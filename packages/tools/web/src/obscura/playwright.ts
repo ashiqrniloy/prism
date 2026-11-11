@@ -131,4 +131,3 @@ export interface PlaywrightCdpSession {
   off?(event: string, handler: (params: Record<string, unknown>) => void): void;
   detach?(): Promise<void>;
 }
-

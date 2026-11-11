@@ -10,7 +10,7 @@ import type { ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism"
 import { type ConceptDoc, parseConceptBody } from "../ontology/codec.js";
 import type { ConceptEdit, WikiOntologyPort, OntologyNoteView, OntologySubject } from "../ontology/port.js";
 import type { WikiScopeLevel } from "../ontology/types.js";
-import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
+import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-system/core";
 import {
   buildPrompt,
   CONSOLIDATE_CACHE_KEY,

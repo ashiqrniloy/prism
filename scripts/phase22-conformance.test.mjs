@@ -17,7 +17,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
+import { createPostgresPersistence } from "@arnilo/prism-extensions/store-postgres";
 import { Pool } from "pg";
 import { assertStateConcurrencyConforms } from "../src/testing/state-concurrency-conformance.ts";
 import { blockedGate } from "./blocked-gate.mjs";
@@ -37,8 +37,8 @@ describe("phase 22 state concurrency conformance", () => {
 
   it("every store leg exists on disk", () => {
     for (const file of [
-      "packages/stores/sqlite/src/__tests__/state-concurrency-conformance.test.ts",
-      "packages/stores/postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
+      "packages/extensions/store-sqlite/src/__tests__/state-concurrency-conformance.test.ts",
+      "packages/extensions/store-postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
     ]) {
       assert.ok(existsSync(`${root}${file}`), `missing harness leg ${file}`);
     }
@@ -75,7 +75,7 @@ describe("phase 22 state concurrency conformance", () => {
       });
       // The harness exposes these two probes for the factories above. Checkpoints and approvals are
       // not state-concurrency probes — `storeConformance` owns them (`package-state`, `session-links`,
-      // `external-state`), and the `@arnilo/prism-store-postgres` leg runs that suite.
+      // `external-state`), and the `@arnilo/prism-extensions/store-postgres` leg runs that suite.
       for (const probe of ["conversation-metadata-cas", "cursor-resume"]) {
         assert.ok(sessionProbes.includes(probe), `postgres session leg did not execute probe ${probe}`);
       }

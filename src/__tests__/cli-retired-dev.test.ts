@@ -1,6 +1,6 @@
 /**
  * Plan 162 Task 4 — `prism dev` is retired from the kernel CLI. The dev inspector is the
- * `@arnilo/prism-devtools` host library and its own bin; the kernel names no host package.
+ * `@arnilo/prism-hosts/devtools` host library and its own bin; the kernel names no host package.
  */
 
 import { describe, it } from "bun:test";

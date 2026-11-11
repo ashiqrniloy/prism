@@ -20,7 +20,7 @@ If a check blocks you, fix the input, not the check.
 
 - Every tool declares `effects` so a gate can classify it. A tool that writes, spawns or reaches the network without
   declaring that is a defect.
-- List `@arnilo/prism-approval` before any tool that edits files or runs commands, and choose `ask`, `edits` or
+- List `@arnilo/prism-extensions/approval` before any tool that edits files or runs commands, and choose `ask`, `edits` or
   `deny` for untrusted input. `auto` is for a sandbox the host controls.
 - Approval gates a call. It does not isolate it. Run untrusted code in a container or VM the host owns.
 - A timeout on an approval prompt is a deny. Do not make it an allow.
@@ -40,7 +40,7 @@ If a check blocks you, fix the input, not the check.
 - A listener beyond loopback needs authentication. Map the authenticated identity to an ownership scope
   (`tenantId`, `userId`) so sessions and memory cannot cross users. Read "Multi-user hosts on one agent" in
   `host-security.md`.
-- Bind to loopback by default. `@arnilo/prism-devtools` is loopback only; never proxy it.
+- Bind to loopback by default. `@arnilo/prism-hosts/devtools` is loopback only; never proxy it.
 - Keep the byte caps (`maxRequestBytes`, `maxResponseBytes`). Raising one needs a stated reason and a test.
 - Serve MCP over stdio for local clients. Over HTTP, add the host's authorization.
 

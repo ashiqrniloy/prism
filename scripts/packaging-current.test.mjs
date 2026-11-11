@@ -116,13 +116,12 @@ test("every publishable manifest declares engines.bun and no engines.node (plan 
   }
 });
 
-test("dist-stage hand lists (packaging/install-smoke) still name every truth package", () => {
-  const names = packages.map((p) => `"${p.name}"`);
+test("packaging and install-smoke discover the release units", () => {
   for (const file of ["src/__tests__/packaging.test.ts", "src/__tests__/install-smoke.test.ts"]) {
-    const content = readFileSync(join(ROOT, file), "utf8");
-    for (const n of names) {
-      assert.ok(content.includes(n), `${file} no longer covers ${n}`);
-    }
+    assert.ok(
+      readFileSync(join(ROOT, file), "utf8").match(/loadRelease\(\s*repoRoot,?\s*\)\.packages/),
+      `${file} must cover release units`,
+    );
   }
 });
 
@@ -133,53 +132,78 @@ test("dist-stage hand lists (packaging/install-smoke) still name every truth pac
  */
 const FAMILY_CALLS = [
   { name: "@arnilo/prism", spec: "@arnilo/prism", call: "(m) => m.isJsonObject({})", expect: true },
-  { name: "@arnilo/prism-memory-core", spec: "@arnilo/prism-memory-core", call: "(m) => m.resolveMemoryLimits().topK", expect: 5 },
   {
-    name: "@arnilo/prism-provider-hyper",
-    spec: "@arnilo/prism-provider-hyper",
-    call: "(m) => m.default().definition.name",
-    expect: "@arnilo/prism-provider-hyper",
+    name: "@arnilo/prism-memory-system/core",
+    spec: "@arnilo/prism-memory-system/core",
+    call: "(m) => m.resolveMemoryLimits().topK",
+    expect: 5,
   },
   {
-    name: "@arnilo/prism-tools-coding",
-    spec: "@arnilo/prism-tools-coding",
+    name: "@arnilo/prism-ai",
+    spec: "@arnilo/prism-ai/hyper",
+    call: "(m) => m.default().definition.name",
+    expect: "@arnilo/prism-ai/hyper",
+  },
+  {
+    name: "@arnilo/prism-tools/coding",
+    spec: "@arnilo/prism-tools/coding",
     call: "(m) => m.fingerprintJson({ a: 1 })",
     expect: "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
   },
   {
-    name: "@arnilo/prism-tools-work",
-    spec: "@arnilo/prism-tools-work/documents",
+    name: "@arnilo/prism-tools/work",
+    spec: "@arnilo/prism-tools/work/documents",
     call: '(m) => m.escapeHtml("<b>&")',
     expect: "&lt;b&gt;&amp;",
   },
   {
-    name: "@arnilo/prism-tools-browser",
-    spec: "@arnilo/prism-tools-browser",
+    name: "@arnilo/prism-tools/browser",
+    spec: "@arnilo/prism-tools/browser",
     call: "(m) => m.resolveBrowserLimits().maxPages",
     expect: 4,
   },
   {
-    name: "@arnilo/prism-tools-web",
-    spec: "@arnilo/prism-tools-web",
+    name: "@arnilo/prism-tools/web",
+    spec: "@arnilo/prism-tools/web",
     call: '(m) => m.canonicalUrl("https://EXAMPLE.com/a?b=1#f")',
     expect: "https://example.com/a?b=1",
   },
   {
-    name: "@arnilo/prism-tools-openapi",
-    spec: "@arnilo/prism-tools-openapi",
+    name: "@arnilo/prism-tools/openapi",
+    spec: "@arnilo/prism-tools/openapi",
     call: "(m) => m.DEFAULT_OPENAPI_LIMITS.maxDocumentBytes",
     expect: 2097152,
   },
   {
-    name: "@arnilo/prism-tools-computer-use",
-    spec: "@arnilo/prism-tools-computer-use",
+    name: "@arnilo/prism-tools/computer-use",
+    spec: "@arnilo/prism-tools/computer-use",
     call: '(m) => m.classifyComputerUseLinuxTool("screenshot")',
     expect: "read",
   },
-  { name: "@arnilo/prism-channels", spec: "@arnilo/prism-channels", call: "(m) => m.resolveChannelLimits().maxInputBytes", expect: 32768 },
-  { name: "@arnilo/prism-mcp", spec: "@arnilo/prism-mcp", call: '(m) => m.defaultMcpNamePrefix("srv")', expect: "mcp:srv:" },
-  { name: "@arnilo/prism-hooks-json", spec: "@arnilo/prism-hooks-json", call: '(m) => m.estimateContextTokens("hello world")', expect: 3 },
-  { name: "@arnilo/prism-ag-ui", spec: "@arnilo/prism-ag-ui", call: "(m) => m.resolveAgUiLimits().maxEventBytes", expect: 65536 },
+  {
+    name: "@arnilo/prism-hosts/channels",
+    spec: "@arnilo/prism-hosts/channels",
+    call: "(m) => m.resolveChannelLimits().maxInputBytes",
+    expect: 32768,
+  },
+  {
+    name: "@arnilo/prism-extensions/mcp",
+    spec: "@arnilo/prism-extensions/mcp",
+    call: '(m) => m.defaultMcpNamePrefix("srv")',
+    expect: "mcp:srv:",
+  },
+  {
+    name: "@arnilo/prism-extensions/hooks-json",
+    spec: "@arnilo/prism-extensions/hooks-json",
+    call: '(m) => m.estimateContextTokens("hello world")',
+    expect: 3,
+  },
+  {
+    name: "@arnilo/prism-hosts/ag-ui",
+    spec: "@arnilo/prism-hosts/ag-ui",
+    call: "(m) => m.resolveAgUiLimits().maxEventBytes",
+    expect: 65536,
+  },
 ];
 
 /**
@@ -267,7 +291,27 @@ test("Bun consumer: every packed tarball installs, imports, and answers one call
         return [pkg.name, `file:${join(staging, tgz)}`];
       }),
     );
-    writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-consumer", private: true, type: "module", overrides }));
+    writeFileSync(
+      join(consumer, "package.json"),
+      JSON.stringify({
+        name: "prism-consumer",
+        private: true,
+        type: "module",
+        overrides,
+        dependencies: {
+          ...Object.fromEntries(
+            Object.entries(readManifest(join(ROOT, "packages/hosts/package.json")).peerDependencies).filter(
+              ([name]) => name !== "@arnilo/prism",
+            ),
+          ),
+          ...Object.fromEntries(
+            Object.entries(readManifest(join(ROOT, "packages/tools/package.json")).peerDependencies).filter(
+              ([name]) => name.startsWith("@office-open/") || name === "ajv" || name === "fast-xml-parser",
+            ),
+          ),
+        },
+      }),
+    );
 
     const started = Date.now();
     const install = bunInstall(consumer, tarballs);

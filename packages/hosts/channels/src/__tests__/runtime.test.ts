@@ -6,7 +6,23 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
-import { type Agent, askEveryTool, createAgent, createMemorySessionStore, createSecretRedactor, createStaticTrustPolicy, type Message, type ModelProvider, type OwnershipScope, type ProviderRequest, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
+import {
+  type Agent,
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  createStaticTrustPolicy,
+  type Message,
+  type ModelProvider,
+  type OwnershipScope,
+  type ProviderRequest,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  type SessionStore,
+  toolCallContent,
+} from "@arnilo/prism";
 import type { LeaseStore } from "../checkpoint-contract.js";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "../memory-stores.js";
 import { providerPackage } from "@arnilo/prism/provider-kit";
@@ -985,7 +1001,10 @@ describe("plan 079 channel runtime", () => {
 
   it("does no I/O at construction and reports bounded diagnostics", async () => {
     let touched = 0;
-    const dummyAgent = await agentWith(textProvider({ count: 0 }, () => "dummy"), createMemorySessionStore());
+    const dummyAgent = await agentWith(
+      textProvider({ count: 0 }, () => "dummy"),
+      createMemorySessionStore(),
+    );
     const runtime = createChannelRuntime(dummyAgent, {
       authorize: () => {
         touched += 1;

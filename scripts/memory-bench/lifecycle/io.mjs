@@ -44,8 +44,7 @@ export async function writeLedger(ledger, out = `${CACHE}/ledgers`) {
   await mkdir(out, { recursive: true, mode: 0o700 });
   const stage = await mkdtemp(join(out, ".export-"));
   try {
-    const text =
-      [ledger.manifest, ...ledger.entries.map((entry) => ({ type: "entry", entry }))].map((row) => JSON.stringify(row)).join("\n") + "\n";
+    const text = `${[ledger.manifest, ...ledger.entries.map((entry) => ({ type: "entry", entry }))].map((row) => JSON.stringify(row)).join("\n")}\n`;
     const path = join(stage, "ledger.jsonl");
     await writeFile(path, text, { mode: 0o600 });
     await scanSecrets([path]);

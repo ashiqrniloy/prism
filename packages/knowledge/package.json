@@ -1,0 +1,82 @@
+{
+  "name": "@arnilo/prism-knowledge",
+  "version": "0.13.0-experimental.0",
+  "description": "Experimental Prism knowledge bundle. Import each capability through its published entrypoint.",
+  "type": "module",
+  "exports": {
+    "./rag": "./rag/src/index.ts",
+    "./wiki": "./wiki/src/index.ts"
+  },
+  "files": [
+    "rag/src",
+    "!rag/src/**/__tests__",
+    "!rag/src/**/fixtures",
+    "!rag/src/**/*.js",
+    "!rag/src/**/*.js.map",
+    "!rag/src/**/*.d.ts",
+    "rag/README.md",
+    "wiki/src",
+    "!wiki/src/**/__tests__",
+    "!wiki/src/**/fixtures",
+    "!wiki/src/**/*.js",
+    "!wiki/src/**/*.js.map",
+    "!wiki/src/**/*.d.ts",
+    "wiki/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 rag/src wiki/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "pg": "^8.23.0",
+    "@arnilo/prism-tools": "^0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    },
+    "@arnilo/prism-tools": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@arnilo/prism-memory-system": "0.13.0-experimental.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "^7.0.2",
+    "@arnilo/prism-extensions": "workspace:*",
+    "@arnilo/prism-tools": "workspace:*"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/knowledge"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/knowledge#readme",
+  "keywords": [
+    "prism",
+    "wiki",
+    "ontology",
+    "knowledge",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

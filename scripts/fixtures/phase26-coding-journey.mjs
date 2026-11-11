@@ -33,8 +33,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createMemoryToolEffectStore, createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
 import { collectProviderEvents } from "@arnilo/prism/provider-kit";
-import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
-import { createBrowserManager, createBrowserTools } from "@arnilo/prism-tools-browser";
+import { createPostgresPersistence } from "@arnilo/prism-extensions/store-postgres";
+import { createBrowserManager, createBrowserTools } from "@arnilo/prism-tools/browser";
 import {
   createCodingCheckTool,
   createDockerSandbox,
@@ -44,7 +44,7 @@ import {
   createWorkspaceService,
   diagnosticDelta,
   normalizeDiagnostics,
-} from "@arnilo/prism-tools-coding";
+} from "@arnilo/prism-tools/coding";
 
 const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${randomBytes(4).toString("hex")}`; // random suffix (CodeQL js/insecure-randomness, alerts 52-55)
 // mkdtemp: exclusive-created, mode 0700 workspace (CodeQL js/insecure-temporary-file, alerts 81-82).
@@ -121,7 +121,7 @@ function git(cwd, args) {
   return execFileSync("git", args, { cwd, env: gitEnv(), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
-function sha256Of(buffer) {
+function _sha256Of(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 

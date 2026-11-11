@@ -16,10 +16,7 @@ import type {
   ToolDefinition,
   Usage,
 } from "../contracts.js";
-import {
-  DecisionsError,
-  EmbeddingsError,
-} from "../contracts.js";
+import { DecisionsError, EmbeddingsError } from "../contracts.js";
 import { reconstructToolCallDeltas } from "../models/events.js";
 import { SECRET_REF } from "../packages/schema.js";
 import type { SecretSource } from "./provider-package.js";
@@ -271,12 +268,7 @@ function findJsonFiles(dir: string): string[] {
   return results.sort();
 }
 
-function requestFromWire(
-  body: unknown,
-  modelsList: readonly ModelConfig[],
-  providerId: string,
-  requestPath?: string,
-): ProviderRequest {
+function requestFromWire(body: unknown, modelsList: readonly ModelConfig[], providerId: string, requestPath?: string): ProviderRequest {
   const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const modelId = typeof obj.model === "string" ? obj.model : (modelsList[0]?.model ?? "default");
   const foundModel = modelsList.find((m) => m.model === modelId);
@@ -307,11 +299,7 @@ function requestFromWire(
     if (typeof obj.instructions === "string" && obj.instructions) {
       messages.push({ role: "system", content: [{ type: "text", text: obj.instructions }] });
     }
-    const rawInput = Array.isArray(obj.input)
-      ? obj.input
-      : typeof obj.input === "string"
-        ? [{ role: "user", content: obj.input }]
-        : [];
+    const rawInput = Array.isArray(obj.input) ? obj.input : typeof obj.input === "string" ? [{ role: "user", content: obj.input }] : [];
     for (const raw of rawInput) {
       const item = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : undefined;
       if (!item) continue;
@@ -464,7 +452,7 @@ function requestFromWire(
         const fnObj = callObj.function as Record<string, unknown> | undefined;
         let argsObj: JsonObject = {};
         try {
-          argsObj = typeof fnObj?.arguments === "string" ? JSON.parse(fnObj.arguments) : (fnObj?.arguments as JsonObject) ?? {};
+          argsObj = typeof fnObj?.arguments === "string" ? JSON.parse(fnObj.arguments) : ((fnObj?.arguments as JsonObject) ?? {});
         } catch {}
         content.push({
           type: "tool_call",
@@ -499,7 +487,11 @@ function requestFromWire(
       const fnObj = toolObj.function as Record<string, unknown> | undefined;
       const name = typeof toolObj.name === "string" ? toolObj.name : typeof fnObj?.name === "string" ? fnObj.name : "tool";
       const description =
-        typeof toolObj.description === "string" ? toolObj.description : typeof fnObj?.description === "string" ? fnObj.description : undefined;
+        typeof toolObj.description === "string"
+          ? toolObj.description
+          : typeof fnObj?.description === "string"
+            ? fnObj.description
+            : undefined;
       const parameters = (toolObj.input_schema ?? fnObj?.parameters ?? toolObj.parameters ?? { type: "object" }) as JsonObject;
       return {
         name,
@@ -531,8 +523,7 @@ export async function providerConformance(
 ): Promise<ProviderConformanceResult> {
   if (!options.recordings) {
     if (!options.request) throw new Error("providerConformance requires request when recordings is not specified");
-    if (!options.headers?.captured)
-      throw new Error("providerConformance requires headers when recordings is not specified");
+    if (!options.headers?.captured) throw new Error("providerConformance requires headers when recordings is not specified");
     if (!options.secrets || options.secrets.filter(Boolean).length === 0)
       throw new Error("providerConformance requires at least one secret to check for leaks");
     const callerHeaders = options.headers.caller ?? {};
@@ -557,10 +548,7 @@ export async function providerConformance(
     };
   }
 
-  const recordingsDir =
-    options.recordings instanceof URL
-      ? fileURLToPath(options.recordings)
-      : resolve(String(options.recordings));
+  const recordingsDir = options.recordings instanceof URL ? fileURLToPath(options.recordings) : resolve(String(options.recordings));
 
   if (!existsSync(recordingsDir)) {
     throw new Error(`providerConformance: recordings directory does not exist: ${recordingsDir}`);
@@ -607,7 +595,9 @@ export async function providerConformance(
       : parsed && typeof parsed === "object" && "responseBody" in parsed
         ? [parsed as RecordedExchange]
         : parsed && typeof parsed === "object" && "recording" in parsed
-          ? (Array.isArray(parsed.recording) ? parsed.recording : [parsed.recording])
+          ? Array.isArray(parsed.recording)
+            ? parsed.recording
+            : [parsed.recording]
           : [];
 
     if (exchanges.length === 0) continue;
@@ -689,7 +679,11 @@ export async function providerConformance(
         options: {
           sessionId: turnRequest.options?.sessionId ?? "conformance-session",
           ...turnRequest.options,
-          headers: { ...turnRequest.options?.headers, "x-conformance-caller": "caller-value", authorization: "Bearer attacker-header-override" },
+          headers: {
+            ...turnRequest.options?.headers,
+            "x-conformance-caller": "caller-value",
+            authorization: "Bearer attacker-header-override",
+          },
         },
       };
 
@@ -1001,7 +995,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     const events = await collectProviderEvents(options.factory(trackingFetch), toolReq);
     if (fetched) throw new Error("systemOneConformance: tools must be rejected before fetch");
     const terminal = events.at(-1);
-    if (!terminal || terminal.type !== "error" || !terminal.error.message.includes("tools")) {
+    if (terminal?.type !== "error" || !terminal.error.message.includes("tools")) {
       throw new Error("systemOneConformance: expected tools rejection error event before fetch");
     }
   }
@@ -1021,7 +1015,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     const events = await collectProviderEvents(options.factory(trackingFetch), noSchemaReq);
     if (fetched) throw new Error("systemOneConformance: request without structuredOutput must fail before fetch");
     const terminal = events.at(-1);
-    if (!terminal || terminal.type !== "error" || !terminal.error.message.includes("structuredOutput")) {
+    if (terminal?.type !== "error" || !terminal.error.message.includes("structuredOutput")) {
       throw new Error("systemOneConformance: expected structuredOutput rejection error event before fetch");
     }
   }
@@ -1040,7 +1034,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     const types = events.map((e) => e.type);
     if (types[0] !== "message_start") throw new Error("systemOneConformance: expected message_start as first event");
     const textDelta = events.find((e) => e.type === "content_delta" && e.content.type === "text");
-    if (!textDelta || textDelta.type !== "content_delta" || textDelta.content.type !== "text") {
+    if (textDelta?.type !== "content_delta" || textDelta.content.type !== "text") {
       throw new Error("systemOneConformance: expected text content_delta");
     }
     const rendered = JSON.parse(textDelta.content.text);
@@ -1048,10 +1042,10 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
       throw new Error(`systemOneConformance: rendered output mismatch: ${JSON.stringify(rendered)}`);
     }
     const done = events.at(-1);
-    if (!done || done.type !== "done" || done.stopReason !== "end_turn") {
+    if (done?.type !== "done" || done.stopReason !== "end_turn") {
       throw new Error("systemOneConformance: expected terminal done event with stopReason: end_turn");
     }
-    if (!done.usage || done.usage.inputTokens !== 96 || done.usage.outputTokens !== 0) {
+    if (done.usage?.inputTokens !== 96 || done.usage.outputTokens !== 0) {
       throw new Error("systemOneConformance: expected usage accounting on done event");
     }
     assertNoSecretLeak(events, [canaryKey]);
@@ -1077,7 +1071,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
       const events = await collectProviderEvents(options.factory(trackingFetch), req);
       if (fetched) throw new Error("systemOneConformance: out-of-range boolean_threshold must fail before fetch");
       const terminal = events.at(-1);
-      if (!terminal || terminal.type !== "error" || !terminal.error.message.includes("boolean_threshold")) {
+      if (terminal?.type !== "error" || !terminal.error.message.includes("boolean_threshold")) {
         throw new Error("systemOneConformance: expected boolean_threshold error event");
       }
     }
@@ -1090,7 +1084,10 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     };
     const makeThresholdFetch = () =>
       (async () =>
-        new Response(JSON.stringify(thresholdResponse), { status: 200, headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+        new Response(JSON.stringify(thresholdResponse), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })) as unknown as typeof fetch;
 
     const highReq: ProviderRequest = {
       ...baseRequest,
@@ -1104,8 +1101,12 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     const lowEvents = await collectProviderEvents(options.factory(makeThresholdFetch()), lowReq);
     const highText = highEvents.find((e) => e.type === "content_delta" && e.content.type === "text");
     const lowText = lowEvents.find((e) => e.type === "content_delta" && e.content.type === "text");
-    const highParsed = JSON.parse(highText && highText.type === "content_delta" && highText.content.type === "text" ? highText.content.text : "{}");
-    const lowParsed = JSON.parse(lowText && lowText.type === "content_delta" && lowText.content.type === "text" ? lowText.content.text : "{}");
+    const highParsed = JSON.parse(
+      highText && highText.type === "content_delta" && highText.content.type === "text" ? highText.content.text : "{}",
+    );
+    const lowParsed = JSON.parse(
+      lowText && lowText.type === "content_delta" && lowText.content.type === "text" ? lowText.content.text : "{}",
+    );
     if (highParsed.irreversible !== false) {
       throw new Error(`systemOneConformance: 0.6 noul under 0.9 threshold should be false, got ${highParsed.irreversible}`);
     }
@@ -1129,7 +1130,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     const events401 = await collectProviderEvents(options.factory(fetch401, { apiKey: async () => canary401 }), baseRequest);
     if (attempts401 !== 1) throw new Error(`systemOneConformance: 401 must not be retried, attempts: ${attempts401}`);
     const term401 = events401.at(-1);
-    if (!term401 || term401.type !== "error" || !term401.error.message.includes("401")) {
+    if (term401?.type !== "error" || !term401.error.message.includes("401")) {
       throw new Error("systemOneConformance: 401 response must yield error event mentioning 401");
     }
     if (term401.error.message.includes(canary401)) {
@@ -1149,32 +1150,28 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     const events422 = await collectProviderEvents(options.factory(fetch422), baseRequest);
     if (attempts422 !== 1) throw new Error(`systemOneConformance: 422 must not be retried, attempts: ${attempts422}`);
     const term422 = events422.at(-1);
-    if (!term422 || term422.type !== "error" || !term422.error.message.includes("expected at least 2 options")) {
+    if (term422?.type !== "error" || !term422.error.message.includes("expected at least 2 options")) {
       throw new Error("systemOneConformance: 422 response must surface field detail in error event");
     }
     scenarios.push({ name: "error-mapping-401-422", ok: true });
   }
-
-  // 6. Malformed success
-  {
-    for (const badAnswer of [
-      { type: "choice", choice: "ask", confidence: 2 },
-      { type: "choice", choice: "ask", probabilities: { ask: -1 } },
-      { type: "choice", choice: 123 },
-    ]) {
-      const malformedFetch = (async () =>
-        new Response(JSON.stringify({ ...OK_RESPONSE, answers: { verdict: badAnswer } }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        })) as unknown as typeof fetch;
-      const events = await collectProviderEvents(options.factory(malformedFetch), baseRequest);
-      const term = events.at(-1);
-      if (!term || term.type !== "error" || events.some((e) => e.type === "done" || e.type === "content_delta")) {
-        throw new Error("systemOneConformance: malformed success must yield error event and no decision");
-      }
+  for (const badAnswer of [
+    { type: "choice", choice: "ask", confidence: 2 },
+    { type: "choice", choice: "ask", probabilities: { ask: -1 } },
+    { type: "choice", choice: 123 },
+  ]) {
+    const malformedFetch = (async () =>
+      new Response(JSON.stringify({ ...OK_RESPONSE, answers: { verdict: badAnswer } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })) as unknown as typeof fetch;
+    const events = await collectProviderEvents(options.factory(malformedFetch), baseRequest);
+    const term = events.at(-1);
+    if (term?.type !== "error" || events.some((e) => e.type === "done" || e.type === "content_delta")) {
+      throw new Error("systemOneConformance: malformed success must yield error event and no decision");
     }
-    scenarios.push({ name: "malformed-success-rejected", ok: true });
   }
+  scenarios.push({ name: "malformed-success-rejected", ok: true });
 
   // 7. Credential resolution once per request and no secret leak
   {
@@ -1196,7 +1193,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
       throw new Error(`systemOneConformance: credential must resolve once per request, resolved ${resolutions} times`);
     }
     const term = events.at(-1);
-    if (!term || term.type !== "error") {
+    if (term?.type !== "error") {
       throw new Error("systemOneConformance: expected error event on transport failure");
     }
     assertNoSecretLeak(events, [secret]);
@@ -1216,12 +1213,8 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     }
     scenarios.push({ name: "keyless-sends-no-auth", ok: true });
   }
-
-  // 9. Abort before fetch
-  {
-    await assertAbortIsObserved({ provider: options.factory(), request: baseRequest });
-    scenarios.push({ name: "abort-observed", ok: true });
-  }
+  await assertAbortIsObserved({ provider: options.factory(), request: baseRequest });
+  scenarios.push({ name: "abort-observed", ok: true });
 
   // 10. decisions(): raw answers, images, custom path, error mapping, credential resolution
   {
@@ -1370,8 +1363,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
 
   // 11. Wire recordings replay
   if (options.recordings) {
-    const recordingsDir =
-      options.recordings instanceof URL ? fileURLToPath(options.recordings) : resolve(String(options.recordings));
+    const recordingsDir = options.recordings instanceof URL ? fileURLToPath(options.recordings) : resolve(String(options.recordings));
     if (existsSync(recordingsDir)) {
       const files = findJsonFiles(recordingsDir);
       for (const file of files) {
@@ -1409,7 +1401,9 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
         }
         if (exchanges[0]?.status && exchanges[0].status >= 400) {
           if (terminal.type !== "error") {
-            throw new Error(`systemOneConformance: recorded scenario "${scenarioName}" expected error event for status ${exchanges[0].status}`);
+            throw new Error(
+              `systemOneConformance: recorded scenario "${scenarioName}" expected error event for status ${exchanges[0].status}`,
+            );
           }
         } else {
           if (terminal.type !== "done") {
@@ -1428,5 +1422,3 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
 
   return { ok: true, scenarios };
 }
-
-

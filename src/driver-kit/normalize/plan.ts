@@ -6,6 +6,8 @@ type PlanActivity = Extract<ExternalActivity, { kind: "plan" }>;
 export function mapPlan(entries: readonly { readonly title?: string; readonly status?: string }[]): PlanActivity {
   return {
     kind: "plan",
-    entries: entries.filter((entry) => entry.title && entry.title.trim() !== "").map((entry) => ({ title: entry.title as string, status: entry.status ?? "pending" })),
+    entries: entries
+      .filter((entry) => entry.title && entry.title.trim() !== "")
+      .map((entry) => ({ title: entry.title as string, status: entry.status ?? "pending" })),
   };
 }

@@ -1,0 +1,109 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-a38df35ae51d",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 154773669,
+    "attempts": [
+      {
+        "attemptId": "217-m1.small.memory-off.long-session@1",
+        "jobId": "217-m1.small.memory-off.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 1030478
+      },
+      {
+        "attemptId": "217-m1.small.STM.long-session@1",
+        "jobId": "217-m1.small.STM.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 2280112
+      },
+      {
+        "attemptId": "217-m1.small.OM-before.long-session@1",
+        "jobId": "217-m1.small.OM-before.long-session",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 2273669
+      },
+      {
+        "attemptId": "217-m1.large.memory-off.long-session@1",
+        "jobId": "217-m1.large.memory-off.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 552479
+      },
+      {
+        "attemptId": "217-m1.large.STM.long-session@1",
+        "jobId": "217-m1.large.STM.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 2936983
+      },
+      {
+        "attemptId": "217-m1.large.OM-before.long-session@1",
+        "jobId": "217-m1.large.OM-before.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 2745494
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.small.memory-off.long-session",
+      "attemptId": "217-m1.small.memory-off.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.small.STM.long-session",
+      "attemptId": "217-m1.small.STM.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.small.OM-before.long-session",
+      "attemptId": "217-m1.small.OM-before.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 2273669
+    },
+    {
+      "id": "217-m1.large.memory-off.long-session",
+      "attemptId": "217-m1.large.memory-off.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.large.STM.long-session",
+      "attemptId": "217-m1.large.STM.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.large.OM-before.long-session",
+      "attemptId": "217-m1.large.OM-before.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    }
+  ]
+}

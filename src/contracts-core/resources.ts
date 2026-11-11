@@ -66,4 +66,3 @@ export interface OAuthCredentials {
   readonly accountId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
-

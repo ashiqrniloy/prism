@@ -14,11 +14,11 @@ import {
 } from "@arnilo/prism";
 import { createScriptedHostUi, mockProvider } from "@arnilo/prism/testing";
 
-import sqliteStore, { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import workflows, { agentNode, defineWorkflow, startWorkflow, type WorkflowRun } from "@arnilo/prism-workflows";
+import sqliteStore, { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
+import workflows, { agentNode, defineWorkflow, startWorkflow, type WorkflowRun } from "@arnilo/prism-extensions/workflows";
 
 // Keep Bun transport declarations out of the examples compiler (see the conformance fixture).
-const remoteModule = "@arnilo/prism-remote";
+const remoteModule = "@arnilo/prism-hosts/remote";
 const connectAgent: (
   endpoint: { kind: "stdio"; command: string[] },
   options: { host: { ui: HostUi }; mirror: SessionStore },

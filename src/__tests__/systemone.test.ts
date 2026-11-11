@@ -221,4 +221,3 @@ describe("@arnilo/prism/provider-kit (systemone)", () => {
     assert.doesNotMatch(seen[0]!, /path\/to\/resource/);
   });
 });
-

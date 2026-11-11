@@ -181,7 +181,11 @@ export function createProfiles(options: ProfilesOptions): Profiles {
       if (error instanceof DriverError) throw error;
       throw new DriverError("auth_required", `could not read the sign-in status; run: ${(mode.login ?? []).join(" ")}`);
     }
-    const auth = { signedIn: parsed.signedIn === true, ...(parsed.method === undefined ? {} : { method: parsed.method }), checkedAt: now().toISOString() };
+    const auth = {
+      signedIn: parsed.signedIn === true,
+      ...(parsed.method === undefined ? {} : { method: parsed.method }),
+      checkedAt: now().toISOString(),
+    };
     return write({ ...record, auth });
   };
 
@@ -192,7 +196,12 @@ export function createProfiles(options: ProfilesOptions): Profiles {
     const command = argv(mode.login);
     const ui = options.host?.ui;
     const env = mode.homeEnv === undefined ? undefined : { [mode.homeEnv]: homeOf(name) };
-    const answer = await requestHostUi(ui, { kind: "terminal", title: `Sign in (${options.driver.descriptor.vendor})`, command, ...(env ? { env } : {}) });
+    const answer = await requestHostUi(ui, {
+      kind: "terminal",
+      title: `Sign in (${options.driver.descriptor.vendor})`,
+      command,
+      ...(env ? { env } : {}),
+    });
     if (answer.status !== "answered" || answer.value.exitCode !== 0) {
       if (answer.status === "unavailable") {
         await ui?.request({ kind: "notify", level: "warn", message: `Sign in to profile "${name}" by running: ${command.join(" ")}` });

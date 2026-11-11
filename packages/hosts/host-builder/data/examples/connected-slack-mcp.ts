@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { ToolDefinition } from "@arnilo/prism";
-import { type ConnectMcpToolsOptions, createConnectedAppSession, type McpToolBridge } from "@arnilo/prism-mcp";
-import { AgentIdentity } from "@arnilo/prism-governance";
+import { type ConnectMcpToolsOptions, createConnectedAppSession, type McpToolBridge } from "@arnilo/prism-extensions/mcp";
+import { AgentIdentity } from "@arnilo/prism-extensions/governance";
 const identity: AgentIdentity = {
   tenantId: "tenant-a",
   accountId: "account-a",

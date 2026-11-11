@@ -1,6 +1,6 @@
 import { type Agent, createAgent, type HostUi, type ModelSpec, type PackageInput } from "@arnilo/prism";
-import approval from "@arnilo/prism-approval";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import approval from "@arnilo/prism-extensions/approval";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 export interface HostOptions {
   readonly model: ModelSpec;

@@ -37,12 +37,12 @@ async function firstRequest(
   }
 }
 
-describe("@arnilo/prism-tools-browser skills", () => {
+describe("@arnilo/prism-tools/browser skills", () => {
   it("tools_browser_registers_bundled_skills", async () => {
     const { text, skills } = await firstRequest();
     const skill = skills.find((entry) => entry.name === "browser-automation");
     assert.ok(skill, "inspect().skills lists browser-automation");
-    assert.equal(skill.package, "@arnilo/prism-tools-browser");
+    assert.equal(skill.package, "@arnilo/prism-tools/browser");
     assert.deepEqual(skill.requiresTools, ["browser_open", "browser_snapshot", "browser_act"]);
     assert.match(text, /- browser-automation: /);
   });

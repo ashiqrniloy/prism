@@ -53,7 +53,10 @@ describe("sliceMarkdown", () => {
   });
 
   it("rejects a bad window, naming the argument", () => {
-    assert.throws(() => fetchSliceArgs({ offset: -1 }), (error: Error) => /offset/.test(error.message));
+    assert.throws(
+      () => fetchSliceArgs({ offset: -1 }),
+      (error: Error) => /offset/.test(error.message),
+    );
     assert.throws(() => fetchSliceArgs({ offset: 1.5 }), /offset/);
     assert.throws(() => fetchSliceArgs({ max_chars: 0 }), /max_chars/);
     assert.throws(() => fetchSliceArgs({ max_chars: HARD_FETCH_CHARS + 1 }), /max_chars/);
@@ -74,7 +77,13 @@ describe("sliceMarkdown", () => {
   });
 
   it("keeps the citation fields and replaces the page body with the slice", () => {
-    const page = { citationId: "web:firecrawl:x", provider: "firecrawl" as const, url: "https://example.com/", markdown: "page", untrusted: true as const };
+    const page = {
+      citationId: "web:firecrawl:x",
+      provider: "firecrawl" as const,
+      url: "https://example.com/",
+      markdown: "page",
+      untrusted: true as const,
+    };
     const value = fetchSliceValue(page, sliceMarkdown("0123456789", args(2, 3)));
     assert.equal(value.citationId, "web:firecrawl:x");
     assert.equal(value.url, "https://example.com/");

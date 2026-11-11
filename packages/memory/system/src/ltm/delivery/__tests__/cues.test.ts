@@ -6,7 +6,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { ContextDraft, HookContext, SessionEntry } from "@arnilo/prism";
-import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-system/core";
 import type { MemoryFabricInjectConfig } from "../../config.js";
 import { createFabricCitationTracker, createFabricContext } from "../../context.js";
 import { createMemory, createLongTermMemory } from "../../../index.js";

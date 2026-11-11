@@ -75,6 +75,8 @@ async function stmWith(calls: readonly Record<string, unknown>[], extra: Partial
     entries: [userEntry, toolEntry],
     client: clientFor(scripted(calls, results)),
     maxTurns: 2,
+    // The scripted model collects the tool results it is sent, so it needs the second request.
+    endAfterCleanTurn: false,
     onChunks: (_id, accepted) => chunks.push(...accepted),
     ...extra,
   });

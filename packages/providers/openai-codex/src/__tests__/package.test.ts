@@ -16,10 +16,12 @@ import { packageConformance } from "@arnilo/prism/testing";
 
 import openaiCodexDefinition, {
   createOpenAICodexProvider,
+  credentialRecordToSecret,
   listOpenAICodexModels,
   OPENAI_CODEX_DEFAULT_BASE_URL,
   OPENAI_CODEX_DEFAULT_CREDENTIAL_REF,
   OPENAI_CODEX_MODELS_MAX_BODY_BYTES,
+  OPENAI_CODEX_SCOPE,
   openAICodexAffinity,
   openAICodexErrorCode,
   openAICodexModels,
@@ -92,7 +94,7 @@ function agentConfig(overrides: Partial<AgentConfig> = {}): AgentConfig {
   };
 }
 
-describe("@arnilo/prism-provider-openai-codex package", () => {
+describe("@arnilo/prism-ai/openai-codex package", () => {
   it("openai_codex_package_conformance", async () => {
     const result = await packageConformance(openaiCodexDefinition, { config: { credential: CREDENTIAL, appName: "Prism Tests" } });
     assert.deepEqual(
@@ -370,6 +372,64 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     assert.deepEqual(first.capabilities?.thinkingLevels, ["low", "high"], "ultra is dropped");
     assert.equal(first.limits?.maxOutputTokens, undefined, "a null ceiling stays unknown rather than guessed");
     assert.equal(listed[1]?.limits?.maxOutputTokens, undefined);
+  });
+
+  it("direct_credential_slots_authorize_provider_and_discovery_without_refresh", async () => {
+    const secret = credentialRecordToSecret({
+      v: 1,
+      clientId: "oaiapp_direct_fixture",
+      hostId: "urn:uuid:11111111-2222-3333-4444-555555555555",
+      access: KEY,
+      refresh: "fixture-refresh-never-sent",
+      expires: Date.now() + 3_600_000,
+      scope: OPENAI_CODEX_SCOPE,
+    });
+    const stored: Secret[] = [];
+    const slot = {
+      resolve: async (ref: string) => {
+        assert.equal(ref, CREDENTIAL);
+        return secret;
+      },
+      store: async (_ref: string, value: Secret) => {
+        stored.push(value);
+      },
+    };
+    const calls: string[] = [];
+    const provider = createOpenAICodexProvider({
+      id: "codex-direct",
+      credential: CREDENTIAL,
+      credentialSource: slot,
+      baseUrl: "https://codex.fixture.test/v1/",
+      fetch: async (input, init) => {
+        calls.push(String(input));
+        assert.equal(new Headers(init?.headers).get("authorization"), `Bearer ${KEY}`);
+        return completed("direct");
+      },
+    });
+    const events = await collect(provider, request({ model: { ...model, provider: "codex-direct" } }));
+    assert.ok(events.some((event) => event.type === "content_delta" && event.content.type === "text" && event.content.text === "direct"));
+    const listed = await listOpenAICodexModels({
+      provider: "codex-direct",
+      credential: CREDENTIAL,
+      credentialSource: slot,
+      baseUrl: "https://codex.fixture.test/v1/",
+      fetch: async (input, init) => {
+        calls.push(String(input));
+        assert.equal(new Headers(init?.headers).get("authorization"), `Bearer ${KEY}`);
+        return Response.json({ data: [{ slug: "discovered", visibility: "list", auto_compact_token_limit: 123 }] });
+      },
+    });
+    assert.deepEqual(calls, ["https://codex.fixture.test/v1/responses", "https://codex.fixture.test/v1/models"]);
+    assert.equal(listed[0]?.provider, "codex-direct");
+    assert.equal(listed[0]?.limits?.maxOutputTokens, 123);
+    assert.deepEqual(stored, [], "an unexpired grant must neither refresh nor write to the slot");
+  });
+
+  it("model_discovery_http_failures_redact_the_grant", async () => {
+    await assert.rejects(
+      () => listOpenAICodexModels({ apiKey: async () => KEY, fetch: async () => failure(403, { error: `refused ${KEY}` }) }),
+      (error: unknown) => error instanceof Error && /model discovery failed: 403/.test(error.message) && !error.message.includes(KEY),
+    );
   });
 
   it("list_openai_codex_models_accepts_the_measured_catalog_size", async () => {

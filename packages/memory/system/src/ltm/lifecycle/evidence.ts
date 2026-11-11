@@ -28,7 +28,8 @@ export function citationEvidence(input: CitationEvidenceInput): CitationEvidence
   const cited = new Set(input.cited);
   const helped = input.helped ?? new Set<string>();
   const next = input.entries.at(-1)?.id;
-  if (next === undefined || next === input.cursor || cited.size === 0) return { helpful: [], harmful: [], ...(next === undefined ? {} : { cursor: next }) };
+  if (next === undefined || next === input.cursor || cited.size === 0)
+    return { helpful: [], harmful: [], ...(next === undefined ? {} : { cursor: next }) };
   const candidates = gatherConsolidationCandidates(input.entries, input.cursor === undefined ? {} : { cursor: input.cursor });
   const harmful = new Set<string>();
   let outcome = false;

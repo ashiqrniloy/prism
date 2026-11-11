@@ -1,5 +1,5 @@
 import { type ToolDefinition, UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { ingestImageBlock, ingestSource, renderIngestBrief } from "../ingest.js";
 import type { WikiExtensionOptions, WikiIngestInput } from "../types.js";
 

@@ -1,7 +1,7 @@
 /**
  * The generic guardrail stage runner. Plan 159 Task 5 moved the pack compile path and pack
- * definitions to `@arnilo/prism-guardrail-packs` (and Task 7 moved `field-evidence.ts` to
- * `@arnilo/prism-governance`), but this runner stays in the kernel: a package passes its own
+ * definitions to `@arnilo/prism-extensions/guardrail-packs` (and Task 7 moved `field-evidence.ts` to
+ * `@arnilo/prism-extensions/governance`), but this runner stays in the kernel: a package passes its own
  * `package` label and calls it through `@arnilo/prism`, so its `guardrail.decision` events are
  * attributed correctly.
  */

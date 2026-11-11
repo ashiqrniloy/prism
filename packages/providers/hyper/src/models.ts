@@ -1,10 +1,4 @@
-import {
-  type JsonObject,
-  type ModelConfig,
-  type ModelCost,
-  redactSecrets,
-  trimTrailingSlashes,
-} from "@arnilo/prism";
+import { type JsonObject, type ModelConfig, type ModelCost, redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** Official Hyper API base (`/chat/completions`, `/messages`, `/models`, `/credits`). */

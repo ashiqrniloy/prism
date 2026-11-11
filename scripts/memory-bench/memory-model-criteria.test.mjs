@@ -301,10 +301,31 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
 
 test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   // Plan 217 Task 6: the two fixtures gate M-1 reads are hashed by the first amendment; removing it restores the frozen file.
-  const [first] = MEMORY_MODEL_CRITERIA.amendments;
+  const [first, second, third] = MEMORY_MODEL_CRITERIA.amendments;
   assert.equal(first.plan, 217);
+  // Amendment 3 (owner decision m1DevPersonas): restoring the 12-persona partition hash rebuilds amendment 2's file.
+  const afterSecond = edited((c) => {
+    c.amendments = c.amendments.slice(0, 2);
+    delete c.ownerDecisions.m1DevPersonas;
+    c.fixtures.index.find((entry) => entry.id === "long-session").hash = "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674";
+  });
+  assert.equal(memoryModelCriteriaHash(afterSecond), third.previousHash);
+  assert.deepEqual(afterSecond.rows, MEMORY_MODEL_CRITERIA.rows);
+  // Amendment 2 (owner decision m1S3Deferred): removing the deferral rebuilds amendment 1's file.
+  const afterFirst = edited((c) => {
+    c.amendments = c.amendments.slice(0, 1);
+    delete c.gates["M-1"].deferred;
+    delete c.ownerDecisions.m1S3Deferred;
+    delete c.ownerDecisions.m1DevPersonas;
+    c.fixtures.index.find((entry) => entry.id === "long-session").hash = "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674";
+  });
+  assert.equal(memoryModelCriteriaHash(afterFirst), second.previousHash);
+  assert.deepEqual(afterFirst.rows, MEMORY_MODEL_CRITERIA.rows);
   const before = edited((c) => {
     delete c.amendments;
+    delete c.gates["M-1"].deferred;
+    delete c.ownerDecisions.m1S3Deferred;
+    delete c.ownerDecisions.m1DevPersonas;
     for (const entry of c.fixtures.index)
       if (entry.hashOf) {
         entry.hash = null;
@@ -322,6 +343,33 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
       ),
     /fixture hashes are added only by an amendment/,
   );
+  // A deferral needs its row in the gate, a target gate that reads it, and an owner decision.
+  assert.throws(() => verifyMemoryModelCriteria(edited((c) => delete c.ownerDecisions.m1S3Deferred)), /without an owner decision/);
+  assert.throws(() => verifyMemoryModelCriteria(edited((c) => (c.gates["M-1"].deferred.S3.to = "M-2"))), /which does not read it/);
+  assert.throws(
+    () => verifyMemoryModelCriteria(edited((c) => (c.gates["M-1"].deferred = { M1: { to: "A", decision: "m1S3Deferred" } }))),
+    /which it does not list/,
+  );
+  const verdict = memoryModelGateVerdict(
+    "M-1",
+    {
+      memoryModelCriteriaHash: frozenMemoryModelHash(),
+      gate: "M-1",
+      partition: "dev",
+      rows: {
+        S1: { tests: { "vs-om-before": ci(0.5) } },
+        S2: { tests: { "byte-equal": { value: 1 }, "other-tool-runs": { value: 0 } } },
+        S4: { tests: { "token-ratio": { value: 1.1 } } },
+      },
+    },
+    { partition: "dev" },
+  );
+  assert.deepEqual(
+    verdict.rows.map((row) => `${row.row}:${row.status}`),
+    ["S1:pass", "S2:pass", "S3:deferred", "S4:pass"],
+  );
+  assert.equal(verdict.status, "pass");
+  assert.equal(verdict.rows.find((row) => row.row === "S3").to, "A");
   assert.throws(
     () => verifyMemoryModelCriteria(edited((c) => delete c.fixtures.index.find((entry) => entry.id === "long-session").hashOf)),
     /needs a sha256 hash and the file it hashes/,

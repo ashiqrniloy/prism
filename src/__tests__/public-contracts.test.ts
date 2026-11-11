@@ -322,7 +322,10 @@ describe("public contracts", () => {
   });
 
   it("host can create minimal phase 6 agent sessions", async () => {
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+    });
     const session = await agent.session({ id: "s1", leafId: undefined, create: true });
     const forkOptions: SessionForkOptions = { at: undefined };
 

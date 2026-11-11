@@ -23,32 +23,14 @@ export const MAX_SESSION_LIST_CURSOR_LENGTH = 512;
 
 const RUN_OPTION_KEYS = new Set(["metadata", "limits", "interactive"]);
 const DECISION_KEYS = new Set(["approvalId", "outcome", "reason", "elicitation"]);
-const APPROVAL_OUTCOMES: ReadonlySet<ApprovalOutcome> = new Set([
-  "allow_once",
-  "allow_for_run",
-  "reject_once",
-  "reject_for_run",
-]);
+const APPROVAL_OUTCOMES: ReadonlySet<ApprovalOutcome> = new Set(["allow_once", "allow_for_run", "reject_once", "reject_for_run"]);
 const OWNERSHIP_KEYS = new Set(["tenantId", "accountId", "userId"]);
-const SESSION_LIST_LINK_STRING_KEYS = [
-  "agentId",
-  "parentSessionId",
-  "workflowRunId",
-  "delegationId",
-  "actorAgent",
-] as const;
-const SESSION_LIST_QUERY_KEYS = new Set<string>([
-  "cursor",
-  "limit",
-  "order",
-  ...SESSION_LIST_LINK_STRING_KEYS,
-  "actorKind",
-]);
+const SESSION_LIST_LINK_STRING_KEYS = ["agentId", "parentSessionId", "workflowRunId", "delegationId", "actorAgent"] as const;
+const SESSION_LIST_QUERY_KEYS = new Set<string>(["cursor", "limit", "order", ...SESSION_LIST_LINK_STRING_KEYS, "actorKind"]);
 const PARENT_LINK_KEYS = ["sessionId", "agentId", "workflowRunId", "delegationId"] as const;
 const PARENT_LINK_KEY_SET = new Set<string>(PARENT_LINK_KEYS);
 
-export const isObject = (value: unknown): value is JsonObject =>
-  value !== null && typeof value === "object" && !Array.isArray(value);
+export const isObject = (value: unknown): value is JsonObject => value !== null && typeof value === "object" && !Array.isArray(value);
 
 export function invalid(message: string): RemoteError {
   return new RemoteError("invalid_params", message);
@@ -68,11 +50,7 @@ export function parseInput(value: unknown): string | Message | readonly Message[
 }
 
 /** Wire `RunOptions` is an allow-list: a client never chooses `principal`, `ownership`, `redactor`, `signal`, … */
-export function parseRunOptions(
-  value: unknown,
-  principal: Principal | undefined,
-  ownership: OwnershipScope | undefined,
-): RunOptions {
+export function parseRunOptions(value: unknown, principal: Principal | undefined, ownership: OwnershipScope | undefined): RunOptions {
   const identity: RunOptions = {
     ...(principal ? { principal } : {}),
     ...(ownership ? { ownership } : {}),
@@ -130,11 +108,7 @@ export function parseDecisions(value: unknown, options: ParseDecisionsOptions = 
         throw invalid(`decision field ${key} is not allowed over the wire`);
       }
     }
-    if (
-      typeof item.approvalId !== "string" ||
-      item.approvalId.length === 0 ||
-      item.approvalId.length > MAX_APPROVAL_ID_LENGTH
-    ) {
+    if (typeof item.approvalId !== "string" || item.approvalId.length === 0 || item.approvalId.length > MAX_APPROVAL_ID_LENGTH) {
       throw invalid(`approvalId must be a non-empty string of at most ${MAX_APPROVAL_ID_LENGTH} characters`);
     }
     if (!isApprovalOutcome(item.outcome)) {
@@ -193,10 +167,7 @@ export function parseSteerOptions(value: unknown): SteerOptions | undefined {
  * Validates wire `SessionListQuery`: accepts only documented `SessionListQuery` filter and pagination keys,
  * drops client-supplied ownership keys (`tenantId`, `accountId`, `userId`), and applies the server's `ownership` scope.
  */
-export function parseSessionListQuery(
-  value: unknown,
-  ownership?: OwnershipScope,
-): SessionListQuery | undefined {
+export function parseSessionListQuery(value: unknown, ownership?: OwnershipScope): SessionListQuery | undefined {
   if (value === undefined) {
     return ownership ? { ...ownership } : undefined;
   }
@@ -218,11 +189,7 @@ export function parseSessionListQuery(
     }
   }
   if (value.cursor !== undefined) {
-    if (
-      typeof value.cursor !== "string" ||
-      value.cursor.length === 0 ||
-      value.cursor.length > MAX_SESSION_LIST_CURSOR_LENGTH
-    ) {
+    if (typeof value.cursor !== "string" || value.cursor.length === 0 || value.cursor.length > MAX_SESSION_LIST_CURSOR_LENGTH) {
       throw invalid(`cursor must be a non-empty string of at most ${MAX_SESSION_LIST_CURSOR_LENGTH} characters`);
     }
   }
@@ -234,10 +201,7 @@ export function parseSessionListQuery(
   }
   for (const key of SESSION_LIST_LINK_STRING_KEYS) {
     const field = value[key];
-    if (
-      field !== undefined &&
-      (typeof field !== "string" || field.length === 0 || field.length > MAX_SESSION_LINK_ID_LENGTH)
-    ) {
+    if (field !== undefined && (typeof field !== "string" || field.length === 0 || field.length > MAX_SESSION_LINK_ID_LENGTH)) {
       throw invalid(`${key} must be a non-empty string of at most ${MAX_SESSION_LINK_ID_LENGTH} characters`);
     }
   }
@@ -267,10 +231,7 @@ export function parseSessionParentLink(value: unknown): SessionParentLink | unde
   }
   for (const key of PARENT_LINK_KEYS) {
     const field = value[key];
-    if (
-      field !== undefined &&
-      (typeof field !== "string" || field.length === 0 || field.length > MAX_SESSION_LINK_ID_LENGTH)
-    ) {
+    if (field !== undefined && (typeof field !== "string" || field.length === 0 || field.length > MAX_SESSION_LINK_ID_LENGTH)) {
       throw invalid(`parent.${key} must be a non-empty string of at most ${MAX_SESSION_LINK_ID_LENGTH} characters`);
     }
   }

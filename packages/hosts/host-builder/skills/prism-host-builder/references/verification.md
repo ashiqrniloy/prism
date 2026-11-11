@@ -83,7 +83,7 @@ same answer.
 
 Each call checks the installed `@arnilo/prism` against the version the indexes describe. A mismatch is an
 `ERR_PRISM_HOST_BUILDER_VERSION` tool error naming both versions and the fix; do not work around it, install the
-matching `@arnilo/prism-host-builder`. An unknown name returns the nearest names, not an error. The server also serves
+matching `@arnilo/prism-hosts/host-builder`. An unknown name returns the nearest names, not an error. The server also serves
 the installed docs as `prism-docs://` resources and three prompts: `build-host`, `add-capability` and `upgrade-host`.
 
 Three more tools check the host's own code. They are not read-only: each runs that code in a child process, and only

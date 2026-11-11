@@ -58,7 +58,10 @@ export async function loadPinnedBytes(pin = EXPRESS_PIN, { cache = cacheRoot(), 
   } finally {
     await rm(temp, { force: true });
   }
-  await writeFile(`${path}.license.json`, `${JSON.stringify({ license: pin.license, source: pin.licenseUrl, commit: pin.commit }, null, 2)}\n`);
+  await writeFile(
+    `${path}.license.json`,
+    `${JSON.stringify({ license: pin.license, source: pin.licenseUrl, commit: pin.commit }, null, 2)}\n`,
+  );
   return bytes;
 }
 

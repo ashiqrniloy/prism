@@ -17,7 +17,7 @@ import {
   type MemoryVectorMetadataPage,
   redactJson,
   type VectorScanMetadataQuery,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { memoryWriteVersion } from "../directory.js";
 import {
   DEFAULT_DECAY,

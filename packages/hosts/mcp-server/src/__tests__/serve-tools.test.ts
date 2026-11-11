@@ -1,4 +1,4 @@
-import { describe, it, afterEach } from "bun:test";
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,10 +25,10 @@ import {
   type ToolDefinition,
 } from "@arnilo/prism";
 import { type CallbackBroker, createCallbackBroker, effectsTable, type HookCodec, type McpEndpoint } from "@arnilo/prism/driver-kit";
+import approval from "@arnilo/prism-extensions/approval";
+import toolsCoding, { createEditTool } from "@arnilo/prism-tools/coding";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import approval from "@arnilo/prism-approval";
-import toolsCoding, { createEditTool } from "@arnilo/prism-tools-coding";
 import { ServeToolsError, serveTools, skillResources } from "../index.js";
 import type {
   PermissionCodec,
@@ -273,7 +273,7 @@ function countingHost(): { readonly host: HostPort; readonly asked: () => number
   return {
     host: {
       ui: {
-        // `confirm` then `select` (once/always), as `@arnilo/prism-approval` prompts.
+        // `confirm` then `select` (once/always), as `@arnilo/prism-extensions/approval` prompts.
         request: (async (): Promise<HostUiResponse> => {
           asked += 1;
           return { status: "answered", value: asked % 2 === 1 ? true : "once" };
@@ -877,12 +877,77 @@ describe("serveTools", () => {
       },
       async ({ client }) => {
         const result = await client.callTool({ name: "web", arguments: {} });
-        const expected = formatUntrustedToolText({ name: "web", content: [{ type: "text", text: "# Page" }], value, metadata: { trust: "untrusted_external", source: value.url } });
+        const expected = formatUntrustedToolText({
+          name: "web",
+          content: [{ type: "text", text: "# Page" }],
+          value,
+          metadata: { trust: "untrusted_external", source: value.url },
+        });
         assert.equal(textOf(result), expected, "one envelope, built by the kernel helper");
         assert.equal((textOf(result).match(/<\/untrusted_external_content>/g) ?? []).length, 1);
         assert.deepEqual(result.structuredContent, value, "the value is still structured");
       },
     );
+  });
+
+  it("clipped_untrusted_output_keeps_its_closing_boundary_and_utf8", async () => {
+    const body = "界".repeat(512);
+    await withServed(
+      {
+        allow: ["web"],
+        tools: [
+          echoTool({
+            name: "web",
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "web",
+              content: [{ type: "text", text: body }],
+              metadata: { trust: "untrusted_external", source: "https://example.test/page" },
+            }),
+          }),
+        ],
+        transport: "loopback-http",
+        limits: { resultBytes: 256 },
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "web", arguments: {} });
+        const text = textOf(result);
+        assert.notEqual(result.isError, true);
+        assert.ok(Buffer.byteLength(text, "utf8") <= 256);
+        assert.match(text, /<untrusted_external_content/);
+        assert.ok(text.endsWith("\n</untrusted_external_content>"));
+        assert.doesNotMatch(text, /\uFFFD/);
+        assert.ok(!text.includes(body), "oversized content is clipped, never sent whole");
+      },
+    );
+  });
+
+  it("permission_tool_names_cannot_replace_an_allowed_tool", async () => {
+    await withRun({ tools: [echoTool()] }, async ({ run }) => {
+      const broker = await createCallbackBroker(run, {
+        runDir: tempDir("serve-tools-conflict-"),
+        hookCodec: codec,
+        failClosed: FAIL,
+        timeoutMs: 10_000,
+      });
+      try {
+        for (const name of ["", "echo"]) {
+          await assert.rejects(
+            serveTools(run, {
+              broker,
+              tools: [echoTool()],
+              allow: ["echo"],
+              transport: "loopback-http",
+              origin: ORIGIN,
+              permissionTool: permissionTool({ name }),
+            }),
+            (error: unknown) => error instanceof ServeToolsError && error.code === "serve_tools_permission_conflict",
+          );
+        }
+      } finally {
+        await broker.close();
+      }
+    });
   });
 
   it("served_error_sets_is_error", async () => {

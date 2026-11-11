@@ -1,6 +1,6 @@
-import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-extensions/workflows";
 import { createAgent, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
-import { createTimelineFolder, projectWorkflowTimeline, summarizeTimeline } from "@arnilo/prism-observability";
+import { createTimelineFolder, projectWorkflowTimeline, summarizeTimeline } from "@arnilo/prism-extensions/observability";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -10,7 +10,7 @@ import {
   runWorkflow,
   serializeWorkflowGraph,
   workflowGraphToMermaid,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
 import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 

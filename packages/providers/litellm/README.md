@@ -1,4 +1,4 @@
-# @arnilo/prism-provider-litellm
+# @arnilo/prism-ai/litellm
 
 Registers a host-run [LiteLLM Proxy](https://docs.litellm.ai/docs/proxy/quick_start) as a Prism provider:
 one Chat Completions route, conservative per-group model discovery, and per-call LiteLLM telemetry
@@ -7,14 +7,14 @@ one Chat Completions route, conservative per-group model discovery, and per-call
 ## Install
 
 ```bash
-prism add @arnilo/prism-provider-litellm
+prism add @arnilo/prism-ai/litellm
 ```
 
 ```jsonc
 {
-  "packages": ["@arnilo/prism-provider-litellm"],
+  "packages": ["@arnilo/prism-ai/litellm"],
   "packageConfig": {
-    "@arnilo/prism-provider-litellm": { "apiKey": "env:LITELLM_API_KEY" }
+    "@arnilo/prism-ai/litellm": { "apiKey": "env:LITELLM_API_KEY" }
   }
 }
 ```
@@ -186,7 +186,7 @@ what it charged matches what the proxy logged. It is opt-in, runs after the fact
 calls**.
 
 ```ts
-import { litellmSpendLogs } from "@arnilo/prism-provider-litellm";
+import { litellmSpendLogs } from "@arnilo/prism-ai/litellm";
 
 const { rows, missing } = await litellmSpendLogs({
   baseUrl: "http://127.0.0.1:4000",

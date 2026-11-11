@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type Agent, type AgentEvent, createAgent, createSessionIndex, definePackage, type HostUi } from "@arnilo/prism";
 import { createScriptedHostUi } from "@arnilo/prism/testing";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import type { HostConfig } from "../host/config.js";
 import { connectRemoteWorker, REMOTE_ENDPOINT } from "../host/remote.js";
 import { sqlitePackage } from "../host/store.js";

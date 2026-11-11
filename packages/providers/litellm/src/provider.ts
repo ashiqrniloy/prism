@@ -7,12 +7,7 @@ import {
   type RoutedProviderRoute,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
-import {
-  LITELLM_CALL_ID_HEADER,
-  type LiteLLMTelemetry,
-  liteLLMUsageMetadata,
-  readLiteLLMHeaders,
-} from "./headers.js";
+import { LITELLM_CALL_ID_HEADER, type LiteLLMTelemetry, liteLLMUsageMetadata, readLiteLLMHeaders } from "./headers.js";
 import { LITELLM_DEFAULT_BASE_URL } from "./models.js";
 
 /** `request.metadata` key carrying the minted call id from the `generate` wrapper to the route header. */
@@ -40,9 +35,7 @@ export function mapLiteLLMUsage(raw: unknown, chunk?: JsonObject): Usage | undef
   // input; the guard keeps the shared invariant cacheRead + cacheWrite <= input.
   const budget = (base.inputTokens ?? 0) - (base.cacheReadTokens ?? 0) - (base.cacheWriteTokens ?? 0);
   const read = base.cacheReadTokens ?? (cacheRead !== undefined && cacheRead <= budget ? cacheRead : undefined);
-  const write =
-    base.cacheWriteTokens ??
-    (cacheWrite !== undefined && cacheWrite <= budget - (read ?? 0) ? cacheWrite : undefined);
+  const write = base.cacheWriteTokens ?? (cacheWrite !== undefined && cacheWrite <= budget - (read ?? 0) ? cacheWrite : undefined);
   const usage: Usage = {
     ...base,
     ...(read !== undefined ? { cacheReadTokens: read } : {}),
@@ -155,7 +148,10 @@ export function createLiteLLMProvider(options: LiteLLMProviderOptions = {}): Mod
       ...(usage.cost === undefined && found.responseCost !== undefined ? { cost: found.responseCost, currency: "USD" } : {}),
       metadata: {
         ...(usage.metadata ?? {}),
-        litellm: { ...((usage.metadata?.litellm as JsonObject | undefined) ?? {}), ...(liteLLMUsageMetadata(found) as unknown as JsonObject) },
+        litellm: {
+          ...((usage.metadata?.litellm as JsonObject | undefined) ?? {}),
+          ...(liteLLMUsageMetadata(found) as unknown as JsonObject),
+        },
       },
     };
   };

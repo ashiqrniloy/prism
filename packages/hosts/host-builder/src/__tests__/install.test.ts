@@ -57,7 +57,7 @@ describe("installer", () => {
       assert.match(read(root, `${dir}/SKILL.md`), /^---\nname: prism-host-builder/, target);
       assert.ok(existsSync(join(root, dir, "references/pitfalls.md")), target);
       const stamp = JSON.parse(read(root, `${dir}/${STAMP}`));
-      assert.equal(stamp.package, "@arnilo/prism-host-builder");
+      assert.equal(stamp.package, "@arnilo/prism-hosts/host-builder");
       assert.match(stamp.contentHash, /^[0-9a-f]{64}$/);
       assert.ok(stamp.files.includes("SKILL.md"));
       // Without --mcp, no agent configuration is touched.
@@ -117,7 +117,10 @@ describe("installer", () => {
     const result = installHostBuilder({ target: "codex", root, mcp: true });
     assert.equal(result.mcp?.status, "snippet");
     assert.equal(result.mcp?.file, ".codex/config.toml");
-    assert.equal(result.mcp?.snippet, '[mcp_servers.prism]\ncommand = "bunx"\nargs = ["prism-host-builder", "mcp"]');
+    assert.equal(
+      result.mcp?.snippet,
+      '[mcp_servers.prism]\ncommand = "bunx"\nargs = ["--package", "@arnilo/prism-hosts", "prism-host-builder", "mcp"]',
+    );
     assert.ok(describeInstall(result).join("\n").includes("[mcp_servers.prism]"));
     assert.ok(!existsSync(join(root, ".codex")));
     // The skill still lands in .agents/skills, which Codex reads.
@@ -127,9 +130,9 @@ describe("installer", () => {
   it("prism target prints the packages snippet; agents with --mcp says there is no config", () => {
     const prism = installHostBuilder({ target: "prism", root: project() });
     const text = describeInstall(prism).join("\n");
-    assert.match(text, /@arnilo\/prism-context-files/);
-    assert.match(text, /@arnilo\/prism-mcp/);
-    assert.match(text, /args: \["prism-host-builder", "mcp"\]/);
+    assert.match(text, /@arnilo\/prism-extensions\/context-files/);
+    assert.match(text, /@arnilo\/prism-extensions\/mcp/);
+    assert.match(text, /args: \["--package", "@arnilo\/prism-hosts", "prism-host-builder", "mcp"\]/);
     const agents = installHostBuilder({ target: "agents", root: project(), mcp: true });
     assert.equal(agents.mcp, undefined);
     assert.match(agents.notes.join("\n"), /no MCP configuration/);

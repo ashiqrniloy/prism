@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { JsonObject } from "@arnilo/prism";
 import { MemoryValidationError } from "../errors.js";
 import { mergeJsonObjects } from "../util.js";

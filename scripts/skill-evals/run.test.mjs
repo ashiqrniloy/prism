@@ -17,13 +17,27 @@ import {
   sha256,
   triggerStats,
 } from "./lib.mjs";
-import { allowedProviders, assertNoSecret, assertPreregistered, buildAgent, loadSuite, parseArgs, readLock, registrationFor, run, sealEvidence } from "./run.mjs";
+import {
+  allowedProviders,
+  assertNoSecret,
+  assertPreregistered,
+  buildAgent,
+  loadSuite,
+  parseArgs,
+  readLock,
+  registrationFor,
+  run,
+  sealEvidence,
+} from "./run.mjs";
 
 const SKILLS = ["web-research", "coding-workflow", "browser-automation", "delegating-work"];
 
 test("skill_eval_criteria_preregistered", async () => {
   const { criteria, hash } = loadCriteria();
-  assert.deepEqual(criteria.skills.map((skill) => skill.name), SKILLS);
+  assert.deepEqual(
+    criteria.skills.map((skill) => skill.name),
+    SKILLS,
+  );
   assert.equal(criteria.shipRule.regression.delta, 0);
   assert.equal(criteria.shipRule.regression.alpha, 0.05);
   assert.equal(criteria.shipRule.minTriggerPrecision, 0.7);
@@ -49,7 +63,10 @@ test("skill_eval_offline_runs_every_dataset", async () => {
   try {
     const result = await run({ offline: true, providers: [], outDir: out });
     const elapsed = performance.now() - started;
-    assert.deepEqual(result.summaries.map((summary) => summary.skill), SKILLS);
+    assert.deepEqual(
+      result.summaries.map((summary) => summary.skill),
+      SKILLS,
+    );
     for (const summary of result.summaries) {
       const [provider] = summary.providers;
       assert.equal(summary.mode, "offline");
@@ -95,7 +112,10 @@ test("skill_eval_graders_reject_a_do_nothing_agent_and_accept_the_oracle", async
       const solved = await module.createEnvironment({ mode: "offline", item });
       try {
         const answer = await solved.applyOffline(item);
-        const delegated = (solved.offlineCalls ?? []).length > 0 ? [{ kind: "tool", name: "delegate", status: "succeeded", output: solved.offlineChild?.() ?? "" }] : [];
+        const delegated =
+          (solved.offlineCalls ?? []).length > 0
+            ? [{ kind: "tool", name: "delegate", status: "succeeded", output: solved.offlineChild?.() ?? "" }]
+            : [];
         const snapshot = await solved.snapshot({ text: answer }, { steps: delegated });
         const verdict = module.grade(item.expected.grade, snapshot);
         assert.equal(verdict.pass, true, `${spec.name}/${item.id}: the oracle must pass (${verdict.reason})`);
@@ -112,7 +132,15 @@ test("skill_eval_arms_differ_only_by_skill", async () => {
     const item = dataset.items.find((candidate) => candidate.expected.kind === "trigger");
     const inspected = {};
     for (const arm of ARMS) {
-      const { agent, env } = await buildAgent({ skill: spec.name, arm, mode: "offline", item, provider: undefined, criteria: suite.criteria, module });
+      const { agent, env } = await buildAgent({
+        skill: spec.name,
+        arm,
+        mode: "offline",
+        item,
+        provider: undefined,
+        criteria: suite.criteria,
+        module,
+      });
       try {
         inspected[arm] = agent.inspect();
       } finally {
@@ -144,7 +172,7 @@ test("skill_eval_evidence_contains_no_secret", async () => {
   const sealed = sealEvidence({ note: `key ${secret} leaked`, nested: { value: secret } }, [secret]);
   assert.ok(!JSON.stringify(sealed).includes(secret));
   assert.throws(() => assertNoSecret(`token ${secret}`, [secret]), /secret value/);
-  assert.throws(() => assertNoSecret("sk-abcdefghijklmnopqrstuvwxyz0123456789", []), /key-shaped/);
+  assert.throws(() => assertNoSecret("sk-" + "abcdefghijklmnopqrstuvwxyz0123456789", []), /key-shaped/);
   assert.throws(() => assertNoSecret("Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123", []), /key-shaped/);
   // Every committed evidence file is clean.
   if (!existsSync(EVIDENCE_DIR)) return;
@@ -159,17 +187,40 @@ function syntheticReport({ id, pass, loaded }) {
   const items = [];
   pass.forEach((ok, index) => {
     const itemId = `item-${index}`;
-    const own = [{ id: `${id}-ts-${index}`, scorerId: "task_success", status: "scored", score: ok ? 1 : 0, itemId, sampled: true, createdAt: "2026-11-05T00:00:00Z" }];
+    const own = [
+      {
+        id: `${id}-ts-${index}`,
+        scorerId: "task_success",
+        status: "scored",
+        score: ok ? 1 : 0,
+        itemId,
+        sampled: true,
+        createdAt: "2026-11-05T00:00:00Z",
+      },
+    ];
     if (loaded[index] !== null && loaded[index] !== undefined)
-      own.push({ id: `${id}-st-${index}`, scorerId: "skill_triggered", status: "scored", score: 1, itemId, sampled: true, createdAt: "2026-11-05T00:00:00Z", metadata: { loaded: loaded[index], kind: "trigger" } });
+      own.push({
+        id: `${id}-st-${index}`,
+        scorerId: "skill_triggered",
+        status: "scored",
+        score: 1,
+        itemId,
+        sampled: true,
+        createdAt: "2026-11-05T00:00:00Z",
+        metadata: { loaded: loaded[index], kind: "trigger" },
+      });
     evaluations.push(...own);
-    items.push({ item: { id: itemId, expected: { kind: "trigger" } }, trials: [{ status: "succeeded", costComplete: false }], evaluations: own });
+    items.push({
+      item: { id: itemId, expected: { kind: "trigger" } },
+      trials: [{ status: "succeeded", costComplete: false }],
+      evaluations: own,
+    });
   });
   return {
     experimentId: id,
     datasetId: "synthetic",
     datasetVersion: "1",
-    datasetContentHash: "sha256:" + "a".repeat(64),
+    datasetContentHash: `sha256:${"a".repeat(64)}`,
     status: "succeeded",
     items,
     evaluations,
@@ -194,12 +245,22 @@ test("skill_eval_v3_rule_ships_only_a_measured_benefit_on_the_preload_run", () =
   const shipped = decideShip({ skillReport: helps, noSkillReport: noSkill, criteria, loading: "preload" });
   assert.equal(shipped.verdict, "ship", shipped.reason);
   // Identical arms: nothing regressed, but nothing improved either, so it does not ship.
-  const same = decideShip({ skillReport: syntheticReport({ id: "s2", pass: ten(true), loaded: ten(true) }), noSkillReport: syntheticReport({ id: "n2", pass: ten(true), loaded: ten(null) }), criteria, loading: "preload" });
+  const same = decideShip({
+    skillReport: syntheticReport({ id: "s2", pass: ten(true), loaded: ten(true) }),
+    noSkillReport: syntheticReport({ id: "n2", pass: ten(true), loaded: ten(null) }),
+    criteria,
+    loading: "preload",
+  });
   assert.equal(same.verdict, "fail");
   assert.match(same.reason, /no measured benefit/);
   assert.equal(applyRound(same, 1), "rewrite");
   assert.equal(applyRound(same, 2), "remove");
-  const worse = decideShip({ skillReport: syntheticReport({ id: "s3", pass: ten(false), loaded: ten(true) }), noSkillReport: syntheticReport({ id: "n3", pass: ten(true), loaded: ten(null) }), criteria, loading: "preload" });
+  const worse = decideShip({
+    skillReport: syntheticReport({ id: "s3", pass: ten(false), loaded: ten(true) }),
+    noSkillReport: syntheticReport({ id: "n3", pass: ten(true), loaded: ten(null) }),
+    criteria,
+    loading: "preload",
+  });
   assert.match(worse.reason, /significant regression/);
 });
 
@@ -278,11 +339,14 @@ test("skill_eval_trigger_and_misuse_read_the_timeline", () => {
   assert.equal(loadedSkill(timeline, "web-research"), true);
   assert.equal(loadedSkill(timeline, "coding-workflow"), false);
   assert.equal(failedToolCalls(timeline), 2);
-  const report = { evaluations: [{ scorerId: "skill_triggered", status: "scored", metadata: { loaded: true, kind: "trigger" } }, { scorerId: "skill_triggered", status: "scored", metadata: { loaded: true, kind: "non_trigger" } }, { scorerId: "skill_triggered", status: "scored", metadata: { loaded: false, kind: "trigger" } }] };
-  assert.deepEqual(
-    { recall: triggerStats(report).recall, precision: triggerStats(report).precision },
-    { recall: 0.5, precision: 0.5 },
-  );
+  const report = {
+    evaluations: [
+      { scorerId: "skill_triggered", status: "scored", metadata: { loaded: true, kind: "trigger" } },
+      { scorerId: "skill_triggered", status: "scored", metadata: { loaded: true, kind: "non_trigger" } },
+      { scorerId: "skill_triggered", status: "scored", metadata: { loaded: false, kind: "trigger" } },
+    ],
+  };
+  assert.deepEqual({ recall: triggerStats(report).recall, precision: triggerStats(report).precision }, { recall: 0.5, precision: 0.5 });
 });
 
 test("skill_eval_gradeanswer_rules", () => {
@@ -302,8 +366,14 @@ test("skill_eval_paid_run_needs_a_matching_lock", async () => {
   assert.throws(() => assertPreregistered(suite, undefined, { requireCommitted: false }), /lock is missing|criteria.lock.json is missing/);
   const lock = await registrationFor(suite);
   assertPreregistered(suite, lock, { requireCommitted: false });
-  assert.throws(() => assertPreregistered(suite, { ...lock, criteriaHash: sha256("changed") }, { requireCommitted: false }), /criteria.json changed/);
-  assert.throws(() => assertPreregistered(suite, { ...lock, datasets: { ...lock.datasets, "web-research": "sha256:x" } }, { requireCommitted: false }), /dataset changed/);
+  assert.throws(
+    () => assertPreregistered(suite, { ...lock, criteriaHash: sha256("changed") }, { requireCommitted: false }),
+    /criteria.json changed/,
+  );
+  assert.throws(
+    () => assertPreregistered(suite, { ...lock, datasets: { ...lock.datasets, "web-research": "sha256:x" } }, { requireCommitted: false }),
+    /dataset changed/,
+  );
 });
 
 test("skill_eval_arguments", () => {
@@ -317,7 +387,10 @@ test("skill_eval_arguments", () => {
 test("skill_eval_provider_allowlist", async () => {
   const { criteria } = loadCriteria();
   const ids = ["hyper", "opencode-go", "openrouter", "kilo", "commandcode"];
-  assert.deepEqual(allowedProviders(criteria, ids).map((entry) => entry.id), ids);
+  assert.deepEqual(
+    allowedProviders(criteria, ids).map((entry) => entry.id),
+    ids,
+  );
   assert.throws(() => allowedProviders(criteria, ["anthropic"]), /not allowed/);
   assert.throws(() => allowedProviders(criteria, ["openrouter/free"]), /not allowed/);
   const saved = process.env.PRISM_LIVE_SKILL_EVAL_OPENROUTER_MODEL;

@@ -17,7 +17,14 @@ import { dirname, join } from "node:path";
  * a new union member is additive for them. Anything a host constructs and passes in is not listed, since
  * a widened input union can break exhaustive host code that builds it. Keyed by bare name, any entry.
  */
-export const PRODUCER_ONLY_TYPES = new Set(["AgentEventPayload", "AgentEvent", "AgentEventType", "AgentFinishReason", "HostUiRequest", "SessionEntryKind"]);
+export const PRODUCER_ONLY_TYPES = new Set([
+  "AgentEventPayload",
+  "AgentEvent",
+  "AgentEventType",
+  "AgentFinishReason",
+  "HostUiRequest",
+  "SessionEntryKind",
+]);
 
 const OPEN = new Set(["(", "[", "{", "<"]);
 const CLOSE = new Set([")", "]", "}", ">"]);

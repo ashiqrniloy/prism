@@ -8,7 +8,7 @@
  * text, never note content, and never enters the prompt prefix.
  */
 import type { SessionEntry } from "@arnilo/prism";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { gatherConsolidationCandidates } from "./consolidation/gather.js";
 import type { ExchangePair } from "./exchanges.js";
 import type { MemoryNoteScope } from "./types.js";

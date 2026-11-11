@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- New provider package (plan 204 Task 5): `@arnilo/prism-provider-openai-codex` registers the
+- New provider package (plan 204 Task 5): `@arnilo/prism-ai/openai-codex` registers the
   `openai-codex` provider for OpenAI models on a ChatGPT plan through Sign in with ChatGPT. The
   grant lives in a writable `keyring:` ref (default `keyring:openai-codex`), is refreshed per request
   inside a five-minute margin, and persists the rotated record before it is used. The package declares

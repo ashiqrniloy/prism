@@ -11,7 +11,14 @@ import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { createHashEmbedder, deriveEntryImportance, type ImportanceFromReflection, type MemoryVectorHit, rerankRecallHits, resolveRecallScoring } from "@arnilo/prism-memory-core";
+import {
+  createHashEmbedder,
+  deriveEntryImportance,
+  type ImportanceFromReflection,
+  type MemoryVectorHit,
+  rerankRecallHits,
+  resolveRecallScoring,
+} from "@arnilo/prism-memory-system/core";
 import { clampImportance } from "../../../../core/src/scoring.js";
 import { createMemory } from "../../index.js";
 

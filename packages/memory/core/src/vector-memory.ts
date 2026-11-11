@@ -207,7 +207,8 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
     function inThread(scope: Required<MemoryScope>): MemoryVectorRecord[] {
       const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
       return [...target.values()].filter(
-        (record) => record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId,
+        (record) =>
+          record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId,
       );
     }
     function directoryInvalidations(scope: Required<MemoryScope>) {
@@ -292,8 +293,15 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
         assertNotAborted(options.signal);
         const required = requireScope(scope, true);
         const selected = new Set(ids);
-        return sorted([...target.values()].filter(record => selected.has(record.id) &&
-          record.tenantId === required.tenantId && record.resourceId === required.resourceId && record.threadId === required.threadId));
+        return sorted(
+          [...target.values()].filter(
+            (record) =>
+              selected.has(record.id) &&
+              record.tenantId === required.tenantId &&
+              record.resourceId === required.resourceId &&
+              record.threadId === required.threadId,
+          ),
+        );
       },
 
       async getByThread(scope) {
@@ -347,7 +355,10 @@ export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}):
       async topTags(scope, query = {}) {
         assertNotAborted(query.signal);
         const limit = resolveDirectoryLimit(query.limit);
-        return rankDirectoryTags(scanDirectory(inThread(scope), directoryInvalidations(scope), resolveDirectoryAsOf(query.asOf)).tags, limit);
+        return rankDirectoryTags(
+          scanDirectory(inThread(scope), directoryInvalidations(scope), resolveDirectoryAsOf(query.asOf)).tags,
+          limit,
+        );
       },
 
       async getBySource(scope, sourceId, sourceOptions = {}) {

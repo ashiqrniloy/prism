@@ -2,11 +2,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ProviderRequest } from "@arnilo/prism";
 import { createAgent, providerDone } from "@arnilo/prism";
-import { contextFiles } from "@arnilo/prism-context-files";
+import { contextFiles } from "@arnilo/prism-extensions/context-files";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMockProvider } from "@arnilo/prism/testing";
 
-// Workspace skill discovery through `@arnilo/prism-context-files`, end-to-end with the mock
+// Workspace skill discovery through `@arnilo/prism-extensions/context-files`, end-to-end with the mock
 // provider. The package scans the standard project skill roots (`.agents/skills`, `.claude/skills`)
 // for `<name>/SKILL.md`, registers what it finds, and the mock agent renders the instruction from
 // the discovered skill — proving no manual contribution scan or host registration was needed.

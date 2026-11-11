@@ -13,8 +13,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { validateAgainstJsonSchema } from "@arnilo/prism-memory-core";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { validateAgainstJsonSchema } from "@arnilo/prism-memory-system/core";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import memorySystem, { memoryFabricConfigSchema, parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
 import { canonicalArm, historicalVariants, memoryConfigs, resolvedMemoryConfigs } from "../ablations.mjs";
 import { textOf, tokens } from "../injection-log.mjs";

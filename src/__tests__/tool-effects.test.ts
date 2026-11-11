@@ -4,7 +4,6 @@ import type { ToolCallContent, ToolDefinition, ToolEffectKey, ToolEffectStore } 
 import {
   askEveryTool,
   createAgent,
-  
   createMemorySessionStore,
   createMemoryToolEffectStore,
   createSecretRedactor,
@@ -12,7 +11,6 @@ import {
   dispatchToolCall,
   providerDone,
   providerTextDelta,
-  
   toolCallContent,
 } from "../index.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
@@ -359,19 +357,23 @@ describe("tool effect dispatch", () => {
       ownership,
       slots: { store: createMemorySessionStore() },
       effectStore: store,
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turns += 1;
-          if (turns === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call", "mutate", { value: "ok" }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turns += 1;
+              if (turns === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("call", "mutate", { value: "ok" }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("done");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: { add: [mutation(() => ({ toolCallId: "call", name: "mutate", value: ++calls }))] },
     });
     const session = await agent.session({ id: "effect-durable-session", create: true });

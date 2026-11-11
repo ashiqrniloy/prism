@@ -10,19 +10,19 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createReadOnlyTools } from "@arnilo/prism-tools-coding";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import {
   assertEvaluationThreshold,
-  wilsonInterval,
   defineDataset,
   defineScorer,
   type ExperimentReport,
   runExperiment,
   scoreRun,
   serializeEvaluationReport,
-} from "@arnilo/prism-evals";
-import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-tools-browser";
-import { providerPackage } from "@arnilo/prism/provider-kit";
+  wilsonInterval,
+} from "@arnilo/prism-hosts/evals";
+import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-tools/browser";
+import { createReadOnlyTools } from "@arnilo/prism-tools/coding";
 
 const scorer = defineScorer<{ kind: string }, { pass: boolean }>({
   id: "pass-flag",
@@ -122,13 +122,17 @@ try {
   });
   const mock = await createAgent({
     model: { provider: "mock", model: "offline" },
-    packages: [providerPackage("test-provider", [{
-      id: "oracle-mock",
-      async *generate() {
-        yield providerTextDelta("ok");
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "oracle-mock",
+          async *generate() {
+            yield providerTextDelta("ok");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
   });
   const toEnvironment = async (item: { expected?: { hash?: string } }) => ({
     testsPassed:
@@ -157,10 +161,7 @@ try {
     toEnvironment,
   });
   // A failing invariant must block the release, not just lower the mean.
-  assert.throws(
-    () => assertEvaluationThreshold(red, { minimumMacroMean: 1, requireInvariants: true }),
-    /hard invariant failed/,
-  );
+  assert.throws(() => assertEvaluationThreshold(red, { minimumMacroMean: 1, requireInvariants: true }), /hard invariant failed/);
   assert.equal(red.aggregate.invariantsPassed, false);
   oracleRedBlocked = true;
 } finally {
@@ -182,7 +183,16 @@ const report = {
     skippedCount: 0,
     failedCount: evaluations.filter((e) => e.status === "failed").length,
     macroMean: mean,
-    scorers: { "pass-flag": { items: scored.length, records: scored.length, mean: mean ?? 0, passRate: scored.filter(e => e.score === 1).length / scored.length, method: "wilson" as const, ci95: wilsonInterval(scored.filter(e => e.score === 1).length, scored.length) } },
+    scorers: {
+      "pass-flag": {
+        items: scored.length,
+        records: scored.length,
+        mean: mean ?? 0,
+        passRate: scored.filter((e) => e.score === 1).length / scored.length,
+        method: "wilson" as const,
+        ci95: wilsonInterval(scored.filter((e) => e.score === 1).length, scored.length),
+      },
+    },
   },
 } satisfies ExperimentReport;
 

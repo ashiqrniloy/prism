@@ -26,7 +26,10 @@ export function normalQuantile(p) {
   if (p > 1 - low) return -normalQuantile(1 - p);
   const q = p - 0.5;
   const r = q * q;
-  return ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  return (
+    ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) /
+    (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+  );
 }
 
 /** The smallest difference in accuracy (a fraction) a paired design of `n` pairs can show. */
@@ -40,8 +43,16 @@ export function minDetectableDifference({ n, discordance, alpha = 0.05, power = 
 
 if (import.meta.main) {
   try {
-    const { values } = parseArgs({ options: { n: { type: "string" }, discordance: { type: "string" }, alpha: { type: "string" }, power: { type: "string" } }, strict: true });
-    const design = { n: Number(values.n), discordance: Number(values.discordance), ...(values.alpha ? { alpha: Number(values.alpha) } : {}), ...(values.power ? { power: Number(values.power) } : {}) };
+    const { values } = parseArgs({
+      options: { n: { type: "string" }, discordance: { type: "string" }, alpha: { type: "string" }, power: { type: "string" } },
+      strict: true,
+    });
+    const design = {
+      n: Number(values.n),
+      discordance: Number(values.discordance),
+      ...(values.alpha ? { alpha: Number(values.alpha) } : {}),
+      ...(values.power ? { power: Number(values.power) } : {}),
+    };
     const delta = minDetectableDifference(design);
     console.log(JSON.stringify({ ...design, minDetectablePoints: Math.round(delta * 1000) / 10 }));
   } catch (error) {

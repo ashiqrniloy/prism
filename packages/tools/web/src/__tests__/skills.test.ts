@@ -34,12 +34,12 @@ async function firstRequest(
   }
 }
 
-describe("@arnilo/prism-tools-web skills", () => {
+describe("@arnilo/prism-tools/web skills", () => {
   it("tools_web_registers_bundled_skills", async () => {
     const { text, skills } = await firstRequest();
     const skill = skills.find((entry) => entry.name === "web-research");
     assert.ok(skill, "inspect().skills lists web-research");
-    assert.equal(skill.package, "@arnilo/prism-tools-web");
+    assert.equal(skill.package, "@arnilo/prism-tools/web");
     assert.deepEqual(skill.requiresTools, ["web_fetch"]);
     assert.match(text, /- web-research: /);
   });

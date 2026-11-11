@@ -55,7 +55,7 @@ export function loadEnv(env = process.env) {
 }
 export async function importProvider(id, importer = (name) => import(name)) {
   validProvider(id);
-  const module = await importer(`@arnilo/prism-provider-${id}`);
+  const module = await importer(`@arnilo/prism-ai/${id}`);
   const factories = Object.entries(module).filter(([name, value]) => /^create.+Provider$/.test(name) && typeof value === "function");
   const catalogs = Object.entries(module).filter(([name, value]) => /^list.+Models$/.test(name) && typeof value === "function");
   if (factories.length !== 1 || catalogs.length !== 1)
@@ -231,11 +231,11 @@ export async function writeEvidence(report, { root = ROOT, date = new Date().toI
  * exposes `resolve`/`store`/`delete`, so the provider can persist a rotated record too.
  */
 export async function credentialSlot(importer = (name) => import(name)) {
-  const keyring = await importer("@arnilo/prism-credentials-keyring");
+  const keyring = await importer("@arnilo/prism-extensions/keyring");
   const createResolver = keyring.createKeyringCredentialResolver ?? keyring.default?.createKeyringCredentialResolver;
   const createStore = keyring.createKeychainCredentialStore ?? keyring.default?.createKeychainCredentialStore;
   if (typeof createResolver !== "function" || typeof createStore !== "function")
-    throw new Error("ProviderProbe: @arnilo/prism-credentials-keyring exposes no credential resolver");
+    throw new Error("ProviderProbe: @arnilo/prism-extensions/keyring exposes no credential resolver");
   return createResolver({ store: createStore({ service: keyring.KEYRING_DEFAULT_SERVICE }) });
 }
 

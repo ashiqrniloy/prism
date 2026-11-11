@@ -1,9 +1,9 @@
-import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const SRC = join(REPO_ROOT, "packages/memory/core/src");
@@ -42,7 +42,7 @@ describe("memory core package (plan 158 Task 2)", () => {
 
     // Runtime: importing the root never loads pg. The `after` probe proves the check can see it.
     const script = [
-      'const core = await import("@arnilo/prism-memory-core");',
+      'const core = await import("@arnilo/prism-memory-system/core");',
       'const seen = () => Object.keys(require.cache ?? {}).some((key) => key.includes("node_modules/pg/"));',
       "const before = seen();",
       'await import("pg");',

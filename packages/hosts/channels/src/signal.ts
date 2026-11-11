@@ -717,7 +717,9 @@ export interface SignalConnectOptions {
   readonly leases?: LeaseStore;
   readonly cursorOwnership?: OwnershipScope;
   readonly connect?: (socketPath: string) => Socket;
-  readonly authorize?: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>;
+  readonly authorize?: (
+    input: ChannelAuthorizeInput,
+  ) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>;
   readonly multiAccount?: boolean;
 }
 
@@ -757,7 +759,8 @@ export async function connectSignal(agent: Agent, options: SignalConnectOptions)
       if (typeof update === "object" && update !== null && "connectionId" in update && "externalActorId" in update && "eventId" in update) {
         return await runtime.admit(update as ChannelInboundEvent);
       }
-      const event = notificationEvent(update, connectionId, resolvedAccount, undefined) ??
+      const event =
+        notificationEvent(update, connectionId, resolvedAccount, undefined) ??
         notificationEvent(update, connectionId, resolvedAccount, (update as { params?: { subscription?: number } })?.params?.subscription);
       if (event && event !== "account_mismatch") {
         return await runtime.admit(event);

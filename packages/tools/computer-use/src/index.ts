@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-tools-computer-use` — the `computer-use-linux` MCP binary as Prism tools.
+ * `@arnilo/prism-tools/computer-use` — the `computer-use-linux` MCP binary as Prism tools.
  *
  * `setup` resolves the host-owned executable on `PATH` and connects over stdio. A missing binary or
  * a refused device admission notes why and registers nothing. Every tool declares
@@ -9,7 +9,7 @@
  * `computer-use-linux` skill.
  *
  * ```ts
- * import toolsComputerUse from "@arnilo/prism-tools-computer-use";
+ * import toolsComputerUse from "@arnilo/prism-tools/computer-use";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -26,7 +26,7 @@
  */
 
 import { definePackage, type PackageInstance } from "@arnilo/prism";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 
 import { resolveCommand } from "./command.js";
 import { type ToolsComputerUseConfig, toolsComputerUseConfigSchema } from "./config.js";
@@ -87,7 +87,7 @@ function errorMessage(error: unknown): string {
 }
 
 const definition = definePackage<ToolsComputerUseConfig>({
-  name: "@arnilo/prism-tools-computer-use",
+  name: "@arnilo/prism-tools/computer-use",
   version: manifest.version,
   description:
     "Linux desktop observation and targeting over the host-owned computer-use-linux MCP binary, with in-tool device admission and declared external effects.",
@@ -154,4 +154,4 @@ export function toolsComputerUse(config: ToolsComputerUseConfig): PackageInstanc
   return definition(config);
 }
 
-export const packageName = "@arnilo/prism-tools-computer-use";
+export const packageName = "@arnilo/prism-tools/computer-use";

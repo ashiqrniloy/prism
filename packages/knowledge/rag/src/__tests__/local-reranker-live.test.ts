@@ -26,8 +26,8 @@ import { cpus, hostname } from "node:os";
 import { dirname, join, sep } from "node:path";
 import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import type { Embedder } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import type { Embedder } from "@arnilo/prism-memory-system/core";
 import {
   chunkMarkdown,
   DEFAULT_LOCAL_RERANK_MODEL,

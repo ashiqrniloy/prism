@@ -2,13 +2,8 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, type ToolDefinition } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import type { McpAppsBridge, McpToolBridge } from "@arnilo/prism-mcp";
-import {
-  createAgUiMcpAdapter,
-  createAgUiMcpAppHandler,
-  createAgUiMcpAppSandbox,
-  resolveAgUiLimits,
-} from "../index.js";
+import type { McpAppsBridge, McpToolBridge } from "@arnilo/prism-extensions/mcp";
+import { createAgUiMcpAdapter, createAgUiMcpAppHandler, createAgUiMcpAppSandbox, resolveAgUiLimits } from "../index.js";
 import { parseAgUiInput } from "../input.js";
 
 const authorization = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
@@ -196,5 +191,4 @@ describe("AG-UI protocol fronting", () => {
     });
     assert.equal((await call("other", { jsonrpc: "2.0", id: 5, method: "tools/list" })).status, 400);
   });
-
 });

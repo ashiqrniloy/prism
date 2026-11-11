@@ -52,7 +52,7 @@ describe("host-builder MCP server", () => {
       const readOnly = (await client.listTools()).tools.filter((tool) => tool.annotations?.readOnlyHint === true);
       assert.deepEqual(readOnly.map((tool) => tool.name).sort(), ["prism_api", "prism_docs", "prism_errors", "prism_examples"]);
       assert.deepEqual((await client.listResources()).resources.map((resource) => resource.uri).sort(), [
-        "prism-docs://prism-approval/README.md",
+        "prism-docs://prism-extensions/approval/README.md",
         "prism-docs://prism/README.md",
         "prism-docs://prism/docs/agent.md",
       ]);
@@ -80,7 +80,7 @@ describe("host-builder MCP server", () => {
       assert.match(example.source, /definePackage/);
       const docs = JSON.parse(resultText(await client.callTool({ name: "prism_docs", arguments: { query: "createAgent" } })));
       assert.equal(docs.hits[0].heading, "Creating an agent");
-      const missing = JSON.parse(resultText(await client.callTool({ name: "prism_examples", arguments: { path: "../package.json" } })));
+      const missing = JSON.parse(resultText(await client.callTool({ name: "prism_examples", arguments: { path: "../../package.json" } })));
       assert.equal(missing.found, false);
     } finally {
       await close();

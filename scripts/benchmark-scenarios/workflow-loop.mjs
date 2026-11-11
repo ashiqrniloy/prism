@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createWorkflowTransitionChannel } from "@arnilo/prism-workflows";
+import { createWorkflowTransitionChannel } from "@arnilo/prism-extensions/workflows";
 /**
  * Plan 045 Task 3 network-free workflow-loop benchmark.
  * Five serial loop iterations run a mock-provider refinement body. The frozen
@@ -11,7 +11,7 @@ import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { createAgent, providerDone, providerTextDelta } from "../../src/index.ts";
-import { createMemoryWorkflowCheckpoints, defineWorkflow, loopNode, runWorkflow } from "@arnilo/prism-workflows";
+import { createMemoryWorkflowCheckpoints, defineWorkflow, loopNode, runWorkflow } from "@arnilo/prism-extensions/workflows";
 import { loadBudgets } from "../budget-gates.mjs";
 import { providerPackage } from "../../src/provider-kit/index.ts";
 

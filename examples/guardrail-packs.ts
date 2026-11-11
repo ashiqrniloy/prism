@@ -1,5 +1,5 @@
 /**
- * Guardrail packs end to end (plan 104 Task 7; moved onto `@arnilo/prism-guardrail-packs` in plan 159 Task 5) —
+ * Guardrail packs end to end (plan 104 Task 7; moved onto `@arnilo/prism-extensions/guardrail-packs` in plan 159 Task 5) —
  * network-free: mock provider, in-memory stores.
  *
  * One file, four demonstrations, one printed line each:
@@ -34,8 +34,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createGuardrailPackScorer, runScenario } from "@arnilo/prism-evals";
-import guardrailPacks from "@arnilo/prism-guardrail-packs";
+import { createGuardrailPackScorer, runScenario } from "@arnilo/prism-hosts/evals";
+import guardrailPacks from "@arnilo/prism-extensions/guardrail-packs";
 
 const MODEL = { provider: "mock", model: "guardrail-packs-demo" } as const;
 const FINISH: readonly ProviderEvent[] = [providerTextDelta("done"), providerDone()];

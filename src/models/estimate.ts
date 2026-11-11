@@ -1,7 +1,7 @@
 /** Input estimation residue (plan 158 Task 8). The kernel's own accounting: the usage seam
  *  (`provider-round.ts`), the compaction trigger (`contracts-core/compaction.ts`), skill disclosure,
  *  and the context meter all measure with these helpers, so they stay in the kernel after the
- *  context-engineering stages moved to `@arnilo/prism-context-engineering`.
+ *  context-engineering stages moved to `@arnilo/prism-extensions/context-engineering`.
  *
  *  Nothing here decides anything: every function returns a number or a cap. The stages that act on
  *  those numbers are package `context.build` handlers, which import these estimators from

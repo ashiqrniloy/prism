@@ -142,8 +142,7 @@ export async function searchLocal(
     throw new RepositoryError(`unsupported search mode: ${String(mode)} (literal only)`);
   }
   const caseSensitive = request.caseSensitive === true;
-  const matcher =
-    request.matcher ?? literalMatcher(request.query, caseSensitive, defaults.maxPatternBytes, defaults.maxLineBytes);
+  const matcher = request.matcher ?? literalMatcher(request.query, caseSensitive, defaults.maxPatternBytes, defaults.maxLineBytes);
 
   const resolved = await resolveRepoPath(request.root, request.path);
   const maxMatches = validateCodingLimit("maxMatches", request.maxMatches ?? defaults.maxMatches, HARD_MAX_SEARCH_MATCHES);

@@ -1,5 +1,5 @@
 import type { HostUi, HostUiRequest, HostUiRequestKind, HostUiResponse, OwnershipScope, PendingDecision, Session } from "@arnilo/prism";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { type AnswerQuery, createAnswerLog, type RoutedAnswer } from "./answers.js";
 import type { ResumeAuthority } from "./authority.js";
 import { HeadlessError } from "./errors.js";

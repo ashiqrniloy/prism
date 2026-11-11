@@ -6,10 +6,10 @@ import type {
   MemoryContextProviderOptions,
   MemoryScope,
   RecallScoringOptions,
-} from "@arnilo/prism-memory-core";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import type { RecallBranchPageResult, RecallPageDetail, RecallPageDirection } from "../session/recall.js";
-import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-core";
+import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-system/core";
 import { isMemoryId } from "../session/types.js";
 import type { MemoryNoteCoReadEvent, MemoryNoteUseEvent } from "./lifecycle/events.js";
 import { readCoReadEvents, readUseEvents } from "./lifecycle/events.js";
@@ -23,24 +23,14 @@ import { isMemoryNoteStatus } from "./lifecycle/status.js";
  * verbatim archive of a completed user turn plus the assistant reply (plan 188.9 Task 7); the
  * archive writes it, never a tool call. `decision` is a standing rule with a rationale, a decision
  * status and optional supersession (plan 202 Task 11). The ontology's `concept` kind left memory for the wiki
- * (`@arnilo/prism-wiki`, plan 216 Task 3): a stored concept note is unreadable here (`retired-concept`).
+ * (`@arnilo/prism-knowledge/wiki`, plan 216 Task 3): a stored concept note is unreadable here (`retired-concept`).
  */
 export type MemoryNoteKind = "episode" | "fact" | "preference" | "procedure" | "decision" | "file" | "exchange";
 
 export type { MemoryNoteCoReadEvent, MemoryNoteUseEvent } from "./lifecycle/events.js";
 export type { MemoryNoteStatus } from "./lifecycle/status.js";
 
-export const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[] = [
-  "episode",
-  "fact",
-  "preference",
-  "procedure",
-  "decision",
-  "file",
-  "exchange",
-];
-
-
+export const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[] = ["episode", "fact", "preference", "procedure", "decision", "file", "exchange"];
 
 /** Decision lifecycle, independent of the storage lifecycle (`candidate`/`verified`/`archived`). */
 export type MemoryDecisionStatus = "proposed" | "active" | "superseded";
@@ -444,7 +434,7 @@ export interface CreateMemoryFabricOptions {
    * The store behind `memory`, when the caller has it. `maintain()` needs `scanMetadata`; without a
    * store, or with one that cannot scan, it fails closed and leaves recall and writes alone.
    */
-  readonly vectorStore?: import("@arnilo/prism-memory-core").VectorStore;
+  readonly vectorStore?: import("@arnilo/prism-memory-system/core").VectorStore;
   /** One memory per active storage level; `memory` is the default when omitted. */
   readonly scopes?: readonly MemoryFabricScopeBinding[];
   /**
@@ -503,8 +493,6 @@ export interface MemoryFabricConsolidationOptions {
   /** Cosine floor at which a recalled note counts as the same note; default 0.85. */
   readonly threshold?: number;
 }
-
-
 
 export interface MemoryFabricConversationSearchOptions {
   /** Messages per page around a hit: the observational-memory page limit (default 20, hard cap 100). */
@@ -778,9 +766,7 @@ export const MEMORY_NOTE_FABRIC_KEYS: ReadonlySet<string> = new Set([
  * Why a fabric note cannot be read by this version, or `undefined` when it can (or is not a fabric note).
  * `version>1` is a note a newer version wrote; `invalid-fabric` is any other field this parser refuses.
  */
-export function unreadableNoteReason(
-  metadata: JsonObject | undefined,
-): "version>1" | "invalid-fabric" | "retired-concept" | undefined {
+export function unreadableNoteReason(metadata: JsonObject | undefined): "version>1" | "invalid-fabric" | "retired-concept" | undefined {
   const raw = metadata?.[MEMORY_NOTE_METADATA_KEY];
   if (raw === undefined || raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   if (parseMemoryNoteMetadata(metadata) !== undefined) return undefined;

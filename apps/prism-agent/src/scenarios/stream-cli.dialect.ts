@@ -7,7 +7,7 @@
 import { fileURLToPath } from "node:url";
 import type { ExternalActivity } from "@arnilo/prism";
 import { defineScriptedDialect, type ScriptedInput } from "@arnilo/prism/testing";
-import type { AdapterConformanceFixtures } from "@arnilo/prism-driver-process/testing";
+import type { AdapterConformanceFixtures } from "@arnilo/prism-hosts/driver-process/testing";
 
 export const hostStreamCliDialect = defineScriptedDialect({
   name: "stream-cli",

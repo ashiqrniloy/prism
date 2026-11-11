@@ -2,7 +2,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { EventType } from "@ag-ui/core";
 import { createSecretRedactor, toolCallContent } from "@arnilo/prism";
-import { createAcpEventMapper } from "@arnilo/prism-acp";
+import { createAcpEventMapper } from "@arnilo/prism-hosts/acp";
 import { createAgUiEventMapper } from "../index.js";
 import { composeAgUiProjections, createMessagesFromSessionProjection } from "../projectors.js";
 

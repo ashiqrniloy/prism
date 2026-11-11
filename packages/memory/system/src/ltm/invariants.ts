@@ -1,4 +1,4 @@
-import { tokenizeLexical } from "@arnilo/prism-memory-core";
+import { tokenizeLexical } from "@arnilo/prism-memory-system/core";
 
 /** 072 invariant body: wrap with `defineScorer({ invariant: true, score: ... })`. Score 0 is not mean-able. */
 export function caseConclusionsNotProcedures(

@@ -1,5 +1,10 @@
 import type { ModelClient, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
-import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
+import {
+  joinWorkerText,
+  type MemoryWorkerLimitOptions,
+  resolveMemoryWorkerLimits,
+  runMemoryWorkerLoop,
+} from "@arnilo/prism-memory-system/core";
 import { createMemoryId } from "../ids.js";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryReflection, type MemoryObservation, type MemoryReflection } from "../types.js";

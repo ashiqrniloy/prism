@@ -1,4 +1,4 @@
-# @arnilo/prism-tools-web
+# @arnilo/prism-tools/web
 
 The first-party web search and fetch tools as a Prism package. The default export is a
 `definePackage` definition whose `setup` registers `web_search` and `web_fetch` into the session's
@@ -7,13 +7,13 @@ tool registry and, when a fetch backend is configured, provides the `web.fetch` 
 ## Install
 
 ```bash
-prism add @arnilo/prism-tools-web
+prism add @arnilo/prism-tools/web
 ```
 
 ```jsonc
 // manifest entry, with every config field that has no default
 {
-  "name": "@arnilo/prism-tools-web",
+  "name": "@arnilo/prism-tools/web",
   "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": {
@@ -246,9 +246,9 @@ the package makes none.
 - Subresource loads made by the Obscura browser are **not** restricted by Prism; Obscura's own client
   resolves and validates them, and the binary is never told to allow the private network. For full
   network isolation in enterprise deployments, put the binary behind an egress proxy or in an
-  isolated network container — the contained-proxy pattern `@arnilo/prism-tools-browser` requires.
+  isolated network container — the contained-proxy pattern `@arnilo/prism-tools/browser` requires.
 - Registration performs no network request. Importing the package loads neither `playwright-core`
-  nor `@arnilo/prism-mcp`; the Obscura MCP bridge is imported dynamically only when its surface is
+  nor `@arnilo/prism-extensions/mcp`; the Obscura MCP bridge is imported dynamically only when its surface is
   used.
 - Missing key/binary is a status note and an inert package, never a throw.
 - **Parallel calls wait, they do not fail.** `maxConcurrency` (default 4, hard 16) caps requests in
@@ -267,7 +267,7 @@ the package makes none.
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import toolsWeb from "@arnilo/prism-tools-web";
+import toolsWeb from "@arnilo/prism-tools/web";
 
 const agent = await createAgent({
   model,

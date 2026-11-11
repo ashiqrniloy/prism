@@ -109,13 +109,17 @@ describe("plan 079 Telegram adapter", () => {
       id: "telegram-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield providerTextDelta("final answer");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield providerTextDelta("final answer");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     const runtime = createChannelRuntime(agent, {
       checkpoints,
@@ -502,15 +506,19 @@ describe("plan 080 Telegram draft streaming", () => {
       id: "draft-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield providerTextDelta("first ");
-          yield providerTextDelta("second ");
-          yield providerTextDelta("third");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield providerTextDelta("first ");
+              yield providerTextDelta("second ");
+              yield providerTextDelta("third");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
   }
 
@@ -777,13 +785,17 @@ describe("plan 080 bounded attachments and voice", () => {
       id: "telegram-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield providerTextDelta("heard you");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield providerTextDelta("heard you");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     const runtime = createChannelRuntime(agent, {
       checkpoints,

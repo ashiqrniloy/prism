@@ -16,9 +16,9 @@ The governance package (policy engine, OPA, identity verification and principal 
 ## Today
 
 - Kernel floor: `src/redaction.ts` (`redactSecrets`), `src/security.ts`, `src/pinned-fetch.ts`, `src/guardrails.ts` (the generic guardrail stage runner packages call), `src/credentials/` (the `env:` resolver), `src/node/trust.ts` (project trust). `principal` is opaque in `src/contracts-core/principal.ts`; ownership scopes are narrow-only (`SessionOptions.ownership`, `OwnershipScopeError`).
-- `@arnilo/prism-governance` (`packages/policy/governance/src/`): `policy/` (engines, OPA), `identity/` and `identity-hooks.ts` (verified identity and principal enforcement), `field-policy.ts`, `field-evidence.ts`, `claim-grounding.ts`, `audit.ts`, `readiness.ts`.
-- `@arnilo/prism-guardrail-packs` (`compile.ts`, `packs/`), `@arnilo/prism-model-router` (`router/`, `around.ts` on `model.call`), `@arnilo/prism-approval` (`decide.ts` over `tool.call` effects and `coding.targets` roots).
-- Current docs: [`governance`](../../../../packages/policy/governance/README.md), [`guardrail-packs`](../../../../packages/policy/guardrail-packs/README.md), [`model-router`](../../../../packages/policy/model-router/README.md), [`approval`](../../../../packages/policy/approval/README.md), [credentials-and-redaction.md](../../../../docs/credentials-and-redaction.md), [settings-auth-trust-security.md](../../../../docs/settings-auth-trust-security.md), [host-security.md](../../../../docs/host-security.md).
+- `@arnilo/prism-extensions/governance` (`packages/extensions/governance/src/`): `policy/` (engines, OPA), `identity/` and `identity-hooks.ts` (verified identity and principal enforcement), `field-policy.ts`, `field-evidence.ts`, `claim-grounding.ts`, `audit.ts`, `readiness.ts`.
+- `@arnilo/prism-extensions/guardrail-packs` (`compile.ts`, `packs/`), `@arnilo/prism-extensions/model-router` (`router/`, `around.ts` on `model.call`), `@arnilo/prism-extensions/approval` (`decide.ts` over `tool.call` effects and `coding.targets` roots).
+- Current docs: [`governance`](../../../../packages/extensions/governance/README.md), [`guardrail-packs`](../../../../packages/extensions/guardrail-packs/README.md), [`model-router`](../../../../packages/extensions/model-router/README.md), [`approval`](../../../../packages/extensions/approval/README.md), [credentials-and-redaction.md](../../../../docs/credentials-and-redaction.md), [settings-auth-trust-security.md](../../../../docs/settings-auth-trust-security.md), [host-security.md](../../../../docs/host-security.md).
 
 ## Graft queries
 

@@ -24,14 +24,20 @@ export function superviseDecision(journal, { restarts, maxRestarts, now = Date.n
     const at = Date.parse(journal.resumeAfter);
     if (Number.isFinite(at)) return { action: "wait", waitMs: Math.max(60_000, at - now + 120_000), reason: "quota-daily" };
   }
-  return { action: "wait", waitMs: SUPERVISE_BACKOFF_MS[Math.min(restarts, SUPERVISE_BACKOFF_MS.length - 1)], reason: journal?.status ?? "no-journal" };
+  return {
+    action: "wait",
+    waitMs: SUPERVISE_BACKOFF_MS[Math.min(restarts, SUPERVISE_BACKOFF_MS.length - 1)],
+    reason: journal?.status ?? "no-journal",
+  };
 }
 
 /** The journal the supervised campaign writes: a quick read keeps its own (plan 208 Task 5), so it must be read from there. */
 export function superviseJournalPath(env = process.env) {
   const ids = env.PRISM_MEMORY_BENCH_208_WORKER;
   if (!ids) throw new Error("Supervise: set PRISM_MEMORY_BENCH_208_WORKER to the worker's job list");
-  return screen208WorkerPaths(ids, env.PRISM_MEMORY_BENCH_208_WORKER_PROVIDER || undefined, { quick: env.PRISM_MEMORY_BENCH_208_QUICK === "1" }).journalPath;
+  return screen208WorkerPaths(ids, env.PRISM_MEMORY_BENCH_208_WORKER_PROVIDER || undefined, {
+    quick: env.PRISM_MEMORY_BENCH_208_QUICK === "1",
+  }).journalPath;
 }
 
 async function main() {

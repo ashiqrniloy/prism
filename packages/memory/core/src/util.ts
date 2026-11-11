@@ -109,7 +109,10 @@ export function assertFiniteVector(value: unknown, label: string, expectedLength
  * A stored record's embedding: finite (and `expectedLength` wide when given), or empty for a
  * lexical-only record, which must then carry no `embedderId`.
  */
-export function assertRecordEmbedding(record: { readonly embedding: unknown; readonly embedderId?: string }, expectedLength?: number): void {
+export function assertRecordEmbedding(
+  record: { readonly embedding: unknown; readonly embedderId?: string },
+  expectedLength?: number,
+): void {
   if (Array.isArray(record.embedding) && record.embedding.length === 0) {
     if (record.embedderId !== undefined) throw new MemoryValidationError("embedding is empty but embedderId is set");
     return;

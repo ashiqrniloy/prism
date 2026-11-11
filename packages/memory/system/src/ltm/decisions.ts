@@ -6,14 +6,8 @@
  * it the incumbent does, and inside it the incumbent also does. Errors and timeouts are abstentions,
  * never turn failures. No gate deletes or archives anything.
  */
-import type {
-  DecisionAnswer,
-  DecisionNoulAnswer,
-  DecisionQuestion,
-  DecisionsClient,
-  JsonObject,
-} from "@arnilo/prism";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import type { DecisionAnswer, DecisionNoulAnswer, DecisionQuestion, DecisionsClient, JsonObject } from "@arnilo/prism";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 export const DECISION_POINTS = ["P3", "P4", "P5", "P7"] as const;
 export type DecisionPoint = (typeof DECISION_POINTS)[number];

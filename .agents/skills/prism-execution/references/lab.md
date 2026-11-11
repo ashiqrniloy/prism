@@ -23,10 +23,10 @@ Prism Code (`@arnilo/prism-code`) is the reference host: a coding-agent TUI. In 
 | `providers.ts`, `oauth.ts`, `credentials.ts` | provider packages, the credentials slot, `credentials-keyring` |
 | `sessions.ts` | the store slot plus `store-jsonl` |
 | `compaction.ts`, `observational-memory.ts`, `wiki.ts` | `memory-*` and `context-engineering` |
-| `approval.ts` | `@arnilo/prism-approval` plus `HostUi` |
+| `approval.ts` | `@arnilo/prism-extensions/approval` plus `HostUi` |
 | `mcp.ts` | `mcp` package, trust via `host.ui` |
 | `web.ts`, `tools.ts`, `tool-modules.ts`, `skills.ts`, `prompt.ts` | tool packages, kernel skills, `context-files` |
-| `acp.ts` | `@arnilo/prism-acp` |
+| `acp.ts` | `@arnilo/prism-hosts/acp` |
 | `limits.ts` (maxCost `turnPolicy` wrap) | a `turn.before` hook |
 | `config.ts`, `doctor.ts` | config → manifest mapping; `doctor` renders `inspect()` |
 

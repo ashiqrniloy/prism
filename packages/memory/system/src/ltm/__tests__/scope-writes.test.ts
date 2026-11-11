@@ -10,8 +10,8 @@ import {
   type Memory,
   MemoryScopeError,
   MemoryValidationError,
-} from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores, type MarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
+} from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores, type MarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
 import { createMemory, createLongTermMemory, type MemoryFabricScopeBinding } from "../../index.js";
 
 const dirs: string[] = [];

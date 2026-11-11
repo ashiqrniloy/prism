@@ -1,0 +1,83 @@
+{
+  "name": "@arnilo/prism-memory-system",
+  "version": "0.13.0-experimental.0",
+  "description": "Experimental Prism memory bundle. Import each capability through its published entrypoint.",
+  "type": "module",
+  "exports": {
+    "./core": "./core/src/index.ts",
+    "./core/fabric": "./core/src/fabric/index.ts",
+    "./core/postgres": "./core/src/postgres/index.ts",
+    "./core/sqlite": "./core/src/sqlite/index.ts",
+    ".": "./system/src/index.ts"
+  },
+  "files": [
+    "core/src",
+    "!core/src/**/__tests__",
+    "!core/src/**/fixtures",
+    "!core/src/**/*.js",
+    "!core/src/**/*.js.map",
+    "!core/src/**/*.d.ts",
+    "core/README.md",
+    "system/src",
+    "!system/src/**/__tests__",
+    "!system/src/**/fixtures",
+    "!system/src/**/*.js",
+    "!system/src/**/*.js.map",
+    "!system/src/**/*.d.ts",
+    "system/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 core/src system/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pack:dry-run": "bun pm pack --dry-run",
+    "test:postgres": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 system/src/ltm/__tests__/postgres-memory.integration.test.ts system/src/ltm/__tests__/postgres-vector.integration.test.ts system/src/ltm/__tests__/postgres-propagation.integration.test.ts"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "pg": "^8.23.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "^7.0.2",
+    "@arnilo/prism-extensions": "workspace:*",
+    "@arnilo/prism-knowledge": "workspace:*"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/memory"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/memory#readme",
+  "keywords": [
+    "prism",
+    "memory",
+    "memory-system",
+    "session-memory",
+    "long-term-memory",
+    "context",
+    "agent",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -34,9 +34,9 @@ import { arch, cpus, platform, totalmem } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgent, definePackage } from "@arnilo/prism";
-import { LAYA_DEFAULT_BASE_URL, laya } from "@arnilo/prism-provider-laya";
-import { liquid } from "@arnilo/prism-provider-liquid";
-import { typesafe } from "@arnilo/prism-provider-typesafe";
+import { LAYA_DEFAULT_BASE_URL, laya } from "@arnilo/prism-ai/laya";
+import { liquid } from "@arnilo/prism-ai/liquid";
+import { typesafe } from "@arnilo/prism-ai/typesafe";
 import { parseEnvFile } from "./live-matrix.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");

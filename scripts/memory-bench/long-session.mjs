@@ -97,6 +97,19 @@ export function callTarget(call) {
 }
 
 /**
+ * S1 on the live family (plan 217 Task 6): the searches and guesses in a dependent task (`b`). Its task needs no
+ * search when memory carries what task `a` found (task 3 writes a new file, task 6 a doc), so every `grep` counts, and
+ * a `read_file` counts only when the path does not exist (a guess; the project tools mark it `missing`). Reading a file
+ * that exists is verification, not re-derivation: an agent that knows the path still opens it, in every arm.
+ */
+export function searchRederivationCalls(calls) {
+  return calls.filter((call) => {
+    const tool = call.name ?? call.tool;
+    return tool === "grep" || (tool === "read_file" && call.missing === true);
+  });
+}
+
+/**
  * S1: calls in task `b` that re-derive what task `a` changed — a `grep`, `read` or `bash` call whose target names one
  * of `a`'s targets. `calls` are `{ id?, name | tool, args }` in task `b`, in order.
  */

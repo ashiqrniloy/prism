@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-tools-web` — the first-party web search and fetch tools as a package.
+ * `@arnilo/prism-tools/web` — the first-party web search and fetch tools as a package.
  *
  * The default export registers `web_search`, `web_fetch`, and (through the named `createWebTools`
  * factory) `web_extract`, each declaring `effects: ["network"]`. The backend is selected by config:
@@ -17,7 +17,7 @@
  * `createObscuraMcpTools`) stay exported for hosts that build tool lists by hand.
  *
  * ```ts
- * import toolsWeb from "@arnilo/prism-tools-web";
+ * import toolsWeb from "@arnilo/prism-tools/web";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -27,7 +27,6 @@
  * ```
  */
 import { fileURLToPath } from "node:url";
-import manifest from "../package.json" with { type: "json" };
 import {
   assertSsrfAllowedUrl,
   definePackage,
@@ -35,47 +34,34 @@ import {
   type JsonSchema,
   type PackageInstance,
   type Secret,
-  type ToolDefinition,
   type ToolArgumentValidator,
+  type ToolDefinition,
   validateJsonSchema,
 } from "@arnilo/prism";
+import manifest from "../../package.json" with { type: "json" };
 
 import { createBraveSearch } from "./brave.js";
 import { createFetchCache, resolveFetchCache, withFetchCache } from "./cache.js";
+import { type ToolsWebConfig, toolsWebConfigSchema } from "./config.js";
+import { createDomainPolicy, type DomainPolicy } from "./domains.js";
+import { createExaSearch } from "./exa.js";
+import { createFirecrawlExtractor, createFirecrawlFetch } from "./firecrawl.js";
 import { createKagiSearch } from "./kagi.js";
+import { resolveWebLimits } from "./limits.js";
+import { createNativeFetch } from "./native/fetch.js";
+import { OBSCURA_GUARDED_VERSION, probeObscuraVersion } from "./obscura/cli.js";
+import { resolveObscuraWebLimits } from "./obscura/limits.js";
+import { resolveObscuraCommand } from "./obscura/process.js";
+import { createObscuraPageFetcher, createObscuraWebTools } from "./obscura/web.js";
 import { createPromptFetch, DEFAULT_PROMPT_INPUT_CHARS, DEFAULT_PROMPT_OUTPUT_TOKENS, withOutputBudget } from "./prompt-fetch.js";
 import { createSearxngSearch } from "./searxng.js";
 import { createTavilySearch } from "./tavily.js";
-import { createDomainPolicy, type DomainPolicy } from "./domains.js";
-import { type ToolsWebConfig, toolsWebConfigSchema } from "./config.js";
-import { createExaSearch } from "./exa.js";
-import { createFirecrawlExtractor, createFirecrawlFetch } from "./firecrawl.js";
-import { createNativeFetch } from "./native/fetch.js";
-import { OBSCURA_GUARDED_VERSION, probeObscuraVersion } from "./obscura/cli.js";
-import { resolveObscuraCommand } from "./obscura/process.js";
-import { resolveObscuraWebLimits } from "./obscura/limits.js";
-import { createObscuraPageFetcher, createObscuraWebTools } from "./obscura/web.js";
 import { createWebTools } from "./tools.js";
-import { resolveWebLimits } from "./limits.js";
 import type { PromptFetch, WebCredentialSource, WebFetchAdapter, WebFetchService, WebSearchAdapter } from "./types.js";
 
 // The moved 0.12 surface keeps its names, now behind one entry point.
 export * from "./brave.js";
 export * from "./cache.js";
-export * from "./prompt-fetch.js";
-export * from "./searxng.js";
-export * from "./tavily.js";
-export * from "./kagi.js";
-export * from "./domains.js";
-export * from "./exa.js";
-export * from "./firecrawl.js";
-export * from "./limits.js";
-export * from "./native/fetch.js";
-export * from "./normalize.js";
-export * from "./obscura/index.js";
-export * from "./tools.js";
-export * from "./transport.js";
-export * from "./types.js";
 export type {
   ToolsWebBackend,
   ToolsWebCacheConfig,
@@ -87,18 +73,24 @@ export type {
   ToolsWebSearxngConfig,
 } from "./config.js";
 export { toolsWebConfigSchema } from "./config.js";
+export * from "./domains.js";
+export * from "./exa.js";
+export * from "./firecrawl.js";
+export * from "./kagi.js";
+export * from "./limits.js";
+export * from "./native/fetch.js";
+export * from "./normalize.js";
+export * from "./obscura/index.js";
+export * from "./prompt-fetch.js";
+export * from "./searxng.js";
+export * from "./tavily.js";
+export * from "./tools.js";
+export * from "./transport.js";
+export * from "./types.js";
+
 import type { ToolsWebBackend } from "./config.js";
 
-const BACKENDS: readonly ToolsWebConfig["backend"][] = [
-  "brave",
-  "exa",
-  "firecrawl",
-  "native",
-  "obscura",
-  "searxng",
-  "tavily",
-  "kagi",
-];
+const BACKENDS: readonly ToolsWebConfig["backend"][] = ["brave", "exa", "firecrawl", "native", "obscura", "searxng", "tavily", "kagi"];
 /** Identifies the package on every native fetch; config `fetch.userAgent` replaces it. */
 const DEFAULT_USER_AGENT = `Prism-Web-Fetch/${manifest.version} (+https://github.com/ashiqrniloy/prism)`;
 
@@ -168,7 +160,7 @@ function secretSource(secret: Secret): WebCredentialSource {
 }
 
 const definition = definePackage<ToolsWebConfig>({
-  name: "@arnilo/prism-tools-web",
+  name: "@arnilo/prism-tools/web",
   version: manifest.version,
   description: "Web search and fetch tools with declared network effects, ref-only keys, and a web.fetch service.",
   requires: { api: 1 },

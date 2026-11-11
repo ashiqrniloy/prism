@@ -2,7 +2,7 @@
  * The ontology's vocabulary (plan 216 Task 3: moved out of the fabric with the rest of the ontology). Scope levels
  * mirror the long-term memory's, so a concept and the notes it cites live at the same level.
  */
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 /** Where a concept lives. `user` and `project` are written by the curator; `agent` and `team` are read only. */
 export type WikiScopeLevel = "user" | "project" | "agent" | "team";

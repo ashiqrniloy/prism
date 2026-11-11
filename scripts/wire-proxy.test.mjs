@@ -485,7 +485,8 @@ it("max_requests_answers_429_without_contacting_the_upstream", async () => {
   const proxy = await startWireProxy({ upstream: `http://127.0.0.1:${upstream.port}`, listen: "127.0.0.1:0", usageLog, maxRequests: 2 });
   try {
     const statuses = [];
-    for (let i = 0; i < 4; i++) statuses.push((await fetch(`${proxy.url}/chat/completions`, { method: "POST", body: JSON.stringify({ model: "m" }) })).status);
+    for (let i = 0; i < 4; i++)
+      statuses.push((await fetch(`${proxy.url}/chat/completions`, { method: "POST", body: JSON.stringify({ model: "m" }) })).status);
     await proxy.drain();
     assert.deepEqual(statuses, [200, 200, 429, 429]);
     assert.equal(served, 2);
@@ -523,7 +524,12 @@ it("usage_metrics_read_each_wire_format_inclusively", () => {
   assert.equal(responses.cacheWriteTokens, 0);
 
   // Anthropic Messages stays exclusive-plus-cache.
-  const messages = normalizeUsageMetrics({ input_tokens: 3, output_tokens: 9, cache_read_input_tokens: 2000, cache_creation_input_tokens: 100 });
+  const messages = normalizeUsageMetrics({
+    input_tokens: 3,
+    output_tokens: 9,
+    cache_read_input_tokens: 2000,
+    cache_creation_input_tokens: 100,
+  });
   assert.equal(messages.inputTokens, 2103);
   assert.equal(messages.cacheReadTokens, 2000);
 });

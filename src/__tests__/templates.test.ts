@@ -29,7 +29,12 @@ function workspaceNames(): Set<string> {
   const add = (leaf: string): void => {
     try {
       const manifest = JSON.parse(readFileSync(join(leaf, "package.json"), "utf8"));
-      if (typeof manifest.name === "string") names.add(manifest.name);
+      if (typeof manifest.name === "string" && !manifest.private) {
+        names.add(manifest.name);
+        for (const key of Object.keys(manifest.exports ?? {})) {
+          if (key.startsWith("./")) names.add(manifest.name + key.slice(1));
+        }
+      }
     } catch {
       // not a package leaf
     }

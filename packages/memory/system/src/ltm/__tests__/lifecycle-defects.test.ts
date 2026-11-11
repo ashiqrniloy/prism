@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { ContextDraft, HookContext, Session, SessionEntry } from "@arnilo/prism";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "../context.js";
 import { createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, renderFabricDirectory } from "../directory.js";
 import { createLongTermMemory, parseMemoryNoteMetadata } from "../exports.js";
@@ -157,7 +157,11 @@ describe("Lifecycle defect fixes (D4, D5, D13)", () => {
     const activeHits = (await fabric.recall("Rarely used feature X", { minSimilarity: 0 })).hits;
     assert.equal(activeHits.find((h) => h.id === note.id)?.status, "archived");
     const withoutArchiveSearch = (await fabric.recall("Rarely used feature X", { minSimilarity: 0, archiveSearch: false })).hits;
-    assert.equal(withoutArchiveSearch.some((h) => h.id === note.id), false, "no archive search, no archived hit");
+    assert.equal(
+      withoutArchiveSearch.some((h) => h.id === note.id),
+      false,
+      "no archive search, no archived hit",
+    );
 
     // Historical recall (asOf before archivedAt) still sees it as valid
     const pastAsOf = new Date(Date.now() - 60_000);

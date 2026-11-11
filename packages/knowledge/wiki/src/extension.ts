@@ -1,8 +1,8 @@
 import { join, resolve } from "node:path";
 import { definePackage, type JsonObject, type ModelClient, type PackageAPI, type PackageInstance } from "@arnilo/prism";
-import { type MemoryWorkerLimitOptions, MemoryValidationError, resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
-import type { WebFetchService } from "@arnilo/prism-tools-web";
-import manifest from "../package.json" with { type: "json" };
+import { MemoryValidationError, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
+import type { WebFetchService } from "@arnilo/prism-tools/web";
+import manifest from "../../package.json" with { type: "json" };
 import { createWikiConsolidateCommand } from "./commands/consolidate.js";
 import { createWikiIngestCommand } from "./commands/ingest.js";
 import { createWikiLintCommand } from "./commands/lint.js";
@@ -41,7 +41,7 @@ export interface WikiConsolidateConfig {
   readonly maxClaimsPerConcept?: number;
   /** Output token cap for one concept call. */
   readonly maxOutputTokens?: number;
-  /** The memory worker-loop limits (`@arnilo/prism-memory-core`), same shape and hard caps. */
+  /** The memory worker-loop limits (`@arnilo/prism-memory-system/core`), same shape and hard caps. */
   readonly workerLimits?: MemoryWorkerLimitOptions;
 }
 
@@ -57,7 +57,7 @@ export interface WikiSearchConfig {
   readonly maxClaimsRendered?: number;
 }
 
-/** JSON config for `@arnilo/prism-wiki`; `setup` applies the defaults below. */
+/** JSON config for `@arnilo/prism-knowledge/wiki`; `setup` applies the defaults below. */
 export interface WikiConfig {
   /** Where the wiki keeps its store and stages sources. Default `<workspaceRoot>/.prism/wiki`. */
   readonly root?: string;
@@ -153,7 +153,7 @@ function filenameFromUrl(url: string): string | undefined {
 }
 
 export const definition = definePackage<WikiConfig>({
-  name: "@arnilo/prism-wiki",
+  name: "@arnilo/prism-knowledge/wiki",
   version: manifest.version,
   description:
     "The wiki: concepts, claims and sources in their own store, consolidated from cited evidence; reads memory read-only when installed.",

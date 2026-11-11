@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { type AgentConfig, createAgent, createMemorySessionStore, createSecretRedactor, type ProviderRequestOptions, providerDone, providerTextDelta } from "../index.js";
+import {
+  type AgentConfig,
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  type ProviderRequestOptions,
+  providerDone,
+  providerTextDelta,
+} from "../index.js";
 import { createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 

@@ -134,7 +134,8 @@ export function writeGeneration(options = {}) {
 /** Only shipped settings: unsupported historical mechanisms fail before any paid call. */
 export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) {
   // Plan 210 Task 7 removed `retrieval: "hybrid"`: the fabric package is lexical and has no embeddings arm.
-  if (options.config === "fabric-hybrid") throw new Error("MemoryBenchAblation: fabric-hybrid was removed with retrieval hybrid (plan 210 Task 7)");
+  if (options.config === "fabric-hybrid")
+    throw new Error("MemoryBenchAblation: fabric-hybrid was removed with retrieval hybrid (plan 210 Task 7)");
   const observational = isSessionConfig(options.config)
     ? { enabled: true, ...(options.offline || lifecycle ? { stm: { triggerTokens: options.offline ? 1 : 1000 } } : {}) }
     : null;
@@ -182,7 +183,7 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   if (fabric && options.suite === "memoryagentbench-cr" && fabric.inject !== false) {
     fabric.inject = { ...(fabric.inject ?? presetFields(fabric.preset)?.inject), kinds: ["fact"] };
   }
-  // Plan 208 Task 3: `--ontology` installs `@arnilo/prism-wiki` next to the fabric. The key exists only on
+  // Plan 208 Task 3: `--ontology` installs `@arnilo/prism-knowledge/wiki` next to the fabric. The key exists only on
   // an ontology arm, so every other arm's resolved config (and its protocol hash) is unchanged.
   if (options.ontology && !fabric) throw new Error("MemoryBenchArguments: --ontology needs a fabric arm");
   // The offline fixture holds a handful of notes, so its accumulation threshold is two, the smallest cluster the curator accepts (the OM arm does the same with messageTokens).
@@ -199,8 +200,7 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     if (typeof spec !== "string") throw new Error("MemoryBenchAblation: expected path=value");
     if (historical.includes(spec)) {
       const sessionSpec = spec.startsWith("om.") || spec.startsWith("session.");
-      if ((sessionSpec && !observational) || (!sessionSpec && !fabric))
-        throw new Error("MemoryBenchAblation: inactive historical arm");
+      if ((sessionSpec && !observational) || (!sessionSpec && !fabric)) throw new Error("MemoryBenchAblation: inactive historical arm");
       continue;
     }
     const index = spec.indexOf("="),
@@ -241,7 +241,8 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     target[keys.at(-1)] = value;
   }
   if (observational) {
-    if (!validateJsonSchema(memorySystemConfigSchema, observational).ok) throw new Error("MemoryBenchAblation: invalid session-memory settings");
+    if (!validateJsonSchema(memorySystemConfigSchema, observational).ok)
+      throw new Error("MemoryBenchAblation: invalid session-memory settings");
     resolveMemorySystemConfig(observational);
   }
   if (fabric) {

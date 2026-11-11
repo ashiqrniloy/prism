@@ -386,11 +386,7 @@ export function plaintextRemoteOrigin(baseUrl: string): string | undefined {
  * Warns if baseUrl is plaintext and not loopback.
  * Prints origin only (never credentials/userinfo).
  */
-export function warnIfPlaintextRemote(
-  label: string,
-  baseUrl: string,
-  warn: (message: string) => void = console.warn,
-): boolean {
+export function warnIfPlaintextRemote(label: string, baseUrl: string, warn: (message: string) => void = console.warn): boolean {
   const origin = plaintextRemoteOrigin(baseUrl);
   if (!origin) return false;
   warn(
@@ -398,4 +394,3 @@ export function warnIfPlaintextRemote(
   );
   return true;
 }
-

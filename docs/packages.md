@@ -28,12 +28,19 @@ export default definePackage({
 const agent = await createAgent({ model, packages: [pev, audit({ level: "warn" })] });
 ```
 
-The definition is validated when `definePackage` runs: `name` must be an npm name (`host` and
+The definition is validated when `definePackage` runs: `name` must be a module specifier: a lower-case npm name, optionally followed by exported subpath segments (`host` and
 `kernel` are reserved for the kernel's own owners), `version` must be semver, `requires.api` must be
 an integer when `requires` is present, optional `requires.prism` ranges must parse, every capability
 must be known, and `config` must use the supported schema subset. A failure throws `PackageLoadError`
 `definition_invalid` (or `config_schema_unsupported`); the loader rejects a definition with no
 `requires` at all.
+
+Each subpath segment matches `[a-z0-9][a-z0-9._~-]*`; the complete specifier is at most 214 characters.
+Empty segments, `.` / `..`, and trailing slashes are rejected. The full specifier is the package id in
+`requires.packages`, `packageConfig`, slot ownership, events and `inspect()`.
+A bundle has one root `package.json` with an `exports` entry per package, for example
+`"./coding": "./coding/src/index.ts"`. That module's default definition is named
+`@acme/tools/coding`. A host lists and configures each subpath separately; unlisted siblings never load.
 
 ### Inputs / request
 

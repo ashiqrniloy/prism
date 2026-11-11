@@ -118,7 +118,7 @@ export async function loadHostBuilderIndex<N extends HostBuilderIndexName>(
   } catch (error) {
     throw new HostBuilderError(
       "ERR_PRISM_HOST_BUILDER_INDEX",
-      `host-builder index "${name}" cannot be read at ${file}: ${error instanceof Error ? error.message : String(error)}. Reinstall @arnilo/prism-host-builder.`,
+      `host-builder index "${name}" cannot be read at ${file}: ${error instanceof Error ? error.message : String(error)}. Reinstall @arnilo/prism-hosts.`,
     );
   }
   const header = parsed as Partial<HostBuilderIndexHeader> | null;

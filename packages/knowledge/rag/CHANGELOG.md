@@ -12,7 +12,7 @@
   reranking, connectors, sync, ingestion status) moved out of `@arnilo/prism-memory/rag` into its own
   package, plus one `rag_search` tool (`effects: ["read"]`), an opt-in `context.build` block, the
   `embeddings` service, and lazy source indexing. URL sources consume `web.fetch` from
-  `@arnilo/prism-tools-web`; the local `WebFetchAdapter`/`WebFetchDocument` are deleted.
+  `@arnilo/prism-tools/web`; the local `WebFetchAdapter`/`WebFetchDocument` are deleted.
 - The kernel gains `prism.models.embeddings(ref)` and the optional `ModelProvider.embeddings()`
   adapter, so a package can build an `Embedder` over a model's provider without a vendor registry.
 

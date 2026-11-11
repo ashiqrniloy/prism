@@ -28,6 +28,8 @@ const PROVIDER_LITERAL_SEAMS = new Set([
   // Plan 183's live-provider scenario table: the shipped `@arnilo/prism/testing` suite names each
   // vendor it drives over a real endpoint (a data table, not core behavior). Test-support only.
   "src/testing/provider-live-scenarios.ts",
+  // Wire-cache conformance parses vendor protocols for tests, outside the kernel runtime.
+  "src/testing/prefix-stability-conformance.ts",
 ]);
 const runtimeFiles = sourceFiles(
   "src",
@@ -80,7 +82,7 @@ describe("core source boundaries", () => {
     // boundary into any seam.
     const bare = [...allSrcText.matchAll(/from "([^"]+)"/g)]
       .map((m) => m[1])
-      .filter((spec) => !spec.startsWith("./") && !spec.startsWith("../") && !spec.startsWith("node:"));
+      .filter((spec) => !spec.startsWith("./") && !spec.startsWith("../") && !spec.startsWith("node:") && !spec.startsWith("bun:"));
     assert.deepEqual(bare, [], `src/ imports non-relative, non-node specifiers: ${bare.join(", ")}`);
   });
 

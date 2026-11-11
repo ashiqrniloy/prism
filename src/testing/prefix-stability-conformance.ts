@@ -352,7 +352,9 @@ export function assertWireSegmentsStable(previous: WireSegments, next: WireSegme
   assertSegmentEqual("system", undefined, previous.system, next.system, label);
   const lastIndex = previous.messages.length - 1;
   if (next.messages.length < lastIndex) {
-    assert.fail(`${label}: messages shrank from ${previous.messages.length} to ${next.messages.length}; earlier messages cannot stay byte-equal`);
+    assert.fail(
+      `${label}: messages shrank from ${previous.messages.length} to ${next.messages.length}; earlier messages cannot stay byte-equal`,
+    );
   }
   for (let index = 0; index < lastIndex; index += 1) {
     assertSegmentEqual("messages", index, stripCacheMarkers(previous.messages[index]), stripCacheMarkers(next.messages[index]), label);
@@ -465,7 +467,12 @@ function createPingTool(): ToolDefinition {
     description: "Deterministic no-op for the extra fixture turns.",
     parameters: { type: "object", properties: {} } as JsonObject,
     execute(_args, context) {
-      return { toolCallId: context.toolCallId, name: PREFIX_STABILITY_PING_TOOL_NAME, value: "pong", content: [{ type: "text", text: "pong" }] };
+      return {
+        toolCallId: context.toolCallId,
+        name: PREFIX_STABILITY_PING_TOOL_NAME,
+        value: "pong",
+        content: [{ type: "text", text: "pong" }],
+      };
     },
   };
 }

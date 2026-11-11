@@ -33,20 +33,24 @@ export async function demo() {
       model: { provider: "mock", model: "demo" },
       // The `ask` gate makes the first tool call a suspension instead of a side effect.
       hooks: askEveryTool(),
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate(request) {
-          requests.push(request);
-          if (executed.length === 0) {
-            // Turn 1: the agent opens the investigation by running one research tool.
-            yield { type: "tool_call" as const, call: toolCallContent("gather-1", "gather", { query: "revenue by region" }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("North America leads revenue at 4,320.50 (gather-1).");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate(request) {
+              requests.push(request);
+              if (executed.length === 0) {
+                // Turn 1: the agent opens the investigation by running one research tool.
+                yield { type: "tool_call" as const, call: toolCallContent("gather-1", "gather", { query: "revenue by region" }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("North America leads revenue at 4,320.50 (gather-1).");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: {
         add: [
           {

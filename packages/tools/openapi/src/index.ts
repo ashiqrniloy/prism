@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-tools-openapi` — compile host-selected OpenAPI 3.1 operations into bounded tools.
+ * `@arnilo/prism-tools/openapi` — compile host-selected OpenAPI 3.1 operations into bounded tools.
  *
  * Config lists `specs`; each spec is read once at setup (a local JSON file, or an `https:` URL
  * through the kernel's pinned fetch) and compiled into `<id>_<operationId>` tools. GET/HEAD
@@ -11,7 +11,7 @@
  * from events, notes, logs, errors, and tool results.
  *
  * ```ts
- * import toolsOpenapi from "@arnilo/prism-tools-openapi";
+ * import toolsOpenapi from "@arnilo/prism-tools/openapi";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -22,7 +22,7 @@
  */
 
 import { definePackage, type PackageAPI, type PackageInstance, type ToolDefinition } from "@arnilo/prism";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 
 import { type ToolsOpenapiConfig, type ToolsOpenapiSpecConfig, toolsOpenapiConfigSchema } from "./config.js";
 import { OpenApiToolError } from "./errors.js";
@@ -68,7 +68,7 @@ function createHeaderResolver(prism: PackageAPI<ToolsOpenapiConfig>, spec: Tools
 }
 
 const definition = definePackage<ToolsOpenapiConfig>({
-  name: "@arnilo/prism-tools-openapi",
+  name: "@arnilo/prism-tools/openapi",
   version: manifest.version,
   description:
     "OpenAPI 3.1 operation compiler: pinned-origin, allow-listed, schema-bounded tools with per-method effects and ref-only header credentials.",
@@ -121,4 +121,4 @@ export function toolsOpenapi(config: ToolsOpenapiConfig): PackageInstance {
   return definition(config);
 }
 
-export const packageName = "@arnilo/prism-tools-openapi";
+export const packageName = "@arnilo/prism-tools/openapi";

@@ -1,4 +1,4 @@
-import { cohensKappa } from "@arnilo/prism-evals";
+import { cohensKappa } from "@arnilo/prism-hosts/evals";
 import { stableHash } from "../journal.mjs";
 
 export const AUDIT_KAPPA_MIN = 0.8;

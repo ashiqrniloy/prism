@@ -1,10 +1,4 @@
-import {
-  type JsonObject,
-  type JsonValue,
-  type ModelConfig,
-  redactSecrets,
-  trimTrailingSlashes,
-} from "@arnilo/prism";
+import { type JsonObject, type JsonValue, type ModelConfig, redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
 import {
   providerHttpError,
   readBoundedResponseJson,

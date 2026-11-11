@@ -10,16 +10,16 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism/testing";
-import { approvalPackage } from "@arnilo/prism-approval";
-import { contextFiles, readContextFileLayers } from "@arnilo/prism-context-files";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import { contextFiles, readContextFileLayers } from "@arnilo/prism-extensions/context-files";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 /**
  * Phase 7 Part A on one agent, on the mock provider and a temp workspace:
- * - `@arnilo/prism-tools-coding` provides the file tools plus the hard deny that keeps paths inside `root`;
- * - `@arnilo/prism-approval` in `ask` mode gates the `edit` call: the scripted `HostUi` answers the
+ * - `@arnilo/prism-tools/coding` provides the file tools plus the hard deny that keeps paths inside `root`;
+ * - `@arnilo/prism-extensions/approval` in `ask` mode gates the `edit` call: the scripted `HostUi` answers the
  *   `confirm` and the follow-up `select` (`once`), and the file changes;
- * - `@arnilo/prism-context-files` layers `SYSTEM.md` and `AGENTS.md` from the same `root`.
+ * - `@arnilo/prism-extensions/context-files` layers `SYSTEM.md` and `AGENTS.md` from the same `root`.
  * The second agent sets `disable: { tools: ["shell"] }`: `shell` is gone from the tool list and a
  * scripted call to it is blocked as an unknown tool without starting.
  * Imports only public package entry points and `@arnilo/prism/testing`; no credential, no network.

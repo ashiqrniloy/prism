@@ -4,7 +4,7 @@
 
 ### Added
 
-- New provider package (plan 206 Task 2): `@arnilo/prism-provider-ollama-cloud` registers the
+- New provider package (plan 206 Task 2): `@arnilo/prism-ai/ollama-cloud` registers the
   `ollama-cloud` provider with the measured native NDJSON `/api/chat` route (default) and the
   OpenAI-compatible `/v1/chat/completions` route used by `pi-ollama-cloud`.
 - Native route streams text, thinking, tool calls, images, and JSON-schema structured output, and maps

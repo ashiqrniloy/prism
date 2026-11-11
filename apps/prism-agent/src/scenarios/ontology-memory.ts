@@ -8,7 +8,7 @@ import {
   type ProviderRequest,
 } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { createMarkdownWikiStore, parseConceptBody } from "@arnilo/prism-wiki";
+import { createMarkdownWikiStore, parseConceptBody } from "@arnilo/prism-knowledge/wiki";
 import type { HostConfig } from "../host/config.js";
 import { createResearchWorker } from "../host/research.js";
 import { runTurn, textOf } from "./conversational-memory.js";

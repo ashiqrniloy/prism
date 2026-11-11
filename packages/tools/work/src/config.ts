@@ -45,7 +45,7 @@ export interface ToolsWorkReaderConfig {
   };
 }
 
-/** Validated `packageConfig` for `@arnilo/prism-tools-work`. */
+/** Validated `packageConfig` for `@arnilo/prism-tools/work`. */
 export interface ToolsWorkConfig {
   /** Absolute workspace root the file-touching tools operate in. Required; checked in `setup`. */
   readonly root?: string;

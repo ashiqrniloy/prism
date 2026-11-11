@@ -1,5 +1,5 @@
 /** Input-estimation residue (plan 158 Task 8): the helpers the kernel keeps after the
- *  context-engineering stages moved to `@arnilo/prism-context-engineering`. Nothing here decides
+ *  context-engineering stages moved to `@arnilo/prism-extensions/context-engineering`. Nothing here decides
  *  anything — each function returns a number or a cap — so the assertions are exact values. */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
@@ -54,13 +54,23 @@ describe("models/estimate", () => {
 
   it("a host token estimator overrides the built-in basis for the single-message form only", () => {
     const message = text("user", "abcdefgh");
-    assert.equal(estimateMessageTokens(message, () => 42), 42);
+    assert.equal(
+      estimateMessageTokens(message, () => 42),
+      42,
+    );
     const withEstimator = estimateMessageTokens([message], "claude-sonnet-4.5");
     assert.ok(withEstimator.tokens < 42, "the family form keeps its own table");
   });
 
   it("request extras measure tools and context blocks with the assembler's own text shapes", () => {
-    const tools: ToolDefinition[] = [{ name: "echo", description: "Echo", parameters: { type: "object", properties: {} }, execute: () => ({ toolCallId: "c", name: "echo" }) }];
+    const tools: ToolDefinition[] = [
+      {
+        name: "echo",
+        description: "Echo",
+        parameters: { type: "object", properties: {} },
+        execute: () => ({ toolCallId: "c", name: "echo" }),
+      },
+    ];
     const context: ContextBlock[] = [{ title: "Project", content: "Stable project context." }];
     const seen: string[] = [];
     const tokens = estimateRequestExtrasTokens(tools, context, (value) => {
@@ -70,7 +80,11 @@ describe("models/estimate", () => {
     assert.equal(tokens, 2, "one call per context block plus one for the tool list");
     assert.equal(seen[0], "Project:\nStable project context.");
     assert.equal(seen[1], "Available tools:\n- echo: Echo");
-    assert.equal(estimateRequestExtrasTokens(undefined, undefined, () => 5), 0, "nothing to measure costs nothing");
+    assert.equal(
+      estimateRequestExtrasTokens(undefined, undefined, () => 5),
+      0,
+      "nothing to measure costs nothing",
+    );
   });
 
   it("resolveInputCap prefers a host cap and otherwise derives one from the model window", () => {

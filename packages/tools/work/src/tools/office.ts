@@ -2,21 +2,8 @@ import { Buffer } from "node:buffer";
 import { isAbsolute } from "node:path";
 import { JsonObject, SecretRedactor, ToolDefinition, ToolExecutionContext, ToolResult, UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
 import { type ArtifactBodyRef, ArtifactBodyStore } from "@arnilo/prism/artifacts";
-import {
-  type DocumentCaps,
-  type DocumentFormat,
-  type DocumentModel,
-  type DocumentPatch,
-  diffDocument,
-  generateDocument,
-  importDocument,
-  parseDocument,
-  patchDocument,
-  renderPreviewHtml,
-  resolveDocumentCaps,
-  validateByteCap,
-  validateDocumentModel,
-} from "../documents/index.js";
+import { resolveDocumentCaps, validateByteCap } from "../documents/caps.js";
+import type { DocumentCaps, DocumentFormat, DocumentModel, DocumentPatch } from "../documents/index.js";
 import { resolveSandboxPath, type WorkSandboxFilesystem } from "./filesystem.js";
 
 const NO_EFFECT = { kind: "none", idempotency: "none" } as const;
@@ -63,6 +50,8 @@ function stringArg(args: JsonObject, key: string): string | undefined {
 function documentModel(value: unknown): DocumentModel {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("model must be an object");
   const model = value as DocumentModel;
+  const validateDocumentModel: typeof import("../documents/model-schema.js").validateDocumentModel =
+    require("../documents/model-schema.js").validateDocumentModel;
   validateDocumentModel(model);
   return model;
 }
@@ -194,6 +183,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
       parameters: objectSchema(INPUT, ["kind"]),
       async execute(args, context) {
         try {
+          const { parseDocument } = await import("../documents/index.js");
           const model = await parseDocument(await inputBytes(args, options, caps.maxBytes, context), {
             kind: documentKind(args.kind),
             caps: options.caps,
@@ -214,6 +204,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
       parameters: objectSchema(INPUT, ["kind"]),
       async execute(args, context) {
         try {
+          const { importDocument } = await import("../documents/index.js");
           const imported = await importDocument(await inputBytes(args, options, caps.maxBytes, context), {
             kind: documentKind(args.kind),
             caps: options.caps,
@@ -237,6 +228,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
       ]),
       async execute(args, context) {
         try {
+          const { generateDocument } = await import("../documents/index.js");
           const format = documentFormat(args.format);
           const generated = await generateDocument(documentModel(args.model), { format, caps: options.caps });
           const target = await writeOutput(generated.bytes, generated.contentHash, format, args, options, context);
@@ -262,6 +254,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
       ]),
       async execute(args, context) {
         try {
+          const { patchDocument, generateDocument } = await import("../documents/index.js");
           const model = patchDocument(documentModel(args.model), documentPatches(args.patches));
           const format = outputFormat(args);
           if (!outputRequested(args)) return { toolCallId: context.toolCallId, name: "office_patch", value: { model } };
@@ -287,6 +280,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
       parameters: objectSchema({ from: MODEL, to: MODEL }, ["from", "to"]),
       async execute(args, context) {
         try {
+          const { diffDocument } = await import("../documents/index.js");
           return {
             toolCallId: context.toolCallId,
             name: "office_diff",
@@ -306,6 +300,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
       parameters: objectSchema({ model: MODEL }, ["model"]),
       async execute(args, context) {
         try {
+          const { renderPreviewHtml } = await import("../documents/index.js");
           return { toolCallId: context.toolCallId, name: "office_preview", value: { html: renderPreviewHtml(documentModel(args.model)) } };
         } catch (error) {
           return errorResult("office_preview", context, error);

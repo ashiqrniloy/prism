@@ -3,27 +3,37 @@
  * hyper + commandcode added).
  * Network-free: reads package manifests + evidence markdown only.
  */
-import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+
 import { test } from "bun:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const evidencePath = join(root, "docs/_evidence/phase37-provider-matrix.md");
-const packagesDir = join(root, "packages");
+
+// The Phase 37 evidence stays historical; shared codec extraction moved cache wire handling into provider-kit.
+const currentCacheSources = {
+  "packages/providers/opencode-go/src/cache.ts": {
+    cache_control: "src/provider-kit/codecs/anthropic-messages.ts",
+    "x-opencode-session": "packages/providers/opencode-go/src/provider.ts",
+  },
+  "packages/providers/hyper/src/cache.ts": {
+    cache_control: "src/provider-kit/codecs/anthropic-messages.ts",
+  },
+  "packages/providers/hyper/src/telemetry.ts": {
+    cached_tokens: "src/provider-kit/openai-primitives.ts",
+  },
+};
 
 function providerAdapters() {
-  // Plan 152 Task 8: every adapter is a standalone @arnilo/prism-provider-<vendor>
-  // package under packages/providers/ (the family workspace is deleted).
-  const providersDir = join(packagesDir, "providers");
-  const adapters = [];
-  for (const name of readdirSync(providersDir)) {
-    const path = join(providersDir, name, "package.json");
-    if (!existsSync(path)) continue;
-    adapters.push({ dir: `providers/${name}`, name: JSON.parse(readFileSync(path, "utf8")).name });
-  }
-  return adapters.sort((a, b) => (a.name < b.name ? -1 : 1));
+  const bundle = JSON.parse(readFileSync(join(root, "scripts/bundles.json"), "utf8")).bundles.find(
+    (bundle) => bundle.dir === "packages/providers",
+  );
+  return bundle.subpaths
+    .filter((row) => ["hyper", "laya", "opencode-go", "typesafe"].includes(row.dir))
+    .map((row) => ({ dir: `providers/${row.dir}`, name: row.formerName }));
 }
 
 function parseCacheClaims(evidence) {
@@ -79,10 +89,17 @@ test("phase37 explicit cache field claims match sources and official URLs", () =
     assert.match(row.status, /^(supported|failing|host-owned)$/, `${row.package} ${row.field} status`);
     assert.match(row.official, /^https:\/\//, `${row.package} ${row.field} official URL`);
     assert.ok(evidence.includes(row.official), `${row.package} ${row.field} official URL must appear in evidence`);
-    const sourcePath = join(root, row.source);
-    const source = readFileSync(sourcePath, "utf8");
+    const currentSource = currentCacheSources[row.source]?.[row.field] ?? row.source;
+    const source = readFileSync(join(root, currentSource), "utf8");
+    if (currentSource.startsWith("src/provider-kit/")) {
+      const adapter = providerAdapters().find((pkg) => pkg.name === row.package);
+      const provider = readFileSync(join(root, "packages", adapter.dir, "src/provider.ts"), "utf8");
+      assert.match(provider, /createRoutedProvider/, `${row.package} must use the shared codecs`);
+      if (row.field === "cache_control") assert.match(provider, /format: "anthropic-messages"/, `${row.package} keeps its messages route`);
+      if (row.field === "cached_tokens") assert.match(provider, /mapOpenAIChatUsage\(raw\)/, `${row.package} keeps shared usage mapping`);
+    }
     if (row.status === "supported") {
-      assert.ok(source.includes(row.field), `${row.source} missing supported field ${row.field}`);
+      assert.ok(source.includes(row.field), `${currentSource} (formerly ${row.source}) missing supported field ${row.field}`);
     }
   }
   assert.equal(claimed.size, 2, `cache claims must cover active packages from phase 37, got ${claimed.size}`);

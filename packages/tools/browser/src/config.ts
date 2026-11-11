@@ -6,7 +6,7 @@ export interface ToolsBrowserProxyConfig {
   readonly denyDirectEgress: true;
 }
 
-/** Validated `packageConfig` for `@arnilo/prism-tools-browser`. */
+/** Validated `packageConfig` for `@arnilo/prism-tools/browser`. */
 export interface ToolsBrowserConfig {
   /** Launch a headless Chromium through `playwright-core` (default `true`). */
   readonly headless?: boolean;

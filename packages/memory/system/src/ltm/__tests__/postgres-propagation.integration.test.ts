@@ -21,10 +21,10 @@ import {
   MemoryScopeError,
   type MemoryVectorRecord,
   repointSource,
-} from "@arnilo/prism-memory-core";
-import { createPostgresVectorStore } from "@arnilo/prism-memory-core/postgres";
-import { chunkText, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-rag";
-import type { RagScope } from "@arnilo/prism-rag";
+} from "@arnilo/prism-memory-system/core";
+import { createPostgresVectorStore } from "@arnilo/prism-memory-system/core/postgres";
+import { chunkText, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-knowledge/rag";
+import type { RagScope } from "@arnilo/prism-knowledge/rag";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createMemoryVectorStore, MemoryValidationError, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, MemoryValidationError, type VectorStore } from "@arnilo/prism-memory-system/core";
 import { createLongTermMemory } from "../create.js";
 import { createMemory } from "../memory.js";
 

@@ -39,20 +39,24 @@ export async function demo(): Promise<Record<string, unknown>> {
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore(), loop },
     hooks: askEveryTool(),
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate() {
-        turn += 1;
-        if (turn === 1) {
-          yield { type: "tool_call" as const, call: toolCallContent("a", "write", { n: 1 }) };
-          yield { type: "tool_call" as const, call: toolCallContent("b", "write", { n: 2 }) };
-          yield providerDone();
-          return;
-        }
-        yield providerTextDelta("done");
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            turn += 1;
+            if (turn === 1) {
+              yield { type: "tool_call" as const, call: toolCallContent("a", "write", { n: 1 }) };
+              yield { type: "tool_call" as const, call: toolCallContent("b", "write", { n: 2 }) };
+              yield providerDone();
+              return;
+            }
+            yield providerTextDelta("done");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     tools: {
       add: [
         {
@@ -74,9 +78,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   if (pending.length !== 2 || executed.length !== 0) throw new Error("expected two gated approvals before side effects");
 
   let last: string | undefined;
-  for await (const event of session.resume(
-    pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
-  )) {
+  for await (const event of session.resume(pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })))) {
     last = event.type;
   }
 

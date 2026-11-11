@@ -166,7 +166,10 @@ export function transformVariantSource(path, source, input = []) {
   if (active("om.dates=off")) {
     if (path === `${om}serialize.ts`) {
       replace("`[${entry.timestamp}] [${entry.id}] ${entry.kind}: ${text}`", "`[${entry.id}] ${entry.kind}: ${text}`");
-      replaceEither(["if (elapsed < 600_000) return undefined;", "if (elapsed >= 600_000) {"], source.includes("if (elapsed < 600_000) return undefined;") ? "return undefined;" : "if (false && elapsed >= 600_000) {");
+      replaceEither(
+        ["if (elapsed < 600_000) return undefined;", "if (elapsed >= 600_000) {"],
+        source.includes("if (elapsed < 600_000) return undefined;") ? "return undefined;" : "if (false && elapsed >= 600_000) {",
+      );
     } else if (path === `${om}render.ts`) {
       replace('${item.observedFrom && item.observedTo ? `(${item.observedFrom} – ${item.observedTo}) ` : ""}', "");
       replace(

@@ -10,19 +10,19 @@
   "skills": [
     {
       "name": "web-research",
-      "package": "@arnilo/prism-tools-web",
+      "package": "@arnilo/prism-tools/web",
       "dataset": "datasets/web-research.ts",
       "skillDir": "packages/tools/web/skills/web-research"
     },
     {
       "name": "coding-workflow",
-      "package": "@arnilo/prism-tools-coding",
+      "package": "@arnilo/prism-tools/coding",
       "dataset": "datasets/coding-workflow.ts",
       "skillDir": "scripts/skill-evals/archive/coding/skills/coding-workflow"
     },
     {
       "name": "browser-automation",
-      "package": "@arnilo/prism-tools-browser",
+      "package": "@arnilo/prism-tools/browser",
       "dataset": "datasets/browser-automation.ts",
       "skillDir": "packages/tools/browser/skills/browser-automation",
       "limits": {
@@ -31,9 +31,9 @@
     },
     {
       "name": "delegating-work",
-      "package": "@arnilo/prism-delegate",
+      "package": "@arnilo/prism-extensions/delegate",
       "dataset": "datasets/delegating-work.ts",
-      "skillDir": "packages/integrations/delegate/skills/delegating-work"
+      "skillDir": "packages/extensions/delegate/skills/delegating-work"
     }
   ],
   "dataset": {

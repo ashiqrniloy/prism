@@ -1,10 +1,10 @@
 import { createAgent, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createAgUiHandler } from "@arnilo/prism-ag-ui";
+import { createAgUiHandler } from "@arnilo/prism-hosts/ag-ui";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 
-/** Compile-checked A2UI painting demo for `@arnilo/prism-ag-ui`. */
+/** Compile-checked A2UI painting demo for `@arnilo/prism-hosts/ag-ui`. */
 export async function demo() {
   let turn = 0;
   const agent = await createAgent({

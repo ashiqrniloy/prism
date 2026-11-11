@@ -1,8 +1,15 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { type ModelProvider, createAgent, providerDone, providerTextDelta, providerToolCallDelta, type ToolDefinition } from "@arnilo/prism";
-import { hookCommandHash, hooksJson } from "@arnilo/prism-hooks-json";
+import {
+  type ModelProvider,
+  createAgent,
+  providerDone,
+  providerTextDelta,
+  providerToolCallDelta,
+  type ToolDefinition,
+} from "@arnilo/prism";
+import { hookCommandHash, hooksJson } from "@arnilo/prism-extensions/hooks-json";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // hooks.json package: config is the file. SessionStart is session.opened. PreToolUse is tool.call.
@@ -52,7 +59,10 @@ const provider: ModelProvider = {
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   tools: { add: [write] },
-  packages: [hooksJson({ config, onWarning: (warning) => console.log(`warning: ${warning.code} ${warning.message}`) }), providerPackage("test-provider", [provider])],
+  packages: [
+    hooksJson({ config, onWarning: (warning) => console.log(`warning: ${warning.code} ${warning.message}`) }),
+    providerPackage("test-provider", [provider]),
+  ],
 });
 
 const session = await agent.session({ id: "hooks-json-example", create: true });

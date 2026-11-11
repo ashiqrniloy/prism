@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEvent, ToolArgumentValidator, ToolCallContent, ToolDefinition, ToolRegistry, } from "../index.js";
+import type { AgentEvent, ToolArgumentValidator, ToolCallContent, ToolDefinition, ToolRegistry } from "../index.js";
 import { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "../index.js";
 
 function tool(name: string, parameters?: ToolDefinition["parameters"]): ToolDefinition {

@@ -280,9 +280,7 @@ function assertLinearCap(value: number | undefined, name: string, fallback: numb
  * `agent.sessions` failing closed with `UnsupportedStoreCapabilityError`.
  */
 export function sessionStoreCapabilities(store: SessionStore): readonly SessionStoreCapability[] {
-  return (["listSessions", "deleteSession", "searchSessions"] as const).filter(
-    (capability) => typeof store[capability] === "function",
-  );
+  return (["listSessions", "deleteSession", "searchSessions"] as const).filter((capability) => typeof store[capability] === "function");
 }
 
 export function createMemorySessionStore(

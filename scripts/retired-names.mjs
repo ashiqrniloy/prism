@@ -32,6 +32,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { activeBundles } from "./bundles.mjs";
 import { loadRelease } from "./release.mjs";
 import { BASELINE_DIR, baselineName } from "./release-gates.mjs";
 
@@ -47,6 +48,7 @@ export const SCAN_ROOTS = ["src", "packages", "apps", "scripts", "examples", "do
 // evidence (immutable, audited standalone; `scripts/run-all-tests.mjs`), and tests (a test names a
 // retired symbol to pin its absence; `bun run typecheck` catches a live import of one).
 export const EXCLUDE = [
+  /^scripts\/bundles\.json$/,
   /(^|\/)dist\//,
   /(^|\/)node_modules\//,
   /^plans\//,
@@ -149,6 +151,16 @@ export function generate({ from = DEFAULT_FROM, root = ROOT } = {}) {
   for (const entry of JSON.parse(readFileSync(join(root, "scripts/deprecations-0.13.json"), "utf8")).names) {
     candidates.add(entry.name);
   }
+  const successors = {};
+  for (const bundle of activeBundles(root)) {
+    for (const row of bundle.subpaths) {
+      if (row.formerName === bundle.name) continue;
+      candidates.add(row.formerName);
+      if (!(row.formerName in successors) || row.kind === "package") {
+        successors[row.formerName] = bundle.name + (row.path === "." ? "" : row.path.slice(1));
+      }
+    }
+  }
   const packages = [...candidates].filter((name) => !live.has(name)).sort();
 
   // Subpaths a package still published at 0.13.0 no longer exports (`@arnilo/prism/node/settings`).
@@ -195,7 +207,7 @@ export function generate({ from = DEFAULT_FROM, root = ROOT } = {}) {
   );
   const cliFlags = [...tagFlags].filter((flag) => !liveFlags.has(flag) && !CLI_FLAG_KEEP.has(flag)).sort();
 
-  return { generatedFrom: from, packages, subpaths, exports, errorCodes, cliFlags };
+  return { generatedFrom: from, packages, successors, subpaths, exports, errorCodes, cliFlags };
 }
 
 export function readList(root = ROOT) {

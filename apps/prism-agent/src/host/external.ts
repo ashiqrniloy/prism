@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { type Agent, createAgent } from "@arnilo/prism";
 import { createProfiles } from "@arnilo/prism/driver-kit";
-import { adapterDriver, processDriver } from "@arnilo/prism-driver-process";
+import { adapterDriver, processDriver } from "@arnilo/prism-hosts/driver-process";
 import { hostStreamCli } from "../adapters/stream-cli.js";
 import type { HostConfig, HostDeps } from "./config.js";
 import { sqlitePackage } from "./store.js";

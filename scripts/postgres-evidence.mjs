@@ -15,14 +15,15 @@ const BUN = process.platform === "win32" ? "bun.exe" : "bun";
 //   (fail) redaction benchmark scenario (plan 070) > runs through the parameterized runner within the frozen caps [279.18ms]
 // and one summary per leg (three workspace-prefixed plus one phase conformance):
 // Plan 158 Task 6: the memory leg moved from the deleted family to the fabric package; plan 216 Task 5 moved it into @arnilo/prism-memory-system.
-//   @arnilo/prism-store-postgres test:postgres: Ran 78 tests across 17 files. [8.46s]
+//   @arnilo/prism-extensions test:postgres: Ran 78 tests across 17 files. [8.46s]
 //   Ran 11 tests across 3 files. [7.86s]
 // Node's TAP (`ℹ pass N`, `# fail N`) is gone: every leg runs `bun test` (plan 124 Tasks 2/3).
 // Bun prints each failure twice (at its position and again in the end-of-run failure block), so
 // `counts.fail` can over-count — harmless here, because any `(fail)` line fails the leg closed.
 // `(pass)` lines print exactly once; counts sum all four leg summaries, never just the final one.
-const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory-system|channels) test:postgres: )?\((pass|fail)\) /gm;
-const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory-system|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
+const RESULT = /^(?:@arnilo\/prism-(?:core|extensions|memory-system|hosts|channels) test:postgres: )?\((pass|fail)\) /gm;
+const SUMMARY =
+  /^(?:(@arnilo\/prism-(?:core|extensions|memory-system|hosts|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
 // Plan 153 Task 5: the session-store integrations moved to the store package, so its leg owns them.
 const REQUIRED_POSTGRES_CASES = [
   "postgres_evaluation_store_conformance",
@@ -55,11 +56,7 @@ export function evidenceCounts(output) {
 export function evidenceDocument({ gitHead, captured, output }) {
   const counts = evidenceCounts(output);
   const legs = [...output.matchAll(SUMMARY)].map((summary) => summary[1] ?? "phase conformance");
-  for (const leg of [
-    "@arnilo/prism-store-postgres test:postgres",
-    "@arnilo/prism-channels test:postgres",
-    "phase conformance",
-  ]) {
+  for (const leg of ["@arnilo/prism-extensions test:postgres", "@arnilo/prism-hosts test:postgres", "phase conformance"]) {
     if (legs.filter((name) => name === leg).length !== 1) throw new Error(`PostgreSQL service leg missing or duplicated: ${leg}`);
     if (leg === "phase conformance" ? !/^\(pass\) /m.test(output) : !output.includes(`${leg}: (pass) `)) {
       throw new Error(`PostgreSQL service leg has no passing tests: ${leg}`);
@@ -69,7 +66,7 @@ export function evidenceDocument({ gitHead, captured, output }) {
   for (const name of REQUIRED_POSTGRES_CASES) {
     if (
       !lines.some((line) =>
-        line.startsWith(`@arnilo/prism-store-postgres test:postgres: (pass) createPostgresPersistence integration > ${name} [`),
+        line.startsWith(`@arnilo/prism-extensions test:postgres: (pass) createPostgresPersistence integration > ${name} [`),
       )
     ) {
       throw new Error(`required PostgreSQL regression did not pass: ${name}`);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { ToolDefinition } from "@arnilo/prism";
-import { type ConnectMcpToolsOptions, createConnectedAppSession, type McpToolBridge } from "@arnilo/prism-mcp";
-import { AgentIdentity } from "@arnilo/prism-governance";
+import { type ConnectMcpToolsOptions, createConnectedAppSession, type McpToolBridge } from "@arnilo/prism-extensions/mcp";
+import { AgentIdentity } from "@arnilo/prism-extensions/governance";
 /** The Open Connector runtime's five MCP tools (`/mcp/tools`). */
 const OC_TOOLS = ["list_apps", "list_connections", "search_actions", "get_action_guide", "execute_action"] as const;
 const OC_ORIGIN = "http://127.0.0.1:3000";

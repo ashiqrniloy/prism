@@ -181,6 +181,13 @@ export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
    * limit the loop ends after this turn. Byte limits still fail either way.
    */
   readonly onToolCallLimit?: "fail" | "refuse";
+  /**
+   * End the loop after a turn whose tool calls all ran without an error result, an `{ ok: false }` value or a
+   * `warning` (none refused) and whose reply did not stop on the output limit, instead of asking the model again. A recording worker's next turn after a clean
+   * turn is almost always a closing reply with no call (plan 217 Task 6: a third of the STM worker's input).
+   * Default `false`.
+   */
+  readonly endAfterCleanTurn?: boolean;
 }
 
 /** The error result of a call `onToolCallLimit: "refuse"` did not run. */
@@ -218,6 +225,7 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
   let totalCalls = 0;
   for (let turn = 0; turn < limits.maxTurns; turn += 1) {
     const calls: { readonly raw: ToolCallContent; readonly safe: ToolCallContent; readonly refused?: string }[] = [];
+    let stopReason: string | undefined;
     try {
       throwIfAborted(options.signal);
       const request = applyDefaultProviderRequestOptions(
@@ -242,6 +250,7 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
       })) {
         throwIfAborted(options.signal);
         if (event.type === "error") throw new Error(safeWorkerError(event.error, secrets, limits.maxErrorBytes));
+        if (event.type === "done") stopReason = event.stopReason;
         if (event.type !== "tool_call") continue;
         let refused: string | undefined;
         if (calls.length >= limits.maxToolCallsPerTurn) {
@@ -275,6 +284,7 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
 
     if (!calls.length) return;
     addMessage({ role: "assistant", content: calls.map((call) => call.safe) });
+    let clean = !calls.some((call) => call.refused) && stopReason !== "max_output_tokens";
     for (const call of calls) {
       if (call.refused) {
         addMessage(toolResultMessage(call.safe, { error: { code: MEMORY_WORKER_TOOL_CALL_LIMIT, message: call.refused } }));
@@ -294,6 +304,10 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
         throw new Error(safeWorkerError(error, secrets, limits.maxErrorBytes));
       }
       measure(result, limits.maxResultBytes, "Observational memory tool result");
+      // A tool that refused its input answers `{ ok: false }` or an error, and one that changed it adds a `warning`: the
+      // model gets a turn to see it.
+      const value = result.value && typeof result.value === "object" ? (result.value as { ok?: unknown; warning?: unknown }) : undefined;
+      if (result.error || value?.ok === false || value?.warning !== undefined) clean = false;
       const payload = { result: result.value, error: result.error };
       measure(payload, limits.maxResultBytes, "Observational memory tool result payload");
       const safePayload = redactSecrets(payload, secrets);
@@ -302,6 +316,7 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
     }
     // Past the total limit nothing more can run: the calls within the limits keep their effect and the loop ends.
     if (refuse && totalCalls >= limits.maxToolCalls) return;
+    if (options.endAfterCleanTurn && clean) return;
   }
 }
 

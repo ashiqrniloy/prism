@@ -388,7 +388,7 @@ export function acme(options: AcmeProviderPackageOptions & AcmeProviderConfig = 
 
 ### 4. System One decision providers (`systemOneProviderPackage`)
 
-Prism decision models (such as `@arnilo/prism-provider-typesafe` and `@arnilo/prism-provider-laya`) follow a single standardized shape over `provider-kit`:
+Prism decision models (such as `@arnilo/prism-ai/typesafe` and `@arnilo/prism-ai/laya`) follow a single standardized shape over `provider-kit`:
 - **`systemOneProviderPackage(spec)`**: Generates the package definition and instance factory from a uniform specification (`name`, `providerId`, `label`, `defaultBaseUrl`, `defaultKeyRef`, `keyRequired`, `models`, and optional `createProvider`).
 - **`createSystemOneDecisionProvider(options)`**: Implements the `ModelProvider` contract over `POST /v1/systemone`. Validates fail-closed that requests provide `options.structuredOutput` with a JSON schema, forbids `tools`, and checks `boolean_threshold` in `request.options.compat`. It also exposes `decisions()`, which returns raw answers (probabilities, confidence, legend, usage, timing) without the schema renderer.
 - **`path` (default `/v1/systemone`)**: `createSystemOneDecisionProvider` and `systemOneProviderPackage` config accept a path so a host can target Foundry (`/providers/microsoft/v1/systemone`) or another deployment without forking. A path without a leading `/` is a construction error. `normalizeSystemOnePath` is exported for custom clients.
@@ -504,7 +504,7 @@ handles request serialization and SSE event parsing for providers implementing t
 
 ```ts
 import { providerConformance } from "@arnilo/prism/provider-kit";
-import { createHyperProvider, hyperModels } from "@arnilo/prism-provider-hyper";
+import { createHyperProvider, hyperModels } from "@arnilo/prism-ai/hyper";
 
 const result = await providerConformance(
   () => createHyperProvider({ apiKey: async () => "test-key" }),
@@ -545,7 +545,7 @@ Every provider package in `packages/providers/<vendor>` is enforced by the suppo
 - `docs/models.md`: `ModelRef`/`ModelSpec`, the provider registry, and the built-in provider.
 - `@arnilo/prism/testing`: `mockProvider` and the provider event helpers.
 - `docs/packages.md`: `definePackage`, `providerPackage`, and the `providers` registrar.
-- `packages/providers/<vendor>/src/index.ts`: the 5 provider packages built on the surface above.
+- `packages/providers/<vendor>/src/index.ts`: the eleven provider subpaths built on the surface above.
 
 ## OpenAI Responses codec
 

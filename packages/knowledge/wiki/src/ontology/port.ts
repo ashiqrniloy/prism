@@ -10,8 +10,8 @@
  * in bounded batches), which catches the hard deletes that leave no record. A claim whose citation is unreadable is
  * never rendered or returned either way: the read side checks again.
  */
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
-import { MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
+import { MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { dirname } from "node:path";
 import {
   createMemoryWikiStore,

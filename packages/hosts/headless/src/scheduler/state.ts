@@ -1,5 +1,10 @@
 import type { Agent, JsonObject, OwnershipScope, RunOptions, RunResult } from "@arnilo/prism";
-import { CHECKPOINT_CONFLICT_CODE, type CheckpointRecord, type CheckpointStore, type WorkflowRunStatus } from "@arnilo/prism-workflows";
+import {
+  CHECKPOINT_CONFLICT_CODE,
+  type CheckpointRecord,
+  type CheckpointStore,
+  type WorkflowRunStatus,
+} from "@arnilo/prism-extensions/workflows";
 import { HeadlessError } from "../errors.js";
 
 export type SchedulerTarget =

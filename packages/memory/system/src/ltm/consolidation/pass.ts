@@ -6,10 +6,10 @@
  * leaves the material for the next trigger.
  */
 import type { ModelClient, SecretRedactor, SessionEntry } from "@arnilo/prism";
-import { type Memory, type MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import { type Memory, type MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import { activeReflections, foldObservationalMemoryLedger, recordData } from "../../session/ledger.js";
 import { isTaskStateRecordedData } from "../../session/types.js";
-import { type ResolvedMemoryWorkerLimits } from "@arnilo/prism-memory-core";
+import { type ResolvedMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
 import type { FabricConsolidationReport, ResolvedPromoteConfig } from "../promote.js";
 import { type MemoryFabric, type MemoryFabricScopeBinding, type MemoryNoteScope, parseMemoryNoteMetadata } from "../types.js";
 import { type ConsolidationExtraction, type ExtractedNote, extractConsolidationNotes } from "./extract.js";

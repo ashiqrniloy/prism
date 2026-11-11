@@ -9,13 +9,7 @@
  *
  * Not included in `createCodingTools` / `createAllTools` / `createReadOnlyTools`.
  */
-import type {
-  HostUi,
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { HostUi, JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { validateCodingLimit } from "./limits.js";
@@ -342,9 +336,7 @@ function buildAnswerResult(
       {
         type: "text",
         text:
-          parsed.selectionMode === "multiple"
-            ? `User selected ${selected.length} option(s): ${labelText}.`
-            : `User selected ${labelText}.`,
+          parsed.selectionMode === "multiple" ? `User selected ${selected.length} option(s): ${labelText}.` : `User selected ${labelText}.`,
       },
     ],
     metadata: {

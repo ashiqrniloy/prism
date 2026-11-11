@@ -21,7 +21,12 @@ async function build(store = createMemorySessionStore(), ownership?: { tenantId:
       yield providerDone();
     },
   };
-  return createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ...(ownership ? { ownership } : {}) });
+  return createAgent({
+    model: MODEL,
+    packages: [providerPackage("test-provider", [provider])],
+    slots: { store },
+    ...(ownership ? { ownership } : {}),
+  });
 }
 
 describe("session links (K4)", () => {
@@ -34,7 +39,10 @@ describe("session links (K4)", () => {
       actor: { kind: "external", agent: "driver", vendor: "acme" },
     });
     const page = await agent.sessions.list({ workflowRunId: "wf-1" });
-    assert.deepEqual(page.items.map((item) => item.sessionId), [child.id]);
+    assert.deepEqual(
+      page.items.map((item) => item.sessionId),
+      [child.id],
+    );
     assert.equal(page.items[0]?.parentSessionId, parent.id);
     assert.equal(page.items[0]?.delegationId, "d-1");
     assert.deepEqual(page.items[0]?.actor, { kind: "external", agent: "driver", vendor: "acme" });
@@ -78,8 +86,14 @@ describe("session links (K4)", () => {
     await b.session({ parent: { workflowRunId: "wf" } });
 
     const index = createSessionIndex(store, { ownership: { tenantId: "t-a" } });
-    assert.deepEqual((await index.list({ workflowRunId: "wf" })).items.map((item) => item.sessionId), [mine.id]);
-    assert.deepEqual((await index.search({ workflowRunId: "wf" })).items.map((hit) => hit.sessionId), [mine.id]);
+    assert.deepEqual(
+      (await index.list({ workflowRunId: "wf" })).items.map((item) => item.sessionId),
+      [mine.id],
+    );
+    assert.deepEqual(
+      (await index.search({ workflowRunId: "wf" })).items.map((hit) => hit.sessionId),
+      [mine.id],
+    );
     // A caller-supplied scope can narrow but never widen the index's own.
     assert.equal((await index.list({ workflowRunId: "wf", tenantId: "t-b" })).items.length, 1);
     assert.equal((await index.list({ workflowRunId: "wf", tenantId: "t-b" })).items[0]?.sessionId, mine.id);

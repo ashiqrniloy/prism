@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { type SsrfPolicy } from "@arnilo/prism";
 import { pinnedFetch } from "@arnilo/prism/net";
-import type { SourceAccessGrant } from "@arnilo/prism-memory-core";
+import type { SourceAccessGrant } from "@arnilo/prism-memory-system/core";
 import { RagLimitError, RagSyncCursorError, RagSyncThrottleError, RagValidationError } from "../errors.js";
 import { htmlParser, pdfParser, textParser } from "../parsers.js";
 import type { KnowledgeChange, KnowledgeChangePage, KnowledgeConnector } from "../sync.js";

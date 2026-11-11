@@ -4,7 +4,7 @@
   "task": 2,
   "file": "scripts/memory-bench/memory-model-criteria.json",
   "frozen": "2026-11-08",
-  "memoryModelCriteriaHash": "f99907bd939cade310204dcca5e9adefeec2ee442a2f89205a31ecc53205479e",
+  "memoryModelCriteriaHash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
   "pins": {
     "robustness-criteria.json": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
     "three-tier-criteria.json": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
@@ -18,6 +18,22 @@
       "task": 6,
       "date": "2026-11-09",
       "reason": "fixture hashes for long-session-replay and long-session (fixtures.rule); no row changes"
+    },
+    {
+      "previousHash": "f99907bd939cade310204dcca5e9adefeec2ee442a2f89205a31ecc53205479e",
+      "hash": "9ed0adf03609287da27442612b02d55f0290e75df86d504a66ee7ec08cf896ce",
+      "plan": 217,
+      "task": 6,
+      "date": "2026-11-10",
+      "reason": "owner decision m1S3Deferred: gate M-1 defers S3 to gate A; no row, threshold or partition changes"
+    },
+    {
+      "previousHash": "9ed0adf03609287da27442612b02d55f0290e75df86d504a66ee7ec08cf896ce",
+      "hash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
+      "plan": 217,
+      "task": 6,
+      "date": "2026-11-10",
+      "reason": "owner decision m1DevPersonas: long-session dev partition extended to 16 personas; fixture hash updated; no row changes"
     }
   ],
   "rule": "An amendment (plan 219.1's retrieval-set hashes and fitted thresholds) adds an `amendments` entry with `previousHash` to the criteria file, then replaces memoryModelCriteriaHash here and appends {previousHash, hash, plan, task, date} to `amendments`. No row changes."

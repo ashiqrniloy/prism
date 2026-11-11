@@ -100,7 +100,7 @@ function baselineHits(pkg, name) {
     if (existsSync(f)) {
       for (const line of readFileSync(f, "utf8").split("\n")) {
         const i = line.indexOf("\t");
-        if (i > 0) rows.add(line.slice(0, i));
+        if (i > 0) rows.add(line.slice(0, i).replace(/^(?:\.|\.\/\S+) /, ""));
       }
     }
     baselineCache.set(pkg, rows);

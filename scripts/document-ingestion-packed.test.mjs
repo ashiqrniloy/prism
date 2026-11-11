@@ -15,14 +15,14 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
     // Bun-only release toolchain (plan 124/175): `bun pm pack` packs one workspace, and no
     // step shells out to npm any more.
     const tgz = execFileSync("bun", ["pm", "pack", "--quiet", "--destination", dir], {
-      cwd: join(ROOT, "packages/tools/work"),
+      cwd: join(ROOT, "packages/tools"),
       encoding: "utf8",
     })
       .trim()
       .split("\n")
       .at(-1);
     execFileSync("tar", ["-xzf", tgz, "-C", dir], { stdio: "pipe" });
-    const pkg = join(dir, "package");
+    const pkg = join(dir, "package", "work");
     assert.equal(existsSync(join(pkg, "docling", "ocr.py")), true);
     const extractionJs = readFileSync(join(pkg, "src/document-extraction/index.ts"), "utf8");
     const documentsJs = readFileSync(join(pkg, "src/documents/index.ts"), "utf8");
@@ -30,7 +30,7 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
     assert.doesNotMatch(extractionJs, /^import\s+.*@firecrawl\/anydoc/m);
     assert.equal(documentsJs.includes("@firecrawl/anydoc"), false);
     assert.equal(wikiTs.includes("@firecrawl/anydoc"), false);
-    assert.equal(wikiTs.includes("@arnilo/prism-tools-work"), false);
+    assert.equal(wikiTs.includes("@arnilo/prism-tools/work"), false);
 
     const extraction = await import(pathToFileURL(join(pkg, "src/document-extraction/index.ts")).href);
     const documents = await import(pathToFileURL(join(pkg, "src/documents/index.ts")).href);

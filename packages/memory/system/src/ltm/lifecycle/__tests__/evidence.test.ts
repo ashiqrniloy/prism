@@ -2,7 +2,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createSessionEntry, type SessionEntry } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createLongTermMemory } from "../../create.js";
 import { citationEvidence } from "../../lifecycle/evidence.js";
 import { createFabricLifecycle } from "../../lifecycle/index.js";
@@ -12,12 +12,7 @@ import { parseMemoryNoteMetadata } from "../../types.js";
 const AT = "2026-10-19T10:00:00.000Z";
 const NOTE_ID = "0123456789ab";
 
-function entry(
-  id: string,
-  runId: string,
-  kind: "user" | "assistant" | "tool_call" | "tool_result",
-  text: string,
-): SessionEntry {
+function entry(id: string, runId: string, kind: "user" | "assistant" | "tool_call" | "tool_result", text: string): SessionEntry {
   if (kind === "user" || kind === "assistant") {
     return createSessionEntry({
       id,
@@ -86,7 +81,12 @@ describe("citation evidence", () => {
       entry("t1", "run-1", "tool_result", ""),
     ];
     const first = citationEvidence({ entries, cited: [NOTE_ID] });
-    const second = citationEvidence({ entries: [...entries, entry("u2", "run-2", "user", "Always run bun test.")], cited: [NOTE_ID], helped: new Set(first.helpful), cursor: first.cursor });
+    const second = citationEvidence({
+      entries: [...entries, entry("u2", "run-2", "user", "Always run bun test.")],
+      cited: [NOTE_ID],
+      helped: new Set(first.helpful),
+      cursor: first.cursor,
+    });
     assert.deepEqual(second.helpful, []);
   });
 
@@ -120,10 +120,7 @@ describe("citation evidence", () => {
   });
 
   it("invented_ids_are_never_evidence_for_a_correction", () => {
-    const entries = [
-      entry("a1", "run-1", "assistant", "I am citing [aaaaaaaaaaaa]."),
-      entry("u2", "run-2", "user", "No, that's wrong."),
-    ];
+    const entries = [entry("a1", "run-1", "assistant", "I am citing [aaaaaaaaaaaa]."), entry("u2", "run-2", "user", "No, that's wrong.")];
     assert.deepEqual(citationEvidence({ entries, cited: [NOTE_ID] }).harmful, [], "only an id the session was shown counts");
   });
 });

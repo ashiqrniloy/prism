@@ -1,6 +1,6 @@
-# @arnilo/prism-wiki
+# @arnilo/prism-knowledge/wiki
 
-> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-wiki@experimental`. Outside the
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-knowledge@experimental`. Outside the
 > [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
 > config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
@@ -19,12 +19,12 @@ memory track's acceptance run decides. The ontology moved here from the fabric (
 ## Install
 
 ```bash
-prism add @arnilo/prism-wiki --version 0.13.0-experimental.0
+prism add @arnilo/prism-knowledge/wiki --version 0.13.0-experimental.0
 ```
 
 ```jsonc
 // manifest entry; every field is optional
-{ "package": "@arnilo/prism-wiki", "config": { "root": "./.prism/wiki", "consolidate": { "model": "openai/gpt-5-mini" } } }
+{ "package": "@arnilo/prism-knowledge/wiki", "config": { "root": "./.prism/wiki", "consolidate": { "model": "openai/gpt-5-mini" } } }
 ```
 
 It needs no other package. With [`@arnilo/prism-memory-system`](../../memory/system/README.md) installed with `ltm`
@@ -48,7 +48,7 @@ per call. Without memory it runs on its own sources, and `wiki:status` says so.
 | `consolidate.maxSubjectsPerPass` | integer 1–32 | `8` | Tuning. Subjects and clusters consolidated per pass: at most one model call each, plus one repair. |
 | `consolidate.maxClaimsPerConcept` | integer 1–200 | `40` | Tuning. Claims a concept may hold. At the cap only merging and retiring are accepted. |
 | `consolidate.maxOutputTokens` | integer 256–16384 | provider default | Output cap for one concept call, capped by the model's own limit. |
-| `consolidate.workerLimits` | object | memory-core's limits | The worker-loop limits (`maxTurns`, `maxMessageBytes`, …), the same names and hard caps as `resolveMemoryWorkerLimits` in `@arnilo/prism-memory-core`. |
+| `consolidate.workerLimits` | object | memory-core's limits | The worker-loop limits (`maxTurns`, `maxMessageBytes`, …), the same names and hard caps as `resolveMemoryWorkerLimits` in `@arnilo/prism-memory-system/core`. |
 | `ingest.maxInputBytes` | integer | 33554432 (32 MiB) | Input cap for `wiki_ingest`. Can only be lowered. |
 | `ingest.maxExtractBytes` | integer | 2097152 (2 MiB) | Extract cap; a larger extract is truncated. Can only be lowered. |
 | `workspaceRoot` | string | `process.cwd()` | Root that `path` ingest sources must resolve inside. |
@@ -93,7 +93,7 @@ Unknown fields are rejected, so a 0.12 config fails at load. The 0.12 fields are
     - **co-read** (primary): memory notes the agent read and used together in at least `minCoReads` answering turns. When they share a subject, that subject is due; when none is bound, they are a new-subject candidate.
     - **accumulation**: a bound subject with `minNotes` notes its concept does not cite yet, or `minNotes` unbound notes sharing an enrichment keyword. An ingested source counts as `minNotes` notes by itself.
     - **repair** (always): a concept whose claims lost or changed a citation.
-  - *What one call does.* One model call per due subject or cluster, through the memory worker loop (`@arnilo/prism-memory-core`), with one tool, `edit_concept`. The input is the concept's claims with ids, its relations and open questions, up to 24 new notes (newest first), and the scope's subject list.
+  - *What one call does.* One model call per due subject or cluster, through the memory worker loop (`@arnilo/prism-memory-system/core`), with one tool, `edit_concept`. The input is the concept's claims with ids, its relations and open questions, up to 24 new notes (newest first), and the scope's subject list.
   - *The edits.* `create_subject`, `bind`, `add_claim`, `update_claim`, `retire_claim`, `merge_claims`, `add_relation`, `add_open_question` and `note_contradiction`. There is no operation that rewrites a concept. Every claim and question cites at least one shown note, a claim is at most 280 characters, and `merge_claims` cites exactly the union of the claims it merges.
   - *What is checked.* The answer is validated whole before anything is written: every id must have been shown, every citation must be a readable active note of the concept's own scope (a foreign-scope, forgotten, flagged or inactive id rejects the batch), a subject slug (`[a-z0-9.-]`, at most 64) must be unused, and above the claim cap only `merge_claims` and `retire_claim` are accepted. A claim a person wrote (marked `human`, or with no citation) is read-only to the pass (`claim_human`).
   - *Provenance.* Each concept carries `generated: { by, at }`.
@@ -134,7 +134,7 @@ Unknown fields are rejected, so a 0.12 config fails at load. The 0.12 fields are
 ```ts
 import { createAgent } from "@arnilo/prism";
 import memorySystem from "@arnilo/prism-memory-system";
-import { wiki } from "@arnilo/prism-wiki";
+import { wiki } from "@arnilo/prism-knowledge/wiki";
 
 const agent = await createAgent({
   model: "openai/gpt-5",
@@ -150,6 +150,6 @@ const status = await agent.commands.run("wiki:status", {});
 ## Related APIs
 
 - `@arnilo/prism-memory-system`: long-term memory (`ltm`) provides the read-only `memory.ltm` service the wiki reads.
-- `@arnilo/prism-memory-core`: the worker loop and limits, and the trust scan the wiki runs.
-- `@arnilo/prism-rag`: the PDF parser and document byte cap the ingest uses.
-- `@arnilo/prism-tools-web`: provides the `web.fetch` service for `url` ingest.
+- `@arnilo/prism-memory-system/core`: the worker loop and limits, and the trust scan the wiki runs.
+- `@arnilo/prism-knowledge/rag`: the PDF parser and document byte cap the ingest uses.
+- `@arnilo/prism-tools/web`: provides the `web.fetch` service for `url` ingest.

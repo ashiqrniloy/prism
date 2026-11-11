@@ -79,7 +79,10 @@ async function replay(
   ];
   const agent = await createAgent({
     model: { provider: "mock", model: "main" },
-    packages: [mockProvider(script, { onRequest: (request) => requests.push(request) }), memorySystem({ ltm: { preset, tools: { root } } })],
+    packages: [
+      mockProvider(script, { onRequest: (request) => requests.push(request) }),
+      memorySystem({ ltm: { preset, tools: { root } } }),
+    ],
   });
   try {
     const session = await agent.session({ id: `removal-${preset}`, create: true });

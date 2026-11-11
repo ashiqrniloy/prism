@@ -24,6 +24,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parseBunLock } from "./bun-lock.mjs";
+import { activeBundles } from "./bundles.mjs";
 import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -77,6 +78,11 @@ function packageSources(dir) {
   };
   const src = join(dir, "src");
   if (existsSync(src)) walk(src);
+  else
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const child = join(dir, entry.name, "src");
+      if (entry.isDirectory() && existsSync(child)) walk(child);
+    }
   return found;
 }
 
@@ -226,9 +232,9 @@ function parseLock(files, path, problems) {
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  // Plan 216 Task 5 folded the fabric into memory-system: 51 manifests (root + 50 workspaces).
-  if (manifests.length !== 51) {
-    problems.push(`expected 51 manifests (root + 50 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  // Plan 224 Tasks 4–8 consolidate all six bundles: seven publishable manifests.
+  if (manifests.length !== 7) {
+    problems.push(`expected 7 manifests (root + 6 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   const parsed = new Map();
   for (const path of manifests) {
@@ -291,7 +297,8 @@ export function claimViolations(files, current) {
   const tags = capture(files, ".github/workflows/release.yml", /tags:\s*\[([^\]]*)\]/, "release tag list", problems);
   if (tags !== undefined) {
     const entries = tags.split(",").map((entry) => entry.trim());
-    if (!entries.includes(`"v${current}"`)) problems.push(`.github/workflows/release.yml: tag list has no "v${current}"`);
+    if (!entries.includes('"v*"') && !entries.includes(`"v${current}"`))
+      problems.push(`.github/workflows/release.yml: tag list has no "v${current}"`);
     if (entries.at(-1) !== '"@arnilo/*@*"') {
       problems.push(".github/workflows/release.yml: package-tag glob must stay the last tag entry");
     }
@@ -327,9 +334,10 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   const next = current.replace(/\.(\d+)$/, ".99");
   const half = new Map(files);
   half.set("package.json", bump(files.get("package.json"), `"version": "${current}"`, `"version": "${next}"`));
+  half.set(".github/workflows/release.yml", files.get(".github/workflows/release.yml").replace('"v*"', `"v${current}"`));
   const halfProblems = claimViolations(half, next);
   for (const [label, fragment] of [
-    ["workspace manifest", "packages/hosts/ag-ui/package.json: version"],
+    ["workspace manifest", "packages/hosts/package.json: version"],
     ["internal range", "package.json: peerDependencies"],
     ["lockfile", "bun.lock:"],
     ["index constant", "src/index.ts: version constant"],
@@ -357,8 +365,8 @@ test("positive control: the experimental line is accepted for exactly the experi
   const files = claimFiles(ROOT);
   const current = currentVersion(ROOT);
   assert.ok(EXPERIMENTAL_LINES.size > 0, "the experimental list is not empty");
-  const memory = "packages/memory/system/package.json";
-  const tools = "packages/tools/web/package.json";
+  const memory = "packages/memory/package.json";
+  const tools = "packages/tools/package.json";
   const manifest = JSON.parse(files.get(memory));
   assert.match(manifest.version, EXPERIMENTAL_VERSION, "an experimental package carries the prerelease");
   const mutate = (path, change) => {
@@ -381,8 +389,8 @@ test("positive control: the experimental line is accepted for exactly the experi
     "the prerelease anywhere else is reported",
   );
   assert.ok(
-    mutate("packages/knowledge/wiki/package.json", (m) => {
-      m.dependencies["@arnilo/prism-memory-core"] = `^${current}`;
+    mutate("packages/knowledge/package.json", (m) => {
+      m.dependencies["@arnilo/prism-memory-system"] = `^${current}`;
     }).some((problem) => problem.includes("expected 0.13.0-experimental")),
     "a caret pin into the experimental line is reported",
   );
@@ -393,9 +401,16 @@ test("positive control: the experimental line is accepted for exactly the experi
 // package then needs one edit, and the reported version can never drift from the published manifest.
 test("no package definition or server identity hardcodes a version", () => {
   const dirs = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces ?? []);
-  const workspaceNames = new Set(dirs.map((dir) => readManifest(join(dir, "package.json")).name));
+  const workspaceNames = new Set([
+    ...dirs.map((dir) => readManifest(join(dir, "package.json")).name),
+    ...activeBundles(ROOT).flatMap((bundle) => bundle.subpaths.map((row) => bundle.name + (row.path === "." ? "" : row.path.slice(1)))),
+  ]);
   const sources = dirs.flatMap((dir) =>
     packageSources(dir).map((file) => [relative(ROOT, file).replaceAll("\\", "/"), readFileSync(file, "utf8")]),
+  );
+  assert.ok(
+    sources.some(([file]) => file === "packages/extensions/compaction/src/index.ts"),
+    "the version scan includes bundle subpaths",
   );
   assert.ok(sources.length > 100, `the scan must cover the package sources, got ${sources.length}`);
   assert.deepEqual(definitionVersionProblems(sources, workspaceNames), [], "a package definition hardcodes a version");
@@ -403,16 +418,16 @@ test("no package definition or server identity hardcodes a version", () => {
 });
 
 test("positive control: a hardcoded definition version is reported, an in-process package is not", () => {
-  const names = new Set(["@arnilo/prism-tools-web"]);
+  const names = new Set(["@arnilo/prism-tools/web"]);
   const problemsFor = (source) => definitionVersionProblems([["a.ts", source]], names);
 
-  assert.equal(problemsFor('definePackage({ name: "@arnilo/prism-tools-web", version: "0.13.0", setup() {} })').length, 1);
+  assert.equal(problemsFor('definePackage({ name: "@arnilo/prism-tools/web", version: "0.13.0", setup() {} })').length, 1);
   assert.equal(
-    problemsFor('const PACKAGE = "@arnilo/prism-tools-web";\ndefinePackage({ name: PACKAGE, version: "0.13.0", setup() {} })').length,
+    problemsFor('const PACKAGE = "@arnilo/prism-tools/web";\ndefinePackage({ name: PACKAGE, version: "0.13.0", setup() {} })').length,
     1,
   );
   assert.equal(
-    problemsFor('defineProviderPackage({ name: "@arnilo/prism-provider-hyper", version: "0.13.0", setup() {} })').length,
+    problemsFor('defineProviderPackage({ name: "@arnilo/prism-ai/hyper", version: "0.13.0", setup() {} })').length,
     0,
     "providers read the kernel version",
   );

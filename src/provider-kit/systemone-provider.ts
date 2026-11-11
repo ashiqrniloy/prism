@@ -21,12 +21,7 @@ import { redactSecrets } from "../redaction.js";
 import type { PackageDefinition, PackageInstance } from "../packages/api.js";
 import type { JsonSchema } from "../packages/schema.js";
 import type { SecretSource } from "./provider-package.js";
-import {
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerUsage,
-} from "../models/events.js";
+import { providerDone, providerError, providerTextDelta, providerUsage } from "../models/events.js";
 import { assertStructuredOutputRequestSupported } from "./structured-output.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import { mapSystemOneUsage, normalizeSystemOnePath, postSystemOne, warnIfPlaintextRemote } from "./systemone.js";
@@ -238,7 +233,6 @@ export interface SystemOneProviderPackageResult<
 }
 
 export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): SystemOneProviderPackageResult {
-
   const configSchema: JsonSchema = {
     type: "object",
     properties: {
@@ -318,4 +312,3 @@ export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): Sy
     package: instanceFactory,
   };
 }
-

@@ -389,7 +389,7 @@ test("markdown_subpath_does_not_load_bun_sqlite", () => {
     "bun",
     [
       "-e",
-      `const { mock } = await import('bun:test'); mock.module('bun:sqlite', () => { throw new Error('sqlite loaded'); }); await import('@arnilo/prism-memory-core/fabric');`,
+      `const { mock } = await import('bun:test'); mock.module('bun:sqlite', () => { throw new Error('sqlite loaded'); }); await import('@arnilo/prism-memory-system/core/fabric');`,
     ],
     { timeout: 10000 },
   );

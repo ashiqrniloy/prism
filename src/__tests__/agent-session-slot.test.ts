@@ -102,9 +102,19 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
 
   it("create_true_still_fails_closed_across_ownership_scope", async () => {
     const store = createMemorySessionStore();
-    const mine = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "tenant-a" } });
+    const mine = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: { store },
+      ownership: { tenantId: "tenant-a" },
+    });
     await (await mine.session({ id: "shared-id", create: true })).run("private");
-    const theirs = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "tenant-b" } });
+    const theirs = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: { store },
+      ownership: { tenantId: "tenant-b" },
+    });
     await assert.rejects(theirs.session({ id: "shared-id", create: true }), SessionNotFoundError);
   });
 

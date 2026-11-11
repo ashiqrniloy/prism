@@ -1,11 +1,4 @@
-import {
-  createAgent,
-  DecisionsError,
-  definePackage,
-  type DecisionsProvider,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
+import { createAgent, DecisionsError, definePackage, type DecisionsProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
 
 /**
@@ -90,10 +83,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const agent = await createAgent({
     id: "decision-models-demo",
     model: { provider: "mock", model: "demo" },
-    packages: [
-      mockProvider([[providerTextDelta("routed to billing"), providerDone()]], { id: "mock", decisions }),
-      router,
-    ],
+    packages: [mockProvider([[providerTextDelta("routed to billing"), providerDone()]], { id: "mock", decisions }), router],
   });
 
   const session = await agent.session();

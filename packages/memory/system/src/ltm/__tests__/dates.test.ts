@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
 
 const REF = "2026-03-15T12:00:00.000Z";
@@ -61,7 +61,6 @@ describe("time-scoped recall", () => {
     await assert.rejects(() => fabric.recall("checkup", { from: "2026-03-01", to: "2026-02-01" }), MemoryValidationError);
     await assert.rejects(() => fabric.recall("checkup", { order: "newest" as "time" }), MemoryValidationError);
   });
-
 
   it("time_window_finds_archived_note_beyond_the_relevance_preload", async () => {
     const { fabric, memory } = harness();

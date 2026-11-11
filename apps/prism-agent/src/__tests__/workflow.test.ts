@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_MAX_FAN_OUT } from "@arnilo/prism-workflows";
+import { DEFAULT_MAX_FAN_OUT } from "@arnilo/prism-extensions/workflows";
 import { type HostConfig, REMOTE_ENDPOINT } from "../host/index.js";
 import { gateThrowFails, orchestratedWorkflow } from "../scenarios/orchestrated-workflow.js";
 

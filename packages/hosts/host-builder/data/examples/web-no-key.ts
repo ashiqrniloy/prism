@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
-import { toolsWeb } from "@arnilo/prism-tools-web";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
+import { toolsWeb } from "@arnilo/prism-tools/web";
 
 /**
  * Two halves of the same story, both offline.
@@ -37,7 +37,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     });
 
     const inspection = agent.inspect();
-    const webNote = inspection.statusNotes.find((note) => note.package === "@arnilo/prism-tools-web");
+    const webNote = inspection.statusNotes.find((note) => note.package === "@arnilo/prism-tools/web");
     const webTools = inspection.tools.filter((tool) => tool.name.startsWith("web_"));
 
     const session = await agent.session();
@@ -56,9 +56,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     try {
       const nativeInspection = native.inspect();
       nativeTools = nativeInspection.tools.filter((tool) => tool.name.startsWith("web_")).map((tool) => tool.name);
-      nativeNotes = nativeInspection.statusNotes
-        .filter((note) => note.package === "@arnilo/prism-tools-web")
-        .map((note) => note.message);
+      nativeNotes = nativeInspection.statusNotes.filter((note) => note.package === "@arnilo/prism-tools/web").map((note) => note.message);
     } finally {
       await native.dispose();
     }
@@ -67,7 +65,7 @@ export async function demo(): Promise<Record<string, unknown>> {
       note: webNote?.message,
       level: webNote?.level,
       webTools: webTools.map((tool) => tool.name),
-      codingToolsRegistered: inspection.tools.some((tool) => tool.package === "@arnilo/prism-tools-coding"),
+      codingToolsRegistered: inspection.tools.some((tool) => tool.package === "@arnilo/prism-tools/coding"),
       status: result.status,
       reply: (await session.messages()).at(-1)?.content,
       nativeTools,

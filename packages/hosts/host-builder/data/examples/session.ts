@@ -13,10 +13,12 @@ export async function demo(): Promise<Record<string, unknown>> {
   const agent = await createAgent({
     id: "session-demo",
     model: { provider: "mock", model: "demo" },
-    packages: [mockProvider([
-      [providerTextDelta("Hello"), providerTextDelta(", world."), providerDone()],
-      [providerTextDelta("Second answer."), providerDone()],
-    ])],
+    packages: [
+      mockProvider([
+        [providerTextDelta("Hello"), providerTextDelta(", world."), providerDone()],
+        [providerTextDelta("Second answer."), providerDone()],
+      ]),
+    ],
   });
 
   const session = await agent.session();

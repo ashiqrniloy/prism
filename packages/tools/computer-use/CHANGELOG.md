@@ -8,7 +8,7 @@
 
 ### Added
 
-- `@arnilo/prism-tools-computer-use` (plan 155 Task 4): the `computer-use-linux` MCP bridge moved out
+- `@arnilo/prism-tools/computer-use` (plan 155 Task 4): the `computer-use-linux` MCP bridge moved out
   of `@arnilo/prism-coding-tools/./computer-use-linux` into a source-exported package on the lockstep
   line, with the factory names unchanged (`createComputerUseLinuxTools`, `loadComputerUseLinuxSkill`,
   `classifyComputerUseLinuxTool`, the `COMPUTER_USE_LINUX_*` lists). The bundled skill moved with it
@@ -20,7 +20,7 @@
   registers nothing instead of throwing.
 - Every tool declares `effects: ["external"]`, so the host approval hook sees it.
 - The optional `computer-use.mcp` service lets a host or test supply its own MCP bridge;
-  `@arnilo/prism-mcp` is now imported dynamically only during `setup`, so the package root is inert.
+  `@arnilo/prism-extensions/mcp` is now imported dynamically only during `setup`, so the package root is inert.
 - New `resolveCommand` helper for absolute-path/PATH executable resolution.
 
 ### Changed

@@ -1,5 +1,5 @@
 import type { ResourceLoadContext, ResourceLoader } from "@arnilo/prism";
-import type { WebFetchService } from "@arnilo/prism-tools-web";
+import type { WebFetchService } from "@arnilo/prism-tools/web";
 import { RagLimitError, RagValidationError } from "./errors.js";
 import { resolveRagLimits } from "./limits.js";
 import type { DocumentLoader, LoadedDocument } from "./types.js";
@@ -11,7 +11,7 @@ export interface ResourceDocumentLoaderOptions {
 }
 
 export interface WebFetchDocumentLoaderOptions {
-  /** The `web.fetch` service (`@arnilo/prism-tools-web`), consumed through `services.consume`. */
+  /** The `web.fetch` service (`@arnilo/prism-tools/web`), consumed through `services.consume`. */
   readonly fetcher: WebFetchService;
 }
 

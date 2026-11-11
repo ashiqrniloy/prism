@@ -22,7 +22,7 @@ test("desktop skill gives safe observation and targeting procedure", () => {
 
 test("desktop skill is packaged as a local file, not an upstream tree", () => {
   const packageRoot = resolve(import.meta.dirname, "../..");
-  const manifest = JSON.parse(readFileSync(resolve(packageRoot, "package.json"), "utf8")) as { files?: string[] };
-  assert.ok(manifest.files?.includes("skills"));
+  const manifest = JSON.parse(readFileSync(resolve(packageRoot, "../package.json"), "utf8")) as { files?: string[] };
+  assert.ok(manifest.files?.includes("computer-use/skills"));
   assert.ok(readFileSync(resolve(packageRoot, "skills/computer-use-linux/SKILL.md"), "utf8").length > 0);
 });

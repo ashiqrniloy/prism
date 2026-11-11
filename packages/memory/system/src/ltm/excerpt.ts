@@ -1,4 +1,4 @@
-import { lexicalTerms, stemLexical } from "@arnilo/prism-memory-core";
+import { lexicalTerms, stemLexical } from "@arnilo/prism-memory-system/core";
 import type { MemoryNoteHit } from "./types.js";
 
 /** Below this many content characters a later excerpt carries too little to be worth its header. */

@@ -113,7 +113,8 @@ export function assertDriverDescriptor(descriptor: DriverDescriptor): void {
     if (!Array.isArray(mode.deployments) || mode.deployments.some((d) => d !== "local" && d !== "hosted")) {
       bad(`auth mode "${mode.name}" deployments must list "local" and/or "hosted"`);
     }
-    if (!Array.isArray(mode.protected?.paths) || !Array.isArray(mode.protected?.env)) bad(`auth mode "${mode.name}" must declare protected.paths and protected.env`);
+    if (!Array.isArray(mode.protected?.paths) || !Array.isArray(mode.protected?.env))
+      bad(`auth mode "${mode.name}" must declare protected.paths and protected.env`);
     if (mode.kind === "account" && mode.protected.paths.length === 0 && mode.protected.env.length === 0) {
       bad(`account auth mode "${mode.name}" must declare protected paths or env`);
     }

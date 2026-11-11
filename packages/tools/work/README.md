@@ -1,9 +1,9 @@
-# @arnilo/prism-tools-work
+# @arnilo/prism-tools/work
 
 First-party work tools for Prism: Office documents, spreadsheets, diagrams, M365/Google connectors, and a bounded document reader, as one package with a `definePackage` entry and the 0.12 family subpaths kept for direct imports.
 
 ```ts
-import toolsWork from "@arnilo/prism-tools-work";
+import toolsWork from "@arnilo/prism-tools/work";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
@@ -24,7 +24,7 @@ const agent = await createAgent({
 `office_parse` / `office_import` return results tagged `trust: "untrusted_external"`, which the kernel
 wraps in its envelope (`docs/tools.md`). `work_exec` runs an argv command inside the host-injected `WorkSandbox`; without that service the package notes why and registers the rest.
 
-The bounded document reader is **not** a tool: it is provided as the `work.reader` service so `@arnilo/prism-tools-coding`'s `read` tool can consume it.
+The bounded document reader is **not** a tool: it is provided as the `work.reader` service so `@arnilo/prism-tools/coding`'s `read` tool can consume it.
 
 The vendored Hermes MIT skills (`docx`, `xlsx`, `powerpoint`, `pdf`) are registered by `loadWorkSkills()` from `vendor/hermes-agent/skills/productivity`, each declaring `requiresTools: work_exec` (`WORK_SKILL_REQUIRES_TOOLS`). They teach `python`, `openpyxl`, `python-docx`, `pypdf` and `soffice` run through the sandbox and never name an `office_*` tool, so a request without `work_exec` (no `work.sandbox` service) hides them. The vendored bytes are unchanged and pinned by `vendor-lock.json`; their 9.6-12.5 KB bodies are the one recorded size exception to the package-skill body cap.
 
@@ -57,12 +57,12 @@ The vendored Hermes MIT skills (`docx`, `xlsx`, `powerpoint`, `pdf`) are registe
 
 The family shares type names (`validateByteCap`, `CellValue`) across libraries, so a single flat barrel cannot re-export them unambiguously. The root entry holds the `definePackage` surface; the libraries stay importable as subpaths:
 
-`@arnilo/prism-tools-work/{connectors,connectors/drafts,connectors/google-workspace,connectors/microsoft365,documents,sheets,diagrams,document-extraction,document-reader,sandbox,skills,tools}`
+`@arnilo/prism-tools/work/{connectors,connectors/drafts,connectors/google-workspace,connectors/microsoft365,documents,sheets,diagrams,document-extraction,document-reader,sandbox,skills,tools}`
 
 ## Install
 
 ```bash
-bun add @arnilo/prism @arnilo/prism-tools-work
+bun add @arnilo/prism @arnilo/prism-tools
 ```
 
 ## Security and cost
@@ -71,3 +71,7 @@ bun add @arnilo/prism @arnilo/prism-tools-work
 - Connector credentials and the OCR key are ref-only and redacted everywhere after resolution.
 - The worker pool starts lazily and is closed in `onDispose`.
 - OCR is off by default and costs one external Mistral call per page when enabled.
+
+## Optional Office peers
+
+Install `@office-open/docx@0.14.5`, `@office-open/pptx@0.14.5`, `@office-open/xlsx@0.14.5`, `@office-open/xml@0.14.5`, `ajv` and `fast-xml-parser@5.11.1` for Office tools and OOXML reading. Missing peers produce a status note and disable Office tools; connectors and skills still register. Direct documents, sheets and diagrams library imports require their peers. See the [bundle footprint](../README.md#dependencies-and-footprint).

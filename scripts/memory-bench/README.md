@@ -145,14 +145,17 @@ so the output side measures the record shape, not a model's choices. The input s
 
 | Per 10k eligible tokens (46,160) | STM | OM-before (`37ee1a24`, worktree `.cache/memory-bench/216/om-before`) |
 |---|---|---|
-| worker passes | 102 | 102 |
+| worker passes | 103 | 102 |
 | worker output tokens | 786 | 626 |
-| worker input tokens | 46,366 | 40,926 |
+| worker input tokens | 48,734 | 40,926 |
 | chunk bytes stored | 127 (9 chunks, 588 bytes) | — |
 
 Stored chunks take 1.8% of the bytes of the entries they cover (the rule caps it at 25%) and 0.32% of the transcript.
-Habituation saved 11 records (45 kept). Task 6 regenerated the file after the STM batch-target fix: one backlog now
-splits in two, so STM makes 102 passes (was 101) and reads 1% more input; every probe still reads `works`. STM's output is 1.26× the observer's: `kind` and the chunks cost tokens the
+Habituation saved 11 records (45 kept). Task 6 regenerated the file three times: after the STM batch-target fix (one backlog now splits in two), after
+the per-exchange instruction (about 340 bytes longer, so input per pass rises), and after the follow-up passes
+and clean-turn ending (103 passes, was 101);
+every probe still reads `works`. The scripted worker records the fixture's annotated events either way, so the
+probe cannot show the instruction's effect on granularity; the live diagnostic in plan 217 Task 6 does. STM's output is 1.26× the observer's: `kind` and the chunks cost tokens the
 old shape did not have. Gate M-1 measures S4 on live models (plan 217 Task 6).
 
 `work-outcome/long-session.mjs` is the live long-session coding family (S1). Each of its 12 personas has one session
@@ -180,8 +183,12 @@ development partition only, with three arms per answer model:
   the long-session family's harness files in (the `acceptance.mjs` harness-copy pattern) and checks they match;
 - `memory-off`: `none` on the suites, the kernel's own compaction on the family.
 
-The suites are `beam-1m` (40 questions) and `longmemeval-m` (50), plus the live `long-session` family (4 personas,
-two related pairs each). The roles are gate C-1's paid Ollama Cloud routes: answers `beam` and `nemotron-3-nano:30b`,
+The live `long-session` family (4 personas, two related pairs each) runs all three arms. Since the owner deferred S3
+to gate A (2026-11-10), `beam-1m` and `longmemeval-m` run as S4's sample only: STM and OM-before, the first 2 dev
+questions per model and suite (`M1_S4_SAMPLE_QUESTIONS`), concurrency 1. A full-cohort S3 was out of reach at dev size:
+gate C-1's paired intervals on these cohorts spanned about ±7 to ±13 points against S3's −2 bound. The 14 jobs run in
+four sittings (`M1_SITTINGS`): run 1 is the family (about 1.5 h); runs 2–4 hold the suite jobs, three at a time with
+`--parallel-arms 3` (about 2.5 h each). The roles are gate C-1's paid Ollama Cloud routes: answers `beam` and `nemotron-3-nano:30b`,
 judges `gpt-oss:120b` and `gemma4:31b`. The worker is each arm's answer model. The jobs come in run order: the family,
 then memory-off, then STM and OM-before back to back per model and suite (small model first). If the allowance guard
 halts the run, the reports written so far are whole pairs.
@@ -193,8 +200,8 @@ identical items only, and an unfinished item is reported unpaired.
 |---|---|
 | S1 | family reports: re-derivation calls per related task, paired by persona and pair, clustered by persona; positive = STM re-derives less |
 | S2 | `217/stm-probes.json` `stm.recall-verbatim` (offline, Task 5): byte-equal share and other tool runs |
-| S3 | suite reports: paired accuracy (points, STM − OM-before) per answer model and suite, every cell non-inferior; STM's all-required evidence coverage per ability |
-| S4 | the largest STM / OM-before worker-token ratio over every (model, scope) cell: worker tokens per question on the suites (identical histories), per 10k eligible tokens on the family. A ratio above 1.25 passes only with `217/s4-justification.md` |
+| S3 | **deferred to gate A** (owner decision `m1S3Deferred`, 2026-11-10; criteria amendment 2). The sample's paired accuracy is kept as a diagnostic only |
+| S4 | the largest STM / OM-before worker-token ratio over every (model, scope) cell: worker tokens per question on the suite sample (the first 2 dev questions per model and suite, identical ids in both arms, each a full 1–1.2M-token history), per 10k eligible tokens on the family. A ratio above 1.25 passes only with `217/s4-justification.md` |
 
 The performance block reports, per arm, worker calls and tokens, context-block bytes per question, chunk-store bytes
 at peak, cost and p95 answer latency. The chunk-store figure comes from `chunk-meter.mjs`, which supplies the STM arm's
@@ -240,7 +247,7 @@ supported-versus-not Cohen's kappa, since only `supported` counts; the four-labe
 gate O-1 record and refuses a judge that is the curator's own model or shares a family with another judge.
 
 Plan 208 Task 3 adds ontology arms to the campaign machinery. `--ontology` (on `run.mjs`; a job's `ontology: true` in
-`campaign.mjs`) installs `@arnilo/prism-wiki` next to a product-ingestion fabric arm (`fabric-x`, `fabric-xc`, the
+`campaign.mjs`) installs `@arnilo/prism-knowledge/wiki` next to a product-ingestion fabric arm (`fabric-x`, `fabric-xc`, the
 `-tools` arms). Ingestion is the product's: each history is archived session by session, and the fabric binds notes at
 write time. The concept pass is a background job that a session opening schedules, exactly as for a user; the bench then
 reopens the session until a pass makes no model call, writes nothing and binds nothing (`ontology-arm.mjs` `settle`),
@@ -1614,7 +1621,7 @@ comparison in the supplied family. Declare families before inspecting results;
 separate CLI calls constitute separate families. The 95% CIs are pointwise,
 without multiplicity adjustment.
 
-`stats.mjs` exports pure functions; its `mcnemar` export reuses `mcnemarExact` from the workspace `@arnilo/prism-evals` package:
+`stats.mjs` exports pure functions; its `mcnemar` export reuses `mcnemarExact` from the workspace `@arnilo/prism-hosts/evals` package:
 
 - `clusterBootstrap(items, { cluster, metric, iterations, seed })` resamples whole
   clusters with replacement and returns `{ estimate, ci95 }`. `metric(row)` is a

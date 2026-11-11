@@ -1,5 +1,10 @@
-
-import { createMemoryPolicyDecisionStore, createPolicyEvaluator, evaluateAndAppend, exportPolicyDecisions, type AgentIdentity } from "@arnilo/prism-governance";
+import {
+  createMemoryPolicyDecisionStore,
+  createPolicyEvaluator,
+  evaluateAndAppend,
+  exportPolicyDecisions,
+  type AgentIdentity,
+} from "@arnilo/prism-extensions/governance";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-a",

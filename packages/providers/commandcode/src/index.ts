@@ -1,10 +1,10 @@
 /**
- * `@arnilo/prism-provider-commandcode` — Command Code provider package for Prism: registers the
+ * `@arnilo/prism-ai/commandcode` — Command Code provider package for Prism: registers the
  * `commandcode` provider, resolves its key from an `env:`/`keyring:` ref per request, and serves the
  * Provider API's three wires (Chat Completions, Responses, Anthropic Messages) plus the model catalog.
  *
  * ```ts
- * import commandcode from "@arnilo/prism-provider-commandcode";
+ * import commandcode from "@arnilo/prism-ai/commandcode";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -70,7 +70,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: CommandCodeProviderPackageOptions) {
   return defineProviderPackage<CommandCodeProviderConfig>({
-    name: "@arnilo/prism-provider-commandcode",
+    name: "@arnilo/prism-ai/commandcode",
     description: "Command Code provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {

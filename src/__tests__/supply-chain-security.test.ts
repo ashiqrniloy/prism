@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "bun:test";
@@ -109,19 +109,25 @@ test("security workflows pin actions, isolate live secrets, and gate publication
   const workflows = files.map((file) => readFileSync(file, "utf8"));
   for (const [index, workflow] of workflows.entries()) {
     assert.ok(!workflow.includes("pull_request_target"), `${files[index]} uses pull_request_target`);
-    for (const uses of workflow.matchAll(/uses:\s*([^\s#]+)/g))
+    for (const uses of workflow.matchAll(/uses:\s*([^\s#]+)/g)) {
+      if (uses[1]?.startsWith("./.github/workflows/")) {
+        assert.ok(existsSync(uses[1]));
+        continue;
+      }
       assert.match(uses[1]!, /@[a-f0-9]{40}$/, `${files[index]} action is not immutable: ${uses[1]}`);
+    }
   }
   const release = workflows[0]!;
   const security = workflows[1]!;
   const live = workflows[2]!;
   // Plan 125 Task 1: the declared Node legs retired with the engines flip, so publish waits on the
   // five remaining gates.
-  assert.match(release, /needs: \[verify, postgres-integration, office-validation, codeql-release, supply-chain\]/);
+  assert.match(release, /needs: \[verify, postgres-integration, office-validation, security-release\]/);
   assert.match(release, /attestations:\s*write/);
   assert.match(release, /subject-path: release-artifacts\/\*\.tgz/);
   assert.match(release, /134217728/);
-  assert.match(release, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}/);
+  assert.doesNotMatch(release, /NPM_TOKEN|NODE_AUTH_TOKEN/);
+  assert.match(release, /id-token:\s*write/);
   assert.match(security, /security-events:\s*write/);
   assert.match(security, /dependency-review-action@[a-f0-9]{40}/);
   assert.match(security, /134217728/);

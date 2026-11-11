@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { activeBundles } from "./bundles.mjs";
 import { buildPackageMap, generateMarkdown } from "./phase54-package-map.mjs";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,7 +18,7 @@ const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // name-pattern separation from capability packages (e.g. prism-mcp), so the set
 // is explicit here; the docs tests assert it against the generated artifact.
 // Plan 054 Task 8: npm profile manifests are deleted; families only.
-export const PRISM_FAMILY = ["@arnilo/prism-channels"];
+export const PRISM_FAMILY = ["@arnilo/prism-hosts/channels"];
 
 export function expandWorkspaceDirs(root, globs) {
   const dirs = [];
@@ -152,7 +153,10 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
   const providerManifests = names.filter((n) => n.startsWith("@arnilo/prism-provider-"));
   // Plan 152 Task 8: the provider-family workspace is deleted, so every
   // first-party adapter is a standalone manifest and no adapter is a subpath.
-  const providers = [...providerManifests].sort();
+  const providerBundle = activeBundles(rootDir).find((bundle) => bundle.dir === "packages/providers");
+  const providers = providerBundle
+    ? providerBundle.subpaths.map((row) => providerBundle.name + row.path.slice(1)).sort()
+    : [...providerManifests].sort();
   const family = names.filter((n) => PRISM_FAMILY.includes(n));
   const capability = names.filter((n) => !providerManifests.includes(n) && !family.includes(n));
   const codeWithPeer = names.filter((n) => byName.get(n).peerDependencies?.["@arnilo/prism"] !== undefined);
@@ -171,7 +175,11 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
   return {
     generatedAt: new Date().toISOString(),
     root: { name: root.name, version: root.version },
-    versions: Object.fromEntries([[root.name, root.version], ...pkgs.map((p) => [p.name, p.version])]),
+    versions: Object.fromEntries([
+      [root.name, root.version],
+      ...pkgs.map((p) => [p.name, p.version]),
+      ...providers.filter((name) => !byName.has(name)).map((name) => [name, byName.get(providerBundle.name).version]),
+    ]),
     counts: {
       publishable: pkgs.length + 1,
       workspace: pkgs.length,
@@ -204,61 +212,65 @@ const flag = (name) => {
 // package without a note renders with its kind label.
 export const PACKAGE_NOTES = {
   "@arnilo/prism": "core — runtime, CLI/RPC, templates, docs",
-  "@arnilo/prism-channels":
+  "@arnilo/prism-hosts":
+    "library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit",
+  "@arnilo/prism-hosts/channels":
     "family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal",
-  "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
-  "@arnilo/prism-credentials-keyring":
+  "@arnilo/prism-hosts/ag-ui": "capability — AG-UI/A2A/A2UI adapter",
+  "@arnilo/prism-extensions/keyring":
     "capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence",
-  "@arnilo/prism-hooks-json":
+  "@arnilo/prism-extensions/hooks-json":
     "capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end",
-  "@arnilo/prism-mcp":
+  "@arnilo/prism-extensions/mcp":
     "capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close",
-  "@arnilo/prism-mcp-server":
+  "@arnilo/prism-hosts/mcp-server":
     "library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports)",
-  "@arnilo/prism-headless": "library — host library routing HostUi requests through ordered routes with a value-free answer log",
-  "@arnilo/prism-host-builder":
+  "@arnilo/prism-hosts/headless": "library — host library routing HostUi requests through ordered routes with a value-free answer log",
+  "@arnilo/prism-hosts/host-builder":
     "library — host library shipping version-exact API, error-code and example indexes, a skill, an MCP server and an installer for coding agents that build Prism hosts",
-  "@arnilo/prism-remote":
+  "@arnilo/prism-hosts/remote":
     "library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1",
-  "@arnilo/prism-tools-coding":
+  "@arnilo/prism-tools/coding":
     "capability — coding file/search/shell tools as a package: a small tool set with declared effects, in-tool path containment, and an optional shell",
-  "@arnilo/prism-approval": "capability — approval modes deny/ask/edits/auto over tool effects and roots, as one tool.call gate",
-  "@arnilo/prism-guardrail-packs":
+  "@arnilo/prism-extensions/approval": "capability — approval modes deny/ask/edits/auto over tool effects and roots, as one tool.call gate",
+  "@arnilo/prism-extensions/guardrail-packs":
     "capability — built-in guardrail packs (coding-standard, destructive-commands, validation-respect, secrets-hygiene) as restrictive-only tool.call/tool.result rules with package session state",
-  "@arnilo/prism-governance":
+  "@arnilo/prism-extensions/governance":
     "capability — deny-by-default policy engine (inline rules or OPA) plus approvals and an audit ledger, as one tool.call/run.input/model.request gate with a governance.policy/governance.audit service",
-  "@arnilo/prism-model-router":
+  "@arnilo/prism-extensions/model-router":
     "capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls",
-  "@arnilo/prism-observability":
+  "@arnilo/prism-extensions/observability":
     "capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself",
-  "@arnilo/prism-workflows":
+  "@arnilo/prism-extensions/workflows":
     "library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts",
-  "@arnilo/prism-driver-process": "capability — generic external-agent process driver with a host-written adapter",
-  "@arnilo/prism-delegate":
+  "@arnilo/prism-hosts/driver-process": "capability — generic external-agent process driver with a host-written adapter",
+  "@arnilo/prism-extensions/delegate":
     "capability — a delegate tool whose child agent inherits a chosen subset of the parent packages, reporting delegate.step package events",
-  "@arnilo/prism-advisor":
+  "@arnilo/prism-extensions/advisor":
     "capability — a second model's advice as one advise tool and opt-in review consults, plus completion validation by a model or a hidden delegate child",
-  "@arnilo/prism-context-files":
+  "@arnilo/prism-extensions/context-files":
     "capability — AGENTS.md / SYSTEM.md layers as one context.build handler, trust-gated and cached per session",
-  "@arnilo/prism-context-engineering":
+  "@arnilo/prism-extensions/context-engineering":
     "capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler",
-  "@arnilo/prism-memory-core":
+  "@arnilo/prism-memory-system/core":
     "library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability",
-  "@arnilo/prism-rag": "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
-  "@arnilo/prism-wiki":
+  "@arnilo/prism-knowledge": "capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin",
+  "@arnilo/prism-knowledge/rag":
+    "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
+  "@arnilo/prism-knowledge/wiki":
     "capability — knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence; reads memory read-only",
   "@arnilo/prism-memory-system":
     "capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools",
-  "@arnilo/prism-tools-work":
+  "@arnilo/prism-tools/work":
     "capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths",
-  "@arnilo/prism-tools-browser":
+  "@arnilo/prism-tools/browser":
     "capability — six exclusive Playwright browser tools with declared effects, fail-closed egress policy, and artifact quarantine",
-  "@arnilo/prism-tools-web":
+  "@arnilo/prism-tools/web":
     "capability — keyless native fetch plus Brave/Exa/SearXNG/Tavily/Kagi search, Firecrawl fetch/extract, and host-installed Obscura, with a host domain policy, an optional per-session cache, and a web.fetch service",
-  "@arnilo/prism-tools-research": "capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check",
-  "@arnilo/prism-tools-openapi":
+  "@arnilo/prism-tools/research": "capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check",
+  "@arnilo/prism-tools/openapi":
     "capability — compile allow-listed OpenAPI 3.1 operations into bounded tools with pinned origins, per-method effects, and ref-only header credentials",
-  "@arnilo/prism-tools-computer-use":
+  "@arnilo/prism-tools/computer-use":
     "capability — the host-owned computer-use-linux MCP binary as tools with declared external effects, in-tool device admission, and a bundled skill",
 };
 
@@ -291,7 +303,7 @@ export function renderProvidersBlock(truth) {
   return [
     blockBegin("providers"),
     // Plan 152 Task 8: the family workspace is deleted, so every adapter is standalone.
-    `**${truth.counts.provider} provider adapters** — first-party adapters ship as standalone \`@arnilo/prism-provider-*\` packages (importing one never evaluates another):`,
+    `**${truth.counts.provider} provider adapters** — first-party adapters ship as \`@arnilo/prism-ai/<provider>\` subpaths (importing one never evaluates another):`,
     "",
     "| adapter package | version |",
     "| --- | --- |",

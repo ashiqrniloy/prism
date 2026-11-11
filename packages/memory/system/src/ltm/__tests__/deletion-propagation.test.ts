@@ -17,10 +17,10 @@ import {
   MemoryScopeError,
   MemoryValidationError,
   type MemoryVectorRecord,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { createMemory } from "@arnilo/prism-memory-system";
-import type { RagScope } from "@arnilo/prism-rag";
-import { chunkText, createRagDeletionHandler, replaceSource, retrieveContext } from "@arnilo/prism-rag";
+import type { RagScope } from "@arnilo/prism-knowledge/rag";
+import { chunkText, createRagDeletionHandler, replaceSource, retrieveContext } from "@arnilo/prism-knowledge/rag";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 const authority = { tenantId: "t1", principalId: "p1", groupIds: ["eng"] };

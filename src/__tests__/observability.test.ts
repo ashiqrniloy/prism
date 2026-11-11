@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { AgentEvent, ProviderRequest } from "../index.js";
-import { createAgent, createProviderTurnMetadata, createToolRegistry, dispatchToolCall, providerDone, providerTextDelta, readProviderHttpStatus } from "../index.js";
+import {
+  createAgent,
+  createProviderTurnMetadata,
+  createToolRegistry,
+  dispatchToolCall,
+  providerDone,
+  providerTextDelta,
+  readProviderHttpStatus,
+} from "../index.js";
 import { mockProvider } from "../testing/index.js";
 
 describe("observability helpers", () => {

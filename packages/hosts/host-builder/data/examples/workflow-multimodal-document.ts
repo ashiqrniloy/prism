@@ -1,12 +1,14 @@
-import { createAgent, createEnvRefCredentialResolver, createSecretRedactor, type Message, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
-import { createMockProvider } from "@arnilo/prism/testing";
 import {
-  agentNode,
-  createMemoryWorkflowCheckpoints,
-  defineWorkflow,
-  functionNode,
-  runWorkflow,
-} from "@arnilo/prism-workflows";
+  createAgent,
+  createEnvRefCredentialResolver,
+  createSecretRedactor,
+  type Message,
+  providerDone,
+  providerTextDelta,
+  providerUsage,
+} from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
+import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-extensions/workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Offline multimodal document workflow. Host constructs a bounded inline PDF

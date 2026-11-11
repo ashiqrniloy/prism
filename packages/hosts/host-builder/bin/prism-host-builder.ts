@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * `prism-host-builder`: reference indexes for building a Prism host. `info` prints what the installed indexes
  * describe, `install` copies the skill into a coding agent's project, `mcp` serves the lookup tools. Any other
@@ -113,7 +113,7 @@ async function mcp(args: readonly string[]): Promise<number> {
   }
   // Loaded here so `info` and `--help` do not pay for the MCP SDK.
   const [{ servePrismMcpStdio }, { createHostBuilderMcpServer }] = await Promise.all([
-    import("@arnilo/prism-mcp-server"),
+    import("@arnilo/prism-hosts/mcp-server"),
     import("../src/server.js"),
   ]);
   const handle = servePrismMcpStdio(() =>

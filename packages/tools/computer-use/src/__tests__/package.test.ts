@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import type { ToolDefinition, ToolResult } from "@arnilo/prism";
 import { createAgent, definePackage } from "@arnilo/prism";
 import { mockProvider, packageConformance, providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { approvalPackage } from "@arnilo/prism-approval";
-import type { McpToolBridge } from "@arnilo/prism-mcp";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import type { McpToolBridge } from "@arnilo/prism-extensions/mcp";
 import { createComputerUseLinuxTools } from "../create.js";
 import toolsComputerUse from "../index.js";
 
@@ -48,7 +48,7 @@ function toolResults(entries: readonly { kind: string; message?: { content: read
   );
 }
 
-describe("@arnilo/prism-tools-computer-use package", () => {
+describe("@arnilo/prism-tools/computer-use package", () => {
   it("tools_computer_use_package_conformance", async () => {
     const result = await packageConformance(
       toolsComputerUse({ command: "/nonexistent/computer-use-linux", device: DEVICE, runLimits: RUN_LIMITS }),
@@ -90,7 +90,7 @@ describe("@arnilo/prism-tools-computer-use package", () => {
       assert.deepEqual(agent.tools.map((tool) => tool.name).sort(), ["click", "doctor"]);
       for (const tool of agent.tools) {
         assert.deepEqual(tool.effects, ["external"], `${tool.name} must declare external`);
-        assert.equal(tool.package, "@arnilo/prism-tools-computer-use");
+        assert.equal(tool.package, "@arnilo/prism-tools/computer-use");
       }
       assert.ok(
         agent.inspect().skills.some((skill) => skill.name === "computer-use-linux"),

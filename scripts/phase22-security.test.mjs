@@ -28,9 +28,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { SessionMetadataConflictError } from "@arnilo/prism";
-import { createEventMultiplexer, EventMultiplexerError } from "@arnilo/prism-workflows";
-import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createEventMultiplexer, EventMultiplexerError } from "@arnilo/prism-extensions/workflows";
+import { createMemoryModelRouterStateStore } from "@arnilo/prism-extensions/model-router";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 
 const BLOCKER_IDS = ["budget-reservation", "conversation-metadata-cas", "single-consumer"];
 const blockerIds = new Set();

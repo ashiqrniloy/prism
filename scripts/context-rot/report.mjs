@@ -56,7 +56,9 @@ export function aggregate({ provider, model, mode, lengths, repeats, results, us
       "History is pinned public-repo tool output, not the task's own workspace.",
       "A task may be answered after the configured turn cap; failed tool use is scored zero.",
       ...(mode === "offline" ? ["Offline smoke uses the mock provider; scores verify plumbing, not capability."] : []),
-      ...(mode === "live" && taskCount < 30 ? [`Pilot run: ${taskCount} of 30 tasks. The release matrix uses all 30 at three repeats.`] : []),
+      ...(mode === "live" && taskCount < 30
+        ? [`Pilot run: ${taskCount} of 30 tasks. The release matrix uses all 30 at three repeats.`]
+        : []),
     ],
   };
 }

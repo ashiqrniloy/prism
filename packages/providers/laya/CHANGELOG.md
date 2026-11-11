@@ -4,7 +4,7 @@
 
 ### Added
 
-- New provider package (plan 152 Task 5): `@arnilo/prism-provider-laya` replaces the
+- New provider package (plan 152 Task 5): `@arnilo/prism-ai/laya` replaces the
   `@arnilo/prism-providers/laya` subpath. The default export is a `definePackage` definition that
   registers the `laya` provider, declares `capabilities: ["credentials"]`, and takes a ref-only config
   (`apiKey` defaults to `env:LAYA_API_KEY`, plus `baseUrl`, `models`). The key resolves through the

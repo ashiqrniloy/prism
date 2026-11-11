@@ -28,7 +28,7 @@ export interface VersionCheck {
 export function checkVersion(root: string, indexVersion: string, allowMismatch: boolean): VersionCheck {
   const installed = installedPrismVersion(root);
   if (installed === indexVersion) return {};
-  const fix = installed === undefined ? `bun add -d @arnilo/prism@${indexVersion}` : `bun add -d @arnilo/prism-host-builder@${installed}`;
+  const fix = installed === undefined ? `bun add -d @arnilo/prism@${indexVersion}` : `bun add -d @arnilo/prism-hosts@${installed}`;
   const message =
     installed === undefined
       ? `@arnilo/prism is not installed under ${root}; the indexes describe ${indexVersion}. Fix: ${fix}`

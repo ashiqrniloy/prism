@@ -76,7 +76,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
-describe("@arnilo/prism-provider-hyper package", () => {
+describe("@arnilo/prism-ai/hyper package", () => {
   it("hyper_passes_package_conformance", async () => {
     const result = await packageConformance(hyperDefinition, { config: { apiKey: "env:PRISM_TEST_HYPER_CONFORMANCE" } });
     assert.deepEqual(
@@ -196,8 +196,14 @@ describe("@arnilo/prism-provider-hyper package", () => {
       assert.deepEqual(urls, [], "setup must not discover");
       const listed = await agent.models.list();
       assert.deepEqual(urls, ["https://hyper.charm.land/v1/models"], "discovery runs only on agent.models.list()");
-      assert.ok(listed.some((entry) => entry.model === "hyper-discovered"), "the live entry lists");
-      assert.ok(listed.some((entry) => entry.model === model.model), "the configured model lists too");
+      assert.ok(
+        listed.some((entry) => entry.model === "hyper-discovered"),
+        "the live entry lists",
+      );
+      assert.ok(
+        listed.some((entry) => entry.model === model.model),
+        "the configured model lists too",
+      );
     } finally {
       await agent.dispose();
       if (previous === undefined) delete process.env.PRISM_TEST_HYPER_KEY;

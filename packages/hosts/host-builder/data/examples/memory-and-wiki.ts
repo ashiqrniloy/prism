@@ -18,7 +18,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import memorySystem, { MEMORY_LTM_SERVICE, type MemoryLtmPort } from "@arnilo/prism-memory-system";
-import { createMarkdownWikiStore, parseConceptBody, wiki } from "@arnilo/prism-wiki";
+import { createMarkdownWikiStore, parseConceptBody, wiki } from "@arnilo/prism-knowledge/wiki";
 
 /**
  * Memory and the wiki in one deterministic run (plan 216 Task 3; plan 207 Task 9 first wrote it as the three-tier
@@ -27,7 +27,7 @@ import { createMarkdownWikiStore, parseConceptBody, wiki } from "@arnilo/prism-w
  * - **`@arnilo/prism-memory-system`**: its session tiers watch the session and record observations; its long-term
  *   memory (`ltm`) holds typed notes and verbatim exchanges, the store of record, and offers the wiki one read-only
  *   port, `memory.ltm`, and nothing else.
- * - **`@arnilo/prism-wiki`**: concepts, claims and subject bindings in its own markdown store under `wiki.root`; a
+ * - **`@arnilo/prism-knowledge/wiki`**: concepts, claims and subject bindings in its own markdown store under `wiki.root`; a
  *   background curator consolidates evidence into one concept per subject, every claim citing the notes it rests on.
  *
  * What the run shows:
@@ -105,7 +105,10 @@ function curate(request: ProviderRequest): ProviderEvent[] {
   return [providerToolCall(toolCallContent("curate-1", "edit_concept", { edits })), providerDone({ inputTokens: 40, outputTokens: 20 })];
 }
 
-/** The observation worker: one `record_event` call, sourced from the first entry its prompt lists. */
+/**
+ * The observation worker: one `record_event` call, sourced from the first entry its prompt lists. It records the same
+ * statement every pass, so habituation keeps one record and raises its count.
+ */
 function observe(request: ProviderRequest): ProviderEvent[] {
   const answered = request.messages.some((message) => message.role === "tool");
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];

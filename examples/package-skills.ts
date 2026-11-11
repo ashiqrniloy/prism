@@ -3,12 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, type ProviderRequest } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
-import { toolsWeb } from "@arnilo/prism-tools-web";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
+import { toolsWeb } from "@arnilo/prism-tools/web";
 
 /**
  * Package skills and availability, offline on the mock provider.
- * - `@arnilo/prism-tools-web` ships `web-research`; it declares `requiresTools: ["web_search", "web_fetch"]`, so the
+ * - `@arnilo/prism-tools/web` ships `web-research`; it declares `requiresTools: ["web_search", "web_fetch"]`, so the
  *   catalog lists it only while both tools reach the model. `agent.inspect().skills` shows `package` and `requiresTools`.
  * - A run with `tools: { only: ["read"] }` narrows the tools: `web-research` leaves the catalog, and a scripted
  *   `load_skill("web-research")` returns `skill_unavailable` instead of the body.
@@ -25,8 +25,7 @@ function catalogOf(request: ProviderRequest, names: ReadonlySet<string>): string
     .flatMap((message) => message.content)
     .map((block) => (block.type === "text" ? block.text : ""))
     .join("\n");
-  return [...text.matchAll(/^- ([a-z0-9-]+): /gm)].map((match) => match[1] as string)
-    .filter((name) => names.has(name));
+  return [...text.matchAll(/^- ([a-z0-9-]+): /gm)].map((match) => match[1] as string).filter((name) => names.has(name));
 }
 
 export async function demo(): Promise<Record<string, unknown>> {
@@ -75,7 +74,8 @@ export async function demo(): Promise<Record<string, unknown>> {
       skills: skills.filter((skill) => skill.name === "web-research"),
       fullCatalog: catalogOf(requests[0] as ProviderRequest, names),
       narrowedCatalog: catalogOf(requests[1] as ProviderRequest, names),
-      loadSkill: loadResult === undefined ? null : JSON.stringify(loadResult).includes("skill_unavailable") ? "skill_unavailable" : "loaded",
+      loadSkill:
+        loadResult === undefined ? null : JSON.stringify(loadResult).includes("skill_unavailable") ? "skill_unavailable" : "loaded",
     };
   } finally {
     await rm(root, { recursive: true, force: true });

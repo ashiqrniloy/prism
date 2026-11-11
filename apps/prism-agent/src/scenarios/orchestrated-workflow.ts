@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AgentEvent } from "@arnilo/prism";
 import { createScriptedCli, createScriptedHostUi, mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import {
   defineWorkflow,
   functionNode,
@@ -12,7 +12,7 @@ import {
   runWorkflow,
   type WorkflowRun,
   type WorkflowStreamEvent,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
 import type { HostConfig } from "../host/config.js";
 import {
   connectRemoteWorker,

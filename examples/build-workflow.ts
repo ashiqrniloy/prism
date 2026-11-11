@@ -5,9 +5,8 @@ import { join } from "node:path";
 import { type Agent, type AgentEvent, createAgent, definePackage, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createProfiles } from "@arnilo/prism/driver-kit";
 import { createScriptedCli, createScriptedHostUi, mockProvider, type ScriptStep } from "@arnilo/prism/testing";
-import { adapterDriver, processDriver } from "@arnilo/prism-driver-process";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
-import { createWorkspaceService } from "@arnilo/prism-tools-coding";
+import { adapterDriver, processDriver } from "@arnilo/prism-hosts/driver-process";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 import workflows, {
   agentNode,
   defineWorkflow,
@@ -17,7 +16,8 @@ import workflows, {
   type WorkflowRun,
   type WorkflowStreamEvent,
   workflowCommand,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
+import { createWorkspaceService } from "@arnilo/prism-tools/coding";
 import { rpcServerDialect, rpcServerFixtures } from "./adapters/rpc-server.dialect.js";
 import { rpcServer } from "./adapters/rpc-server.js";
 import { streamCliDialect, streamCliFixtures } from "./adapters/stream-cli.dialect.js";

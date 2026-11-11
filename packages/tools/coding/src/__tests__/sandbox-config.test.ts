@@ -34,7 +34,7 @@ describe("tools-coding sandbox config", () => {
       );
       const notes = agent.inspect().statusNotes;
       assert.ok(
-        notes.some((note) => note.package === "@arnilo/prism-tools-coding" && note.level === "warn"),
+        notes.some((note) => note.package === "@arnilo/prism-tools/coding" && note.level === "warn"),
         `expected a warn note, got ${JSON.stringify(notes)}`,
       );
     } finally {

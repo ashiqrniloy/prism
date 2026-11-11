@@ -37,29 +37,29 @@ Left column is the retired name. Everything in it is gone.
 | `activateKernel` | list the package; installed is listed is active |
 | `defineAgent` | `createAgent` |
 | `@arnilo/prism-agent-sdk` | `@arnilo/prism` plus the native packages |
-| `@arnilo/prism-providers` | one `@arnilo/prism-provider-<vendor>` package per vendor |
+| `@arnilo/prism-providers` | `@arnilo/prism-ai/<vendor>` subpaths |
 | `@arnilo/prism-core` | the kernel `@arnilo/prism` plus native packages |
-| `@arnilo/prism-coding-tools` | `@arnilo/prism-tools-coding`, `-tools-openapi`, `-tools-computer-use`, `@arnilo/prism-approval` |
-| `@arnilo/prism-web-tools` | `@arnilo/prism-tools-web`, `@arnilo/prism-tools-browser` |
-| `@arnilo/prism-work` | `@arnilo/prism-tools-work` |
-| `@arnilo/prism-hooks` | `@arnilo/prism-hooks-json` |
-| `@arnilo/prism-acp-agent` | `@arnilo/prism-acp` (`serveAcp`) |
+| `@arnilo/prism-coding-tools` | `@arnilo/prism-tools/coding`, `-tools-openapi`, `-tools-computer-use`, `@arnilo/prism-extensions/approval` |
+| `@arnilo/prism-web-tools` | `@arnilo/prism-tools/web`, `@arnilo/prism-tools/browser` |
+| `@arnilo/prism-work` | `@arnilo/prism-tools/work` |
+| `@arnilo/prism-hooks` | `@arnilo/prism-extensions/hooks-json` |
+| `@arnilo/prism-acp-agent` | `@arnilo/prism-hosts/acp` (`serveAcp`) |
 | `@arnilo/prism-code` | the private reference host; copy its patterns, never depend on it |
 | `@arnilo/prism-all` | list the packages you need |
 | `stopHooks` | a `run.end` hook |
 | `turnPolicy` | a `turn.before` hook, cost policy |
 | `providerRequestPolicies` | a `model.request` hook |
-| `instructionInjectors`, `promptBuilder`, `inputBuilder` | a `context.build` hook (`@arnilo/prism-context-files`, `@arnilo/prism-context-engineering`) |
+| `instructionInjectors`, `promptBuilder`, `inputBuilder` | a `context.build` hook (`@arnilo/prism-extensions/context-files`, `@arnilo/prism-extensions/context-engineering`) |
 | `toolNarrowing` | `RunOptions.tools.only` |
 | `beforeProviderTurn` | the `model.call` around hook |
 | `forwardAgentEvents` | an `observe` hook |
-| `createSecureAgent` | `createAgent` with `@arnilo/prism-governance` and `@arnilo/prism-approval` listed |
-| `wiki_search`, `wiki_read_page`, `wiki_record_insight` | `wiki.search` and `wiki.read` (`@arnilo/prism-wiki`), `memory.insert` |
+| `createSecureAgent` | `createAgent` with `@arnilo/prism-extensions/governance` and `@arnilo/prism-extensions/approval` listed |
+| `wiki_search`, `wiki_read_page`, `wiki_record_insight` | `wiki.search` and `wiki.read` (`@arnilo/prism-knowledge/wiki`), `memory.insert` |
 
 Plain words that are still valid config names (`loop`, `context`, `permission`, `middleware` when used as a
 hook concept) are not listed: judge them by whether `api.json` or the docs define them in 0.13. `middleware` and
 `guardrails` as config fields moved to the matching hooks (`model.request`, `tool.call`, `tool.result`) and to
-`@arnilo/prism-guardrail-packs`.
+`@arnilo/prism-extensions/guardrail-packs`.
 
 ## Fabric rename
 

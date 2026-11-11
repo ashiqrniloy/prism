@@ -126,14 +126,18 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
       id: "stop-reason-budget",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo", limits: { contextWindow: 100_000 } },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield { type: "usage" as const, usage: { inputTokens: 500, outputTokens: 7, totalTokens: 507 } };
-          yield providerTextDelta("done");
-          yield providerDone(undefined, "end_turn");
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield { type: "usage" as const, usage: { inputTokens: 500, outputTokens: 7, totalTokens: 507 } };
+              yield providerTextDelta("done");
+              yield providerDone(undefined, "end_turn");
+            },
+          },
+        ]),
+      ],
     });
     const session = await agent.session({ id: "stop-reason-session", create: true });
     const { events, error } = await collectRun(session, "hi", { maxTurns: 5, maxInputTokens: 1000 });
@@ -160,19 +164,23 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
       id: "stop-reason-tools",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call-1", "digest", {}) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("call-1", "digest", {}) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("done");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: { add: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }] },
     });
     const session = await agent.session({ id: "stop-reason-tools-session", create: true });
@@ -189,12 +197,16 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
       id: "stop-reason-error",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield { type: "error" as const, error: { message: "boom" } };
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield { type: "error" as const, error: { message: "boom" } };
+            },
+          },
+        ]),
+      ],
     });
     const session = await agent.session({ id: "stop-reason-error-session", create: true });
     const { events } = await collectRun(session, "hi");

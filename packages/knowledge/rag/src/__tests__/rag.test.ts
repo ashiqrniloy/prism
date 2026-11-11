@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { createSecretRedactor, type ContextDraft, type HookContext, type JsonObject } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore, type Embedder, type MemoryVectorHit, type VectorStore } from "@arnilo/prism-memory-core";
+import {
+  createHashEmbedder,
+  createMemoryVectorStore,
+  type Embedder,
+  type MemoryVectorHit,
+  type VectorStore,
+} from "@arnilo/prism-memory-system/core";
 import {
   chunkMarkdown,
   registerRagContext,

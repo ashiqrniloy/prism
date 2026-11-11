@@ -1,7 +1,7 @@
 /**
  * Write tool: create or overwrite a file on the host filesystem.
  *
- * Behavioral port of pi's core/tools/write for @arnilo/prism-tools-coding, adapted to Prism's
+ * Behavioral port of pi's core/tools/write for @arnilo/prism-tools/coding, adapted to Prism's
  * `ToolDefinition` contract. Faithfully ports the create-parent-dirs → write → serialize-per-path
  * flow. Drops pi's TUI (`renderCall`/`renderResult`, the incremental syntax-highlight cache, key hints).
  *

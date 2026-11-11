@@ -30,12 +30,21 @@ test("long_session_family_partitions_frozen_and_label_blind", async () => {
   // Label-blind: the draw reads ids only, so it is a pure function of the id list (order and labels do not enter).
   assert.deepEqual(drawLongSessionPartitions([...longSessionPersonaIds()].reverse()), drawLongSessionPartitions());
   const [dev, a, b] = ["dev", "heldout-a", "heldout-b"].map((partition) => committed.abilities[partition]["long-session-coding"]);
-  assert.deepEqual([dev.length, a.length, b.length], LONG_SESSION_STRATA["long-session-coding"]);
+  // The base draw (plan 217 Task 5) is unchanged: same ids hash, same held-out partitions; the extension joins dev only.
+  const base = drawLongSessionPartitions();
+  assert.equal(committed.extension.baseIdsHash, "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730");
+  assert.equal(base.idsHash, committed.extension.baseIdsHash);
+  assert.deepEqual(a, base.abilities["heldout-a"]["long-session-coding"]);
+  assert.deepEqual(b, base.abilities["heldout-b"]["long-session-coding"]);
+  assert.deepEqual(dev, [...base.abilities.dev["long-session-coding"], ...committed.extension.dev]);
+  assert.equal(committed.extension.dev.length, 12);
+  assert.ok(committed.extension.dev.every((id) => Number(id.slice(2)) >= 12));
+  assert.deepEqual([base.abilities.dev["long-session-coding"].length, a.length, b.length], LONG_SESSION_STRATA["long-session-coding"]);
   assert.equal(new Set([...dev, ...a, ...b]).size, dev.length + a.length + b.length, "partitions are disjoint");
   // A short stratum fails closed instead of drawing a smaller partition.
   assert.throws(() => drawLongSessionPartitions(longSessionPersonaIds().slice(0, 5)), /LongSessionDraw/);
   // The agent never reads a label: no prompt names what a dependent task needs.
-  for (const id of longSessionPersonaIds()) {
+  for (const id of [...longSessionPersonaIds(), ...committed.extension.dev]) {
     const persona = createLongSessionPersona(Number(id.slice(2)));
     const [task3, task6] = [persona.tasks[2].prompt, persona.tasks[5].prompt];
     for (const value of [persona.labels.to, persona.labels.modulePath, persona.labels.moduleBase]) assert.ok(!task3.includes(value));
@@ -102,4 +111,22 @@ test("metered_providers_count_usage_when_the_consumer_stops_at_done", async () =
   assert.equal(log.eligibleChars, 5);
   for await (const chunk of metered.generate({ messages: [], tools: [{ name: "record_event" }] })) if (chunk.type === "done") break;
   assert.deepEqual(meter.worker, { calls: 1, inputTokens: 40, outputTokens: 7 });
+});
+
+test("project_grep_searches_the_root_and_directories", async () => {
+  // Gate M-1 run 1: `grep` with `path: "."` answered "(no matches)", so agents could not find the module to rename.
+  const { createLongSessionPersona, longSessionProjectToolsForTest } = await import("./long-session.mjs");
+  const persona = createLongSessionPersona(10);
+  const tools = longSessionProjectToolsForTest(persona);
+  const grep = (args) => tools.grep.execute(args, { toolCallId: "g" }).value;
+  const { from, modulePath } = persona.labels;
+  for (const path of [undefined, ".", "./", "src", "src/"])
+    assert.match(
+      grep({ pattern: from, ...(path === undefined ? {} : { path }) }),
+      new RegExp(modulePath.replace(/[.]/g, "\\.")),
+      String(path),
+    );
+  assert.equal(grep({ pattern: from, path: "docs" }), "(no matches)");
+  assert.match(grep({ pattern: from, path: modulePath }), /:1:export function/);
+  assert.equal(grep({ pattern: from, path: "sr" }), "(no matches)");
 });

@@ -1,4 +1,4 @@
-# `@arnilo/prism-provider-openai-codex`
+# `@arnilo/prism-ai/openai-codex`
 
 OpenAI Codex provider package for [Prism](https://github.com/ashiqrniloy/prism): runs OpenAI models on a
 ChatGPT plan through **Sign in with ChatGPT**, keeps the OAuth grant in a `keyring:` ref, refreshes it per
@@ -7,13 +7,13 @@ request, and ships the stateless Responses wire plus the model catalog.
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-openai-codex
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import openaiCodex from "@arnilo/prism-provider-openai-codex";
+import openaiCodex from "@arnilo/prism-ai/openai-codex";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
@@ -59,7 +59,7 @@ kernel runs one. Iterate `provider.auth`, read `kind === "oauth"`, and call `log
 **Headless hosts** import a record instead of running a browser flow: `openAICodexImportCredentials(config)(ctx,
 record)` validates the v1 shape and keeps the importing host's own host ID.
 
-**Who may use this.** `@arnilo/prism-provider-openai-codex` runs OpenAI models on a user's ChatGPT plan through
+**Who may use this.** `@arnilo/prism-ai/openai-codex` runs OpenAI models on a user's ChatGPT plan through
 OpenAI's **Sign in with ChatGPT** flow for **open-source and locally hosted** apps. OpenAI's terms for this flow
 cover open-source tools used locally, not paid or remotely hosted products. If you embed Prism in a paid or
 remotely hosted product, apply through OpenAI's interest form

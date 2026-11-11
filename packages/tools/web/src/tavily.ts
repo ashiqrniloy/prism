@@ -5,13 +5,7 @@ import type { SearchControl, WebAdapterOptions, WebSearchAdapter } from "./types
 
 const ORIGIN = "https://api.tavily.com";
 /** Tavily pages nothing and filters everything else natively. */
-const SUPPORTS: ReadonlySet<SearchControl> = new Set([
-  "freshness",
-  "includeDomains",
-  "excludeDomains",
-  "country",
-  "language",
-]);
+const SUPPORTS: ReadonlySet<SearchControl> = new Set(["freshness", "includeDomains", "excludeDomains", "country", "language"]);
 const MAX_RESULTS = 20;
 const FRESHNESS: Readonly<Record<string, string>> = { day: "day", week: "week", month: "month", year: "year" };
 /** Tavily's `country` takes an English country name; Prism's contract stays a two-letter code. */
@@ -31,7 +25,10 @@ export function createTavilySearch(options: WebAdapterOptions): WebSearchAdapter
           throw new WebToolError("ERR_PRISM_WEB_INPUT", "Tavily query is empty or exceeds byte limit");
         const count = call.count ?? transport.limits.maxResults;
         if (!Number.isSafeInteger(count) || count < 1 || count > transport.limits.maxResults || count > MAX_RESULTS)
-          throw new WebToolError("ERR_PRISM_WEB_INPUT", `Tavily result count is invalid (1..${Math.min(transport.limits.maxResults, MAX_RESULTS)})`);
+          throw new WebToolError(
+            "ERR_PRISM_WEB_INPUT",
+            `Tavily result count is invalid (1..${Math.min(transport.limits.maxResults, MAX_RESULTS)})`,
+          );
         const body = JSON.stringify({
           query: normalized,
           max_results: count,

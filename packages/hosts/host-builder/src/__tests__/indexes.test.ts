@@ -23,7 +23,7 @@ describe("host-builder indexes", () => {
     assert.match(source, /definePackage/);
     for (const path of [
       "examples/nope.ts",
-      "../package.json",
+      "../../package.json",
       "/etc/passwd",
       "examples/../package.json",
       "examples/fixtures/hello-package/package.json",

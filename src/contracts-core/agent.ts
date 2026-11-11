@@ -122,7 +122,7 @@ export interface AgentConfig {
 
 /**
  * Plan 159 Task 7: `createSecureAgent`/`SecureAgentOptions` are gone. The guarantees it enforced at
- * build time live in `@arnilo/prism-governance` as `governance({ require: { principal, ownership } })`
+ * build time live in `@arnilo/prism-extensions/governance` as `governance({ require: { principal, ownership } })`
  * plus the kernel's fail-closed defaults.
  */
 export interface AgentDisable {

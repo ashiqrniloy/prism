@@ -32,7 +32,7 @@ Ranges moved in the cut that never shipped; hosts that pin these themselves must
 - `@nanonets/graft` optional peer **`^0.16.0` → `^0.16.0 || ^0.18.0`** in `@arnilo/prism-memory/graft` (upstream published no 0.17; both listed floors pass the offline peer-contract smoke).
 - `@agentclientprotocol/sdk` exact pin **`1.3.0` → `1.4.0`** in `@arnilo/prism-ag-ui/acp` and `@arnilo/prism-acp-agent`. The wire protocol stays v1 (`PROTOCOL_VERSION === 1`); 1.4.0 stabilizes elicitation (the SDK's `unstable_*` helpers become `createElicitation`/`completeElicitation`, wire method names unchanged — Prism never called the unstable helpers) and adds `compaction` session-update kinds, which Prism does not advertise or map.
 - `@office-open/*` **`0.13.1` → `0.14.5`** in `@arnilo/prism-office`. Upstream made `parseDocument`/`parsePresentation`/`parseWorkbook` async; Prism's adapters call the new synchronous `parse*Sync` variants, so no Prism signature changed — but the office package requires the 0.14.5 line.
-- `zod` **`^4.4.3` → `^4.6.2`** in `@arnilo/prism-mcp` (AG-UI's `^3.25.0 || ^4.0.0` peer range is unchanged and still admits it).
+- `zod` **`^4.4.3` → `^4.6.2`** in `@arnilo/prism-extensions/mcp` (AG-UI's `^3.25.0 || ^4.0.0` peer range is unchanged and still admits it).
 - `@biomejs/biome` dev **`2.5.11` → `2.5.13`** (lint/format only; 0 findings on the repo).
 
 ## 3. `@arnilo/prism-office` is peer-free

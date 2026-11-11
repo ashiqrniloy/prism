@@ -4,7 +4,7 @@
  * The host supplies a PTY module through PRISM_TEST_PTY_BACKEND (absolute path
  * to an ESM/CJS module). The module exports `createPtyBackend()` (named or
  * default) returning an object structurally conforming to
- * `ProcessPtyBackend` from @arnilo/prism-tools-coding — it may wrap any PTY
+ * `ProcessPtyBackend` from @arnilo/prism-tools/coding — it may wrap any PTY
  * engine (e.g. node-pty); Prism never depends on that engine.
  *
  * This leg proves, against a real pseudoterminal:
@@ -19,13 +19,14 @@
  * GATE failure instead of a passing skip. It is only wired into the protected
  * release profile; it is not part of `bun run test`.
  */
+
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { pathToFileURL } from "node:url";
-import { createProcessSessions } from "@arnilo/prism-tools-coding";
+import { createProcessSessions } from "@arnilo/prism-tools/coding";
 import { blockedGate } from "./blocked-gate.mjs";
 
 const backendModule = process.env.PRISM_TEST_PTY_BACKEND;

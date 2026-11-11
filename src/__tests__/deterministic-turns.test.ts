@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AgentEvent, type ProviderEvent, type ProviderRequest, createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "../index.js";
+import {
+  type AgentEvent,
+  type ProviderEvent,
+  type ProviderRequest,
+  createAgent,
+  createMemorySessionStore,
+  providerDone,
+  providerTextDelta,
+} from "../index.js";
 import { mockProvider } from "../testing/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
@@ -39,9 +47,11 @@ describe("host-answered turns that skip the provider", () => {
     const requests: ProviderRequest[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([[providerTextDelta("model answer"), providerDone()]], {
-        onRequest: (request) => requests.push(request),
-      })],
+      packages: [
+        mockProvider([[providerTextDelta("model answer"), providerDone()]], {
+          onRequest: (request) => requests.push(request),
+        }),
+      ],
       hooks: deskModelCall(),
     });
     const session = await agent.session();

@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { describe, it } from "bun:test";
 import { createAgent, createMemorySessionStore, type JsonObject, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import memorySystem, { createMemory, encodeMemoryNoteMetadata } from "../../index.js";
 import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
@@ -83,12 +83,14 @@ describe("memory:lifecycle (plan 188.4 Further Action 4)", () => {
         model: { provider: "mock", model: "main" },
         packages: [
           mockProvider([[providerTextDelta("ok"), providerDone()]]),
-          memorySystem({ ltm: {
-            tools: { root },
-            store: { sqlite: { path: index } },
-            scopes: { user: false, agent: false, project: { root } },
-            consolidate: false,
-          } }),
+          memorySystem({
+            ltm: {
+              tools: { root },
+              store: { sqlite: { path: index } },
+              scopes: { user: false, agent: false, project: { root } },
+              consolidate: false,
+            },
+          }),
         ],
         slots: { store: createMemorySessionStore() },
       });
@@ -121,27 +123,15 @@ describe("memory:lifecycle (plan 188.4 Further Action 4)", () => {
         assert.equal(limited.total, 1);
 
         // An archived note is hidden from the default view; `includeArchived` explains it too.
-        const withArchived = (await agent.commands.run(
-          "memory:lifecycle",
-          { includeArchived: true },
-          { session },
-        )) as JsonObject;
+        const withArchived = (await agent.commands.run("memory:lifecycle", { includeArchived: true }, { session })) as JsonObject;
         assert.equal(withArchived.total, 2);
         const archived = (withArchived.notes as JsonObject[]).find((note) => note.id === "b1000000000b")!;
         assert.equal(archived.status, "archived");
         assert.equal(archived.archivedAt, "2026-01-02T00:00:00.000Z");
         assert.equal(archived.archivedFrom, "verified");
-        const archivedOnly = (await agent.commands.run(
-          "memory:lifecycle",
-          { id: "b1000000000b" },
-          { session },
-        )) as JsonObject;
+        const archivedOnly = (await agent.commands.run("memory:lifecycle", { id: "b1000000000b" }, { session })) as JsonObject;
         assert.equal(archivedOnly.total, 0, "the default view hides archived notes");
-        const capped = (await agent.commands.run(
-          "memory:lifecycle",
-          { includeArchived: true, limit: 1 },
-          { session },
-        )) as JsonObject;
+        const capped = (await agent.commands.run("memory:lifecycle", { includeArchived: true, limit: 1 }, { session })) as JsonObject;
         assert.equal(capped.total, 2);
         assert.equal((capped.notes as JsonObject[]).length, 1, "limit caps the printed rows, not the count");
         await session.close();

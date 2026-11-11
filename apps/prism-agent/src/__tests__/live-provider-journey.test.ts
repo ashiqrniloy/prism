@@ -22,8 +22,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { createScriptedHostUi, mockProvider, providerDone, providerUsage } from "@arnilo/prism/testing";
-import memoryCompaction from "@arnilo/prism-memory-compaction";
-import { connectAgent, remoteHostUi, serveAgent } from "@arnilo/prism-remote";
+import memoryCompaction from "@arnilo/prism-extensions/compaction";
+import { connectAgent, remoteHostUi, serveAgent } from "@arnilo/prism-hosts/remote";
 import {
   apiLevelsOf,
   assertNoLeak,

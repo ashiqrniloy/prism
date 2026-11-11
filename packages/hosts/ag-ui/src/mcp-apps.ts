@@ -1,6 +1,6 @@
 import type { JsonObject } from "@arnilo/prism";
-import type { McpAppResource, McpAppsBridge } from "@arnilo/prism-mcp";
-import manifest from "../package.json" with { type: "json" };
+import type { McpAppResource, McpAppsBridge } from "@arnilo/prism-extensions/mcp";
+import manifest from "../../package.json" with { type: "json" };
 import { AgUiError } from "./errors.js";
 import { assertBoundedJson } from "./input.js";
 import { DEFAULT_AG_UI_LIMITS } from "./limits.js";

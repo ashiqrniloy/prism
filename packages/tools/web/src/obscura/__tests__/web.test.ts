@@ -98,7 +98,7 @@ test("obscura_scrape_returns_numbered_text", async () => {
   const result = await call(toolSet, "obscura_scrape", { urls: ["https://example.com/a"] });
   assert.equal(result.error, undefined);
   const text = (result.content as readonly { text: string }[])[0]!.text;
-  assert.match(text, /^1\. https:\/\/example\.com\/a\n   \{/u);
+  assert.match(text, /^1\. https:\/\/example\.com\/a\n {3}\{/u);
 });
 
 test("count caps results and the default profile keeps the query out of JavaScript source", async () => {

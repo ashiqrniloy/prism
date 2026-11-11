@@ -14,13 +14,7 @@ import {
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createDispatcher, type Dispatcher } from "../dispatcher.js";
-import {
-  connectAgent,
-  createMemoryTransportPair,
-  RemoteError,
-  remoteHostUi,
-  serveAgent,
-} from "../index.js";
+import { connectAgent, createMemoryTransportPair, RemoteError, remoteHostUi, serveAgent } from "../index.js";
 import type { HostUiRequestParams } from "../protocol.js";
 import { createServerState, type ServeAgentOptions, serveConnection } from "../serve.js";
 import { gatedAgent, MODEL, sleep, until } from "./helpers.js";
@@ -485,10 +479,7 @@ describe("prism-remote principal isolation", () => {
         return { status: "answered", value: true } as never;
       },
     };
-    const proxy = await connectAgent(
-      { kind: "websocket", url: served.url!, token: served.token! },
-      { host: { ui: clientUi } },
-    );
+    const proxy = await connectAgent({ kind: "websocket", url: served.url!, token: served.token! }, { host: { ui: clientUi } });
 
     const s = await proxy.session();
     const result = await s.run("approve me");

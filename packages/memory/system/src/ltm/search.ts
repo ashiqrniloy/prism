@@ -3,9 +3,9 @@ import { HARD_MAX_RECALL_PAGE_LIMIT, resolveRecallPageLimit } from "../session/l
 import { isEligibleObservationSourceEntry } from "../session/coverage-helpers.js";
 import { recallObservationalMemoryBranchPage } from "../session/recall.js";
 import { serializeSessionEntry } from "../session/serialize.js";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { assertNotAborted } from "@arnilo/prism-memory-core";
-import { tokenizeLexical } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { assertNotAborted } from "@arnilo/prism-memory-system/core";
+import { tokenizeLexical } from "@arnilo/prism-memory-system/core";
 import type {
   MemoryFabric,
   MemoryFabricConversationHit,

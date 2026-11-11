@@ -1,6 +1,6 @@
 import type { JsonSchema } from "@arnilo/prism";
 import { isThinkingLevel, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { type ConsolidationExtractionReason, EXTRACTION_REASONS } from "./consolidation/extract.js";
 import { DEFAULT_MAX_CONSOLIDATION_CANDIDATES } from "./consolidation/gather.js";
 import {

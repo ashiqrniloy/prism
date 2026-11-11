@@ -17,5 +17,5 @@ runProviderLiveScenarios({
   // reads elsewhere. Plan 184/205 Task 3 measures the levers; a green live run must not claim a hit.
   scenarios: ["text", "tool-loop", "structured-output", "abort", "error"],
   secretEnv: ["COMMAND_CODE_API_KEY", "COMMANDCODE_API_KEY"],
-  title: "@arnilo/prism-provider-commandcode live tests",
+  title: "@arnilo/prism-ai/commandcode live tests",
 });

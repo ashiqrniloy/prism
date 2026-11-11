@@ -1,8 +1,8 @@
 import { ClientSideConnection, ndJsonStream, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createAgent } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { acpHost, serveAcp } from "@arnilo/prism-acp";
-import approval from "@arnilo/prism-approval";
+import { acpHost, serveAcp } from "@arnilo/prism-hosts/acp";
+import approval from "@arnilo/prism-extensions/approval";
 
 /**
  * One agent, approval in ask mode, served over ACP on in-memory streams.

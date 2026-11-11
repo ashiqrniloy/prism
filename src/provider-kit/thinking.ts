@@ -287,14 +287,10 @@ export const preserveThinking = resolvePreserveThinking;
  */
 export function resolveReasoningEffort(request: ProviderRequest): string | undefined {
   const effort =
-    request.options?.compat?.reasoning_effort ??
-    request.options?.compat?.reasoningEffort ??
-    request.model.compat?.reasoning_effort;
+    request.options?.compat?.reasoning_effort ?? request.options?.compat?.reasoningEffort ?? request.model.compat?.reasoning_effort;
   if (typeof effort !== "string" || !effort.trim()) return undefined;
   const normalized = effort.trim().toLowerCase();
-  const declared =
-    request.model.capabilities?.thinkingLevels ??
-    (request.model.compat?.effortLevels as readonly string[] | undefined);
+  const declared = request.model.capabilities?.thinkingLevels ?? (request.model.compat?.effortLevels as readonly string[] | undefined);
   if (!declared || declared.length === 0) return normalized;
   const view: Pick<ModelConfig, "provider" | "compat" | "capabilities"> = {
     provider: request.model.provider,
@@ -341,9 +337,7 @@ export function resolveReasoningObject(request: ProviderRequest): JsonObject | u
   const effort = merged.effort;
   if (typeof effort === "string" && effort.trim()) {
     const normalized = effort.trim().toLowerCase();
-    const declared =
-      request.model.capabilities?.thinkingLevels ??
-      (request.model.compat?.effortLevels as readonly string[] | undefined);
+    const declared = request.model.capabilities?.thinkingLevels ?? (request.model.compat?.effortLevels as readonly string[] | undefined);
     if (declared && declared.length > 0) {
       const view: Pick<ModelConfig, "provider" | "compat" | "capabilities"> = {
         provider: request.model.provider,
@@ -390,4 +384,3 @@ function doStripCompat(compat: JsonObject | undefined, extraKeys?: readonly stri
   if (entries.length === 0) return undefined;
   return Object.fromEntries(entries);
 }
-

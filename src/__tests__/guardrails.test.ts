@@ -1,6 +1,6 @@
 // Focused behavior coverage for the kernel guardrail stage runner (`src/guardrails.ts`), which had no
 // direct root test: plan 159 Task 5 moved the pack compile path and the pack definitions to
-// `@arnilo/prism-guardrail-packs`, but this runner stays in the kernel and a package calls it through
+// `@arnilo/prism-extensions/guardrail-packs`, but this runner stays in the kernel and a package calls it through
 // `@arnilo/prism` so its `guardrail.decision` events are attributed to that package. Each test asserts
 // an observable outcome (a record, a thrown code, an emitted decision, an abort) rather than internals.
 
@@ -78,11 +78,11 @@ describe("guardrail stage runner", () => {
 
   it("attributes decisions to the calling package and carries the tool ids when the context has them", async () => {
     const events: AgentEvent[] = [];
-    await run({ guards: [guard("a")], emit: (event) => events.push(event), package: "@arnilo/prism-governance" });
+    await run({ guards: [guard("a")], emit: (event) => events.push(event), package: "@arnilo/prism-extensions/governance" });
 
     const envelope = events[0];
     assert.ok(envelope && envelope.type === "package.event");
-    assert.equal(envelope.package, "@arnilo/prism-governance");
+    assert.equal(envelope.package, "@arnilo/prism-extensions/governance");
     const data = envelope.data as unknown as { toolCallId?: string; toolName?: string; record: GuardrailRecord };
     assert.equal(data.toolCallId, "call-1");
     assert.equal(data.toolName, "search");

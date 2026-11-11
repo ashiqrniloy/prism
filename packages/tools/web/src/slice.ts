@@ -38,8 +38,19 @@ export function fetchParameters(cached = false, prompt = false): JsonObject {
       url: { type: "string", format: "uri" },
       max_chars: { type: "integer", minimum: 1, maximum: HARD_FETCH_CHARS, default: DEFAULT_FETCH_CHARS },
       offset: { type: "integer", minimum: 0, default: 0 },
-      ...(cached ? { refresh: { type: "boolean", description: "Fetch the page again instead of reusing this session's cached copy" } } : {}),
-      ...(prompt ? { prompt: { type: "string", minLength: 1, maxLength: 4_000, description: "A question for the configured model to answer from this page" } } : {}),
+      ...(cached
+        ? { refresh: { type: "boolean", description: "Fetch the page again instead of reusing this session's cached copy" } }
+        : {}),
+      ...(prompt
+        ? {
+            prompt: {
+              type: "string",
+              minLength: 1,
+              maxLength: 4_000,
+              description: "A question for the configured model to answer from this page",
+            },
+          }
+        : {}),
     },
     required: ["url"],
     additionalProperties: false,
@@ -60,10 +71,7 @@ export function fetchSliceArgs(args: JsonObject): FetchSliceArgs {
 export function sliceMarkdown(markdown: string, args: FetchSliceArgs): FetchSlice {
   const totalChars = markdown.length;
   if (totalChars > 0 && args.offset >= totalChars)
-    throw new WebToolError(
-      "ERR_PRISM_WEB_INPUT",
-      `offset ${args.offset} is past the end of the document (${totalChars} characters)`,
-    );
+    throw new WebToolError("ERR_PRISM_WEB_INPUT", `offset ${args.offset} is past the end of the document (${totalChars} characters)`);
   let end = Math.min(args.offset + args.maxChars, totalChars);
   if (end < totalChars) {
     // Prefer a paragraph, then a line break, in the last tenth of the window.
@@ -90,8 +98,7 @@ export function sliceMarkdown(markdown: string, args: FetchSliceArgs): FetchSlic
 /** The model-visible text: which characters these are, how to continue, then the slice. */
 export function fetchSliceText(slice: FetchSlice, sourceTruncated = false, cachedAgeMs?: number): string {
   const lines = [`Showing characters ${slice.offset}–${slice.end} of ${slice.totalChars}.`];
-  if (cachedAgeMs !== undefined)
-    lines.push(`This page was cached ${formatAge(cachedAgeMs)} ago; pass refresh: true to fetch it again.`);
+  if (cachedAgeMs !== undefined) lines.push(`This page was cached ${formatAge(cachedAgeMs)} ago; pass refresh: true to fetch it again.`);
   if (slice.nextOffset !== undefined) lines.push(`Call web_fetch again with offset=${slice.nextOffset} for more.`);
   if (sourceTruncated) lines.push(`The page exceeded the fetch limit and was cut at ${slice.totalChars} characters.`);
   return `${lines.join("\n")}\n\n${slice.markdown}`;

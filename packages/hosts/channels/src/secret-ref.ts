@@ -24,7 +24,7 @@ export async function resolveChannelSecretRef(agent: Agent, ref: string): Promis
   }
   const assigned = agent.config?.slots?.credentials;
   const resolver: CredentialResolver = typeof assigned === "object" ? assigned : createEnvRefCredentialResolver();
-  const resolved = (await resolver.resolve(ref, { package: "@arnilo/prism-channels" }))?.value;
+  const resolved = (await resolver.resolve(ref, { package: "@arnilo/prism-hosts/channels" }))?.value;
   if (!resolved || resolved.trim().length === 0) {
     throw new Error(`Failed to resolve channel credential reference: ${ref}`);
   }

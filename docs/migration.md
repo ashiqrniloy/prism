@@ -44,7 +44,7 @@ What a 0.8.0 host must check before upgrading:
 What a 0.7.0 host must check before upgrading:
 
 - **One import-map break.** Replace `@arnilo/prism-office/*`, `@arnilo/prism-core/integrations/work*`, and `@arnilo/prism-coding-tools/document-reader` with `@arnilo/prism-work` subpaths. Catch work-idempotency by `error.code`, not class. No pre-1.0 shim.
-- **Eleventh package.** `@arnilo/prism-channels` is new and optional; omit it if the host has no messaging ingress.
+- **Eleventh package.** `@arnilo/prism-hosts/channels` is new and optional; omit it if the host has no messaging ingress.
 - **Additive, inert by default:** connected-app MCP sessions, work HTTP adapters, turn-boundary checkpoints / `decision: "continue"`, turn-stop policy, run-bundle snapshots, claim-grounding guardrail, work sandbox/skills.
 - **Behavioral pins inside existing surfaces:** observational-memory workers stay tool-only (text-only turns are successful no-ops); channel lease release clears in-memory state only after the store acknowledges; AG-UI `inputPolicy.clientState: "ignore"` is opt-in (default honor matches 0.7.0); a foreign checkpoint/run-status load is a miss, not an existence leak.
 
@@ -67,9 +67,9 @@ What a 0.12.1 host must check before upgrading:
 
 This is a break for hosts that used the kernel's checkpoint/lease contracts, the `@arnilo/prism-core/runtime/workflows` engine, or the `@arnilo/prism-core/governance/observability` subpath. No compatibility aliases ship.
 
-- **The kernel checkpoint, lease, and checkpoint-backed run-state surface is gone** (plan 168 Task 5). `@arnilo/prism-core`/`@arnilo/prism` no longer export `CheckpointStore`, `LeaseStore`, their record/key/query types, `createMemoryCheckpointStore`, `createMemoryLeaseStore`, `CheckpointConflictError`, `LeaseConflictError`, `AgentConfig.runState`, `RunOptions.runState`, `AgentRunStateOptions`, `createAgentRunLifecycle`, `resumeAgentRun`, or `resumeAgentRunStream`. The contracts and the memory/durable implementations live in `@arnilo/prism-workflows` (types plus `checkpoints`/`leases` services, with `@arnilo/prism-store-sqlite` and `@arnilo/prism-store-postgres` providing them); durable runs anchor on the store slot's `suspended_run` entry and resume through `session.resume(decisions)`, which requires a decision for every pending request. `runCheckpointRestoreHooks` stays in the kernel.
-- **`@arnilo/prism-core/runtime/workflows` is deleted** (plan 168 Task 7). Install `@arnilo/prism-workflows` and import the same names from its root: `defineWorkflow`, `buildGraph`, `functionNode`, `agentNode`, `fanOutNode`, `joinNode`, `loopNode`, `conditionalNode`, `routeNode`, `workflowNode`, `runWorkflow`, `resumeWorkflow`, `suspend`, `replayWorkflow`, `createWorkflowCheckpoints`, `createMemoryWorkflowCheckpoints`, `serializeWorkflowGraph`, `workflowGraphToMermaid`, `projectWorkflowGraphRun`, `createWorkflowEventBus`, the `Workflow*` types, and the limit constants. `toolNode` is retired — a `kind: "tool"` definition fails `defineWorkflow`, and a function node that dispatches the `ToolDefinition` is the replacement. The coordinator, schedules, sagas, swarm, commands, active-run status, and the 0.12 workflow event facade have no 0.13 replacement yet (Phase 16 Part B); `@arnilo/prism-core/runtime/server` drops the workflow, schedule, and operator endpoints with them and keeps its agent run/stream/status/resume/events routes, artifacts, conversations, health, drain, rate limit, replay, deployment lease, and agent-event webhooks. `@arnilo/prism-core/governance/evals` (the 0.12 workflow experiment) is deleted too, and `@arnilo/prism-core` no longer depends on `@arnilo/prism-workflows`.
-- **`@arnilo/prism-core/governance/observability` is deleted** (plan 168 Task 6). The workflow spans (`createWorkflowInstrumentation`), the execution timeline (`createTimelineFolder`, `createWorkflowTimelineFolder`, `projectAgentTimeline`, `projectTraceTimeline`, `projectWorkflowTimeline`, `TimelineError`), the summaries (`summarizeTimeline`, `summarizeSession`, `addUsage`, `capToolCounts`), and the RAG telemetry seam (`createRagTelemetry`) move to `@arnilo/prism-observability`. Retarget imports and add that package; its workflow types are a type-only reference to `@arnilo/prism-workflows`.
+- **The kernel checkpoint, lease, and checkpoint-backed run-state surface is gone** (plan 168 Task 5). `@arnilo/prism-core`/`@arnilo/prism` no longer export `CheckpointStore`, `LeaseStore`, their record/key/query types, `createMemoryCheckpointStore`, `createMemoryLeaseStore`, `CheckpointConflictError`, `LeaseConflictError`, `AgentConfig.runState`, `RunOptions.runState`, `AgentRunStateOptions`, `createAgentRunLifecycle`, `resumeAgentRun`, or `resumeAgentRunStream`. The contracts and the memory/durable implementations live in `@arnilo/prism-extensions/workflows` (types plus `checkpoints`/`leases` services, with `@arnilo/prism-extensions/store-sqlite` and `@arnilo/prism-extensions/store-postgres` providing them); durable runs anchor on the store slot's `suspended_run` entry and resume through `session.resume(decisions)`, which requires a decision for every pending request. `runCheckpointRestoreHooks` stays in the kernel.
+- **`@arnilo/prism-core/runtime/workflows` is deleted** (plan 168 Task 7). Install `@arnilo/prism-extensions/workflows` and import the same names from its root: `defineWorkflow`, `buildGraph`, `functionNode`, `agentNode`, `fanOutNode`, `joinNode`, `loopNode`, `conditionalNode`, `routeNode`, `workflowNode`, `runWorkflow`, `resumeWorkflow`, `suspend`, `replayWorkflow`, `createWorkflowCheckpoints`, `createMemoryWorkflowCheckpoints`, `serializeWorkflowGraph`, `workflowGraphToMermaid`, `projectWorkflowGraphRun`, `createWorkflowEventBus`, the `Workflow*` types, and the limit constants. `toolNode` is retired — a `kind: "tool"` definition fails `defineWorkflow`, and a function node that dispatches the `ToolDefinition` is the replacement. The coordinator, schedules, sagas, swarm, commands, active-run status, and the 0.12 workflow event facade have no 0.13 replacement yet (Phase 16 Part B); `@arnilo/prism-core/runtime/server` drops the workflow, schedule, and operator endpoints with them and keeps its agent run/stream/status/resume/events routes, artifacts, conversations, health, drain, rate limit, replay, deployment lease, and agent-event webhooks. `@arnilo/prism-core/governance/evals` (the 0.12 workflow experiment) is deleted too, and `@arnilo/prism-core` no longer depends on `@arnilo/prism-extensions/workflows`.
+- **`@arnilo/prism-core/governance/observability` is deleted** (plan 168 Task 6). The workflow spans (`createWorkflowInstrumentation`), the execution timeline (`createTimelineFolder`, `createWorkflowTimelineFolder`, `projectAgentTimeline`, `projectTraceTimeline`, `projectWorkflowTimeline`, `TimelineError`), the summaries (`summarizeTimeline`, `summarizeSession`, `addUsage`, `capToolCounts`), and the RAG telemetry seam (`createRagTelemetry`) move to `@arnilo/prism-extensions/observability`. Retarget imports and add that package; its workflow types are a type-only reference to `@arnilo/prism-extensions/workflows`.
 
 ## Work family package move (0.8.0 detail)
 
@@ -121,9 +121,9 @@ The 0.5.7 cut was never published, so its content ships in 0.6.0. Third-party ra
 - `playwright-core` optional exact peer **`1.61.0` → `1.63.0`** in `@arnilo/prism-web-tools` (the exact pin is deliberate — browser control is version-sensitive, and the host still owns the browser binary/image). `@arnilo/prism-office` **drops** its optional `playwright-core` peer: no office subpath ever imported it at runtime (the diagrams embed takes a host-supplied iframe), so it becomes a devDependency behind the gated live draw.io test. Hosts that installed it for office can remove it.
 - `@ai-sdk/provider` exact peer **`4.0.10` → `4.0.13`** in the historical AI SDK provider adapter. The supported-version matrix gained a `4.0.13` row; `4.0.3`, `4.0.4`, and `4.0.10` stay listed. Unlisted versions fail closed.
 - `@nanonets/graft` optional peer **`^0.16.0` → `^0.16.0 || ^0.18.0`** in `@arnilo/prism-memory/graft` (upstream published no 0.17; both listed floors pass the offline peer-contract smoke).
-- `@agentclientprotocol/sdk` exact pin **`1.3.0` → `1.4.0`** in `@arnilo/prism-ag-ui/acp` and `@arnilo/prism-acp-agent`. Wire protocol stays v1 (`PROTOCOL_VERSION === 1`); 1.4.0 stabilizes elicitation (the SDK's `unstable_createElicitation`/`unstable_completeElicitation` helpers become `createElicitation`/`completeElicitation`, wire method names unchanged — Prism never called the unstable helpers) and adds `compaction` session-update kinds, which Prism does not advertise or map.
+- `@agentclientprotocol/sdk` exact pin **`1.3.0` → `1.4.0`** in `@arnilo/prism-hosts/ag-ui/acp` and `@arnilo/prism-acp-agent`. Wire protocol stays v1 (`PROTOCOL_VERSION === 1`); 1.4.0 stabilizes elicitation (the SDK's `unstable_createElicitation`/`unstable_completeElicitation` helpers become `createElicitation`/`completeElicitation`, wire method names unchanged — Prism never called the unstable helpers) and adds `compaction` session-update kinds, which Prism does not advertise or map.
 - `@office-open/*` **`0.13.1` → `0.14.5`** in `@arnilo/prism-office`. Upstream made `parseDocument`/`parsePresentation`/`parseWorkbook` async; Prism's synchronous document adapters now call the new `parse*Sync` variants, so no Prism signature changed — but the office package requires the 0.14.5 line.
-- `zod` **`^4.4.3` → `^4.6.2`** in `@arnilo/prism-mcp` (AG-UI's `^3.25.0 || ^4.0.0` peer range is unchanged and still admits it).
+- `zod` **`^4.4.3` → `^4.6.2`** in `@arnilo/prism-extensions/mcp` (AG-UI's `^3.25.0 || ^4.0.0` peer range is unchanged and still admits it).
 - `@biomejs/biome` dev **`2.5.11` → `2.5.13`** (lint/format only; 0 findings on the repo).
 
 Dev-tooling and release-gate changes in the same cut (no host action required):
@@ -169,7 +169,7 @@ Read this page when:
 - you are hardening an agent that previously relied on "every scoped tool/skill is active" and need to name capabilities explicitly;
 - you are adopting 0.0.6 persistence, checkpoints/leases, workflows, structured output, multimodality, or explicit tool safety for the first time.
 
-If you are new to Prism, start at [Session stores](../packages/stores/jsonl/README.md) and [Agent/session runtime](agent.md) instead.
+If you are new to Prism, start at [Session stores](../packages/extensions/store-jsonl/README.md) and [Agent/session runtime](agent.md) instead.
 
 ## Inputs / request
 
@@ -286,7 +286,7 @@ Prism 0.0.5 persistence adapters automatically apply additive schema step `002_u
 Plan 201 adds optional `ProductionPersistenceStore.evaluations?: EvaluationStore` and
 `experiments?: ExperimentReportStore`. The evaluation contracts and experiment summary contracts
 are kernel types from `@arnilo/prism`; import memory implementations from
-`@arnilo/prism-store-codecs`. This replaces evals' former type and memory-store exports without
+`@arnilo/prism-extensions/store-codecs`. This replaces evals' former type and memory-store exports without
 aliases. Queries match all ownership fields exactly; unscoped queries see only unowned records.
 Experiment summaries are capped at 1 MiB and retain numeric aggregate statistics and item scorer
 means, without item input/output, reasons, or record metadata. `experiments.latest` finds the newest
@@ -294,7 +294,7 @@ matching dataset/owner and optional manifest fields. SQL adapters may omit these
 they implement the tables; existing adapters remain structurally valid.
 
 
-See [Database persistence](../packages/stores/sqlite/README.md) for the full reference schema, indexes, conditional-append transaction pattern, retention, and NoSQL mapping; [Session stores](../packages/stores/jsonl/README.md) for the `SessionStore` contract and branch helpers; [Session stores and branching](agent.md) for branch semantics; [Runs and usage ledger](events.md) for the `RunLedger` record shapes and ordering rules.
+See [Database persistence](../packages/extensions/store-sqlite/README.md) for the full reference schema, indexes, conditional-append transaction pattern, retention, and NoSQL mapping; [Session stores](../packages/extensions/store-jsonl/README.md) for the `SessionStore` contract and branch helpers; [Session stores and branching](agent.md) for branch semantics; [Runs and usage ledger](events.md) for the `RunLedger` record shapes and ordering rules.
 
 ### Migration 2 — permissive capability defaults → explicit capability activation
 
@@ -321,7 +321,7 @@ import { createContributionRegistries } from "@arnilo/prism";
 const registries = createContributionRegistries({ duplicate: "error" });
 ```
 
-Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per run after an agent has a skill registry configured, and `Skill.toolNames` is enforced fail-closed before the first provider turn. See [Agent definitions](agent.md), [Context and skills](../packages/context/files/README.md), and [Contribution registries](packages.md) for the full capability semantics.
+Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per run after an agent has a skill registry configured, and `Skill.toolNames` is enforced fail-closed before the first provider turn. See [Agent definitions](agent.md), [Context and skills](../packages/extensions/context-files/README.md), and [Contribution registries](packages.md) for the full capability semantics.
 
 ## Extension and configuration notes
 
@@ -343,22 +343,22 @@ Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per
 ## Related APIs
 
 
-- [Evaluations](../packages/hosts/evals/README.md): optional `@arnilo/prism-evals` scorers/datasets/experiments over `AgentRunResult`.
+- [Evaluations](../packages/hosts/evals/README.md): optional `@arnilo/prism-hosts/evals` scorers/datasets/experiments over `AgentRunResult`.
 - [Provider kit](provider-kit.md): shared foundation for building model provider packages on `@arnilo/prism/provider-kit`.
 - [Working and semantic memory](../packages/memory/system/README.md): optional `@arnilo/prism-memory` working/semantic recall primitives.
 - [Retrieval-augmented generation](../packages/knowledge/rag/README.md): optional text/Markdown chunk, index, retrieval, and citation helpers.
 - [Web-standard server handler](host.md): optional authorized agent/workflow HTTP routes.
-- [Supervisor delegation](../packages/integrations/delegate/README.md) and [A2A interoperability](../packages/hosts/ag-ui/README.md): optional install only; core agent/workflow behavior is unchanged. Child factories now receive package-derived memory IDs and narrowing permission, while remote endpoints require exact HTTPS origin allow-lists.
-- [MCP client/server exposure](../packages/integrations/mcp/README.md): selected MCP tools/commands and bounded Web transport.
-- [Database persistence](../packages/stores/sqlite/README.md): production contracts, reference schema, indexes, conditional append, retention, migrations, and custom adapters.
-- [SQLite persistence](../packages/stores/sqlite/README.md): local durable first-party adapter and writer ceiling.
-- [PostgreSQL persistence](../packages/stores/postgres/README.md): pooled multi-process adapter, TLS/pool ownership, and live gate.
-- [Session stores](../packages/stores/jsonl/README.md): `SessionStore` contract, `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, `readBranchPath`.
+- [Supervisor delegation](../packages/extensions/delegate/README.md) and [A2A interoperability](../packages/hosts/ag-ui/README.md): optional install only; core agent/workflow behavior is unchanged. Child factories now receive package-derived memory IDs and narrowing permission, while remote endpoints require exact HTTPS origin allow-lists.
+- [MCP client/server exposure](../packages/extensions/mcp/README.md): selected MCP tools/commands and bounded Web transport.
+- [Database persistence](../packages/extensions/store-sqlite/README.md): production contracts, reference schema, indexes, conditional append, retention, migrations, and custom adapters.
+- [SQLite persistence](../packages/extensions/store-sqlite/README.md): local durable first-party adapter and writer ceiling.
+- [PostgreSQL persistence](../packages/extensions/store-postgres/README.md): pooled multi-process adapter, TLS/pool ownership, and live gate.
+- [Session stores](../packages/extensions/store-jsonl/README.md): `SessionStore` contract, `SessionAppendOptions`, `SessionAppendConflictError`, branch handles, `readBranchPath`.
 - [Session stores and branching](agent.md): detailed branch semantics and helper reference.
 - [Runs and usage ledger](events.md): `RunLedger` record shapes, redaction, and event/usage ordering.
-- [Node JSONL session store](../packages/stores/jsonl/README.md): development-only JSONL adapter and its limits.
+- [Node JSONL session store](../packages/extensions/store-jsonl/README.md): development-only JSONL adapter and its limits.
 - [Agent definitions](agent.md): declarative `AgentDefinition`, `resolveAgentDefinition`, and the explicit-capability-activation migration.
-- [Context and skills](../packages/context/files/README.md): `RunOptions.activeSkills`, `Skill.context`, `toolNames` enforcement.
+- [Context and skills](../packages/extensions/context-files/README.md): `RunOptions.activeSkills`, `Skill.context`, `toolNames` enforcement.
 - [Contribution registries](packages.md): strict `duplicate: "error"` mode for capability shadowing prevention.
 - [Release and install](release.md): packaged surfaces and the offline test budget that gate these migrations.
 

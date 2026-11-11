@@ -25,11 +25,7 @@ const CODE_2 = /^[a-z]{2}$/iu;
  * backend cannot honor fails loudly, naming the argument — silently ignoring it would make results
  * look filtered when they are not.
  */
-export function searchControls(
-  supports: ReadonlySet<SearchControl>,
-  input: object,
-  values: WebSearchControlValues = {},
-): SearchControls {
+export function searchControls(supports: ReadonlySet<SearchControl>, input: object, values: WebSearchControlValues = {}): SearchControls {
   const provided = input as Record<string, unknown>;
   const controls: { -readonly [K in keyof SearchControls]: SearchControls[K] } = {};
   for (const control of Object.keys(ARGUMENT) as SearchControl[]) {
@@ -79,10 +75,7 @@ export function controlsFromArgs(args: JsonObject): Record<string, unknown> {
 }
 
 /** The `web_search` schema properties for one backend, in the model's snake_case spelling. */
-export function searchControlProperties(
-  supports: ReadonlySet<SearchControl>,
-  values: WebSearchControlValues = {},
-): JsonObject {
+export function searchControlProperties(supports: ReadonlySet<SearchControl>, values: WebSearchControlValues = {}): JsonObject {
   const properties: Record<string, JsonObject> = {};
   const entry = (control: SearchControl, schema: JsonObject): void => {
     if (supports.has(control)) properties[ARGUMENT[control]] = schema;

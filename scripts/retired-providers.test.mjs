@@ -4,7 +4,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
@@ -39,7 +39,7 @@ const ALLOWLIST = new Set([
 
 test("no_live_tree_reference_to_retired_provider", () => {
   // `(?:-[a-z0-9]+)*` closes the alternation so a live package whose name starts with a retired one
-  // (`@arnilo/prism-provider-openai-codex`, plan 204 Task 5) is not read as the retired provider.
+  // (`@arnilo/prism-ai/openai-codex`, plan 204 Task 5) is not read as the retired provider.
   const pattern = `prism-provider-(${RETIRED_PROVIDERS.join("|")})(?![a-z0-9-])`;
   const searchDirs = [
     "src",
@@ -75,7 +75,7 @@ test("ollama_deprecation_points_to_cloud_successor", () => {
   const deprecations = JSON.parse(readFileSync(join(ROOT, "scripts/deprecations-0.13.json"), "utf8"));
   const ollama = deprecations.names.find((entry) => entry.name === "@arnilo/prism-provider-ollama");
   assert.ok(ollama);
-  assert.ok(ollama.message.includes("For Ollama Cloud use @arnilo/prism-provider-ollama-cloud"));
+  assert.ok(ollama.message.includes("For Ollama Cloud use @arnilo/prism-ai/ollama-cloud"));
   assert.equal(ollama.successor, "@arnilo/prism/provider-kit");
 });
 
@@ -88,23 +88,11 @@ test("deprecation_messages_name_supported_providers", () => {
   // drift out of the umbrella message the way `liquid` did after plan 196.
   // "Shipped" means it has a manifest: plan 204 Task 4 adds the sign-in client before the shell, and
   // an unpublished directory must not be promised as a replacement package.
-  const shipped = readdirSync(join(ROOT, "packages", "providers"), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && existsSync(join(ROOT, "packages", "providers", entry.name, "package.json")))
-    .map((entry) => entry.name)
-    .sort();
-
-  const providersUmbrella = deprecations.names.find((d) => d.name === "@arnilo/prism-providers");
-  assert.ok(providersUmbrella, "Missing @arnilo/prism-providers deprecation entry");
-  const braced = /@arnilo\/prism-provider-\{([^}]+)\}/.exec(providersUmbrella.successor);
-  assert.ok(braced, "@arnilo/prism-providers successor must list the shipped packages in braces");
-  assert.deepEqual(
-    braced[1]
-      .split(",")
-      .map((name) => name.trim())
-      .sort(),
-    shipped,
-    "@arnilo/prism-providers successor must name every shipped provider package",
+  const bundle = JSON.parse(readFileSync(join(ROOT, "scripts/bundles.json"), "utf8")).bundles.find(
+    (bundle) => bundle.dir === "packages/providers",
   );
+  const providersUmbrella = deprecations.names.find((d) => d.name === "@arnilo/prism-providers");
+  assert.ok(providersUmbrella.successor.includes(`${bundle.name}/<provider>`));
   assert.ok(providersUmbrella.successor.includes("@arnilo/prism/provider-kit"), "@arnilo/prism-providers successor must name provider-kit");
 
   for (const entry of deprecations.names) {
@@ -129,8 +117,8 @@ test("deprecation_messages_name_supported_providers", () => {
   const retiredOpenai = deprecations.names.find((d) => d.name === "@arnilo/prism-provider-openai");
   assert.ok(retiredOpenai, "Missing @arnilo/prism-provider-openai deprecation entry");
   assert.ok(
-    retiredOpenai.message.includes("@arnilo/prism-provider-openai-codex"),
-    "openai deprecation message must point ChatGPT-plan users at @arnilo/prism-provider-openai-codex",
+    retiredOpenai.message.includes("@arnilo/prism-ai/openai-codex"),
+    "openai deprecation message must point ChatGPT-plan users at @arnilo/prism-ai/openai-codex",
   );
   assert.equal(
     retiredOpenai.successor,
@@ -138,18 +126,11 @@ test("deprecation_messages_name_supported_providers", () => {
     "openai successor stays provider-kit even though its message names the ChatGPT-plan package",
   );
 
-  // Plan 203 Task 2: `openrouter` left the retired list because 0.13.0 republishes
-  // the name, so only the legacy line may be deprecated.
+  // Plan 224: the former npm name retires; OpenRouter ships through the bundle.
   const openrouter = deprecations.names.find((d) => d.name === "@arnilo/prism-provider-openrouter");
-  assert.ok(openrouter, "Missing @arnilo/prism-provider-openrouter deprecation entry");
-  assert.equal(openrouter.range, "<0.13.0", "openrouter must keep the 0.13.0 line undeprecated");
-  assert.equal(openrouter.reused, true, "openrouter is a reused name");
-  assert.equal(openrouter.successor, "@arnilo/prism-provider-openrouter@0.13.0", "openrouter successor must name the republished package");
-  assert.ok(
-    openrouter.message.startsWith(
-      "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-provider-openrouter@0.13.0.",
-    ),
-    "openrouter deprecation message must use the reused-name shape",
-  );
+  assert.ok(openrouter);
+  assert.equal(openrouter.range, "*");
+  assert.equal(openrouter.reused, false);
+  assert.equal(openrouter.successor, `${bundle.name}/openrouter`);
   assert.ok(openrouter.message.includes("docs/migrate-to-0.13.md"), "openrouter deprecation message must include a docs link");
 });

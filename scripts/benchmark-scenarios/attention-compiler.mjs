@@ -4,7 +4,7 @@
  *
  * Builds a synthetic but realistic multi-turn session (assistant turns with tool calls, 8 KB
  * tool results, an optional volatile context block) and compiles every turn through the
- * `@arnilo/prism-context-engineering` attention pass in two modes:
+ * `@arnilo/prism-extensions/context-engineering` attention pass in two modes:
  *   - compiler off: the same messages, append-only prefix
  *   - compiler on: the ratio gate, sticky thinking strip, deterministic tool stubs
  *
@@ -25,7 +25,7 @@ import {
   createAttentionCompiler,
   createAttentionStickyFrontier,
   createAttentionTruncationTrigger,
-} from "../../packages/context/engineering/src/exports.js";
+} from "../../packages/extensions/context-engineering/src/exports.js";
 
 const TURNS = 8;
 const PAYLOAD_BYTES = 8_192;
@@ -103,7 +103,9 @@ async function runMode({ mode, volatileProvider, pinnedProvider, frontier, trigg
   let uncachedTail = 0;
   for (let turn = 1; turn <= TURNS; turn += 1) {
     const { history, toolResults } = fixtureFor(turn, bytesFor);
-    const blocks = volatileProvider ? (pinnedProvider ? pinnedProvider(turn, volatileProvider) : volatileProvider(turn)).resolve() : undefined;
+    const blocks = volatileProvider
+      ? (pinnedProvider ? pinnedProvider(turn, volatileProvider) : volatileProvider(turn)).resolve()
+      : undefined;
     const messages = withVolatileBlock(
       [...history, ...toolResults, { role: "user", content: [{ type: "text", text: "keep going" }] }],
       blocks?.[0]?.content,

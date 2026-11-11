@@ -92,7 +92,7 @@ export interface WikiExtensionOptions {
   /** The wiki's ontology port: it supplies the stage root and records the source. */
   readonly port?: () => WikiOntologyPort | undefined;
   /** Host-injected fetcher for `url` ingest sources. The wiki never fetches itself.
-   *  Return null to fail closed. `@arnilo/prism-wiki` wires this from the `web.fetch` service. */
+   *  Return null to fail closed. `@arnilo/prism-knowledge/wiki` wires this from the `web.fetch` service. */
   readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
 }
 

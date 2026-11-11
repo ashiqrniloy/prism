@@ -1,17 +1,17 @@
-# `@arnilo/prism-provider-hyper`
+# `@arnilo/prism-ai/hyper`
 
 Charm Hyper provider package for [Prism](https://github.com/ashiqrniloy/prism). Registers the `hyper` provider, resolves its key through the credentials slot on every request, and ships the dual-route wire (Anthropic Messages and OpenAI Chat), the quota and telemetry helpers, and the model catalog.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-hyper
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import hyper from "@arnilo/prism-provider-hyper";
+import hyper from "@arnilo/prism-ai/hyper";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

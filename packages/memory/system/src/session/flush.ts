@@ -4,10 +4,12 @@
  *
  * The pass is bounded and idempotent enough to run on every turn: it reads the branch once, folds the
  * ledger already in memory, and only calls a model when a threshold is crossed. One pass runs per
- * session at a time; a second request while one is in flight is skipped, not queued.
+ * session at a time. A request while one is in flight returns `skipped: "in_flight"` and is folded into the running
+ * flush: when its pass ends, it runs one more pass over what arrived meanwhile (plan 217 Task 6), so the tail written
+ * during a long pass is not left until the next turn.
  */
 import type { JsonValue, ModelClient, SessionContext, SessionEntry, SessionLog } from "@arnilo/prism";
-import { resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-core";
+import { resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-system/core";
 import type { ChunkOp, ChunkStoreHandle } from "../chunks.js";
 import type { ResolvedMemorySystemConfig, ResolvedWorkerSettings } from "./config.js";
 import {
@@ -86,6 +88,8 @@ export interface ObservationalFlush {
 
 export function createObservationalFlush(deps: ObservationalFlushDeps): ObservationalFlush {
   const statuses = new Map<string, ObservationalFlushStatus>();
+  /** Sessions whose flush was requested while a pass was in flight. */
+  const requested = new Set<string>();
   const limits = resolveMemoryWorkerLimits(deps.config.worker);
   const set = (sessionId: string, next: ObservationalFlushStatus): void => {
     statuses.set(sessionId, next);
@@ -93,11 +97,21 @@ export function createObservationalFlush(deps: ObservationalFlushDeps): Observat
   return {
     status: (sessionId) => statuses.get(sessionId) ?? { inFlight: false },
     async flush(session, options = {}) {
-      if (statuses.get(session.id)?.inFlight) return { observations: 0, reflections: 0, dropped: 0, skipped: "in_flight" };
+      if (statuses.get(session.id)?.inFlight) {
+        requested.add(session.id);
+        return { observations: 0, reflections: 0, dropped: 0, skipped: "in_flight" };
+      }
       set(session.id, { inFlight: true });
       deps.onStatus(session, { inFlight: true });
       try {
-        const result = await pass(session, deps, limits, options);
+        let result = await pass(session, deps, limits, options);
+        // Requests that arrived during the pass run as follow-up passes, bounded so a session that keeps writing
+        // cannot hold the flush forever (its next turn requests again).
+        for (let rerun = 0; rerun < MAX_FOLLOW_UP_PASSES && requested.has(session.id) && !options.signal?.aborted; rerun += 1) {
+          requested.delete(session.id);
+          result = sumFlushResults(result, await pass(session, deps, limits, options));
+        }
+        requested.delete(session.id);
         set(session.id, { inFlight: false });
         deps.onStatus(session, { inFlight: false });
         return result;
@@ -106,11 +120,25 @@ export function createObservationalFlush(deps: ObservationalFlushDeps): Observat
           error instanceof Error ? error.message : "Observational memory pass failed",
           limits.maxErrorBytes,
         );
+        requested.delete(session.id);
         set(session.id, { inFlight: false, lastError });
         deps.onStatus(session, { inFlight: false, lastError });
         throw error;
       }
     },
+  };
+}
+
+/** Follow-up passes one flush may run for requests that arrived while it was in flight. */
+export const MAX_FOLLOW_UP_PASSES = 4;
+
+function sumFlushResults(a: ObservationalFlushResult, b: ObservationalFlushResult): ObservationalFlushResult {
+  const boundaries = (a.boundaries ?? 0) + (b.boundaries ?? 0);
+  return {
+    observations: a.observations + b.observations,
+    reflections: a.reflections + b.reflections,
+    dropped: a.dropped + b.dropped,
+    ...(boundaries ? { boundaries } : {}),
   };
 }
 

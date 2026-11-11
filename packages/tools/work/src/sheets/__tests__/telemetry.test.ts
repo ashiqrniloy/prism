@@ -4,7 +4,7 @@ import { generateWorkbookSync } from "@office-open/xlsx";
 import { parseCsv, parseWorkbook } from "../index.js";
 import type { SheetsTelemetry, SheetsTelemetryAttributeValue, SheetsTelemetrySpan } from "../telemetry.js";
 
-describe("@arnilo/prism-tools-work — Telemetry Seam & Privacy", () => {
+describe("@arnilo/prism-tools/work — Telemetry Seam & Privacy", () => {
   it("records standard metadata metrics without leaking cell text for CSV parses", async () => {
     const csv = `id,pii_ssn,medical_diagnosis\n1,123-45-6789,CONFIDENTIAL_HEALTH_RECORD\n`;
 

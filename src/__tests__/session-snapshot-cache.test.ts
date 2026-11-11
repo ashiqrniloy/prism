@@ -1,4 +1,4 @@
-import { describe, it } from "bun:test";
+import { describe, it, spyOn } from "bun:test";
 import assert from "node:assert/strict";
 import { RuntimeAgentSession } from "../agent-session/session.js";
 import {
@@ -176,20 +176,27 @@ describe("session snapshot cache (plan 210 Task 0.3)", () => {
 
   it("expired_cache_revalidates_with_one_get", async () => {
     const { store, counts } = countingStore(createMemorySessionStore());
-    const session = new RuntimeAgentSession({ agent: await testAgent(), id: "expire", store, snapshotCacheTtlMs: 1 });
-    await session.appendEntry(message("expire", undefined, "user", "one"));
-    await session.snapshot();
-    await session.appendEntry(message("expire", session.leafId, "assistant", "two"));
-    const before = { ...counts };
-    await sleep(5);
-    const value = await session.snapshot();
-    assert.equal(counts.get - before.get, 1, "one get revalidates the expired cache");
-    assert.equal(counts.readBranchPath - before.readBranchPath, 0);
-    assert.equal(counts.list - before.list, 0);
-    assert.equal(value.entries.length, 2);
-    // Renewed: a second read within the TTL makes no store call at all.
-    await session.snapshot();
-    assert.equal(counts.get - before.get, 1);
+    const agent = await testAgent();
+    let now = 0;
+    const clock = spyOn(performance, "now").mockImplementation(() => now);
+    try {
+      const session = new RuntimeAgentSession({ agent, id: "expire", store, snapshotCacheTtlMs: 1 });
+      await session.appendEntry(message("expire", undefined, "user", "one"));
+      await session.snapshot();
+      await session.appendEntry(message("expire", session.leafId, "assistant", "two"));
+      const before = { ...counts };
+      now += 5;
+      const value = await session.snapshot();
+      assert.equal(counts.get - before.get, 1, "one get revalidates the expired cache");
+      assert.equal(counts.readBranchPath - before.readBranchPath, 0);
+      assert.equal(counts.list - before.list, 0);
+      assert.equal(value.entries.length, 2);
+      // Renewed: a second read within the TTL makes no store call at all.
+      await session.snapshot();
+      assert.equal(counts.get - before.get, 1);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("deleted_session_is_detected_at_revalidation", async () => {

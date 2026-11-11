@@ -1,10 +1,7 @@
 // Plan 079 Task 5: native-fetch Telegram Bot API adapter. Importing and constructing are inert;
 // `start` is the only polling lifecycle entry point and the webhook handler is host-mounted.
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import {
-  type Agent,
-  type OwnershipScope,
-} from "@arnilo/prism";
+import { type Agent, type OwnershipScope } from "@arnilo/prism";
 import type { CheckpointStore, LeaseRecord, LeaseStore } from "./checkpoint-contract.js";
 import { bindChannelHostUi } from "./host-ui.js";
 import { retryableAdmission } from "./admission.js";
@@ -491,7 +488,14 @@ function parseCallbackUpdate(connectionId: string, update: Record<string, unknow
   const uiMatch = typeof data === "string" ? /^q:([A-Za-z0-9_-]{43}):([0-7])$/.exec(data) : null;
   const match = typeof data === "string" ? /^p:([ad]):([A-Za-z0-9_-]{32,64})$/.exec(data) : null;
   const kind = admittedChatKind(chat, allowGroups);
-  if (id === undefined || callback === undefined || kind === undefined || from === undefined || from.is_bot === true || (match === null && uiMatch === null)) {
+  if (
+    id === undefined ||
+    callback === undefined ||
+    kind === undefined ||
+    from === undefined ||
+    from.is_bot === true ||
+    (match === null && uiMatch === null)
+  ) {
     return undefined;
   }
   const chatId = asChatId(chat?.id);
@@ -505,7 +509,7 @@ function parseCallbackUpdate(connectionId: string, update: Record<string, unknow
     externalActorId: actorId,
     eventId: String(id),
     text: uiMatch ? `/answer ${token} ${uiMatch[2]}` : "",
-    ...(!uiMatch ? { approval: { token, outcome: match?.[1] === "a" ? "allow_once" as const : "reject_once" as const } } : {}),
+    ...(!uiMatch ? { approval: { token, outcome: match?.[1] === "a" ? ("allow_once" as const) : ("reject_once" as const) } } : {}),
     ...(threadId === undefined ? {} : { threadId }),
     receivedAt: new Date().toISOString(),
     claims: { platform: "telegram", chatType: kind, control: "approval" },
@@ -1179,7 +1183,9 @@ export interface TelegramConnectOptions {
   readonly pairing?: {
     readonly ttlMs?: number;
   };
-  readonly authorize?: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>;
+  readonly authorize?: (
+    input: ChannelAuthorizeInput,
+  ) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>;
   readonly allowGroups?: boolean;
   readonly sendDrafts?: boolean;
   readonly maxAttachmentBytes?: number;
@@ -1235,21 +1241,21 @@ export async function connectTelegram(agent: Agent, options: TelegramConnectOpti
 
   const webhookHandler =
     resolvedWebhookSecret !== undefined
-    ? createTelegramWebhookHandler({
-        connectionId,
-        botToken,
-        webhookSecret: async () => resolvedWebhookSecret,
-        admit: (event) => runtime.admit(event),
-        leases,
-        cursorOwnership,
-        allowGroups: options.allowGroups,
-        maxAttachmentBytes: options.maxAttachmentBytes,
-        transcribe: options.transcribe,
-        extractDocumentText: options.extractDocumentText,
-        apiOrigin: options.apiOrigin,
-        fetch: options.fetch,
-      })
-    : undefined;
+      ? createTelegramWebhookHandler({
+          connectionId,
+          botToken,
+          webhookSecret: async () => resolvedWebhookSecret,
+          admit: (event) => runtime.admit(event),
+          leases,
+          cursorOwnership,
+          allowGroups: options.allowGroups,
+          maxAttachmentBytes: options.maxAttachmentBytes,
+          transcribe: options.transcribe,
+          extractDocumentText: options.extractDocumentText,
+          apiOrigin: options.apiOrigin,
+          fetch: options.fetch,
+        })
+      : undefined;
 
   const api = telegramApi({
     botToken,

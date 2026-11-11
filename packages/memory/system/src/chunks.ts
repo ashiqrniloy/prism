@@ -14,7 +14,7 @@ import type { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { redactSecrets, type SessionEntry } from "@arnilo/prism";
-import { truncateWorkerText } from "@arnilo/prism-memory-core";
+import { truncateWorkerText } from "@arnilo/prism-memory-system/core";
 import { normalizeEventText } from "./session/normalize.js";
 import { serializeSessionEntry } from "./session/serialize.js";
 import type { MemoryChunkRef } from "./session/types.js";
@@ -248,7 +248,7 @@ export class SqliteChunkStore implements ChunkStore {
 
 /** Opens (or creates) the default chunk store. A path that holds another SQLite schema fails closed. */
 export async function createSqliteChunkStore(options: { readonly path: string }): Promise<SqliteChunkStore> {
-  const { openSqliteDatabase } = await import("@arnilo/prism-memory-core/sqlite");
+  const { openSqliteDatabase } = await import("@arnilo/prism-memory-system/core/sqlite");
   const path = options.path === ":memory:" ? options.path : resolve(options.path);
   const db = await openSqliteDatabase(path);
   try {

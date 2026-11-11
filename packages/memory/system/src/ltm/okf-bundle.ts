@@ -11,9 +11,9 @@ import {
   MemoryValidationError,
   type MemoryVectorRecord,
   type VectorStore,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { noteMemoryRetraction } from "./directory.js";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import {
   encodeMemoryNoteMetadata,
   MEMORY_NOTE_METADATA_KEY,
@@ -116,7 +116,7 @@ function withoutEmbedding(record: MemoryVectorRecord): MemoryVectorRecord {
 export async function exportMemoryOkf(memory: Memory, options: ExportMemoryOkfOptions): Promise<ExportMemoryOkfResult> {
   const scope = fullScope(memory);
   const { vectorStore } = options.stores;
-  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
   const bundle = await createMarkdownMemoryStores({ root: options.dir, limits: memory.limits });
   let notes = 0;
   let invalidations = 0;
@@ -163,7 +163,7 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
   const scope = fullScope(memory);
   const { vectorStore } = options.stores;
   requireListing(vectorStore);
-  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
   const bundle = await createMarkdownMemoryStores({ root: options.dir, limits: memory.limits });
   const at = new Date().toISOString();
   // A target hold survives everything: held ids are never overwritten or removed.

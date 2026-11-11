@@ -23,16 +23,18 @@ describe("Scope clock (plan 188.4 Task 2)", () => {
       model: { provider: "mock", model: "main" },
       packages: [
         provider,
-        memorySystem({ ltm: {
-          tools: { root },
-          store: { markdown: { dir: notes } },
-          scopes: { user: false, agent: false, project: { root } },
-          consolidate: false,
-        } }),
+        memorySystem({
+          ltm: {
+            tools: { root },
+            store: { markdown: { dir: notes } },
+            scopes: { user: false, agent: false, project: { root } },
+            consolidate: false,
+          },
+        }),
       ],
       slots: { store: createMemorySessionStore() },
     });
-    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
     const counter = async (): Promise<number> => {
       const stores = await createMarkdownMemoryStores({ root: notes });
       try {

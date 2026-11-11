@@ -7,7 +7,7 @@
  * whose citations are not all readable is dropped, so a forgotten note's text cannot ride in on a concept file
  * another process left behind.
  */
-import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { type ConceptDoc, type ConceptItem, describeItem, parseConceptBody } from "./codec.js";
 
 /** `search.maxClaimsRendered` (tuning): claims one concept hit shows in `wiki.search`. */

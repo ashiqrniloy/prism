@@ -1,4 +1,4 @@
-# `@arnilo/prism-provider-liquid`
+# `@arnilo/prism-ai/liquid`
 
 Liquid provider package for [Prism](https://github.com/ashiqrniloy/prism). Registers two decision-model providers over the shared System One wire:
 
@@ -8,13 +8,13 @@ Liquid provider package for [Prism](https://github.com/ashiqrniloy/prism). Regis
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-liquid
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import liquid from "@arnilo/prism-provider-liquid";
+import liquid from "@arnilo/prism-ai/liquid";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
@@ -49,7 +49,7 @@ const agent = await createAgent({
 Set config through the code instance (`liquid({ localBaseUrl })`) or `AgentConfig.packageConfig` (which wins). `fetch` is a factory-only option and cannot come from a manifest:
 
 ```json
-{ "packages": { "@arnilo/prism-provider-liquid": { "apiKey": "env:LIQUID_API_KEY", "localBaseUrl": "http://127.0.0.1:8080" } } }
+{ "packages": { "@arnilo/prism-ai/liquid": { "apiKey": "env:LIQUID_API_KEY", "localBaseUrl": "http://127.0.0.1:8080" } } }
 ```
 
 ## Catalog

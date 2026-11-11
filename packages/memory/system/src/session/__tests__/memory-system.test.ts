@@ -291,7 +291,8 @@ describe("memory-system session tiers", () => {
     const maxMessageBytes = 8_192;
     const entries = Array.from({ length: 12 }, (_, index) => entry(`e${index}`, `${index} `.repeat(300)));
     const requests: ProviderRequest[] = [];
-    const { flush, session, data } = flushHarness(entries, recordingObserver(requests, { failOnCall: 3 }), {
+    // The second batch's first call fails (call 2: a clean recording turn ends a pass in one call, plan 217 Task 6).
+    const { flush, session, data } = flushHarness(entries, recordingObserver(requests, { failOnCall: 2 }), {
       worker: { maxMessageBytes },
       wm: { observationTokens: 1_000_000 },
       rehearsal: { targetTokens: 1_000_000 },

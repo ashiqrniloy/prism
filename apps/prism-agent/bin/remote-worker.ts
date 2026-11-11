@@ -1,6 +1,6 @@
 import { createAgent, type PackageInstance } from "@arnilo/prism";
-import { approvalPackage } from "@arnilo/prism-approval";
-import { remoteHostUi, serveAgent } from "@arnilo/prism-remote";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import { remoteHostUi, serveAgent } from "@arnilo/prism-hosts/remote";
 import { loadHostConfig } from "../src/host/config.js";
 import { REMOTE_ENDPOINT } from "../src/host/remote.js";
 

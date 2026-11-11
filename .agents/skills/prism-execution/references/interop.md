@@ -26,20 +26,20 @@ This reference covers two groups:
 
 - Integration packages (`packages/integrations/*`): `mcp` (client: `bridge.ts`, `auth.ts`, transports, elicitation, connected apps; project servers trust-gated through `host.ui`), `hooks-json` (`.agents/hooks.json` compiled onto the hook bus: `compile.ts`, `handlers/`, `matchers.ts`), `workflows` (graph engine, `agentNode`/`functionNode`/gates/fan-out, checkpoints and leases), `delegate` (sub-agents as a tool), `observability` (OpenTelemetry instrumentation and the timeline).
 - Host libraries (`packages/hosts/*`): `acp` (`serveAcp`), `ag-ui`, `mcp-server` (`serve`, `serveTools`), `channels` (messaging channels and pairing), `evals`, `devtools` (local inspector), `remote` (`serveAgent`/`connectAgent`), `headless` (pending answers, resume, scheduler).
-- Driver: `packages/drivers/process` (`prism-driver-process`, the generic external-agent driver) over the kernel driver kit (`src/driver-kit/`).
+- Driver: `packages/hosts/driver-process` (`prism-driver-process`, the generic external-agent driver) over the kernel driver kit (`src/driver-kit/`).
 - In flight: plan 191 (release path step 7) changes the `delegate` config and result contract.
-- Current docs: [hooks.md](../../../../docs/hooks.md), [drivers.md](../../../../docs/drivers.md); integration packages [`mcp`](../../../../packages/integrations/mcp/README.md), [`hooks-json`](../../../../packages/integrations/hooks-json/README.md), [`workflows`](../../../../packages/integrations/workflows/README.md), [`delegate`](../../../../packages/integrations/delegate/README.md), [`observability`](../../../../packages/integrations/observability/README.md); host libraries [`acp`](../../../../packages/hosts/acp/README.md), [`ag-ui`](../../../../packages/hosts/ag-ui/README.md), [`mcp-server`](../../../../packages/hosts/mcp-server/README.md), [`channels`](../../../../packages/hosts/channels/README.md), [`evals`](../../../../packages/hosts/evals/README.md), [`devtools`](../../../../packages/hosts/devtools/README.md), [`remote`](../../../../packages/hosts/remote/README.md), [`headless`](../../../../packages/hosts/headless/README.md).
+- Current docs: [hooks.md](../../../../docs/hooks.md), [drivers.md](../../../../docs/drivers.md); integration packages [`mcp`](../../../../packages/extensions/mcp/README.md), [`hooks-json`](../../../../packages/extensions/hooks-json/README.md), [`workflows`](../../../../packages/extensions/workflows/README.md), [`delegate`](../../../../packages/extensions/delegate/README.md), [`observability`](../../../../packages/extensions/observability/README.md); host libraries [`acp`](../../../../packages/hosts/acp/README.md), [`ag-ui`](../../../../packages/hosts/ag-ui/README.md), [`mcp-server`](../../../../packages/hosts/mcp-server/README.md), [`channels`](../../../../packages/hosts/channels/README.md), [`evals`](../../../../packages/hosts/evals/README.md), [`devtools`](../../../../packages/hosts/devtools/README.md), [`remote`](../../../../packages/hosts/remote/README.md), [`headless`](../../../../packages/hosts/headless/README.md).
 
 ## Graft queries
 
 - `graft ask "acp capability advertisement permission request" --source`
-- `graft ask "mcp client connect trust reconnect status" --source --in packages/integrations/mcp/`
+- `graft ask "mcp client connect trust reconnect status" --source --in packages/extensions/mcp/`
 - `graft ask "hooks json compile command handler decision" --source`
 - `graft callers serveAcp --depth all`
 
 ## Tests
 
-- `packages/integrations/<name>/src/__tests__/`, `packages/hosts/<name>/src/__tests__/`, `packages/drivers/process/src/__tests__/` (run from each package directory)
+- `packages/integrations/<name>/src/__tests__/`, `packages/hosts/<name>/src/__tests__/`, `packages/hosts/driver-process/src/__tests__/` (run from each package directory)
 - Driver conformance: `@arnilo/prism/testing` `driverConformance`; the three reference adapters run in `release:gate` through `examples/adapters/conformance.ts`
 
 ## Rules

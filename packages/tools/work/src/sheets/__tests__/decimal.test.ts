@@ -7,7 +7,7 @@ import { isCanonicalDecimal, isCurrencyString, isScientificNotation, normalizeDe
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-describe("@arnilo/prism-tools-work — Decimal Safety & Normalization", () => {
+describe("@arnilo/prism-tools/work — Decimal Safety & Normalization", () => {
   it("normalizes standard decimal strings without altering canonical form", () => {
     assert.deepEqual(normalizeDecimal("1234.56"), { value: "1234.56", isMoney: false });
     assert.deepEqual(normalizeDecimal("-0.05"), { value: "-0.05", isMoney: false });

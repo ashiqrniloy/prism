@@ -2,7 +2,7 @@
  * Governance deny-by-default (plan 159 Task 6; Done criterion 2) — network-free: mock provider,
  * in-memory audit store.
  *
- * One `tool.call` gate over `@arnilo/prism-governance`: the allow-listed `read_file` runs, the
+ * One `tool.call` gate over `@arnilo/prism-extensions/governance`: the allow-listed `read_file` runs, the
  * unlisted `write_file` is blocked with a `hook_denied` result naming the policy, and the run still
  * completes. Every decision is appended to the configured `PolicyDecisionStore`, so the audit holds
  * both the allow and the deny.
@@ -24,7 +24,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import governance, { type PolicyDecisionStore } from "@arnilo/prism-governance";
+import governance, { type PolicyDecisionStore } from "@arnilo/prism-extensions/governance";
 
 const MODEL = { provider: "mock", model: "governance-deny-demo" } as const;
 const FINISH: readonly ProviderEvent[] = [providerTextDelta("done"), providerDone()];

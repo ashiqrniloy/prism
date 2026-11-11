@@ -2,12 +2,7 @@
  * `grep` tool: bounded repository text search. Regex by default, run in a terminate-able worker;
  * `literal: true` matches the pattern's characters on the main thread. Output is ripgrep-style.
  */
-import type {
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { validateGlobPattern } from "./glob-match.js";
 import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
@@ -251,10 +246,13 @@ class RegexWorker {
     if (this.dead) throw new GrepTimeout();
     const id = this.nextId++;
     return await new Promise<readonly RepositoryLineMatch[]>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new GrepTimeout());
-      }, Math.max(0, timeoutMs));
+      const timer = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new GrepTimeout());
+        },
+        Math.max(0, timeoutMs),
+      );
       timer.unref?.();
       this.pending.set(id, {
         resolve: (matches) => {
@@ -292,7 +290,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
     pattern: {
       type: "string",
       description:
-        "Regular expression (JavaScript syntax) to search for, e.g. \"function \\\\w+\". Set literal: true to match these characters as plain text.",
+        'Regular expression (JavaScript syntax) to search for, e.g. "function \\\\w+". Set literal: true to match these characters as plain text.',
     },
     literal: { type: "boolean", description: "Match pattern as literal text instead of a regular expression (default false)" },
     path: { type: "string", description: "Workspace-relative directory or file to search (default: workspace root)" },

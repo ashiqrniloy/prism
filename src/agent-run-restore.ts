@@ -5,7 +5,7 @@
  * suspended one did.
  *
  * Keys a 0.12 checkpoint carries for stages the kernel no longer runs (`activatedToolNames`,
- * `attentionSticky`, `attentionFold`, and `guardrailPacks` — moved to `@arnilo/prism-guardrail-packs`
+ * `attentionSticky`, `attentionFold`, and `guardrailPacks` — moved to `@arnilo/prism-extensions/guardrail-packs`
  * in plan 159 Task 5) are simply not read: the run resumes without them instead of failing the load.
  */
 import type { StoredAgentRunState } from "./agent-run-state.js";

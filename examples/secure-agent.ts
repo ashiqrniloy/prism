@@ -9,7 +9,7 @@ import {
   validateJsonSchema,
 } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import governance from "@arnilo/prism-governance";
+import governance from "@arnilo/prism-extensions/governance";
 
 // Network-free secure baseline (plan 159 Task 7). `createSecureAgent` is gone; the same guarantees
 // are explicit `AgentConfig` fields plus `governance({ require: { principal, ownership } })`, which

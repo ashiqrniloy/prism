@@ -178,85 +178,255 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-context-files": {
-      ".": {
+    "@arnilo/prism-extensions": {
+      "./context-files": {
         "suites": [
-          "packages/context/files/src/__tests__/instructions.test.ts",
-          "packages/context/files/src/__tests__/layers.test.ts",
-          "packages/context/files/src/__tests__/package.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-context-engineering": {
-      ".": {
-        "suites": [
-          "packages/context/engineering/src/__tests__/attention-contracts.test.ts",
-          "packages/context/engineering/src/__tests__/attention-durable.test.ts",
-          "packages/context/engineering/src/__tests__/attention-followups.test.ts",
-          "packages/context/engineering/src/__tests__/attention-stages.test.ts",
-          "packages/context/engineering/src/__tests__/attention-triggers.test.ts",
-          "packages/context/engineering/src/__tests__/budget.test.ts",
-          "packages/context/engineering/src/__tests__/conformance.test.ts",
-          "packages/context/engineering/src/__tests__/fold.test.ts",
-          "packages/context/engineering/src/__tests__/package.test.ts",
-          "packages/context/engineering/src/__tests__/tail-context.test.ts",
-          "packages/context/engineering/src/__tests__/tool-search.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-credentials-keyring": {
-      ".": {
-        "suites": [
-          "packages/credentials/keyring/src/__tests__/credentials-node.test.ts",
-          "packages/credentials/keyring/src/__tests__/file-store.test.ts",
-          "packages/credentials/keyring/src/__tests__/package.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-driver-process": {
-      ".": {
-        "suites": [
-          "packages/drivers/process/src/__tests__/abort.test.ts",
-          "packages/drivers/process/src/__tests__/adapter.test.ts",
-          "packages/drivers/process/src/__tests__/extend.test.ts",
-          "packages/drivers/process/src/__tests__/external-host.test.ts",
-          "packages/drivers/process/src/__tests__/gating.test.ts",
-          "packages/drivers/process/src/__tests__/guide-samples.test.ts",
-          "packages/drivers/process/src/__tests__/json-rpc.test.ts",
-          "packages/drivers/process/src/__tests__/jsonl-stream.test.ts",
-          "packages/drivers/process/src/__tests__/load-cost.test.ts",
-          "packages/drivers/process/src/__tests__/pipeline.test.ts",
-          "packages/drivers/process/src/__tests__/reference-adapters.test.ts",
-          "packages/drivers/process/src/__tests__/resume.test.ts",
-          "packages/drivers/process/src/__tests__/rpc-server.test.ts",
-          "packages/drivers/process/src/__tests__/signals.test.ts",
-          "packages/drivers/process/src/__tests__/stream-cli.test.ts",
-          "packages/drivers/process/src/__tests__/turn.test.ts"
+          "packages/extensions/context-files/src/__tests__/instructions.test.ts",
+          "packages/extensions/context-files/src/__tests__/layers.test.ts",
+          "packages/extensions/context-files/src/__tests__/package.test.ts"
         ],
         "mode": ""
       },
-      "./testing": {
+      "./context-engineering": {
         "suites": [
-          "packages/drivers/process/src/__tests__/adapter-conformance.test.ts"
+          "packages/extensions/context-engineering/src/__tests__/attention-contracts.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/attention-durable.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/attention-followups.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/attention-stages.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/attention-triggers.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/budget.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/conformance.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/fold.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/package.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/tail-context.test.ts",
+          "packages/extensions/context-engineering/src/__tests__/tool-search.test.ts"
         ],
         "mode": ""
+      },
+      "./keyring": {
+        "suites": [
+          "packages/extensions/keyring/src/__tests__/credentials-node.test.ts",
+          "packages/extensions/keyring/src/__tests__/file-store.test.ts",
+          "packages/extensions/keyring/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      },
+      "./hooks-json": {
+        "suites": [
+          "packages/extensions/hooks-json/src/__tests__/compile.test.ts",
+          "packages/extensions/hooks-json/src/__tests__/schema.test.ts",
+          "examples/hooks-json.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./mcp": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./observability": {
+        "suites": [
+          "packages/extensions/observability/src/__tests__/instrumentation.test.ts",
+          "packages/extensions/observability/src/__tests__/origin-attributes.test.ts",
+          "packages/extensions/observability/src/__tests__/package.test.ts",
+          "packages/extensions/observability/src/__tests__/rag-telemetry.test.ts",
+          "packages/extensions/observability/src/__tests__/summary.test.ts",
+          "packages/extensions/observability/src/__tests__/timeline-origin.test.ts",
+          "packages/extensions/observability/src/__tests__/timeline.test.ts",
+          "packages/extensions/observability/src/__tests__/workflow-parenting.test.ts",
+          "packages/extensions/observability/src/__tests__/workflow-spans.test.ts"
+        ],
+        "mode": ""
+      },
+      "./delegate": {
+        "suites": [
+          "packages/extensions/delegate/src/__tests__/package.test.ts",
+          "packages/extensions/delegate/src/__tests__/isolation.test.ts",
+          "examples/delegate.ts"
+        ],
+        "mode": ""
+      },
+      "./workflows": {
+        "suites": [
+          "packages/extensions/workflows/src/__tests__/agent-node.test.ts",
+          "packages/extensions/workflows/src/__tests__/checkpoint-restore.test.ts",
+          "packages/extensions/workflows/src/__tests__/command.test.ts",
+          "packages/extensions/workflows/src/__tests__/composition-replay.test.ts",
+          "packages/extensions/workflows/src/__tests__/cyclic-durability.test.ts",
+          "packages/extensions/workflows/src/__tests__/cyclic-execution.test.ts",
+          "packages/extensions/workflows/src/__tests__/cyclic-replay-export.test.ts",
+          "packages/extensions/workflows/src/__tests__/define-cyclic.test.ts",
+          "packages/extensions/workflows/src/__tests__/define.test.ts",
+          "packages/extensions/workflows/src/__tests__/events.test.ts",
+          "packages/extensions/workflows/src/__tests__/fan-out.test.ts",
+          "packages/extensions/workflows/src/__tests__/gate-integrity.test.ts",
+          "packages/extensions/workflows/src/__tests__/gate-node.test.ts",
+          "packages/extensions/workflows/src/__tests__/graph.test.ts",
+          "packages/extensions/workflows/src/__tests__/human-gate.test.ts",
+          "packages/extensions/workflows/src/__tests__/kill-resume.test.ts",
+          "packages/extensions/workflows/src/__tests__/loop.test.ts",
+          "packages/extensions/workflows/src/__tests__/merged-stream.test.ts",
+          "packages/extensions/workflows/src/__tests__/package.test.ts",
+          "packages/extensions/workflows/src/__tests__/parent-session.test.ts",
+          "packages/extensions/workflows/src/__tests__/route-node.test.ts",
+          "packages/extensions/workflows/src/__tests__/run.test.ts",
+          "packages/extensions/workflows/src/__tests__/scoped-state.test.ts"
+        ],
+        "mode": ""
+      },
+      "./workflows/testing": {
+        "suites": [
+          "packages/extensions/workflows/src/__tests__/checkpoint-conformance.test.ts",
+          "packages/extensions/workflows/src/__tests__/checkpoints.test.ts",
+          "packages/extensions/workflows/src/__tests__/lease-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./advisor": {
+        "suites": [
+          "packages/extensions/advisor/src/__tests__/package.test.ts",
+          "packages/extensions/advisor/src/__tests__/consult.test.ts",
+          "packages/extensions/advisor/src/__tests__/triggers.test.ts",
+          "packages/extensions/advisor/src/__tests__/validate.test.ts",
+          "examples/advisor.ts",
+          "examples/validator.ts"
+        ],
+        "mode": ""
+      },
+      "./compaction": {
+        "suites": [
+          "packages/extensions/compaction/src/__tests__/coding.test.ts",
+          "packages/extensions/compaction/src/__tests__/index.test.ts",
+          "packages/extensions/compaction/src/__tests__/live.test.ts",
+          "packages/extensions/compaction/src/__tests__/package.test.ts",
+          "packages/extensions/compaction/src/__tests__/prepare.test.ts",
+          "packages/extensions/compaction/src/__tests__/runtime.test.ts",
+          "packages/extensions/compaction/src/__tests__/serialize.test.ts",
+          "packages/extensions/compaction/src/__tests__/strategy.test.ts",
+          "packages/extensions/compaction/src/__tests__/tokens-fixtures.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
+        ],
+        "mode": ""
+      },
+      "./approval": {
+        "suites": [
+          "packages/extensions/approval/src/__tests__/approval.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
+        ],
+        "mode": ""
+      },
+      "./guardrail-packs": {
+        "suites": [
+          "packages/extensions/guardrail-packs/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      },
+      "./governance": {
+        "suites": [
+          "packages/extensions/governance/src/__tests__/claim-grounding.test.ts",
+          "packages/extensions/governance/src/__tests__/field-evidence.test.ts",
+          "packages/extensions/governance/src/__tests__/field-policy.test.ts",
+          "packages/extensions/governance/src/__tests__/package.test.ts",
+          "packages/extensions/governance/src/__tests__/readiness.test.ts",
+          "packages/extensions/governance/src/identity/__tests__/identity.test.ts",
+          "packages/extensions/governance/src/policy/__tests__/approvals.test.ts",
+          "packages/extensions/governance/src/policy/__tests__/audit-export.test.ts",
+          "packages/extensions/governance/src/policy/__tests__/opa-live.test.ts",
+          "packages/extensions/governance/src/policy/__tests__/opa.test.ts",
+          "packages/extensions/governance/src/policy/__tests__/policy.test.ts"
+        ],
+        "mode": ""
+      },
+      "./model-router": {
+        "suites": [
+          "packages/extensions/model-router/src/__tests__/package.test.ts",
+          "packages/extensions/model-router/src/router/__tests__/aggregate-accounting.test.ts",
+          "packages/extensions/model-router/src/router/__tests__/model-router.test.ts",
+          "packages/extensions/model-router/src/router/__tests__/selection.test.ts"
+        ],
+        "mode": ""
+      },
+      "./store-jsonl": {
+        "suites": [
+          "packages/extensions/store-jsonl/src/__tests__/jsonl-store.test.ts",
+          "packages/extensions/store-jsonl/src/__tests__/package.test.ts",
+          "packages/extensions/store-jsonl/src/__tests__/fixtures.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./store-codecs": {
+        "suites": [
+          "packages/extensions/store-codecs/src/__tests__/parity.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/extensions/store-codecs/src/__tests__/evaluations.test.ts"
+        ],
+        "mode": ""
+      },
+      "./store-sqlite": {
+        "suites": [
+          "packages/extensions/store-sqlite/src/__tests__/lifecycle.test.ts",
+          "packages/extensions/store-sqlite/src/__tests__/sqlite-persistence.test.ts",
+          "packages/extensions/store-sqlite/src/__tests__/state-concurrency-conformance.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "examples/sqlite-resume.ts",
+          "examples/durable-approval.ts",
+          "packages/extensions/store-sqlite/src/__tests__/evaluations.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
+        ],
+        "mode": ""
+      },
+      "./store-postgres": {
+        "suites": [
+          "packages/extensions/store-postgres/src/__tests__/event-source.integration.test.ts",
+          "packages/extensions/store-postgres/src/__tests__/package.test.ts",
+          "packages/extensions/store-postgres/src/__tests__/postgres-integration.test.ts",
+          "packages/extensions/store-postgres/src/__tests__/postgres-persistence.test.ts",
+          "packages/extensions/store-postgres/src/__tests__/root-exports.test.ts",
+          "packages/extensions/store-postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ]
       }
     },
-    "@arnilo/prism-mcp-server": {
-      ".": {
+    "@arnilo/prism-hosts": {
+      "./driver-process": {
+        "suites": [
+          "packages/hosts/driver-process/src/__tests__/abort.test.ts",
+          "packages/hosts/driver-process/src/__tests__/adapter.test.ts",
+          "packages/hosts/driver-process/src/__tests__/extend.test.ts",
+          "packages/hosts/driver-process/src/__tests__/external-host.test.ts",
+          "packages/hosts/driver-process/src/__tests__/gating.test.ts",
+          "packages/hosts/driver-process/src/__tests__/guide-samples.test.ts",
+          "packages/hosts/driver-process/src/__tests__/json-rpc.test.ts",
+          "packages/hosts/driver-process/src/__tests__/jsonl-stream.test.ts",
+          "packages/hosts/driver-process/src/__tests__/load-cost.test.ts",
+          "packages/hosts/driver-process/src/__tests__/pipeline.test.ts",
+          "packages/hosts/driver-process/src/__tests__/reference-adapters.test.ts",
+          "packages/hosts/driver-process/src/__tests__/resume.test.ts",
+          "packages/hosts/driver-process/src/__tests__/rpc-server.test.ts",
+          "packages/hosts/driver-process/src/__tests__/signals.test.ts",
+          "packages/hosts/driver-process/src/__tests__/stream-cli.test.ts",
+          "packages/hosts/driver-process/src/__tests__/turn.test.ts"
+        ],
+        "mode": ""
+      },
+      "./driver-process/testing": {
+        "suites": [
+          "packages/hosts/driver-process/src/__tests__/adapter-conformance.test.ts"
+        ],
+        "mode": ""
+      },
+      "./mcp-server": {
         "suites": [
           "packages/hosts/mcp-server/src/__tests__/serve-tools.test.ts",
           "packages/hosts/mcp-server/src/__tests__/serve.test.ts",
           "packages/hosts/mcp-server/src/__tests__/server.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-acp": {
-      ".": {
+      },
+      "./acp": {
         "suites": [
           "packages/hosts/acp/src/__tests__/capabilities.test.ts",
           "packages/hosts/acp/src/__tests__/host.test.ts",
@@ -267,44 +437,38 @@
           "packages/hosts/acp/src/__tests__/serve.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-ag-ui": {
-      ".": {
+      },
+      "./ag-ui": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
       },
-      "./renderer": {
+      "./ag-ui/renderer": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": "live+hermetic"
-      }
-    },
-    "@arnilo/prism-channels": {
-      ".": {
+      },
+      "./channels": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
       },
-      "./telegram": {
+      "./channels/telegram": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
       },
-      "./signal": {
+      "./channels/signal": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-evals": {
-      ".": {
+      },
+      "./evals": {
         "suites": [
           "examples/eval-judges.ts",
           "examples/eval-injection.ts",
@@ -326,10 +490,8 @@
           "packages/hosts/evals/src/__tests__/report-record.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-devtools": {
-      ".": {
+      },
+      "./devtools": {
         "suites": [
           "packages/hosts/devtools/src/__tests__/bin.test.ts",
           "packages/hosts/devtools/src/__tests__/eval-compare.test.ts",
@@ -337,10 +499,8 @@
           "packages/hosts/devtools/src/__tests__/ui.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-remote": {
-      ".": {
+      },
+      "./remote": {
         "suites": [
           "packages/hosts/remote/src/__tests__/auth.test.ts",
           "packages/hosts/remote/src/__tests__/connect.test.ts",
@@ -356,15 +516,13 @@
         ],
         "mode": ""
       },
-      "./testing": {
+      "./remote/testing": {
         "suites": [
           "packages/hosts/remote/src/__tests__/conformance.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-headless": {
-      ".": {
+      },
+      "./headless": {
         "suites": [
           "packages/hosts/headless/src/__tests__/answers.test.ts",
           "packages/hosts/headless/src/__tests__/resume.test.ts",
@@ -374,10 +532,8 @@
           "packages/hosts/headless/src/__tests__/scheduler.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-host-builder": {
-      ".": {
+      },
+      "./host-builder": {
         "suites": [
           "examples/host-builder-agent.ts",
           "packages/hosts/host-builder/src/__tests__/bin.test.ts",
@@ -394,104 +550,8 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-hooks-json": {
-      ".": {
-        "suites": [
-          "packages/integrations/hooks-json/src/__tests__/compile.test.ts",
-          "packages/integrations/hooks-json/src/__tests__/schema.test.ts",
-          "examples/hooks-json.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-mcp": {
-      ".": {
-        "suites": [
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-observability": {
-      ".": {
-        "suites": [
-          "packages/integrations/observability/src/__tests__/instrumentation.test.ts",
-          "packages/integrations/observability/src/__tests__/origin-attributes.test.ts",
-          "packages/integrations/observability/src/__tests__/package.test.ts",
-          "packages/integrations/observability/src/__tests__/rag-telemetry.test.ts",
-          "packages/integrations/observability/src/__tests__/summary.test.ts",
-          "packages/integrations/observability/src/__tests__/timeline-origin.test.ts",
-          "packages/integrations/observability/src/__tests__/timeline.test.ts",
-          "packages/integrations/observability/src/__tests__/workflow-parenting.test.ts",
-          "packages/integrations/observability/src/__tests__/workflow-spans.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-delegate": {
-      ".": {
-        "suites": [
-          "packages/integrations/delegate/src/__tests__/package.test.ts",
-          "packages/integrations/delegate/src/__tests__/isolation.test.ts",
-          "examples/delegate.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-workflows": {
-      ".": {
-        "suites": [
-          "packages/integrations/workflows/src/__tests__/agent-node.test.ts",
-          "packages/integrations/workflows/src/__tests__/checkpoint-restore.test.ts",
-          "packages/integrations/workflows/src/__tests__/command.test.ts",
-          "packages/integrations/workflows/src/__tests__/composition-replay.test.ts",
-          "packages/integrations/workflows/src/__tests__/cyclic-durability.test.ts",
-          "packages/integrations/workflows/src/__tests__/cyclic-execution.test.ts",
-          "packages/integrations/workflows/src/__tests__/cyclic-replay-export.test.ts",
-          "packages/integrations/workflows/src/__tests__/define-cyclic.test.ts",
-          "packages/integrations/workflows/src/__tests__/define.test.ts",
-          "packages/integrations/workflows/src/__tests__/events.test.ts",
-          "packages/integrations/workflows/src/__tests__/fan-out.test.ts",
-          "packages/integrations/workflows/src/__tests__/gate-integrity.test.ts",
-          "packages/integrations/workflows/src/__tests__/gate-node.test.ts",
-          "packages/integrations/workflows/src/__tests__/graph.test.ts",
-          "packages/integrations/workflows/src/__tests__/human-gate.test.ts",
-          "packages/integrations/workflows/src/__tests__/kill-resume.test.ts",
-          "packages/integrations/workflows/src/__tests__/loop.test.ts",
-          "packages/integrations/workflows/src/__tests__/merged-stream.test.ts",
-          "packages/integrations/workflows/src/__tests__/package.test.ts",
-          "packages/integrations/workflows/src/__tests__/parent-session.test.ts",
-          "packages/integrations/workflows/src/__tests__/route-node.test.ts",
-          "packages/integrations/workflows/src/__tests__/run.test.ts",
-          "packages/integrations/workflows/src/__tests__/scoped-state.test.ts"
-        ],
-        "mode": ""
-      },
-      "./testing": {
-        "suites": [
-          "packages/integrations/workflows/src/__tests__/checkpoint-conformance.test.ts",
-          "packages/integrations/workflows/src/__tests__/checkpoints.test.ts",
-          "packages/integrations/workflows/src/__tests__/lease-conformance.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-advisor": {
-      ".": {
-        "suites": [
-          "packages/integrations/advisor/src/__tests__/package.test.ts",
-          "packages/integrations/advisor/src/__tests__/consult.test.ts",
-          "packages/integrations/advisor/src/__tests__/triggers.test.ts",
-          "packages/integrations/advisor/src/__tests__/validate.test.ts",
-          "examples/advisor.ts",
-          "examples/validator.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-wiki": {
-      ".": {
+    "@arnilo/prism-knowledge": {
+      "./wiki": {
         "suites": [
           "examples/memory-and-wiki.ts",
           "packages/knowledge/wiki/src/__tests__/commands.test.ts",
@@ -501,10 +561,8 @@
           "packages/knowledge/wiki/src/__tests__/tools.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-rag": {
-      ".": {
+      },
+      "./rag": {
         "suites": [
           "packages/knowledge/rag/src/__tests__/access-recheck.test.ts",
           "packages/knowledge/rag/src/__tests__/citations.test.ts",
@@ -520,23 +578,6 @@
           "packages/knowledge/rag/src/__tests__/sync.test.ts",
           "packages/knowledge/rag/src/__tests__/tei-reranker.test.ts",
           "packages/knowledge/rag/src/__tests__/telemetry.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-memory-compaction": {
-      ".": {
-        "suites": [
-          "packages/memory/compaction/src/__tests__/coding.test.ts",
-          "packages/memory/compaction/src/__tests__/index.test.ts",
-          "packages/memory/compaction/src/__tests__/live.test.ts",
-          "packages/memory/compaction/src/__tests__/package.test.ts",
-          "packages/memory/compaction/src/__tests__/prepare.test.ts",
-          "packages/memory/compaction/src/__tests__/runtime.test.ts",
-          "packages/memory/compaction/src/__tests__/serialize.test.ts",
-          "packages/memory/compaction/src/__tests__/strategy.test.ts",
-          "packages/memory/compaction/src/__tests__/tokens-fixtures.test.ts",
-          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -592,10 +633,8 @@
           "packages/memory/system/src/session/__tests__/workers.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-memory-core": {
-      ".": {
+      },
+      "./core": {
         "suites": [
           "packages/memory/core/src/__tests__/lexical.test.ts",
           "packages/memory/core/src/__tests__/package.test.ts",
@@ -607,71 +646,25 @@
         ],
         "mode": ""
       },
-      "./fabric": {
+      "./core/fabric": {
         "suites": [
           "packages/memory/core/src/fabric/__tests__/markdown.test.ts"
         ],
         "mode": ""
       },
-      "./postgres": {
+      "./core/postgres": {
         "suites": [],
         "mode": ""
       },
-      "./sqlite": {
+      "./core/sqlite": {
         "suites": [
           "packages/memory/core/src/__tests__/sqlite.test.ts"
         ],
         "mode": ""
       }
     },
-    "@arnilo/prism-approval": {
-      ".": {
-        "suites": [
-          "packages/policy/approval/src/__tests__/approval.test.ts",
-          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-guardrail-packs": {
-      ".": {
-        "suites": [
-          "packages/policy/guardrail-packs/src/__tests__/package.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-governance": {
-      ".": {
-        "suites": [
-          "packages/policy/governance/src/__tests__/claim-grounding.test.ts",
-          "packages/policy/governance/src/__tests__/field-evidence.test.ts",
-          "packages/policy/governance/src/__tests__/field-policy.test.ts",
-          "packages/policy/governance/src/__tests__/package.test.ts",
-          "packages/policy/governance/src/__tests__/readiness.test.ts",
-          "packages/policy/governance/src/identity/__tests__/identity.test.ts",
-          "packages/policy/governance/src/policy/__tests__/approvals.test.ts",
-          "packages/policy/governance/src/policy/__tests__/audit-export.test.ts",
-          "packages/policy/governance/src/policy/__tests__/opa-live.test.ts",
-          "packages/policy/governance/src/policy/__tests__/opa.test.ts",
-          "packages/policy/governance/src/policy/__tests__/policy.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-model-router": {
-      ".": {
-        "suites": [
-          "packages/policy/model-router/src/__tests__/package.test.ts",
-          "packages/policy/model-router/src/router/__tests__/aggregate-accounting.test.ts",
-          "packages/policy/model-router/src/router/__tests__/model-router.test.ts",
-          "packages/policy/model-router/src/router/__tests__/selection.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-opencode-go": {
-      ".": {
+    "@arnilo/prism-ai": {
+      "./opencode-go": {
         "suites": [
           "packages/providers/opencode-go/src/__tests__/live.test.ts",
           "packages/providers/opencode-go/src/__tests__/opencode-go.test.ts",
@@ -679,10 +672,8 @@
           "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-hyper": {
-      ".": {
+      },
+      "./hyper": {
         "suites": [
           "packages/providers/hyper/src/__tests__/hyper.test.ts",
           "packages/providers/hyper/src/__tests__/live.test.ts",
@@ -690,59 +681,47 @@
           "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-laya": {
-      ".": {
+      },
+      "./laya": {
         "suites": [
           "packages/providers/laya/src/__tests__/laya.test.ts",
           "packages/providers/laya/src/__tests__/live.test.ts",
           "packages/providers/laya/src/__tests__/package.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-typesafe": {
-      ".": {
+      },
+      "./typesafe": {
         "suites": [
           "packages/providers/typesafe/src/__tests__/live.test.ts",
           "packages/providers/typesafe/src/__tests__/package.test.ts",
           "packages/providers/typesafe/src/__tests__/typesafe.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-liquid": {
-      ".": {
+      },
+      "./liquid": {
         "suites": [
           "packages/providers/liquid/src/__tests__/liquid.test.ts",
           "packages/providers/liquid/src/__tests__/live.test.ts",
           "packages/providers/liquid/src/__tests__/package.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-openai-codex": {
-      ".": {
+      },
+      "./openai-codex": {
         "suites": [
           "packages/providers/openai-codex/src/__tests__/live.test.ts",
           "packages/providers/openai-codex/src/__tests__/oauth.test.ts",
           "packages/providers/openai-codex/src/__tests__/package.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-openrouter": {
-      ".": {
+      },
+      "./openrouter": {
         "suites": [
           "packages/providers/openrouter/src/__tests__/openrouter.test.ts",
           "packages/providers/openrouter/src/__tests__/live.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-commandcode": {
-      ".": {
+      },
+      "./commandcode": {
         "suites": [
           "packages/providers/commandcode/src/__tests__/commandcode.test.ts",
           "packages/providers/commandcode/src/__tests__/live-agent.test.ts",
@@ -751,10 +730,8 @@
           "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-kilo": {
-      ".": {
+      },
+      "./kilo": {
         "suites": [
           "packages/providers/kilo/src/__tests__/auth.test.ts",
           "packages/providers/kilo/src/__tests__/cache-levers.test.ts",
@@ -764,10 +741,8 @@
           "packages/providers/kilo/src/__tests__/package.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-litellm": {
-      ".": {
+      },
+      "./litellm": {
         "suites": [
           "packages/providers/litellm/src/__tests__/litellm.test.ts",
           "packages/providers/litellm/src/__tests__/live.test.ts",
@@ -775,10 +750,8 @@
           "packages/providers/litellm/src/__tests__/spend-logs.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-ollama-cloud": {
-      ".": {
+      },
+      "./ollama-cloud": {
         "suites": [
           "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
           "packages/providers/ollama-cloud/src/__tests__/ollama-cloud.test.ts",
@@ -788,57 +761,8 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-store-jsonl": {
-      ".": {
-        "suites": [
-          "packages/stores/jsonl/src/__tests__/jsonl-store.test.ts",
-          "packages/stores/jsonl/src/__tests__/package.test.ts",
-          "packages/stores/jsonl/src/__tests__/fixtures.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-store-codecs": {
-      ".": {
-        "suites": [
-          "packages/stores/codecs/src/__tests__/parity.test.ts",
-          "scripts/e2e-full-surface.test.mjs",
-          "packages/stores/codecs/src/__tests__/evaluations.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-store-sqlite": {
-      ".": {
-        "suites": [
-          "packages/stores/sqlite/src/__tests__/lifecycle.test.ts",
-          "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
-          "packages/stores/sqlite/src/__tests__/state-concurrency-conformance.test.ts",
-          "scripts/e2e-full-surface.test.mjs",
-          "examples/sqlite-resume.ts",
-          "examples/durable-approval.ts",
-          "packages/stores/sqlite/src/__tests__/evaluations.test.ts",
-          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-store-postgres": {
-      ".": {
-        "suites": [
-          "packages/stores/postgres/src/__tests__/event-source.integration.test.ts",
-          "packages/stores/postgres/src/__tests__/package.test.ts",
-          "packages/stores/postgres/src/__tests__/postgres-integration.test.ts",
-          "packages/stores/postgres/src/__tests__/postgres-persistence.test.ts",
-          "packages/stores/postgres/src/__tests__/root-exports.test.ts",
-          "packages/stores/postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ]
-      }
-    },
-    "@arnilo/prism-tools-coding": {
-      ".": {
+    "@arnilo/prism-tools": {
+      "./coding": {
         "suites": [
           "packages/tools/coding/src/__tests__/disable-tools.test.ts",
           "packages/tools/coding/src/__tests__/hard-deny.test.ts",
@@ -898,10 +822,8 @@
           "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-tools-web": {
-      ".": {
+      },
+      "./web": {
         "suites": [
           "examples/package-skills.ts",
           "packages/tools/web/src/__tests__/live.test.ts",
@@ -916,10 +838,8 @@
           "packages/tools/web/src/obscura/__tests__/web.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-tools-browser": {
-      ".": {
+      },
+      "./browser": {
         "suites": [
           "packages/tools/browser/src/__tests__/browser.test.ts",
           "packages/tools/browser/src/__tests__/cdp.test.ts",
@@ -937,20 +857,16 @@
           "packages/tools/browser/src/__tests__/wait-for.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-tools-openapi": {
-      ".": {
+      },
+      "./openapi": {
         "suites": [
           "packages/tools/openapi/src/__tests__/live.test.ts",
           "packages/tools/openapi/src/__tests__/openapi-tools.test.ts",
           "packages/tools/openapi/src/__tests__/package.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-tools-computer-use": {
-      ".": {
+      },
+      "./computer-use": {
         "suites": [
           "packages/tools/computer-use/src/__tests__/create.test.ts",
           "packages/tools/computer-use/src/__tests__/devices.test.ts",
@@ -959,10 +875,8 @@
           "packages/tools/computer-use/src/__tests__/skill.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-tools-work": {
-      ".": {
+      },
+      "./work": {
         "suites": [
           "packages/tools/work/src/__tests__/package.test.ts",
           "packages/tools/work/src/connectors/__tests__/google-workspace-http.test.ts",
@@ -1009,77 +923,75 @@
         ],
         "mode": ""
       },
-      "./connectors": {
+      "./work/connectors": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./connectors/drafts": {
+      "./work/connectors/drafts": {
         "suites": [
           "packages/tools/work/src/connectors/__tests__/drafts.test.ts"
         ],
         "mode": ""
       },
-      "./connectors/google-workspace": {
+      "./work/connectors/google-workspace": {
         "suites": [],
         "mode": ""
       },
-      "./connectors/microsoft365": {
+      "./work/connectors/microsoft365": {
         "suites": [],
         "mode": ""
       },
-      "./diagrams": {
+      "./work/diagrams": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./document-extraction": {
+      "./work/document-extraction": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./document-reader": {
+      "./work/document-reader": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./documents": {
+      "./work/documents": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./sandbox": {
+      "./work/sandbox": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./sheets": {
+      "./work/sheets": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./skills": {
+      "./work/skills": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
       },
-      "./tools": {
+      "./work/tools": {
         "suites": [
           "packages/tools/work/src/document-reader/__tests__/index.test.ts"
         ],
         "mode": ""
-      }
-    },
-    "@arnilo/prism-tools-research": {
-      ".": {
+      },
+      "./research": {
         "suites": [
           "packages/tools/research/src/__tests__/check.test.ts",
           "packages/tools/research/src/__tests__/ledger.test.ts",

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "bun:test";
 import { compareFamily } from "./report.mjs";
 import { clusterBootstrap, compare, holm, pairedClusterPermutation, powerForDiff } from "./stats.mjs";
 

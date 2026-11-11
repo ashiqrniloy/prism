@@ -41,8 +41,8 @@ test("a headless host runs coding tools rooted at root with project skills", asy
     expect(text).toContain("hosted-ok");
     expect(text).not.toContain("requires a principal");
     const names = agent.inspect().packages.map((entry: { name: string }) => entry.name);
-    expect(names).toContain("@arnilo/prism-tools-coding");
-    expect(names).toContain("@arnilo/prism-context-files");
+    expect(names).toContain("@arnilo/prism-tools/coding");
+    expect(names).toContain("@arnilo/prism-extensions/context-files");
   } finally {
     await agent.dispose();
   }

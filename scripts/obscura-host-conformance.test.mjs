@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { createAgent, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createAgUiHandler, createAgUiMcpAdapter } from "../packages/hosts/ag-ui/src/index.ts";
-import { agentNode, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-workflows";
+import { agentNode, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-extensions/workflows";
 import { fakeObscuraCliPath } from "../packages/tools/web/src/obscura/__tests__/fake-cli.ts";
 import { createObscuraWebTools } from "../packages/tools/web/src/obscura/index.ts";
 
@@ -63,7 +63,11 @@ const fetchThen = (text) => [
 
 async function _agentWith(provider, tools, id) {
   return await (
-    await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: tools } })
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: tools },
+    })
   ).session({ id, create: true });
 }
 
@@ -152,7 +156,11 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
               },
             ),
         }),
-        research: agentNode({ agent, session: () => agent.session({ id: "wf-obscura", create: true }), input: (ctx) => `summarize ${ctx.upstream.fetch}` }),
+        research: agentNode({
+          agent,
+          session: () => agent.session({ id: "wf-obscura", create: true }),
+          input: (ctx) => `summarize ${ctx.upstream.fetch}`,
+        }),
       },
       edges: [["fetch", "research"]],
     });

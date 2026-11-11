@@ -1097,26 +1097,18 @@ describe("public-export contract (build-time, pre-pack)", () => {
     assert.deepEqual(readPkg(".").exports?.["./provider-kit"], "./src/provider-kit/index.ts");
     assert.deepEqual(readPkg(".").exports?.["./driver-kit"], "./src/driver-kit/index.ts");
 
-    const hooksJson = readPkg("packages/integrations/hooks-json");
-    assert.equal(hooksJson.exports?.["."], "./src/index.ts");
-    assert.equal(existsSync(join(repoRoot, "packages/integrations/hooks-json/src/index.d.ts")), false);
+    const hooksJson = readPkg("packages/extensions");
+    assert.equal(hooksJson.exports?.["./hooks-json"], "./hooks-json/src/index.ts");
+    assert.equal(existsSync(join(repoRoot, "packages/extensions/hooks-json/src/index.d.ts")), false);
 
-    // The observational-memory runtime moved to `@arnilo/prism-memory-system` (plan 157 Task 4),
-    // its 0.12 attach surface was deleted with the family subpath (plan 157 Task 5), and the family
-    // workspace itself is deleted (plan 158 Task 6) — so the 0.12 subpath can only be gone.
-    assert.equal(
-      existsSync(join(repoRoot, "packages", "memory", "package.json")),
-      false,
-      "the @arnilo/prism-memory family workspace is deleted, not shimmed",
-    );
-    const observationalPkg = readPkg("packages/memory/system");
-    assert.equal(observationalPkg.exports?.["."], "./src/index.ts", "the OM package is source-exported");
+    const observationalPkg = readPkg("packages/memory");
+    assert.equal(observationalPkg.exports?.["."], "./system/src/index.ts", "the memory system is source-exported");
   });
 
   it("process driver publishes a TypeScript source root with its named API", async () => {
-    const pkg = readPkg("packages/drivers/process");
-    assert.equal(pkg.exports?.["."], "./src/index.ts");
-    const api = await import(new URL("../../packages/drivers/process/src/index.ts", import.meta.url).href);
+    const pkg = readPkg("packages/hosts");
+    assert.equal(pkg.exports?.["./driver-process"], "./driver-process/src/index.ts");
+    const api = await import(new URL("../../packages/hosts/driver-process/src/index.ts", import.meta.url).href);
     assert.deepEqual(Object.keys(api).sort(), ["ProcessDriverError", "adapterDriver", "extendAdapter", "processDriver"].sort());
   });
 

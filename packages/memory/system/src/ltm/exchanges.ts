@@ -15,9 +15,9 @@
  */
 import { createHash } from "node:crypto";
 import type { Message, SecretRedactor, SessionEntry } from "@arnilo/prism";
-import type { MemoryConsentInput } from "@arnilo/prism-memory-core";
-import { lexicalTerms } from "@arnilo/prism-memory-core";
-import { normalizeScopedMemoryContent, scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import type { MemoryConsentInput } from "@arnilo/prism-memory-system/core";
+import { lexicalTerms } from "@arnilo/prism-memory-system/core";
+import { normalizeScopedMemoryContent, scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import type { MemoryFabric, MemoryFabricWriteOptions, MemoryNoteScope } from "./types.js";
 
 /** Link edges one split part carries; a pathological turn is capped instead of writing a quadratic list. */

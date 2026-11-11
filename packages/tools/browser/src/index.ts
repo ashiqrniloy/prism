@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-tools-browser` — the first-party browser automation tools as a package.
+ * `@arnilo/prism-tools/browser` — the first-party browser automation tools as a package.
  *
  * The default export registers the six exclusive model-facing tools from `createBrowserTools`
  * (`browser_open`, `browser_snapshot`, `browser_act`, `browser_close`, `browser_evaluate`,
@@ -14,15 +14,15 @@
  * approval mode.
  *
  * ```ts
- * import toolsBrowser from "@arnilo/prism-tools-browser";
+ * import toolsBrowser from "@arnilo/prism-tools/browser";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({ model, packages: [toolsBrowser({ headless: true, allowOrigins: ["https://example.com"] })] });
  * ```
  */
 import { fileURLToPath } from "node:url";
-import manifest from "../package.json" with { type: "json" };
 import { definePackage, type PackageInstance, type ToolDefinition } from "@arnilo/prism";
+import manifest from "../../package.json" with { type: "json" };
 
 import { type ToolsBrowserConfig, toolsBrowserConfigSchema } from "./config.js";
 import { createBrowserManager } from "./manager.js";
@@ -71,7 +71,7 @@ function networkPolicyOf(config: ToolsBrowserConfig): BrowserNetworkPolicy {
 }
 
 const definition = definePackage<ToolsBrowserConfig>({
-  name: "@arnilo/prism-tools-browser",
+  name: "@arnilo/prism-tools/browser",
   version: manifest.version,
   description: "Six exclusive browser tools over Playwright with declared effects, fail-closed egress policy, and artifact quarantine.",
   requires: { api: 1 },

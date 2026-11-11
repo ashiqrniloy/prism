@@ -32,79 +32,82 @@ Each native package documents itself in its README; the kernel pages above cover
 
 ### Providers
 
-- [`@arnilo/prism-provider-commandcode`](../packages/providers/commandcode/README.md): Command Code Provider API (Chat, Responses, Messages) for Prism.
-- [`@arnilo/prism-provider-kilo`](../packages/providers/kilo/README.md): Kilo AI Gateway (Chat, Responses, Messages) with API-key and device login.
-- [`@arnilo/prism-provider-litellm`](../packages/providers/litellm/README.md): any model behind a LiteLLM Proxy, with per-call LiteLLM telemetry and spend-log reconciliation.
-- [`@arnilo/prism-provider-hyper`](../packages/providers/hyper/README.md): Charm Hyper provider package for Prism.
-- [`@arnilo/prism-provider-laya`](../packages/providers/laya/README.md): Laya provider package for Prism.
-- [`@arnilo/prism-provider-liquid`](../packages/providers/liquid/README.md): Liquid provider package for Prism.
-- [`@arnilo/prism-provider-openai-codex`](../packages/providers/openai-codex/README.md): OpenAI models on a ChatGPT plan via Sign in with ChatGPT.
-- [`@arnilo/prism-provider-ollama-cloud`](../packages/providers/ollama-cloud/README.md): Ollama Cloud hosted models (native NDJSON and OpenAI-compatible routes) for Prism.
-- [`@arnilo/prism-provider-opencode-go`](../packages/providers/opencode-go/README.md): OpenCode Go provider package for Prism.
-- [`@arnilo/prism-provider-openrouter`](../packages/providers/openrouter/README.md): OpenRouter provider package for Prism.
-- [`@arnilo/prism-provider-typesafe`](../packages/providers/typesafe/README.md): TypeSafe Jev provider package for Prism.
+- [`@arnilo/prism-ai/commandcode`](../packages/providers/commandcode/README.md): Command Code Provider API (Chat, Responses, Messages) for Prism.
+- [`@arnilo/prism-ai/kilo`](../packages/providers/kilo/README.md): Kilo AI Gateway (Chat, Responses, Messages) with API-key and device login.
+- [`@arnilo/prism-ai/litellm`](../packages/providers/litellm/README.md): any model behind a LiteLLM Proxy, with per-call LiteLLM telemetry and spend-log reconciliation.
+- [`@arnilo/prism-ai/hyper`](../packages/providers/hyper/README.md): Charm Hyper provider package for Prism.
+- [`@arnilo/prism-ai/laya`](../packages/providers/laya/README.md): Laya provider package for Prism.
+- [`@arnilo/prism-ai/liquid`](../packages/providers/liquid/README.md): Liquid provider package for Prism.
+- [`@arnilo/prism-ai/openai-codex`](../packages/providers/openai-codex/README.md): OpenAI models on a ChatGPT plan via Sign in with ChatGPT.
+- [`@arnilo/prism-ai/ollama-cloud`](../packages/providers/ollama-cloud/README.md): Ollama Cloud hosted models (native NDJSON and OpenAI-compatible routes) for Prism.
+- [`@arnilo/prism-ai/opencode-go`](../packages/providers/opencode-go/README.md): OpenCode Go provider package for Prism.
+- [`@arnilo/prism-ai/openrouter`](../packages/providers/openrouter/README.md): OpenRouter provider package for Prism.
+- [`@arnilo/prism-ai/typesafe`](../packages/providers/typesafe/README.md): TypeSafe Jev provider package for Prism.
 
 ### Tools
 
-- [`@arnilo/prism-tools-browser`](../packages/tools/browser/README.md): First-party browser automation tools for Prism.
-- [`@arnilo/prism-tools-coding`](../packages/tools/coding/README.md): First-party coding tools for Prism.
-- [`@arnilo/prism-tools-computer-use`](../packages/tools/computer-use/README.md): First-party Linux desktop tools for Prism.
-- [`@arnilo/prism-tools-openapi`](../packages/tools/openapi/README.md): First-party OpenAPI tools for Prism.
-- [`@arnilo/prism-tools-research`](../packages/tools/research/README.md): Research skills, a per-session source ledger, a read-only cite tool, and a bounded run.end citation check.
-- [`@arnilo/prism-tools-web`](../packages/tools/web/README.md): First-party web search and fetch tools for Prism — keyless native fetch by default, plus Brave, Exa, Firecrawl, Obscura, SearXNG, Tavily, and Kagi backends.
-- [`@arnilo/prism-tools-work`](../packages/tools/work/README.md): First-party work tools for Prism.
+- [`@arnilo/prism-tools`](../packages/tools/README.md): Coding, web, browser, research, OpenAPI, desktop and work subpaths.
+- [`@arnilo/prism-tools/browser`](../packages/tools/browser/README.md): First-party browser automation tools for Prism.
+- [`@arnilo/prism-tools/coding`](../packages/tools/coding/README.md): First-party coding tools for Prism.
+- [`@arnilo/prism-tools/computer-use`](../packages/tools/computer-use/README.md): First-party Linux desktop tools for Prism.
+- [`@arnilo/prism-tools/openapi`](../packages/tools/openapi/README.md): First-party OpenAPI tools for Prism.
+- [`@arnilo/prism-tools/research`](../packages/tools/research/README.md): Research skills, a per-session source ledger, a read-only cite tool, and a bounded run.end citation check.
+- [`@arnilo/prism-tools/web`](../packages/tools/web/README.md): First-party web search and fetch tools for Prism — keyless native fetch by default, plus Brave, Exa, Firecrawl, Obscura, SearXNG, Tavily, and Kagi backends.
+- [`@arnilo/prism-tools/work`](../packages/tools/work/README.md): First-party work tools for Prism.
 
 ### Memory and context
 
-- [`@arnilo/prism-memory-compaction`](../packages/memory/compaction/README.md): LLM summarization compaction for Prism.
-- [`@arnilo/prism-memory-core`](../packages/memory/core/README.md) (experimental): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
+- [`@arnilo/prism-extensions/compaction`](../packages/extensions/compaction/README.md): LLM summarization compaction for Prism.
+- [Memory bundle](../packages/memory/README.md) and [knowledge bundle](../packages/knowledge/README.md): experimental entrypoints and installation.
+- [`@arnilo/prism-memory-system/core`](../packages/memory/core/README.md) (experimental): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
 - [`@arnilo/prism-memory-system`](../packages/memory/system/README.md) (experimental): the memory system (STM → WM → rehearsal → LTM, plus sleep): session tiers that observe the session, keep a source-backed ledger, and compact from it, and long-term memory (`ltm`), the store of record behind the `memory.*` tools.
-- [`@arnilo/prism-rag`](../packages/knowledge/rag/README.md) (experimental): Retrieval-augmented generation for Prism agents.
-- [`@arnilo/prism-wiki`](../packages/knowledge/wiki/README.md) (experimental): The wiki, knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence, reading memory read-only.
-- [`@arnilo/prism-context-engineering`](../packages/context/engineering/README.md): Context engineering for Prism agents.
-- [`@arnilo/prism-context-files`](../packages/context/files/README.md): AGENTS.md and SYSTEM.md context layers for Prism agents, trust-gated and cached per session.
+- [`@arnilo/prism-knowledge`](../packages/knowledge/README.md) (experimental): Wiki and RAG subpaths, with an exact memory-system dependency.
+- [`@arnilo/prism-knowledge/rag`](../packages/knowledge/rag/README.md) (experimental): Retrieval-augmented generation for Prism agents.
+- [`@arnilo/prism-knowledge/wiki`](../packages/knowledge/wiki/README.md) (experimental): The wiki, knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence, reading memory read-only.
+- [`@arnilo/prism-extensions/context-engineering`](../packages/extensions/context-engineering/README.md): Context engineering for Prism agents.
+- [`@arnilo/prism-extensions/context-files`](../packages/extensions/context-files/README.md): AGENTS.md and SYSTEM.md context layers for Prism agents, trust-gated and cached per session.
 
 ### Stores
 
-- [`@arnilo/prism-store-codecs`](../packages/stores/codecs/README.md): Row codecs, cursors, ownership-scope helpers, and SQL query semantics shared by the Prism SQL session-store adapters.
-- [`@arnilo/prism-store-jsonl`](../packages/stores/jsonl/README.md): One JSONL file per session under a directory, as a durable single-process session store for Prism agents.
-- [`@arnilo/prism-store-postgres`](../packages/stores/postgres/README.md): The PostgreSQL session store (leases, lifecycle, event source, and schema migrations included) as the Prism store slot, over `pg`.
-- [`@arnilo/prism-store-sqlite`](../packages/stores/sqlite/README.md): The SQLite session store (leases, lifecycle, and schema migrations included) as the Prism store slot, over bun:sqlite.
+- [`@arnilo/prism-extensions/store-codecs`](../packages/extensions/store-codecs/README.md): Row codecs, cursors, ownership-scope helpers, and SQL query semantics shared by the Prism SQL session-store adapters.
+- [`@arnilo/prism-extensions/store-jsonl`](../packages/extensions/store-jsonl/README.md): One JSONL file per session under a directory, as a durable single-process session store for Prism agents.
+- [`@arnilo/prism-extensions/store-postgres`](../packages/extensions/store-postgres/README.md): The PostgreSQL session store (leases, lifecycle, event source, and schema migrations included) as the Prism store slot, over `pg`.
+- [`@arnilo/prism-extensions/store-sqlite`](../packages/extensions/store-sqlite/README.md): The SQLite session store (leases, lifecycle, and schema migrations included) as the Prism store slot, over bun:sqlite.
 
 ### Policy and credentials
 
-- [`@arnilo/prism-approval`](../packages/policy/approval/README.md): Approval modes over tool effects and roots, as one tool.call gate.
-- [`@arnilo/prism-governance`](../packages/policy/governance/README.md): Policy engine, OPA adapter, approvals, and audit ledger as one tool.call/run.input/model.request gate.
-- [`@arnilo/prism-guardrail-packs`](../packages/policy/guardrail-packs/README.md): Built-in guardrail packs.
-- [`@arnilo/prism-model-router`](../packages/policy/model-router/README.md): Native model router package.
-- [`@arnilo/prism-credentials-keyring`](../packages/credentials/keyring/README.md): Credentials slot package for Prism.
+- [`@arnilo/prism-extensions/approval`](../packages/extensions/approval/README.md): Approval modes over tool effects and roots, as one tool.call gate.
+- [`@arnilo/prism-extensions/governance`](../packages/extensions/governance/README.md): Policy engine, OPA adapter, approvals, and audit ledger as one tool.call/run.input/model.request gate.
+- [`@arnilo/prism-extensions/guardrail-packs`](../packages/extensions/guardrail-packs/README.md): Built-in guardrail packs.
+- [`@arnilo/prism-extensions/model-router`](../packages/extensions/model-router/README.md): Native model router package.
+- [`@arnilo/prism-extensions/keyring`](../packages/extensions/keyring/README.md): Credentials slot package for Prism.
 
 ### Integrations
 
-- [`@arnilo/prism-delegate`](../packages/integrations/delegate/README.md): Sub-agents as a tool.
-- [`@arnilo/prism-advisor`](../packages/integrations/advisor/README.md): A second model's advice, and completion validation by a model or a delegate child.
-- [`@arnilo/prism-hooks-json`](../packages/integrations/hooks-json/README.md): Claude/Codex hooks.json compiled onto Prism hooks.
-- [`@arnilo/prism-mcp`](../packages/integrations/mcp/README.md): Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.
-- [`@arnilo/prism-observability`](../packages/integrations/observability/README.md): OpenTelemetry spans and metrics over the Prism agent event catalog.
-- [`@arnilo/prism-workflows`](../packages/integrations/workflows/README.md): Typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions.
+- [`@arnilo/prism-extensions/delegate`](../packages/extensions/delegate/README.md): Sub-agents as a tool.
+- [`@arnilo/prism-extensions/advisor`](../packages/extensions/advisor/README.md): A second model's advice, and completion validation by a model or a delegate child.
+- [`@arnilo/prism-extensions/hooks-json`](../packages/extensions/hooks-json/README.md): Claude/Codex hooks.json compiled onto Prism hooks.
+- [`@arnilo/prism-extensions/mcp`](../packages/extensions/mcp/README.md): Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.
+- [`@arnilo/prism-extensions/observability`](../packages/extensions/observability/README.md): OpenTelemetry spans and metrics over the Prism agent event catalog.
+- [`@arnilo/prism-extensions/workflows`](../packages/extensions/workflows/README.md): Typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions.
 
 ### Drivers
 
-- [`@arnilo/prism-driver-process`](../packages/drivers/process/README.md): Generic process driver and adapter contract for external agents.
+- [`@arnilo/prism-hosts/driver-process`](../packages/hosts/driver-process/README.md): Generic process driver and adapter contract for external agents.
 
 ## Host libraries
 
 Host libraries serve or drive an agent from outside; they are not loaded as packages.
 
-- [`@arnilo/prism-acp`](../packages/hosts/acp/README.md): Host library serving one Prism agent over the Agent Client Protocol.
-- [`@arnilo/prism-ag-ui`](../packages/hosts/ag-ui/README.md): Host library serving a Prism Agent over AG-UI SSE, with protocol adapters and a reference renderer.
-- [`@arnilo/prism-channels`](../packages/hosts/channels/README.md): Host library serving one Prism agent over Telegram and Signal messaging channels.
-- [`@arnilo/prism-devtools`](../packages/hosts/devtools/README.md): Host library serving a loopback developer inspector over a Prism agent.
-- [`@arnilo/prism-evals`](../packages/hosts/evals/README.md): Host library providing evaluations, datasets, scorers, judges, and multi-turn scenarios for Prism agents.
-- [`@arnilo/prism-headless`](../packages/hosts/headless/README.md): Host library for routed Prism HostUi requests and durable agent/workflow scheduling.
-- [`@arnilo/prism-host-builder`](../packages/hosts/host-builder/README.md): Skill, MCP server, and installer that help coding agents build and change Prism hosts against the installed version.
-- [`@arnilo/prism-mcp-server`](../packages/hosts/mcp-server/README.md): Host library serving a Prism agent over MCP stdio and Streamable HTTP transports.
-- [`@arnilo/prism-remote`](../packages/hosts/remote/README.md): Host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1.
+- [`@arnilo/prism-hosts/acp`](../packages/hosts/acp/README.md): Host library serving one Prism agent over the Agent Client Protocol.
+- [`@arnilo/prism-hosts/ag-ui`](../packages/hosts/ag-ui/README.md): Host library serving a Prism Agent over AG-UI SSE, with protocol adapters and a reference renderer.
+- [`@arnilo/prism-hosts/channels`](../packages/hosts/channels/README.md): Host library serving one Prism agent over Telegram and Signal messaging channels.
+- [`@arnilo/prism-hosts/devtools`](../packages/hosts/devtools/README.md): Host library serving a loopback developer inspector over a Prism agent.
+- [`@arnilo/prism-hosts/evals`](../packages/hosts/evals/README.md): Host library providing evaluations, datasets, scorers, judges, and multi-turn scenarios for Prism agents.
+- [`@arnilo/prism-hosts/headless`](../packages/hosts/headless/README.md): Host library for routed Prism HostUi requests and durable agent/workflow scheduling.
+- [`@arnilo/prism-hosts/host-builder`](../packages/hosts/host-builder/README.md): Skill, MCP server, and installer that help coding agents build and change Prism hosts against the installed version.
+- [`@arnilo/prism-hosts/mcp-server`](../packages/hosts/mcp-server/README.md): Host library serving a Prism agent over MCP stdio and Streamable HTTP transports.
+- [`@arnilo/prism-hosts/remote`](../packages/hosts/remote/README.md): Host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1.
 
 ## Guides
 
@@ -150,49 +153,22 @@ Host libraries serve or drive an agent from outside; they are not loaded as pack
 
 The generated inventory below derives from [`scripts/package-truth.json`](../scripts/package-truth.json) — regenerate with `bun scripts/package-truth.mjs --emit-docs`, never hand-edit.
 
+- [Providers bundle](../packages/providers/README.md) — install `@arnilo/prism-ai`; import each provider through its subpath.
+
 <!-- generated:package-truth:inventory begin -->
-**51 publishable manifests** — root `@arnilo/prism` plus 50 workspace packages (1 `prism-*` family packages, 38 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**7 publishable manifests** — root `@arnilo/prism` plus 6 workspace packages (0 `prism-*` family packages, 6 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
 | `@arnilo/prism` | 0.13.0 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-channels` | 0.13.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-acp` | 0.13.0 | capability |
-| `@arnilo/prism-advisor` | 0.13.0 | capability — a second model's advice as one advise tool and opt-in review consults, plus completion validation by a model or a hidden delegate child |
-| `@arnilo/prism-ag-ui` | 0.13.0 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-approval` | 0.13.0 | capability — approval modes deny/ask/edits/auto over tool effects and roots, as one tool.call gate |
-| `@arnilo/prism-context-engineering` | 0.13.0 | capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler |
-| `@arnilo/prism-context-files` | 0.13.0 | capability — AGENTS.md / SYSTEM.md layers as one context.build handler, trust-gated and cached per session |
-| `@arnilo/prism-credentials-keyring` | 0.13.0 | capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence |
-| `@arnilo/prism-delegate` | 0.13.0 | capability — a delegate tool whose child agent inherits a chosen subset of the parent packages, reporting delegate.step package events |
-| `@arnilo/prism-devtools` | 0.13.0 | capability |
-| `@arnilo/prism-driver-process` | 0.13.0 | capability — generic external-agent process driver with a host-written adapter |
-| `@arnilo/prism-evals` | 0.13.0 | capability |
-| `@arnilo/prism-governance` | 0.13.0 | capability — deny-by-default policy engine (inline rules or OPA) plus approvals and an audit ledger, as one tool.call/run.input/model.request gate with a governance.policy/governance.audit service |
-| `@arnilo/prism-guardrail-packs` | 0.13.0 | capability — built-in guardrail packs (coding-standard, destructive-commands, validation-respect, secrets-hygiene) as restrictive-only tool.call/tool.result rules with package session state |
-| `@arnilo/prism-headless` | 0.13.0 | library — host library routing HostUi requests through ordered routes with a value-free answer log |
-| `@arnilo/prism-hooks-json` | 0.13.0 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
-| `@arnilo/prism-host-builder` | 0.13.0 | library — host library shipping version-exact API, error-code and example indexes, a skill, an MCP server and an installer for coding agents that build Prism hosts |
-| `@arnilo/prism-mcp` | 0.13.0 | capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close |
-| `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
-| `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
-| `@arnilo/prism-memory-core` | 0.13.0-experimental.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
+| `@arnilo/prism-ai` | 0.13.0 | capability |
+| `@arnilo/prism-extensions` | 0.13.0 | capability |
+| `@arnilo/prism-hosts` | 0.13.0 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
+| `@arnilo/prism-knowledge` | 0.13.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
 | `@arnilo/prism-memory-system` | 0.13.0-experimental.0 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
-| `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
-| `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
-| `@arnilo/prism-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
-| `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
-| `@arnilo/prism-store-codecs` | 0.13.0 | capability |
-| `@arnilo/prism-store-jsonl` | 0.13.0 | capability |
-| `@arnilo/prism-store-postgres` | 0.13.0 | capability |
-| `@arnilo/prism-store-sqlite` | 0.13.0 | capability |
-| `@arnilo/prism-tools-browser` | 0.13.0 | capability — six exclusive Playwright browser tools with declared effects, fail-closed egress policy, and artifact quarantine |
-| `@arnilo/prism-tools-coding` | 0.13.0 | capability — coding file/search/shell tools as a package: a small tool set with declared effects, in-tool path containment, and an optional shell |
-| `@arnilo/prism-tools-computer-use` | 0.13.0 | capability — the host-owned computer-use-linux MCP binary as tools with declared external effects, in-tool device admission, and a bundled skill |
-| `@arnilo/prism-tools-openapi` | 0.13.0 | capability — compile allow-listed OpenAPI 3.1 operations into bounded tools with pinned origins, per-method effects, and ref-only header credentials |
-| `@arnilo/prism-tools-research` | 0.13.0 | capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check |
-| `@arnilo/prism-tools-web` | 0.13.0 | capability — keyless native fetch plus Brave/Exa/SearXNG/Tavily/Kagi search, Firecrawl fetch/extract, and host-installed Obscura, with a host domain policy, an optional per-session cache, and a web.fetch service |
-| `@arnilo/prism-tools-work` | 0.13.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
-| `@arnilo/prism-wiki` | 0.13.0-experimental.0 | capability — knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence; reads memory read-only |
-| `@arnilo/prism-workflows` | 0.13.0 | library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts |
+| `@arnilo/prism-tools` | 0.13.0 | capability |
 <!-- generated:package-truth:inventory end -->
+
+- [Extensions bundle](../packages/extensions/README.md): context, credentials, integrations, policy and stores.
+
+Host libraries ship together in [`@arnilo/prism-hosts`](../packages/hosts/README.md), in lockstep with the kernel.

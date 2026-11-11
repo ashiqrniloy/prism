@@ -77,14 +77,14 @@ New eleventh publishable package. Transport-neutral runtime: deny-by-default sen
 
 ### 7. Connected apps and work HTTP
 
-Identity-bound MCP connected-app sessions admit host-selected transports and register prefixed tools. Google Workspace and Microsoft 365 HTTP adapters live under `@arnilo/prism-work/connectors`. Slack MCP wrap and Open Connector sidecar remain examples, not core. See [connected apps](../packages/integrations/mcp/README.md) and [work connectors](../packages/tools/work/README.md).
+Identity-bound MCP connected-app sessions admit host-selected transports and register prefixed tools. Google Workspace and Microsoft 365 HTTP adapters live under `@arnilo/prism-work/connectors`. Slack MCP wrap and Open Connector sidecar remain examples, not core. See [connected apps](../packages/extensions/mcp/README.md) and [work connectors](../packages/tools/work/README.md).
 
 #### Migration Actions
 - Wire `connected-apps` only with a host allow-list. Do not add Open Connector / Klavis / Nango as Prism dependencies.
 
 ### 8. Durable long runs
 
-`AgentRunStateOptions.checkpointPolicy: "every-turn"` checkpoints at the provider-turn boundary. Host-only `decision: "continue"` resumes a crashed worker (never from AG-UI or the server boundary; rejected while an approval or ready tool call is pending). `RunOptions.turnPolicy` stops at a turn boundary with `stopReason: "host_policy"`. `snapshotRunBundle` returns a frozen redacted digest with zero store or network reads. `createClaimGroundingGuardrail` (stage `"output"`) blocks or flags numeric claims that no tool result or host evidence supports. `ErrorInfo.failureClass` types provider failures; `ModelCapabilities.toolCallStrictness` is advisory. See [durable runs](loop.md), [run bundle](history/run-bundle-0.12.md), [guardrails](../packages/policy/guardrail-packs/README.md).
+`AgentRunStateOptions.checkpointPolicy: "every-turn"` checkpoints at the provider-turn boundary. Host-only `decision: "continue"` resumes a crashed worker (never from AG-UI or the server boundary; rejected while an approval or ready tool call is pending). `RunOptions.turnPolicy` stops at a turn boundary with `stopReason: "host_policy"`. `snapshotRunBundle` returns a frozen redacted digest with zero store or network reads. `createClaimGroundingGuardrail` (stage `"output"`) blocks or flags numeric claims that no tool result or host evidence supports. `ErrorInfo.failureClass` types provider failures; `ModelCapabilities.toolCallStrictness` is advisory. See [durable runs](loop.md), [run bundle](history/run-bundle-0.12.md), [guardrails](../packages/extensions/guardrail-packs/README.md).
 
 #### Migration Actions
 - Omit `checkpointPolicy` / `turnPolicy` / the claim-grounding guardrail to keep 0.7.0 run behavior.
@@ -92,7 +92,7 @@ Identity-bound MCP connected-app sessions admit host-selected transports and reg
 
 ### 9. Work sandbox and vendored skills
 
-`@arnilo/prism-work/sandbox` plus `createWorkComposition` run office/exec in an injected Docker sandbox; connectors stay on the host. The package ships `docx`, `xlsx`, `powerpoint`, `pdf` skills. See [work sandbox](../packages/tools/work/README.md) and [context and skills](../packages/context/files/README.md).
+`@arnilo/prism-work/sandbox` plus `createWorkComposition` run office/exec in an injected Docker sandbox; connectors stay on the host. The package ships `docx`, `xlsx`, `powerpoint`, `pdf` skills. See [work sandbox](../packages/tools/work/README.md) and [context and skills](../packages/extensions/context-files/README.md).
 
 ---
 
@@ -121,4 +121,4 @@ Back up channel journals and work-sandbox volumes before a rollback if those 0.8
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Migrate Prism 0.6 to 0.7](migrate-to-0.7.md): ACP MCP allow-list, model-router facade refusals, host-completeness additions.
 - [Release and install](release.md): packed surfaces, install rules, support matrix, and the offline test budget.
-- [Messaging channels](../packages/hosts/channels/README.md), [Connected apps](../packages/integrations/mcp/README.md), [Work tools](../packages/tools/work/README.md), [Durable runs](loop.md): owning pages for the 0.8.0 additions.
+- [Messaging channels](../packages/hosts/channels/README.md), [Connected apps](../packages/extensions/mcp/README.md), [Work tools](../packages/tools/work/README.md), [Durable runs](loop.md): owning pages for the 0.8.0 additions.

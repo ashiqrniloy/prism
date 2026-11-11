@@ -140,7 +140,7 @@ async function load() {
     kit: await import("@arnilo/prism/provider-kit"),
     // The fabric is the memory system's `ltm` component since plan 216 Task 5; the probes keep the `fabric` key.
     fabric: await import("@arnilo/prism-memory-system"),
-    sqlite: await import("@arnilo/prism-memory-core/sqlite"),
+    sqlite: await import("@arnilo/prism-memory-system/core/sqlite"),
   };
   return modules;
 }

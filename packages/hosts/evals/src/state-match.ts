@@ -17,8 +17,12 @@ const MAX_STATE_BYTES = 1024 * 1024;
 function snapshot(value: unknown): unknown {
   if (value === undefined) return undefined;
   const json = JSON.stringify(value, (_key, entry: unknown) => {
-    if (typeof entry === "function" || typeof entry === "symbol" || typeof entry === "bigint"
-      || (typeof entry === "number" && !Number.isFinite(entry))) {
+    if (
+      typeof entry === "function" ||
+      typeof entry === "symbol" ||
+      typeof entry === "bigint" ||
+      (typeof entry === "number" && !Number.isFinite(entry))
+    ) {
       throw new EvalError("state must be JSON serializable", "ERR_PRISM_EVAL_STATE_INVALID");
     }
     return entry;
@@ -36,10 +40,10 @@ function preview(value: unknown): unknown {
   if (Buffer.byteLength(json) <= 256) return value;
   let text = "";
   for (const char of json) {
-    if (Buffer.byteLength(JSON.stringify(text + char + "…")) > 256) break;
+    if (Buffer.byteLength(JSON.stringify(`${text + char}…`)) > 256) break;
     text += char;
   }
-  return text + "…";
+  return `${text}…`;
 }
 
 function removePointer(state: unknown, tokens: readonly string[]): unknown {
@@ -59,11 +63,16 @@ export function createStateMatchScorer<TInput = unknown, TExpected = unknown>(
   if (options.mode !== "exact" && options.mode !== "subset") {
     throw new EvalError("state match mode must be exact or subset", "ERR_PRISM_EVAL_SCORER");
   }
-  const pointers = (options.ignore ?? []).map(pointer => {
+  const pointers = (options.ignore ?? []).map((pointer) => {
     if (typeof pointer !== "string" || (pointer !== "" && !pointer.startsWith("/")) || /~(?![01])/u.test(pointer)) {
       throw new EvalError("invalid state ignore JSON pointer", "ERR_PRISM_EVAL_SCORER");
     }
-    return pointer === "" ? [] : pointer.slice(1).split("/").map(token => token.replace(/~1/g, "/").replace(/~0/g, "~"));
+    return pointer === ""
+      ? []
+      : pointer
+          .slice(1)
+          .split("/")
+          .map((token) => token.replace(/~1/g, "/").replace(/~0/g, "~"));
   });
   return defineScorer({
     id: options.id ?? "state_match",
@@ -89,8 +98,13 @@ export function createStateMatchScorer<TInput = unknown, TExpected = unknown>(
       };
       const compare = (expected: unknown, actual: unknown, path: string): void => {
         if (diff.length >= 32 || expected === actual) return;
-        if (!expected || !actual || typeof expected !== "object" || typeof actual !== "object"
-          || Array.isArray(expected) !== Array.isArray(actual)) {
+        if (
+          !expected ||
+          !actual ||
+          typeof expected !== "object" ||
+          typeof actual !== "object" ||
+          Array.isArray(expected) !== Array.isArray(actual)
+        ) {
           mismatch(path, expected, actual);
           return;
         }

@@ -1,17 +1,17 @@
-# `@arnilo/prism-provider-opencode-go`
+# `@arnilo/prism-ai/opencode-go`
 
 OpenCode Go provider package for [Prism](https://github.com/ashiqrniloy/prism): registers the `opencode-go` provider, resolves its key from an `env:`/`keyring:` ref per request, and ships the dual-route wire (Anthropic Messages and OpenAI Chat) plus the model catalog.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-opencode-go
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import opencodeGo from "@arnilo/prism-provider-opencode-go";
+import opencodeGo from "@arnilo/prism-ai/opencode-go";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

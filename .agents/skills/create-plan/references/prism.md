@@ -18,16 +18,16 @@ Answer this for every task before writing its approach.
 | The change… | Belongs in | Never in |
 | --- | --- | --- |
 | is required by the default loop, hooks, slots, the package system, the manifest, the model core, the tools/skills/commands registries, the host port, events, or the safety floor | kernel `src/` (`@arnilo/prism`) | a package |
-| is a capability an agent may or may not have (tools, memory, store, policy, a vendor, an integration) | a native package `packages/<group>/<name>` | the kernel |
-| is vendor wire code | `packages/providers/<vendor>` | the kernel |
+| is a capability an agent may or may not have (tools, memory, store, policy, a vendor, an integration) | a package subpath `@arnilo/<bundle>/<subpath>` in `packages/<bundle>/<subpath>` | the kernel |
+| is vendor wire code | `@arnilo/prism-ai/<vendor>` in `packages/providers/<vendor>` | the kernel |
 | is wire code shared by providers | `@arnilo/prism/provider-kit` | a provider package |
-| drives an `Agent` from an external protocol or transport (ACP, AG-UI, MCP server, channels, evals, devtools) | host library `packages/hosts/<name>` | a package or the kernel |
+| drives an `Agent` from an external protocol or transport (ACP, AG-UI, MCP server, channels, evals, devtools) | host library subpath `@arnilo/prism-hosts/<name>` in `packages/hosts/<name>` | a package or the kernel |
 | is one product's opinion: which agents exist, their package sets, the workflow and gates, `HostUi` routing, vendor adapters | the host (`apps/prism-agent` is the reference host) | the kernel or a package |
 
 Two rules apply everywhere:
 
 - **The kernel never imports or names a package.** A kernel addition needs written proof that no existing hook, slot, `PackageAPI` member, or `RunController` primitive can express it. The addition must also be generic: named in the roadmap's catalog, or needed by at least two packages.
-- **A capability that can be a package is a package.**
+- **A capability that can be a package is a package.** A package is a module specifier — an npm package, or one subpath its `exports` map lists — whose default export is `definePackage(...)`. A new package is a new **subpath** in an existing bundle (`scripts/bundles.json`). A new **bundle** is a new npm package: an owner decision, since it sets what 0.13.0 ships and how it publishes.
 
 ## 2. Phase review task
 
@@ -71,7 +71,8 @@ Ask each probe for every task. Record the answer as an acceptance criterion, a l
     - `docs/history/` is a frozen archive and is never edited
     - changes go under `## [Unreleased]` in `CHANGELOG.md`
 11. **Enforcement rows.** Each new artifact must extend the checks the release gate runs (`docs/release.md`, "What the gate runs"):
-    - new package → root `workspaces`, `scripts/package-truth.mjs` counts, the `packaging.test.ts` package list, the `scripts/independent-packages.json` decision, a compat baseline file, and a `docs/index.md` link to its README
+    - new package subpath → a row in `scripts/bundles.json` (npm name, directory, line, subpaths), the bundle's `exports` and `files` entries, the subpath's `README.md` with a `docs/index.md` link, and the `packaging.test.ts` package list
+    - new bundle → an owner decision, then every row above for the bundle itself: root `workspaces`, `scripts/package-truth.mjs` counts, the `scripts/independent-packages.json` decision (its own line, or `experimental`), a compat baseline file, and a `docs/index.md` link to its README
     - new example → an `examples/README.md` line and `scripts/e2e-coverage.json`
     - new `/docs` page → one `docs/index.md` link and an entry in the `kernelPages` or `apiPages` list in `src/__tests__/docs.test.ts`
 12. **Reference host impact.** Does the change alter an API, tool, or config that `apps/prism-agent` uses (its agents in `src/host/`, its scenarios in `src/scenarios/`)? Update the host in the same task and keep `bun run --filter @arnilo/prism-agent test` green; it also runs in `release:gate`. If the host would need a workaround (a type-erasing cast, a reach into package internals, reimplemented package logic), fix the SDK instead or record the gap in the Phase 12 plan's `## Gap log`. Prism Code (`packages/prism-code`) was deleted by plan 173; never plan work against it.
@@ -88,12 +89,14 @@ Include every applicable line as a criterion, file, or test.
 - The 0.12 mechanism it replaces is deleted (probe 6).
 
 **New native package**
-- Layout: `packages/<group>/<name>/{package.json, src/index.ts, src/__tests__/, README.md}`. The default export is `definePackage`, and `"exports": { ".": "./src/index.ts" }`.
+- A new package is a **subpath** of an existing bundle (roadmap Part 3), not a new npm package; a new bundle is an owner decision.
+- Layout: `packages/<bundle>/<subpath>/{src/index.ts, src/__tests__/, README.md}` — the bundle root holds the only `package.json`, with an `exports` entry `"./<subpath>": "./<subpath>/src/index.ts"`, a `files` list that ships the subpath's `src` and `README.md`, and a `scripts/bundles.json` row.
+- The name is the specifier `@arnilo/<bundle>/<subpath>`; the default export is `definePackage` (a library subpath exports functions instead and registers nothing).
 - `requires.prism` range; minimal `capabilities`; config as JSON Schema with defaults and ref-only secret fields.
 - Package conformance suite from `@arnilo/prism/testing`, plus behavior tests on the mock provider.
 - A missing optional key or binary produces `status.note(...)` and no registrations, not a throw.
-- README follows the package page structure in `prism-wiki.md`, including a manifest entry example.
-- Enforcement rows (probe 11).
+- README follows the package page structure in `prism-wiki.md`, including a manifest entry example that uses the full specifier.
+- Enforcement rows (probe 11), and the bundle's own gates stay green: one compat baseline per bundle, `package-truth`, and the whole-tree install proof.
 
 **Moving 0.12 code into a package**
 - Move the code and its tests; delete the old export and subpath; regenerate the baseline; sweep.
@@ -104,7 +107,7 @@ Include every applicable line as a criterion, file, or test.
 
 **Store package** — store conformance: branching and fork, package-state entries, suspended-run records, search, title, delete. Its driver loads only in this package.
 
-**Tool package** — each tool declares `effects`. Hard denies go through `tool.call`. Approval is left to `@arnilo/prism-approval`; the tool package does not reimplement it.
+**Tool package** — each tool declares `effects`. Hard denies go through `tool.call`. Approval is left to `@arnilo/prism-extensions/approval`; the tool package does not reimplement it.
 
 **Host library** — uses only the public `@arnilo/prism` API, implements `HostUi` for its protocol, and constructs no agent outside `createAgent`.
 
@@ -119,8 +122,9 @@ The 0.13.0 train's layout assumptions are resolved: packages are nested `package
 | The change | Gate to update |
 | --- | --- |
 | Moves, renames, or removes an export | `bun scripts/release.mjs gate --update-baseline` (compat baselines), then `bun scripts/retired-names.mjs --generate` |
-| Retires a package, subpath, error code, `prism` flag, or tool | `scripts/retired-names.json` / `scripts/retired-tool-names.json`; `scripts/retired-names.test.mjs` stays green |
-| Creates a publishable package | root `workspaces`, a compat baseline, `scripts/independent-packages.json` (independent line or `experimental`), package truth |
+| Retires a package (subpath), bundle, error code, `prism` flag, or tool | `scripts/retired-names.json` / `scripts/retired-tool-names.json`; `scripts/retired-names.test.mjs` stays green |
+| Creates a package subpath | a `scripts/bundles.json` row, the bundle's `exports`/`files`, a per-subpath `README.md` and its `docs/index.md` link |
+| Creates a bundle (owner decision) | root `workspaces`, a compat baseline, `scripts/independent-packages.json` (independent line or `experimental`), package truth |
 | Adds a kernel `/docs` page | one `docs/index.md` link and the `kernelPages`/`apiPages` list in `src/__tests__/docs.test.ts` |
 
 ## 6. Plan-level rules

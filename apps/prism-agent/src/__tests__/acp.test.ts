@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { type ServeAcpOptions, serveAcp } from "@arnilo/prism-acp";
+import { type ServeAcpOptions, serveAcp } from "@arnilo/prism-hosts/acp";
 import { createCodingWorker, type HostConfig } from "../host/index.js";
 
 const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };

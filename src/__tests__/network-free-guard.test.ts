@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const skipDirs = new Set(["node_modules", "dist", ".git", ".agents", "plans", "docs", "coverage"]);
 const guardFileName = "network-free-guard.test.ts";
+const FETCH_TYPE_QUERY = /\btypeof\s+globalThis\.fetch\b(?!\s*(?:\(|\.|\[))/g;
 
 function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
@@ -22,6 +23,17 @@ function* walk(dir: string): Generator<string> {
 }
 
 describe("network-free default test guard", () => {
+  it("permits fetch type queries while still detecting calls under typeof", () => {
+    assert.doesNotMatch("fetch as typeof globalThis.fetch, calls".replace(FETCH_TYPE_QUERY, ""), /globalThis\.fetch/);
+    for (const source of [
+      "globalThis.fetch(url)",
+      "typeof globalThis.fetch(url)",
+      "typeof globalThis.fetch.call(null, url)",
+      'typeof globalThis.fetch["call"](null, url)',
+    ]) {
+      assert.match(source.replace(FETCH_TYPE_QUERY, ""), /globalThis\.fetch/);
+    }
+  });
   it("every live test file is gated by a PRISM_LIVE_* env var", () => {
     for (const file of walk(repoRoot)) {
       // A live test is named `live.test.ts` or `<thing>-live.test.ts`; a directory such as `delivery/`
@@ -37,7 +49,11 @@ describe("network-free default test guard", () => {
       if (/live/i.test(file)) continue;
       if (file.endsWith(guardFileName)) continue;
       const src = readFileSync(file, "utf8");
-      assert.doesNotMatch(src, /\bglobalThis\.fetch\b/, `${file} must not reference globalThis.fetch (inject a mock fetch instead)`);
+      assert.doesNotMatch(
+        src.replace(FETCH_TYPE_QUERY, ""),
+        /\bglobalThis\.fetch\b/,
+        `${file} must not reference globalThis.fetch (inject a mock fetch instead)`,
+      );
     }
   });
 });

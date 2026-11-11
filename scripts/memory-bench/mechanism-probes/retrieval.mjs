@@ -79,7 +79,7 @@ export const probes = [
     id: "retrieval.hybrid",
     async run() {
       const { fabric } = await packages();
-      const core = await import("@arnilo/prism-memory-core");
+      const core = await import("@arnilo/prism-memory-system/core");
       const arm = async (retrieval) => {
         const memory = fabric.createMemory({
           ...SCOPE,

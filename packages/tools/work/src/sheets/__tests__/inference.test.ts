@@ -2,7 +2,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { inferAndTransformRows, parseCsv, resolveSheetsCaps } from "../index.js";
 
-describe("@arnilo/prism-tools-work — Schema Inference Engine", () => {
+describe("@arnilo/prism-tools/work — Schema Inference Engine", () => {
   it("infers decimal type and exact decimal strings for currency-formatted columns", async () => {
     const csv = `product,price,paid\nLaptop,"$1,234.56",true\nMouse,"$25.99",true\nKeyboard,"$120.00",false\n`;
     const result = await parseCsv(csv);

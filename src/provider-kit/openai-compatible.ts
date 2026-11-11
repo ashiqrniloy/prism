@@ -1,10 +1,4 @@
-import type {
-  JsonObject,
-  Message,
-  ProviderEvent,
-  ProviderRequest,
-  Usage,
-} from "../contracts.js";
+import type { JsonObject, Message, ProviderEvent, ProviderRequest, Usage } from "../contracts.js";
 import type { SecretSource } from "./provider-package.js";
 import { createRoutedProvider, type RoutedProvider } from "./routed-provider.js";
 import {
@@ -78,10 +72,8 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
         path: "/chat/completions",
         auth,
         url: options.chatCompletionsUrl
-          ? (req, baseUrl) =>
-              typeof options.chatCompletionsUrl === "function"
-                ? options.chatCompletionsUrl(req)
-                : options.chatCompletionsUrl!
+          ? (req, _baseUrl) =>
+              typeof options.chatCompletionsUrl === "function" ? options.chatCompletionsUrl(req) : options.chatCompletionsUrl!
           : undefined,
         codec: {
           mapMessages: options.mapMessages,

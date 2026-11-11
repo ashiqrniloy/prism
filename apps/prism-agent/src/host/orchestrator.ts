@@ -1,6 +1,6 @@
 import { type Agent, createAgent, definePackage } from "@arnilo/prism";
-import delegate from "@arnilo/prism-delegate";
-import workflows, { type WorkflowRun, workflowCommand } from "@arnilo/prism-workflows";
+import delegate from "@arnilo/prism-extensions/delegate";
+import workflows, { type WorkflowRun, workflowCommand } from "@arnilo/prism-extensions/workflows";
 import type { HostConfig, HostDeps } from "./config.js";
 import { hostPortOf } from "./config.js";
 import { sqlitePackage } from "./store.js";

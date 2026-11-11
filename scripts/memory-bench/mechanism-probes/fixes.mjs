@@ -16,7 +16,11 @@ export const FIXES = Object.freeze([
       "The package built its own tool set without the cross-scope routing createLongTermMemory().tools() has: memory.read { around | session } always returned not_found, memory.replace { id, pin } ignored pin, and a replace or verify of a note outside the narrowest scope missed it.",
     change:
       "Shared createNoteNavigator (navigation.ts) used by both tool sets; the package passes navigateNotes, noteMemory and routed pin/verify.",
-    files: ["packages/memory/system/src/ltm/navigation.ts", "packages/memory/system/src/ltm/create.ts", "packages/memory/system/src/ltm/index.ts"],
+    files: [
+      "packages/memory/system/src/ltm/navigation.ts",
+      "packages/memory/system/src/ltm/create.ts",
+      "packages/memory/system/src/ltm/index.ts",
+    ],
     test: { file: `${FT}/session-navigation.test.ts`, name: "package_memory_read_navigates_and_replace_pins_across_scopes" },
   },
   {

@@ -56,9 +56,7 @@ export function normalizeUsage(raw: RawUsageInput | undefined): Usage | undefine
   const currency = typeof raw.currency === "string" && raw.currency.length > 0 ? raw.currency : undefined;
   const estimated = raw.estimated === true ? true : undefined;
   const metadata =
-    raw.metadata && typeof raw.metadata === "object" && !Array.isArray(raw.metadata)
-      ? (raw.metadata as JsonObject)
-      : undefined;
+    raw.metadata && typeof raw.metadata === "object" && !Array.isArray(raw.metadata) ? (raw.metadata as JsonObject) : undefined;
 
   if (
     inputTokens === undefined &&

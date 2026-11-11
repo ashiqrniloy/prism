@@ -20,7 +20,7 @@ const KERNEL = "@arnilo/prism";
 const PUBLIC_SUBPATHS = new Set(["manifest", "driver-kit", "net", "artifacts"]);
 /**
  * 0.12 family subpaths retired into packages (plan 168 Tasks 6-7). A host library must
- * never reach them: the engine is `@arnilo/prism-workflows` and the timeline is `@arnilo/prism-observability`.
+ * never reach them: the engine is `@arnilo/prism-extensions/workflows` and the timeline is `@arnilo/prism-extensions/observability`.
  */
 const RETIRED_FAMILY = "@arnilo/" + "prism-core";
 
@@ -66,6 +66,7 @@ function hostModules(root: string): HostModule[] {
     }
   };
   for (const lib of readdirSync(hosts)) {
+    if (lib === "driver-process") continue; // Native driver package, not an Agent-serving host library.
     for (const sub of ["src", "bin"]) {
       const dir = join(hosts, lib, sub);
       if (existsSync(dir)) walk(dir, lib, sub === "bin");
@@ -138,7 +139,7 @@ function scanHostSurface(root: string, allowed: Set<string>): Scan {
       } else if (spec.startsWith(".")) {
         const libRoot = join(root, "packages/hosts", mod.lib);
         const target = resolve(dirname(mod.path), spec);
-        if (target !== libRoot && !target.startsWith(libRoot + sep)) {
+        if (target !== libRoot && !target.startsWith(libRoot + sep) && target !== join(root, "packages/hosts/package.json")) {
           scan.importViolations.push(`${where} relative import ${spec} leaves packages/hosts/${mod.lib}`);
         }
       }
@@ -209,7 +210,9 @@ describe("host surface gate", () => {
     const allow = loadAllowlist(ROOT);
     const scan = scanHostSurface(ROOT, new Set(Object.values(allow).flat()));
     // Guard against a vacuous pass: every host library directory must contribute modules to the scan.
-    const hostDirs = readdirSync(join(ROOT, "packages/hosts"));
+    const hostDirs = readdirSync(join(ROOT, "packages/hosts"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "driver-process")
+      .map((entry) => entry.name);
     assert.deepEqual([...scan.libs].sort(), hostDirs.sort(), "every host library must be scanned");
     assert.deepEqual(scan.importViolations, [], `host libraries must import only the public surface:\n${scan.importViolations.join("\n")}`);
   });
@@ -239,7 +242,10 @@ describe("host surface gate", () => {
       );
       writeFileSync(join(probe, "computed.ts"), 'export const load = () => import("@arnilo/" + "prism-workflows");\n');
       // A package specifier hidden behind a bound variable: no retired-family name in the import call itself.
-      writeFileSync(join(probe, "indirect.ts"), 'const pkg = "@arnilo/prism-observability";\nexport const load = () => import(pkg);\n');
+      writeFileSync(
+        join(probe, "indirect.ts"),
+        'const pkg = "@arnilo/prism-extensions/observability";\nexport const load = () => import(pkg);\n',
+      );
       // The sanctioned exception: a runtime module path, declared with a reason on the line above.
       writeFileSync(
         join(probe, "runtime.ts"),

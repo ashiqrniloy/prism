@@ -29,10 +29,18 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AgentDecisionError, askEveryTool, createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import {
+  AgentDecisionError,
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  providerDone,
+  providerTextDelta,
+  toolCallContent,
+} from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-tools-coding";
-import { createCliRunner } from "@arnilo/prism-tools-work/connectors";
+import { createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-tools/coding";
+import { createCliRunner } from "@arnilo/prism-tools/work/connectors";
 
 const BLOCKER_IDS = ["resume-validation", "work-tools-env", "sandbox-capabilities"];
 const blockerIds = new Set();

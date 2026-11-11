@@ -43,7 +43,7 @@ test("record_scanner_rejects_unknown_secrets_without_publishing", () =>
       createSessionEntry({
         sessionId: "s",
         kind: "message",
-        message: { role: "user", content: [{ type: "text", text: "gh" + "p_" + "a".repeat(35) }] },
+        message: { role: "user", content: [{ type: "text", text: `ghp_${"a".repeat(35)}` }] },
       }),
     ]);
     await assert.rejects(recordLedger({ store, session: "s", consent: true, out: dir }), /Secret scan/);
@@ -244,7 +244,7 @@ test("replay_refuses_unconsented_or_tampered_ledgers_and_unknown_policy", () =>
     await assert.rejects(replayLedgers({ ledgers, offline: true, cache, policy: { promote: { minScore: "invalid" } } }));
     await assert.rejects(replayLedgers({ ledgers, offline: true, cache, policy: { promote: { weights: { typo: 1 } } } }));
     const path = await writeLedger(ledgers[0], join(cache, "ledgers"));
-    await writeFile(path, (await readFile(path, "utf8")) + "\n");
+    await writeFile(path, `${await readFile(path, "utf8")}\n`);
     await assert.rejects(loadLedgers(join(cache, "ledgers")), /Integrity/);
     ledgers[0].manifest.source = "recorded";
     await assert.rejects(replayLedgers({ ledgers, offline: true, cache }), /Manifest/);
@@ -294,12 +294,12 @@ test("live_replay_accounting_fails_closed_for_missing_usage_and_token_ceiling", 
         },
       },
     ];
-    await writeFile(usageLog, JSON.stringify({ status: 200, inputTokens: 12, rawUsage: { prompt_tokens: 12 } }) + "\n");
+    await writeFile(usageLog, `${JSON.stringify({ status: 200, inputTokens: 12, rawUsage: { prompt_tokens: 12 } })}\n`);
     assert.equal(await replayUsage(proxies, 20), 12);
     await assert.rejects(replayUsage(proxies, 10), /TokenCeiling/);
-    await writeFile(usageLog, JSON.stringify({ status: 200, inputTokens: 0 }) + "\n");
+    await writeFile(usageLog, `${JSON.stringify({ status: 200, inputTokens: 0 })}\n`);
     await assert.rejects(replayUsage(proxies, 20), /UsageMissing/);
-    await writeFile(usageLog, JSON.stringify({ status: 200, inputTokens: null, rawUsage: { prompt_tokens: 12 } }) + "\n");
+    await writeFile(usageLog, `${JSON.stringify({ status: 200, inputTokens: null, rawUsage: { prompt_tokens: 12 } })}\n`);
     await assert.rejects(replayUsage(proxies, 20), /UsageMissing/);
     assert.equal(drained, 4);
   }));

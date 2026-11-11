@@ -269,7 +269,12 @@ export * as ns from "./mod.js";
           .filter(Boolean)
           .map((line) => line.slice(0, line.indexOf("\t")).split(" ").pop()),
       );
-    const coding = names(read("@arnilo/prism-tools-coding"));
+    const coding = names(
+      read("@arnilo/prism-tools")
+        .split("\n")
+        .filter((line) => line.startsWith("./coding "))
+        .join("\n"),
+    );
     for (const removed of [
       "repo_list",
       "repo_search",
@@ -322,12 +327,13 @@ export * as ns from "./mod.js";
     assert.ok(assertTarballAllowDeny("pkg", ["dist/index.d.ts", "package.json", "LICENSE"]));
   });
 
-  it("publish_uses_bun_with_prepacked_tarball", () => {
+  it("publish_uses_npm_oidc_with_prepacked_tarball", () => {
     const pkg = { path: "packages/core", manifest: { name: "@arnilo/prism-sample" } };
     const args = publishArgs(pkg, "0.13.0");
     assert.equal(args[0], "publish");
     assert.ok(args[1].endsWith("/arnilo-prism-sample-0.13.0.tgz"), `must name the prepacked tarball: ${args[1]}`);
-    assert.ok(!args.includes("--provenance"), "npm provenance is retired");
+    assert.ok(!args.includes("--provenance"), "local publishing has no OIDC provenance");
+    assert.ok(publishArgs(pkg, "0.13.0", { provenance: true }).includes("--provenance"), "CI publishes attested bytes with npm OIDC");
     assert.ok(!args.some((arg) => arg.includes("packages/core")), "must never publish a package directory");
     assert.ok(publishArgs(pkg, "0.13.0", { dryRun: true }).includes("--dry-run"));
     assert.deepEqual(publishArgs(pkg, "0.13.0", { registry: "https://example.test" }).slice(-2), ["--registry", "https://example.test"]);
@@ -630,12 +636,14 @@ export * as ns from "./mod.js";
     );
   });
 
-  it("reference_host_suite_has_no_skips", () => {
+  it("reference_host_hermetic_suite_has_no_skips", () => {
     const offenders = [];
     const walk = (dir) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) walk(path);
+        else if (entry.name === "live-provider-journey.test.ts")
+          continue; // Live service evidence has its own opt-in gate.
         else if (entry.name.endsWith(".ts") && /\b(?:test|it|describe)\.skip\s*\(/.test(readFileSync(path, "utf8"))) {
           offenders.push(relative(join(import.meta.dirname, ".."), path));
         }
@@ -668,7 +676,7 @@ export * as ns from "./mod.js";
   // remembered to list.
   it("release_gate_covers_every_publishable_workspace", () => {
     const expected = publishableNames().sort();
-    assert.ok(expected.length >= 43, `expected the publishable set, found ${expected.length}`);
+    assert.ok(expected.length >= 7, `expected the publishable set, found ${expected.length}`);
     const release = loadRelease(REPO);
     assert.deepEqual(
       release.packages.map((pkg) => pkg.manifest.name).sort(),
@@ -710,7 +718,7 @@ export * as ns from "./mod.js";
       "release-skip-manifest.mjs",
       "check-client-neutrality.mjs",
       "--filter @arnilo/prism-agent test",
-      "--filter @arnilo/prism-driver-process test",
+      "--filter @arnilo/prism-hosts test",
       "examples/adapters/conformance.ts",
       "src/__tests__/driver-kit-vendor-neutral.test.ts",
       "src/__tests__/kernel-constraints.test.ts",

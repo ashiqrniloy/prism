@@ -15,8 +15,8 @@ const MODEL = process.env.PRISM_LIVE_OPENAI_CODEX_MODEL ?? "gpt-6.1-sol";
 let grant: string | undefined;
 
 async function keyringRecord(): Promise<string | false> {
-  const keyring = await import("@arnilo/prism-credentials-keyring").catch(() => undefined);
-  if (!keyring) return "install @arnilo/prism-credentials-keyring to read the grant";
+  const keyring = await import("@arnilo/prism-extensions/keyring").catch(() => undefined);
+  if (!keyring) return "install @arnilo/prism-extensions/keyring to read the grant";
   if (typeof keyring.createKeychainCredentialStore !== "function") return "the keyring package has no OS backend";
   const probe = await keyring.probeKeychainAvailability({ service: keyring.KEYRING_DEFAULT_SERVICE }).catch(() => undefined);
   if (probe?.status !== "available") return `OS keyring unavailable: ${probe?.message ?? "probe failed"}`;
@@ -33,7 +33,7 @@ const recordMissing = await keyringRecord();
 
 runProviderLiveScenarios({
   provider: async (opts): Promise<ModelProvider> => {
-    const keyring = await import("@arnilo/prism-credentials-keyring");
+    const keyring = await import("@arnilo/prism-extensions/keyring");
     const resolver = keyring.createKeyringCredentialResolver({
       store: keyring.createKeychainCredentialStore({ service: keyring.KEYRING_DEFAULT_SERVICE }),
     });
@@ -57,5 +57,5 @@ runProviderLiveScenarios({
   // The grant is injected by the factory above; the leak scan still runs against it.
   secrets: grant ? [grant] : [],
   skipUnless: () => recordMissing,
-  title: "@arnilo/prism-provider-openai-codex live tests",
+  title: "@arnilo/prism-ai/openai-codex live tests",
 });

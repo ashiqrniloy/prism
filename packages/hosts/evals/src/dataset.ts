@@ -34,11 +34,21 @@ export function defineDataset<TInput = unknown, TExpected = unknown>(
     if (seen.has(itemId)) throw new EvalDatasetError(`duplicate dataset item id: ${itemId}`);
     seen.add(itemId);
     if (item.split !== undefined) validateSplit(item.split);
-    if (item.tags !== undefined && (!Array.isArray(item.tags) || item.tags.length > 16
-      || Array.from(item.tags).some((tag: unknown) => typeof tag !== "string" || tag.length > 64))) throw new EvalDatasetError("invalid dataset tags");
-    if (item.label !== undefined && (!item.label || !["human", "model", "curated", "synthetic"].includes(item.label.source)
-      || (item.label.adjudicated !== undefined && typeof item.label.adjudicated !== "boolean")
-      || (item.label.by !== undefined && typeof item.label.by !== "string"))) throw new EvalDatasetError("invalid dataset label");
+    if (
+      item.tags !== undefined &&
+      (!Array.isArray(item.tags) ||
+        item.tags.length > 16 ||
+        Array.from(item.tags).some((tag: unknown) => typeof tag !== "string" || tag.length > 64))
+    )
+      throw new EvalDatasetError("invalid dataset tags");
+    if (
+      item.label !== undefined &&
+      (!item.label ||
+        !["human", "model", "curated", "synthetic"].includes(item.label.source) ||
+        (item.label.adjudicated !== undefined && typeof item.label.adjudicated !== "boolean") ||
+        (item.label.by !== undefined && typeof item.label.by !== "string"))
+    )
+      throw new EvalDatasetError("invalid dataset label");
     return { ...item, id: itemId };
   });
   try {
@@ -50,12 +60,20 @@ export function defineDataset<TInput = unknown, TExpected = unknown>(
       if (source?.kind === "scenario" && source.user && target?.user) copySimulatorBinding(source.user, target.user);
     });
     return freezeJson({
-      id: input.id.trim(), version: input.version, canary: input.canary,
+      id: input.id.trim(),
+      version: input.version,
+      canary: input.canary,
       contentHash: `sha256:${createHash("sha256").update(canonical).digest("hex")}`,
       items: snapshot,
-      metadata: input.metadata || input.canary !== undefined ? JSON.parse(canonicalJson({
-        ...input.metadata, ...(input.canary !== undefined ? { canary: input.canary } : {}),
-      })) : undefined,
+      metadata:
+        input.metadata || input.canary !== undefined
+          ? JSON.parse(
+              canonicalJson({
+                ...input.metadata,
+                ...(input.canary !== undefined ? { canary: input.canary } : {}),
+              }),
+            )
+          : undefined,
     });
   } catch (cause) {
     throw new EvalDatasetError("dataset not serializable", { cause });

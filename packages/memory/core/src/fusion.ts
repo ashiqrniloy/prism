@@ -42,7 +42,8 @@ export function fuseRankings(
   return [...fused.values()]
     .sort((a, b) => b.score - a.score || a.bestRank - b.bestRank || fusionKey(a.hit).localeCompare(fusionKey(b.hit)))
     .map(({ hit, legs, score }) => ({
-      hit, score,
+      hit,
+      score,
       retrieval: legs.size > 1 ? ("hybrid" as const) : ([...legs][0] as RetrievalLeg),
     }));
 }

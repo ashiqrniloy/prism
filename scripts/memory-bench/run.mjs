@@ -383,7 +383,7 @@ export async function liveProviders(refs, temp, fetchOptions) {
       const key = process.env[spec.secret] ?? (id === "opencode-go" ? process.env.OPENCODE_API_KEY : undefined);
       // Kilo serves its `:free` rows credentialless; the free-only check still runs on the catalog.
       if (!key && id !== "kilo") throw new Error("MemoryBenchCredentials: provider credential unavailable");
-      const module = await import(`@arnilo/prism-provider-${id}`);
+      const module = await import(`@arnilo/prism-ai/${id}`);
       const catalog = await module[spec.list]({ apiKey: () => key, signal: AbortSignal.timeout(30_000) });
       for (const ref of refs.filter((ref) => ref.provider === id)) {
         const model = catalog.find((model) => model.model === ref.model);

@@ -111,8 +111,8 @@ export const M1_CAPS = Object.freeze({
 export const M1_ESTIMATE = Object.freeze({
   tokensPerQuestion: { "beam-1m": 10_000_000, "longmemeval-m": 5_000_000 },
   longSessionTokensPerJob: 2_000_000,
-  usdPerMillion: 0.044,
-  rateSource: "Ollama /api/usage, 2026-11-02 to 2026-11-09: $22.97 for 520.9M input tokens (83.6% cached)",
+  usdPerMillion: 0.0585,
+  rateSource: "Ollama /api/usage, 2026-11-09 (the smoke and the diagnostics): $1.57 for 26.8M input tokens, output included",
 });
 export const M1_CEILING = 1_000_000_000_000;
 
@@ -182,28 +182,58 @@ export function m1LongSessionJob(model, arm, { worktree = M1_WORKTREE } = {}) {
 }
 
 /**
- * The job list, in run order: the cheap jobs first (the family, then memory-off), then the worker arms in pairs (STM
- * and OM-before back to back per model and suite, the small model first), so a halt on a spent allowance leaves
- * whole pairs.
+ * The S4 sample of the suites (owner, 2026-11-10: S3 deferred to gate A, runs 1-4): the first questions of each
+ * suite's development cohort in its frozen ability-interleaved order, the same ids for every arm. Every question
+ * replays a whole 1-1.2M-token history, so the worker-token ratio per question is measured on full histories.
+ */
+export const M1_S4_SAMPLE_QUESTIONS = 2;
+/**
+ * The runs (sittings) of 2-3 hours each. Run 1 is the long-session family (S1 and the family's S4 cell); runs 2-4 hold
+ * the eight suite jobs, three at a time (`--parallel-arms 3`, concurrency 1: the account's three concurrent requests).
+ */
+export const M1_SITTINGS = Object.freeze({
+  1: [
+    "small.memory-off.long-session",
+    "small.STM.long-session",
+    "small.OM-before.long-session",
+    "large.memory-off.long-session",
+    "large.STM.long-session",
+    "large.OM-before.long-session",
+  ],
+  2: ["small.STM.longmemeval-m", "small.OM-before.longmemeval-m", "small.STM.beam-1m"],
+  3: ["small.OM-before.beam-1m", "large.STM.longmemeval-m", "large.OM-before.longmemeval-m"],
+  4: ["large.STM.beam-1m", "large.OM-before.beam-1m"],
+});
+
+/**
+ * The job list, in run order: the family (three arms per model, full dev partition), then the S4 suite sample (STM and
+ * OM-before per model and suite, `M1_S4_SAMPLE_QUESTIONS` each). memory-off runs on the family only: on the suites it
+ * measured nothing S1-S4 reads once S3 was deferred. Each job names its sitting.
  */
 export function m1Jobs({ worktree = M1_WORKTREE } = {}) {
   const models = [...M1_MODELS].sort((a, b) => Number(b.small) - Number(a.small));
   const jobs = [];
   for (const model of models) for (const arm of M1_ARMS) jobs.push(m1LongSessionJob(model, arm, { worktree }));
-  const off = M1_ARMS.find((arm) => arm.id === "memory-off");
-  for (const model of models) for (const suite of M1_SUITES) jobs.push(m1RobustnessJob(model, off, suite, { worktree }));
   for (const model of models)
     for (const suite of M1_SUITES)
       for (const id of M1_WORKER_ARMS)
-        jobs.push(
-          m1RobustnessJob(
+        jobs.push({
+          ...m1RobustnessJob(
             model,
             M1_ARMS.find((arm) => arm.id === id),
             suite,
             { worktree },
           ),
-        );
-  return jobs;
+          maxQuestions: M1_S4_SAMPLE_QUESTIONS,
+          concurrency: 1,
+        });
+  const sittingOf = (job) =>
+    Number(Object.entries(M1_SITTINGS).find(([, ids]) => ids.includes(job.id.replace(/^217-m1\./, "")))?.[0] ?? Number.NaN);
+  for (const job of jobs) {
+    job.sitting = sittingOf(job);
+    if (!Number.isInteger(job.sitting)) throw new Error(`M1Jobs: ${job.id} is in no sitting`);
+  }
+  return jobs.sort((a, b) => a.sitting - b.sitting);
 }
 
 /** Every pair in the job list differs only in the arm (and the tree it runs from): same items, model, judges and flags. */
@@ -218,6 +248,7 @@ export function assertM1Paired(jobs) {
     judgeCacheDir: _j,
     maxInputTokens: _m,
     wallTimeCapHours: _w,
+    sitting: _s,
     ...rest
   }) => stableHash(rest);
   const groups = new Map();
@@ -227,7 +258,8 @@ export function assertM1Paired(jobs) {
   }
   for (const [key, group] of groups) {
     const arms = group.map((job) => job.arm).sort();
-    if (JSON.stringify(arms) !== JSON.stringify(M1_ARMS.map((arm) => arm.id).sort()))
+    const expected = (group[0].suite === M1_FAMILY ? M1_ARMS.map((arm) => arm.id) : [...M1_WORKER_ARMS]).sort();
+    if (JSON.stringify(arms) !== JSON.stringify(expected))
       throw new Error(`M1Jobs: ${key} does not hold every arm once (${arms.join(", ")})`);
     const shapes = new Set(group.map(strip));
     if (shapes.size !== 1) throw new Error(`M1Jobs: the arms of ${key} differ in more than the arm`);
@@ -245,16 +277,16 @@ export function m1ManifestHash(manifest) {
 
 /** The planning estimate: input tokens and USD per arm and in total, from the cohort sizes. */
 export function m1Estimate() {
-  const questions = Object.fromEntries(M1_SUITES.map((suite) => [suite, m1DevIds(suite).length]));
-  const perWorkerArm = M1_SUITES.reduce((n, suite) => n + questions[suite] * M1_ESTIMATE.tokensPerQuestion[suite], 0);
-  const workerTokens = perWorkerArm * M1_WORKER_ARMS.length * M1_MODELS.length;
-  const otherTokens = M1_ESTIMATE.longSessionTokensPerJob * M1_ARMS.length * M1_MODELS.length + 4 * 5_000_000;
-  const tokens = workerTokens + otherTokens;
+  const historyTokens = { "longmemeval-m": 1_212_826, "beam-1m": 1_000_000 };
+  const sampleHistory = M1_SUITES.reduce((n, suite) => n + historyTokens[suite] * M1_S4_SAMPLE_QUESTIONS, 0);
+  // Measured 2026-11-09/10 on 120k tokens of LongMemEval-M with MiMo: STM 5.2, OM-before 5.0 worker tokens per history token.
+  const workerTokens = sampleHistory * (5.2 + 5.0) * M1_MODELS.length;
+  const tokens = Math.round(workerTokens + M1_ESTIMATE.longSessionTokensPerJob * M1_ARMS.length * M1_MODELS.length);
   return {
-    questions,
-    tokensPerWorkerArmAndModel: perWorkerArm,
+    sample: { questionsPerSuiteAndArm: M1_S4_SAMPLE_QUESTIONS, historyTokensPerQuestion: historyTokens },
     inputTokens: tokens,
     usd: Math.round((tokens / 1e6) * M1_ESTIMATE.usdPerMillion),
+    wall: "run 1 about 1.5 h; runs 2-4 about 2.5 h each (16k history tokens a minute per stream, three streams)",
     basis: M1_ESTIMATE,
   };
 }
@@ -459,7 +491,7 @@ export async function preflightM1(manifest, options = {}) {
   if (foreign.length) throw new Error(`M1Preflight: ${foreign.join(", ")} is not a gate M-1 route`);
   for (const id of Object.keys(manifest.fixtures)) assertMemoryModelFixture(id);
   const worktree = await (options.prepareWorktree ?? prepareM1Worktree)({ root: options.root ?? ".", ...manifest.baselines.omBefore });
-  const list = options.list ?? (await import("@arnilo/prism-provider-ollama-cloud")).listOllamaCloudModels;
+  const list = options.list ?? (await import("@arnilo/prism-ai/ollama-cloud")).listOllamaCloudModels;
   const key = options.apiKey ?? process.env.OLLAMA_API_KEY;
   if (!key) throw new Error("M1Preflight: OLLAMA_API_KEY is unavailable");
   const catalog = await list({ apiKey: () => key, signal: AbortSignal.timeout(60_000) });
@@ -512,6 +544,16 @@ const p95 = (values) => {
   return sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil(0.95 * sorted.length) - 1)] : null;
 };
 const completed = (report) => report?.status === "completed";
+/**
+ * A suite job is done when it completed, or when it is a capped sample (`maxQuestions`) that answered exactly its
+ * sample (the run reports `partial` for a capped job).
+ */
+const answeredIds = (report) =>
+  (report?.results ?? []).filter((row) => row.outcome === "scored" || row.outcome === "answered").map((row) => row.id);
+export function m1SuiteDone(report, job) {
+  if (completed(report)) return true;
+  return Boolean(job?.maxQuestions) && report?.status === "partial" && answeredIds(report).length === job.maxQuestions;
+}
 const workerTokens = (usage) => sum(Object.values(usage ?? {}).map((row) => (row?.inputTokens ?? 0) + (row?.outputTokens ?? 0)));
 const workerCalls = (usage) => sum(Object.values(usage ?? {}).map((row) => row?.calls ?? 0));
 
@@ -630,10 +672,13 @@ export function buildM1Evidence({ reports, manifest, probes, justification = nul
   for (const model of models) {
     performance[model] = {};
     for (const suite of M1_SUITES) {
-      performance[model][suite] = Object.fromEntries(M1_ARMS.map((arm) => [arm.id, m1CostRow(get(model, arm.id, suite))]));
+      performance[model][suite] = Object.fromEntries(M1_WORKER_ARMS.map((arm) => [arm, m1CostRow(get(model, arm, suite))]));
       const om = get(model, "OM-before", suite);
       const stm = get(model, "STM", suite);
-      if (!completed(om) || !completed(stm)) {
+      const jobOf = (arm) => manifest.jobs?.find((job) => job.id === `217-m1.${model}.${arm}.${suite}`);
+      // The two arms must have answered the same questions: the S4 ratio is per question on identical histories.
+      const sameIds = JSON.stringify([...answeredIds(om)].sort()) === JSON.stringify([...answeredIds(stm)].sort());
+      if (!m1SuiteDone(om, jobOf("OM-before")) || !m1SuiteDone(stm, jobOf("STM")) || !sameIds) {
         cells[`${model}.${suite}`] = "missing";
         continue;
       }
@@ -715,10 +760,9 @@ export function buildM1Evidence({ reports, manifest, probes, justification = nul
             },
           }
         : { tests: {} },
-    S3:
-      s3.length === models.length * M1_SUITES.length
-        ? { tests: { "vs-om-before": { models: s3, rule: "each (answer model, suite) cell must be non-inferior" } }, coverage }
-        : { tests: {}, cells: s3, coverage },
+    // Deferred to gate A (owner decision m1S3Deferred, 2026-11-10). The sample's paired accuracy is kept as a
+    // diagnostic only: two questions per cell decide nothing.
+    S3: { deferred: MEMORY_MODEL_CRITERIA.gates[M1_GATE_ID].deferred?.S3 ?? null, diagnostic: { cells: s3, coverage } },
     S4: {
       tests: s4Complete
         ? {

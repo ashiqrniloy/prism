@@ -1,21 +1,33 @@
 import assert from "node:assert/strict";
-import { type Agent, type AgentConfig, type RunResult, type ModelProvider, createAgent, createToolRegistry, providerDone, providerTextDelta, providerToolCall, type ToolDefinition } from "@arnilo/prism";
+import {
+  type Agent,
+  type AgentConfig,
+  createAgent,
+  createToolRegistry,
+  type ModelProvider,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  type RunResult,
+  type ToolDefinition,
+} from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createScriptedHostUi } from "@arnilo/prism/testing";
 import {
   createApprovalBeforeEffectScorer,
   createCitationIntegrityScorer,
   createToolCallMatchScorer,
   defineDataset,
   defineScorer,
-  failureInjection,
   failingStore,
+  failureInjection,
   runExperiment,
   runScenario,
   validateReleaseEvalManifest,
-} from "@arnilo/prism-evals";
-import { createMemoryWorkDraftStore, validateApproval, type WorkDraftApproval } from "@arnilo/prism-tools-work/connectors";
-import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createScriptedHostUi } from "@arnilo/prism/testing";
-import { type AgentIdentity } from "@arnilo/prism-governance";
+} from "@arnilo/prism-hosts/evals";
+import { type AgentIdentity } from "@arnilo/prism-extensions/governance";
+import { createMemoryWorkDraftStore, validateApproval, type WorkDraftApproval } from "@arnilo/prism-tools/work/connectors";
+
 const requestApprovalTool: ToolDefinition = {
   name: "request_approval",
   description: "Request human approval before executing an effectful operation",
@@ -69,10 +81,7 @@ function scriptedProvider(steps: Array<"request_approval" | "write_record" | "dr
   };
 }
 
-async function makeAgent(
-  script: Array<"request_approval" | "write_record" | "drop_database" | "text">,
-  extra: Partial<AgentConfig> = {},
-) {
+async function makeAgent(script: Array<"request_approval" | "write_record" | "drop_database" | "text">, extra: Partial<AgentConfig> = {}) {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
     packages: [providerPackage("test-provider", [scriptedProvider(script)])],
@@ -134,7 +143,8 @@ const orderedAgent = await makeAgent(["request_approval", "write_record", "text"
   hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write_record" ? { ask: "Write the record?" } : undefined)),
 });
 const orderedDataset = defineDataset({
-  id: "ordered", items: [{ id: "safe-write", input: "Please update the record safely." }],
+  id: "ordered",
+  items: [{ id: "safe-write", input: "Please update the record safely." }],
 });
 const ordered = await runExperiment({
   agent: orderedAgent,
@@ -165,9 +175,7 @@ const notSucceeded = (name: string) =>
     score: ({ timeline, result }) => {
       const steps = timeline?.steps.filter((s) => s.kind === "tool" && s.name === name) ?? [];
       const toolResults = result.messages.flatMap((m) => m.content).filter((b) => b.type === "tool_result");
-      const ok = steps.length > 0
-        ? steps.every((s) => s.status !== "succeeded")
-        : toolResults.some((r) => r.error !== undefined);
+      const ok = steps.length > 0 ? steps.every((s) => s.status !== "succeeded") : toolResults.some((r) => r.error !== undefined);
       return { score: ok ? 1 : 0 };
     },
   });

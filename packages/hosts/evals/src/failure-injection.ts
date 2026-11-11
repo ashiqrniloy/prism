@@ -1,4 +1,4 @@
-import type { AgentConfig, SessionEntry, } from "@arnilo/prism";
+import type { AgentConfig, SessionEntry } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 
 export interface SessionStore {
@@ -34,8 +34,7 @@ export function failureInjection(injection: FailureInjectionOptions): NonNullabl
         }
         if (unknownEffect) {
           const isMutating =
-            payload.effects.length === 0 ||
-            payload.effects.some((e) => e === "write" || e === "execute" || e === "external");
+            payload.effects.length === 0 || payload.effects.some((e) => e === "write" || e === "execute" || e === "external");
           if (isMutating) {
             mutatingCallIds.add(payload.callId);
           }

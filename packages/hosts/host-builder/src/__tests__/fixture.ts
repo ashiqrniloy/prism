@@ -43,8 +43,12 @@ export async function projectRoot(version?: string): Promise<string> {
   );
   write(root, `${kernel}/docs/migration.md`, "# Migration\n\nretiredquokka lives only in a retired page.\n");
   write(root, `${kernel}/docs/migrate-to-0.9.md`, "# Migrate to 0.9\n\nretiredquokka again.\n");
-  write(root, "node_modules/@arnilo/prism-approval/package.json", JSON.stringify({ name: "@arnilo/prism-approval", version: "0.13.0" }));
-  write(root, "node_modules/@arnilo/prism-approval/README.md", "# Approval\n\n## Modes\n\nThe `ask` mode prompts a person.\n");
+  write(
+    root,
+    "node_modules/@arnilo/prism-extensions/package.json",
+    JSON.stringify({ name: "@arnilo/prism-extensions", version: "0.13.0", files: ["approval/README.md"] }),
+  );
+  write(root, "node_modules/@arnilo/prism-extensions/approval/README.md", "# Approval\n\n## Modes\n\nThe `ask` mode prompts a person.\n");
   return root;
 }
 

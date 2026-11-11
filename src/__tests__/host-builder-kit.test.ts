@@ -61,6 +61,11 @@ function workspacePackages(root: string): Map<string, string> {
   for (const group of readdirSync(packagesDir)) {
     const groupDir = join(packagesDir, group);
     if (!existsSync(groupDir) || !readdirSync(groupDir, { withFileTypes: true }).length) continue;
+    const bundleManifest = join(groupDir, "package.json");
+    if (existsSync(bundleManifest)) {
+      found.set(readJson<{ name: string }>(bundleManifest).name, groupDir);
+      continue;
+    }
     for (const entry of readdirSync(groupDir, { withFileTypes: true })) {
       const manifest = join(groupDir, entry.name, "package.json");
       if (entry.isDirectory() && existsSync(manifest)) found.set(readJson<{ name: string }>(manifest).name, join(groupDir, entry.name));
@@ -253,6 +258,10 @@ function checkKit(options: CheckOptions = {}): Failure[] {
   const codes = new Map(errors.codes.map((row) => [row.code, row.meaning]));
   const workspaces = workspacePackages(root);
   const current = new Set<string>([...workspaces.keys()]);
+  for (const [name, dir] of workspaces) {
+    const manifest = readJson<{ exports?: Record<string, unknown> }>(join(dir, "package.json"));
+    for (const key of Object.keys(manifest.exports ?? {})) if (key.startsWith("./")) current.add(name + key.slice(1));
+  }
   for (const pkg of api.packages) {
     current.add(pkg.name);
     for (const entry of pkg.entries) for (const row of entry.exports) current.add(row.name);
@@ -340,9 +349,9 @@ describe("host-builder kit", () => {
       }>;
     };
     const report = await gate.runPackageSkillsGate({ referenceHost: false });
-    const mine = report.failures.filter((failure) => failure.package === "@arnilo/prism-host-builder");
+    const mine = report.failures.filter((failure) => failure.package === "@arnilo/prism-hosts/host-builder");
     assert.deepEqual(mine, []);
-    assert.deepEqual(report.packages.find((row) => row.package === "@arnilo/prism-host-builder")?.skills, ["prism-host-builder"]);
+    assert.deepEqual(report.packages.find((row) => row.package === "@arnilo/prism-hosts/host-builder")?.skills, ["prism-host-builder"]);
   }, 60_000);
 
   describe("fixture kits each fail one rule", () => {

@@ -6,7 +6,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { SessionEntry } from "@arnilo/prism";
 import { createScriptedHostUi } from "@arnilo/prism/testing";
-import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-system/core";
 import { resolveMemoryFabricConfig } from "../../config.js";
 import { createMemory, createLongTermMemory } from "../../../index.js";
 import { createFabricLifecycle } from "../../lifecycle/index.js";
@@ -258,7 +258,8 @@ describe("coding decisions (plan 202 Task 11)", () => {
     assert.equal((resolveMemoryFabricConfig({ preset: "coding" }).rules as { capture: string }).capture, "confirm");
     const opted = resolveMemoryFabricConfig({ preset: "conversational", rules: { capture: "confirm" } });
     assert.equal((opted.rules as { capture: string }).capture, "confirm", "any preset can opt in");
-    assert.equal(opted.rules && opted.rules.maxTokens, 2_000);
+    assert.ok(opted.rules);
+    assert.equal(opted.rules.maxTokens, 2_000);
     assert.equal(resolveMemoryFabricConfig({ rules: false }).rules, false);
   });
 

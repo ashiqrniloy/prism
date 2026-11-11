@@ -40,7 +40,7 @@ export interface RunCheckOptions {
   readonly kind: CheckKind;
   /** The host project: the child's working directory, and where it resolves `@arnilo/prism` from. */
   readonly root: string;
-  /** Absolute path of the file to import (`inspect`, `conformance`). */
+  /** Absolute path of the file to load for `inspect` or `conformance`. */
   readonly file?: string;
   /** Name of the export to use (`inspect`, `conformance`). */
   readonly exportName?: string;

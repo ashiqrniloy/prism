@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
 import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
-import { HARD_TOP_K_CAP, lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
-import { noteRelPath } from "@arnilo/prism-memory-core/fabric";
+import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
+import { HARD_TOP_K_CAP, lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { noteRelPath } from "@arnilo/prism-memory-system/core/fabric";
 import type { FabricCitationTracker } from "./context.js";
 import type { FabricDecisions } from "./decisions.js";
 import { type FabricDirectoryHandle, pageFabricDirectory, renderFabricDirectory } from "./directory.js";
@@ -12,7 +12,7 @@ import { createFabricFileJail, type FabricFileJail } from "./files.js";
 import { EvidenceNotFoundError, LessonRequiresEvidenceError } from "./lessons.js";
 import { groupRecallHits, noteTime, parseRecallKinds } from "./recall.js";
 import { selectWithScopeReserve } from "./scope/recall.js";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import {
   estimateNoteTokens,
   type FabricScopeLevel,
@@ -321,12 +321,7 @@ export function createLongTermMemoryTools(deps: MemoryFabricToolDeps): (options?
                 : []),
               ...(page.nextOffset === undefined ? [] : [`More: call memory.view with offset ${page.nextOffset}.`]),
             ];
-            return ok(
-              viewName,
-              context,
-              { found: true, directory: { counts: snapshot.counts }, ...page },
-              lines.join("\n"),
-            );
+            return ok(viewName, context, { found: true, directory: { counts: snapshot.counts }, ...page }, lines.join("\n"));
           }
           const access = gateFiles(viewName, context);
           if ("denied" in access) return access.denied;
@@ -707,15 +702,7 @@ export function createLongTermMemoryTools(deps: MemoryFabricToolDeps): (options?
               type: "array",
               items: {
                 type: "string",
-                enum: [
-                  "fact",
-                  "preference",
-                  "procedure",
-                  "file",
-                  "episode",
-                  "exchange",
-                  "all",
-                ],
+                enum: ["fact", "preference", "procedure", "file", "episode", "exchange", "all"],
               },
               description: 'Kinds to search; defaults to every kind. `["all"]` searches every kind.',
             },
@@ -848,10 +835,7 @@ export function createLongTermMemoryTools(deps: MemoryFabricToolDeps): (options?
               hits.map((hit) => hit.id),
             );
           }
-          const lines = [
-            ...summaryLines,
-            ...hits.map((hit) => rendered.get(hit.id) ?? ""),
-          ];
+          const lines = [...summaryLines, ...hits.map((hit) => rendered.get(hit.id) ?? "")];
           if (lines.length === 0) lines.push(noMatchingMemory(queries, recallScopeNames(deps)));
           if (hits.length > 0) lines.push("Cite [id] for notes you use.");
           const matchedTerms = new Set(
@@ -883,8 +867,7 @@ export function createLongTermMemoryTools(deps: MemoryFabricToolDeps): (options?
       {
         name: forgetName,
         kind: "delete",
-        description:
-          "Tombstone one fabric note by id. Pass hold to retain a note under legal hold instead of deleting it.",
+        description: "Tombstone one fabric note by id. Pass hold to retain a note under legal hold instead of deleting it.",
         parameters: {
           type: "object",
           properties: {

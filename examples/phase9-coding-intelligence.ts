@@ -6,13 +6,14 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createMemoryToolEffectStore } from "@arnilo/prism";
 import {
+  createAllowListEgressProxy,
   createBoundGitRunner,
+  createEgressPolicy,
   createGitAwareRepositoryOperations,
   createGitHubForge,
   createLanguageIntelligence,
   createProcessSessions,
-} from "@arnilo/prism-tools-coding";
-import { createAllowListEgressProxy, createEgressPolicy } from "@arnilo/prism-tools-coding";
+} from "@arnilo/prism-tools/coding";
 
 /**
  * Network-free Phase 9 composed example (plan 009 Task 7).

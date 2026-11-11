@@ -6,7 +6,7 @@
 
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { resolveLifecycleConfig } from "../../config.js";
 import { createLongTermMemory } from "../../create.js";
 import { createMemory } from "../../memory.js";

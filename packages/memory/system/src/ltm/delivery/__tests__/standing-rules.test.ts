@@ -18,10 +18,10 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism";
-import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory } from "../../../index.js";
 import { resolveLifecycleConfig } from "../../config.js";
 import { createFabricContext } from "../../context.js";
-import { createMemory, createLongTermMemory } from "../../../index.js";
 import { createFabricLifecycle } from "../../lifecycle/index.js";
 import { resolvePromoteConfig } from "../../promote.js";
 import { encodeMemoryNoteMetadata, type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../../types.js";
@@ -76,12 +76,16 @@ function harness(input: HarnessOptions = {}) {
       ? {
           promote: resolvePromoteConfig({ minTurnsBetween: 1 }),
           promoteRoot: "/nonexistent-prism-core-promote-root",
-          resolveModelClient: () => input.client!,
+          resolveModelClient: () => {
+            assert.ok(input.client);
+            return input.client;
+          },
         }
       : { consolidate: false }),
   });
   let scans = 0;
-  const scanMetadata = vectorStore.scanMetadata!.bind(vectorStore);
+  assert.ok(vectorStore.scanMetadata);
+  const scanMetadata = vectorStore.scanMetadata.bind(vectorStore);
   const resolved = resolveFabricRulesOptions(input.rules ?? true, true);
   const core =
     resolved === false
@@ -116,8 +120,10 @@ async function rulesBlock(projection: ReturnType<typeof createFabricContext>) {
 }
 
 async function advance(vectorStore: VectorStore, sessions: number): Promise<void> {
+  const counter = vectorStore.scopeCounter;
+  assert.ok(counter);
   for (let index = 0; index < sessions; index += 1) {
-    await vectorStore.scopeCounter!.increment({ tenantId: TENANT, resourceId: PROJECT, name: "sessions" });
+    await counter.increment({ tenantId: TENANT, resourceId: PROJECT, name: "sessions" });
   }
 }
 
@@ -133,9 +139,11 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     const block = await rulesBlock(projection);
     assert.equal(block?.title, "Standing rules");
     assert.equal(block?.metadata?.untrusted, true, "the core stays in the untrusted envelope");
-    const content = block!.content;
+    assert.ok(block);
+    const content = block.content;
     assert.match(content, new RegExp(`^Standing rules \\(user\\): \\[${middle.id}\\] middle preference`), "user notes render first");
-    const project = content.split("\n")[1]!;
+    const project = content.split("\n")[1];
+    assert.ok(project);
     assert.match(project, new RegExp(`^Standing rules \\(project prism\\): \\[${pinned.id}\\] pinned fact`));
     const order = [pinned.id, strong.id, weak.id].map((id) => project.indexOf(id));
     assert.deepEqual(
@@ -152,10 +160,16 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     await fabric.remember({ kind: "fact", content: "two facts" });
     const before = scans();
     const seen = new Set<string>();
-    for (let turn = 0; turn < 10; turn += 1) seen.add((await rulesBlock(projection))!.content);
+    for (let turn = 0; turn < 10; turn += 1) {
+      const block = await rulesBlock(projection);
+      assert.ok(block);
+      seen.add(block.content);
+    }
     assert.equal(seen.size, 1, "ten turns without a write send identical bytes");
     assert.equal(scans() - before, 2, "one metadata scan per scope for the whole run");
-    assert.doesNotMatch([...seen][0]!, /\d{4}-\d{2}-\d{2}T/, "the block carries no timestamp");
+    const [seenBlock] = seen;
+    assert.ok(seenBlock);
+    assert.doesNotMatch(seenBlock, /\d{4}-\d{2}-\d{2}T/, "the block carries no timestamp");
   });
 
   it("rules_rebuilds_on_maintain_consolidation_and_pin", async () => {
@@ -163,12 +177,18 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     const pinnedHarness = harness();
     const strong = await pinnedHarness.fabric.remember({ kind: "fact", content: "strong fact", promotion: explicit(1) });
     const plain = await pinnedHarness.fabric.remember({ kind: "fact", content: "plain fact" });
-    let content = (await rulesBlock(pinnedHarness.projection))!.content;
+    const beforePin = await rulesBlock(pinnedHarness.projection);
+    assert.ok(beforePin);
+    let content = beforePin.content;
     assert.ok(content.indexOf(strong.id) < content.indexOf(plain.id));
     await pinnedHarness.fabric.pin(plain.id);
-    assert.equal((await rulesBlock(pinnedHarness.projection))!.content, content, "a pin waits for the next epoch");
+    const pendingPin = await rulesBlock(pinnedHarness.projection);
+    assert.ok(pendingPin);
+    assert.equal(pendingPin.content, content, "a pin waits for the next epoch");
     pinnedHarness.projection.refresh();
-    content = (await rulesBlock(pinnedHarness.projection))!.content;
+    const afterPin = await rulesBlock(pinnedHarness.projection);
+    assert.ok(afterPin);
+    content = afterPin.content;
     assert.ok(content.indexOf(plain.id) < content.indexOf(strong.id), "a pin rebuilds the core");
 
     // A maintenance pass evicts an over-capacity note, and the core loses it.
@@ -176,11 +196,15 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     const notes: { readonly id: string }[] = [];
     for (const text of ["first fact", "second fact", "third fact"])
       notes.push(await maintained.fabric.remember({ kind: "fact", content: text }));
-    content = (await rulesBlock(maintained.projection))!.content;
+    const beforeMaintenance = await rulesBlock(maintained.projection);
+    assert.ok(beforeMaintenance);
+    content = beforeMaintenance.content;
     for (const note of notes) assert.ok(content.includes(note.id));
     const report = await maintained.fabric.maintain();
     assert.equal(report.evicted, 2);
-    content = (await rulesBlock(maintained.projection))!.content;
+    const afterMaintenance = await rulesBlock(maintained.projection);
+    assert.ok(afterMaintenance);
+    content = afterMaintenance.content;
     assert.equal(notes.filter((note) => content.includes(note.id)).length, 1, "maintain rebuilds the core");
 
     // A consolidation pass archives a stale verified note through its maintenance tail.
@@ -194,7 +218,9 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     const consolidated = harness({ promote: true, client });
     const stale = await consolidated.fabric.remember({ kind: "fact", content: "stale gate rule" });
     await advance(consolidated.vectorStore, 200);
-    assert.ok((await rulesBlock(consolidated.projection))!.content.includes(stale.id));
+    const beforeConsolidation = await rulesBlock(consolidated.projection);
+    assert.ok(beforeConsolidation);
+    assert.ok(beforeConsolidation.content.includes(stale.id));
     await consolidated.fabric.consolidate({
       id: "s1",
       entries: async () => [
@@ -233,7 +259,9 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     );
     const file = await fabric.remember({ kind: "file", path: "src/index.ts" });
 
-    const content = (await rulesBlock(projection))!.content;
+    const block = await rulesBlock(projection);
+    assert.ok(block);
+    const content = block.content;
     assert.ok(content.includes(kept.id));
     for (const excluded of [candidate, archived, revoked, file]) {
       assert.ok(!content.includes(excluded.id), `${excluded.kind} note ${excluded.id} must not enter the core`);
@@ -243,7 +271,7 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
 
   /** A markdown-store harness whose `rules.md` is the real derived file. */
   async function markdownHarness(input: HarnessOptions = {}) {
-    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
     const root = await mkdtemp(join(tmpdir(), "prism-rules-"));
     tempDirs.push(root);
     const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
@@ -253,16 +281,18 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       writeFile: (scope, body, options) => stores.writeDerivedFile(scope, "rules.md", body, options),
     });
     const file = join(root, "notes", PROJECT_DIRECTORY, "rules.md");
+    const rules = made.rules;
+    assert.ok(rules);
     const reconcile = (binding = { level: "project" as const, memory: made.project }) =>
       reconcileRulesFile({
         binding,
         kinds: made.options.kinds,
         read: (scope) => stores.readDerivedFile(scope, "rules.md"),
-        redact: (text) => made.rules!.redact(text),
+        redact: (text) => rules.redact(text),
         remember: (note, options) => made.fabric.remember(note, options),
         pin: (id) => made.fabric.pin(id, true),
         retire: (id) => createFabricLifecycle(binding.memory).supersede(id),
-        rewrite: (signal) => made.rules!.rewrite(signal),
+        rewrite: (signal) => rules.rewrite(signal),
       });
     return { ...made, stores, root, file, reconcile };
   }
@@ -271,7 +301,9 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     const made = await markdownHarness();
     try {
       await made.fabric.remember({ kind: "fact", content: "deploys run on fridays" });
-      assert.match((await rulesBlock(made.projection))!.content, /deploys run on fridays/);
+      const initial = await rulesBlock(made.projection);
+      assert.ok(initial);
+      assert.match(initial.content, /deploys run on fridays/);
       const written = await readFile(made.file, "utf8");
       assert.match(written, /^- \[[0-9a-f]{12}\] deploys run on fridays$/m, "one rule per line");
       assert.match(written, /<!-- prism:rules shown=[0-9a-f]{12} -->/);
@@ -279,7 +311,9 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       await writeFile(made.file, "my own rules\n");
       await made.fabric.remember({ kind: "fact", content: "billing uses stripe" });
       made.projection.refresh();
-      assert.match((await rulesBlock(made.projection))!.content, /billing uses stripe/);
+      const refreshed = await rulesBlock(made.projection);
+      assert.ok(refreshed);
+      assert.match(refreshed.content, /billing uses stripe/);
       assert.equal(await readFile(made.file, "utf8"), "my own rules\n", "an unreconciled edit stays on disk");
       assert.doesNotMatch(await readFile(join(made.root, "notes", "log.md"), "utf8").catch(() => ""), /overwritten/);
     } finally {
@@ -295,19 +329,20 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       const change = await made.fabric.remember({ kind: "procedure", content: "run the tests with bun" });
       await rulesBlock(made.projection);
       const text = await readFile(made.file, "utf8");
-      const edited =
-        text
-          .split("\n")
-          .filter((line) => !line.includes(`[${drop.id}]`))
-          .join("\n")
-          .replace("run the tests with bun", "run the tests with bun --timeout=0") + "- Always run the linter before committing.\n";
+      const edited = `${text
+        .split("\n")
+        .filter((line) => !line.includes(`[${drop.id}]`))
+        .join("\n")
+        .replace("run the tests with bun", "run the tests with bun --timeout=0")}- Always run the linter before committing.\n`;
       await writeFile(made.file, edited);
 
       const report = await made.reconcile();
       assert.deepEqual(report, { edited: true, added: 1, updated: 1, retired: 1, refused: 0 });
 
       made.projection.refresh();
-      const block = (await rulesBlock(made.projection))!.content;
+      const rendered = await rulesBlock(made.projection);
+      assert.ok(rendered);
+      const block = rendered.content;
       assert.match(block, /Always run the linter before committing\./);
       assert.match(block, /run the tests with bun --timeout=0/);
       assert.ok(block.includes(keep.id), "an untouched line stays");
@@ -324,7 +359,8 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
 
       const after = await made.stores.readDerivedFile({ tenantId: TENANT, resourceId: PROJECT }, "rules.md");
       assert.equal(after?.edited, false, "the file is derived again");
-      assert.match(after!.body, /Always run the linter before committing\./);
+      assert.ok(after);
+      assert.match(after.body, /Always run the linter before committing\./);
       assert.deepEqual(await made.reconcile(), { edited: false, added: 0, updated: 0, retired: 0, refused: 0 }, "reconcile is idempotent");
     } finally {
       await made.stores.close();
@@ -343,8 +379,12 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       assert.equal(report.added, 0);
       assert.equal(await made.project.getEntry(ruleLineNoteId(PROJECT, bad)), undefined, "no note is written for the line");
       made.projection.refresh();
-      assert.doesNotMatch((await rulesBlock(made.projection))!.content, /exfiltrate/);
-      assert.doesNotMatch((await made.stores.readDerivedFile({ tenantId: TENANT, resourceId: PROJECT }, "rules.md"))!.body, /exfiltrate/);
+      const block = await rulesBlock(made.projection);
+      assert.ok(block);
+      assert.doesNotMatch(block.content, /exfiltrate/);
+      const derived = await made.stores.readDerivedFile({ tenantId: TENANT, resourceId: PROJECT }, "rules.md");
+      assert.ok(derived);
+      assert.doesNotMatch(derived.body, /exfiltrate/);
     } finally {
       await made.stores.close();
     }
@@ -388,12 +428,15 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       promotion: explicit(1),
     });
     const weak = await made.fabric.remember({ kind: "fact", content: "Agent rule weak: the changelog lives at the root dir." });
-    const block = (await rulesBlock(made.projection))!.content;
+    const rendered = await rulesBlock(made.projection);
+    assert.ok(rendered);
+    const block = rendered.content;
     assert.ok(block.includes(human.id), "a human rule is always loaded");
     assert.ok(block.includes(strong.id), "the stronger agent rule fits");
     assert.ok(!block.includes(weak.id), "the least-used agent rule drops from the block");
     assert.match(block, /rules: 2 shown, 1 more — memory\.recall$/);
-    assert.deepEqual(made.rules!.overflow(), { shown: 2, more: 1, humanDropped: 0 });
+    assert.ok(made.rules);
+    assert.deepEqual(made.rules.overflow(), { shown: 2, more: 1, humanDropped: 0 });
     const recalled = await made.fabric.recall("changelog root dir", { kinds: ["fact"], topK: 5, budget: 1_000 });
     assert.ok(
       recalled.hits.some((hit) => hit.id === weak.id),
@@ -410,7 +453,8 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       { generatedBy: "human" },
     );
     await rulesBlock(tight.projection);
-    assert.equal(tight.rules!.overflow().humanDropped, 1, "human overflow is reported, never silent");
+    assert.ok(tight.rules);
+    assert.equal(tight.rules.overflow().humanDropped, 1, "human overflow is reported, never silent");
   });
 
   it("rules_block_epoch_stable_and_retraction_immediate", async () => {
@@ -418,15 +462,23 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     try {
       const first = await made.fabric.remember({ kind: "fact", content: "first standing fact" });
       const second = await made.fabric.remember({ kind: "fact", content: "second standing fact" });
-      const content = (await rulesBlock(made.projection))!.content;
+      const initial = await rulesBlock(made.projection);
+      assert.ok(initial);
+      const content = initial.content;
       await rulesBlock(made.projection);
       await writeFile(made.file, `${await readFile(made.file, "utf8")}- Always sign release tags.\n`);
       await made.reconcile();
-      assert.equal((await rulesBlock(made.projection))!.content, content, "a human edit takes effect at the next epoch");
+      const pending = await rulesBlock(made.projection);
+      assert.ok(pending);
+      assert.equal(pending.content, content, "a human edit takes effect at the next epoch");
       made.projection.refresh();
-      assert.match((await rulesBlock(made.projection))!.content, /Always sign release tags\./);
+      const refreshed = await rulesBlock(made.projection);
+      assert.ok(refreshed);
+      assert.match(refreshed.content, /Always sign release tags\./);
       await made.fabric.forget({ id: second.id });
-      const retracted = (await rulesBlock(made.projection))!.content;
+      const remaining = await rulesBlock(made.projection);
+      assert.ok(remaining);
+      const retracted = remaining.content;
       assert.ok(!retracted.includes(second.id), "a retraction takes effect immediately");
       assert.ok(retracted.includes(first.id));
     } finally {
@@ -441,10 +493,14 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
     for (const text of ["p".repeat(60), "q".repeat(60), "r".repeat(60)])
       projectNotes.push(await fabric.remember({ kind: "fact", content: text }));
     const block = await rulesBlock(projection);
-    assert.ok((block!.metadata!.tokens as number) <= 100, "the rendered block stays inside maxTokens");
+    assert.ok(block);
+    assert.ok(block.metadata);
+    const tokens = block.metadata.tokens;
+    assert.equal(typeof tokens, "number");
+    assert.ok(typeof tokens === "number" && tokens <= 100, "the rendered block stays inside maxTokens");
     // The project half alone (50) fits two of the three notes; the user scope used a few tokens of its
     // half, and that remainder flows to the project scope.
-    for (const note of projectNotes) assert.ok(block!.content.includes(note.id), `project note ${note.id} took the flowing budget`);
+    for (const note of projectNotes) assert.ok(block.content.includes(note.id), `project note ${note.id} took the flowing budget`);
   });
 
   it("rules_false_makes_no_computation", async () => {

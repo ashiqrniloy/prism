@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { SessionEntry } from "@arnilo/prism";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, encodeMemoryNoteMetadata } from "../../index.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
@@ -170,11 +170,18 @@ describe("memory fabric recall", () => {
     // The default kinds are fact, preference, and file: the procedure is invisible, as is the archived episode.
     assert.deepEqual((await fabric.recall("drain canary rollback", { archiveSearch: false })).hits, []);
     const active = await fabric.recall("drain canary rollback", { kinds: ["all"], archiveSearch: false });
-    assert.deepEqual(active.hits.map((hit) => hit.id), [procedure.id], "an archived note still needs includeArchived");
+    assert.deepEqual(
+      active.hits.map((hit) => hit.id),
+      [procedure.id],
+      "an archived note still needs includeArchived",
+    );
     // One call gets every kind, archived notes included: the old footgun needed both flags plus a kind list.
     const archived = await fabric.recall("drain canary rollback", { kinds: ["all"], includeArchived: true });
     assert.deepEqual(archived.hits.map((hit) => hit.id).sort(), ["e1000000000e", procedure.id].sort());
-    assert.deepEqual(archived.hits.filter((hit) => hit.status === "archived").map((hit) => hit.id), ["e1000000000e"]);
+    assert.deepEqual(
+      archived.hits.filter((hit) => hit.status === "archived").map((hit) => hit.id),
+      ["e1000000000e"],
+    );
     // `all` unions with named kinds instead of replacing them.
     assert.equal((await fabric.recall("drain canary rollback", { kinds: ["all", "fact"], archiveSearch: false })).hits.length, 1);
     await assert.rejects(fabric.recall("x", { kinds: ["all", "nope" as never] }), MemoryValidationError);

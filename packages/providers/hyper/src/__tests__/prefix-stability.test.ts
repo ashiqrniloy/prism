@@ -40,11 +40,12 @@ async function stable(model: ModelConfig): Promise<void> {
     turns: 5,
     encode,
   });
-  if (result.requests !== 10 || result.wirePairs !== 9) throw new Error(`expected 10 requests / 9 wire pairs, got ${result.requests} / ${result.wirePairs}`);
+  if (result.requests !== 10 || result.wirePairs !== 9)
+    throw new Error(`expected 10 requests / 9 wire pairs, got ${result.requests} / ${result.wirePairs}`);
   if (performance.now() - started >= 500) throw new Error("wire run must stay under 500 ms offline");
 }
 
-describe("@arnilo/prism-provider-hyper wire prefix stability", () => {
+describe("@arnilo/prism-ai/hyper wire prefix stability", () => {
   it("hyper_wire_prefix_stable_openai", () => stable(openaiModel));
   it("hyper_wire_prefix_stable_anthropic", () => stable(anthropicModel));
 });

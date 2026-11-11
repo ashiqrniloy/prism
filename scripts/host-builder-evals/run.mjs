@@ -16,10 +16,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { createAgent, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { defineDataset, runExperiment } from "@arnilo/prism-evals";
-import { contextFiles } from "@arnilo/prism-context-files";
-import { mcp } from "@arnilo/prism-mcp";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { defineDataset, runExperiment } from "@arnilo/prism-hosts/evals";
+import { contextFiles } from "@arnilo/prism-extensions/context-files";
+import { mcp } from "@arnilo/prism-extensions/mcp";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 import {
   allowedProviders,
   assertNoSecret,
@@ -38,9 +38,9 @@ import {
   createScorers,
   decideClaims,
   disposeStaged,
+  EVIDENCE_DIR,
   installRateLimitedFetch,
   LIVE_MIN_INTERVAL_MS,
-  EVIDENCE_DIR,
   LOCK_PATH,
   loadCriteria,
   REPO,

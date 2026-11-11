@@ -1,8 +1,8 @@
 import type { Agent, ModelSpec, PackageInput } from "@arnilo/prism";
 import { createAgent } from "@arnilo/prism";
-import { acpHost, serveAcp } from "@arnilo/prism-acp";
-import approval from "@arnilo/prism-approval";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { acpHost, serveAcp } from "@arnilo/prism-hosts/acp";
+import approval from "@arnilo/prism-extensions/approval";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 export interface AcpHostOptions {
   readonly model: ModelSpec;

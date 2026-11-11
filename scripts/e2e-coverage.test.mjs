@@ -146,15 +146,15 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   // plan 176 Task 3: regenerated for the 0.13 grouped workspace set (retired family keys dropped, 64
   // dangling suite paths pruned). Four surfaces have no covering suite yet and stay pending in baseline mode.
   // plan 182 Task 2: minus the 17 retired provider packages (91 -> 74).
-  // plan 188.1 Task 4: plus `@arnilo/prism-memory-core/fabric` (74 -> 75); the WIP 0.13 package
+  // plan 188.1 Task 4: plus `@arnilo/prism-memory-system/core/fabric` (74 -> 75); the WIP 0.13 package
   // restructuring had already added one more surface without updating this count, so the live
-  // total was 76. Plan 191 Task 8 adds `@arnilo/prism-advisor` and a later surface added one more,
-  // so the live total is 78. Plan 204 Task 5 adds `@arnilo/prism-provider-openai-codex`, and the
+  // total was 76. Plan 191 Task 8 adds `@arnilo/prism-extensions/advisor` and a later surface added one more,
+  // so the live total is 78. Plan 204 Task 5 adds `@arnilo/prism-ai/openai-codex`, and the
   // regeneration also picked up the OpenRouter package plan 203 added without a row, so the live
-  // total is 80. Plan 205 Task 2 adds `@arnilo/prism-provider-commandcode`, so 81. Plan 213 Task 2 adds
-  // `@arnilo/prism-provider-kilo` and plan 214 Task 2 adds `@arnilo/prism-provider-litellm`, so 83.
-  // Plan 206 Task 2 adds `@arnilo/prism-provider-ollama-cloud`, so 84. Plan 215 Task 14 adds
-  // `@arnilo/prism-host-builder`, so 85. Plan 215 Task 26 added the kernel's `./net` and `./artifacts` subpaths; plan 216
+  // total is 80. Plan 205 Task 2 adds `@arnilo/prism-ai/commandcode`, so 81. Plan 213 Task 2 adds
+  // `@arnilo/prism-ai/kilo` and plan 214 Task 2 adds `@arnilo/prism-ai/litellm`, so 83.
+  // Plan 206 Task 2 adds `@arnilo/prism-ai/ollama-cloud`, so 84. Plan 215 Task 14 adds
+  // `@arnilo/prism-hosts/host-builder`, so 85. Plan 215 Task 26 added the kernel's `./net` and `./artifacts` subpaths; plan 216
   // Task 3 regenerated the manifest (the knowledge renames keep the count), so 87. Plan 216 Task 5 folded
   // the fabric package into `@arnilo/prism-memory-system`, so 86.
   assert.equal(summary.total, 86);

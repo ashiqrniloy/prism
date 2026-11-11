@@ -22,17 +22,38 @@ import { buildReport, defaultDeps, REPO_ROOT, runCell, writeReport } from "./run
 
 /** The enabled cells, in run order. Models are Task 21's matrix; an env override exists for each. */
 export const CELLS = [
-  { id: "commandcode/chat", provider: "commandcode", model: "minimax/minimax-m3.1-flash", modelEnv: "PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL" },
-  { id: "commandcode/responses", provider: "commandcode", model: "gpt-5.6-luna", modelEnv: "PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL" },
-  { id: "commandcode/messages", provider: "commandcode", model: "claude-haiku-5-5", modelEnv: "PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL" },
+  {
+    id: "commandcode/chat",
+    provider: "commandcode",
+    model: "minimax/minimax-m3.1-flash",
+    modelEnv: "PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL",
+  },
+  {
+    id: "commandcode/responses",
+    provider: "commandcode",
+    model: "gpt-5.6-luna",
+    modelEnv: "PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL",
+  },
+  {
+    id: "commandcode/messages",
+    provider: "commandcode",
+    model: "claude-haiku-5-5",
+    modelEnv: "PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL",
+  },
   { id: "ollama-cloud/chat", provider: "ollama-cloud", model: "gemma4:31b", modelEnv: "PRISM_LIVE_PARITY_OLLAMA_MODEL" },
 ];
 
 /** Cells recorded as `deferred` (post-0.13.0), with the Task 21 reasons. */
 export const DEFERRED_CELLS = [
   { id: "hyper/chat+messages", reason: "no Hyper credits (402); deferred to after 0.13.0 (owner, 2026-11-08)" },
-  { id: "opencode-go/chat+messages", reason: "monthly limit reached (429) and mimo-v2.5 deprecated; deferred to after 0.13.0 (owner, 2026-11-08)" },
-  { id: "openrouter/anthropic", reason: "unmeasurable: needs owner authorization and PRISM_LIVE_OPENROUTER_PAID=1; deferred to after 0.13.0" },
+  {
+    id: "opencode-go/chat+messages",
+    reason: "monthly limit reached (429) and mimo-v2.5 deprecated; deferred to after 0.13.0 (owner, 2026-11-08)",
+  },
+  {
+    id: "openrouter/anthropic",
+    reason: "unmeasurable: needs owner authorization and PRISM_LIVE_OPENROUTER_PAID=1; deferred to after 0.13.0",
+  },
 ];
 
 /**
@@ -70,7 +91,11 @@ export async function runGate(cells, run, { strict = false } = {}) {
     finals.push({ id: spec.id, verdict: last.cell.verdict, reason: last.cell.reason });
     if (last.cell.verdict === "reference_config_mutated") break;
   }
-  return { gate: parityGate([...finals, ...DEFERRED_CELLS.map((cell) => ({ id: cell.id, verdict: "deferred", reason: cell.reason }))], { strict }), attempts, finals };
+  return {
+    gate: parityGate([...finals, ...DEFERRED_CELLS.map((cell) => ({ id: cell.id, verdict: "deferred", reason: cell.reason }))], { strict }),
+    attempts,
+    finals,
+  };
 }
 
 async function main() {
@@ -90,9 +115,13 @@ async function main() {
     process.exitCode = strict ? 1 : 0;
     return;
   }
-  const only = (process.env.PRISM_LIVE_PARITY_CELLS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  const only = (process.env.PRISM_LIVE_PARITY_CELLS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
   const cells = only.length === 0 ? CELLS : CELLS.filter((cell) => only.includes(cell.id));
-  if (cells.length === 0) throw new Error(`CacheParity: PRISM_LIVE_PARITY_CELLS names no cell; use ${CELLS.map((cell) => cell.id).join(", ")}`);
+  if (cells.length === 0)
+    throw new Error(`CacheParity: PRISM_LIVE_PARITY_CELLS names no cell; use ${CELLS.map((cell) => cell.id).join(", ")}`);
   const deps = defaultDeps(process.env, piHome);
   const git = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" });
   const piVersion = spawnSync("pi", ["--version"], { encoding: "utf8" }).stdout?.trim() || "unknown";
@@ -100,11 +129,19 @@ async function main() {
   const result = await runGate(
     cells,
     async (spec, attempt) => {
-      const options = { provider: spec.provider, model: process.env[spec.modelEnv] || spec.model, runs: 3, harness: ["prism", "pi"], thinking: "medium" };
+      const options = {
+        provider: spec.provider,
+        model: process.env[spec.modelEnv] || spec.model,
+        runs: 3,
+        harness: ["prism", "pi"],
+        thinking: "medium",
+      };
       const cellResult = await runCell(options, deps);
       const report = buildReport({ options, result: cellResult, date, prismCommit: git.stdout?.trim() || "unknown", piVersion });
       const [json] = writeReport({ ...report, attempt }, { secrets: deps.secrets });
-      console.log(`${spec.id} attempt ${attempt + 1}: ${report.cell.verdict} (${report.requests.used}/${report.requests.ceiling} requests) -> ${json}`);
+      console.log(
+        `${spec.id} attempt ${attempt + 1}: ${report.cell.verdict} (${report.requests.used}/${report.requests.ceiling} requests) -> ${json}`,
+      );
       return report;
     },
     { strict },

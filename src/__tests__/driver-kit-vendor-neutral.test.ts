@@ -22,7 +22,7 @@ describe("driver kit stays vendor-neutral", () => {
     const files = [
       ...tsFiles("src/driver-kit"),
       ...tsFiles("examples/adapters"),
-      ...tsFiles("packages/drivers/process/src"),
+      ...tsFiles("packages/hosts/driver-process/src"),
       ...tsFiles("src/testing"),
       ...readdirSync("src")
         .filter((name) => name === "cli-relay.ts" || name.startsWith("relay"))

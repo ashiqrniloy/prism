@@ -5,7 +5,7 @@
  * One session runs RUNS runs on a network-free scripted provider. Each run is two provider turns
  * plus one tool call: turn 1 asks for `fetch_record`, the tool returns a ~2 KB result, and turn 2
  * replies with ~2 KB of text. The same workload runs once over `createMemorySessionStore` and once
- * over the SQLite session store (`@arnilo/prism-store-sqlite`, temp file).
+ * over the SQLite session store (`@arnilo/prism-extensions/store-sqlite`, temp file).
  *
  * Per variant it reports per-run p50/p95, first-window and last-window p50s, `growthRatio`
  * (last-window p50 / first-window p50, same-process so it travels across machines), and
@@ -20,7 +20,7 @@ import { cpus, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall } from "../../src/index.ts";
 import { providerPackage } from "../../src/provider-kit/index.ts";
 import { loadBudgets } from "../budget-gates.mjs";

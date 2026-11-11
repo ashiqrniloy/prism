@@ -5,9 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { validateJsonSchema } from "@arnilo/prism";
-import {
-  MemoryValidationError,
-} from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 import { memoryFabricConfigSchema, resolveMemoryFabricConfig } from "../../index.js";
 import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
@@ -78,5 +76,4 @@ describe("fabric scopes config (plan 188.2 Task 2)", () => {
     assert.equal(config.scopes.project?.resourceId, projectResourceId(identity));
     assert.equal(config.scopes.active[0]?.level, "project");
   });
-
 });

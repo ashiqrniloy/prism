@@ -46,9 +46,12 @@ describe("model-less agents and run.model (K1)", () => {
     let seen: unknown;
     const agent = await createAgent({
       slots: {
-        loop: driver(async (run) => {
-          seen = run.model;
-        }, { runModel: "passthrough" }),
+        loop: driver(
+          async (run) => {
+            seen = run.model;
+          },
+          { runModel: "passthrough" },
+        ),
       },
     });
     const result = await (await agent.session()).run("go", { model: { provider: "p", model: "m" } });
@@ -60,9 +63,12 @@ describe("model-less agents and run.model (K1)", () => {
     let ran = false;
     const agent = await createAgent({
       slots: {
-        loop: driver(async () => {
-          ran = true;
-        }, { runModel: "none" }),
+        loop: driver(
+          async () => {
+            ran = true;
+          },
+          { runModel: "none" },
+        ),
       },
     });
     const result = await (await agent.session()).run("go", { model: { provider: "p", model: "m" } });

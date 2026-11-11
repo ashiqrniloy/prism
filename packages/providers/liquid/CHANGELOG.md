@@ -4,7 +4,7 @@
 
 ### Added
 
-- New provider package (plan 196 Task 2): `@arnilo/prism-provider-liquid` registers two System One
+- New provider package (plan 196 Task 2): `@arnilo/prism-ai/liquid` registers two System One
   decision providers from one vendor package — hosted `liquid` (`d1.1`, `d1-ultra` at
   `https://api.liquid.ai/decisions/v1/systemone`, key from `env:LIQUID_API_KEY`) and `liquid-local`
   (`d1-3B` served by llama.cpp `llama-server` at `http://127.0.0.1:8080`, optional `localApiKey`).

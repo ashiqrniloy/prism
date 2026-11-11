@@ -30,19 +30,19 @@ code, or when `prism add` should be able to install, enable, and configure a pac
 {
   "version": 1,
   "packages": [
-    { "name": "@arnilo/prism-approval", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["host-ui"],
+    { "name": "@arnilo/prism-extensions/approval", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["host-ui"],
       "config": { "mode": "ask" } },
-    { "name": "@arnilo/prism-tools-web", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": [],
+    { "name": "@arnilo/prism-tools/web", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": [],
       "optional": true, "config": { "apiKey": "env:BRAVE_API_KEY" } }
   ],
-  "slots": { "store": "@arnilo/prism-store-jsonl" }
+  "slots": { "store": "@arnilo/prism-extensions/store-jsonl" }
 }
 ```
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `version` | `1` | Format version. Any other value fails as `manifest_version`. |
-| `packages[].name` | string | npm-style name. Unique within a scope. |
+| `packages[].name` | string | Module specifier: npm root plus an optional exported subpath. Unique within a scope. |
 | `packages[].version` | semver range | The range `install` resolved. |
 | `packages[].integrity` | `sha512-<base64>` | SRI hash of the installed package and its runtime dependency closure. |
 | `packages[].capabilities` | string[] | What the definition declared at install. A later load fails if the definition's capabilities differ. |
@@ -125,24 +125,29 @@ user `home` is `$PRISM_HOME` (an absolute path) or `~/.prism`, the same rule Pri
 ```ts
 import { install, remove } from "@arnilo/prism/manifest";
 const entry = await install("file:./fixtures/hello-package", { scope: "project", root: cwd });
+// Tests can install a bundle subpath from a local directory or tarball:
+// await install("@acme/tools/coding", { scope: "project", root: cwd, packFrom: "./tools.tgz" });
 await remove("@acme/hello", { scope: "project", root: cwd });
 ```
 
 `install` does this, in order:
 
-1. Checks the spec. Only registry names (`name`, `name@range`) and `file:` paths are accepted; URLs, git,
+1. Checks the spec. Only registry specifiers (`name`, `name/subpath`, `name/subpath@range`) and `file:` paths are accepted; URLs, git,
    aliases, an empty spec, and a spec starting with `-` fail as `install_failed` before any process starts.
 2. For a `file:` **directory**, runs `bun pm pack` and installs the tarball. Bun installs a `file:`
    directory as symlinks back to the source, and a symlinked tree cannot be hashed.
-3. Runs `bun add --ignore-scripts` in the managed directory. Package lifecycle scripts never run.
-4. Hashes the installed tree, imports the definition once, and writes the entry (`name`, the range,
+3. Splits the specifier into its npm root and optional subpath, then runs `bun add --ignore-scripts <root>[@range]` once in the managed directory. Package lifecycle scripts never run.
+4. Hashes the npm root and its dependency closure, imports the listed specifier through its exports map, and writes the entry (`name`, the range,
    `integrity`, `capabilities`). **Installing is the trust decision**: `install` imports the package, at
    the user's request. Reinstalling keeps the entry's `config`, `enabled`, and `optional`.
 5. Writes the manifest atomically: a private temp file in the same directory, then a rename. A crash
    leaves the old file.
 
-A default export that is not a package definition fails as `not_a_package` and the install is rolled
-back with `bun remove`. A failed import is `import_failed`. `bun` missing or exiting non-zero is
+A default export that is not a package definition, or a bundle with no root export, fails as
+`not_a_package`. The message lists explicit exported subpaths as candidates; it does not import
+siblings to determine which are package definitions. An unexported subpath fails as `import_failed`
+before its code runs. Failed installs restore the previous dependencies and lockfile, including an
+upgraded root, and leave the manifest unchanged. A failed import is `import_failed`. `bun` missing or exiting non-zero is
 `install_failed`; its stderr is truncated and redacted (token-looking environment values, `_authToken`,
 `Bearer`).
 
@@ -150,7 +155,13 @@ The definition is read field by field and defined again with this kernel's `defi
 may carry its own copy of `@arnilo/prism` (a peer dependency installed beside it), whose definitions
 this kernel's loader would not otherwise recognise.
 
-`remove` runs `bun remove`, deletes the entry, and drops any `slots` assignment that pointed at it. It
+Entries with the same npm root share a version range and integrity hash. Installing another subpath
+refreshes both fields on every installed sibling in that scope. A manifest with conflicting sibling
+version ranges is rejected as `manifest_invalid`. Capabilities remain per specifier and are checked
+again at load. Each `loadManifest` or `verify` pass hashes a root once per managed directory.
+
+`remove` deletes the entry and drops any `slots` assignment that pointed at it. It runs
+`bun remove --ignore-scripts <root>` only after the last sibling in that scope is removed. It
 does not touch the other scope. A name that is not listed fails as `package_missing`.
 
 ### Integrity
@@ -175,7 +186,7 @@ Limits to know:
   dependencies installed beside the package in `node_modules` are walked and hashed.
 - **Bounds.** Each package tree is bounded by 20,000 files and 256 MiB. The closure is bounded by 512
   packages (`MAX_CLOSURE_PACKAGES`).
-- **Performance.** Hashing reads each file once. On `@arnilo/prism-tools-coding` with its `diff`
+- **Performance.** Hashing reads each file once. On `@arnilo/prism-tools/coding` with its `diff`
   runtime dependency (~70 files total), closure hashing takes about 4–5 ms per load (compared to ~2.5 ms
   for the package tree alone).
 - `install` and `remove` for the same scope are not serialised; run one at a time.
@@ -251,7 +262,7 @@ Thin wrappers over the calls above. Scope defaults to `--project`; `--user` sele
 
 | Command | Calls |
 | --- | --- |
-| `prism add <spec> [--user\|--project] [--version <range>]` | `install`. Prints `<name> <range> declares capabilities: …` after the package is imported and before the manifest entry is written. |
+| `prism add <spec> [--user\|--project] [--version <range>]` | `install`. Prints `<name> <range> trusts npm root <root>; declares capabilities: …` after the package is imported and before the manifest entry is written. |
 | `prism remove <name> [--user\|--project]` | `remove` |
 | `prism list [--json]` | `list` (merged view) |
 | `prism enable <name>` / `prism disable <name>` | `setEnabled` |

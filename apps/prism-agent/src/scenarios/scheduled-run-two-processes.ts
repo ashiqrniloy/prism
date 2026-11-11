@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSessionIndex } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import type { HostConfig } from "../host/index.js";
 import { BRIEF_SCHEDULE, SCHEDULE_OWNERSHIP } from "../host/index.js";
 

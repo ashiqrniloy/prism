@@ -14,14 +14,24 @@ import { test } from "bun:test";
 const root = join(new URL(".", import.meta.url).pathname, "..");
 const run = (cmd, args, cwd = root) => spawnSync(cmd, args, { cwd, encoding: "utf8" });
 
-test("sweep driver always exits 0 and writes the combined report", () => {
+test("sweep driver always exits 0 and writes the combined report", async () => {
   const result = run(process.execPath, ["scripts/sweep-unused.mjs", "--json"]);
   assert.equal(result.status, 0, `driver must exit 0 (non-blocking), got ${result.status}: ${result.stderr}`);
   const report = readFileSync(join(root, "scripts", "unused-sweep-report.txt"), "utf8");
   assert.ok(report.includes("## tsconfig.json"), "report covers the core tsconfig");
   assert.ok(report.includes("dead-export candidate"), "report includes the dead-export scan section");
   const json = JSON.parse(readFileSync(join(root, "scripts", "unused-report.json"), "utf8"));
-  assert.ok(Array.isArray(json.configs) && json.configs.length >= 10, "--json must write the machine-readable per-tsconfig report");
+  const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  const { expandWorkspaceDirs } = await import("./package-truth.mjs");
+  const { existsSync } = await import("node:fs");
+  const expected = [
+    "tsconfig.json",
+    ...expandWorkspaceDirs(root, manifest.workspaces)
+      .map((dir) => join(dir, "tsconfig.json"))
+      .filter(existsSync)
+      .map((file) => file.slice(root.length + 1)),
+  ];
+  assert.deepEqual(json.configs.map((row) => row.config).sort(), expected.sort());
 });
 
 test("tsc noUnused flags catch a seeded unused local, and the driver stays non-blocking", () => {

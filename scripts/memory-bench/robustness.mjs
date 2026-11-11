@@ -385,6 +385,12 @@ export function verifyMemoryModelCriteria(value = MEMORY_MODEL_CRITERIA, files =
     if (gate === "rule" || gate === "K-1") continue;
     for (const id of entry.rows ?? []) if (!rows[id]) fail(`gate ${gate} lists unknown row ${id}`);
     if (gate !== "A" && entry.rows.some((id) => rows[id].gate !== gate)) fail(`gate ${gate} lists a row of another gate`);
+    // Plan 217 Task 6: a gate may defer one of its rows to a later gate that reads the same row, by an owner decision.
+    for (const [id, deferral] of Object.entries(entry.deferred ?? {})) {
+      if (!entry.rows.includes(id)) fail(`gate ${gate} defers ${id}, which it does not list`);
+      if (!gates[deferral?.to]?.rows?.includes(id)) fail(`gate ${gate} defers ${id} to ${deferral?.to}, which does not read it`);
+      if (!value.ownerDecisions?.[deferral.decision]?.decision) fail(`gate ${gate} defers ${id} without an owner decision`);
+    }
   }
   for (const gate of ["M-1", "M-2", "M-3", "M-T", "M-4", "M-5", "K-1", "A"]) {
     if (!gates[gate]) fail(`gate ${gate} is missing`);
@@ -630,12 +636,20 @@ export function memoryModelGateVerdict(gate, evidence, { value = MEMORY_MODEL_CR
     assertMemoryModelPin({ ...evidence, gate }, expected);
     if (evidence.gate !== gate) throw new Error(`MemoryModelCriteria: evidence is for gate ${evidence.gate}, not ${gate}`);
   }
-  const rows = entry.rows.map((id) => memoryModelVerdict(id, evidence?.rows?.[id], value));
+  // A deferred row (an owner decision) is reported `deferred` with the gate that reads it, and the gate is decided
+  // by its other rows; the later gate still holds the row.
+  const deferred = entry.deferred ?? {};
+  const rows = entry.rows.map((id) =>
+    deferred[id]
+      ? { row: id, gate, status: "deferred", to: deferred[id].to, decision: deferred[id].decision, tests: [] }
+      : memoryModelVerdict(id, evidence?.rows?.[id], value),
+  );
+  const decided = rows.filter((row) => row.status !== "deferred");
   const status = !evidence
     ? "pending"
-    : rows.some((row) => row.status === "miss")
+    : decided.some((row) => row.status === "miss")
       ? "miss"
-      : rows.every((row) => row.status === "pass")
+      : decided.every((row) => row.status === "pass")
         ? "pass"
         : "missing";
   return { gate, plan: entry.plan, partition, memoryModelCriteriaHash: expected, status, rows };

@@ -27,8 +27,14 @@ describe("cache helpers", () => {
     assert.equal(resolveBreakpoint(messages, { location: "tools" }), -1, "tools marks tool definitions, not messages");
     assert.equal(resolveBreakpoint([], { location: "last_message" }), -1);
     assert.equal(resolveBreakpoint([], { location: "last_stable_message" }), -1);
-    assert.equal(resolveBreakpoint([{ id: "only", role: "user", content: [{ type: "text", text: "hi" }] }], { location: "last_message" }), 0);
-    assert.equal(resolveBreakpoint([{ id: "only", role: "user", content: [{ type: "text", text: "hi" }] }], { location: "last_stable_message" }), 0);
+    assert.equal(
+      resolveBreakpoint([{ id: "only", role: "user", content: [{ type: "text", text: "hi" }] }], { location: "last_message" }),
+      0,
+    );
+    assert.equal(
+      resolveBreakpoint([{ id: "only", role: "user", content: [{ type: "text", text: "hi" }] }], { location: "last_stable_message" }),
+      0,
+    );
   });
 
   it("applies maxBreakpoints after de-duplicating duplicate targets", () => {
@@ -51,15 +57,20 @@ describe("cache helpers", () => {
 
   it("markers never land on an empty block", () => {
     const messagesWithEmpty: readonly Message[] = [
-      { id: "m1", role: "user", content: [{ type: "text", text: "hello" }, { type: "text", text: "" }] },
+      {
+        id: "m1",
+        role: "user",
+        content: [
+          { type: "text", text: "hello" },
+          { type: "text", text: "" },
+        ],
+      },
       { id: "m2", role: "assistant", content: [{ type: "text", text: "   " }] },
     ];
 
-    const stamped = applyCacheControl(
-      messagesWithEmpty,
-      [{ location: "last_message" }, { location: "stable_context" }],
-      { maxBreakpoints: 2 },
-    );
+    const stamped = applyCacheControl(messagesWithEmpty, [{ location: "last_message" }, { location: "stable_context" }], {
+      maxBreakpoints: 2,
+    });
 
     // m1: the first block is non-empty ("hello"), the second is empty (""). Cache_control lands on block 0!
     assert.deepEqual(stamped[0]?.content[0]?.cache_control, { type: "ephemeral" });
@@ -151,9 +162,24 @@ describe("cache helpers", () => {
         { role: "user" as const, content: [{ type: "text" as const, text: "execute" }] },
       ],
       tools: [
-        { name: "read_file", description: "read a file", parameters: { type: "object" as const }, execute: async () => ({ toolCallId: "", name: "", result: "" }) },
-        { name: "write_file", description: "write a file", parameters: { type: "object" as const }, execute: async () => ({ toolCallId: "", name: "", result: "" }) },
-        { name: "bash", description: "run a command", parameters: { type: "object" as const }, execute: async () => ({ toolCallId: "", name: "", result: "" }) },
+        {
+          name: "read_file",
+          description: "read a file",
+          parameters: { type: "object" as const },
+          execute: async () => ({ toolCallId: "", name: "", result: "" }),
+        },
+        {
+          name: "write_file",
+          description: "write a file",
+          parameters: { type: "object" as const },
+          execute: async () => ({ toolCallId: "", name: "", result: "" }),
+        },
+        {
+          name: "bash",
+          description: "run a command",
+          parameters: { type: "object" as const },
+          execute: async () => ({ toolCallId: "", name: "", result: "" }),
+        },
       ],
       options: {
         cache: {
@@ -203,9 +229,7 @@ describe("cache helpers", () => {
         },
         {
           role: "tool",
-          content: [
-            { type: "tool_result", toolCallId: `call_${i}`, name: "tool", result: `result of step ${i}` },
-          ],
+          content: [{ type: "tool_result", toolCallId: `call_${i}`, name: "tool", result: `result of step ${i}` }],
         },
       ];
       turns.push(nextTurn);

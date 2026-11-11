@@ -2,7 +2,7 @@ import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
 import type { ContextDraft, HookContext, JsonObject, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createMemoryVectorStore, type Embedder, MemoryValidationError, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type Embedder, MemoryValidationError, type VectorStore } from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "../context.js";
 import { createMemory, createLongTermMemory } from "../../index.js";
 
@@ -125,7 +125,6 @@ describe("fabric lexical retrieval", () => {
     );
     assert.ok(!hits.some((hit) => hit.id === old.id), "a historical value is not returned as current");
   });
-
 });
 
 describe("memory.recall tool: multi-query, snippets, budget", () => {

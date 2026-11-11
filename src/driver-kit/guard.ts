@@ -65,7 +65,8 @@ const REF = /^(env|keyring):(.+)$/;
 function* leaves(value: unknown, depth = 0): Generator<string> {
   if (typeof value === "string") yield value;
   else if (depth < 8 && Array.isArray(value)) for (const item of value) yield* leaves(item, depth + 1);
-  else if (depth < 8 && value !== null && typeof value === "object") for (const item of Object.values(value)) yield* leaves(item, depth + 1);
+  else if (depth < 8 && value !== null && typeof value === "object")
+    for (const item of Object.values(value)) yield* leaves(item, depth + 1);
 }
 
 /** Active runs per profile home, shared by every guard in the process so two agents on one profile share one cap. */
@@ -125,12 +126,21 @@ export function createPolicyGuard(options: PolicyGuardOptions): PolicyGuard {
       if (deployment === "hosted") {
         const missing = (mode.hostedAcknowledgements ?? []).filter((term) => !acknowledgements.includes(term));
         if (missing.length > 0) {
-          throw new DriverError("plan_login_not_permitted", `auth mode "${mode.name}" needs acknowledgements before hosted use: ${missing.join(", ")}`);
+          throw new DriverError(
+            "plan_login_not_permitted",
+            `auth mode "${mode.name}" needs acknowledgements before hosted use: ${missing.join(", ")}`,
+          );
         }
       }
       const max = stored.maxConcurrentRuns ?? options.defaultMaxConcurrentRuns ?? 2;
       const running = activeByHome.get(home) ?? 0;
-      if (running >= max) throw new DriverError("profile_busy", `profile "${profile}" already has ${running} active runs (maximum ${max})`, undefined, profile);
+      if (running >= max)
+        throw new DriverError(
+          "profile_busy",
+          `profile "${profile}" already has ${running} active runs (maximum ${max})`,
+          undefined,
+          profile,
+        );
       activeByHome.set(home, running + 1);
       let released = false;
       const release = (): void => {
@@ -152,7 +162,8 @@ export function createPolicyGuard(options: PolicyGuardOptions): PolicyGuard {
     noteLimit(profile, signal) {
       if (signal.code === "auth") {
         const entry = seen.get(profile);
-        if (entry !== undefined) seen.set(profile, { ...entry, record: { ...entry.record, auth: { signedIn: false, checkedAt: new Date().toISOString() } } });
+        if (entry !== undefined)
+          seen.set(profile, { ...entry, record: { ...entry.record, auth: { signedIn: false, checkedAt: new Date().toISOString() } } });
         return { action: "stop" };
       }
       if (signal.deferUntil !== undefined) {

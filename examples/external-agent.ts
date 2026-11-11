@@ -222,7 +222,10 @@ function gateCodec(effectOf: (name: string) => readonly ("read" | "write" | "exe
       const value = JSON.parse(stdin) as { kind?: string; id?: string; name?: string; args?: JsonValue };
       // Anything the codec does not recognize throws, and the broker answers fail-closed.
       if (value.kind !== "pre-tool" || value.id === undefined || value.name === undefined) throw new Error("unknown hook payload");
-      return { kind: "pre-tool", request: { toolCallId: value.id, name: value.name, args: value.args ?? {}, effects: effectOf(value.name) } };
+      return {
+        kind: "pre-tool",
+        request: { toolCallId: value.id, name: value.name, args: value.args ?? {}, effects: effectOf(value.name) },
+      };
     },
     encode(answer) {
       if ("allow" in answer) {
@@ -237,7 +240,12 @@ function gateCodec(effectOf: (name: string) => readonly ("read" | "write" | "exe
 }
 
 /** Starts the vendor process, sends the input, maps its frames, and waits for the turn to end or the run to stop. */
-async function converse(context: DriverRunContext<ExampleConfig>, broker: CallbackBroker, runDir: string, dialect: ScriptedDialect): Promise<void> {
+async function converse(
+  context: DriverRunContext<ExampleConfig>,
+  broker: CallbackBroker,
+  runDir: string,
+  dialect: ScriptedDialect,
+): Promise<void> {
   const { run, config, binary, descriptor: driverDescriptor } = context;
   // The vendor runs this command for each gate call, with the call as JSON on stdin. It is the relay, not a vendor script.
   const hookCommand = [...relayCommand(), "relay", "hook", "--run", runDir];
@@ -258,7 +266,12 @@ async function converse(context: DriverRunContext<ExampleConfig>, broker: Callba
     if (output === undefined) return;
     if (output.kind === "hook") {
       // A dialect with client-side gating (`json-rpc`) sends each gate call as a request. Ask, then answer on stdin.
-      const decision = await run.ask({ toolCallId: output.call.id, name: output.call.tool, args: output.call.args, effects: effectOf(output.call.tool) });
+      const decision = await run.ask({
+        toolCallId: output.call.id,
+        name: output.call.tool,
+        args: output.call.args,
+        effects: effectOf(output.call.tool),
+      });
       write(dialect.encodeInput({ kind: "answer", id: output.call.id, allow: "allow" in decision && decision.allow === true }));
       return;
     }
@@ -309,7 +322,12 @@ async function callBridged(broker: CallbackBroker, data: JsonValue): Promise<voi
 async function serveMcp(request: Request, bridge: ToolBridge, evidence: Evidence): Promise<Response> {
   const message = (await request.json()) as { id: string; method: string; params: { name: string; arguments: JsonObject } };
   if (message.method === "tools/list") return rpc(message.id, { tools: bridge.tools });
-  const outcome = await bridge.invoke({ type: "tool_call", id: message.id, name: message.params.name, arguments: message.params.arguments });
+  const outcome = await bridge.invoke({
+    type: "tool_call",
+    id: message.id,
+    name: message.params.name,
+    arguments: message.params.arguments,
+  });
   evidence.bridged.push({ name: message.params.name, value: outcome.value });
   return rpc(message.id, { value: outcome.value ?? null });
 }
@@ -358,7 +376,8 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 const eventName = (event: AgentEvent): string => (event.type === "package.event" ? event.name : event.type);
 const messageText = (message: Message): string =>
   message.content.map((block) => ("text" in block && typeof block.text === "string" ? block.text : "")).join("");
-const inputText = (input: AgentInput): string => (typeof input === "string" ? input : (Array.isArray(input) ? input : [input]).map(messageText).join(""));
+const inputText = (input: AgentInput): string =>
+  typeof input === "string" ? input : (Array.isArray(input) ? input : [input]).map(messageText).join("");
 const codeOf = (result: { readonly error?: { readonly code?: string | number; readonly message: string } }): string | undefined =>
   result.error === undefined ? undefined : String(result.error.code ?? result.error.message);
 
@@ -488,7 +507,10 @@ export async function demo(): Promise<Record<string, unknown>> {
       policy: {
         hosted: codeOf(hostedRun),
         principal: codeOf(mismatch),
-        busy: { completed: busyResults.filter((run) => run.status === "completed").length, refused: busyResults.map(codeOf).filter(Boolean) },
+        busy: {
+          completed: busyResults.filter((run) => run.status === "completed").length,
+          refused: busyResults.map(codeOf).filter(Boolean),
+        },
       },
     };
   } finally {

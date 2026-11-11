@@ -58,8 +58,8 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   // packages/memory/ (plan 157 Tasks 3-4; plan 158 Tasks 2-5), and the approval, guardrail-packs,
   // governance, context-files, and context-engineering packages under packages/policy/ and
   // packages/context/ (plan 154 Tasks 6-7; plan 158 Task 7; plan 159 Tasks 5-6; plan 160 Tasks 2-4),
-  // and the ACP host library (plan 161 Task 2), plus `@arnilo/prism-driver-process` (plans 166–167) and
-  // `@arnilo/prism-workflows` (plan 168 Task 2), which landed after this count was written.
+  // and the ACP host library (plan 161 Task 2), plus `@arnilo/prism-hosts/driver-process` (plans 166–167) and
+  // `@arnilo/prism-extensions/workflows` (plan 168 Task 2), which landed after this count was written.
   // Plan 174 Task 6 retires the core family package, so the graph is 63 packages. Plan 174
   // Task 7 retires the three 0.12 workspaces (coding-tools, agent-sdk, acp-agent), so 60.
   // Plan 182 Task 2 retires the 17 provider packages, so 43. Plan 196 adds `provider-liquid`, plan
@@ -67,11 +67,11 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   // 46 workspaces at HEAD while this line still said 43, so one earlier addition had gone uncounted.
   // Plan 204 Task 8 re-anchors the check to the loaded graph (47 = root + 46 workspaces) instead of
   // guessing which plan owned that one; from here it catches any further drift.
-  // Plan 213 Task 2 adds @arnilo/prism-provider-kilo (49), plan 214 Task 2 adds
-  // @arnilo/prism-provider-litellm (50), and plan 206 Task 2 adds
-  // @arnilo/prism-provider-ollama-cloud (51).
-  assert.equal(release.packages.length, 51);
-  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 51);
+  // Plan 213 Task 2 adds @arnilo/prism-ai/kilo (49), plan 214 Task 2 adds
+  // @arnilo/prism-ai/litellm (50), and plan 206 Task 2 adds
+  // @arnilo/prism-ai/ollama-cloud (51).
+  assert.equal(release.packages.length, 7);
+  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 7);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -82,7 +82,7 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   );
   for (const pkg of release.packages) {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");
-    if (pkg.manifest.name === "@arnilo/prism-channels") {
+    if (pkg.manifest.name === "@arnilo/prism-hosts/channels") {
       assert.ok(changelog.includes("## [Unreleased] (plan 079 Task 4)"), "channels package missing extraction changelog");
     } else if ((changelog.match(/^## \[[^\]]+\]/m)?.[0] ?? "") === "## [Unreleased]") {
       // Packages added after the 0.1.0 anchor (driver-process, remote, headless, research) carry an
@@ -290,7 +290,9 @@ function experimentalFixture(experimental: unknown = ["@arnilo/prism-memory-core
   for (const [path, manifest] of manifests) {
     mkdirSync(join(root, path), { recursive: true });
     writeFileSync(join(root, path, "package.json"), `${JSON.stringify({ ...manifest, publishConfig: { access: "public" } }, null, 2)}\n`);
-    lock.push(`    ${JSON.stringify(path)}: ${JSON.stringify({ name: manifest.name, ...(path === "" ? {} : { version: manifest.version }) })},`);
+    lock.push(
+      `    ${JSON.stringify(path)}: ${JSON.stringify({ name: manifest.name, ...(path === "" ? {} : { version: manifest.version }) })},`,
+    );
   }
   writeFileSync(join(root, "bun.lock"), `{\n  "lockfileVersion": 2,\n  "workspaces": {\n${lock.join("\n")}\n  },\n}\n`);
   mkdirSync(join(root, "scripts"), { recursive: true });
@@ -310,7 +312,16 @@ test("semver_prerelease_sorts_below_release", () => {
 test("semver_prerelease_identifiers_compare", () => {
   // semver 2.0.0 section 11: numeric identifiers compare as numbers, alphanumeric ones lexically,
   // numeric sorts below alphanumeric, and a shorter list sorts below a longer one with the same prefix.
-  const ordered = ["1.0.0-alpha", "1.0.0-alpha.1", "1.0.0-alpha.beta", "1.0.0-beta", "1.0.0-beta.2", "1.0.0-beta.11", "1.0.0-rc.1", "1.0.0"];
+  const ordered = [
+    "1.0.0-alpha",
+    "1.0.0-alpha.1",
+    "1.0.0-alpha.beta",
+    "1.0.0-beta",
+    "1.0.0-beta.2",
+    "1.0.0-beta.11",
+    "1.0.0-rc.1",
+    "1.0.0",
+  ];
   for (let i = 0; i < ordered.length - 1; i++) {
     assert.ok(cmpSemver(ordered[i], ordered[i + 1]) < 0, `${ordered[i]} < ${ordered[i + 1]}`);
     assert.ok(cmpSemver(ordered[i + 1], ordered[i]) > 0, `${ordered[i + 1]} > ${ordered[i]}`);
@@ -351,7 +362,10 @@ test("bump_prerelease_rewrites_dependent_pins", () => {
   assert.equal(system.devDependencies["@arnilo/prism-memory-core"], "file:../core", "dev file: links are left alone");
   assert.equal(system.peerDependencies["@arnilo/prism-addon"], "^0.13.0", "a loose range into a stable package is left alone");
   // the bumped graph still validates once the lockfile follows (the CLI regenerates it)
-  assert.throws(() => validateReleaseIndependent(loadRelease(root), unchanged), /bun\.lock packages\/memory\/core version is 0\.13\.0-experimental\.0/);
+  assert.throws(
+    () => validateReleaseIndependent(loadRelease(root), unchanged),
+    /bun\.lock packages\/memory\/core version is 0\.13\.0-experimental\.0/,
+  );
   // an experimental package bumps with prerelease only, and a stable package never takes it
   assert.throws(() => bumpPackage(release, "@arnilo/prism-memory-system", "patch"), /is experimental: bump it with prerelease/);
   assert.throws(() => bumpPackage(release, "@arnilo/prism-addon", "prerelease"), /needs a prerelease version/);
@@ -359,7 +373,9 @@ test("bump_prerelease_rewrites_dependent_pins", () => {
 
 test("publish_args_use_experimental_tag", () => {
   const release = loadRelease(experimentalFixture());
-  const [kernel, addon, core] = ["@arnilo/prism", "@arnilo/prism-addon", "@arnilo/prism-memory-core"].map((name) => release.byName.get(name));
+  const [kernel, addon, core] = ["@arnilo/prism", "@arnilo/prism-addon", "@arnilo/prism-memory-core"].map((name) =>
+    release.byName.get(name),
+  );
   const tag = (args: string[]) => args[args.indexOf("--tag") + 1];
   assert.equal(tag(publishArgs(core, PRE)), "experimental");
   assert.equal(tag(publishArgs(addon, "0.13.0")), "latest");
@@ -418,7 +434,10 @@ test("lockstep_cut_excludes_experimental", () => {
   assert.equal(release.byName.get("@arnilo/prism-addon").experimental, false);
   // a stable pin into the experimental line is not a lockstep claim, and the cut still ignores the prerelease versions
   const lockstepOnly = experimentalFixture([]);
-  assert.throws(() => validateRelease(loadRelease(lockstepOnly), "0.13.0"), /@arnilo\/prism-memory-core version is 0\.13\.0-experimental\.0, expected 0\.13\.0/);
+  assert.throws(
+    () => validateRelease(loadRelease(lockstepOnly), "0.13.0"),
+    /@arnilo\/prism-memory-core version is 0\.13\.0-experimental\.0, expected 0\.13\.0/,
+  );
 });
 
 test("independent_validate_accepts_exact_prerelease_pins", () => {
@@ -443,14 +462,17 @@ test("experimental_list_rejects_unknown_workspace", () => {
 test("release_tag_is_never_latest_for_an_experimental_package_in_the_real_graph", () => {
   const release = loadRelease(process.cwd());
   const experimental = release.packages.filter((pkg: { experimental: boolean }) => pkg.experimental);
-  assert.deepEqual(
-    experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(),
-    ["@arnilo/prism-memory-core", "@arnilo/prism-memory-system", "@arnilo/prism-rag", "@arnilo/prism-wiki"],
-  );
+  assert.deepEqual(experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(), [
+    "@arnilo/prism-knowledge",
+    "@arnilo/prism-memory-system",
+  ]);
   for (const pkg of experimental) {
     const args = publishArgs(pkg, pkg.manifest.version);
     assert.equal(args[args.indexOf("--tag") + 1], "experimental");
   }
   const lockstep = validateRelease(release, release.byName.get("@arnilo/prism").manifest.version);
-  assert.ok(lockstep.every((pkg: { experimental: boolean }) => !pkg.experimental), "a lockstep cut publishes none of them");
+  assert.ok(
+    lockstep.every((pkg: { experimental: boolean }) => !pkg.experimental),
+    "a lockstep cut publishes none of them",
+  );
 });

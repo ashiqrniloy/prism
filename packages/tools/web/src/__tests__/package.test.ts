@@ -1,10 +1,10 @@
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, it } from "bun:test";
 import { createAgent, definePackage } from "@arnilo/prism";
 import { packageConformance } from "@arnilo/prism/testing";
 import toolsWeb, { createFirecrawlFetch, createWebTools, type WebFetchService } from "../index.js";
@@ -112,7 +112,7 @@ function fetchProbe() {
   });
 }
 
-describe("@arnilo/prism-tools-web package", () => {
+describe("@arnilo/prism-tools/web package", () => {
   it("tools_web_package_conformance", async () => {
     const result = await packageConformance(toolsWeb({ backend: "brave", apiKey: `env:${KEY_ENV}` }));
     assert.deepEqual(
@@ -222,7 +222,10 @@ describe("@arnilo/prism-tools-web package", () => {
   it("fetch_prompt_config_exposes_prompt_argument", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "m" },
-      packages: [toolsWeb({ backend: "native", fetch: { prompt: { model: { provider: "mock", model: "m" } } } }), toolParameterProbe("web_fetch")],
+      packages: [
+        toolsWeb({ backend: "native", fetch: { prompt: { model: { provider: "mock", model: "m" } } } }),
+        toolParameterProbe("web_fetch"),
+      ],
     });
     try {
       const { arguments: names } = (await agent.commands.run("probe-tool-parameters", {})) as { arguments: string[] };
@@ -359,12 +362,12 @@ describe("@arnilo/prism-tools-web package", () => {
         provider: "firecrawl",
         fetch: async () => ({ citationId: "c", provider: "firecrawl", url: "", markdown: "", retrievedAt: "", untrusted: true }),
       },
-      extract: { provider: "firecrawl", extract: async () => ({ provider: "firecrawl", urls: [], data: null, retrievedAt: "", untrusted: true }) },
+      extract: {
+        provider: "firecrawl",
+        extract: async () => ({ provider: "firecrawl", urls: [], data: null, retrievedAt: "", untrusted: true }),
+      },
     });
-    assert.deepEqual(
-      declared.map((tool) => tool.name).sort(),
-      ["web_extract", "web_fetch", "web_search"],
-    );
+    assert.deepEqual(declared.map((tool) => tool.name).sort(), ["web_extract", "web_fetch", "web_search"]);
     for (const tool of declared) assert.deepEqual(tool.effects, ["network"], `${tool.name} must declare network`);
 
     process.env[KEY_ENV] = "brave-canary";
@@ -477,7 +480,10 @@ describe("@arnilo/prism-tools-web package", () => {
     // The probe command is the real call path; a resolver keeps it network-free.
     const agent = await createAgent({
       model: { provider: "mock", model: "m" },
-      packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), nativeTools: false } }), fetchCallProbe("https://example.com/page")],
+      packages: [
+        toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), nativeTools: false } }),
+        fetchCallProbe("https://example.com/page"),
+      ],
     });
     try {
       assert.equal(
@@ -571,7 +577,7 @@ describe("@arnilo/prism-tools-web package", () => {
   });
 
   it("tools_web_loads_no_playwright", async () => {
-    // Static: no source module value-imports playwright-core or @arnilo/prism-mcp.
+    // Static: no source module value-imports playwright-core or @arnilo/prism-extensions/mcp.
     const offenders: string[] = [];
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -582,34 +588,34 @@ describe("@arnilo/prism-tools-web package", () => {
         }
         if (!entry.name.endsWith(".ts")) continue;
         const text = readFileSync(path, "utf8");
-        if (/import\s+(?!type\b)[^;]*from\s*["'](?:playwright-core|@arnilo\/prism-mcp)["']/.test(text)) offenders.push(path);
+        if (/import\s+(?!type\b)[^;]*from\s*["'](?:playwright-core|@arnilo\/prism-extensions\/mcp)["']/.test(text)) offenders.push(path);
       }
     };
     walk(join(REPO_ROOT, "packages/tools/web/src"));
-    assert.deepEqual(offenders, [], "no source module may statically import playwright-core or @arnilo/prism-mcp");
+    assert.deepEqual(offenders, [], "no source module may statically import playwright-core or @arnilo/prism-extensions/mcp");
 
     // Runtime: importing the package and loading it never loads either peer.
     const script = [
-      'const web = await import("@arnilo/prism-tools-web");',
+      'const web = await import("@arnilo/prism-tools/web");',
       'const { createAgent } = await import("@arnilo/prism");',
       'process.env.PRISM_TEST_WEB_BRAVE_KEY = "canary";',
       'const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [web.default({ backend: "brave", apiKey: "env:PRISM_TEST_WEB_BRAVE_KEY" })] });',
       "await agent.dispose();",
-      'const seen = (name) => Object.keys(require.cache ?? {}).some((key) => key.includes(name));',
-      'const before = { playwright: seen("playwright-core"), mcp: seen("packages/integrations/mcp") };',
+      "const seen = (name) => Object.keys(require.cache ?? {}).some((key) => key.includes(name));",
+      'const before = { playwright: seen("playwright-core"), mcp: seen("packages/extensions/mcp") };',
       'await import("playwright-core");',
-      'await import("@arnilo/prism-mcp");',
-      'const after = { playwright: seen("playwright-core"), mcp: seen("packages/integrations/mcp") };',
-      "console.log(JSON.stringify({ inert: typeof web.createBraveSearch === \"function\", before, after }));",
+      'await import("@arnilo/prism-extensions/mcp");',
+      'const after = { playwright: seen("playwright-core"), mcp: seen("packages/extensions/mcp") };',
+      'console.log(JSON.stringify({ inert: typeof web.createBraveSearch === "function", before, after }));',
     ].join("\n");
     const result = spawnSync("bun", ["-e", script], { cwd: REPO_ROOT, encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
     const probe = JSON.parse(result.stdout.trim()) as { inert: boolean; before: Record<string, boolean>; after: Record<string, boolean> };
     assert.equal(probe.inert, true, "the package module loads without the peers");
     assert.equal(probe.before.playwright, false, "playwright-core is absent from the module graph");
-    assert.equal(probe.before.mcp, false, "@arnilo/prism-mcp is absent from the module graph");
+    assert.equal(probe.before.mcp, false, "@arnilo/prism-extensions/mcp is absent from the module graph");
     assert.equal(probe.after.playwright, true, "the probe can observe playwright-core once loaded");
-    assert.equal(probe.after.mcp, true, "the probe can observe @arnilo/prism-mcp once loaded");
+    assert.equal(probe.after.mcp, true, "the probe can observe @arnilo/prism-extensions/mcp once loaded");
   });
 
   it("brave_without_fetch_config_registers_native_web_fetch", async () => {
@@ -624,7 +630,10 @@ describe("@arnilo/prism-tools-web package", () => {
       assert.ok(names.includes("web_fetch"), `web_fetch defaults to the keyless native backend (${names.join(", ")})`);
       assert.deepEqual(await agent.commands.run("probe-web-fetch", {}), { present: true });
       assert.equal(
-        agent.inspect().statusNotes.filter((note) => note.level === "warn").some((note) => note.message.includes("fetch")),
+        agent
+          .inspect()
+          .statusNotes.filter((note) => note.level === "warn")
+          .some((note) => note.message.includes("fetch")),
         false,
         "a native fetch needs no key, so no warn note mentions the fetch backend",
       );
@@ -645,7 +654,10 @@ describe("@arnilo/prism-tools-web package", () => {
         "the native backend is fetch-only",
       );
       assert.deepEqual(await agent.commands.run("probe-web-fetch", {}), { present: true });
-      assert.deepEqual(agent.inspect().statusNotes.filter((note) => note.level === "warn"), []);
+      assert.deepEqual(
+        agent.inspect().statusNotes.filter((note) => note.level === "warn"),
+        [],
+      );
     } finally {
       await agent.dispose();
     }
@@ -670,8 +682,8 @@ describe("@arnilo/prism-tools-web package", () => {
     assert.deepEqual(offenders, [], "only native/convert.ts may load the HTML/Markdown dependencies, dynamically");
 
     const script = [
-      'const web = await import("@arnilo/prism-tools-web");',
-      'const seen = (name) => Object.keys(require.cache ?? {}).some((key) => key.includes(name));',
+      'const web = await import("@arnilo/prism-tools/web");',
+      "const seen = (name) => Object.keys(require.cache ?? {}).some((key) => key.includes(name));",
       'const before = { linkedom: seen("linkedom"), turndown: seen("turndown"), readability: seen("@mozilla/readability") };',
       'const fetch = web.createNativeFetch({ userAgent: "test", request: async () => new Response("<html><body><article><h1>Hi</h1><p>Body</p></article></body></html>", { status: 200, headers: { "content-type": "text/html" } }) });',
       'const page = await fetch.fetch("https://example.com/");',
@@ -680,7 +692,11 @@ describe("@arnilo/prism-tools-web package", () => {
     ].join("\n");
     const result = spawnSync("bun", ["-e", script], { cwd: REPO_ROOT, encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
-    const probe = JSON.parse(result.stdout.trim()) as { before: Record<string, boolean>; after: Record<string, boolean>; converted: boolean };
+    const probe = JSON.parse(result.stdout.trim()) as {
+      before: Record<string, boolean>;
+      after: Record<string, boolean>;
+      converted: boolean;
+    };
     assert.deepEqual(probe.before, { linkedom: false, turndown: false, readability: false }, "importing the package loads none of them");
     assert.equal(probe.converted, true, "the first HTML conversion works");
     assert.deepEqual(probe.after, { linkedom: true, turndown: true, readability: true }, "the first conversion loads all three");

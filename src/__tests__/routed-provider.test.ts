@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { Message, ProviderEvent, ProviderRequest } from "../contracts.js";
+import type { ProviderEvent, ProviderRequest } from "../contracts.js";
 import { createRoutedProvider } from "../provider-kit/routed-provider.js";
 import { createBuiltinProvider } from "../models/builtin.js";
 import { ProviderRequirementError } from "../provider-kit/provider-request-policy.js";
@@ -209,10 +209,7 @@ describe("routed-provider", () => {
       fetch: (async (url, init) => {
         capturedUrl = String(url);
         capturedHeaders = new Headers(init?.headers);
-        return new Response(
-          sse([JSON.stringify({ choices: [{ delta: { content: "Builtin reply" } }] }), STOP, "[DONE]"]),
-          { status: 200 },
-        );
+        return new Response(sse([JSON.stringify({ choices: [{ delta: { content: "Builtin reply" } }] }), STOP, "[DONE]"]), { status: 200 });
       }) as typeof fetch,
     });
 
@@ -254,7 +251,11 @@ describe("routed-provider", () => {
           auth: "bearer",
           affinity: (req): Record<string, string> => {
             const key = req.options?.cacheKey ?? req.options?.sessionId;
-            const sanitized = (key && key.replace(/[^A-Za-z0-9_.:-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 128)) || undefined;
+            const sanitized =
+              key
+                ?.replace(/[^A-Za-z0-9_.:-]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 128) || undefined;
             return sanitized ? { "x-opencode-session": sanitized } : {};
           },
         },
@@ -264,7 +265,11 @@ describe("routed-provider", () => {
           auth: "x-api-key+bearer",
           affinity: (req): Record<string, string> => {
             const key = req.options?.cacheKey ?? req.options?.sessionId;
-            const sanitized = (key && key.replace(/[^A-Za-z0-9_.:-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 128)) || undefined;
+            const sanitized =
+              key
+                ?.replace(/[^A-Za-z0-9_.:-]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 128) || undefined;
             return sanitized ? { "x-affinity-id": sanitized } : {};
           },
         },

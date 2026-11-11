@@ -1,0 +1,478 @@
+{
+  "bundles": [
+    {
+      "name": "@arnilo/prism-ai",
+      "dir": "packages/providers",
+      "line": "independent",
+      "subpaths": [
+        {
+          "path": "./commandcode",
+          "dir": "commandcode",
+          "formerName": "@arnilo/prism-provider-commandcode",
+          "kind": "package"
+        },
+        {
+          "path": "./hyper",
+          "dir": "hyper",
+          "formerName": "@arnilo/prism-provider-hyper",
+          "kind": "package"
+        },
+        {
+          "path": "./kilo",
+          "dir": "kilo",
+          "formerName": "@arnilo/prism-provider-kilo",
+          "kind": "package"
+        },
+        {
+          "path": "./laya",
+          "dir": "laya",
+          "formerName": "@arnilo/prism-provider-laya",
+          "kind": "package"
+        },
+        {
+          "path": "./liquid",
+          "dir": "liquid",
+          "formerName": "@arnilo/prism-provider-liquid",
+          "kind": "package"
+        },
+        {
+          "path": "./litellm",
+          "dir": "litellm",
+          "formerName": "@arnilo/prism-provider-litellm",
+          "kind": "package"
+        },
+        {
+          "path": "./ollama-cloud",
+          "dir": "ollama-cloud",
+          "formerName": "@arnilo/prism-provider-ollama-cloud",
+          "kind": "package"
+        },
+        {
+          "path": "./openai-codex",
+          "dir": "openai-codex",
+          "formerName": "@arnilo/prism-provider-openai-codex",
+          "kind": "package"
+        },
+        {
+          "path": "./opencode-go",
+          "dir": "opencode-go",
+          "formerName": "@arnilo/prism-provider-opencode-go",
+          "kind": "package"
+        },
+        {
+          "path": "./openrouter",
+          "dir": "openrouter",
+          "formerName": "@arnilo/prism-provider-openrouter",
+          "kind": "package"
+        },
+        {
+          "path": "./typesafe",
+          "dir": "typesafe",
+          "formerName": "@arnilo/prism-provider-typesafe",
+          "kind": "package"
+        }
+      ],
+      "publishOrder": 2
+    },
+    {
+      "name": "@arnilo/prism-tools",
+      "dir": "packages/tools",
+      "line": "independent",
+      "subpaths": [
+        {
+          "path": "./browser",
+          "dir": "browser",
+          "formerName": "@arnilo/prism-tools-browser",
+          "kind": "package"
+        },
+        {
+          "path": "./coding",
+          "dir": "coding",
+          "formerName": "@arnilo/prism-tools-coding",
+          "kind": "package"
+        },
+        {
+          "path": "./computer-use",
+          "dir": "computer-use",
+          "formerName": "@arnilo/prism-tools-computer-use",
+          "kind": "package"
+        },
+        {
+          "path": "./openapi",
+          "dir": "openapi",
+          "formerName": "@arnilo/prism-tools-openapi",
+          "kind": "package"
+        },
+        {
+          "path": "./research",
+          "dir": "research",
+          "formerName": "@arnilo/prism-tools-research",
+          "kind": "package"
+        },
+        {
+          "path": "./web",
+          "dir": "web",
+          "formerName": "@arnilo/prism-tools-web",
+          "kind": "package"
+        },
+        {
+          "path": "./work",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "package"
+        },
+        {
+          "path": "./work/connectors",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/connectors/drafts",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/connectors/google-workspace",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/connectors/microsoft365",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/diagrams",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/document-extraction",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/document-reader",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/documents",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/sandbox",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/sheets",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/skills",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        },
+        {
+          "path": "./work/tools",
+          "dir": "work",
+          "formerName": "@arnilo/prism-tools-work",
+          "kind": "library"
+        }
+      ],
+      "publishOrder": 3
+    },
+    {
+      "name": "@arnilo/prism-extensions",
+      "dir": "packages/extensions",
+      "line": "independent",
+      "subpaths": [
+        {
+          "path": "./context-engineering",
+          "dir": "context-engineering",
+          "formerName": "@arnilo/prism-context-engineering",
+          "kind": "package"
+        },
+        {
+          "path": "./context-files",
+          "dir": "context-files",
+          "formerName": "@arnilo/prism-context-files",
+          "kind": "package"
+        },
+        {
+          "path": "./keyring",
+          "dir": "keyring",
+          "formerName": "@arnilo/prism-credentials-keyring",
+          "kind": "package"
+        },
+        {
+          "path": "./advisor",
+          "dir": "advisor",
+          "formerName": "@arnilo/prism-advisor",
+          "kind": "package"
+        },
+        {
+          "path": "./delegate",
+          "dir": "delegate",
+          "formerName": "@arnilo/prism-delegate",
+          "kind": "package"
+        },
+        {
+          "path": "./hooks-json",
+          "dir": "hooks-json",
+          "formerName": "@arnilo/prism-hooks-json",
+          "kind": "package"
+        },
+        {
+          "path": "./mcp",
+          "dir": "mcp",
+          "formerName": "@arnilo/prism-mcp",
+          "kind": "package"
+        },
+        {
+          "path": "./observability",
+          "dir": "observability",
+          "formerName": "@arnilo/prism-observability",
+          "kind": "package"
+        },
+        {
+          "path": "./workflows",
+          "dir": "workflows",
+          "formerName": "@arnilo/prism-workflows",
+          "kind": "package"
+        },
+        {
+          "path": "./workflows/testing",
+          "dir": "workflows",
+          "formerName": "@arnilo/prism-workflows",
+          "kind": "library"
+        },
+        {
+          "path": "./approval",
+          "dir": "approval",
+          "formerName": "@arnilo/prism-approval",
+          "kind": "package"
+        },
+        {
+          "path": "./governance",
+          "dir": "governance",
+          "formerName": "@arnilo/prism-governance",
+          "kind": "package"
+        },
+        {
+          "path": "./guardrail-packs",
+          "dir": "guardrail-packs",
+          "formerName": "@arnilo/prism-guardrail-packs",
+          "kind": "package"
+        },
+        {
+          "path": "./model-router",
+          "dir": "model-router",
+          "formerName": "@arnilo/prism-model-router",
+          "kind": "package"
+        },
+        {
+          "path": "./store-codecs",
+          "dir": "store-codecs",
+          "formerName": "@arnilo/prism-store-codecs",
+          "kind": "library"
+        },
+        {
+          "path": "./store-jsonl",
+          "dir": "store-jsonl",
+          "formerName": "@arnilo/prism-store-jsonl",
+          "kind": "package"
+        },
+        {
+          "path": "./store-postgres",
+          "dir": "store-postgres",
+          "formerName": "@arnilo/prism-store-postgres",
+          "kind": "package"
+        },
+        {
+          "path": "./store-sqlite",
+          "dir": "store-sqlite",
+          "formerName": "@arnilo/prism-store-sqlite",
+          "kind": "package"
+        },
+        {
+          "path": "./compaction",
+          "dir": "compaction",
+          "formerName": "@arnilo/prism-memory-compaction",
+          "kind": "package"
+        }
+      ],
+      "publishOrder": 1
+    },
+    {
+      "name": "@arnilo/prism-hosts",
+      "dir": "packages/hosts",
+      "line": "lockstep",
+      "subpaths": [
+        {
+          "path": "./acp",
+          "dir": "acp",
+          "formerName": "@arnilo/prism-acp",
+          "kind": "library"
+        },
+        {
+          "path": "./ag-ui",
+          "dir": "ag-ui",
+          "formerName": "@arnilo/prism-ag-ui",
+          "kind": "library"
+        },
+        {
+          "path": "./ag-ui/renderer",
+          "dir": "ag-ui",
+          "formerName": "@arnilo/prism-ag-ui",
+          "kind": "library"
+        },
+        {
+          "path": "./channels",
+          "dir": "channels",
+          "formerName": "@arnilo/prism-channels",
+          "kind": "library"
+        },
+        {
+          "path": "./channels/telegram",
+          "dir": "channels",
+          "formerName": "@arnilo/prism-channels",
+          "kind": "library"
+        },
+        {
+          "path": "./channels/signal",
+          "dir": "channels",
+          "formerName": "@arnilo/prism-channels",
+          "kind": "library"
+        },
+        {
+          "path": "./devtools",
+          "dir": "devtools",
+          "formerName": "@arnilo/prism-devtools",
+          "kind": "library"
+        },
+        {
+          "path": "./evals",
+          "dir": "evals",
+          "formerName": "@arnilo/prism-evals",
+          "kind": "library"
+        },
+        {
+          "path": "./headless",
+          "dir": "headless",
+          "formerName": "@arnilo/prism-headless",
+          "kind": "library"
+        },
+        {
+          "path": "./host-builder",
+          "dir": "host-builder",
+          "formerName": "@arnilo/prism-host-builder",
+          "kind": "library"
+        },
+        {
+          "path": "./mcp-server",
+          "dir": "mcp-server",
+          "formerName": "@arnilo/prism-mcp-server",
+          "kind": "library"
+        },
+        {
+          "path": "./remote",
+          "dir": "remote",
+          "formerName": "@arnilo/prism-remote",
+          "kind": "library"
+        },
+        {
+          "path": "./remote/testing",
+          "dir": "remote",
+          "formerName": "@arnilo/prism-remote",
+          "kind": "library"
+        },
+        {
+          "path": "./driver-process",
+          "dir": "driver-process",
+          "formerName": "@arnilo/prism-driver-process",
+          "kind": "library"
+        },
+        {
+          "path": "./driver-process/testing",
+          "dir": "driver-process",
+          "formerName": "@arnilo/prism-driver-process",
+          "kind": "library"
+        }
+      ],
+      "publishOrder": 4
+    },
+    {
+      "name": "@arnilo/prism-memory-system",
+      "dir": "packages/memory",
+      "line": "experimental",
+      "subpaths": [
+        {
+          "path": "./core",
+          "dir": "core",
+          "formerName": "@arnilo/prism-memory-core",
+          "kind": "library"
+        },
+        {
+          "path": "./core/fabric",
+          "dir": "core",
+          "formerName": "@arnilo/prism-memory-core",
+          "kind": "library"
+        },
+        {
+          "path": "./core/postgres",
+          "dir": "core",
+          "formerName": "@arnilo/prism-memory-core",
+          "kind": "library"
+        },
+        {
+          "path": "./core/sqlite",
+          "dir": "core",
+          "formerName": "@arnilo/prism-memory-core",
+          "kind": "library"
+        },
+        {
+          "path": ".",
+          "dir": "system",
+          "formerName": "@arnilo/prism-memory-system",
+          "kind": "package"
+        }
+      ],
+      "publishOrder": 5
+    },
+    {
+      "name": "@arnilo/prism-knowledge",
+      "dir": "packages/knowledge",
+      "line": "experimental",
+      "subpaths": [
+        {
+          "path": "./rag",
+          "dir": "rag",
+          "formerName": "@arnilo/prism-rag",
+          "kind": "package"
+        },
+        {
+          "path": "./wiki",
+          "dir": "wiki",
+          "formerName": "@arnilo/prism-wiki",
+          "kind": "package"
+        }
+      ],
+      "publishOrder": 6
+    }
+  ]
+}

@@ -528,8 +528,7 @@ export function serveConnection(state: ServerState, transport: RemoteTransport, 
           canSecret: negotiated["hostUi.secret"] === true,
           principalKey,
           operator: isOperator,
-          ask: async (params) =>
-            (await dispatcher.request("hostUi.request", params as unknown as JsonObject)) as unknown as HostUiResponse,
+          ask: async (params) => (await dispatcher.request("hostUi.request", params as unknown as JsonObject)) as unknown as HostUiResponse,
         });
         const owned = state.sessions.get(principalKey);
         if (owned) {

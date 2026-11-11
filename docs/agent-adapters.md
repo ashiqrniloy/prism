@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-driver-process` runs one external coding-agent binary as a Prism `Agent`'s loop. Prism ships no
+`@arnilo/prism-hosts/driver-process` runs one external coding-agent binary as a Prism `Agent`'s loop. Prism ships no
 adapter for any vendor binary: the host writes an `AgentAdapter`, a plain object that describes what the binary can
 enforce and capture, maps the agent definition onto the binary's flags or files, and maps the binary's wire onto
 Prism activity. The driver package owns the process, the profile, the policy guard, the callback broker, the MCP tool
@@ -22,7 +22,7 @@ wiring the kernel's driver kit for a new binary family, start with [drivers](dri
 
 ## The adapter contract
 
-An adapter is an `AgentAdapter` from `@arnilo/prism-driver-process`. Every member is read once at definition, except
+An adapter is an `AgentAdapter` from `@arnilo/prism-hosts/driver-process`. Every member is read once at definition, except
 the functions, which are called per run.
 
 | Member | Required | What it does |
@@ -48,7 +48,7 @@ the functions, which are called per run.
 adds a `driver-process:<name>` service whose `inspect()` reports the adapter identity, binary, transport, capture,
 deployment, isolation, and auth policy. Neither is needed in the adapter itself.
 
-A minimal `jsonl-stream` adapter. From `packages/drivers/process/src/__tests__/guide-samples.test.ts`:
+A minimal `jsonl-stream` adapter. From `packages/hosts/driver-process/src/__tests__/guide-samples.test.ts`:
 
 ```ts
 const minimal: AgentAdapter = {
@@ -371,10 +371,10 @@ rejected at definition.
 `extendAdapter(base, overrides)` creates a new adapter at definition time without changing the base. Every extension
 requires its own `name` and `revision`.
 
-From `packages/drivers/process/src/__tests__/guide-samples.test.ts`:
+From `packages/hosts/driver-process/src/__tests__/guide-samples.test.ts`:
 
 ```ts
-import { type AgentAdapter, extendAdapter } from "@arnilo/prism-driver-process";
+import { type AgentAdapter, extendAdapter } from "@arnilo/prism-hosts/driver-process";
 
 const extended = extendAdapter(minimal, {
   name: "my-extended-adapter",
@@ -394,7 +394,7 @@ The result records the full `extends` chain in `inspect()`.
 
 ## Recording fixtures and running conformance in CI
 
-`adapterConformance(adapter, { dialect, fixtures })` from `@arnilo/prism-driver-process/testing` runs the kernel
+`adapterConformance(adapter, { dialect, fixtures })` from `@arnilo/prism-hosts/driver-process/testing` runs the kernel
 driver suite plus adapter-specific checks: recorded replay, unmapped capture, declared fail-closed response, unknown
 RPC request, abort within grace, resume strategy, hosted acknowledgements, and rate limits. It imports separately so
 production imports never load testing code.
@@ -403,10 +403,10 @@ Record a fixture from one live run with `recordFixtures` from `@arnilo/prism/tes
 returns a tee wrapper argv to set as the adapter's binary, and `recordFixtures.finish` writes a redacted fixture
 file. The binary itself is never modified. Then run the suite in the host's CI:
 
-From `packages/drivers/process/src/__tests__/guide-samples.test.ts`:
+From `packages/hosts/driver-process/src/__tests__/guide-samples.test.ts`:
 
 ```ts
-import { adapterConformance } from "@arnilo/prism-driver-process/testing";
+import { adapterConformance } from "@arnilo/prism-hosts/driver-process/testing";
 
 const result = await adapterConformance(minimal, {
   dialect: "jsonl-stream",
@@ -420,9 +420,9 @@ actual hook, skill, and MCP paths the strict-isolation check plants. A command-h
 exit zero must supply `hook.allowed({ exitCode, stdout })` so the fake binary honors that response. Failures throw
 `AdapterConformanceError` with the failing `leg`; unavailable legs return a skip reason.
 
-`packages/drivers/process/src/__tests__/external-host.test.ts` is the template for a host's CI: it links the kernel
+`packages/hosts/driver-process/src/__tests__/external-host.test.ts` is the template for a host's CI: it links the kernel
 and the package into a temporary workspace, checks that every import is a public specifier, resolves the kernel
-through its `exports` (not `src`), and runs `adapterConformance` once. `packages/drivers/process/src/__tests__/reference-adapters.test.ts`
+through its `exports` (not `src`), and runs `adapterConformance` once. `packages/hosts/driver-process/src/__tests__/reference-adapters.test.ts`
 spawns `examples/adapters/conformance.ts`, which runs the suite for all three reference adapters.
 
 ## Worked mappings (non-normative)

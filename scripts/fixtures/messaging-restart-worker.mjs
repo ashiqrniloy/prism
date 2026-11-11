@@ -4,8 +4,8 @@
  * PRISM_CHANNELS_WORKER_INPUT = { filename, connectionId, eventId, chat, actor }
  */
 import { createAgent } from "../../src/index.ts";
-import { createChannelRuntime } from "@arnilo/prism-channels";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createChannelRuntime } from "@arnilo/prism-hosts/channels";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import { providerPackage } from "../../src/provider-kit/index.ts";
 
 const input = JSON.parse(process.env.PRISM_CHANNELS_WORKER_INPUT ?? "null");
@@ -34,19 +34,23 @@ const persistence = createSqlitePersistence({ filename: input.filename });
 const agent = await createAgent({
   id: "channel-agent",
   model: { provider: "mock", model: "demo" },
-  packages: [providerPackage("test-provider", [{
-    id: "mock",
-    async *generate(request) {
-      await new Promise((resolve) => {
-        if (request.signal?.aborted) {
-          resolve();
-          return;
-        }
-        request.signal?.addEventListener("abort", () => resolve(), { once: true });
-      });
-      throw new Error("aborted while the process was dying");
-    },
-  }])],
+  packages: [
+    providerPackage("test-provider", [
+      {
+        id: "mock",
+        async *generate(request) {
+          await new Promise((resolve) => {
+            if (request.signal?.aborted) {
+              resolve();
+              return;
+            }
+            request.signal?.addEventListener("abort", () => resolve(), { once: true });
+          });
+          throw new Error("aborted while the process was dying");
+        },
+      },
+    ]),
+  ],
   slots: { store: persistence },
   runLedger: persistence,
 });

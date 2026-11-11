@@ -1,6 +1,6 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
-import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
+import { createMemoryCheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { createReadPathSet, createReadPathSetPersistence, READ_PATH_SET_NAMESPACE } from "../read-path-set.js";
 
 test("read-path persistence: save then restore into a fresh set (plan 015 Task 4)", async () => {

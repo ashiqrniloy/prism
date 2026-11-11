@@ -1,5 +1,7 @@
 # Phase 11 Part O21 — Memory system: non-declarative memory (procedural memory, conditioned responses, priming)
 
+> **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
+
 ## Objectives
 
 - Add the non-declarative half of LTM (design §5.6.2). This is memory that changes the agent's behaviour without the agent asking for it:

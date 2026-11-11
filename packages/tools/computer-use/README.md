@@ -1,4 +1,4 @@
-# @arnilo/prism-tools-computer-use
+# @arnilo/prism-tools/computer-use
 
 The first-party Linux desktop tools as a Prism package. The default export is a `definePackage`
 definition whose `setup` resolves the host-owned `computer-use-linux` MCP binary on `PATH`,
@@ -8,14 +8,14 @@ connects over stdio, registers the upstream desktop tools, and registers the bun
 ## Install
 
 ```bash
-prism add @arnilo/prism-tools-computer-use
+prism add @arnilo/prism-tools/computer-use
 bun add -g @agent-sh/computer-use-linux   # the host-owned binary; Prism never downloads it
 ```
 
 ```jsonc
 // manifest entry
 {
-  "name": "@arnilo/prism-tools-computer-use",
+  "name": "@arnilo/prism-tools/computer-use",
   "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": {
@@ -45,7 +45,7 @@ bun add -g @agent-sh/computer-use-linux   # the host-owned binary; Prism never d
 A missing `device.sandbox`, a missing `runLimits`, or an unresolvable `command` writes a `warn`
 status note and registers nothing; it never throws. A host or test may supply its own MCP bridge by
 providing the `computer-use.mcp` service; the bundled path dynamically imports
-`@arnilo/prism-mcp`'s `connectMcpTools`.
+`@arnilo/prism-extensions/mcp`'s `connectMcpTools`.
 
 ## What it changes
 
@@ -76,12 +76,12 @@ redactor.
 - Observation results are marked `untrusted_external`, so the kernel wraps them in its envelope
   (`docs/tools.md`); screenshot/app-state payloads pass `acceptDeviceChunk` and oversize payloads
   become `dropped_oversize`.
-- Importing the package is inert: `@arnilo/prism-mcp` is imported dynamically only during `setup`.
+- Importing the package is inert: `@arnilo/prism-extensions/mcp` is imported dynamically only during `setup`.
 
 ## Example
 
 ```ts
-import toolsComputerUse from "@arnilo/prism-tools-computer-use";
+import toolsComputerUse from "@arnilo/prism-tools/computer-use";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, join, normalize, relative, sep } from "node:path";
+// @ts-expect-error stdlib-only bundle tooling.
+import { packagePages } from "../../scripts/bundles.mjs";
+// @ts-expect-error stdlib-only release tooling.
+import { loadRelease } from "../../scripts/release.mjs";
 import { classify, referenceHostPackages } from "./reference-host-allowlist.js";
 
 const docsDir = "docs";
@@ -112,7 +116,7 @@ const readinessDoc = () => withHistory("docs/history/0.1.0-readiness.md", () => 
 /** Every workspace package directory, one level under `packages/` and grouped one level deeper. */
 function workspaceDirs(): string[] {
   const dirs: string[] = [];
-  // Plan 157 Task 3: a package may nest inside a family directory (`packages/memory/compaction`), so the
+  // Plan 157 Task 3: a package may nest inside a family directory (`packages/extensions/compaction`), so the
   // walk descends one level past a manifest instead of stopping there.
   const walk = (dir: string, depth: number) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -261,7 +265,10 @@ describe("docs", () => {
 
   // plan 215 Task 29: the stability promise is indexed, linked from the pages it governs, and states the rules.
   it("docs_compatibility_page_indexed", () => {
-    assert.ok(readFileSync("docs/index.md", "utf8").includes("- [Compatibility](compatibility.md): "), "docs/index.md must link compatibility.md");
+    assert.ok(
+      readFileSync("docs/index.md", "utf8").includes("- [Compatibility](compatibility.md): "),
+      "docs/index.md must link compatibility.md",
+    );
     for (const page of ["docs/host.md", "docs/events.md", "docs/packages.md"]) {
       assert.ok(readFileSync(page, "utf8").includes("(compatibility.md)"), `${page} must link compatibility.md`);
     }
@@ -281,7 +288,7 @@ describe("docs", () => {
 
   // plan 068 Task 4: the index is a current-line link map — no stale readiness
   // claims, no retired package names presented as live installables.
-  // `@arnilo/prism-evals` is not in this list: plan 162 Task 3 reintroduced the name as the live evals host library.
+  // `@arnilo/prism-hosts/evals` is not in this list: plan 162 Task 3 reintroduced the name as the live evals host library.
   it("docs index has no stale readiness claim or retired package as live", () => {
     const index = readFileSync("docs/index.md", "utf8");
     assert.ok(!index.includes("**0.2.5** current line"), "docs/index.md must not claim a 0.2.5 current line");
@@ -521,20 +528,18 @@ describe("docs", () => {
 
   it("index_links_every_package_readme", () => {
     const index = readFileSync("docs/index.md", "utf8");
-    const dirs: string[] = [];
-    const walk = (dir: string) => {
-      for (const ent of readdirSync(dir, { withFileTypes: true })) {
-        if (!ent.isDirectory() || ent.name === "node_modules") continue;
-        const full = join(dir, ent.name);
-        if (existsSync(join(full, "package.json"))) dirs.push(full);
-        else walk(full);
-      }
-    };
-    walk("packages");
+    const release = loadRelease(process.cwd());
+    const dirs = [
+      ...new Set([
+        ...release.packages.filter((pkg: { path: string }) => pkg.path !== ".").map((pkg: { path: string }) => pkg.path),
+        ...packagePages(process.cwd(), release.packages)
+          .filter((pkg: { path: string }) => pkg.path !== ".")
+          .map((pkg: { path: string }) => pkg.path),
+      ]),
+    ] as string[];
     assert.ok(dirs.length > 0);
     for (const dir of dirs) {
-      const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { private?: boolean };
-      if (pkg.private) continue;
+      if (existsSync(join(dir, "package.json")) && JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).private) continue;
       assert.ok(index.includes(`(../${dir}/README.md)`), `docs/index.md must link ${dir}/README.md`);
     }
     assert.ok(index.includes("(../apps/prism-agent/README.md)"), "docs/index.md must link the Prism Agent walkthrough");
@@ -646,15 +651,15 @@ describe("docs", () => {
       // 55 legacy names were retired in 0.4; the
       // two `@arnilo/prism-provider-<vendor>` packages (hyper, opencode-go, typesafe, laya) are current
       // manifests; restored OpenRouter leaves 49 legacy names, and plan 216 Task 3 reuses two of them for the
-      // knowledge packages (`@arnilo/prism-rag`, `@arnilo/prism-wiki`), which leaves 47 that are not
+      // knowledge packages (`@arnilo/prism-knowledge/rag`, `@arnilo/prism-knowledge/wiki`), which leaves 47 that are not
       // publishable. The 55-entry legacy registry plan stays frozen in the evidence file
       // and is asserted by the packaging suite. (`@arnilo/prism-providers` itself is not in
       // this list: the phase54 table names it in a numbered row, not the first-cell form the
       // derivation matches — `no_workspace_imports_prism_providers` guards it instead.)
       assert.equal(
         retired.length,
-        47,
-        `phase54 evidence must enumerate 47 still-retired 0.3 names after OpenRouter restoration and the knowledge renames, got ${retired.length}`,
+        54,
+        `plan 224: all former npm names move to bundle subpaths, leaving 54 retired 0.3 names, got ${retired.length}`,
       );
       const exemptPages = new Set(["docs/migration.md"]); // per-era records live under docs/history/ (skipped above)
       // Lines tied to dated records (release decisions, plan/phase cites, version-pinned tags) or to
@@ -993,8 +998,8 @@ describe("docs", () => {
         : existsSync("packages/tools/work/src/connectors/idempotency.ts")
           ? "packages/tools/work/src/connectors/idempotency.ts"
           : "packages/prism-work/src/connectors/idempotency.ts",
-      existsSync("packages/credentials/keyring/src/resolver.ts")
-        ? "packages/credentials/keyring/src/resolver.ts"
+      existsSync("packages/extensions/keyring/src/resolver.ts")
+        ? "packages/extensions/keyring/src/resolver.ts"
         : "packages/prism-core/src/credentials/node/resolver.ts",
       existsSync("packages/server/src/replay.ts")
         ? "packages/server/src/replay.ts"
@@ -1112,7 +1117,7 @@ describe("docs", () => {
         ? "packages/credentials-node/src/index.ts"
         : existsSync("packages/prism-core/src/credentials/node/index.ts")
           ? "packages/prism-core/src/credentials/node/index.ts"
-          : "packages/credentials/keyring/src/index.ts",
+          : "packages/extensions/keyring/src/index.ts",
       existsSync("packages/work-tools/src/index.ts")
         ? "packages/work-tools/src/index.ts"
         : existsSync("packages/tools/work/src/connectors/index.ts")
@@ -1746,7 +1751,7 @@ describe("docs", () => {
             narrowedCatalog: string[];
             loadSkill: string;
           };
-          assert.deepEqual(skills.skills, [{ name: "web-research", package: "@arnilo/prism-tools-web", requiresTools: ["web_fetch"] }]);
+          assert.deepEqual(skills.skills, [{ name: "web-research", package: "@arnilo/prism-tools/web", requiresTools: ["web_fetch"] }]);
           assert.deepEqual(skills.fullCatalog, ["web-research"], "every tool reaches the model: the skill is listed");
           assert.deepEqual(skills.narrowedCatalog, [], "tools.only read: the skill leaves the catalog");
           assert.equal(skills.loadSkill, "skill_unavailable", "load_skill refuses an unavailable skill");
@@ -1985,10 +1990,10 @@ describe("docs", () => {
   it("phase8_package_readmes_state_cost", () => {
     const files = [
       "packages/memory/system/README.md",
-      "packages/memory/compaction/README.md",
+      "packages/extensions/compaction/README.md",
       "packages/knowledge/rag/README.md",
       "packages/knowledge/wiki/README.md",
-      "packages/context/engineering/README.md",
+      "packages/extensions/context-engineering/README.md",
     ];
     for (const file of files) {
       const text = readFileSync(file, "utf8");
@@ -2008,7 +2013,7 @@ describe("docs", () => {
   });
 
   it("phase_6_examples_import_only_prism_testing_and_store_sqlite", () => {
-    const allowed = new Set(["@arnilo/prism", "@arnilo/prism/testing", "@arnilo/prism-store-sqlite"]);
+    const allowed = new Set(["@arnilo/prism", "@arnilo/prism/testing", "@arnilo/prism-extensions/store-sqlite"]);
     for (const file of ["examples/sqlite-resume.ts", "examples/durable-approval.ts"]) {
       const source = readFileSync(file, "utf8");
       const specifiers = [...source.matchAll(/^\s*(?:import|export)\b[^;]*?\bfrom\s+["']([^"']+)["']/gm)].map((match) => match[1]);
@@ -2016,7 +2021,7 @@ describe("docs", () => {
       for (const specifier of specifiers) {
         assert.ok(
           allowed.has(specifier) || specifier.startsWith("node:"),
-          `${file} imports ${specifier}; Phase 6 examples use only @arnilo/prism, @arnilo/prism/testing, and @arnilo/prism-store-sqlite`,
+          `${file} imports ${specifier}; Phase 6 examples use only @arnilo/prism, @arnilo/prism/testing, and @arnilo/prism-extensions/store-sqlite`,
         );
       }
       assert.ok(!/\bimport\(/.test(source), `${file} must not use a dynamic import`);
@@ -2145,11 +2150,7 @@ describe("docs", () => {
   });
 
   it("fabric_readme_makes_no_better_than_full_context_claim", () => {
-    const files = [
-      "packages/memory/system/README.md",
-      "CHANGELOG.md",
-      "docs/_evidence/memory-bench-0.13.0.md",
-    ];
+    const files = ["packages/memory/system/README.md", "CHANGELOG.md", "docs/_evidence/memory-bench-0.13.0.md"];
     for (const file of files) {
       const text = readFileSync(file, "utf8");
       assert.ok(!/better than full[- ]context/i.test(text), `${file} claims better than full context`);
@@ -2193,9 +2194,9 @@ describe("docs", () => {
     assert.ok(!/Prism Code/.test(product + readme), "Prism Agent, not Prism Code, is the reference host");
     assert.ok(product.includes("**Prism Agent** is the reference host"), "PRODUCT.md must name Prism Agent as the reference host");
     for (const phrase of [
-      "@arnilo/prism-driver-process",
-      "@arnilo/prism-remote",
-      "@arnilo/prism-headless",
+      "@arnilo/prism-hosts/driver-process",
+      "@arnilo/prism-hosts/remote",
+      "@arnilo/prism-hosts/headless",
       "agent.inspect()",
       ".prism/packages.json",
     ]) {

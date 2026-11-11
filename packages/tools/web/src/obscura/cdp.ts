@@ -3,14 +3,14 @@
  *
  * `obscura serve` exposes a CDP endpoint (default ws://127.0.0.1:9222); hosts connect
  * with their own Playwright via chromium.connectOverCDP — never connect() or launch.
- * The resulting browser plugs straight into `@arnilo/prism-tools-browser`'s
+ * The resulting browser plugs straight into `@arnilo/prism-tools/browser`'s
  * createBrowserTools/createBrowserManager; raw CDP (screenshots, PDF, screencast)
  * stays available through Playwright's own CDP session APIs. No command allow-list
  * is added here and Puppeteer is out of scope.
  */
 import { isIP } from "node:net";
-import type { PlaywrightBrowser } from "./playwright.js";
 import { ObscuraError } from "./errors.js";
+import type { PlaywrightBrowser } from "./playwright.js";
 import { spawnObscuraProcess } from "./process.js";
 import type { ObscuraProcessOptions, OwnedObscuraProcess } from "./types.js";
 
@@ -148,7 +148,7 @@ function makeProbe(endpoint: URL): () => Promise<boolean> {
 /**
  * Attach to an external CDP endpoint, or spawn `obscura serve` and attach once it
  * is ready (bounded, abortable readiness — no fixed post-start sleep). Exactly one
- * connectOverCDP call is made and its browser is returned for @arnilo/prism-tools-browser.
+ * connectOverCDP call is made and its browser is returned for @arnilo/prism-tools/browser.
  */
 export async function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession> {
   let endpointRaw: string | undefined = options.endpoint;

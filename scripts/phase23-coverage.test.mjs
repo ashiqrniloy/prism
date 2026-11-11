@@ -6,7 +6,7 @@
 // PRISM_COVERAGE_THRESHOLDS + PRISM_COVERAGE_ARTIFACT overrides (sabotaged temp files),
 // so the real thresholds JSON and the real artifact are never touched.
 //
-// Denominator proof: @arnilo/prism-mcp imported root core dist in the 0.2.2 run and
+// Denominator proof: @arnilo/prism-extensions/mcp imported root core dist in the 0.2.2 run and
 // reported 45.47 lines (polluted, Node instrument); its Bun freeze threshold here is
 // 91.32 (recompute 94.32 - 3pp). The `lines >= threshold` gate failing for mcp would
 // therefore be the observable symptom of a broken package-local bunfig filter.
@@ -18,8 +18,10 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSyn
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 
+import { packagePages } from "./bundles.mjs";
 import { failureRow, MAX_TAIL_CHARS, TAIL_LINES, tailOf } from "./coverage-failure.mjs";
-import { computePackageTruth, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { loadRelease } from "./release.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const SUMMARY = join(ROOT, "scripts", "coverage-summary.mjs");
@@ -39,7 +41,7 @@ function sourcePackage(dir) {
     const target = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).exports?.["."];
     return typeof target === "string" && target.endsWith(".ts");
   } catch {
-    return false;
+    return existsSync(join(dir, "src"));
   }
 }
 
@@ -60,8 +62,17 @@ function findTestFiles(dir) {
   return tests;
 }
 
-const pkgName = (dir) => JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name ?? dir;
-const workspaceDirs = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces)
+const pages = packagePages(ROOT, loadRelease(ROOT).packages);
+const pkgName = (dir) =>
+  pages.find((pkg) => join(ROOT, pkg.path) === dir)?.manifest.name ?? JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name;
+const workspaceDirs = [
+  ...new Set([
+    ...pages.filter((pkg) => pkg.path !== ".").map((pkg) => join(ROOT, pkg.path)),
+    ...expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces).filter(
+      (dir) => readManifest(join(dir, "package.json")).private,
+    ),
+  ]),
+]
   .filter((dir) => findTestFiles(dir).length > 0)
   .sort();
 const workspacePackageNames = workspaceDirs.map(pkgName).sort();
@@ -76,8 +87,7 @@ function assertArtifactPackageNames(artifact) {
 
 // Plan 070 Task 7: the live workspace graph from the manifest truth (root excluded —
 // @arnilo/prism is the core row, never a workspace row in the thresholds file).
-const truth = computePackageTruth();
-const liveWorkspaceNames = new Set(Object.keys(truth.versions).filter((name) => name !== truth.root.name));
+const liveWorkspaceNames = new Set(workspaceDirs.map((dir) => relative(ROOT, dir)));
 const retiredThresholdRows = (packages) => Object.keys(packages).filter((name) => !liveWorkspaceNames.has(name));
 
 function runSummary(env) {
@@ -115,7 +125,11 @@ test("default scripts carry the Bun instrument, never the Node one", () => {
   assert.equal((script.match(/bun test --coverage/g) ?? []).length, 1, "the stage must measure the core suite exactly once");
   // The capture seam falls back to a real measurement when the core run failed, which would
   // otherwise let a red core suite reach a green stage; the stage re-checks that exit code itself.
-  assert.match(script, /core_exit -ne 0[\s\S]*exit \$core_exit/, "a failed core coverage run must fail the stage, never be retried into green");
+  assert.match(
+    script,
+    /core_exit -ne 0[\s\S]*exit \$core_exit/,
+    "a failed core coverage run must fail the stage, never be retried into green",
+  );
   assert.match(
     script,
     /PRISM_COVERAGE_CORE_OUTPUT=node_modules\/\.prism-core-coverage\.out PRISM_COVERAGE_CORE_EXIT=\$core_exit/,
@@ -276,7 +290,7 @@ test("thresholds JSON covers every workspace package and is well-formed", () => 
   );
   for (const dir of workspaceDirs) {
     const name = pkgName(dir);
-    const entry = thresholds.packages[name];
+    const entry = thresholds.packages[relative(ROOT, dir)];
     assert.ok(entry, `${name} missing from coverage-thresholds.json`);
     if (entry.protectedException) {
       assert.ok(entry.protectedException.length > 0, "protected exception needs a reason");
@@ -320,7 +334,7 @@ test("coverage_discovers_grouped_workspaces", () => {
   const grouped = workspaceDirs.filter((dir) => relative(ROOT, dir).split(sep).length === 3);
   assert.ok(grouped.length > 0, "the grouped packages/<group>/<name> layout must be discovered");
   for (const dir of workspaceDirs) {
-    assert.ok(existsSync(join(dir, "package.json")), `${dir} must be a workspace leaf with a manifest, never a group directory`);
+    assert.ok(existsSync(join(dir, "package.json")) || pages.some((pkg) => join(ROOT, pkg.path) === dir), `${dir} must be a source owner`);
     assert.ok(findTestFiles(dir).length > 0, `${dir} was discovered without a test file`);
   }
 });
@@ -330,7 +344,7 @@ test("coverage_discovers_grouped_workspaces", () => {
 test("coverage_rows_match_workspaces", () => {
   assert.deepEqual(
     Object.keys(thresholds.packages).sort(),
-    workspacePackageNames,
+    workspaceDirs.map((dir) => relative(ROOT, dir)).sort(),
     "every discovered workspace must have exactly one threshold row",
   );
   const artifact = JSON.parse(readFileSync(ARTIFACT, "utf8"));
@@ -366,7 +380,7 @@ test("real artifact is well-formed and every non-protected package passes its ga
     assert.ok(Number.isFinite(row.lines) && Number.isFinite(row.functions));
     assert.equal(row.branches, null, `${name} must record branches: null`);
     assert.ok(Number.isInteger(row.denominatorFiles) && row.denominatorFiles >= 0);
-    const protectedException = thresholds.packages[name].protectedException ?? null;
+    const protectedException = thresholds.packages[relative(ROOT, dir)].protectedException ?? null;
     assert.equal(row.protectedException, protectedException);
     if (protectedException) {
       assert.equal(row.threshold, null, "protected packages are never threshold-gated");
@@ -378,7 +392,7 @@ test("real artifact is well-formed and every non-protected package passes its ga
   }
   // Denominator proof: mcp imported root core dist in 0.2.2 (45.47 lines, polluted); the
   // package-local bunfig filter must keep the Bun recompute at the frozen 94.32-class level.
-  assert.ok(artifact.packages["@arnilo/prism-mcp"].lines >= 80, "mcp recompute must stay package-only (bunfig filter working)");
+  assert.ok(artifact.packages["@arnilo/prism-extensions/mcp"].lines >= 80, "mcp recompute must stay package-only (bunfig filter working)");
 });
 
 test("fail-closed: a non-protected package below its threshold exits 1, is listed, and never touches the real files", () => {
@@ -388,7 +402,7 @@ test("fail-closed: a non-protected package below its threshold exits 1, is liste
   try {
     // Sabotage one non-protected package: demand 100 lines, above the fake run's 99.00.
     const sabotaged = JSON.parse(realThresholds);
-    sabotaged.packages["@arnilo/prism-ag-ui"] = { lines: 100, branches: 100, functions: 100 };
+    sabotaged.packages["packages/hosts/ag-ui"] = { lines: 100, branches: 100, functions: 100 };
     const tempThresholds = join(dir, "thresholds.json");
     const tempArtifact = join(dir, "artifact.json");
     writeFileSync(tempThresholds, JSON.stringify(sabotaged, null, 2));
@@ -398,19 +412,19 @@ test("fail-closed: a non-protected package below its threshold exits 1, is liste
     const r = runSummary({ PRISM_COVERAGE_THRESHOLDS: tempThresholds, PRISM_COVERAGE_ARTIFACT: tempArtifact, PATH: path });
     assert.notEqual(r.status, 0, "coverage-summary must fail closed when a non-protected package regresses");
     const artifact = JSON.parse(readFileSync(tempArtifact, "utf8"));
-    assert.deepEqual(artifact.belowThreshold, ["@arnilo/prism-ag-ui"]);
-    assert.equal(artifact.packages["@arnilo/prism-ag-ui"].pass, false);
-    assert.equal(artifact.packages["@arnilo/prism-ag-ui"].lines, 99);
+    assert.deepEqual(artifact.belowThreshold, ["@arnilo/prism-hosts/ag-ui"]);
+    assert.equal(artifact.packages["@arnilo/prism-hosts/ag-ui"].pass, false);
+    assert.equal(artifact.packages["@arnilo/prism-hosts/ag-ui"].lines, 99);
     assert.equal(Object.values(artifact.packages).filter((row) => row.pass === false).length, 1, "only the sabotage may fail");
     assert.equal(artifact.core.pass, true, "the core row clears its floor at 99.00");
     // The failing row is self-describing on stdout (plan 071 Task 15): the numbers
     // carry the reason for a threshold regression, and a green child has no tail.
     assert.match(
       r.stdout,
-      /@arnilo\/prism-ag-ui\s+functions[^\n]*\[FAIL lines 99\.00 < 100\.00\]/,
+      /@arnilo\/prism-hosts\/ag-ui\s+functions[^\n]*\[FAIL lines 99\.00 < 100\.00\]/,
       "the failing row must print its reason",
     );
-    assert.ok(!artifact.packages["@arnilo/prism-ag-ui"].tail, "a green child records no tail");
+    assert.ok(!artifact.packages["@arnilo/prism-hosts/ag-ui"].tail, "a green child records no tail");
     // Protected packages are exempt even when the gate fails elsewhere.
     for (const [pkg, entry] of Object.entries(thresholds.packages)) {
       if (entry.protectedException) assert.ok(!artifact.belowThreshold.includes(pkg), `${pkg} must never be a threshold failure`);

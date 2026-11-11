@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { ingestWikiSource, sourceKeywords } from "../ingest.js";
 
 const UNCOMPRESSED_PDF = "%PDF-1.4\n/Type /Page\nBT (Hello \\(PDF\\)) Tj ET";

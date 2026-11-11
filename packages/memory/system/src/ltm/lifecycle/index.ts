@@ -7,7 +7,7 @@
  * a user correction that cites the note counts harmful evidence and reopens it for reconsolidation.
  */
 import type { JsonObject } from "@arnilo/prism";
-import { type Memory, MemoryValidationError, type MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import { type Memory, MemoryValidationError, type MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import type { FabricNoteCensus } from "../promote.js";
 import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../types.js";
 import { appendCoReadEvent, appendUseEvent, MAX_CO_READ_WITH, type MemoryNoteUseEvent } from "./events.js";

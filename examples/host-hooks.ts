@@ -28,14 +28,16 @@ export async function demo(): Promise<Record<string, unknown>> {
   const agent = await createAgent({
     id: "host-hooks",
     model: { provider: "mock", model: "demo" },
-    packages: [mockProvider([
-      [
-        providerToolCall(toolCallContent("net-1", "fetch_url", { url: "https://example.com" })),
-        providerToolCall(toolCallContent("read-1", "read_file", { path: "README.md" })),
-        providerDone(),
-      ],
-      [providerTextDelta("never reached"), providerDone()],
-    ])],
+    packages: [
+      mockProvider([
+        [
+          providerToolCall(toolCallContent("net-1", "fetch_url", { url: "https://example.com" })),
+          providerToolCall(toolCallContent("read-1", "read_file", { path: "README.md" })),
+          providerDone(),
+        ],
+        [providerTextDelta("never reached"), providerDone()],
+      ]),
+    ],
     tools: { add: [tool("fetch_url", ["network"]), tool("read_file", ["read"]), tool("shell", ["execute"])] },
     // One tool switched off by id, whoever registered it.
     disable: { tools: ["shell"] },

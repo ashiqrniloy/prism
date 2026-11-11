@@ -19,46 +19,54 @@ const JOURNEY_CEILING_MS = 180_000;
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/hosts/channels", name: "@arnilo/prism-channels" },
-  { dir: "packages/hosts/evals", name: "@arnilo/prism-evals" },
-  { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools" },
-  { dir: "packages/memory/core", name: "@arnilo/prism-memory-core" },
-  { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag" },
-  { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki" },
-  { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction" },
-  { dir: "packages/memory/system", name: "@arnilo/prism-memory-system" },
-  { dir: "packages/policy/governance", name: "@arnilo/prism-governance" },
-  { dir: "packages/policy/model-router", name: "@arnilo/prism-model-router" },
-  { dir: "packages/integrations/workflows", name: "@arnilo/prism-workflows" },
-  { dir: "packages/integrations/observability", name: "@arnilo/prism-observability" },
-  { dir: "packages/context/files", name: "@arnilo/prism-context-files" },
-  { dir: "packages/context/engineering", name: "@arnilo/prism-context-engineering" },
-  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
-  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
-  { dir: "packages/tools/web", name: "@arnilo/prism-tools-web" },
-  { dir: "packages/tools/openapi", name: "@arnilo/prism-tools-openapi" },
-  { dir: "packages/tools/computer-use", name: "@arnilo/prism-tools-computer-use" },
-  { dir: "packages/tools/work", name: "@arnilo/prism-tools-work" },
-  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/hosts/mcp-server", name: "@arnilo/prism-mcp-server" },
-  { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
-  { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl" },
-  { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs" },
-  { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite" },
-  { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres" },
-  { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring" },
-  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
-  { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
-  { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/channels" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/evals" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/devtools" },
+  { dir: "packages/memory", name: "@arnilo/prism-memory-system/core" },
+  { dir: "packages/knowledge", name: "@arnilo/prism-knowledge/rag" },
+  { dir: "packages/knowledge", name: "@arnilo/prism-knowledge/wiki" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/compaction" },
+  { dir: "packages/memory", name: "@arnilo/prism-memory-system" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/governance" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/model-router" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/workflows" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/observability" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/context-files" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/context-engineering" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/coding" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/browser" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/web" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/openapi" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/computer-use" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/work" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/ag-ui" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/mcp" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/mcp-server" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/hooks-json" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/store-jsonl" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/store-codecs" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/store-sqlite" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/store-postgres" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/keyring" },
+  { dir: "packages/providers", name: "@arnilo/prism-ai" },
 ];
 
 let consumer, run, hostRun;
 let fixtureStartedMs;
 before(() => {
   fixtureStartedMs = Date.now();
-  consumer = createPackedConsumer(packages);
+  const peers = JSON.parse(readFileSync(join(repoRoot, "packages/tools/package.json"), "utf8")).peerDependencies;
+  const officePeers = Object.fromEntries(
+    Object.entries(peers).filter(([name]) => name.startsWith("@office-open/") || name === "ajv" || name === "fast-xml-parser"),
+  );
+  consumer = createPackedConsumer(packages, {
+    ...officePeers,
+    ...Object.fromEntries(
+      Object.entries(JSON.parse(readFileSync(join(repoRoot, "packages/hosts/package.json"), "utf8")).peerDependencies).filter(
+        ([name]) => name !== "@arnilo/prism",
+      ),
+    ),
+  });
   if (consumer.installStatus !== 0) return;
   copyFileSync(join(repoRoot, "scripts/fixtures/e2e-full-surface-journey.mjs"), join(consumer.consumer, "journey.mjs"));
   copyFileSync(join(repoRoot, "scripts/fixtures/e2e-070-host-completeness-journey.mjs"), join(consumer.consumer, "host-completeness.mjs"));
@@ -86,7 +94,7 @@ describe("packed-install full-surface journey", () => {
   });
 
   it("resolves public imports from the packed install, not the workspace", () => {
-    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-evals");
+    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-hosts/evals");
     assert.ok(resolved.startsWith(`file://${consumer.consumer}`), `resolved to ${resolved}, expected consumer node_modules`);
     assert.equal(resolved.includes(repoRoot), false, "must not resolve into the workspace tree");
   });

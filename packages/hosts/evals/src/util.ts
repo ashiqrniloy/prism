@@ -51,11 +51,7 @@ export function resolveSampling(
     throw new EvalError("sampling.strata must return a nonempty string", "ERR_PRISM_EVAL_BOUNDS");
   }
   const always = sampling.always ? Boolean(sampling.always(result)) : false;
-  const probability = always
-    ? 1
-    : sampling.rates !== undefined && Object.hasOwn(sampling.rates, stratum)
-      ? sampling.rates[stratum]!
-      : rate;
+  const probability = always ? 1 : sampling.rates !== undefined && Object.hasOwn(sampling.rates, stratum) ? sampling.rates[stratum]! : rate;
   return {
     probability,
     ...(probability > 0 ? { metadata: { stratum, probability } } : {}),
@@ -180,19 +176,28 @@ export async function mapPool<T, R>(
   return results;
 }
 
-
 /** Sorted object keys, ordered arrays, JSON's undefined rules; reject lossy non-JSON values. */
 export function canonicalJson(value: unknown): string {
   const ancestors = new Set<object>();
   const normalize = (value: unknown): unknown => {
     if (value === undefined || value === null || typeof value === "string" || typeof value === "boolean") return value;
     if (typeof value === "number" && Number.isFinite(value)) return value;
-    if (typeof value !== "object" || value === null || ancestors.has(value)
-      || (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
-      || Object.getOwnPropertySymbols(value).length) throw new TypeError("not serializable");
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      ancestors.has(value) ||
+      (!Array.isArray(value) && Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) ||
+      Object.getOwnPropertySymbols(value).length
+    )
+      throw new TypeError("not serializable");
     ancestors.add(value);
-    const result = Array.isArray(value) ? value.map(normalize)
-      : Object.fromEntries(Object.keys(value).sort().map(key => [key, normalize((value as Record<string, unknown>)[key])]));
+    const result = Array.isArray(value)
+      ? value.map(normalize)
+      : Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((key) => [key, normalize((value as Record<string, unknown>)[key])]),
+        );
     ancestors.delete(value);
     return result;
   };

@@ -120,7 +120,7 @@ async function runPrefixProbe() {
       createLongTermMemory,
       parseMemoryNoteMetadata,
     } = await import("@arnilo/prism-memory-system");
-    const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
+    const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-system/core/sqlite");
     const { storageStrength } = await import("../../packages/memory/system/src/ltm/lifecycle/strength.ts");
     const extractorRequests = [];
     const scenarios = [];

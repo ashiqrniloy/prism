@@ -28,7 +28,7 @@ import { INSTALL_TARGETS, type InstallTarget, type InstallTargetName, SERVER_ENT
 const PACKAGE_DIR = join(import.meta.dirname, "..", "..");
 const SKILL_SOURCE = join(PACKAGE_DIR, "skills", SKILL_NAME);
 const STAMP_FILE = ".prism-host-builder.json";
-const PACKAGE_NAME = "@arnilo/prism-host-builder";
+const PACKAGE_NAME = "@arnilo/prism-hosts/host-builder";
 
 export interface InstallOptions {
   readonly target: InstallTargetName;
@@ -147,7 +147,7 @@ function readSkillSource(): SkillFile[] {
 }
 
 function packageVersion(): string {
-  const parsed = JSON.parse(readFileSync(join(PACKAGE_DIR, "package.json"), "utf8")) as { version?: unknown };
+  const parsed = JSON.parse(readFileSync(join(PACKAGE_DIR, "..", "package.json"), "utf8")) as { version?: unknown };
   return typeof parsed.version === "string" ? parsed.version : "0.0.0";
 }
 
@@ -287,11 +287,11 @@ function tomlSnippet(target: InstallTarget): string {
   ].join("\n");
 }
 
-/** What a Prism builder agent lists in code: the skill is found by `contextFiles`, the MCP server by `@arnilo/prism-mcp`. */
+/** What a Prism builder agent lists in code: the skill is found by `contextFiles`, the MCP server by `@arnilo/prism-extensions/mcp`. */
 function prismSnippet(): string {
   return [
-    'import contextFiles from "@arnilo/prism-context-files";',
-    'import mcp from "@arnilo/prism-mcp";',
+    'import contextFiles from "@arnilo/prism-extensions/context-files";',
+    'import mcp from "@arnilo/prism-extensions/mcp";',
     "",
     "packages: [",
     "  contextFiles({ root: process.cwd() }), // discovers .agents/skills (and .claude/skills) by default",

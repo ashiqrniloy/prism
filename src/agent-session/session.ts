@@ -57,7 +57,7 @@ import {
   SessionNotFoundError,
   toRunResultStatus,
 } from "../contracts.js";
-import { createHookBus, type HookBus, } from "../hooks/index.js";
+import { createHookBus, type HookBus } from "../hooks/index.js";
 import type { Principal } from "../contracts-core/principal.js";
 import type { AgentInput } from "../input.js";
 import type { LoopStrategy } from "../loop/index.js";

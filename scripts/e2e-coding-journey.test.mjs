@@ -5,11 +5,12 @@
  * that consumer — the journey uses only public exports and resolves against
  * the packed node_modules, not workspace source paths.
  */
+
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
 
 const freeze = JSON.parse(readFileSync(join(repoRoot, "scripts/phase12-freeze-manifest.json"), "utf8"));
@@ -17,16 +18,16 @@ const CEILING_MS = freeze.capacity.e2eJourneyFixtureMsCeiling;
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
-  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/coding" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/ag-ui" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/mcp" },
 ];
 
 let consumer, run;
 let fixtureStartedMs;
 before(() => {
   fixtureStartedMs = Date.now();
-  const packed = createPackedConsumer(packages);
+  const packed = createPackedConsumer(packages, { "@ag-ui/core": "0.0.59" });
   consumer = packed;
   if (packed.installStatus !== 0) return;
   copyFileSync(join(repoRoot, "scripts/fixtures/e2e-coding-journey.mjs"), join(packed.consumer, "journey.mjs"));
@@ -49,7 +50,7 @@ describe("packed-install coding journey", () => {
   });
 
   it("resolves public imports from the packed install, not the workspace", () => {
-    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-tools-coding");
+    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-tools/coding");
     assert.ok(resolved.startsWith(`file://${consumer.consumer}`), `resolved to ${resolved}, expected consumer node_modules`);
     assert.ok(!resolved.includes(repoRoot), "must not resolve into the workspace tree");
   });

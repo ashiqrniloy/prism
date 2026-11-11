@@ -108,10 +108,16 @@ export function createChannelPairingStore(options: ChannelPairingStoreOptions): 
       if (found === null) return null;
       const r = found.record;
       if (
-        r.state !== "consumed" || typeof r.externalConversationId !== "string" || !r.externalConversationId ||
-        typeof r.externalActorId !== "string" || !r.externalActorId || typeof r.grantRevision !== "string" || !r.grantRevision ||
+        r.state !== "consumed" ||
+        typeof r.externalConversationId !== "string" ||
+        !r.externalConversationId ||
+        typeof r.externalActorId !== "string" ||
+        !r.externalActorId ||
+        typeof r.grantRevision !== "string" ||
+        !r.grantRevision ||
         (r.threadId !== undefined && typeof r.threadId !== "string")
-      ) return null;
+      )
+        return null;
       return r;
     },
     async create(input) {

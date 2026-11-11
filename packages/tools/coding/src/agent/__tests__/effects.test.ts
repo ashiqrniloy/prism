@@ -26,7 +26,9 @@ test("coding and Git tools declare conservative effect metadata", async () => {
     }
     // With a shell there is no delete/move tool at all.
     assert.deepEqual(
-      createCodingTools(cwd).map((tool) => tool.name).filter((name) => name === "delete" || name === "move"),
+      createCodingTools(cwd)
+        .map((tool) => tool.name)
+        .filter((name) => name === "delete" || name === "move"),
       [],
     );
     assert.deepEqual(effect(new Map(createCodingTools(cwd).map((tool) => [tool.name, tool])).get("shell")!), {

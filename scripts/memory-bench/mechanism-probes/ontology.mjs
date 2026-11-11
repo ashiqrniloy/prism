@@ -13,7 +13,7 @@ const WIKI = "../../../packages/knowledge/wiki/src";
 /** The wiki's ontology over the real fabric (LTM, read only) and an in-memory wiki store (the wiki tests' setup). */
 async function env(levels = ["project"], ontologyOptions = {}) {
   const { fabric } = await packages();
-  const core = await import("@arnilo/prism-memory-core");
+  const core = await import("@arnilo/prism-memory-system/core");
   const { createWikiOntology } = await import(`${WIKI}/ontology/port.ts`);
   const vectorStore = core.createMemoryVectorStore();
   const memories = new Map(
@@ -184,7 +184,7 @@ export const probes = [
     id: "ontology.curator-pass",
     async run() {
       const { runWikiPass, createWikiLease } = await import(`${WIKI}/consolidate/pass.ts`);
-      const { resolveMemoryWorkerLimits } = await import("@arnilo/prism-memory-core");
+      const { resolveMemoryWorkerLimits } = await import("@arnilo/prism-memory-system/core");
       const { parseConceptBody } = await import(`${WIKI}/ontology/codec.ts`);
       const arm = async (withEvidence) => {
         const e = await env();

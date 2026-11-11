@@ -9,50 +9,50 @@
       "@arnilo/prism/provider-kit": [
         "../src/provider-kit/index.ts"
       ],
-      "@arnilo/prism-context-files": [
-        "../packages/context/files/src/index.ts"
+      "@arnilo/prism-extensions/context-files": [
+        "../packages/extensions/context-files/src/index.ts"
       ],
-      "@arnilo/prism-context-engineering": [
-        "../packages/context/engineering/src/index.ts"
+      "@arnilo/prism-extensions/context-engineering": [
+        "../packages/extensions/context-engineering/src/index.ts"
       ],
-      "@arnilo/prism-store-jsonl": [
-        "../packages/stores/jsonl/src/index.ts"
+      "@arnilo/prism-extensions/store-jsonl": [
+        "../packages/extensions/store-jsonl/src/index.ts"
       ],
       "@arnilo/prism/*": [
         "../src/*"
       ],
-      "@arnilo/prism-tools-research": [
+      "@arnilo/prism-tools/research": [
         "../packages/tools/research/src/index.ts"
       ],
-      "@arnilo/prism-mcp": [
-        "../packages/integrations/mcp/src/index.ts"
+      "@arnilo/prism-extensions/mcp": [
+        "../packages/extensions/mcp/src/index.ts"
       ],
-      "@arnilo/prism-mcp-server": [
+      "@arnilo/prism-hosts/mcp-server": [
         "../packages/hosts/mcp-server/src/index.ts"
       ],
-      "@arnilo/prism-acp": [
+      "@arnilo/prism-hosts/acp": [
         "../packages/hosts/acp/src/index.ts"
       ],
-      "@arnilo/prism-guardrail-packs": [
-        "../packages/policy/guardrail-packs/src/index.ts"
+      "@arnilo/prism-extensions/guardrail-packs": [
+        "../packages/extensions/guardrail-packs/src/index.ts"
       ],
-      "@arnilo/prism-governance": [
-        "../packages/policy/governance/src/index.ts"
+      "@arnilo/prism-extensions/governance": [
+        "../packages/extensions/governance/src/index.ts"
       ],
-      "@arnilo/prism-model-router": [
-        "../packages/policy/model-router/src/index.ts"
+      "@arnilo/prism-extensions/model-router": [
+        "../packages/extensions/model-router/src/index.ts"
       ],
-      "@arnilo/prism-observability": [
-        "../packages/integrations/observability/src/index.ts"
+      "@arnilo/prism-extensions/observability": [
+        "../packages/extensions/observability/src/index.ts"
       ],
-      "@arnilo/prism-driver-process": [
-        "../packages/drivers/process/src/index.ts"
+      "@arnilo/prism-hosts/driver-process": [
+        "../packages/hosts/driver-process/src/index.ts"
       ],
-      "@arnilo/prism-delegate": [
-        "../packages/integrations/delegate/src/index.ts"
+      "@arnilo/prism-extensions/delegate": [
+        "../packages/extensions/delegate/src/index.ts"
       ],
-      "@arnilo/prism-advisor": [
-        "../packages/integrations/advisor/src/index.ts"
+      "@arnilo/prism-extensions/advisor": [
+        "../packages/extensions/advisor/src/index.ts"
       ]
     }
   },

@@ -11,14 +11,23 @@ export async function runToollessSession(agent: Agent, prompt: string, signal: A
     const result = await session.run(prompt, {
       signal,
       tools: { only: [] },
-      limits: { maxTurns: 1, maxProviderAttempts: 1, maxToolCalls: 1, maxToolRounds: 1,
-        maxContinuations: 0, maxWallTimeMs: timeoutMs, maxInputTokens: HARD_JUDGE_MAX_INPUT_BYTES,
-        maxOutputTokens: 4096, maxTotalTokens: HARD_JUDGE_MAX_INPUT_BYTES + 4096 },
+      limits: {
+        maxTurns: 1,
+        maxProviderAttempts: 1,
+        maxToolCalls: 1,
+        maxToolRounds: 1,
+        maxContinuations: 0,
+        maxWallTimeMs: timeoutMs,
+        maxInputTokens: HARD_JUDGE_MAX_INPUT_BYTES,
+        maxOutputTokens: 4096,
+        maxTotalTokens: HARD_JUDGE_MAX_INPUT_BYTES + 4096,
+      },
     });
     if (result.status !== "completed") {
       throw new EvalError("judge run did not complete", "ERR_PRISM_EVAL_JUDGE_OUTPUT");
     }
     return result.text;
-  } finally { await session.close(); }
+  } finally {
+    await session.close();
+  }
 }
-

@@ -43,7 +43,7 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
   try {
     const agent = await createCodingWorker(config(root, BUDGET_MODEL), { packages: packages("opencode-go") });
     try {
-      const compaction = packageConfig(agent, "@arnilo/prism-memory-compaction");
+      const compaction = packageConfig(agent, "@arnilo/prism-extensions/compaction");
       assert.equal(compaction.profile, "coding");
       assert.deepEqual(compaction.trigger, { type: "threshold_tokens", tokens: 96_000 });
 
@@ -53,7 +53,7 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
         "the observational memory is part of the experimental memory opt-in, not the default path",
       );
 
-      const engineering = packageConfig(agent, "@arnilo/prism-context-engineering");
+      const engineering = packageConfig(agent, "@arnilo/prism-extensions/context-engineering");
       assert.deepEqual(engineering.fold, { minAgeTurns: 2, minBytes: 2_048, keepLast: 3, clearAtLeastTokens: 9_600 });
       assert.equal(engineering.accounting, true);
       assert.equal(
@@ -81,7 +81,7 @@ test("memory_opt_in_budgets_the_observational_memory", async () => {
       try {
         const observational = packageConfig(agent, "@arnilo/prism-memory-system");
         assert.deepEqual(observational.context, { recentMessages: 8, compactAt: { ratio: 0.6, maxTokens: 96_000 } });
-        assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-compaction").trigger, { type: "threshold_tokens", tokens: 96_000 });
+        assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/compaction").trigger, { type: "threshold_tokens", tokens: 96_000 });
       } finally {
         await agent.dispose();
       }
@@ -97,12 +97,12 @@ test("research_worker_caps_block_share", async () => {
   try {
     const agent = await createResearchWorker(config(root, MOCK, BUDGET_MODEL), { packages: packages("opencode-go") });
     try {
-      const engineering = packageConfig(agent, "@arnilo/prism-context-engineering");
+      const engineering = packageConfig(agent, "@arnilo/prism-extensions/context-engineering");
       assert.deepEqual(engineering.blocks, { maxShare: 0.2 });
       assert.equal(engineering.budget, undefined);
       assert.equal(engineering.attention, undefined);
       assert.equal(engineering.accounting, true);
-      assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-compaction").trigger, {
+      assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/compaction").trigger, {
         type: "threshold_tokens",
         tokens: 96_000,
       });
@@ -120,8 +120,8 @@ test("unlisted_model_uses_ratio_and_notes_once", async () => {
   try {
     const agent = await createCodingWorker(config(root), { packages: packages("mock") });
     try {
-      assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-compaction").trigger, { type: "input_ratio", ratio: 0.6 });
-      assert.deepEqual(packageConfig(agent, "@arnilo/prism-context-engineering").fold, {
+      assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/compaction").trigger, { type: "input_ratio", ratio: 0.6 });
+      assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/context-engineering").fold, {
         minAgeTurns: 2,
         minBytes: 2_048,
         keepLast: 3,

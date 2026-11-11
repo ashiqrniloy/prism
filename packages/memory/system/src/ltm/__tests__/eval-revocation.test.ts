@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-system/core";
 import { createMemory } from "@arnilo/prism-memory-system";
 
 test("072 invariant: revoked id absent from injected snapshot; score 0 cannot be averaged away", async () => {

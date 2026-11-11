@@ -61,7 +61,7 @@ export function createHardDenyHook(options: HardDenyOptions) {
     if (!targets) return undefined;
 
     if (options.readOnly && MUTATING_TOOLS.has(payload.name)) {
-      return { deny: `${payload.name} denied: @arnilo/prism-tools-coding is read-only` };
+      return { deny: `${payload.name} denied: @arnilo/prism-tools/coding is read-only` };
     }
 
     if (targets.paths.length > 0) {

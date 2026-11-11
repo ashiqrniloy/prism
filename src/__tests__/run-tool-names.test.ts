@@ -171,26 +171,34 @@ describe("RunOptions.toolNames", () => {
     const sessionA = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        packages: [providerPackage("test-provider", [{
-          id: "mock",
-          async *generate(request) {
-            seenA.push((request.tools ?? []).map((item) => item.name));
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate(request) {
+                seenA.push((request.tools ?? []).map((item) => item.name));
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
         tools: { add: registry.list() },
       })
     ).session();
     const sessionB = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        packages: [providerPackage("test-provider", [{
-          id: "mock",
-          async *generate(request) {
-            seenB.push((request.tools ?? []).map((item) => item.name));
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate(request) {
+                seenB.push((request.tools ?? []).map((item) => item.name));
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
         tools: { add: registry.list() },
       })
     ).session();
@@ -203,13 +211,17 @@ describe("RunOptions.toolNames", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          packages: [providerPackage("test-provider", [{
-            id: "mock",
-            async *generate(request) {
-              seenC.push((request.tools ?? []).map((item) => item.name));
-              yield providerDone();
-            },
-          }])],
+          packages: [
+            providerPackage("test-provider", [
+              {
+                id: "mock",
+                async *generate(request) {
+                  seenC.push((request.tools ?? []).map((item) => item.name));
+                  yield providerDone();
+                },
+              },
+            ]),
+          ],
           tools: { add: registry.list() },
         })
       ).session()
@@ -222,12 +234,16 @@ describe("RunOptions.toolNames", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        packages: [providerPackage("test-provider", [{
-          id: "mock",
-          async *generate() {
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate() {
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
         tools: { add: [tool("echo"), tool("secret")] },
         skills: { add: registry.list() },
       })
@@ -260,9 +276,7 @@ describe("RunOptions.toolNames", () => {
     };
     const fresh = await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] });
     const resumed = await fresh.session({ id: "s1" });
-    for await (const _event of resumed.resume(
-      first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
-    )) {
+    for await (const _event of resumed.resume(first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })))) {
       // drain: the resumed leg re-derives its tool menu from the stored grant
     }
     assert.deepEqual(seen, [["echo"]]);

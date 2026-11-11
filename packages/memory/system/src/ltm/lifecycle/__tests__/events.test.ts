@@ -2,7 +2,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { ToolExecutionContext } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createFabricCitationTracker } from "../../context.js";
 import { createFabricLifecycle } from "../../lifecycle/index.js";
 import { appendUseEvent, MAX_USE_EVENTS, readUseEvents } from "../../lifecycle/events.js";

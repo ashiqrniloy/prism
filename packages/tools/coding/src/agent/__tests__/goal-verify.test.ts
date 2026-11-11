@@ -4,8 +4,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSecretRedactor, type JsonObject } from "@arnilo/prism";
-import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
-import { createWorkflowCheckpoints } from "@arnilo/prism-workflows";
+import { createMemoryCheckpointStore } from "@arnilo/prism-extensions/workflows";
+import { createWorkflowCheckpoints } from "@arnilo/prism-extensions/workflows";
 import {
   CODING_GOAL_VERIFY_SUSPEND_REASON,
   type CodingCheckSummary,

@@ -1,22 +1,22 @@
 /**
- * Timeline projection is the only reason evals needs `@arnilo/prism-observability`, so it is an
+ * Timeline projection is the only reason evals needs `@arnilo/prism-extensions/observability`, so it is an
  * optional peer loaded on demand. A host that scores text only never installs it, and a host that
  * asks for a timeline without it gets a named error instead of a module-resolution stack.
  */
 import { EvalError } from "./errors.js";
 
-type Observability = typeof import("@arnilo/prism-observability");
+type Observability = typeof import("@arnilo/prism-extensions/observability");
 
 /** The two projections evals needs from the optional peer. */
 export type TimelineTools = Pick<Observability, "createTimelineFolder" | "projectTraceTimeline">;
 
-const TIMELINE_PACKAGE = "@arnilo/prism-observability";
+const TIMELINE_PACKAGE = "@arnilo/prism-extensions/observability";
 
-let importer = (): Promise<Observability> => import("@arnilo/prism-observability");
+let importer = (): Promise<Observability> => import("@arnilo/prism-extensions/observability");
 
 /** @internal Test seam: production always resolves through this module's literal import. */
 export function setTimelineImporterForTests(next?: () => Promise<Observability>): void {
-  importer = next ?? ((): Promise<Observability> => import("@arnilo/prism-observability"));
+  importer = next ?? ((): Promise<Observability> => import("@arnilo/prism-extensions/observability"));
 }
 
 /**

@@ -30,7 +30,7 @@
  */
 
 import { definePackage } from "@arnilo/prism";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 
 import { memorySystemCapabilities, resolveMemorySystemComponents } from "./components.js";
 import { type MemorySystemConfig, memorySystemConfigSchema } from "./config.js";

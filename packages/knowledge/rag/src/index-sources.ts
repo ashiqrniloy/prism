@@ -1,5 +1,5 @@
 /**
- * Lazy source indexing for `@arnilo/prism-rag` (plan 158 Task 3, decision (b)).
+ * Lazy source indexing for `@arnilo/prism-knowledge/rag` (plan 158 Task 3, decision (b)).
  *
  * There is no agent-scope background task, so indexing runs on the first `rag_search` or
  * `context.build` call behind a per-agent promise. A local source is read from disk here; a URL source
@@ -7,15 +7,15 @@
  * Nothing in this module runs during `createAgent`.
  */
 import { readdir, readFile, stat } from "node:fs/promises";
-import { extname, basename, resolve } from "node:path";
-import type { WebFetchService } from "@arnilo/prism-tools-web";
-import type { Embedder } from "@arnilo/prism-memory-core";
+import { basename, extname, resolve } from "node:path";
+import type { Embedder } from "@arnilo/prism-memory-system/core";
+import type { WebFetchService } from "@arnilo/prism-tools/web";
 
 import { DEFAULT_RAG_GLOB, type RagSourceConfig } from "./config.js";
-import { htmlParser, markdownParser, pdfParser, textParser } from "./parsers.js";
-import { replaceDocument, } from "./sources.js";
-import type { DocumentLoader, Parser, RagScope, TransactionalVectorStore } from "./types.js";
 import { RagValidationError } from "./errors.js";
+import { htmlParser, markdownParser, pdfParser, textParser } from "./parsers.js";
+import { replaceDocument } from "./sources.js";
+import type { DocumentLoader, Parser, RagScope, TransactionalVectorStore } from "./types.js";
 
 /** Hard ceiling on files one local source may contribute, so a stray glob cannot walk a filesystem. */
 export const HARD_MAX_SOURCE_FILES = 4096;
@@ -201,7 +201,10 @@ function createWebFetchLoader(fetcher: WebFetchService): DocumentLoader {
         sourceId: document.citationId,
         mediaType: "text/markdown",
         text: document.markdown,
-        metadata: { web: { citationId: document.citationId, provider: document.provider, url: document.url, retrievedAt: document.retrievedAt }, untrusted: true },
+        metadata: {
+          web: { citationId: document.citationId, provider: document.provider, url: document.url, retrievedAt: document.retrievedAt },
+          untrusted: true,
+        },
       };
     },
   };

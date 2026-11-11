@@ -228,7 +228,11 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
     const session = await agent.session();
     const reader = collect(session.subscribe());
 
@@ -255,7 +259,11 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
     const session = await agent.session();
     const reader = collect(session.subscribe());
 
@@ -377,7 +385,11 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "should-not-run" };
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
     const session = await agent.session();
     const reader = collect(session.subscribe());
 
@@ -420,7 +432,13 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "should-not-run" };
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } })).session();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: [echo] },
+      })
+    ).session();
 
     {
       const outcome = await session.run("Hi");
@@ -448,7 +466,13 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "nope" };
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } })).session();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: [echo] },
+      })
+    ).session();
 
     {
       const outcome = await session.run("Hi");
@@ -472,7 +496,11 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
     const session = await agent.session();
     const reader = collect(session.subscribe());
 
@@ -516,7 +544,13 @@ describe("agent session runtime", () => {
         throw new Error("tool failed");
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [boom] } })).session();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: [boom] },
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -540,7 +574,10 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+    });
     const session = await agent.session();
     const reader = collect(session.subscribe());
 
@@ -571,7 +608,11 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
 
     await (await agent.session()).run("Hi", { limits: { maxToolRounds: 1 } });
 
@@ -631,7 +672,12 @@ describe("agent session runtime", () => {
       },
     };
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [stop] }, slots: { store } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [stop] },
+      slots: { store },
+    });
     session = await agent.session({ id: "s1", create: true });
     const reader = collect(session.subscribe());
 
@@ -658,7 +704,10 @@ describe("agent session runtime", () => {
         );
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+    });
     const controller = new AbortController();
     const run = (await agent.session()).run("Hi", { signal: controller.signal });
 
@@ -681,7 +730,9 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session();
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session();
     const first = session.run("one");
 
     await assert.rejects(session.run("two"), /active run/);
@@ -732,7 +783,13 @@ describe("agent session runtime", () => {
         },
       },
     ];
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: tools } })).session({
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: tools },
+      })
+    ).session({
       id: "steer-turn",
       create: true,
     });
@@ -854,7 +911,9 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "blocking", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session({
+    const session = await (
+      await createAgent({ model: { provider: "blocking", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session({
       id: "steer-soft",
       create: true,
     });
@@ -899,7 +958,9 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session();
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session();
     const run = session.run("one");
     await ready;
     for (let i = 0; i < 8; i += 1) session.steer(`msg-${i}`);
@@ -915,7 +976,9 @@ describe("agent session runtime", () => {
         yield { type: "error", error: { name: "ProviderError", message: "provider failed" } };
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session();
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session();
     const reader = collect(session.subscribe());
 
     await failedRun(session.run("Hi"), /provider failed/);
@@ -942,7 +1005,13 @@ describe("agent session runtime", () => {
         throw new Error("tool failed");
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [boom] } })).session();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: [boom] },
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
@@ -1008,7 +1077,15 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await (await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], instructions: "Base" })).session()).run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          packages: [providerPackage("test-provider", [provider])],
+          instructions: "Base",
+        })
+      ).session()
+    ).run("Hi");
 
     assert.equal(textOf(request.messages[0]), "System instruction:\nBase");
   });
@@ -1132,7 +1209,12 @@ describe("agent session runtime", () => {
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
     const session = await (
-      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] }, slots: { store } })
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: [echo] },
+        slots: { store },
+      })
     ).session({ id: "s1", create: true });
 
     await session.run("Hi");
@@ -1160,7 +1242,13 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })).session({
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        slots: { store },
+      })
+    ).session({
       id: "s1",
       create: true,
     });
@@ -1206,7 +1294,13 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })).session({
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        slots: { store },
+      })
+    ).session({
       id: "s1",
       create: true,
     });
@@ -1256,7 +1350,13 @@ describe("agent session runtime", () => {
   it("fork_at_entry_copies_branch_and_package_state", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("ok"), providerDone(), providerTextDelta("two"), providerDone()]);
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })).session({
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        slots: { store },
+      })
+    ).session({
       id: "s1",
       create: true,
     });
@@ -1344,7 +1444,13 @@ describe("agent session runtime", () => {
   it("fork_without_at_forks_from_leaf", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })).session({
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        slots: { store },
+      })
+    ).session({
       id: "s1",
       create: true,
     });
@@ -1367,7 +1473,11 @@ describe("agent session runtime", () => {
 
     await (
       await (
-        await createAgent({ model: { provider: "mock", model: "default" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })
+        await createAgent({
+          model: { provider: "mock", model: "default" },
+          packages: [providerPackage("test-provider", [provider])],
+          slots: { store },
+        })
       ).session({ id: "s1", create: true })
     ).run("Hi", { model: { provider: "mock", model: "override" } });
 
@@ -1382,7 +1492,9 @@ describe("agent session runtime", () => {
       providerUsage({ inputTokens: 3, outputTokens: 2, totalTokens: 5 }),
       providerDone(),
     ]);
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session({
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session({
       id: "result-ok",
       create: true,
     });
@@ -1429,7 +1541,9 @@ describe("agent session runtime", () => {
         });
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session({
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session({
       id: "result-abort",
       create: true,
     });
@@ -1446,7 +1560,9 @@ describe("agent session runtime", () => {
 
   it("session.stream subscribes before the run and yields only owned-run events", async () => {
     const provider = createMockProvider([providerTextDelta("streamed"), providerDone()]);
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session({
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session({
       id: "stream-1",
       create: true,
     });
@@ -1477,7 +1593,9 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session({
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session({
       id: "stream-early",
       create: true,
     });
@@ -1497,7 +1615,11 @@ describe("agent session runtime", () => {
 
     await (
       await (
-        await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          packages: [providerPackage("test-provider", [provider])],
+          slots: { store },
+        })
       ).session({ id: "s1", create: true })
     ).run("Hi");
 
@@ -1584,7 +1706,13 @@ describe("agent session runtime", () => {
   it("manual compact appends compaction entry and updates leaf", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("reply"), providerDone()]);
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } })).session({
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        slots: { store },
+      })
+    ).session({
       id: "s1",
       create: true,
     });
@@ -1675,7 +1803,9 @@ describe("agent session runtime", () => {
   it("compaction events are emitted with redacted summary", async () => {
     const secret = "secret-value";
     const provider = createMockProvider([providerDone()]);
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session({ id: "s1", create: true });
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+    ).session({ id: "s1", create: true });
 
     await session.run(`old ${secret}`);
     const eventsPromise = take(session.subscribe(), 2);
@@ -1965,7 +2095,9 @@ describe("agent session runtime", () => {
       },
     };
     const model = { provider: "openai", model: "gpt" };
-    await (await (await await createAgent({ model, packages: [providerPackage("test-provider", [provider])], thinkingLevel: "low" })).session()).run("Hi");
+    await (
+      await (await await createAgent({ model, packages: [providerPackage("test-provider", [provider])], thinkingLevel: "low" })).session()
+    ).run("Hi");
     assert.deepEqual(request.options?.compat, applyThinkingLevelForModel(undefined, "low", model).compat);
   });
 
@@ -1979,7 +2111,9 @@ describe("agent session runtime", () => {
       },
     };
     const model = { provider: "openai", model: "gpt" };
-    await (await (await await createAgent({ model, packages: [providerPackage("test-provider", [provider])], thinkingLevel: "low" })).session()).run("Hi", { thinkingLevel: "high" });
+    await (
+      await (await await createAgent({ model, packages: [providerPackage("test-provider", [provider])], thinkingLevel: "low" })).session()
+    ).run("Hi", { thinkingLevel: "high" });
     assert.deepEqual(request.options?.compat, applyThinkingLevelForModel(undefined, "high", model).compat);
   });
 
@@ -1992,7 +2126,11 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await (await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })).session()).run("Hi");
+    await (
+      await (
+        await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] })
+      ).session()
+    ).run("Hi");
     assert.equal(request.options?.compat, undefined);
   });
 
@@ -2010,7 +2148,9 @@ describe("agent session runtime", () => {
       model: "gpt",
       capabilities: { reasoning: true, thinkingLevels: ["low", "medium", "high"] as const },
     };
-    await (await (await await createAgent({ model, packages: [providerPackage("test-provider", [provider])], thinkingLevel: "max" })).session()).run("Hi");
+    await (
+      await (await await createAgent({ model, packages: [providerPackage("test-provider", [provider])], thinkingLevel: "max" })).session()
+    ).run("Hi");
     assert.equal((request.options?.compat?.reasoning as { effort?: string } | undefined)?.effort, "high");
   });
 
@@ -2191,7 +2331,10 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "default" }, packages: [providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "default" },
+      packages: [providerPackage("test-provider", [provider])],
+    });
 
     await (await agent.session()).run("Hi", { model: { provider: "mock", model: "override" } });
 
@@ -2320,7 +2463,13 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } })).session();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        tools: { add: [echo] },
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -2429,7 +2578,11 @@ describe("agent session runtime", () => {
       const config = { model: { provider: "mock", model: "demo" }, [field]: field === "provider" ? provider : () => provider };
       await assert.rejects(
         createAgent(config as never),
-        (error: unknown) => error instanceof TypeError && /packages/.test(error.message) && /providers\.register/.test(error.message) && !error.message.includes("demo"),
+        (error: unknown) =>
+          error instanceof TypeError &&
+          /packages/.test(error.message) &&
+          /providers\.register/.test(error.message) &&
+          !error.message.includes("demo"),
       );
     }
   });

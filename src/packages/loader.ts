@@ -18,7 +18,15 @@ import { assertDecisionRequest, DecisionsError, modelSupportsDecisions } from ".
 import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embeddings.js";
 import type { HookBus, HookRegistrar } from "../hooks/index.js";
 import { requestHostUi } from "../host/response.js";
-import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, HostUiTerminalRequest, Logger } from "../host/types.js";
+import type {
+  HostPort,
+  HostUiRequest,
+  HostUiRequestKind,
+  HostUiResponse,
+  HostUiSecretRequest,
+  HostUiTerminalRequest,
+  Logger,
+} from "../host/types.js";
 import { BUILTIN_PROVIDER_ID, createBuiltinProvider } from "../models/builtin.js";
 import { CredentialRefNotWritableError, CredentialStoreUnavailableError } from "../credentials/errors.js";
 import { normalizeStopReason } from "../models/events.js";
@@ -32,7 +40,15 @@ import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
 import { createSkillRegistry, isSameSkill } from "../skills.js";
 import { SLOT_NAMES, type SlotAssignments, type SlotName, type SlotRegistry } from "../slots/index.js";
 import { createToolRegistry } from "../tools.js";
-import type { ModelClient, PackageAPI, PackageCommand, PackageCommandInfo, PackageDefinition, PackageInstance, SlotRegistrar } from "./api.js";
+import type {
+  ModelClient,
+  PackageAPI,
+  PackageCommand,
+  PackageCommandInfo,
+  PackageDefinition,
+  PackageInstance,
+  SlotRegistrar,
+} from "./api.js";
 import { type Capability, requireCapability } from "./capabilities.js";
 import { type PackageConfigSource, resolvePackageConfig } from "./config.js";
 import { type NormalizedPackage, normalizePackageInput } from "./define.js";
@@ -77,7 +93,7 @@ export interface LoadPackagesOptions {
 }
 
 /** Names the kernel generates tools under, so a package cannot shadow them. `search_tools` left
- *  this set in plan 158 Task 7 — `@arnilo/prism-context-engineering` owns the activation tool, and
+ *  this set in plan 158 Task 7 — `@arnilo/prism-extensions/context-engineering` owns the activation tool, and
  *  Task 8 deleted the kernel's own run-assembly path — so `load_skill` is the only name left. */
 export const RESERVED_TOOL_NAMES: ReadonlySet<string> = new Set(["load_skill"]);
 
@@ -234,7 +250,8 @@ function instanceCapabilities(definition: PackageDefinition<any>, config: JsonOb
   }
   if (!Array.isArray(narrowed)) throw invalid("must return an array");
   for (const capability of narrowed) {
-    if (!declared.has(capability as Capability)) throw invalid(`returned "${String(capability).slice(0, 32)}", which capabilities does not declare`);
+    if (!declared.has(capability as Capability))
+      throw invalid(`returned "${String(capability).slice(0, 32)}", which capabilities does not declare`);
   }
   return new Set(narrowed as Capability[]);
 }
@@ -495,7 +512,11 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
             const env = (request as HostUiTerminalRequest).env;
             for (const [name, value] of Object.entries(env ?? {})) {
               if (typeof value !== "string" || /^(env|keyring):/.test(value)) {
-                throw new PackageLoadError("terminal_env_secret", `host.ui terminal env ${name} must be a plain non-secret string, not a credential ref.`, { package: owner });
+                throw new PackageLoadError(
+                  "terminal_env_secret",
+                  `host.ui terminal env ${name} must be a plain non-secret string, not a credential ref.`,
+                  { package: owner },
+                );
               }
             }
           }
@@ -557,7 +578,8 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     if (taken) {
       // The same file registered twice (a host `skills.dirs` plus a discovery package, or a child that
       // inherits both) is one skill. A different path or body under the same name still fails closed.
-      const existing = taken === "the host" ? hostConfig.skills?.add?.find((entry) => entry.name === skill.name) : packageSkills.get(skill.name);
+      const existing =
+        taken === "the host" ? hostConfig.skills?.add?.find((entry) => entry.name === skill.name) : packageSkills.get(skill.name);
       if (existing && isSameSkill(existing, skill)) return;
       throw new PackageLoadError("skill_conflict", `Skill ${skill.name} is registered by ${owner} but is already taken by ${taken}.`, {
         package: owner,
@@ -624,12 +646,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
    * same answer whatever the slot declares; the slot then enforces its own writable scheme. A written
    * value joins `secrets` exactly as a resolved one does.
    */
-  const writeCredentialRef = async (
-    owner: string,
-    op: "store" | "delete",
-    ref: string,
-    secret?: Secret,
-  ): Promise<void> => {
+  const writeCredentialRef = async (owner: string, op: "store" | "delete", ref: string, secret?: Secret): Promise<void> => {
     if (ref.startsWith("env:")) throw new CredentialRefNotWritableError(ref);
     const assigned = (options.slotAssignments ?? {}) as Partial<Record<SlotName, unknown>>;
     const resolver = slots.resolve("credentials", assigned.credentials as never);

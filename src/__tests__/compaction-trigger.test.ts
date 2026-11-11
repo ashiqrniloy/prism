@@ -175,7 +175,11 @@ function whenTrigger(trigger: CompactionTrigger, sessionModel: ModelConfig = mod
 describe("session auto-compaction trigger", () => {
   it("keeps the legacy entry-count gate, boundary included", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 3, keepRecentEntries: 1 } });
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      compaction: { thresholdEntries: 3, keepRecentEntries: 1 },
+    });
     const session = await agent.session({ id: "s1", create: true });
 
     // The run input is appended before the gate, so the second turn sees three entries: at the
@@ -190,7 +194,11 @@ describe("session auto-compaction trigger", () => {
 
   it("still skips when the run disables compaction", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 } });
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      compaction: { thresholdEntries: 1 },
+    });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("first");
@@ -235,7 +243,11 @@ describe("session auto-compaction trigger", () => {
 
   it("does not compact on input_ratio while the estimate stays under the ratio", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model: cappedModel, packages: [providerPackage("test-provider", [provider])], hooks: whenTrigger({ type: "input_ratio", ratio: 0.9 }, cappedModel) });
+    const agent = await createAgent({
+      model: cappedModel,
+      packages: [providerPackage("test-provider", [provider])],
+      hooks: whenTrigger({ type: "input_ratio", ratio: 0.9 }, cappedModel),
+    });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("hi");
@@ -247,7 +259,11 @@ describe("session auto-compaction trigger", () => {
   it("fails loudly when an input_ratio handler cannot resolve a cap", async () => {
     const { provider } = recordingProvider();
     // `model` declares no limits, so the shared cap helper cannot resolve a window: config error.
-    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], hooks: whenTrigger({ type: "input_ratio", ratio: 0.5 }) });
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      hooks: whenTrigger({ type: "input_ratio", ratio: 0.5 }),
+    });
     const session = await agent.session();
 
     // The cap is resolved as soon as the handler evaluates the ratio, before any size judgement.
@@ -310,7 +326,12 @@ describe("session auto-compaction trigger", () => {
 
     for (const [_index, trigger] of triggers.entries()) {
       const { provider } = recordingProvider();
-      const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 }, hooks: whenTrigger(trigger) });
+      const agent = await createAgent({
+        model,
+        packages: [providerPackage("test-provider", [provider])],
+        compaction: { thresholdEntries: 1 },
+        hooks: whenTrigger(trigger),
+      });
       const session = await agent.session();
 
       // Both runs resolve: a failed trigger decides `false`, it never fails the run.
@@ -323,7 +344,11 @@ describe("session auto-compaction trigger", () => {
 
   it("does not compact a branch that just compacted", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 } });
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      compaction: { thresholdEntries: 1 },
+    });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("first");
@@ -357,7 +382,9 @@ describe("session auto-compaction trigger", () => {
         yield providerDone();
       },
     };
-    session = await (await createAgent({ model, packages: [providerPackage("test-provider", [provider])], slots: { store: createMemorySessionStore() } })).session({
+    session = await (
+      await createAgent({ model, packages: [providerPackage("test-provider", [provider])], slots: { store: createMemorySessionStore() } })
+    ).session({
       id: "s1",
       create: true,
     });
@@ -371,7 +398,11 @@ describe("session auto-compaction trigger", () => {
 describe("compaction.when hook", () => {
   it("compaction_config_trigger_decides_without_a_hook", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 0, keepRecentEntries: 1 } });
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      compaction: { thresholdEntries: 0, keepRecentEntries: 1 },
+    });
     const session = await agent.session();
 
     await session.run("first");

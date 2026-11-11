@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll as after, describe, it } from "bun:test";
 import { promisify } from "node:util";
 import { Pool } from "pg";
-import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
+import { createPostgresPersistence } from "@arnilo/prism-extensions/store-postgres";
 
 const exec = promisify(execFile);
 const url = process.env.PRISM_TEST_POSTGRES_URL;
@@ -147,5 +147,4 @@ describeProtected("Phase 7 protected process conformance", () => {
     await iterator.return?.();
     await subscriber.close();
   });
-
 });

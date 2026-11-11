@@ -131,10 +131,7 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
     });
   };
 
-  const contextFor = (
-    payload: unknown,
-    identity?: { readonly sessionId?: string; readonly runId?: string },
-  ): HookContext => {
+  const contextFor = (payload: unknown, identity?: { readonly sessionId?: string; readonly runId?: string }): HookContext => {
     const source = isRecord(payload) ? payload : {};
     return {
       sessionId: typeof source.sessionId === "string" ? source.sessionId : (identity?.sessionId ?? ""),

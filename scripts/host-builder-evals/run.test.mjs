@@ -5,7 +5,8 @@ import { readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { createAgent, providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
+import { allowedProviders, assertNoSecret, sealEvidence } from "../skill-evals/run.mjs";
 import {
   ARMS,
   applyRound,
@@ -24,7 +25,6 @@ import {
   surfaceViolations,
   WORKSPACES,
 } from "./lib.mjs";
-import { assertNoSecret, sealEvidence } from "../skill-evals/run.mjs";
 import {
   armPackages,
   assertPreregistered,
@@ -36,7 +36,6 @@ import {
   registrationFor,
   run,
 } from "./run.mjs";
-import { allowedProviders } from "../skill-evals/run.mjs";
 
 const { criteria } = loadCriteria();
 const TASKS = criteria.tasks.map((task) => task.id);
@@ -213,7 +212,7 @@ test("host_builder_eval_arms_differ_only_by_the_kit", () => {
     const tree = (arm) => {
       const workspace = buildWorkspace({ task, arm });
       const files = walk(workspace.dir).map((file) => relative(workspace.dir, file));
-      const kit = existsSync(join(workspace.dir, "node_modules/@arnilo/prism-host-builder"));
+      const kit = existsSync(join(workspace.dir, "node_modules/@arnilo/prism-hosts/host-builder"));
       workspace.dispose();
       return { files, kit };
     };
@@ -229,14 +228,15 @@ test("host_builder_eval_arms_differ_only_by_the_kit", () => {
     assert.ok(added.includes(".agents/skills/prism-host-builder/SKILL.md"));
     assert.ok(
       added.every(
-        (file) => file.startsWith(".agents/skills/prism-host-builder/") || file.startsWith("node_modules/@arnilo/prism-host-builder/"),
+        (file) =>
+          file.startsWith(".agents/skills/prism-host-builder/") || file.startsWith("node_modules/@arnilo/prism-hosts/host-builder/"),
       ),
       "only the skill copy and the installed kit package are added",
     );
     // The builder's packages: identical except the MCP server in the last arm.
     const names = (arm) => armPackages(arm, "/nonexistent").map((instance) => instance.definition.name);
     assert.deepEqual(names("none"), names("skill"));
-    assert.deepEqual(names("skill+mcp"), [...names("skill"), "@arnilo/prism-mcp"]);
+    assert.deepEqual(names("skill+mcp"), [...names("skill"), "@arnilo/prism-extensions/mcp"]);
   } finally {
     disposeStaged();
   }
@@ -249,7 +249,7 @@ test("host_builder_eval_evidence_contains_no_secret", async () => {
   const sealed = sealEvidence({ note: `key ${secret} leaked`, nested: { value: secret } }, [secret]);
   assert.ok(!JSON.stringify(sealed).includes(secret));
   assert.throws(() => assertNoSecret(`token ${secret}`, [secret]), /secret value/);
-  assert.throws(() => assertNoSecret("sk-abcdefghijklmnopqrstuvwxyz0123456789", []), /key-shaped/);
+  assert.throws(() => assertNoSecret("sk-" + "abcdefghijklmnopqrstuvwxyz0123456789", []), /key-shaped/);
   assert.throws(() => assertNoSecret("Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123", []), /key-shaped/);
   if (existsSync(EVIDENCE_DIR)) {
     for (const entry of await readdir(EVIDENCE_DIR, { recursive: true, withFileTypes: true })) {
@@ -310,12 +310,12 @@ test("host_builder_eval_surface_and_retired_name_rules", () => {
   assert.equal(classifySpecifier("@arnilo/prism/testing", join(dir, "src/x.test.ts"), dir), undefined);
   assert.match(classifySpecifier("@arnilo/prism/testing", file, dir) ?? "", /outside a test/);
   assert.match(classifySpecifier("@arnilo/prism/src/index.ts", file, dir) ?? "", /not public/);
-  assert.match(classifySpecifier("@arnilo/prism-tools-coding/src/agent/write", file, dir) ?? "", /deep or undeclared/);
+  assert.match(classifySpecifier("@arnilo/prism-tools/coding/src/agent/write", file, dir) ?? "", /deep or undeclared/);
   assert.match(classifySpecifier("@arnilo/prism-coding-tools", file, dir) ?? "", /retired/);
   assert.match(classifySpecifier("@arnilo/prism-nothing", file, dir) ?? "", /not a published/);
   assert.match(classifySpecifier("../../outside", file, dir) ?? "", /leaves the project/);
   assert.match(classifySpecifier("../node_modules/@arnilo/prism/src/x", file, dir) ?? "", /node_modules|leaves/);
-  assert.equal(classifySpecifier("@arnilo/prism-tools-coding", file, dir), undefined);
+  assert.equal(classifySpecifier("@arnilo/prism-tools/coding", file, dir), undefined);
   assert.equal(classifySpecifier("zod", file, dir), undefined);
   assert.deepEqual(surfaceViolations(join(WORKSPACES, "acp-serve")), []);
   // The 0.12-shaped seed trips both the surface rule and the retired-name rule; every other seed trips neither.
@@ -513,7 +513,10 @@ test("host_builder_eval_rate_limited_fetch_waits_on_a_429_and_gives_up_on_a_dail
   const calls = [];
   const restore = installRateLimitedFetch({
     minIntervalMs: { "example.test": 100 },
-    base: async (url) => (calls.push(String(url)), responses.shift()),
+    base: async (url) => {
+      calls.push(String(url));
+      return responses.shift();
+    },
     sleep: async (ms) => void waits.push(ms),
   });
   try {
@@ -557,7 +560,10 @@ test("host_builder_eval_fetch_retries_a_transient_server_error_a_bounded_number_
   }
   let calls = 0;
   const restoreAlways = installRateLimitedFetch({
-    base: async () => ((calls += 1), new Response("x", { status: 500 })),
+    base: async () => {
+      calls += 1;
+      return new Response("x", { status: 500 });
+    },
     sleep: async () => undefined,
   });
   try {

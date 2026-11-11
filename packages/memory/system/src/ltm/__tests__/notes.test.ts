@@ -1,15 +1,9 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
 import { describe, it } from "bun:test";
 import { createSessionEntry, type SessionEntry } from "@arnilo/prism";
-import {
-  type MemoryObservation,
-  type MemoryReflection,
-  OBSERVATIONS_RECORDED,
-  REFLECTIONS_RECORDED,
-} from "@arnilo/prism-memory-system";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { type MemoryObservation, type MemoryReflection, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "@arnilo/prism-memory-system";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { MEMORY_NOTE_KINDS } from "../types.js";
 
@@ -52,7 +46,13 @@ function ledgerEntries(): readonly SessionEntry[] {
  */
 function packageLogEntries(): readonly SessionEntry[] {
   const base = { sessionId: "s1", timestamp: observation.timestamp, kind: "package_state" as const };
-  const state = (value: unknown) => ({ schemaVersion: 1, package: "arnilo:prism-memory-system", key: "memory.session.ledger", op: "append", value });
+  const state = (value: unknown) => ({
+    schemaVersion: 1,
+    package: "arnilo:prism-memory-system",
+    key: "memory.session.ledger",
+    op: "append",
+    value,
+  });
   return [
     createSessionEntry({ id: "m1", ...base, data: state({ type: OBSERVATIONS_RECORDED, observations: [observation] }) }),
     createSessionEntry({ id: "m2", ...base, data: state({ type: REFLECTIONS_RECORDED, reflections: [reflection] }) }),
@@ -218,7 +218,7 @@ describe("memory fabric notes", () => {
     for (const name of ["createMemoryWorkingStore", "MEMORY_FABRIC_WORKING_KEY", "readFabricBlock", "FABRIC_BLOCK_LABEL"]) {
       assert.equal(name in system, false, `${name} is not exported`);
     }
-    const core = await import("@arnilo/prism-memory-core");
+    const core = await import("@arnilo/prism-memory-system/core");
     assert.equal("renderTemplate" in core, false);
   });
 
@@ -250,7 +250,10 @@ describe("memory fabric notes", () => {
     };
     const fabric = createLongTermMemory({ memory, observational: { session: { entries: async () => [entry] } } });
     assert.ok((MEMORY_NOTE_KINDS as readonly string[]).includes("episode"), "the kind name stays reserved");
-    for (const input of [{ kind: "episode", id: observation.id }, { kind: "episode", content: "a day" }] as const) {
+    for (const input of [
+      { kind: "episode", id: observation.id },
+      { kind: "episode", content: "a day" },
+    ] as const) {
       const failure = await fabric.remember(input).then(
         () => undefined,
         (error: unknown) => error,
@@ -260,7 +263,13 @@ describe("memory fabric notes", () => {
     }
     assert.equal((await vectors.getByThread(scope)).length, 0);
     const lifecycle = await import("../lifecycle/index.js");
-    for (const name of ["episodeClusters", "summarizeEpisodeCluster", "EPISODE_MERGE_TOOL", "EPISODE_MERGE_SYSTEM", "MAX_EPISODE_CLUSTER"]) {
+    for (const name of [
+      "episodeClusters",
+      "summarizeEpisodeCluster",
+      "EPISODE_MERGE_TOOL",
+      "EPISODE_MERGE_SYSTEM",
+      "MAX_EPISODE_CLUSTER",
+    ]) {
       assert.equal(name in lifecycle, false, `${name} is gone`);
     }
     const report = await createLongTermMemory({ memory, vectorStore: vectors }).maintain();
@@ -272,15 +281,25 @@ describe("memory fabric notes", () => {
     const fabric = createLongTermMemory({ memory });
     assert.deepEqual(
       Object.keys(fabric).sort(),
-      ["consolidate", "forget", "maintain", "pin", "recall", "recordUses", "registerContextBuild", "remember", "searchConversation", "tools", "verify"].sort(),
+      [
+        "consolidate",
+        "forget",
+        "maintain",
+        "pin",
+        "recall",
+        "recordUses",
+        "registerContextBuild",
+        "remember",
+        "searchConversation",
+        "tools",
+        "verify",
+      ].sort(),
     );
     assert.equal((await vectors.getByThread(scope)).length, 0);
-    // The family workspace is deleted (plan 158 Task 6), so the fabric/scoped subpaths and the
-    // createMemory exports left with it — there is no root entrypoint left to leak into.
-    assert.equal(
-      existsSync(new URL("../../../../package.json", import.meta.url)),
-      false,
-      "the @arnilo/prism-memory family manifest must stay deleted",
-    );
+    const { readFileSync } = await import("node:fs");
+    const manifest = JSON.parse(readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"));
+    assert.equal(manifest.name, "@arnilo/prism-memory-system");
+    assert.equal(manifest.exports["."], "./system/src/index.ts");
+    assert.equal(manifest.exports["./fabric"], undefined, "the retired family subpath stays absent");
   });
 });

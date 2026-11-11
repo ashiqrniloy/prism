@@ -12,7 +12,7 @@
  * and fail closed: `false` and thrown store errors both withhold the hits, recorded once
  * per source in the audit sink instead of aborting the whole query. Abort stays an abort.
  */
-import type { RagAccessConstraint, StoreDenial, StoreDenialReason, VectorStore } from "@arnilo/prism-memory-core";
+import type { RagAccessConstraint, StoreDenial, StoreDenialReason, VectorStore } from "@arnilo/prism-memory-system/core";
 import type { AccessDenial, RagHit, RagScope } from "./types.js";
 import { assertNotAborted } from "./util.js";
 

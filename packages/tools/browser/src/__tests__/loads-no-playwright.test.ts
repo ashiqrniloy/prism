@@ -6,15 +6,15 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 
-describe("@arnilo/prism-tools-browser module graph", () => {
+describe("@arnilo/prism-tools/browser module graph", () => {
   it("playwright_not_loaded_unless_tools_browser_listed", () => {
     // Static: no source module value-imports playwright-core; the package requires it lazily in
     // setup, and the kernel never names it.
     const script = [
-      'const browserPkg = await import("@arnilo/prism-tools-browser");',
-      'const toolsWeb = (await import("@arnilo/prism-tools-web")).default;',
-      'const toolsCoding = (await import("@arnilo/prism-tools-coding")).default;',
-      'const { approvalPackage } = await import("@arnilo/prism-approval");',
+      'const browserPkg = await import("@arnilo/prism-tools/browser");',
+      'const toolsWeb = (await import("@arnilo/prism-tools/web")).default;',
+      'const toolsCoding = (await import("@arnilo/prism-tools/coding")).default;',
+      'const { approvalPackage } = await import("@arnilo/prism-extensions/approval");',
       'const { createAgent } = await import("@arnilo/prism");',
       "const agent = await createAgent({",
       '  model: { provider: "mock", model: "m" },',

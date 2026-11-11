@@ -2,7 +2,7 @@
 import { cp, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ExternalActivity, JsonValue, Message, Usage } from "@arnilo/prism";
-import type { AgentAdapter, Decoded } from "@arnilo/prism-driver-process";
+import type { AgentAdapter, Decoded } from "@arnilo/prism-hosts/driver-process";
 
 function text(input: string | Message | readonly Message[]): string {
   if (typeof input === "string") return input;

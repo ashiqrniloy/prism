@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Agent, createAgent, definePackage, type HostUi } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import approval from "@arnilo/prism-approval";
-import { type ChannelConnectionHandle, channelHostUi, connectTelegram, createChannelPairingStore } from "@arnilo/prism-channels";
-import { createResumeAuthority, createScheduler, policyDefault, routeHostUi, type SchedulerClock } from "@arnilo/prism-headless";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import workflows, { agentNode, defineWorkflow, workflowCommand } from "@arnilo/prism-workflows";
+import approval from "@arnilo/prism-extensions/approval";
+import { type ChannelConnectionHandle, channelHostUi, connectTelegram, createChannelPairingStore } from "@arnilo/prism-hosts/channels";
+import { createResumeAuthority, createScheduler, policyDefault, routeHostUi, type SchedulerClock } from "@arnilo/prism-hosts/headless";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
+import workflows, { agentNode, defineWorkflow, workflowCommand } from "@arnilo/prism-extensions/workflows";
 
 // Keep Bun transport declarations out of the examples compiler, as in remote-agent.ts.
-const remoteModule = "@arnilo/prism-remote";
+const remoteModule = "@arnilo/prism-hosts/remote";
 const remoteHostUi: () => HostUi = (await import(remoteModule)).remoteHostUi;
 
 function assert(condition: unknown, message: string): asserts condition {

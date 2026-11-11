@@ -7,7 +7,7 @@ import workflows, {
   defineWorkflow,
   startWorkflow,
   type WorkflowRun,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
 import { attribute, createMemoryTransportPair, RemoteError, remoteHostUi } from "../index.js";
 import { connectProxy, gatedAgent, until } from "./helpers.js";
 

@@ -1,5 +1,5 @@
 import { OwnershipScope } from "@arnilo/prism";
-import type { CheckpointStore, LeaseStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore, LeaseStore } from "@arnilo/prism-extensions/workflows";
 /** Duck-typed long-running sandbox handle (mirrors coding-security SandboxProcessHandle). */
 import type { ExecutionPolicy } from "../execution-policy.js";
 import { AgentIdentity } from "../identity.js";

@@ -15,7 +15,7 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider } from "@arnilo/prism/testing";
 import { Client, InMemoryTransport, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import manifest from "../../package.json" with { type: "json" };
+import manifest from "../../../package.json" with { type: "json" };
 import { mcpHost, serveMcp } from "../index.js";
 import { bindMcpSession, brandMcpHost, type ElicitRequest } from "../session-map.js";
 

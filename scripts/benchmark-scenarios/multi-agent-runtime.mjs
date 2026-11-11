@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createWorkflowTransitionChannel } from "@arnilo/prism-workflows";
+import { createWorkflowTransitionChannel } from "@arnilo/prism-extensions/workflows";
 /**
  * Phase 35 network-free multi-agent runtime benchmark.
  * Concurrent sessions, supervisor fan-out/saturation, workflow agent nodes,
@@ -19,11 +19,11 @@ import {
   providerToolCall,
   toolCallContent,
 } from "../../src/index.ts";
-import delegatePackage from "../../packages/integrations/delegate/src/index.ts";
-import { agentNode, defineWorkflow, fanOut, functionNode, runWorkflow } from "@arnilo/prism-workflows";
+import delegatePackage from "../../packages/extensions/delegate/src/index.ts";
+import { agentNode, defineWorkflow, fanOut, functionNode, runWorkflow } from "@arnilo/prism-extensions/workflows";
 // Plan 158 Task 8: budget eviction is the package's `budget` stage, so the 10k-row row measures
 // the package's own pass (the same one a session runs through `context.build`).
-import { applyDraftBudget } from "../../packages/context/engineering/src/exports.js";
+import { applyDraftBudget } from "../../packages/extensions/context-engineering/src/exports.js";
 import { loadBudgets } from "../budget-gates.mjs";
 import { providerPackage } from "../../src/provider-kit/index.ts";
 
@@ -203,7 +203,7 @@ export async function runIndependentSessions(count, options = {}) {
 }
 
 /**
- * Drives `attempted` parallel `delegate` calls from one parent turn through `@arnilo/prism-delegate`
+ * Drives `attempted` parallel `delegate` calls from one parent turn through `@arnilo/prism-extensions/delegate`
  * (`maxConcurrent: cap`). Children reach the tracked provider through the parent's model resolution.
  */
 async function runDelegations({ delayMs, cap, attempted, prefix }) {

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { HookRegistrar, JsonObject, Message, ModelClient, ModelRef } from "@arnilo/prism";
 import { resolveRedactor } from "@arnilo/prism";
-import type { Memory, MemoryConsentInput, MemoryContextProviderOptions, RecallScoringOptions } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryConsentInput, MemoryContextProviderOptions, RecallScoringOptions } from "@arnilo/prism-memory-system/core";
 import {
   HARD_TOP_K_CAP,
   lexicalDice,
@@ -10,11 +10,11 @@ import {
   MemoryValidationError,
   type MemoryVectorRecord,
   RECALL_OVERSAMPLE,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { createMemoryId } from "../session/ids.js";
 import { foldObservationalMemoryLedger } from "../session/ledger.js";
 import { isMemoryId } from "../session/types.js";
-import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
+import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
 import { type MemoryConsolidationPlan, mergeNoteMetadata, planMemoryConsolidation } from "./consolidate.js";
 import { ConsolidationExtractionError } from "./consolidation/extract.js";
 import {
@@ -49,7 +49,7 @@ import { createNoteNavigator } from "./navigation.js";
 import { registerMemoryFabricContext } from "./provider.js";
 import { createFabricRecall, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
 import { createScopeRecall, resolveScopePriors } from "./scope/recall.js";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import { createFabricConversationSearch } from "./search.js";
 import { createLongTermMemoryTools } from "./tools.js";
 import {
@@ -439,8 +439,9 @@ export function createLongTermMemory(options: CreateMemoryFabricOptions): Memory
     const ingestedAt = new Date().toISOString();
     const generated = provenanceFor(writeOptions, promotedFrom, input.sourceEntryIds, ingestedAt);
     const consolidate = settings.consolidate && input.id === undefined && input.supersedes === undefined;
-    const rawCandidates =
-      consolidate ? await recallCandidates(content, new Set([kind]), Date.now(), 1, signal, undefined, undefined, target) : [];
+    const rawCandidates = consolidate
+      ? await recallCandidates(content, new Set([kind]), Date.now(), 1, signal, undefined, undefined, target)
+      : [];
     // The write path scores candidates on the active mode's [0,1] similarity: term-set Dice in
     // lexical mode, pre-fusion cosine in hybrid mode (never the RRF rank). Only notes in the same
     // scope may fold together: a project note never absorbs a user preference or a path note.
@@ -1033,7 +1034,7 @@ export function createLongTermMemory(options: CreateMemoryFabricOptions): Memory
         options.touchedPaths,
       ),
     tools: createLongTermMemoryTools({
-        ...(options.gather === true ? { gather: true } : {}),
+      ...(options.gather === true ? { gather: true } : {}),
       memory,
       remember,
       recall,

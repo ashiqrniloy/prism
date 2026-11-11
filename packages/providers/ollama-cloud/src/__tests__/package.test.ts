@@ -29,7 +29,7 @@ function completion(): Response {
   );
 }
 
-describe("@arnilo/prism-provider-ollama-cloud package", () => {
+describe("@arnilo/prism-ai/ollama-cloud package", () => {
   it("ollama-cloud_passes_package_conformance", async () => {
     const result = await packageConformance(ollamaCloudDefinition, {
       config: { apiKey: "env:PRISM_TEST_OLLAMA_CLOUD_CONFORMANCE" },

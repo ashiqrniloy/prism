@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { connectObscuraCdp, type ObscuraPlaywright } from "@arnilo/prism-tools-web";
+import { connectObscuraCdp, type ObscuraPlaywright } from "@arnilo/prism-tools/web";
 import {
   createBrowserTools,
   type PlaywrightBrowser,

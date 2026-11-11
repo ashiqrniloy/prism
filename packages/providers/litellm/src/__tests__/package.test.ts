@@ -54,7 +54,10 @@ async function registeredProvider(options: {
       },
     },
   };
-  const instance = litellm({ ...(options.fetch !== undefined ? { fetch: options.fetch } : {}), ...(options.config as Record<string, unknown>) });
+  const instance = litellm({
+    ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
+    ...(options.config as Record<string, unknown>),
+  });
   await instance.definition.setup(prism as never);
   assert.ok(provider, "the package registers a provider");
   return provider;
@@ -80,7 +83,14 @@ describe("LiteLLM package", () => {
     assert.equal(result.ok, true);
     const names = result.scenarios.map((scenario) => scenario.name);
     for (const name of ["text", "stream", "tool-loop", "thinking", "image", "cache"]) assert.ok(names.includes(name), name);
-    for (const name of ["error-unauthorized", "error-unknown-model", "error-budget", "error-rate-limit", "error-cooldown", "error-overflow"]) {
+    for (const name of [
+      "error-unauthorized",
+      "error-unknown-model",
+      "error-budget",
+      "error-rate-limit",
+      "error-cooldown",
+      "error-overflow",
+    ]) {
       assert.ok(names.includes(name), name);
     }
     // The cache scenario replays three turns in one file.
@@ -160,7 +170,7 @@ describe("LiteLLM package", () => {
       const surfaced = JSON.stringify(agent.inspect()) + JSON.stringify(events);
       assert.equal(surfaced.includes(secret), false);
       assert.equal(surfaced.includes("authorization"), false, "no header travels in events");
-        assert.equal(surfaced.includes('"litellm":{"callId"'), true, "the call id does surface, in usage metadata");
+      assert.equal(surfaced.includes('"litellm":{"callId"'), true, "the call id does surface, in usage metadata");
     } finally {
       await agent.dispose();
       if (previous === undefined) delete process.env.PRISM_TEST_LITELLM_CANARY;

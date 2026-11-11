@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHashEmbedder, type Memory } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, type Memory } from "@arnilo/prism-memory-system/core";
 import {
   createMemory,
   createLongTermMemory,

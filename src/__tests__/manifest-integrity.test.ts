@@ -179,9 +179,7 @@ describe("manifest closure integrity", () => {
     assert.equal(MAX_CLOSURE_PACKAGES, 512);
 
     // Limit to 2 packages (root + 1 dep); having 2 deps means closure = 3 packages > 2
-    const error = await codeOf(() =>
-      hashPackageClosure(dirs.packagesDir, "@acme/root", "project", { maxClosurePackages: 2 }),
-    );
+    const error = await codeOf(() => hashPackageClosure(dirs.packagesDir, "@acme/root", "project", { maxClosurePackages: 2 }));
     assert.equal(error.code, "integrity_mismatch");
     assert.match(error.message, /dependency closure exceeds 2 packages/);
   });
@@ -269,10 +267,11 @@ describe("manifest closure integrity", () => {
     await writePkg(pkgDir, { name: "@acme/standalone" });
     const oldTreeHash = await hashPackageTree(pkgDir, { scope: "project", name: "@acme/standalone" });
 
-    const error = await codeOf(() =>
-      verifyInstalled({ name: "@acme/standalone", integrity: oldTreeHash }, dirs.packagesDir, "project"),
-    );
+    const error = await codeOf(() => verifyInstalled({ name: "@acme/standalone", integrity: oldTreeHash }, dirs.packagesDir, "project"));
     assert.equal(error.code, "integrity_mismatch");
-    assert.match(error.message, /Package @acme\/standalone \(project\) does not match its recorded integrity hash; run 'prism add @acme\/standalone' to reinstall\./);
+    assert.match(
+      error.message,
+      /Package @acme\/standalone \(project\) does not match its recorded integrity hash; run 'prism add @acme\/standalone' to reinstall\./,
+    );
   });
 });

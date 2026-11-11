@@ -85,6 +85,14 @@ export function listDocPages(root: string): DocPage[] {
       if (existsSync(file)) pages.push({ package: pkg, path, display: `node_modules/${pkg}/${path}`, uri: docUri(pkg, path), file });
     };
     add("README.md");
+    try {
+      const manifest = JSON.parse(readInside(root, dir, join(dir, "package.json")) ?? "{}");
+      for (const path of manifest.files ?? []) {
+        if (typeof path === "string" && /^[a-zA-Z0-9_-]+\/README\.md$/.test(path)) add(path);
+      }
+    } catch {
+      // An unreadable or malformed manifest contributes no bundle pages.
+    }
     if (pkg === KERNEL) {
       const docsDir = join(dir, "docs");
       if (!existsSync(docsDir)) continue;

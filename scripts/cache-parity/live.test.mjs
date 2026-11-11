@@ -53,27 +53,29 @@ describe("parity gate", () => {
     expect(calls).toEqual(["a:0", "a:1", "b:0"]);
     expect(result.attempts).toHaveLength(3);
     expect(result.gate.pass).toBe(true);
-    const stuck = await runGate([{ id: "a" }], async () => ({ cell: { verdict: "inconclusive" }, requests: { used: 1, ceiling: 120 } }), { strict: true });
+    const stuck = await runGate([{ id: "a" }], async () => ({ cell: { verdict: "inconclusive" }, requests: { used: 1, ceiling: 120 } }), {
+      strict: true,
+    });
     expect(stuck.attempts).toHaveLength(2);
     expect(stuck.gate.pass).toBe(false);
   });
 
   test("gate_stops_when_the_pi_config_changed", async () => {
     const calls = [];
-    const result = await runGate(
-      [{ id: "a" }, { id: "b" }],
-      async (spec) => {
-        calls.push(spec.id);
-        return { cell: { verdict: "reference_config_mutated" }, requests: { used: 1, ceiling: 120 } };
-      },
-    );
+    const result = await runGate([{ id: "a" }, { id: "b" }], async (spec) => {
+      calls.push(spec.id);
+      return { cell: { verdict: "reference_config_mutated" }, requests: { used: 1, ceiling: 120 } };
+    });
     expect(calls).toEqual(["a"]);
     expect(result.gate.pass).toBe(false);
   });
 });
 
 describe("parity row", () => {
-  const row = () => JSON.parse(readFileSync(join(REPO_ROOT, "scripts/live-matrix.json"), "utf8")).suites.find((suite) => suite.id === "release/cache-parity");
+  const row = () =>
+    JSON.parse(readFileSync(join(REPO_ROOT, "scripts/live-matrix.json"), "utf8")).suites.find(
+      (suite) => suite.id === "release/cache-parity",
+    );
 
   test("parity_row_skips_without_pi", () => {
     expect(preflight({ piHome: "/x", which: () => false, exists: () => true })).toEqual({ ok: false, reason: "pi is not on PATH" });
@@ -96,7 +98,12 @@ describe("parity row", () => {
   test("cells_match_task_21_matrix_and_deferred_cells_are_not_failures", () => {
     expect(CELLS.map((cell) => cell.model)).toEqual(["minimax/minimax-m3.1-flash", "gpt-5.6-luna", "claude-haiku-5-5", "gemma4:31b"]);
     expect(DEFERRED_CELLS.map((cell) => cell.id)).toEqual(["hyper/chat+messages", "opencode-go/chat+messages", "openrouter/anthropic"]);
-    expect(parityGate(DEFERRED_CELLS.map((cell) => ({ id: cell.id, verdict: "deferred" })), { strict: true }).pass).toBe(true);
+    expect(
+      parityGate(
+        DEFERRED_CELLS.map((cell) => ({ id: cell.id, verdict: "deferred" })),
+        { strict: true },
+      ).pass,
+    ).toBe(true);
   });
 });
 

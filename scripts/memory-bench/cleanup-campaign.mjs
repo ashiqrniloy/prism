@@ -964,7 +964,7 @@ export async function preflightC1(manifest, options = {}) {
   ].sort();
   const foreign = refs.filter((ref) => !C1_ROUTES.has(ref));
   if (foreign.length) throw new Error(`C1Preflight: ${foreign.join(", ")} is not a gate C-1 route`);
-  const list = options.list ?? (await import("@arnilo/prism-provider-ollama-cloud")).listOllamaCloudModels;
+  const list = options.list ?? (await import("@arnilo/prism-ai/ollama-cloud")).listOllamaCloudModels;
   const key = options.apiKey ?? process.env.OLLAMA_API_KEY;
   if (!key) throw new Error("C1Preflight: OLLAMA_API_KEY is unavailable");
   const catalog = await list({ apiKey: () => key, signal: AbortSignal.timeout(60_000) });

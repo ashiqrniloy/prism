@@ -456,7 +456,7 @@ export async function main(argv = process.argv.slice(2)) {
       renderTrustedPublishers(shippedNames(), { owner: match[1], repository: match[2], published }),
       "utf8",
     );
-    cleanup.err(`trusted publishers: ${shippedNames().length} name(s), nothing was executed`);
+    cleanup.err(`trusted publishers: ${shippedNames().size} name(s), nothing was executed`);
     return 0;
   }
   const plan = buildPlan(evidence, { includeUnlisted: argv.includes("--include-unlisted") });

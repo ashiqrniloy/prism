@@ -1,4 +1,4 @@
-# @arnilo/prism-tools-openapi
+# @arnilo/prism-tools/openapi
 
 The first-party OpenAPI 3.1 tools as a Prism package. The default export is a `definePackage`
 definition whose `setup` reads each configured spec once, compiles the allow-listed operations into
@@ -7,13 +7,13 @@ bounded tools, and registers them as `<id>_<operationId>`.
 ## Install
 
 ```bash
-prism add @arnilo/prism-tools-openapi
+prism add @arnilo/prism-tools/openapi
 ```
 
 ```jsonc
 // manifest entry
 {
-  "name": "@arnilo/prism-tools-openapi",
+  "name": "@arnilo/prism-tools/openapi",
   "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": {
@@ -75,7 +75,7 @@ the agent's secret set, so it is redacted from events, notes, logs, errors, and 
 ## Example
 
 ```ts
-import toolsOpenapi from "@arnilo/prism-tools-openapi";
+import toolsOpenapi from "@arnilo/prism-tools/openapi";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

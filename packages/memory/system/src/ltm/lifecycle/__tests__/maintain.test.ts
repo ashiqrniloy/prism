@@ -6,7 +6,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createSessionEntry, type ModelClient, providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
-import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-system/core";
 import { resolveLifecycleConfig } from "../../config.js";
 import { createLongTermMemory } from "../../create.js";
 import { createMemory, type MemoryFabricScopeBinding } from "../../../index.js";
@@ -103,16 +103,6 @@ async function advance(store: VectorStore, resourceId: string, sessions: number)
 }
 
 describe("lifecycle maintenance (plan 188.4 Tasks 4-5)", () => {
-
-
-
-
-
-
-
-
-
-
   it("maintain_runs_steps_in_order_and_reports_counts", async () => {
     const { fabric, projects, store } = stack({ capacityNotes: 3 });
     const [alpha, beta] = projects as [Memory, Memory];
@@ -184,5 +174,4 @@ describe("lifecycle maintenance (plan 188.4 Tasks 4-5)", () => {
 
     assert.equal((await alpha.getEntry(stale))?.metadata?.status, "archived", "the pass maintained its project scope");
   });
-
 });

@@ -5,12 +5,7 @@
  * not tools: `shell` runs `git`, and worktrees belong to the `workspace` service (plan 189 Task 8).
  * Shell is never used internally; all Git invocations go through typed arg arrays.
  */
-import type {
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { type CodingCheckToolOptions, createCodingCheckTool, type NamedCheckDefinition } from "./checks.js";
 import { CODING_LOCAL_EFFECT, CODING_OBSERVATION_EFFECT, CODING_UNSUPPORTED_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";

@@ -83,7 +83,7 @@ const attention = createAttentionCompiler(
 );
 ```
 
-Sizing: one session-store write per fold (not per turn); folding stays default-off, and `durable: true` requires a checkpoint store (`runState`) or the run throws `AgentRunStateError` before its first provider turn. See [Attention compiler](../packages/context/engineering/README.md).
+Sizing: one session-store write per fold (not per turn); folding stays default-off, and `durable: true` requires a checkpoint store (`runState`) or the run throws `AgentRunStateError` before its first provider turn. See [Attention compiler](../packages/extensions/context-engineering/README.md).
 
 ### 6. Per-turn tool narrowing
 
@@ -106,7 +106,7 @@ const agent = createAgent({ /* … */, session: { guardrailPacks: ["secrets-hygi
 // compiled from existing seams: interruptBeforeTool, the extension kernel, enforceExecutionPolicy
 ```
 
-Sizing: `guardrailPacks` accepts at most 8 packs and 64 rules per pack; containment in `coding-standard` is lexical (`options.roots` defaults to `[process.cwd()]`, symlinks are not resolved), so an `ExecutionPolicy` stays the hard boundary. See [Guardrails](../packages/policy/guardrail-packs/README.md).
+Sizing: `guardrailPacks` accepts at most 8 packs and 64 rules per pack; containment in `coding-standard` is lexical (`options.roots` defaults to `[process.cwd()]`, symlinks are not resolved), so an `ExecutionPolicy` stays the hard boundary. See [Guardrails](../packages/extensions/guardrail-packs/README.md).
 
 ### 8. Background (session-lifetime) child agents and child-event passthrough
 
@@ -117,7 +117,7 @@ const { delegationId } = await supervisor.delegateAsync({ childId: "researcher",
 supervisor.subscribe(); // … child_milestone … child_failed (on a limit or error)
 ```
 
-Sizing: child events per delegation 256/4096, child-event bytes 32 KiB/256 KiB, child events per second 10/1000 (default/hard, per child) — 10/s is trivial for a UI, raise it only for a child whose tool events are the UI. Exceeding rate coalesces into one `delegation_child_events_coalesced` marker with the dropped count (never throws). Defaults are exactly 0.8: `lifetime: "task"`, `report: "on-complete"`, no milestone, no share, no subscription. See [Supervisors](../packages/integrations/delegate/README.md) and [Multi-agent patterns](../packages/integrations/delegate/README.md).
+Sizing: child events per delegation 256/4096, child-event bytes 32 KiB/256 KiB, child events per second 10/1000 (default/hard, per child) — 10/s is trivial for a UI, raise it only for a child whose tool events are the UI. Exceeding rate coalesces into one `delegation_child_events_coalesced` marker with the dropped count (never throws). Defaults are exactly 0.8: `lifetime: "task"`, `report: "on-complete"`, no milestone, no share, no subscription. See [Supervisors](../packages/extensions/delegate/README.md) and [Multi-agent patterns](../packages/extensions/delegate/README.md).
 
 ### 9. Checkpoint sidecar metadata and cross-layer restore hooks
 
@@ -139,7 +139,7 @@ const page = await store.searchSessions!({ workspaceRoot: "/repo", query: "flake
 const { page } = await searchSessions({ bySession, leafBySession, query: "flake" }); // linear caps apply
 ```
 
-Sizing: on the 100k-turn fixture the index is 18.8% of transcript page bytes (stored tool output is never indexed) and query p95 is 38 ms against the 100 ms ceiling; unindexed stores are O(corpus) per query and accept `maxLinearSessions` / `maxLinearEntries` / `maxLinearBytes` overrides bounded by their hard caps. See [Session stores](../packages/stores/jsonl/README.md) and `examples/session-search.ts`.
+Sizing: on the 100k-turn fixture the index is 18.8% of transcript page bytes (stored tool output is never indexed) and query p95 is 38 ms against the 100 ms ceiling; unindexed stores are O(corpus) per query and accept `maxLinearSessions` / `maxLinearEntries` / `maxLinearBytes` overrides bounded by their hard caps. See [Session stores](../packages/extensions/store-jsonl/README.md) and `examples/session-search.ts`.
 
 ### 11. Deterministic no-model turns
 
@@ -207,4 +207,4 @@ Pin the previous published line: `@arnilo/prism@0.8.0` and its siblings, exact p
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Migrate Prism 0.7 to 0.8](migrate-to-0.8.md): work-family import map, messaging channels, connected apps, durable runs.
 - [Release and install](release.md): packed surfaces, install rules, support matrix, and the offline test budget.
-- [Agent events](events.md), [Runs and usage](events.md), [Observability](../packages/integrations/observability/README.md), [Tools](tools.md), [Guardrails](../packages/policy/guardrail-packs/README.md), [Supervisors](../packages/integrations/delegate/README.md), [Session stores](../packages/stores/jsonl/README.md): owning pages for the 0.9.0 additions.
+- [Agent events](events.md), [Runs and usage](events.md), [Observability](../packages/extensions/observability/README.md), [Tools](tools.md), [Guardrails](../packages/extensions/guardrail-packs/README.md), [Supervisors](../packages/extensions/delegate/README.md), [Session stores](../packages/extensions/store-jsonl/README.md): owning pages for the 0.9.0 additions.

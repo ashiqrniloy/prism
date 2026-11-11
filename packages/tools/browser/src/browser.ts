@@ -194,4 +194,4 @@ export {
   type UploadBudget,
 } from "./uploads.js";
 
-export const packageName = "@arnilo/prism-tools-browser";
+export const packageName = "@arnilo/prism-tools/browser";

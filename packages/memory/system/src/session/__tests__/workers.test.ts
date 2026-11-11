@@ -6,7 +6,7 @@ import {
   MemoryWorkerError as ObservationalMemoryError,
   MemoryWorkerLimitError as ObservationalMemoryLimitError,
   runMemoryWorkerLoop,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { type MemoryObservation } from "../../index.js";
 import { runDropper } from "../workers/dropper.js";
 import { runReflector } from "../workers/reflector.js";
@@ -187,6 +187,54 @@ describe("observational memory workers", () => {
       ["a1", "b1"],
     );
     assert.equal(calls, 1);
+  });
+
+  it("stm_pass_ends_after_a_clean_turn_and_continues_after_a_rejection", async () => {
+    // Plan 217 Task 6: after a turn whose events were all recorded, the model's next turn was a closing reply with no
+    // call; STM now ends the pass instead of asking for it.
+    const event = (id: string, description: string, extra: Record<string, unknown> = {}) =>
+      providerToolCall(toolCallContent(id, "record_event", { kind: "statement", description, sourceEntryIds: ["m1"], ...extra }));
+    let turns = 0;
+    const clean: ModelProvider = {
+      id: "mock",
+      async *generate() {
+        turns += 1;
+        if (turns === 1) yield* [event("c1", "one"), event("c2", "two")];
+        else yield providerTextDelta("Done.");
+        yield providerDone();
+      },
+    };
+    assert.equal((await runStm({ entries: [source], client: clientFor(clean), maxTurns: 4 })).length, 2);
+    assert.equal(turns, 1, "no closing call after a clean turn");
+    // A rejected event (`{ ok: false }`) gets the model another turn to correct it.
+    let again = 0;
+    const rejected: ModelProvider = {
+      id: "mock",
+      async *generate() {
+        again += 1;
+        if (again === 1) yield event("r1", "");
+        else if (again === 2) yield event("r2", "fixed");
+        yield providerDone();
+      },
+    };
+    const fixed = await runStm({ entries: [source], client: clientFor(rejected), maxTurns: 4 });
+    assert.deepEqual(
+      fixed.map((record) => record.description),
+      ["fixed"],
+    );
+    assert.equal(again, 2, "the corrected turn was clean, so the pass ended there");
+    // A turn cut at the output limit may have more to record: the loop asks again.
+    let cut = 0;
+    const capped: ModelProvider = {
+      id: "mock",
+      async *generate() {
+        cut += 1;
+        if (cut === 1) yield* [event("k1", "first"), providerDone(undefined, "max_output_tokens")];
+        else yield* [event("k2", "second"), providerDone()];
+      },
+    };
+    assert.equal((await runStm({ entries: [source], client: clientFor(capped), maxTurns: 4 })).length, 2);
+    assert.equal(cut, 2);
   });
 
   it("worker_loop_still_fails_on_the_limits_by_default", async () => {
@@ -375,7 +423,8 @@ describe("observational memory workers", () => {
       },
     };
 
-    const observations = await runStm({ entries: [source], client: clientFor(memoryProvider), maxTurns: 2 });
+    // `endAfterCleanTurn: false` so the second request (the replayed transcript) is sent at all.
+    const observations = await runStm({ entries: [source], client: clientFor(memoryProvider), maxTurns: 2, endAfterCleanTurn: false });
 
     assert.equal(observations.length, 1);
     const replay = requests[1]?.messages.slice(-2) as Message[] | undefined;

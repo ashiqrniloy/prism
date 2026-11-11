@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdir, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -84,10 +84,7 @@ void describe("provider conformance", () => {
   });
 
   it("usage_accounting_rejects_cache_above_input", () => {
-    const events = [
-      providerUsage({ inputTokens: 5, cacheReadTokens: 4, cacheWriteTokens: 2 }),
-      providerDone(),
-    ];
+    const events = [providerUsage({ inputTokens: 5, cacheReadTokens: 4, cacheWriteTokens: 2 }), providerDone()];
     assert.throws(
       () => assertUsageAccounting(events, { inputTokens: 5 }),
       /Usage accounting invariant violated.*cacheReadTokens \(4\) \+ cacheWriteTokens \(2\) > inputTokens \(5\)/,
@@ -230,13 +227,10 @@ void describe("provider conformance", () => {
       createHyperProvider: (opts: { apiKey: () => Promise<string> }) => ModelProvider;
       hyperModels: readonly { provider: string; model: string }[];
     };
-    const result = await providerConformance(
-      () => createHyperProvider({ apiKey: async () => "fake-hyper-key" }),
-      {
-        recordings: new URL("../../packages/providers/hyper/src/__tests__/wire/anthropic", import.meta.url),
-        models: hyperModels,
-      },
-    );
+    const result = await providerConformance(() => createHyperProvider({ apiKey: async () => "fake-hyper-key" }), {
+      recordings: new URL("../../packages/providers/hyper/src/__tests__/wire/anthropic", import.meta.url),
+      models: hyperModels,
+    });
     assert.equal(result.ok, true);
     assert.ok(result.scenarios.length >= 5);
     const names = result.scenarios.map((s) => s.name);
@@ -335,9 +329,7 @@ void describe("provider conformance", () => {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               model: req.model.model,
-              messages: [
-                { role: "assistant", content: [{ type: "thinking", thinking: "unsigned thought" }] },
-              ],
+              messages: [{ role: "assistant", content: [{ type: "thinking", thinking: "unsigned thought" }] }],
             }),
           });
           yield { type: "done", stopReason: "end_turn", usage: { inputTokens: 10, outputTokens: 2, totalTokens: 12 } };
@@ -361,10 +353,7 @@ void describe("provider conformance", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "scaffold-provider-"));
     try {
       const runtime = { stdout: { write() {} }, stderr: { write() {} } } as any;
-      const code = await runManifestCommand(
-        ["new", "package", "--provider", "@acme/prism-provider-sample", "--dir", tempDir],
-        runtime,
-      );
+      const code = await runManifestCommand(["new", "package", "--provider", "@acme/prism-provider-sample", "--dir", tempDir], runtime);
       assert.equal(code, 0);
 
       assert.ok(existsSync(join(tempDir, "package.json")));

@@ -15,33 +15,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@arnilo/prism-acp": "workspace:*",
-    "@arnilo/prism-approval": "workspace:*",
-    "@arnilo/prism-channels": "workspace:*",
-    "@arnilo/prism-context-engineering": "workspace:*",
-    "@arnilo/prism-context-files": "workspace:*",
-    "@arnilo/prism-delegate": "workspace:*",
-    "@arnilo/prism-driver-process": "workspace:*",
-    "@arnilo/prism-evals": "workspace:*",
-    "@arnilo/prism-headless": "workspace:*",
-    "@arnilo/prism-hooks-json": "workspace:*",
-    "@arnilo/prism-memory-compaction": "workspace:*",
     "@arnilo/prism-memory-system": "workspace:*",
-    "@arnilo/prism-rag": "workspace:*",
-    "@arnilo/prism-wiki": "workspace:*",
-    "@arnilo/prism-provider-hyper": "workspace:*",
-    "@arnilo/prism-remote": "workspace:*",
-    "@arnilo/prism-store-sqlite": "workspace:*",
-    "@arnilo/prism-tools-browser": "workspace:*",
-    "@arnilo/prism-tools-coding": "workspace:*",
-    "@arnilo/prism-tools-research": "workspace:*",
-    "@arnilo/prism-tools-web": "workspace:*",
-    "@arnilo/prism-workflows": "workspace:*"
+    "@arnilo/prism-ai": "workspace:*",
+    "@arnilo/prism-extensions": "workspace:*",
+    "@arnilo/prism-tools": "workspace:*",
+    "@arnilo/prism-hosts": "^0.13.0",
+    "@arnilo/prism-knowledge": "0.13.0-experimental.0"
   },
   "devDependencies": {
-    "@arnilo/prism-provider-commandcode": "workspace:*",
-    "@arnilo/prism-provider-ollama-cloud": "workspace:*",
-    "@arnilo/prism-provider-opencode-go": "workspace:*",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"
   },

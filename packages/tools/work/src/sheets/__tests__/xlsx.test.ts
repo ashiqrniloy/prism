@@ -4,7 +4,7 @@ import { generateWorkbookSync } from "@office-open/xlsx";
 import { parseWorkbook, SheetsCapError, SheetsFormatError, SheetsValidationError } from "../index.js";
 import type { SheetsTelemetry, SheetsTelemetryAttributeValue, SheetsTelemetrySpan } from "../telemetry.js";
 
-describe("@arnilo/prism-tools-work — XLSX Parser & Container Gating", () => {
+describe("@arnilo/prism-tools/work — XLSX Parser & Container Gating", () => {
   it("parses a multi-sheet workbook with various cell types and formula preservation", async () => {
     const bytes = generateWorkbookSync({
       worksheets: [

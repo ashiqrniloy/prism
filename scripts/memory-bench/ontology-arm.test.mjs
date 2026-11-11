@@ -99,9 +99,22 @@ test("an_ontology_arm_builds_each_history_once_and_restores_it_for_later_questio
     assert.equal((await readdir(cache)).filter((name) => !name.includes(".")).length, 1, "one store per history");
     // A later question on the same history (here: the same questions in a fresh answer cache) restores the memory.
     const restored = await runBench({ ...b.options(), ontology: true, ontologyStoreCache: cache });
-    assert.ok(restored.results.every((row) => row.outcome === "scored" && row.ontology.ontologyReused === true && row.ingest.ontologyReused === true));
-    assert.ok(restored.results.every((row) => row.ontology.curator.calls === 0), "no curator call on a restored history");
-    const memory = (row) => ({ id: row.id, correct: row.correct, concepts: row.ontology.concepts, claims: row.ontology.claims, passes: row.ontology.passes });
+    assert.ok(
+      restored.results.every(
+        (row) => row.outcome === "scored" && row.ontology.ontologyReused === true && row.ingest.ontologyReused === true,
+      ),
+    );
+    assert.ok(
+      restored.results.every((row) => row.ontology.curator.calls === 0),
+      "no curator call on a restored history",
+    );
+    const memory = (row) => ({
+      id: row.id,
+      correct: row.correct,
+      concepts: row.ontology.concepts,
+      claims: row.ontology.claims,
+      passes: row.ontology.passes,
+    });
     assert.deepEqual(restored.results.map(memory), built.results.map(memory));
   } finally {
     await a.done();

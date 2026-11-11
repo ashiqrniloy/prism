@@ -12,8 +12,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ContextDraft, HookContext, SessionEntry, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createHashEmbedder } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
+import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
 
 import { createFabricContext } from "../context.js";
 import { createMemory, createLongTermMemory } from "../../index.js";

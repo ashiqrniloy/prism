@@ -93,6 +93,7 @@ describe("shared pending decisions", () => {
     const executed: string[] = [];
     const { agent, store } = await decisionAgent(executed);
     const { session, pending } = await suspend(agent, store, "s1");
+    assert.ok(pending[0]);
 
     assert.equal(executed.length, 0);
     assert.equal(pending.length, 2);
@@ -110,9 +111,10 @@ describe("shared pending decisions", () => {
     const executed: string[] = [];
     const { agent, store } = await decisionAgent(executed);
     const { session, pending } = await suspend(agent, store, "s2");
+    assert.ok(pending[0]);
 
     await assert.rejects(
-      collect(session.resume([allowOnce(pending[0]!.approvalId)])),
+      collect(session.resume([allowOnce(pending[0].approvalId)])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
     const suspended = await loadSuspendedRunEntry(store, "s2");
@@ -127,24 +129,19 @@ describe("shared pending decisions", () => {
   it("fails the whole batch closed on unknown or duplicate approval ids", async () => {
     const { agent, store } = await decisionAgent([]);
     const { session, pending } = await suspend(agent, store, "s3");
+    assert.ok(pending[0]);
 
     await assert.rejects(
       collect(
-        session.resume([
-          allowOnce(pending[0]!.approvalId),
-          { approvalId: pending[0]!.approvalId, outcome: "reject_once" } as Decision,
-        ]),
+        session.resume([allowOnce(pending[0].approvalId), { approvalId: pending[0].approvalId, outcome: "reject_once" } as Decision]),
       ),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_DUPLICATE",
     );
-    await assert.rejects(
-      collect(session.resume([allowOnce("foreign")])),
-      (error: unknown) => {
-        assert.ok(error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_UNKNOWN");
-        assert.ok(!error.message.includes("foreign")); // non-enumerating
-        return true;
-      },
-    );
+    await assert.rejects(collect(session.resume([allowOnce("foreign")])), (error: unknown) => {
+      assert.ok(error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_UNKNOWN");
+      assert.ok(!error.message.includes("foreign")); // non-enumerating
+      return true;
+    });
     // Every rejection left the suspension untouched.
     const suspended = await loadSuspendedRunEntry(store, "s3");
     assert.equal(suspended?.state.status, "suspended");
@@ -154,17 +151,18 @@ describe("shared pending decisions", () => {
   it("rejects invalid batches: empty, oversized reasons, mixed decision shapes", async () => {
     const { agent, store } = await decisionAgent([]);
     const { session, pending } = await suspend(agent, store, "s4");
+    assert.ok(pending[0]);
 
     await assert.rejects(
       collect(session.resume([])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
     await assert.rejects(
-      collect(session.resume([allowOnce(pending[0]!.approvalId, { reason: "x".repeat(2049) })])),
+      collect(session.resume([allowOnce(pending[0].approvalId, { reason: "x".repeat(2049) })])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_LIMIT",
     );
     await assert.rejects(
-      collect(session.resume([allowOnce(pending[0]!.approvalId, { elicitation: { a: 1 } })])),
+      collect(session.resume([allowOnce(pending[0].approvalId, { elicitation: { a: 1 } })])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_SCOPE",
     );
   });
@@ -173,10 +171,12 @@ describe("shared pending decisions", () => {
     const executed: string[] = [];
     const { agent, store } = await decisionAgent(executed);
     const { session, pending } = await suspend(agent, store, "s5");
+    assert.ok(pending[0]);
+    assert.ok(pending[1]);
 
     const last = await resumeSuspended(session, [
-      { approvalId: pending[0]!.approvalId, outcome: "reject_once", reason: "not safe" },
-      allowOnce(pending[1]!.approvalId),
+      { approvalId: pending[0].approvalId, outcome: "reject_once", reason: "not safe" },
+      allowOnce(pending[1].approvalId),
     ]);
     assert.equal(last?.type, "run.completed");
     assert.deepEqual(executed, ['call-2:{"value":"b"}']);
@@ -205,21 +205,23 @@ describe("shared pending decisions", () => {
       },
     });
     const { session, pending } = await suspend(agent, store, "s6");
+    assert.ok(pending[0]);
 
-    const second = await resumeSuspended(session, [{ approvalId: pending[0]!.approvalId, outcome: "allow_for_run" }]);
+    const second = await resumeSuspended(session, [{ approvalId: pending[0].approvalId, outcome: "allow_for_run" }]);
     // call-2 matches the sticky scope (same tool + arguments) and runs without a suspension;
     // call-3 has different arguments and suspends the run again.
     assert.equal(second?.type, "run.suspended");
     assert.deepEqual(executed, ['call-1:{"value":"same"}', 'call-2:{"value":"same"}']);
     const remaining = (await loadSuspendedRunEntry(store, "s6"))?.state.interruption?.pendingDecisions ?? [];
+    assert.ok(remaining[0]);
     assert.equal(remaining.length, 1);
-    assert.equal(remaining[0]!.toolCallId, "call-3");
+    assert.equal(remaining[0].toolCallId, "call-3");
 
-    const done = await resumeSuspended(session, [allowOnce(remaining[0]!.approvalId)]);
+    const done = await resumeSuspended(session, [allowOnce(remaining[0].approvalId)]);
     assert.equal(done?.type, "run.completed");
     // The suspension is resolved: the branch tip moved past its entry, so a second resume is stale.
     await assert.rejects(
-      collect(session.resume([allowOnce(remaining[0]!.approvalId)])),
+      collect(session.resume([allowOnce(remaining[0].approvalId)])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_STALE",
     );
   });
@@ -241,9 +243,10 @@ describe("shared pending decisions", () => {
       },
     });
     const { session, pending } = await suspend(agent, store, "s7");
+    assert.ok(pending[0]);
 
     const last = await resumeSuspended(session, [
-      { approvalId: pending[0]!.approvalId, outcome: "reject_for_run", reason: "denied for run" },
+      { approvalId: pending[0].approvalId, outcome: "reject_for_run", reason: "denied for run" },
     ]);
     assert.equal(last?.type, "run.completed");
     assert.deepEqual(executed, []);
@@ -274,14 +277,11 @@ describe("shared pending decisions", () => {
       },
     });
     const { session, pending } = await suspend(agent, store, "s8");
+    assert.ok(pending[0]);
+    assert.ok(pending[1]);
 
     await assert.rejects(
-      collect(
-        session.resume([
-          allowOnce(pending[0]!.approvalId, { modifiedArguments: { value: 42 } }),
-          allowOnce(pending[1]!.approvalId),
-        ]),
-      ),
+      collect(session.resume([allowOnce(pending[0].approvalId, { modifiedArguments: { value: 42 } }), allowOnce(pending[1].approvalId)])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
     // Atomic failure: still suspended with both decisions pending, nothing executed.
@@ -289,8 +289,8 @@ describe("shared pending decisions", () => {
     assert.equal(executed.length, 0);
 
     const last = await resumeSuspended(session, [
-      allowOnce(pending[0]!.approvalId, { modifiedArguments: { value: "edited" } }),
-      allowOnce(pending[1]!.approvalId),
+      allowOnce(pending[0].approvalId, { modifiedArguments: { value: "edited" } }),
+      allowOnce(pending[1].approvalId),
     ]);
     assert.equal(last?.type, "run.completed");
     assert.deepEqual(executed, ['call-1:{"value":"edited"}', 'call-2:{"value":"b"}']);
@@ -300,10 +300,17 @@ describe("shared pending decisions", () => {
     const executed: string[] = [];
     const { agent, store } = await decisionAgent(executed);
     const { session, runId, pending } = await suspend(agent, store, "s9");
+    assert.ok(pending[0]);
     const suspension = await loadSuspendedRunEntry(store, "s9");
-    const tip = (await session.entries()).at(-1)!.id;
-    const approvalId = suspension!.state.pendingCalls![0]!.approvalId;
-    assert.equal(pending[0]!.approvalId, approvalId);
+    const tipEntry = (await session.entries()).at(-1);
+    assert.ok(tipEntry);
+    const tip = tipEntry.id;
+    assert.ok(suspension);
+    assert.ok(suspension.state.pendingCalls);
+    const pendingCall = suspension.state.pendingCalls[0];
+    assert.ok(pendingCall);
+    const approvalId = pendingCall.approvalId;
+    assert.equal(pending[0].approvalId, approvalId);
 
     // Re-publish the suspension as an elicitation entry (a package maps this in the ask path).
     await store.append(
@@ -312,11 +319,11 @@ describe("shared pending decisions", () => {
         sessionId: "s9",
         parentId: tip,
         runId,
-        loop: suspension!.loop,
-        hookIds: suspension!.hookIds,
+        loop: suspension.loop,
+        hookIds: suspension.hookIds,
         state: {
-          ...suspension!.state,
-          pendingCalls: [suspension!.state.pendingCalls![0]!],
+          ...suspension.state,
+          pendingCalls: [pendingCall],
           interruption: {
             kind: "elicitation",
             reason: "Need operator input",
@@ -392,6 +399,7 @@ describe("shared pending decisions", () => {
       },
     });
     const { session, pending } = await suspend(agent, store, "s10");
+    assert.ok(pending[0]);
     assert.equal(pending.length, 1);
     assert.equal(pending[0]?.kind, "elicitation");
     assert.equal(pending[0]?.reason, "Pick one");
@@ -399,10 +407,10 @@ describe("shared pending decisions", () => {
 
     // The tool's validate fn rejects out-of-set answers even though required keys are present.
     await assert.rejects(
-      collect(session.resume([allowOnce(pending[0]!.approvalId, { elicitation: { choice: "z" } })])),
+      collect(session.resume([allowOnce(pending[0].approvalId, { elicitation: { choice: "z" } })])),
       (error: unknown) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
-    const last = await resumeSuspended(session, [allowOnce(pending[0]!.approvalId, { elicitation: { choice: "a" } })]);
+    const last = await resumeSuspended(session, [allowOnce(pending[0].approvalId, { elicitation: { choice: "a" } })]);
     assert.equal(last?.type, "run.completed");
     assert.deepEqual(executed, []); // elicitation resolved without executing
   });

@@ -8,7 +8,7 @@
 // call id (or up to 50 pages of a date range) and no prompt or response content is read or written.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { litellmSpendLogs } from "@arnilo/prism-provider-litellm";
+import { litellmSpendLogs } from "@arnilo/prism-ai/litellm";
 
 const USAGE = "usage: reconcile.mjs --report <report.json|usage.jsonl> [--base-url URL] [--tolerance 1e-6] [--wait-ms N] [--out PREFIX]";
 

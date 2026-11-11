@@ -17,7 +17,10 @@ const RAW_PREVIEW_CHARS = 256;
  * Parses a byte or string stream as JSONL. Holds at most one line plus the current chunk. A malformed
  * line is reported as `{ kind: "invalid" }` (redacted, truncated) instead of throwing.
  */
-export async function* readJsonl(stream: AsyncIterable<Uint8Array | string> | Iterable<Uint8Array | string>, options: ReadJsonlOptions): AsyncGenerator<JsonlItem> {
+export async function* readJsonl(
+  stream: AsyncIterable<Uint8Array | string> | Iterable<Uint8Array | string>,
+  options: ReadJsonlOptions,
+): AsyncGenerator<JsonlItem> {
   const decoder = new TextDecoder();
   let pending = "";
   let pendingBytes = 0;

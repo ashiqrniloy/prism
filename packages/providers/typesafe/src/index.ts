@@ -1,25 +1,16 @@
 /**
- * @arnilo/prism-provider-typesafe — TypeSafe Jev provider package for Prism.
+ * @arnilo/prism-ai/typesafe — TypeSafe Jev provider package for Prism.
  */
 import type { PackageInstance } from "@arnilo/prism";
-import {
-  systemOneProviderPackage,
-  type SystemOneProviderConfig,
-  type SystemOneProviderPackageOptions,
-} from "@arnilo/prism/provider-kit";
-import {
-  TYPESAFE_API_KEY_ENV,
-  TYPESAFE_DEFAULT_API_KEY_REF,
-  TYPESAFE_DEFAULT_BASE_URL,
-  typeSafeModels,
-} from "./models.js";
+import { systemOneProviderPackage, type SystemOneProviderConfig, type SystemOneProviderPackageOptions } from "@arnilo/prism/provider-kit";
+import { TYPESAFE_DEFAULT_API_KEY_REF, TYPESAFE_DEFAULT_BASE_URL, typeSafeModels } from "./models.js";
 import { createTypeSafeProvider } from "./provider.js";
 
 export type TypeSafeProviderConfig = SystemOneProviderConfig;
 export type TypeSafeProviderPackageOptions = SystemOneProviderPackageOptions;
 
 const pkg = systemOneProviderPackage({
-  name: "@arnilo/prism-provider-typesafe",
+  name: "@arnilo/prism-ai/typesafe",
   providerId: "typesafe",
   label: "TypeSafe Jev",
   defaultBaseUrl: TYPESAFE_DEFAULT_BASE_URL,

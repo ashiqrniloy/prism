@@ -15,8 +15,8 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism/testing";
-import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-core";
-import { contextEngineering } from "../../../../../context/engineering/src/index.js";
+import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-system/core";
+import { contextEngineering } from "@arnilo/prism-extensions/context-engineering";
 
 import memorySystem, { type MemoryFabricConfig } from "../../index.js";
 import { parseProjectFile, projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
@@ -36,7 +36,7 @@ async function tempRoot(): Promise<string> {
   return dir;
 }
 
-/** Another package's `Embedder`, the way `@arnilo/prism-rag` provides it. */
+/** Another package's `Embedder`, the way `@arnilo/prism-knowledge/rag` provides it. */
 function embeddingsPackage(): PackageInstance {
   const embedder: Embedder = createHashEmbedder({ dimensions: 8, id: "fake-embeddings" });
   return definePackage({
@@ -190,7 +190,7 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
     } finally {
       await agent.dispose();
     }
-    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
     const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
     try {
       const records = await stores.vectorStore.getByIds({ tenantId: "prism", resourceId: PROJECT_RESOURCE, threadId: "default" }, [
@@ -262,7 +262,6 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
     }
   });
 
-
   it("invalid_project_scope_warns_once_and_keeps_user_and_agent", async () => {
     const { agent } = await harness({ config: { semantic: false, scopes: { project: { id: "bad id" } } } });
     try {
@@ -313,7 +312,6 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
     await reopened.close();
     await next.agent.dispose();
   });
-
 
   it("fabric_sqlite_path_outside_root_fails_config", async () => {
     const root = await tempRoot();
@@ -424,7 +422,6 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
     await agent.dispose();
   });
 
-
   it("memory_fabric_tools_gated_per_session", async () => {
     const { agent, requests } = await harness({ config: { semantic: false }, script: INSERT_THEN_ANSWER });
     const session = await agent.session({ id: "fabric-gated", create: true });
@@ -440,7 +437,6 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
     await session.close();
     await agent.dispose();
   });
-
 
   // Plan 210 Task 2: capture reads the archived user turn; without the archive it cannot fire, so setup says so.
   it("rules_capture_without_the_exchange_archive_warns_at_setup", async () => {
@@ -510,7 +506,8 @@ describe("lifecycle retirement sweep (plan 188.4)", () => {
     // calendar-day archive (Task 4). Only frozen records and release notes may still name them.
     const retired = /scoreScopedHit|\btauDays\b|archiveAfterDays|candidateArchiveDays|isStaleCandidate|archiveStale/;
     const skipDir = /^(docs\/history|docs\/_evidence|plans|scripts\/compat-baseline|node_modules|dist|\.types)(\/|$)|\/\.types\//;
-    const allowed = (key: string): boolean => /CHANGELOG\.md$/.test(key) || key === "packages/memory/system/src/ltm/__tests__/package.test.ts";
+    const allowed = (key: string): boolean =>
+      /CHANGELOG\.md$/.test(key) || key === "packages/memory/system/src/ltm/__tests__/package.test.ts";
     const hits: string[] = [];
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -558,12 +555,13 @@ describe("retired memory family workspace", () => {
       "packages/memory/system/src/ltm/__tests__/notes.test.ts", // asserts the family manifest is deleted
       "packages/memory/system/README.md", // "moved out of the `@arnilo/prism-memory/{fabric,scoped}` subpaths"
       "packages/knowledge/wiki/README.md", // "moved out of the `@arnilo/prism-memory/wiki` subpath"
+      "scripts/retired-names.json", // the canonical retirement ledger
       "scripts/deprecations-0.13.json", // the deliberate 0.13 registry deprecation ledger names every retired line
       "scripts/budgets.json", // frozen 0.12 family export budget and historical rationale
       "scripts/phase12-freeze-manifest.json", // frozen 0.12 record: "pgvector (required by … path only)"
       "scripts/independent-packages.json", // the lockstep note names the retired family it replaced
       "scripts/phase24-truth.test.mjs", // the unreachable 0.11-era peer-map branch
-      "scripts/phase29-freeze-manifest.json", // 0.2.9 supersession map: family -> @arnilo/prism-memory-core
+      "scripts/phase29-freeze-manifest.json", // 0.2.9 supersession map: family -> @arnilo/prism-memory-system/core
       "scripts/phase54-package-map.mjs", // frozen 0.4 consolidation spec plus retired migration rows
       "scripts/phase54-package-map.test.mjs", // pins the frozen spec's prism-wiki bin target
       "scripts/postgres-evidence.test.mjs", // negative-control filter that drops the memory leg
@@ -612,7 +610,11 @@ describe("retired memory family workspace", () => {
       `only frozen records and explicit negative guards may name the retired ${FAMILY} family`,
     );
     // Positive controls: the workspace is really gone and the scan really looked.
-    assert.equal(existsSync(join(repoRoot, "packages", "memory", "package.json")), false, "the family manifest must stay deleted");
+    assert.equal(
+      JSON.parse(readFileSync(join(repoRoot, "packages/memory/package.json"), "utf8")).name,
+      "@arnilo/prism-memory-system",
+      "the bundle must not reuse the retired family name",
+    );
     assert.equal(existsSync(join(repoRoot, "packages", "memory", "src")), false, "the family source tree must stay deleted");
     assert.ok(mentions.length > 0, "the scan must find the frozen-record mentions it allows");
   });

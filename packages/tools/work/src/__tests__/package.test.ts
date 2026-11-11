@@ -29,7 +29,7 @@ function identityJson(): JsonObject {
   };
 }
 
-describe("@arnilo/prism-tools-work package", () => {
+describe("@arnilo/prism-tools/work package", () => {
   it("tools_work_package_conformance", async () => {
     const result = await packageConformance(toolsWork({ root: ROOT }));
     assert.deepEqual(
@@ -143,9 +143,9 @@ describe("@arnilo/prism-tools-work package", () => {
 
   it("office_parsers_not_loaded_unless_tools_work_listed", async () => {
     const script = [
-      'const coding = await import("@arnilo/prism-tools-coding");',
-      'const web = await import("@arnilo/prism-tools-web");',
-      'const approval = await import("@arnilo/prism-approval");',
+      'const coding = await import("@arnilo/prism-tools/coding");',
+      'const web = await import("@arnilo/prism-tools/web");',
+      'const approval = await import("@arnilo/prism-extensions/approval");',
       'const { createAgent } = await import("@arnilo/prism");',
       "const seen = (needle) => Object.keys(require.cache ?? {}).some((key) => key.includes(needle));",
       'const heavy = () => ({ office: seen("@office-open"), mammoth: seen("mammoth"), pdf: seen("pdf-parse"), anydoc: seen("@firecrawl/anydoc") });',
@@ -156,8 +156,10 @@ describe("@arnilo/prism-tools-work package", () => {
       "]});",
       "await agent.dispose();",
       "const before = heavy();",
-      'const work = await import("@arnilo/prism-tools-work");',
+      'const work = await import("@arnilo/prism-tools/work");',
       'const withWork = await createAgent({ model: { provider: "mock", model: "m" }, packages: [work.default({ root: process.cwd() })] });',
+      'const office = work.createOfficeTools().find((tool) => tool.name === "office_preview");',
+      'await office.execute({ model: { kind: "doc", modelVersion: 1, blocks: [] } }, { toolCallId: "probe", signal: new AbortController().signal });',
       "await withWork.dispose();",
       "console.log(JSON.stringify({ before, after: heavy() }));",
     ].join("\n");
@@ -172,7 +174,7 @@ describe("@arnilo/prism-tools-work package", () => {
       { office: false, mammoth: false, pdf: false, anydoc: false },
       "an agent without tools-work loads no office parser",
     );
-    assert.equal(probe.after.office, true, "the probe is meaningful: listing tools-work loads @office-open");
+    assert.equal(probe.after.office, true, "the probe is meaningful: executing an Office tool loads @office-open");
   });
 
   it("tools_work_disposes_worker_pool", async () => {

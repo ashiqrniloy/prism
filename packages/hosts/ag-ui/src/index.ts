@@ -141,7 +141,7 @@ export {
   HARD_MAX_PROJECTOR_MESSAGES,
   jsonDiff,
 } from "./projectors.js";
-// Task 14: reference renderer subpath (@arnilo/prism-ag-ui/renderer).
+// Task 14: reference renderer subpath (@arnilo/prism-hosts/ag-ui/renderer).
 // Type-only re-exports; runtime DOM code stays behind the subpath so the main
 // entry remains runtime-agnostic.
 export type {
@@ -174,4 +174,4 @@ export {
 } from "./replay.js";
 export type { AgUiAuthorization, AgUiRunReference, CoWorkContext, CoWorkEvent, CoWorkKind } from "./types.js";
 
-export const packageName = "@arnilo/prism-ag-ui";
+export const packageName = "@arnilo/prism-hosts/ag-ui";

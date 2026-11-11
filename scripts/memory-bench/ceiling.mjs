@@ -46,7 +46,8 @@ export function ceilingReport({ recall, oracle }) {
     else table[oracleRight ? "recallWrongOracleRight" : "bothWrong"] += 1;
   }
   const wrongByStage = {};
-  for (const row of paired.filter((item) => !item.correct)) wrongByStage[retrievalStage(row)] = (wrongByStage[retrievalStage(row)] ?? 0) + 1;
+  for (const row of paired.filter((item) => !item.correct))
+    wrongByStage[retrievalStage(row)] = (wrongByStage[retrievalStage(row)] ?? 0) + 1;
   const recallCorrect = paired.filter((row) => row.correct).length;
   const oracleCorrect = paired.filter((row) => oracleById.get(row.id).correct).length;
   return {
@@ -71,7 +72,10 @@ export function ceilingReport({ recall, oracle }) {
 
 if (import.meta.main) {
   try {
-    const { values } = parseArgs({ options: { recall: { type: "string" }, oracle: { type: "string" }, output: { type: "string" } }, strict: true });
+    const { values } = parseArgs({
+      options: { recall: { type: "string" }, oracle: { type: "string" }, output: { type: "string" } },
+      strict: true,
+    });
     if (!values.recall || !values.oracle) throw new Error("MemoryBenchArguments: --recall and --oracle are required");
     const report = ceilingReport({
       recall: JSON.parse(await readFile(values.recall, "utf8")),

@@ -1,10 +1,4 @@
-import {
-  type ModelCapabilities,
-  type ModelConfig,
-  type ModelCost,
-  redactSecrets,
-  trimTrailingSlashes,
-} from "@arnilo/prism";
+import { type ModelCapabilities, type ModelConfig, type ModelCost, redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** A host-run LiteLLM Proxy answers on loopback by default (`litellm --port 4000`). */
@@ -61,7 +55,10 @@ function maximum(values: readonly (number | null | undefined)[]): number | undef
 }
 
 /** True only when every deployment says yes; a null/absent flag is not a claim. */
-function all(members: readonly LiteLLMModelInfoEntry[], read: (info: NonNullable<LiteLLMModelInfoEntry["model_info"]>) => unknown): boolean {
+function all(
+  members: readonly LiteLLMModelInfoEntry[],
+  read: (info: NonNullable<LiteLLMModelInfoEntry["model_info"]>) => unknown,
+): boolean {
   return members.every((member) => read(member.model_info ?? {}) === true);
 }
 
@@ -115,7 +112,11 @@ export function groupLiteLLMModelInfo(
       streaming: true,
     };
     const providers = [
-      ...new Set(chat.map((member) => member.model_info?.litellm_provider).filter((value): value is string => typeof value === "string" && value !== "")),
+      ...new Set(
+        chat
+          .map((member) => member.model_info?.litellm_provider)
+          .filter((value): value is string => typeof value === "string" && value !== ""),
+      ),
     ].sort();
     models.push({
       provider,
@@ -134,11 +135,8 @@ export function groupLiteLLMModelInfo(
   return models.sort((a, b) => a.model.localeCompare(b.model));
 }
 
-async function discover(
-  options: ListLiteLLMModelsOptions,
-  path: string,
-): Promise<{ response: Response; token: string | undefined }> {
-  const provider = options.provider ?? "litellm";
+async function discover(options: ListLiteLLMModelsOptions, path: string): Promise<{ response: Response; token: string | undefined }> {
+  const _provider = options.provider ?? "litellm";
   const token = await options.apiKey?.();
   const response = await (options.fetch ?? fetch)(`${trimTrailingSlashes(options.baseUrl ?? LITELLM_DEFAULT_BASE_URL)}${path}`, {
     method: "GET",

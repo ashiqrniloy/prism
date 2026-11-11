@@ -1,7 +1,7 @@
 /**
  * Edit tool: precise text replacement in an existing file via exact matching.
  *
- * Behavioral port of pi's core/tools/edit for @arnilo/prism-tools-coding, adapted to Prism's
+ * Behavioral port of pi's core/tools/edit for @arnilo/prism-tools/coding, adapted to Prism's
  * `ToolDefinition` contract. Faithfully ports the access → read → stripBom → line-ending-normalize →
  * `applyEditsToNormalizedContent` (exact only, with duplicate/overlap/empty/no-change guards) →
  * write flow, serialized per-path via `withFileMutationQueue`. Also ports `prepareEditArguments`

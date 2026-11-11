@@ -268,7 +268,7 @@ Per-suite subpaths (the conformance helpers other than `@arnilo/prism/provider-k
 stay until their owning phases consolidate them. This subpath does not replace them, and the store conformance
 moved here from the retired `./testing/session-store-conformance` subpath.
 
-Checkpoint and lease conformance moved to `@arnilo/prism-workflows/testing` with the contracts themselves
+Checkpoint and lease conformance moved to `@arnilo/prism-extensions/workflows/testing` with the contracts themselves
 `checkpointConformance(factory)` covers create/CAS/create-only/concurrent-writer/
 fencing/ownership/list/delete, and `leaseConformance(factory, { ttlMs? })` covers acquire, exclusive hold,
 renew, release, foreign-owner rejection, and a fence that survives release and expiry. The kernel
@@ -374,8 +374,8 @@ supply all known secrets and review fixtures before committing them.
 
 ### Process adapter conformance
 
-`adapterConformance` lives in `@arnilo/prism-driver-process/testing`; see the
-[process driver package](../packages/drivers/process/README.md#testing-your-adapter).
+`adapterConformance` lives in `@arnilo/prism-hosts/driver-process/testing`; see the
+[process driver package](../packages/hosts/driver-process/README.md#testing-your-adapter).
 The kernel's `driverConformance` accepts `fixtures.scriptFor(activity)` to map
 neutral output activities to raw scripted steps. Command-hook dialects may
 provide a self-contained `hook.allowed({ exitCode, stdout })` function when the

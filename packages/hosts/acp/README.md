@@ -1,4 +1,4 @@
-# @arnilo/prism-acp
+# @arnilo/prism-hosts/acp
 
 Host library that serves one existing Prism `Agent` over ACP v1. It does not construct an agent.
 
@@ -61,8 +61,8 @@ HostUi kind:
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { acpHost, serveAcp } from "@arnilo/prism-acp";
-import approval from "@arnilo/prism-approval";
+import { acpHost, serveAcp } from "@arnilo/prism-hosts/acp";
+import approval from "@arnilo/prism-extensions/approval";
 
 const agent = await createAgent({
   model,
@@ -82,4 +82,6 @@ No work per connection beyond the agent's own runs. Notification text is capped 
 ## Related APIs
 
 - `session.resume`: continues a suspended approval
-- `@arnilo/prism-approval`: ask mode that suspends when the host cannot confirm inline
+- `@arnilo/prism-extensions/approval`: ask mode that suspends when the host cannot confirm inline
+
+Protocol dependencies are optional peers of `@arnilo/prism-hosts`. Install `@agentclientprotocol/sdk@1.4.0`. Protocol entrypoints require these peers; see the [bundle dependency table](../README.md).

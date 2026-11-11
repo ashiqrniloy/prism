@@ -100,7 +100,7 @@ describe("package tools", () => {
   });
 
   it("search_tools_is_a_package_owned_name", async () => {
-    // Plan 158 Tasks 7-8: the activation tool belongs to `@arnilo/prism-context-engineering`, and
+    // Plan 158 Tasks 7-8: the activation tool belongs to `@arnilo/prism-extensions/context-engineering`, and
     // the kernel no longer generates one, so the name carries no reservation.
     const owner = pkg("@acme/search", ({ tools }) => tools.register(tool("search_tools")));
     const agent = await createAgent({ model: MODEL, packages: [owner, providerPackage("test-provider", [textProvider()])] });
@@ -288,13 +288,21 @@ describe("package skills and providers", () => {
     const config = { model: MODEL };
     assert.equal((await rejects(createAgent({ ...config, packages: [one, twoSkill] }), "skill_conflict")).package, "@acme/two");
     assert.equal((await rejects(createAgent({ ...config, packages: [one, twoProvider] }), "provider_conflict")).package, "@acme/three");
-    await rejects(createAgent({ ...config, packages: [one], skills: { add: [{ ...skill("review"), instructions: "another review" }] } }), "skill_conflict");
+    await rejects(
+      createAgent({ ...config, packages: [one], skills: { add: [{ ...skill("review"), instructions: "another review" }] } }),
+      "skill_conflict",
+    );
   });
 
   it("identical_skill_reregistration_is_noop", async () => {
     // Two packages discovering the same `SKILL.md` (a child inheriting both, or context-files plus a
     // host `skills.dirs`) register one skill. Same name with a different body is still a conflict.
-    const shared: Skill = { name: "review", description: "Review.", instructions: "Review the diff.", path: "/repo/.agents/skills/review/SKILL.md" };
+    const shared: Skill = {
+      name: "review",
+      description: "Review.",
+      instructions: "Review the diff.",
+      path: "/repo/.agents/skills/review/SKILL.md",
+    };
     const one = pkg("@acme/one", ({ skills }) => skills.register(shared));
     const two = pkg("@acme/two", ({ skills }) => skills.register({ ...shared }));
     const agent = await createAgent({ model: MODEL, packages: [one, two], skills: { add: [{ ...shared }] } });

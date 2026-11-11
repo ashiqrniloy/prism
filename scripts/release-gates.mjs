@@ -1,10 +1,11 @@
 // Offline pre-publish gates: API surface diff, tarball allow/deny, version ranges.
 // Stdlib-only. Used by `release.mjs gate` and wired into `bun run sdk:ready`.
 import { spawnSync } from "node:child_process";
+import { activeBundles } from "./bundles.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-import { checkHostBuilderBudget, checkKernelBudget, loadBudgets, measureExportCounts, measureKernelSourceLines } from "./budget-gates.mjs";
+import { checkKernelBudget, loadBudgets, measureExportCounts, measureKernelSourceLines } from "./budget-gates.mjs";
 import { classifyChange, displayKey, extractPackageSurface, PRODUCER_ONLY_TYPES, shapeDiff } from "./compat-shape.mjs";
 
 export const BASELINE_DIR = "scripts/compat-baseline";
@@ -292,7 +293,10 @@ export function extractEntrySurface(entryFile) {
 }
 
 function sourceEntry(manifest) {
-  const exp = manifest.exports?.["."];
+  const exp = Object.values(manifest.exports ?? {}).find((value) => {
+    const target = typeof value === "string" ? value : value?.default;
+    return typeof target === "string" && target.endsWith(".ts");
+  });
   const target = typeof exp === "string" ? exp : exp?.default;
   return typeof target === "string" && target.endsWith(".ts") ? target : undefined;
 }
@@ -338,8 +342,8 @@ export function declarationDir(root, pkg) {
         // the nested path in `.types`. The kernel's declarations land in the same throwaway tree.
         rootDir: relative(pkgDir, root),
       },
-      include: ["src"],
-      exclude: ["src/**/__tests__"],
+      include: [...new Set(Object.values(pkg.manifest.exports).map((value) => dirname(typeof value === "string" ? value : value.default)))],
+      exclude: ["**/__tests__", "node_modules"],
     }),
   );
   const result = spawnSync("bun", ["x", "tsc", "-p", configPath], { cwd: pkgDir, encoding: "utf8" });
@@ -553,13 +557,21 @@ export function runGates({
   // 3. Tarball deny list, and the kernel size budget from the root pack it makes.
   if (!skipTarball) {
     let rootPack;
-    let hostBuilderPack;
     for (const pkg of release.packages) {
       try {
         const packed = packStats(release.root, pkg.path);
         if (pkg.path === ".") rootPack = packed;
-        if (pkg.manifest.name === "@arnilo/prism-host-builder") hostBuilderPack = packed;
         assertTarballAllowDeny(pkg.manifest.name, packed.files);
+        const bundle = activeBundles(release.root).find((bundle) => bundle.name === pkg.manifest.name);
+        if (bundle) {
+          const budget = loadBudgets()[bundle.name.replace("@arnilo/prism-", "")];
+          if (!budget) throw new Error(`${bundle.name}: missing packed/unpacked budget`);
+          for (const field of ["packedBytes", "unpackedBytes"]) {
+            if (packed[field] > budget[field].baseline * (1 + budget[field].tolerance)) {
+              throw new Error(`${bundle.name}: ${field} ${packed[field]} exceeds bundle budget`);
+            }
+          }
+        }
       } catch (error) {
         errors.push(`tarball: ${error.message}`);
       }
@@ -576,11 +588,6 @@ export function runGates({
         sourceLines: measureKernelSourceLines(release.root),
       };
       for (const check of checkKernelBudget(budget, measured)) if (!check.ok) errors.push(check.message);
-    }
-    // 5. Host-builder size budget (plan 215 Task 14): its tarball carries the generated indexes.
-    if (hostBuilderPack) {
-      const measured = { packedBytes: hostBuilderPack.packedBytes, unpackedBytes: hostBuilderPack.unpackedBytes };
-      for (const check of checkHostBuilderBudget(loadBudgets().hostBuilder, measured)) if (!check.ok) errors.push(check.message);
     }
   }
 

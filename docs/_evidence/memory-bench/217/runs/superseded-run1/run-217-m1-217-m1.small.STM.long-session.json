@@ -1,0 +1,285 @@
+{
+  "kind": "217-long-session-job",
+  "plan": 217,
+  "task": 6,
+  "gate": "M-1",
+  "jobId": "217-m1.small.STM.long-session",
+  "attemptId": "217-m1.small.STM.long-session@1",
+  "arm": "STM",
+  "model": "ollama-cloud/mimo-v2.6-flash",
+  "partition": "dev",
+  "sourceRevision": "stm-df10a4b554f0bcb43e5e67b272b5f1ca",
+  "protocol": "026fcd32a5dd3c102f73ac79ac494c422b1cfb76b6967983e1f5cbf80631f349",
+  "maxInputTokens": 30000000,
+  "usageSource": "wire-proxy",
+  "status": "completed",
+  "inputTokens": 1427636,
+  "cacheReadTokens": 910848,
+  "outputTokens": 44747,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "report": {
+    "kind": "long-session-report-v1",
+    "family": "long-session",
+    "mode": "live",
+    "partition": "dev",
+    "partitionIdsHash": "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730",
+    "metric": "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
+    "arms": [
+      "STM"
+    ],
+    "personas": [
+      "ls10",
+      "ls7",
+      "ls11",
+      "ls1"
+    ],
+    "summary": {
+      "STM": {
+        "relatedTasks": 8,
+        "rederivationsPerRelatedTask": 0.5,
+        "successRate": 1
+      }
+    },
+    "rows": {
+      "STM": [
+        {
+          "family": "long-session",
+          "persona": "ls10",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 2,
+          "toolCalls": 7,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls10",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls7",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls7",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls11",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls11",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        }
+      ]
+    },
+    "usage": [
+      {
+        "persona": "ls10",
+        "arm": "STM",
+        "worker": {
+          "calls": 9,
+          "inputTokens": 127933,
+          "outputTokens": 8244
+        },
+        "main": {
+          "calls": 19,
+          "inputTokens": 159963,
+          "outputTokens": 4497
+        },
+        "eligibleTokens": 13426,
+        "chunkStorePeakBytes": 431,
+        "tasks": {
+          "task1": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls7",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 113919,
+          "outputTokens": 4525
+        },
+        "main": {
+          "calls": 19,
+          "inputTokens": 163773,
+          "outputTokens": 2415
+        },
+        "eligibleTokens": 12891,
+        "chunkStorePeakBytes": 287,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls11",
+        "arm": "STM",
+        "worker": {
+          "calls": 4,
+          "inputTokens": 84974,
+          "outputTokens": 4099
+        },
+        "main": {
+          "calls": 18,
+          "inputTokens": 159043,
+          "outputTokens": 1673
+        },
+        "eligibleTokens": 12661,
+        "chunkStorePeakBytes": 36,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls1",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 111934,
+          "outputTokens": 6252
+        },
+        "main": {
+          "calls": 18,
+          "inputTokens": 160128,
+          "outputTokens": 2225
+        },
+        "eligibleTokens": 12867,
+        "chunkStorePeakBytes": 216,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "wallMs": 172579
+  }
+}

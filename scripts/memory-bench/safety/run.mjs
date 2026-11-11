@@ -10,8 +10,8 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createSecretRedactor } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
 import { createFabricRules, resolveFabricRulesOptions } from "../../../packages/memory/system/src/ltm/delivery/rules.js";
 import { createExchangeArchive } from "../../../packages/memory/system/src/ltm/exchanges.js";
 import { createMemory, createLongTermMemory, exportMemoryOkf } from "../../../packages/memory/system/src/index.js";

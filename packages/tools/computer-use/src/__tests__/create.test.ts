@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
 import { type JsonObject, type ToolDefinition, type ToolExecutionContext, type ToolResult } from "@arnilo/prism";
 import { DevicePolicyError } from "../devices.js";
-import type { McpToolBridge } from "@arnilo/prism-mcp";
+import type { McpToolBridge } from "@arnilo/prism-extensions/mcp";
 import { type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools } from "../create.js";
 
 const baseDevice = {

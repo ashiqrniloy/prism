@@ -6,7 +6,7 @@ export interface ApiQuery {
   readonly symbol?: string;
   /** Words matched against names, signatures and summaries. */
   readonly query?: string;
-  /** A package name (`@arnilo/prism-approval`) that limits the search. */
+  /** A package name (`@arnilo/prism-extensions/approval`) that limits the search. */
   readonly package?: string;
 }
 
@@ -39,8 +39,8 @@ const MAX_SIGNATURE = 4000;
 function flatten(index: ApiIndex, packageName: string | undefined): ApiMatch[] {
   const matches: ApiMatch[] = [];
   for (const pkg of index.packages) {
-    if (packageName !== undefined && pkg.name !== packageName) continue;
     for (const entry of pkg.entries) {
+      if (packageName !== undefined && pkg.name !== packageName && entry.specifier !== packageName) continue;
       for (const item of entry.exports) {
         matches.push({
           package: pkg.name,
@@ -72,7 +72,7 @@ export function lookupApi(index: ApiIndex, input: ApiQuery): ApiResult {
       found: false,
       matches: [],
       nearest: nearest(
-        index.packages.map((pkg) => pkg.name),
+        index.packages.flatMap((pkg) => [pkg.name, ...pkg.entries.map((entry) => entry.specifier)]),
         input.package,
       ),
       note: `no package named "${input.package}"`,

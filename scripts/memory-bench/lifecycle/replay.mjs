@@ -4,8 +4,14 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { providerDone, providerToolCall, toolCallContent, validateJsonSchema } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-core";
-import { createMemory, createLongTermMemory, memoryFabricConfigSchema, parseMemoryNoteMetadata, resolveMemoryFabricConfig } from "@arnilo/prism-memory-system";
+import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import {
+  createMemory,
+  createLongTermMemory,
+  memoryFabricConfigSchema,
+  parseMemoryNoteMetadata,
+  resolveMemoryFabricConfig,
+} from "@arnilo/prism-memory-system";
 import { createScopeClock } from "../../../packages/memory/system/src/ltm/lifecycle/clock.ts";
 import { isMemoryNoteValidAt } from "../../../packages/memory/system/src/ltm/types.ts";
 import { foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
@@ -483,7 +489,7 @@ if (import.meta.main) {
       maxInputTokens: options["max-input-tokens"] === undefined ? undefined : Number(options["max-input-tokens"]),
       policy: JSON.parse(await readFile(options.policy, "utf8")),
     });
-    const text = JSON.stringify(report, null, 2) + "\n";
+    const text = `${JSON.stringify(report, null, 2)}\n`;
     if (options.output) await writeFile(options.output, text);
     else console.log(text);
   } catch {

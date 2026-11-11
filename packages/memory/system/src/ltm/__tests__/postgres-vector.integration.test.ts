@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { afterAll as after, describe, it } from "bun:test";
 import { Pool } from "pg";
-import { MemoryValidationError, type MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import { MemoryValidationError, type MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import {
   buildMemoryDdl,
   buildVectorSearchDdl,
   createPostgresMemoryStores,
   createPostgresVectorStore,
   queryPostgres,
-} from "@arnilo/prism-memory-core/postgres";
+} from "@arnilo/prism-memory-system/core/postgres";
 import { validateIdentifier } from "../../../../core/src/postgres/postgres-identifiers.js";
 import { createMemory } from "@arnilo/prism-memory-system";
 
@@ -317,9 +317,21 @@ describeIntegration("createPostgresVectorStore integration", () => {
       ]);
       assert.deepEqual(await store.query({ tenantId: "t1", resourceId: "r1", threadId: "th1", embedding: [], topK: 5 }), []);
       const vector = await store.query({ tenantId: "t1", resourceId: "r1", threadId: "th1", embedding: [1, 0], topK: 5 });
-      assert.deepEqual(vector.map((hit) => hit.id), ["vec-1"]);
-      const hits = await store.lexicalQuery!({ tenantId: "t1", resourceId: "r1", threadId: "th1", text: "how did we deploy the database", topK: 5 });
-      assert.deepEqual(hits.map((hit) => hit.id), ["lex-1"]);
+      assert.deepEqual(
+        vector.map((hit) => hit.id),
+        ["vec-1"],
+      );
+      const hits = await store.lexicalQuery!({
+        tenantId: "t1",
+        resourceId: "r1",
+        threadId: "th1",
+        text: "how did we deploy the database",
+        topK: 5,
+      });
+      assert.deepEqual(
+        hits.map((hit) => hit.id),
+        ["lex-1"],
+      );
       assert.deepEqual(hits[0]?.embedding, []);
       assert.ok((hits[0]?.coverage ?? 0) > 0 && (hits[0]?.coverage ?? 0) < 1);
     } finally {

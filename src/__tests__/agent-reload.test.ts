@@ -34,7 +34,12 @@ describe("agent.reload", () => {
     try {
       const agent = await createAgent({
         model,
-        packages: [mockProvider([[providerTextDelta("one"), providerDone()], [providerTextDelta("two"), providerDone()]])],
+        packages: [
+          mockProvider([
+            [providerTextDelta("one"), providerDone()],
+            [providerTextDelta("two"), providerDone()],
+          ]),
+        ],
         skills: { dirs: [dir] },
       });
       const session = await agent.session();
@@ -79,7 +84,10 @@ describe("agent.reload", () => {
     try {
       const agent = await createAgent({ model, packages: [dynamic, mockProvider([[providerTextDelta("ok"), providerDone()]])] });
       assert.equal(setups, 1);
-      assert.deepEqual(agent.skills.map((skill) => skill.description), ["before reload"]);
+      assert.deepEqual(
+        agent.skills.map((skill) => skill.description),
+        ["before reload"],
+      );
 
       await writeSkill(dir, "dynamic", "after reload");
       await writeSkill(dir, "added", "added after reload");
@@ -104,7 +112,12 @@ describe("agent.reload", () => {
     let compiled = "first";
     const agent = await createAgent({
       model,
-      packages: [mockProvider([[providerTextDelta("one"), providerDone()], [providerTextDelta("two"), providerDone()]])],
+      packages: [
+        mockProvider([
+          [providerTextDelta("one"), providerDone()],
+          [providerTextDelta("two"), providerDone()],
+        ]),
+      ],
       hooks: (hooks) => {
         const version = compiled;
         hooks.on("run.started", () => {
@@ -140,7 +153,11 @@ describe("agent.reload", () => {
       const agent = await createAgent({ model, packages: [flaky, mockProvider([[providerTextDelta("ok"), providerDone()]])] });
       await assert.rejects(agent.reload(), /reload failed/);
       assert.equal(setups, 2);
-      assert.deepEqual(agent.skills.map((skill) => skill.name), ["stable"], "old package contributions survive");
+      assert.deepEqual(
+        agent.skills.map((skill) => skill.name),
+        ["stable"],
+        "old package contributions survive",
+      );
       assert.equal((await (await agent.session()).run("still works")).text, "ok");
       await agent.dispose();
     } finally {

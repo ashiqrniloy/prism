@@ -17,7 +17,7 @@ import {
   type Memory,
   type MemoryContextProviderOptions,
   withTailContext,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { foldObservationalMemoryLedger } from "../session/ledger.js";
 import type { MemoryFabricInjectConfig } from "./config.js";
 import type { FabricDecisions } from "./decisions.js";
@@ -179,7 +179,9 @@ function visibleMemory(draft: ContextDraft, entries: readonly SessionEntry[]) {
     const tail = message.metadata?.contextBlocks;
     if (Array.isArray(tail)) blocks.push(...tail);
   }
-  const itemIds = new Set(blocks.flatMap((block) => (block?.source === "memory.session" && Array.isArray(block.itemIds) ? block.itemIds : [])));
+  const itemIds = new Set(
+    blocks.flatMap((block) => (block?.source === "memory.session" && Array.isArray(block.itemIds) ? block.itemIds : [])),
+  );
   const verbatim = new Set(draft.messages.map((message) => JSON.stringify([message.role, message.content])));
   const entryIds = new Set(
     entries

@@ -1,13 +1,4 @@
-import { mock, test } from "bun:test";
-
-// Force the package's missing-browser path even when playwright-core is installed.
-mock.module("playwright-core", () => ({
-  chromium: {
-    launch: async (): Promise<never> => {
-      throw new Error("playwright-core is not installed");
-    },
-  },
-}));
+import { test } from "bun:test";
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -16,7 +7,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HostConfig } from "../host/index.js";
-import { browserUnavailable } from "../scenarios/browser-unavailable.js";
 import { writeObscuraFixture } from "../scenarios/fixtures/obscura-fixture.js";
 import { researchCitationsFail, researchCitationsPass } from "../scenarios/research-citations.js";
 
@@ -60,7 +50,21 @@ test("research_unresolved_citation_fails_check", async () => {
 test("browser_unavailable_notes_and_registers_nothing", async () => {
   const root = mkdtempSync(join(tmpdir(), "prism-agent-browser-"));
   try {
-    const result = await browserUnavailable(config(root, join(root, "missing-obscura")));
+    const probe = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        `
+      const { mock } = await import("bun:test");
+      mock.module("playwright-core", () => ({ chromium: { launch: async () => { throw new Error("playwright-core is not installed"); } } }));
+      const { browserUnavailable } = await import("./browser-unavailable.ts");
+      console.log(JSON.stringify(await browserUnavailable(${JSON.stringify(config(root, join(root, "missing-obscura")))})));
+    `,
+      ],
+      { cwd: join(HERE, "../scenarios"), encoding: "utf8", timeout: 30_000 },
+    );
+    assert.equal(probe.status, 0, probe.stderr);
+    const result = JSON.parse(probe.stdout);
     assert.equal(result.noted, true);
     assert.deepEqual(result.browserTools, []);
   } finally {

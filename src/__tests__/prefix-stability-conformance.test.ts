@@ -444,7 +444,11 @@ describe("prefix stability conformance: wire mode", () => {
 
   it("wire_prefix_detects_reordered_tools", async () => {
     await assert.rejects(
-      wire(defect((body, call) => { if (call % 2 === 0 && Array.isArray(body.tools)) body.tools.reverse(); })),
+      wire(
+        defect((body, call) => {
+          if (call % 2 === 0 && Array.isArray(body.tools)) body.tools.reverse();
+        }),
+      ),
       /segment 'tools' changed.*first differing byte \d+/,
     );
   });

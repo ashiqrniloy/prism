@@ -90,10 +90,7 @@ describe("fail-closed agent.dispose (plan 177 Task 5)", () => {
   it("session_after_dispose_throws", async () => {
     const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [textProvider()])] });
     await agent.dispose();
-    await assert.rejects(
-      agent.session(),
-      (error: unknown) => error instanceof AgentDisposedError && error.code === AGENT_DISPOSED_CODE,
-    );
+    await assert.rejects(agent.session(), (error: unknown) => error instanceof AgentDisposedError && error.code === AGENT_DISPOSED_CODE);
   });
 
   it("commands_after_dispose_throw", async () => {
@@ -205,6 +202,9 @@ describe("fail-closed agent.dispose (plan 177 Task 5)", () => {
     await session.run("go");
     assert.deepEqual(executed, [], "no tool runs after dispose() starts");
     assert.ok(results.length >= 2, "both ignored rounds return a result");
-    assert.ok(results.every((result) => result.error?.code === "agent_disposed"), JSON.stringify(results));
+    assert.ok(
+      results.every((result) => result.error?.code === "agent_disposed"),
+      JSON.stringify(results),
+    );
   });
 });

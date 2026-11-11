@@ -8,13 +8,13 @@
 
 ### Added
 
-- Plan 155 Task 5: `@arnilo/prism-tools-work` — the work family as one package with a `definePackage` root entry. `setup` registers the `office_*` document group (read/write effects), `work_exec` inside the host-injected `work.sandbox` service (`execute`), and the `m365_*` / `gws_*` connector tools (`network`, plus `external` for drafts/writes) when a ref-only credential resolves. The bounded document reader is provided as the `work.reader` service and the vendored Hermes productivity skills are added from `vendor/`. A missing optional parser, an unresolved connector credential, or a missing sandbox writes a `warn` status note and registers less; the worker pool closes in `onDispose`.
+- Plan 155 Task 5: `@arnilo/prism-tools/work` — the work family as one package with a `definePackage` root entry. `setup` registers the `office_*` document group (read/write effects), `work_exec` inside the host-injected `work.sandbox` service (`execute`), and the `m365_*` / `gws_*` connector tools (`network`, plus `external` for drafts/writes) when a ref-only credential resolves. The bounded document reader is provided as the `work.reader` service and the vendored Hermes productivity skills are added from `vendor/`. A missing optional parser, an unresolved connector credential, or a missing sandbox writes a `warn` status note and registers less; the worker pool closes in `onDispose`.
 - Config: `root` (required, absolute), `office`, `work`, `reader` (formats, caps, optional Mistral OCR), `connectors` (M365/Google CLI adapters with ref-only credentials), `env`.
 - New tests: `tools_work_package_conformance`, `tools_work_groups_by_config`, `tools_work_missing_parser_drops_formats_with_note`, `tools_work_connector_without_credential_notes`, `tools_work_secrets_never_echoed`, `office_parsers_not_loaded_unless_tools_work_listed`, `tools_work_disposes_worker_pool`.
 
 ### Changed
 
-- Moved `packages/prism-work/**` (source, tests, `fixtures/`, `golden/`, `docling/`, `sandbox/`, `vendor/`, `vendor-lock.json`, `THIRD_PARTY_NOTICES`) to `packages/tools/work/**`. The `@arnilo/prism-work` workspace is deleted with no alias; every importer now uses `@arnilo/prism-tools-work` (and its subpaths).
+- Moved `packages/prism-work/**` (source, tests, `fixtures/`, `golden/`, `docling/`, `sandbox/`, `vendor/`, `vendor-lock.json`, `THIRD_PARTY_NOTICES`) to `packages/tools/work/**`. The `@arnilo/prism-work` workspace is deleted with no alias; every importer now uses `@arnilo/prism-tools/work` (and its subpaths).
 - `createOfficeTools` now declares per-tool `effects` (`read` for parse/import/diff/preview, `write` for generate/patch); `createWorkTools` declares `network` for reads and `network` + `external` for drafts/writes; `work_exec` declares `execute`.
 - The package publishes TypeScript source (`exports` targets `./src/...`) instead of `dist/`, so its `build` script is gone and CI builds the workspace with `build:core` only.
 

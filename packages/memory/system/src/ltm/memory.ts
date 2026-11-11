@@ -25,7 +25,7 @@ import type {
   RememberInput,
   RememberOptions,
   RememberResult,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import {
   assertFiniteVector,
   assertNotAborted,
@@ -58,7 +58,7 @@ import {
   shareGrantAllows,
   stampLineage,
   toInvalidationEvent,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "./context.js";
 import { createLongTermMemory } from "./create.js";
 import { noteMemoryRetraction, noteMemoryWrite } from "./directory.js";

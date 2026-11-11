@@ -15,8 +15,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { EMPTY_TOOL_RESULT_TEXT } from "@arnilo/prism";
 import { anthropicMessagesBody, openAIChatBody, serializeOpenAIChatMessage, serializeToolResultText } from "@arnilo/prism/provider-kit";
-import { HYPER_CHAT_ROUTE } from "@arnilo/prism-provider-hyper";
-import { OPENCODE_GO_CHAT_ROUTE } from "@arnilo/prism-provider-opencode-go";
+import { HYPER_CHAT_ROUTE } from "@arnilo/prism-ai/hyper";
+import { OPENCODE_GO_CHAT_ROUTE } from "@arnilo/prism-ai/opencode-go";
 
 const model = { provider: "mock", model: "demo" };
 const toolMessage = {

@@ -1,12 +1,12 @@
 {
-  "criteriaHash": "4571c4884fac0b9f55af16078f9eaf708b4f863bbd6139ccc696f53e740887c9",
+  "criteriaHash": "0862496ab78245523c16a10ac93300483337999447dd36d9c203a9ffbd05c8e3",
   "inputs": {
-    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
-    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
-    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
-    "skill": "sha256:8f3436c586b503abfc3131b31984aac7425565cc6e2fb27dbcb657bb4e170ff9",
-    "indexes": "sha256:20f8a95ecc05c6ba2ad8c2a872c7063164abe05643b5bcf9b98e8992caa87e80"
+    "workspaces": "sha256:7ff669f3e529bc8d1739706331ec27923455a27c6703be5f4ed6661f8bbe69c1",
+    "hidden": "sha256:f41d3bd44cdaa34b6f63bf885cce5544a2e9e20b88f60df460491215d396f171",
+    "solutions": "sha256:7454698f2c517dd3d45e462e86202ddc6796102f69ae97c6ff34f7abf4d3a572",
+    "skill": "sha256:6139a827a68ce0a859ec5443483fb5614bf74c9fd0f84ab63de14abeeef908a8",
+    "indexes": "sha256:a10d2c49db718012f715a7ac494c6f4897e1b936a64a3a6889b14c40ee310ce1"
   },
-  "registeredAt": "2026-11-08T05:28:45.749Z",
-  "gitHead": "d8329fea96d907f78b9eca578cd9b7fdced500ca"
+  "registeredAt": "2026-11-11T05:06:08.002Z",
+  "gitHead": "c8d97b33606ceaae0fc2a4a3f8a3275b62d27743"
 }

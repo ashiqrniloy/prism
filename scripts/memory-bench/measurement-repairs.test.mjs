@@ -4,7 +4,7 @@ import { mkdtemp, readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
 import { normalizeDataset } from "./datasets.mjs";
 import {
@@ -377,7 +377,12 @@ test("the_final_answer_turn_carries_no_tools_and_earlier_turns_are_unchanged", a
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
   const call = () => ({ role: "assistant", content: [{ type: "tool_call", id: "c", name: "memory.recall", arguments: {} }] });
   const result = () => ({ role: "tool", content: [{ type: "tool_result", id: "c", name: "memory.recall", result: {} }] });
-  const run = (turns) => [user("old question"), { role: "assistant", content: [{ type: "text", text: "old answer" }] }, user("q"), ...Array.from({ length: turns }, () => [call(), result()]).flat()];
+  const run = (turns) => [
+    user("old question"),
+    { role: "assistant", content: [{ type: "text", text: "old answer" }] },
+    user("q"),
+    ...Array.from({ length: turns }, () => [call(), result()]).flat(),
+  ];
   assert.equal(answerTurnIndex(run(0)), 0, "an earlier exchange in the history is not this run's turn");
   assert.equal(answerTurnIndex(run(3)), 3);
   const max = BENCH_MAX_TURNS.standard;
@@ -406,7 +411,15 @@ test("the_supersession_diagnostic_strips_only_the_hint_from_text_and_recall_resu
   const { stripSupersessionHints } = await import("./replay.mjs");
   const hit = { id: "a1", supersededBy: { id: "b2", at: "2023-02-05T00:00:00.000Z" }, content: "kept" };
   const messages = [
-    { role: "system", content: [{ type: "text", text: '- [8d0f352609f4] project exchange (2026-11-04) tRef=2023-01-09T19:06:00.000Z superseded by afcd6e8fc83b on 2023-02-05? user: John said hi' }] },
+    {
+      role: "system",
+      content: [
+        {
+          type: "text",
+          text: "- [8d0f352609f4] project exchange (2026-11-04) tRef=2023-01-09T19:06:00.000Z superseded by afcd6e8fc83b on 2023-02-05? user: John said hi",
+        },
+      ],
+    },
     { role: "tool", content: [{ type: "tool_result", name: "memory.recall", result: { hits: [hit], total: 1 } }] },
     { role: "user", content: [{ type: "text", text: "A question that says superseded by nothing" }] },
   ];

@@ -1,5 +1,5 @@
 import type { ToolDefinition, ToolResult } from "@arnilo/prism";
-import type { ConnectMcpToolsOptions, McpToolBridge, McpTransportConfig } from "@arnilo/prism-mcp";
+import type { ConnectMcpToolsOptions, McpToolBridge, McpTransportConfig } from "@arnilo/prism-extensions/mcp";
 import { isObscuraReadTool } from "./classify.js";
 import { resolveObscuraProcessLimits } from "./limits.js";
 import { validateObscuraCommand } from "./process.js";
@@ -11,15 +11,15 @@ export interface ObscuraMcpToolsOptions {
   /** stdio (`obscura mcp` or a Docker argv) or Streamable HTTP transport config. */
   readonly transport: McpTransportConfig;
   readonly serverId?: string;
-  /** Default `obscura_` so Obscura tools coexist with `@arnilo/prism-tools-browser`; `""` keeps native Obscura names. */
+  /** Default `obscura_` so Obscura tools coexist with `@arnilo/prism-tools/browser`; `""` keeps native Obscura names. */
   readonly namePrefix?: string;
   /**
    * Streamable HTTP endpoints outside loopback require this explicit opt-in; the
-   * endpoint still needs a secure transport/auth per `@arnilo/prism-mcp` policy.
+   * endpoint still needs a secure transport/auth per `@arnilo/prism-extensions/mcp` policy.
    */
   readonly allowRemoteHttp?: boolean;
   readonly signal?: AbortSignal;
-  /** Test seam: replace the MCP bridge connection. Defaults to a dynamic `@arnilo/prism-mcp` import. */
+  /** Test seam: replace the MCP bridge connection. Defaults to a dynamic `@arnilo/prism-extensions/mcp` import. */
   readonly connect?: (options: ConnectMcpToolsOptions) => Promise<McpToolBridge>;
 }
 
@@ -65,8 +65,8 @@ function resolveTransport(options: ObscuraMcpToolsOptions): McpTransportConfig {
  */
 export async function createObscuraMcpTools(options: ObscuraMcpToolsOptions): Promise<ObscuraMcpTools> {
   // Dynamic import: the MCP bridge is only loaded when this surface is actually used, so importing
-  // `@arnilo/prism-tools-web` never pulls `@arnilo/prism-mcp`.
-  const connect = options.connect ?? (await import("@arnilo/prism-mcp")).connectMcpTools;
+  // `@arnilo/prism-tools/web` never pulls `@arnilo/prism-extensions/mcp`.
+  const connect = options.connect ?? (await import("@arnilo/prism-extensions/mcp")).connectMcpTools;
   const bridge = await connect({
     serverId: options.serverId ?? DEFAULT_OBSCURA_SERVER_ID,
     transport: resolveTransport(options),

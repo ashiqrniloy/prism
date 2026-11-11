@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { describe, it } from "bun:test";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
-import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
+import { createMemoryCheckpointStore } from "@arnilo/prism-extensions/workflows";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { RagSyncCursorError, RagSyncThrottleError, RagValidationError } from "../errors.js";
 import { createMemoryIngestionStatusStore } from "../ingestion-status.js";
 import { retrieveContext } from "../retrieve.js";

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER } from "../clock.js";
 
 describe("Scope clock (plan 188.4 Task 2)", () => {

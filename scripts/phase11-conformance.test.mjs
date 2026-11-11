@@ -3,7 +3,7 @@
  * Cross-cuts the Task 0 freeze matrices through the real adapters: OIDC/JWKS
  * identity verification (@arnilo/prism-credentials-node/oidc), OPA policy
  * evaluation with the durable decision ledger (@arnilo/prism-policy/opa),
- * MCP OAuth client/server wiring (@arnilo/prism-mcp), OpenAPI tools
+ * MCP OAuth client/server wiring (@arnilo/prism-extensions/mcp), OpenAPI tools
  * (@arnilo/prism-openapi-tools), and the artifact body store + signed
  * delivery (@arnilo/prism-server/artifact-bodies). Everything runs in-process
  * or against loopback 127.0.0.1 servers; no external network, no credentials.
@@ -19,21 +19,19 @@ import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import {
-  createSecretRedactor,
-} from "@arnilo/prism";
+import { createSecretRedactor } from "@arnilo/prism";
 import {
   createMemoryPolicyDecisionStore,
   createOpaPolicyEvaluator,
   createPolicyEvaluator,
   evaluateAndAppend,
-} from "@arnilo/prism-governance";
-import { createMcpOAuthTransport } from "@arnilo/prism-mcp";
-import { createPrismMcpWebHandler } from "@arnilo/prism-mcp-server";
+} from "@arnilo/prism-extensions/governance";
+import { createMcpOAuthTransport } from "@arnilo/prism-extensions/mcp";
+import { createPrismMcpWebHandler } from "@arnilo/prism-hosts/mcp-server";
+import { createOpenApiTools } from "@arnilo/prism-tools/openapi";
 import { Client } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import { createOpenApiTools } from "@arnilo/prism-tools-openapi";
 
 const SECRET = "conformance-secret-value";
 const redactor = createSecretRedactor([SECRET]);
@@ -360,8 +358,6 @@ const identity = {
 
 // ---------------------------------------------------------------------------
 
-
-
 describe("Phase 11 conformance — hostile inputs and limit ladder (Task 6)", () => {
   it("fails closed on hostile OpenAPI origins and unknown operations", async () => {
     const drifted = { ...OPENAPI_DOC, servers: [{ url: "https://evil.example.com" }] };
@@ -374,7 +370,6 @@ describe("Phase 11 conformance — hostile inputs and limit ladder (Task 6)", ()
       (error) => error.code === "ERR_PRISM_OPENAPI_OPERATION_UNKNOWN",
     );
   });
-
 });
 
 describe("Phase 11 conformance — redaction sweep (Task 6)", () => {

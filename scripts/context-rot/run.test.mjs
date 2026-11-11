@@ -3,14 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "bun:test";
-import {
-  effectiveInputBudget,
-  gradeCoding,
-  gradeNeedle,
-  gradeToolState,
-  prepareWorkspace,
-  wilson,
-} from "./grade.mjs";
+import { effectiveInputBudget, gradeCoding, gradeNeedle, gradeToolState, prepareWorkspace, wilson } from "./grade.mjs";
 import { EXPRESS_PIN, loadPinnedBytes } from "./history.mjs";
 import { run } from "./run.mjs";
 import tasks from "./tasks.json" with { type: "json" };
@@ -35,7 +28,10 @@ test("context_rot_offline_smoke_reports_every_length", async () => {
       ],
     );
     assert.equal(report.taskCount, 3);
-    assert.ok(report.arms.every((arm) => arm.runs === 3), "each arm ran the three smoke tasks");
+    assert.ok(
+      report.arms.every((arm) => arm.runs === 3),
+      "each arm ran the three smoke tasks",
+    );
     assert.ok(report.usage.inputTokens > 0);
     assert.ok(await readFile(report.evidence.jsonPath, "utf8"));
     assert.ok(elapsed < 30_000, `offline smoke took ${Math.round(elapsed)} ms`);
@@ -68,10 +64,7 @@ test("context_rot_aborts_at_token_ceiling", async () => {
 
 test("effective_budget_rule_on_fixture_curve", () => {
   const arm = (length, accuracy, interval) => ({ length, accuracy, interval });
-  assert.equal(
-    effectiveInputBudget([arm(0, 0.9, [0.8, 0.96]), arm(1000, 0.88, [0.78, 0.94]), arm(2000, 0.6, [0.5, 0.7])]),
-    1000,
-  );
+  assert.equal(effectiveInputBudget([arm(0, 0.9, [0.8, 0.96]), arm(1000, 0.88, [0.78, 0.94]), arm(2000, 0.6, [0.5, 0.7])]), 1000);
   assert.equal(effectiveInputBudget([arm(0, 0.9, [0.8, 0.96]), arm(1000, 0.5, [0.4, 0.6])]), 0, "none qualify");
   assert.equal(effectiveInputBudget([arm(0, 0.9, [0.8, 0.96]), arm(1000, 0.86, [0.7, 0.95]), arm(2000, 0.85, [0.66, 0.94])]), 2000);
   assert.deepEqual(wilson(3, 3), [0.43849391955098227, 1]);

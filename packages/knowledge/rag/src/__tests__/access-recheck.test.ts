@@ -9,7 +9,13 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore, type MemoryScope, type RagAccessConstraint, type VectorStore } from "@arnilo/prism-memory-core";
+import {
+  createHashEmbedder,
+  createMemoryVectorStore,
+  type MemoryScope,
+  type RagAccessConstraint,
+  type VectorStore,
+} from "@arnilo/prism-memory-system/core";
 import { type AccessDenial, chunkText, createAccessRecheck, indexChunks, type RagHit, type Reranker, retrieveContext } from "../index.js";
 
 const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };

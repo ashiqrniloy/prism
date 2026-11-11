@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createAgent } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import { createScheduler } from "../../index.js";
 
 const [dir, mode, owner] = process.argv.slice(2);

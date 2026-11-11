@@ -1,6 +1,13 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { createAgent, createMemorySessionStore, createSecretRedactor, type JsonValue, type LoopStrategy, type RunController } from "../index.js";
+import {
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  type JsonValue,
+  type LoopStrategy,
+  type RunController,
+} from "../index.js";
 import { MAX_EXTERNAL_STATE_ENTRIES } from "../session/external-state.js";
 import { loopConformance } from "../testing/index.js";
 

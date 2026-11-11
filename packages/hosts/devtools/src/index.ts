@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-devtools`: a loopback developer inspector over one Prism `Agent`.
+ * `@arnilo/prism-hosts/devtools`: a loopback developer inspector over one Prism `Agent`.
  *
  * `serveDevtools(agent, { port })` serves the page and its JSON routes. Each route reads the public
  * `Agent` API only. The `prism-devtools` bin serves a manifest-built agent with the same server.

@@ -1,9 +1,9 @@
 import { type Agent, createAgent, type HostUi, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import approval from "@arnilo/prism-approval";
+import approval from "@arnilo/prism-extensions/approval";
 
 // Keep Bun transport declarations out of the examples compiler.
-const remoteModule = "@arnilo/prism-remote";
+const remoteModule = "@arnilo/prism-hosts/remote";
 const {
   remoteHostUi,
   serveAgent,

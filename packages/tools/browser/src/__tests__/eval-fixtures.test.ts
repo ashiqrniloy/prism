@@ -18,7 +18,7 @@ import {
   type ExperimentReport,
   scoreRun,
   serializeEvaluationReport,
-} from "@arnilo/prism-evals";
+} from "@arnilo/prism-hosts/evals";
 import { BrowserError, classifyBrowserUrl, createBrowserManager, createBrowserTools, normalizeTarget } from "../index.js";
 import { FakeBrowser, FakeDownload, ONE_PX_PNG } from "./fake-playwright.js";
 import { waitFor } from "./wait-for.js";
@@ -68,7 +68,14 @@ function toReport(evaluations: ExperimentReport["evaluations"]): ExperimentRepor
       failedCount: evaluations.filter((e) => e.status === "failed").length,
       macroMean: mean,
       scorers: {
-        "browser-adversarial-outcome": { items: scored.length, records: scored.length, mean: mean ?? 0, passRate: scored.filter(e => e.score === 1).length / scored.length, method: "wilson" as const, ci95: wilsonInterval(scored.filter(e => e.score === 1).length, scored.length) },
+        "browser-adversarial-outcome": {
+          items: scored.length,
+          records: scored.length,
+          mean: mean ?? 0,
+          passRate: scored.filter((e) => e.score === 1).length / scored.length,
+          method: "wilson" as const,
+          ci95: wilsonInterval(scored.filter((e) => e.score === 1).length, scored.length),
+        },
       },
     },
   };

@@ -3,7 +3,7 @@
 import { fileURLToPath } from "node:url";
 import type { ExternalActivity, JsonValue, Usage } from "@arnilo/prism";
 import { defineScriptedDialect } from "@arnilo/prism/testing";
-import type { AdapterConformanceFixtures } from "@arnilo/prism-driver-process/testing";
+import type { AdapterConformanceFixtures } from "@arnilo/prism-hosts/driver-process/testing";
 
 export const rpcServerDialect = defineScriptedDialect({
   name: "rpc-server",

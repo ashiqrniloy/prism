@@ -279,7 +279,10 @@ describe("ask resolution", () => {
       model: MODEL,
       host: { ui: ui({ status: "answered", value: true }, seen) },
       packages: [
-        mockProvider([[{ type: "tool_call", call: toolCallContent("call-1", "write", { value: "ok" }) }, providerDone()], [providerTextDelta("finished"), providerDone()]]),
+        mockProvider([
+          [{ type: "tool_call", call: toolCallContent("call-1", "write", { value: "ok" }) }, providerDone()],
+          [providerTextDelta("finished"), providerDone()],
+        ]),
         definePackage({
           name: "ui-pkg",
           version: "0.1.0",

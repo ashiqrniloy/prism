@@ -1,4 +1,4 @@
-import { serveAcp } from "@arnilo/prism-acp";
+import { serveAcp } from "@arnilo/prism-hosts/acp";
 import { HostStartError } from "../host/start.js";
 import { mockPackages } from "./agents.js";
 import type { AcpArgs } from "./args.js";

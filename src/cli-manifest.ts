@@ -3,6 +3,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import type { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { assignSlot, configure, install, list, ManifestError, type ManifestScope, remove, setEnabled, verify } from "./manifest/index.js";
+import { splitSpecifier } from "./packages/define.js";
 import { redactSecrets } from "./redaction.js";
 import { SLOT_NAMES, type SlotName } from "./slots/index.js";
 
@@ -168,7 +169,10 @@ async function dispatch(command: string, args: readonly string[], runtime: Manif
         ...(runtime.env !== undefined ? { env: runtime.env } : {}),
         review: (reviewed) => {
           const caps = reviewed.capabilities.length > 0 ? reviewed.capabilities.join(", ") : "none";
-          line(out, `${reviewed.name} ${reviewed.version} declares capabilities: ${caps}`);
+          line(
+            out,
+            `${reviewed.name} ${reviewed.version} trusts npm root ${splitSpecifier(reviewed.name).root}; declares capabilities: ${caps}`,
+          );
         },
       });
       line(out, `Added ${entry.name} ${entry.version} to the ${parsed.scope} manifest.`);

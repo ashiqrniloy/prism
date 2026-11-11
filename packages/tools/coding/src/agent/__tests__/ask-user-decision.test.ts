@@ -87,14 +87,17 @@ test("ask_user_decision_accepts_zero_to_three_pros_cons", () => {
     },
     limits,
   );
-  assert.deepEqual(parsed.options.map((option) => [option.pros, option.cons]), [
-    [[], []],
-    [["one"], ["one", "two"]],
+  assert.deepEqual(
+    parsed.options.map((option) => [option.pros, option.cons]),
     [
-      ["1", "2", "3"],
-      ["1", "2", "3"],
+      [[], []],
+      [["one"], ["one", "two"]],
+      [
+        ["1", "2", "3"],
+        ["1", "2", "3"],
+      ],
     ],
-  ]);
+  );
 });
 
 test("ask_user_decision_rejects_four_pros", () => {
@@ -146,7 +149,10 @@ test("ask_user_multiple_select_answer returns selectedIds", async () => {
 });
 
 test("ask_user_custom_input asks select then input", async () => {
-  const ui = scriptedUi([{ status: "answered", value: ASK_USER_DECISION_CUSTOM_VALUE }, { status: "answered", value: "  Ship metadata-only now  " }]);
+  const ui = scriptedUi([
+    { status: "answered", value: ASK_USER_DECISION_CUSTOM_VALUE },
+    { status: "answered", value: "  Ship metadata-only now  " },
+  ]);
   const tool = createAskUserDecisionTool({ ui });
   const result = await tool.execute({ ...validArgs, allowCustom: true }, context);
   assert.equal(result.error, undefined);

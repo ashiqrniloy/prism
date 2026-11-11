@@ -97,9 +97,20 @@ export { defineScorer } from "./scorer.js";
 export { createStateMatchScorer } from "./state-match.js";
 export type { StateMatchScorerOptions } from "./state-match.js";
 export {
-  estimateOnline, fleissKappa, benjaminiHochberg, bootstrapInterval, clusteredStandardError, mcnemarExact,
-  minimumDetectableEffect, pairedPermutationTest, pairedProportionPower, powerAnalysis,
-  paretoFrontier, passAtK, passHatK, wilsonInterval,
+  estimateOnline,
+  fleissKappa,
+  benjaminiHochberg,
+  bootstrapInterval,
+  clusteredStandardError,
+  mcnemarExact,
+  minimumDetectableEffect,
+  pairedPermutationTest,
+  pairedProportionPower,
+  powerAnalysis,
+  paretoFrontier,
+  passAtK,
+  passHatK,
+  wilsonInterval,
 } from "./stats.js";
 export { toExperimentReportRecord } from "./report-record.js";
 export { assertEvaluationThreshold, EvalThresholdError, serializeEvaluationReport } from "./threshold.js";
@@ -169,6 +180,19 @@ export type { ScenarioInput, UserSimulatorSpec, UserSimulator, UserSimulation } 
 export { createUserSimulator, USER_SIMULATOR_TEMPLATE_VERSION } from "./user-simulator.js";
 
 export { BUILTIN_INJECTION_ATTACKS, createInjectionDataset, injectionHooks, runInjectionSuite } from "./injection.js";
-export type { InjectionAttack, InjectionCarrier, InjectionSpec, InjectionRate, InjectionMetrics, RunInjectionSuiteOptions } from "./injection.js";
+export type {
+  InjectionAttack,
+  InjectionCarrier,
+  InjectionSpec,
+  InjectionRate,
+  InjectionMetrics,
+  RunInjectionSuiteOptions,
+} from "./injection.js";
 
-export type { EvaluationTelemetrySink, EvaluationSampling, EvaluationSamplingMetadata, EstimateOnlineOptions, OnlineEstimate } from "./types.js";
+export type {
+  EvaluationTelemetrySink,
+  EvaluationSampling,
+  EvaluationSamplingMetadata,
+  EstimateOnlineOptions,
+  OnlineEstimate,
+} from "./types.js";

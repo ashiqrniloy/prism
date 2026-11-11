@@ -310,14 +310,8 @@ test("BARREL INTENT (Tasks 1-2 landed): src/contracts.ts and src/agents.ts are b
   // implementer alias re-exports stay in the barrel
   // plan 159 Task 8: the `AgentIdentity` alias left the barrel with the identity module; `Principal`
   // is the only identity type the kernel names.
-  assert.ok(
-    !/AgentIdentity/.test(contracts),
-    "AgentIdentity alias left contracts.ts (plan 159 Task 8)",
-  );
-  assert.ok(
-    !/persistence-lifecycle/.test(contracts),
-    "PersistenceLifecycleStore left contracts.ts (plan 174 Task 2)",
-  );
+  assert.ok(!/AgentIdentity/.test(contracts), "AgentIdentity alias left contracts.ts (plan 159 Task 8)");
+  assert.ok(!/persistence-lifecycle/.test(contracts), "PersistenceLifecycleStore left contracts.ts (plan 174 Task 2)");
   // the split modules hold the moved declarations
   assert.ok(/^export interface AgentRunState\b/m.test(runState), "AgentRunState moved to contracts-run-state.ts");
   assert.ok(/^export const DEFAULT_MAX_PENDING_DECISIONS\b/m.test(runState), "run-state limit constants moved to contracts-run-state.ts");

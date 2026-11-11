@@ -11,7 +11,7 @@ the **session tiers** (`src/session`), which watch the session as it happens, ke
 source-backed observations, and compact the session from that ledger, and **long-term memory**
 (`src/ltm`, the `ltm` component; it was `@arnilo/prism-memory-fabric` until plan 216 Task 5), the only
 store of record: typed notes and verbatim exchanges behind the `memory.*` tools. With the ordinary
-`promote` pass, long-term memory takes candidate notes from the session tiers. [`@arnilo/prism-wiki`](../../knowledge/wiki/README.md),
+`promote` pass, long-term memory takes candidate notes from the session tiers. [`@arnilo/prism-knowledge/wiki`](../../knowledge/wiki/README.md),
 outside memory, can consolidate those notes into cited concepts in its own store. The session tiers
 work alone, and the [example](../../../examples/memory-and-wiki.ts) runs all three.
 
@@ -274,7 +274,7 @@ package needs no configuration for it.
 
 ### Slot ownership
 
-While `stm` is on, this package claims the `compaction` slot (with `stm: false` it does not). With `@arnilo/prism-memory-compaction` also installed, two
+While `stm` is on, this package claims the `compaction` slot (with `stm: false` it does not). With `@arnilo/prism-extensions/compaction` also installed, two
 packages claim it and `createAgent` fails closed until the host or manifest assigns the owner:
 
 ```ts
@@ -311,7 +311,12 @@ Rehearsal is a backstop after WM. `rehearsal.targetTokens` must be at least `wm.
 ### Short-term memory
 
 STM (plan 217) records **what happened**, not facts: facts are derived later, by WM and Rehearsal. Each
-pass reads a batch of the unread tail and calls `record_event` once per meaningful event, in order:
+pass reads a batch of the unread tail and calls `record_event` once per meaningful event, in order. Routine
+conversation is one event per exchange or per topic, not per message: what the user asked or said and the gist
+of the reply, keeping every preference, constraint, name, date and number the user gave. Actions, results,
+changes, decisions, errors and outcomes stay separate events, one each. (Plan 217 Task 6: one event per message
+recorded about seven times as many items as the pre-redesign observer on chat history and spent about 1.5× its
+worker tokens; per exchange it is about 1.04× on the same history.)
 
 | `kind` | Records |
 | --- | --- |
@@ -319,6 +324,10 @@ pass reads a batch of the unread tail and calls `record_event` once per meaningf
 | `action`, `result` | a tool call, command, or file read or edit; its output or test result |
 | `change`, `decision`, `error` | files, symbols, config keys or ids changed; a choice and its reason; a failure and its message |
 | `outcome` | a task or subtask completed or abandoned: what was asked, what changed, what was achieved or left open, and how it was verified |
+
+A pass ends after a clean turn (every event recorded; no rejection, warning, refused call or output-limit stop):
+the worker is not asked for a closing reply. A flush requested while a pass runs is folded into it as a follow-up
+pass (at most four) over what arrived meanwhile, so a slow STM model does not fall behind the session by whole turns.
 
 A pass may record more events than one model turn allows (`worker.maxToolCallsPerTurn`, default 32). STM does
 not fail the pass for that: the calls past the limit are not run and are answered with a `tool_call_limit` error,
@@ -482,7 +491,7 @@ Next steps:
 
 **Long-term memory (LTM), and the only store of record.** Typed notes and verbatim exchanges live here; the
 [session tiers](#session-memory) observe the session and feed this store's candidate notes. The ontology is not part of
-memory: [`@arnilo/prism-wiki`](../../knowledge/wiki/README.md) keeps concepts in its own store and reads long-term memory
+memory: [`@arnilo/prism-knowledge/wiki`](../../knowledge/wiki/README.md) keeps concepts in its own store and reads long-term memory
 only through the read-only [`memory.ltm`](#the-memoryltm-service) service (plan 216 Task 3); the
 [example](../../../examples/memory-and-wiki.ts) runs both.
 
@@ -1558,7 +1567,7 @@ Task 7 removed scope widening and narrowing).
 not an agent turn:
 
 ```ts
-import { createScheduler } from "@arnilo/prism-headless";
+import { createScheduler } from "@arnilo/prism-hosts/headless";
 
 const scheduler = createScheduler({
   checkpoints,
@@ -1712,7 +1721,7 @@ the row.
 ### The memory.ltm service
 
 The ontology left memory (plan 216 Task 3, owner decision 2026-11-08): concepts, claims, subject bindings and ingested
-sources live in [`@arnilo/prism-wiki`](../../knowledge/wiki/README.md)'s own store. This package keeps no `concept` kind (a
+sources live in [`@arnilo/prism-knowledge/wiki`](../../knowledge/wiki/README.md)'s own store. This package keeps no `concept` kind (a
 concept note an older version stored is unreadable here, reason `retired-concept`), never binds a note to a subject
 (a `subject` the writer gives is kept as a topic key), and runs no deletion cascade of its own.
 

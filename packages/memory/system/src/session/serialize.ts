@@ -1,6 +1,6 @@
 import type { SessionEntry } from "@arnilo/prism";
 import { redactSecrets } from "@arnilo/prism";
-import { measureWorkerJson, truncateWorkerText } from "@arnilo/prism-memory-core";
+import { measureWorkerJson, truncateWorkerText } from "@arnilo/prism-memory-system/core";
 
 export function serializeSessionEntry(entry: SessionEntry, secrets: readonly (string | undefined)[] = [], maxBytes?: number): string {
   if (maxBytes !== undefined && (!Number.isSafeInteger(maxBytes) || maxBytes < 1))

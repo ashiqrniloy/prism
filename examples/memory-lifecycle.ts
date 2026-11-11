@@ -10,7 +10,7 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism/testing";
-import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-system/core";
 import memorySystem, {
   createMemory,
   createLongTermMemory,
@@ -163,7 +163,8 @@ if (local.error !== undefined || (await agent.recall("eu-west", { topK: 2 })).hi
   throw new Error("project fact escaped the project");
 
 if (preferenceInB !== 1 || (await shadowed(inB)) !== 0 || (await shadowed(inA)) !== 1) throw new Error("scope shadowing failed");
-if (verified !== 2 || (await agent.recall(lesson, { topK: 2 })).hits.length !== 0) throw new Error("verification or agent isolation failed");
+if (verified !== 2 || (await agent.recall(lesson, { topK: 2 })).hits.length !== 0)
+  throw new Error("verification or agent isolation failed");
 if (report.archived !== 1 || archived !== 1 || !revived) throw new Error("archive and revival failed");
 
 // 6. A capacity budget: two same-key notes fold first, then the weakest note is evicted.
@@ -239,12 +240,14 @@ const deliveryAgent = await createAgent({
     mockProvider(memoryScript, { onRequest: (request) => requests.push(request) }),
     // `rules.scopes: ["user"]` keeps the project path note out of the standing rules, so the same note
     // reaches the model through the cue tail instead.
-    memorySystem({ ltm: {
-      tools: { root: deliveryRoot },
-      scopes: { project: { root: deliveryProject } },
-      team: { dir: ".prism/memory" },
-      rules: { scopes: ["user"] },
-    } }),
+    memorySystem({
+      ltm: {
+        tools: { root: deliveryRoot },
+        scopes: { project: { root: deliveryProject } },
+        team: { dir: ".prism/memory" },
+        rules: { scopes: ["user"] },
+      },
+    }),
   ],
 });
 const deliverySession = await deliveryAgent.session({ id: "delivery-demo", create: true });

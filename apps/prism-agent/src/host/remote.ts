@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import type { Agent, HostUi, SessionStore } from "@arnilo/prism";
-import { connectAgent } from "@arnilo/prism-remote";
+import { connectAgent } from "@arnilo/prism-hosts/remote";
 
 /** `origin.remote` for the reference host's remote worker, shared with the worker bin. */
 export const REMOTE_ENDPOINT = "prism-agent-remote";

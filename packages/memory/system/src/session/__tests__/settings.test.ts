@@ -12,7 +12,7 @@ function createStaticSettingsProvider(settings: Record<string, unknown>) {
   };
 }
 
-import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-core";
+import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-system/core";
 import {
   defaultObservationalMemorySettings,
   type ObservationalMemorySettingsInput,

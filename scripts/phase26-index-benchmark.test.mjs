@@ -10,13 +10,13 @@
  * frozen "100000-file metadata fixture" contract: the seam's cost model is
  * O(update batch + result page), never the host engine's storage.
  */
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
-import { createIndexedRepositoryOperations } from "@arnilo/prism-tools-coding";
-import { createLocalRepositoryOperations } from "@arnilo/prism-tools-coding";
+import { createIndexedRepositoryOperations, createLocalRepositoryOperations } from "@arnilo/prism-tools/coding";
 
 const FIXTURE_FILES = 100_000;
 const UPDATE_BATCH = 1_000;

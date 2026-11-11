@@ -51,7 +51,11 @@ test("memory-gate fixture has at least 100 labelled items per shipped point", ()
   for (const point of ["P3", "P4", "P5", "P7"]) {
     assert.equal(items.filter((item) => item.point === point).length, 100, point);
   }
-  assert.equal(items.filter((item) => item.point === "P1" || item.point === "P2" || item.point === "P6").length, 0, "removed points have no items");
+  assert.equal(
+    items.filter((item) => item.point === "P1" || item.point === "P2" || item.point === "P6").length,
+    0,
+    "removed points have no items",
+  );
 });
 
 test("validateItems rejects a bad label and a duplicate id", () => {

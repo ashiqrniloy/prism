@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * `prism-devtools`: serves the developer inspector over a manifest-built agent, on loopback.
  *

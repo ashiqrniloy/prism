@@ -5,7 +5,16 @@
 //   node --test "packages/prism-core/dist/integrations/channels/__tests__/recovery.test.js"
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type Agent, type ModelProvider, createAgent, createMemorySessionStore, type OwnershipScope, providerDone, providerTextDelta, type SessionStore } from "@arnilo/prism";
+import {
+  type Agent,
+  type ModelProvider,
+  createAgent,
+  createMemorySessionStore,
+  type OwnershipScope,
+  providerDone,
+  providerTextDelta,
+  type SessionStore,
+} from "@arnilo/prism";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "../memory-stores.js";
 import { createChannelDeliveryJournal } from "../delivery.js";
 import { createChannelRuntime } from "../index.js";
@@ -107,7 +116,12 @@ function trackingStore(ids: Set<string>): SessionStore {
 }
 
 async function agentWith(provider: ModelProvider, store: SessionStore = createMemorySessionStore()): Promise<Agent> {
-  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } });
+  return await createAgent({
+    id: "channel-agent",
+    model: { provider: "mock", model: "demo" },
+    packages: [providerPackage("test-provider", [provider])],
+    slots: { store },
+  });
 }
 
 interface Harness {

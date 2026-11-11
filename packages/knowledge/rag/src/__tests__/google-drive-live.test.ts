@@ -5,8 +5,8 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryCheckpointStore } from "@arnilo/prism-extensions/workflows";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createGoogleDriveConnector } from "../connectors/google-drive.js";
 import { createMemoryIngestionStatusStore } from "../ingestion-status.js";
 import { syncKnowledge } from "../sync.js";

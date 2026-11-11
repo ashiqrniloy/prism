@@ -1,9 +1,9 @@
 /**
  * Local structural view of the `checkpoints`/`leases` service contracts (plan 168 Task 4).
  *
- * Channels is a host library: it must not gain a dependency on `@arnilo/prism-workflows` (whose root
+ * Channels is a host library: it must not gain a dependency on `@arnilo/prism-extensions/workflows` (whose root
  * loads the workflow engine) just to name two store types. These declarations mirror the contract in
- * `@arnilo/prism-workflows/src/contracts.ts` member for member, so any conforming store — the workflows
+ * `@arnilo/prism-extensions/workflows/src/contracts.ts` member for member, so any conforming store — the workflows
  * memory defaults, or the sqlite/postgres `checkpoints`/`leases` services — is assignable here.
  *
  * Only the generic persistence types that stayed in the kernel (`OwnershipScope`, `PersistencePage`,

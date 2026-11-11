@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it, test } from "bun:test";
-import type { MemoryVectorHit } from "@arnilo/prism-memory-core";
-import { fuseRankings } from "@arnilo/prism-memory-core";
+import type { MemoryVectorHit } from "@arnilo/prism-memory-system/core";
+import { fuseRankings } from "@arnilo/prism-memory-system/core";
 
 function hit(id: string, score = 0.9): MemoryVectorHit {
   return {

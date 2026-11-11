@@ -684,8 +684,8 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     assert.ok(read("src/content.ts").includes("pinnedFetch"), "content fetch routes through pinnedFetch");
     assert.ok(read("packages/credentials-node/src/oidc.ts").includes("pinnedFetch"), "OIDC JWKS fetch routes through pinnedFetch");
     assert.ok(read("packages/policy/src/opa.ts").includes("pinnedFetch"), "OPA decision fetch routes through pinnedFetch");
-    const mcpTransportPath = existsSync(url("../packages/integrations/mcp/src/transport.ts"))
-      ? "packages/integrations/mcp/src/transport.ts"
+    const mcpTransportPath = existsSync(url("../packages/extensions/mcp/src/transport.ts"))
+      ? "packages/extensions/mcp/src/transport.ts"
       : "packages/mcp/src/transport.ts";
     assert.ok(read(mcpTransportPath).includes("pinnedFetch"), "MCP transport reuses pinnedFetch");
     assert.ok(existsSync(url("../src/__tests__/pinned-fetch.test.ts")), "pinned-fetch tests exist");
@@ -698,7 +698,10 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
   }
   if (tasks.task5.startsWith("done")) {
     assert.ok(existsSync(url("../src/provider-kit/oauth-device-code.ts")), "oauth-device-code.ts exists");
-    assert.ok(read("src/provider-kit/oauth-device-code.ts").includes("pollDeviceCodeToken"), "oauth-device-code.ts ships the shared poll helper");
+    assert.ok(
+      read("src/provider-kit/oauth-device-code.ts").includes("pollDeviceCodeToken"),
+      "oauth-device-code.ts ships the shared poll helper",
+    );
     assert.ok(
       read("packages/prism-providers/src/openai/oauth.ts").includes("pollDeviceCodeToken"),
       "OpenAI oauth.ts calls the shared helper",

@@ -2,5 +2,7 @@
   "name": "@acme/hello",
   "version": "1.0.0",
   "type": "module",
-  "exports": { ".": "./index.js" }
+  "exports": {
+    ".": "./index.js"
+  }
 }

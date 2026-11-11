@@ -47,13 +47,15 @@ export function assertEvaluationThreshold(report: ExperimentReport | ComparisonR
     }
   }
   if (thresholds.maximumRegression) {
-    const { baseline, delta = 0, alpha = .05, scorers } = thresholds.maximumRegression;
+    const { baseline, delta = 0, alpha = 0.05, scorers } = thresholds.maximumRegression;
     assertFiniteUnitInterval(delta, "maximumRegression.delta");
     if (!experiment) throw new EvalThresholdError("maximumRegression requires an experiment report");
     const compared = compareExperiments(baseline, experiment, { alpha, scorers });
     for (const [scorerId, stats] of Object.entries(compared.scorers)) {
       if (stats.difference < -delta && stats.significant) {
-        failures.push(`${scorerId} difference ${stats.difference} < -${delta}: ci95=[${stats.ci95.low}, ${stats.ci95.high}], p=${stats.pValue}, q=${stats.qValue} <= alpha=${alpha}`);
+        failures.push(
+          `${scorerId} difference ${stats.difference} < -${delta}: ci95=[${stats.ci95.low}, ${stats.ci95.high}], p=${stats.pValue}, q=${stats.qValue} <= alpha=${alpha}`,
+        );
       }
     }
   }
@@ -61,14 +63,21 @@ export function assertEvaluationThreshold(report: ExperimentReport | ComparisonR
     if (!Number.isFinite(minimumKappa) || minimumKappa < -1 || minimumKappa > 1 || !Number.isSafeInteger(minimumN) || minimumN < 1) {
       throw new EvalThresholdError(`invalid calibration threshold for ${scorerId}`);
     }
-    const used = experiment ? experiment.evaluations.some(record => record.scorerId === scorerId)
-      : comparison?.records.some(record => record.scorerId === scorerId);
+    const used = experiment
+      ? experiment.evaluations.some((record) => record.scorerId === scorerId)
+      : comparison?.records.some((record) => record.scorerId === scorerId);
     if (!used) continue;
     const ci = calibration?.kappaCi95;
-    const validKappa = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= -1 && value <= 1;
-    if (!calibration || !Number.isSafeInteger(calibration.n) || calibration.n < minimumN || !validKappa(calibration.cohensKappa) ||
+    const validKappa = (value: unknown): value is number =>
+      typeof value === "number" && Number.isFinite(value) && value >= -1 && value <= 1;
+    if (
+      !calibration ||
+      !Number.isSafeInteger(calibration.n) ||
+      calibration.n < minimumN ||
+      !validKappa(calibration.cohensKappa) ||
       (ci !== undefined && (!ci || !validKappa(ci.low) || !validKappa(ci.high) || ci.low > ci.high)) ||
-      (ci?.low ?? calibration.cohensKappa ?? -Infinity) < minimumKappa) {
+      (ci?.low ?? calibration.cohensKappa ?? -Infinity) < minimumKappa
+    ) {
       failures.push(`${scorerId} calibration requires n >= ${minimumN} and kappa lower bound >= ${minimumKappa}`);
     }
   }

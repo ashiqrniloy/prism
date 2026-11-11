@@ -222,9 +222,9 @@ export function createRoutedProvider(options: RoutedProviderOptions): RoutedProv
         const auth = route.auth ?? "bearer";
         if (apiKey) {
           if (auth === "bearer") {
-            headers["authorization"] = `Bearer ${apiKey}`;
+            headers.authorization = `Bearer ${apiKey}`;
           } else if (auth === "x-api-key+bearer") {
-            headers["authorization"] = `Bearer ${apiKey}`;
+            headers.authorization = `Bearer ${apiKey}`;
             headers["x-api-key"] = apiKey;
             headers["anthropic-version"] = "2023-06-01";
           } else if (auth === "api-key") {

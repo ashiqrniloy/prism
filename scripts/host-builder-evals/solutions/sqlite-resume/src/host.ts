@@ -1,5 +1,5 @@
 import { type Agent, createAgent, type ModelSpec, type PackageInput } from "@arnilo/prism";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 
 export interface HostOptions {
   readonly model: ModelSpec;

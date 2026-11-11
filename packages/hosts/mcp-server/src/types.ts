@@ -1,6 +1,6 @@
 import type { EventOrigin, JsonObject, JsonValue, OwnershipScope, SecretRedactor, ToolCapabilityKind, ToolDefinition } from "@arnilo/prism";
 import type { CallbackBroker, McpEndpoint } from "@arnilo/prism/driver-kit";
-import type { McpProtectedResource } from "@arnilo/prism-mcp";
+import type { McpProtectedResource } from "@arnilo/prism-extensions/mcp";
 import type { AuthInfo, CallToolResult, ServerEventBus, ServerNotifier, Transport } from "@modelcontextprotocol/server";
 
 /** What `serveMcp`'s `authorize` callback receives before any session is opened. */

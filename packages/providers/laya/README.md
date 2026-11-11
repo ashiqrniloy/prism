@@ -1,17 +1,17 @@
-# `@arnilo/prism-provider-laya`
+# `@arnilo/prism-ai/laya`
 
 Laya provider package for [Prism](https://github.com/ashiqrniloy/prism). Registers the self-hosted `laya` decision model, resolves its key through the credentials slot on every request, and ships the System One wire (shared with `@arnilo/prism/provider-kit`) and the checkpoint catalog.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-laya
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import laya from "@arnilo/prism-provider-laya";
+import laya from "@arnilo/prism-ai/laya";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

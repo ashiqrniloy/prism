@@ -1,11 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import type { ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import {
-  assertNoFetches,
-  collectProviderEvents,
-  ProviderRequirementError,
-} from "@arnilo/prism/provider-kit";
+import type { ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { assertNoFetches, collectProviderEvents, ProviderRequirementError } from "@arnilo/prism/provider-kit";
 import { loadProviderPackage } from "@arnilo/prism/testing";
 import {
   createOpenCodeGoProvider,
@@ -47,7 +43,7 @@ function ok(body: ReadableStream<Uint8Array>): Response {
   return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
-describe("@arnilo/prism-provider-opencode-go", () => {
+describe("@arnilo/prism-ai/opencode-go", () => {
   it("opencode_go_registers_official_featured_models_and_setup_does_not_fetch", async () => {
     const fetchCalls: unknown[] = [];
     const fetchImpl = (async () => {
@@ -124,7 +120,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     });
 
     // Case 1: cacheKey preference over sessionId, sanitized, clamped to 128
-    const longKey = "key_with spaces & special!chars@" + "a".repeat(150);
+    const longKey = `key_with spaces & special!chars@${"a".repeat(150)}`;
     const req1: ProviderRequest = {
       model: openaiModel,
       messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
@@ -190,10 +186,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
     const anthropicModels = models.filter((m) => m.compat?.route === "anthropic");
     assert.equal(anthropicModels.length, 6);
     for (const m of anthropicModels) {
-      assert.ok(
-        m.model.startsWith("minimax-") || m.model.startsWith("qwen"),
-        `Unexpected anthropic model: ${m.model}`,
-      );
+      assert.ok(m.model.startsWith("minimax-") || m.model.startsWith("qwen"), `Unexpected anthropic model: ${m.model}`);
       assert.equal(routeForOpenCodeGoModel(m.model), "anthropic");
     }
     // All 8 Anthropic-route models from Task 1 (c) live snapshot map to anthropic route

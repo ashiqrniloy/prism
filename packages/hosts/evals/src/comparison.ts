@@ -46,8 +46,8 @@ export async function runComparison<TInput = unknown, TExpected = unknown>(
   const { count: trials } = resolveTrialsConfig(options.trials, options.seed);
   if (options.seed !== undefined && !Number.isSafeInteger(options.seed))
     throw new EvalError("seed must be a safe integer", "ERR_PRISM_EVAL_TRIALS");
-  const scorerIds = options.scorers.map(scorer => scorer.id);
-  if (scorerIds.some(id => !id.trim()) || new Set(scorerIds).size !== scorerIds.length)
+  const scorerIds = options.scorers.map((scorer) => scorer.id);
+  if (scorerIds.some((id) => !id.trim()) || new Set(scorerIds).size !== scorerIds.length)
     throw new EvalError("comparison scorer ids must be nonempty and unique", "ERR_PRISM_EVAL_COMPARISON");
   const redactor = resolveRedactor(options.redactor, options.secrets);
   const perItem = await mapPool(
@@ -82,9 +82,16 @@ export async function runComparison<TInput = unknown, TExpected = unknown>(
                 options.signal?.throwIfAborted();
                 if (errors.has(left) && errors.has(right)) throw errors.get(left);
                 if (errors.has(left) || errors.has(right)) {
-                  records.push({ itemId: item.id, trialIndex, scorerId: scorer.id, left, right, status: "scored",
+                  records.push({
+                    itemId: item.id,
+                    trialIndex,
+                    scorerId: scorer.id,
+                    left,
+                    right,
+                    status: "scored",
                     preference: errors.has(left) ? "right" : "left",
-                    metadata: { forfeit: errors.has(left) ? left : right } });
+                    metadata: { forfeit: errors.has(left) ? left : right },
+                  });
                   continue;
                 }
                 const output = await scorer.score({
@@ -111,7 +118,15 @@ export async function runComparison<TInput = unknown, TExpected = unknown>(
                   metadata: output.metadata,
                 });
               } catch (error) {
-                records.push({ itemId: item.id, trialIndex, scorerId: scorer.id, left, right, status: "failed", error: toErrorInfo(error) });
+                records.push({
+                  itemId: item.id,
+                  trialIndex,
+                  scorerId: scorer.id,
+                  left,
+                  right,
+                  status: "failed",
+                  error: toErrorInfo(error),
+                });
               }
             }
           }
@@ -141,41 +156,67 @@ export async function runComparison<TInput = unknown, TExpected = unknown>(
   }
   const positionConsistency = Object.fromEntries([...consistency].map(([id, counts]) => [id, counts.consistent / counts.total]));
   const ranking = rankComparisons(records, candidates, scorerIds, options.seed ?? 0);
-  return { ranking: redactor ? redactor.redact(ranking) : ranking, positionConsistency, datasetId: options.dataset.id, datasetVersion: options.dataset.version, candidates, records: safe, wins, ties, failures };
+  return {
+    ranking: redactor ? redactor.redact(ranking) : ranking,
+    positionConsistency,
+    datasetId: options.dataset.id,
+    datasetVersion: options.dataset.version,
+    candidates,
+    records: safe,
+    wins,
+    ties,
+    failures,
+  };
 }
 
 function rankComparisons(
-  records: readonly ComparisonRecord[], candidates: readonly string[], scorerIds: readonly string[], seed: number,
+  records: readonly ComparisonRecord[],
+  candidates: readonly string[],
+  scorerIds: readonly string[],
+  seed: number,
 ): ComparisonReport["ranking"] {
-  return scorerIds.flatMap(scorerId => {
-    const pairs = records.filter((record): record is ComparisonRecord & { preference: "left" | "right" | "tie" } =>
-      record.scorerId === scorerId && record.status === "scored" && record.preference !== undefined);
+  return scorerIds.flatMap((scorerId) => {
+    const pairs = records.filter(
+      (record): record is ComparisonRecord & { preference: "left" | "right" | "tie" } =>
+        record.scorerId === scorerId && record.status === "scored" && record.preference !== undefined,
+    );
     const fit = bradleyTerry(pairs);
-    const complete = fit !== null && candidates.every(name => Object.hasOwn(fit, name));
-    const rows = candidates.map(candidate => ({ scorerId, candidate,
-      strength: complete ? fit[candidate]! : null, ci95: null as readonly [number, number] | null, rank: null as number | null }));
+    const complete = fit !== null && candidates.every((name) => Object.hasOwn(fit, name));
+    const rows = candidates.map((candidate) => ({
+      scorerId,
+      candidate,
+      strength: complete ? fit[candidate]! : null,
+      ci95: null as readonly [number, number] | null,
+      rank: null as number | null,
+    }));
     if (!complete) return rows;
-    const draws: (ReturnType<typeof bradleyTerry>)[] = [];
+    const draws: ReturnType<typeof bradleyTerry>[] = [];
     let undefinedDraw = false;
     for (const row of rows) {
       let draw = 0;
-      const ci = bootstrapInterval(pairs.map((_, i) => i), {
-        seed, resamples: 1000, clusterIds: pairs.map(pair => pair.itemId),
-        statistic: indices => {
-          if (draw === draws.length) draws.push(bradleyTerry(indices.map(i => pairs[i]!)));
-          const fitted = draws[draw++];
-          const sampled = fitted && Object.hasOwn(fitted, row.candidate) ? fitted[row.candidate] : undefined;
-          if (sampled === undefined) undefinedDraw = true;
-          return sampled ?? 0;
+      const ci = bootstrapInterval(
+        pairs.map((_, i) => i),
+        {
+          seed,
+          resamples: 1000,
+          clusterIds: pairs.map((pair) => pair.itemId),
+          statistic: (indices) => {
+            if (draw === draws.length) draws.push(bradleyTerry(indices.map((i) => pairs[i]!)));
+            const fitted = draws[draw++];
+            const sampled = fitted && Object.hasOwn(fitted, row.candidate) ? fitted[row.candidate] : undefined;
+            if (sampled === undefined) undefinedDraw = true;
+            return sampled ?? 0;
+          },
         },
-      });
+      );
       row.ci95 = [ci.low, ci.high];
     }
     // A separated bootstrap draw has no finite MLE: do not discard it and narrow the interval.
     if (undefinedDraw) for (const row of rows) row.ci95 = null;
     else {
       const byInterval = [...rows].sort((a, b) => b.ci95![1] - a.ci95![1] || a.candidate.localeCompare(b.candidate));
-      let groupLow = Infinity, rank = 1;
+      let groupLow = Infinity,
+        rank = 1;
       for (const [i, row] of byInterval.entries()) {
         if (row.ci95![1] < groupLow) {
           rank = i + 1;

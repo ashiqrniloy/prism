@@ -7,7 +7,7 @@ import {
   listSessionBranches,
   rebuildSessionContext,
 } from "@arnilo/prism";
-import { createJsonlSessionStore } from "@arnilo/prism-store-jsonl";
+import { createJsonlSessionStore } from "@arnilo/prism-extensions/store-jsonl";
 
 // In-memory store + branching; JSONL persistence via the Node subpath.
 // Stores receive no provider credentials. Branching preserves old paths.

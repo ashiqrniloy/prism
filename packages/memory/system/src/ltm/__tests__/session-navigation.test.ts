@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import { createExchangeArchive } from "../exchanges.js";
 import { createMemory, createLongTermMemory } from "../../index.js";
 
@@ -145,11 +145,13 @@ test("package_memory_read_navigates_and_replace_pins_across_scopes", async () =>
           step("c", "memory.replace", { id: fact.id, old: "first", new: "first always", pin: true }),
           [providerTextDelta("ok"), providerDone()],
         ]),
-        memorySystem({ ltm: {
-          tools: { root },
-          store: { sqlite: { path } },
-          scopes: { tenantId: "nav", project: { id: "nav--01234567", root }, agent: false, user: false },
-        } }),
+        memorySystem({
+          ltm: {
+            tools: { root },
+            store: { sqlite: { path } },
+            scopes: { tenantId: "nav", project: { id: "nav--01234567", root }, agent: false, user: false },
+          },
+        }),
       ],
     });
     const session = await agent.session({ id: "s", create: true });

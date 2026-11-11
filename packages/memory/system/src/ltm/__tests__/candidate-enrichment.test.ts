@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { lexicalTerms } from "@arnilo/prism-memory-core";
+import { lexicalTerms } from "@arnilo/prism-memory-system/core";
 import { exchangeKeywords } from "../exchanges.js";
 
 test("exchange_enrichment_is_deterministic_and_model_free", () => {

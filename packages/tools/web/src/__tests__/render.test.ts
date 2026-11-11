@@ -38,7 +38,7 @@ describe("renderSearchResults", () => {
     const lines = text.split("\n");
     assert.equal(lines[0], "1. Example article 0 about agent frameworks");
     assert.equal(lines[1], "   https://example.com/article-0");
-    assert.match(lines[2]!, /^   2026-09-30T00:00:00\.000Z — A long description/);
+    assert.match(lines[2]!, /^ {3}2026-09-30T00:00:00\.000Z — A long description/);
     assert.equal(lines[3], "2. Example article 1 about agent frameworks");
     assert.equal(lines.filter((line) => /^\d+\. /u.test(line)).length, 10, "one numbered line per result");
     assert.equal(text.includes("citationId"), false, "internal fields stay in value");

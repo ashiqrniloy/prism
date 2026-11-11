@@ -28,7 +28,7 @@ import {
   type ToolResult,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import guardrailPacks, { type GuardrailPacksConfig } from "@arnilo/prism-guardrail-packs";
+import guardrailPacks, { type GuardrailPacksConfig } from "@arnilo/prism-extensions/guardrail-packs";
 import { runScenario, type ScenarioResult } from "../scenarios.js";
 import { createGuardrailPackScorer, DEFAULT_PACK_RULE_PREFIX } from "../trajectory.js";
 

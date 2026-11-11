@@ -19,10 +19,8 @@ import {
   providerToolCall,
   resolveInputCap,
 } from "@arnilo/prism";
-import { resolveDevicePolicy } from "@arnilo/prism-tools-computer-use";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider } from "@arnilo/prism/testing";
-import { createAttentionCompiler, createAttentionTruncationTrigger } from "@arnilo/prism-context-engineering";
 import {
   createCitationIntegrityScorer,
   defineDataset,
@@ -30,14 +28,15 @@ import {
   failureInjection,
   runExperiment,
   validateReleaseEvalManifest,
-} from "@arnilo/prism-evals";
-import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-observability";
-import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-workflows";
-import { inspectHostComposition } from "@arnilo/prism-governance";
-import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-core";
-import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
-import memorySystem, { foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
-import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools-work/connectors";
+} from "@arnilo/prism-hosts/evals";
+import { createAttentionCompiler, createAttentionTruncationTrigger } from "@arnilo/prism-extensions/context-engineering";
+import { inspectHostComposition } from "@arnilo/prism-extensions/governance";
+import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-extensions/observability";
+import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-extensions/workflows";
+import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-system/core";
+import memorySystem, { createLongTermMemory, createMemory, foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
+import { resolveDevicePolicy } from "@arnilo/prism-tools/computer-use";
+import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools/work/connectors";
 
 const marks = [];
 let markStart = performance.now();
@@ -604,8 +603,7 @@ const promoted = await fabric.remember({ kind: "procedure", reflectionId: ledger
 assert.equal(promoted.content, "Task one prefers the smallest retry budget.");
 assert.deepEqual(promoted.promotedFrom, { reflectionId: ledger.reflections[0].id });
 assert.equal((await fabric.recall("smallest retry budget", { kinds: ["procedure"] })).hits.length, 1);
-const episode = await fabric.remember({ kind: "episode", id: ledger.observations[0].id });
-assert.equal(episode.content, ledger.observations[0].content, "the fabric derives an episode from the package's observation");
+await assert.rejects(() => fabric.remember({ kind: "episode", id: ledger.observations[0].id }), { code: "episode_kind_not_available" });
 mark("R16 OK");
 
 // --- R17 attention compiler + host-programmable compaction trigger ---

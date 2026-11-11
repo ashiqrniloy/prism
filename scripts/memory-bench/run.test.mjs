@@ -364,7 +364,6 @@ test("two_rate_limited_answers_fork_from_the_forked_session_leaf", async () => {
   assert.equal(result.answer, "cobalt");
 }, 30_000);
 
-
 test("retry_does_not_duplicate_om_workers_or_promotions", async () => {
   const state = benchState();
   let sourceObservations = 0;
@@ -963,7 +962,7 @@ test("memory_bench_logs_item_metadata_and_judges_only_each_item_text", async () 
 test("memory_bench_logs_tail_context_metadata_and_item_tokens", async () => {
   const { createAgent, definePackage, providerDone } = await import("@arnilo/prism");
   const { providerPackage } = await import("@arnilo/prism/provider-kit");
-  const { withTailContext } = await import("@arnilo/prism-memory-core");
+  const { withTailContext } = await import("@arnilo/prism-memory-system/core");
   const { injectionLogger, tokens } = await import("./injection-log.mjs");
   const content = "# Memory\n- [short] blue\n- [long] a much longer unrelated source-backed memory";
   const state = { phase: "answer", questionId: "q", turns: 0, injectedContextTokens: 0, injections: [], injectionText: new Map() };
@@ -1282,11 +1281,7 @@ test("memory_bench_fabric_hybrid_arm_was_removed", async () => {
 });
 
 test("memory_bench_fabric_configs_offline_smoke", async () => {
-  const configs = [
-    { config: "fabric" },
-    { config: "fabric-agentic" },
-    { config: "om+fabric" },
-  ];
+  const configs = [{ config: "fabric" }, { config: "fabric-agentic" }, { config: "om+fabric" }];
   for (const opt of configs) {
     const report = await runBench({ offline: true, ...opt, maxQuestions: 2 });
     assert.equal(report.status, "partial");
@@ -2697,7 +2692,7 @@ test("screen_ms_v1_is_development_only_and_refuses_v3", async () => {
  * multi-session diagnostic is exercised end to end against the same code the CLI runs.
  */
 async function multiSessionFixture({ instances = false } = {}) {
-  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
   const { createMemory, createLongTermMemory, resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-system");
   const { BENCH_SCOPE } = await import("./bench-scope.mjs");
   const { EXCHANGE_ROUNDS_FILE } = await import("./replay.mjs");

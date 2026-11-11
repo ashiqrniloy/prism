@@ -5,7 +5,7 @@
 
 import { test } from "bun:test";
 import assert from "node:assert/strict";
-import { createOpenCodeGoProvider, openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
+import { createOpenCodeGoProvider, openCodeGoModels } from "@arnilo/prism-ai/opencode-go";
 
 import { runStm } from "../../packages/memory/system/src/session/workers/stm.ts";
 import { runReflector } from "../../packages/memory/system/src/session/workers/reflector.ts";

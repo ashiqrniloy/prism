@@ -23,7 +23,7 @@ const catalog = Object.fromEntries(
   [
     ["hyper", "HYPER_API_KEY", "createHyperProvider"],
     ["opencode-go", "OPENCODE_API_KEY", "createOpenCodeGoProvider"],
-  ].map(([id, envKey, factoryExport]) => [id, { id, envKey, factoryExport, factoryModule: `@arnilo/prism-provider-${id}` }]),
+  ].map(([id, envKey, factoryExport]) => [id, { id, envKey, factoryExport, factoryModule: `@arnilo/prism-ai/${id}` }]),
 );
 const requested = process.env.PRISM_LIVE_CLI_PROVIDER;
 const providerId =
@@ -59,10 +59,7 @@ function isCredentialRejected(text) {
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  ...["openai", "openrouter", "kimi", "zai", "opencode-go", "neuralwatt", "alibaba", "ollama"].map((id) => ({
-    dir: `packages/providers/${id}`,
-    name: `@arnilo/prism-provider-${id}`,
-  })),
+  { dir: "packages/providers", name: "@arnilo/prism-ai" },
 ];
 const packed = createPackedConsumer(packages);
 after(() => packed.cleanup());

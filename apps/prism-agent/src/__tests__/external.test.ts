@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { adapterConformance } from "@arnilo/prism-driver-process/testing";
+import { adapterConformance } from "@arnilo/prism-hosts/driver-process/testing";
 import { hostStreamCli } from "../adapters/stream-cli.js";
 import type { HostConfig } from "../host/index.js";
 import { externalUnsupportedControl, externalWorkerAttribution } from "../scenarios/external-worker-attribution.js";

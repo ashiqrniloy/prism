@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 /**
  * Phase 26 (plan 026 Task 7): protected real coding-agent release journey.
  *
@@ -34,9 +35,8 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { blockedGate } from "./blocked-gate.mjs";
-import { createPackedConsumer, installedVersion, repoRoot, } from "./fixtures/packed-consumer.mjs";
+import { createPackedConsumer, installedVersion, repoRoot } from "./fixtures/packed-consumer.mjs";
 
 const freeze = JSON.parse(readFileSync(join(repoRoot, "scripts/phase26-freeze-manifest.json"), "utf8"));
 const WALL_DEFAULT_MS = Number(/^(\d+)/.exec(freeze.frozenCaps.journey.wallMs)?.[1] ?? 1_200_000);
@@ -55,10 +55,10 @@ const REQUIRED_ENVS = [
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
-  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
-  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/coding" },
+  { dir: "packages/hosts", name: "@arnilo/prism-hosts/ag-ui" },
+  { dir: "packages/tools", name: "@arnilo/prism-tools/browser" },
+  { dir: "packages/extensions", name: "@arnilo/prism-extensions/mcp" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ let fixtureStartedMs;
 let playwrightInstall;
 before(() => {
   fixtureStartedMs = Date.now();
-  const packed = createPackedConsumer(packages);
+  const packed = createPackedConsumer(packages, { "@ag-ui/core": "0.0.59" });
   consumer = packed;
   if (packed.installStatus !== 0) return;
   if (process.env.PRISM_LIVE_PLAYWRIGHT === "1") {

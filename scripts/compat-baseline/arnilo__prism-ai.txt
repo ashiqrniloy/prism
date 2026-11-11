@@ -1,0 +1,298 @@
+./commandcode COMMAND_CODE_CHAT_ROUTE	const COMMAND_CODE_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+./commandcode COMMAND_CODE_DEFAULT_API_KEY_REF	const COMMAND_CODE_DEFAULT_API_KEY_REF = "env:COMMAND_CODE_API_KEY"
+./commandcode COMMAND_CODE_DEFAULT_BASE_URL	const COMMAND_CODE_DEFAULT_BASE_URL = "https://api.commandcode.ai/provider/v1"
+./commandcode COMMAND_CODE_MESSAGES_ROUTE	const COMMAND_CODE_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+./commandcode COMMAND_CODE_PRICING_SOURCE	const COMMAND_CODE_PRICING_SOURCE = "https://commandcode.ai/docs/resources/pricing-limits"
+./commandcode COMMAND_CODE_RESPONSES_ENDPOINT	const COMMAND_CODE_RESPONSES_ENDPOINT = "/responses"
+./commandcode COMMAND_CODE_RESPONSES_ROUTE	const COMMAND_CODE_RESPONSES_ROUTE: RoutedProviderRoute<"openai-responses">
+./commandcode COMMAND_CODE_SESSION_ID_MAX_LENGTH	const COMMAND_CODE_SESSION_ID_MAX_LENGTH = 128
+./commandcode COMMAND_CODE_ZDR_HEADER	const COMMAND_CODE_ZDR_HEADER = "x-cmd-zdr"
+./commandcode CommandCodeModelConfig	interface CommandCodeModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: CommandCodeRoute; readonly preserveThinking?: boolean; readonly reasoning_effort?: string; readonly reasoning?: JsonObject; readonly pricing_source?: string; }; readonly provider?: "commandcode"; }
+./commandcode CommandCodeModelEntry	interface CommandCodeModelEntry { readonly context_length?: number; readonly created?: number; readonly id: string; readonly name?: string; readonly object?: string; readonly owned_by?: string; readonly supported_endpoints?: readonly string[]; }
+./commandcode CommandCodeModelFamily	interface CommandCodeModelFamily { readonly efforts?: readonly string[]; readonly reasoning: boolean; readonly vision: boolean; }
+./commandcode CommandCodeProviderConfig	interface CommandCodeProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; readonly zdr?: boolean; }
+./commandcode CommandCodeProviderOptions	interface CommandCodeProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly zdr?: boolean; }
+./commandcode CommandCodeProviderPackageOptions	interface CommandCodeProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./commandcode CommandCodeRoute	type CommandCodeRoute = "openai" | "responses" | "anthropic"
+./commandcode ListCommandCodeModelsOptions	interface ListCommandCodeModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+./commandcode commandCodeFamily	function commandCodeFamily(modelId: string): CommandCodeModelFamily | undefined
+./commandcode commandCodeHttpError	function commandCodeHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+./commandcode commandCodeModels	const commandCodeModels: readonly ModelConfig[]
+./commandcode commandCodeSession	function commandCodeSession(request: ProviderRequest): Record<string, string>
+./commandcode commandCodeThinking	function commandCodeThinking(request: ProviderRequest): JsonObject | undefined
+./commandcode commandcode	function commandcode(options?: CommandCodeProviderPackageOptions & CommandCodeProviderConfig): PackageInstance
+./commandcode createCommandCodeProvider	function createCommandCodeProvider(options?: CommandCodeProviderOptions): ModelProvider
+./commandcode default	const definition: import("@arnilo/prism").PackageDefinition<CommandCodeProviderConfig>
+./commandcode defineCommandCodeModel	function defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig
+./commandcode listCommandCodeModels	function listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
+./commandcode mapCommandCodeModel	function mapCommandCodeModel(entry: CommandCodeModelEntry, options?: { readonly provider?: string; }): ModelConfig
+./commandcode routeForCommandCodeModel	function routeForCommandCodeModel(modelId: string, supportedEndpoints?: readonly string[]): CommandCodeRoute
+./hyper GetHyperCreditsOptions	interface GetHyperCreditsOptions { readonly apiKey: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly signal?: AbortSignal; }
+./hyper HYPER_CHAT_ROUTE	const HYPER_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+./hyper HYPER_DEFAULT_API_KEY_REF	const HYPER_DEFAULT_API_KEY_REF = "env:HYPER_API_KEY"
+./hyper HYPER_DEFAULT_BASE_URL	const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
+./hyper HYPER_MESSAGES_ROUTE	const HYPER_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+./hyper HyperCreditsBalance	interface HyperCreditsBalance { readonly balance: number; }
+./hyper HyperModelConfig	interface HyperModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: HyperRoute; readonly preserveThinking?: boolean; readonly reasoning_effort?: string; readonly effortLevels?: readonly string[]; readonly thinking?: boolean | JsonObject; }; readonly provider?: "hyper"; }
+./hyper HyperModelEntry	interface HyperModelEntry { readonly capabilities?: { readonly vision?: boolean; }; readonly context_window?: number; readonly created?: number; readonly display_name?: string; readonly id: string; readonly max_output_tokens?: number; readonly object?: string; readonly owned_by?: string; readonly pricing?: { readonly input?: number; readonly output?: number; readonly cache_create?: number; readonly cache_hit?: number; }; readonly reasoning?: { readonly effort_levels?: readonly { readonly value?: string; readonly display?: string; }[]; readonly default_effort_level?: string; }; }
+./hyper HyperProviderConfig	interface HyperProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; }
+./hyper HyperProviderOptions	interface HyperProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; }
+./hyper HyperProviderPackageOptions	interface HyperProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./hyper HyperRoute	type HyperRoute = "openai" | "anthropic"
+./hyper HyperUsageCost	interface HyperUsageCost { readonly hypercredits?: number; readonly remainingHypercredits?: number; readonly usd?: number; }
+./hyper costFromHyperPricing	function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
+./hyper createHyperProvider	function createHyperProvider(options?: HyperProviderOptions): RoutedProvider
+./hyper default	const definition: import("@arnilo/prism").PackageDefinition<HyperProviderConfig>
+./hyper defineHyperModel	function defineHyperModel(config: HyperModelConfig): ModelConfig
+./hyper getHyperCredits	function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance>
+./hyper hyper	function hyper(options?: HyperProviderPackageOptions & HyperProviderConfig): PackageInstance
+./hyper hyperModels	const hyperModels: readonly ModelConfig[]
+./hyper listHyperModels	function listHyperModels(options?: ListHyperModelsOptions): Promise<ModelConfig[]>
+./hyper mapHyperModel	function mapHyperModel(entry: HyperModelEntry, options?: { readonly provider?: string; }): ModelConfig
+./hyper parseHyperUsageCost	function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
+./hyper routeForHyperModel	function routeForHyperModel(modelId: string): HyperRoute
+./hyper withHyperCost	function withHyperCost(raw: unknown): Usage | undefined
+./kilo KILO_AUTH_BASE_URL	const KILO_AUTH_BASE_URL = "https://api.kilo.ai"
+./kilo KILO_AUTH_FALLBACK_LIFETIME_MS	const KILO_AUTH_FALLBACK_LIFETIME_MS: number
+./kilo KILO_AUTH_ID	const KILO_AUTH_ID = "kilo"
+./kilo KILO_AUTH_POLL_INTERVAL_MS	const KILO_AUTH_POLL_INTERVAL_MS = 3000
+./kilo KILO_CHAT_ROUTE	const KILO_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+./kilo KILO_DEFAULT_API_KEY_REF	const KILO_DEFAULT_API_KEY_REF = "env:KILO_API_KEY"
+./kilo KILO_DEFAULT_BASE_URL	const KILO_DEFAULT_BASE_URL = "https://ai-gateway.kilo.ai/api/v1"
+./kilo KILO_DEFAULT_CREDENTIAL_REF	const KILO_DEFAULT_CREDENTIAL_REF = "keyring:kilo"
+./kilo KILO_MESSAGES_ROUTE	const KILO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+./kilo KILO_MODE_HEADER	const KILO_MODE_HEADER = "x-kilocode-mode"
+./kilo KILO_ORGANIZATION_HEADER	const KILO_ORGANIZATION_HEADER = "X-KILOCODE-ORGANIZATIONID"
+./kilo KILO_PRICING_SOURCE	const KILO_PRICING_SOURCE = "https://ai-gateway.kilo.ai/api/v1/models"
+./kilo KILO_RESPONSES_ROUTE	const KILO_RESPONSES_ROUTE: RoutedProviderRoute<"openai-responses">
+./kilo KILO_TASK_ID_HEADER	const KILO_TASK_ID_HEADER = "X-KILOCODE-TASKID"
+./kilo KILO_TASK_ID_MAX_LENGTH	const KILO_TASK_ID_MAX_LENGTH = 128
+./kilo KiloAuthConfig	interface KiloAuthConfig { readonly authBase?: string; readonly credential?: string; readonly fetch?: typeof fetch; readonly now?: () => number; readonly signal?: AbortSignal; readonly sleep?: (ms: number, signal?: AbortSignal) => Promise<void>; }
+./kilo KiloAuthError	class KiloAuthError extends Error { constructor(code: string, message: string); readonly code: string; }
+./kilo KiloAuthMethod	type KiloAuthMethod = Extract<AuthMethod, { kind: "oauth"; }>
+./kilo KiloModelConfig	interface KiloModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: KiloRoute; readonly aiSdkProvider?: string; readonly isFree?: boolean; readonly mayTrainOnYourPrompts?: boolean; readonly aliasTarget?: string; readonly pricing_source?: string; readonly preserveThinking?: boolean; readonly thinkingFamily?: string; }; readonly provider?: "kilo"; }
+./kilo KiloModelEntry	interface KiloModelEntry { readonly alias_target?: string; readonly architecture?: { readonly input_modalities?: readonly string[]; readonly output_modalities?: readonly string[]; }; readonly context_length?: number; readonly id: string; readonly isFree?: boolean; readonly mayTrainOnYourPrompts?: boolean; readonly name?: string; readonly opencode?: { readonly ai_sdk_provider?: string; }; readonly pricing?: Readonly<Record<string, string | number>>; readonly supported_parameters?: readonly string[]; readonly top_provider?: { readonly max_completion_tokens?: number | null; }; }
+./kilo KiloProviderConfig	interface KiloProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly credential?: string; readonly dataCollection?: "allow" | "deny"; readonly mode?: string; readonly models?: readonly ModelConfig[]; readonly organizationId?: string; }
+./kilo KiloProviderOptions	interface KiloProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly dataCollection?: "allow" | "deny"; readonly fetch?: typeof fetch; readonly id?: string; readonly mode?: string; readonly organizationId?: string; readonly resolveApiKey?: (request: ProviderRequest) => string | undefined | Promise<string | undefined>; }
+./kilo KiloProviderPackageOptions	interface KiloProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./kilo KiloRoute	type KiloRoute = "chat" | "responses" | "messages"
+./kilo ListKiloModelsOptions	interface ListKiloModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly organizationId?: string; readonly provider?: string; readonly signal?: AbortSignal; }
+./kilo assertKiloWritableCredentialRef	function assertKiloWritableCredentialRef(ref: string): void
+./kilo createKiloProvider	function createKiloProvider(options?: KiloProviderOptions): ModelProvider
+./kilo default	const definition: import("@arnilo/prism").PackageDefinition<KiloProviderConfig>
+./kilo defineKiloModel	function defineKiloModel(config: KiloModelConfig): ModelConfig
+./kilo kilo	function kilo(options?: KiloProviderPackageOptions & KiloProviderConfig): PackageInstance
+./kilo kiloAuth	function kiloAuth(config?: KiloAuthConfig): KiloAuthMethod
+./kilo kiloHttpError	function kiloHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+./kilo kiloLogout	function kiloLogout(config?: Pick<KiloAuthConfig, "credential">): (ctx: AuthContext) => Promise<void>
+./kilo kiloMessagesCache	function kiloMessagesCache(request: ProviderRequest): readonly CacheControlledMessage[]
+./kilo kiloModels	const kiloModels: readonly ModelConfig[]
+./kilo kiloSession	function kiloSession(request: ProviderRequest): Record<string, string>
+./kilo kiloTaskId	function kiloSession(request: ProviderRequest): Record<string, string>
+./kilo listKiloModels	function listKiloModels(options?: ListKiloModelsOptions): Promise<ModelConfig[]>
+./kilo mapKiloChatUsage	function mapKiloChatUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
+./kilo mapKiloMessagesUsage	function mapKiloMessagesUsage(raw: unknown): Usage | undefined
+./kilo mapKiloModel	function mapKiloModel(entry: KiloModelEntry, options?: { readonly provider?: string; }): ModelConfig
+./kilo mapKiloResponsesUsage	function mapKiloResponsesUsage(raw: unknown): Usage | undefined
+./kilo routeForKiloModel	function routeForKiloModel(model: Pick<ModelConfig, "compat">): KiloRoute
+./kilo routeFromAiSdkProvider	function routeFromAiSdkProvider(value: string | undefined): KiloRoute
+./laya LAYA_API_KEY_ENV	const LAYA_API_KEY_ENV = "LAYA_API_KEY"
+./laya LAYA_DEFAULT_API_KEY_REF	const LAYA_DEFAULT_API_KEY_REF = "env:LAYA_API_KEY"
+./laya LAYA_DEFAULT_BASE_URL	const LAYA_DEFAULT_BASE_URL = "http://localhost:8000"
+./laya LayaModelConfig	interface LayaModelConfig extends Omit<ModelConfig, "provider"> { readonly compat?: JsonObject; readonly provider?: "laya"; }
+./laya LayaProviderConfig	type LayaProviderConfig = SystemOneProviderConfig
+./laya LayaProviderOptions	interface LayaProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly maxRetries?: number; readonly path?: string; readonly warn?: (message: string) => void; }
+./laya LayaProviderPackageOptions	type LayaProviderPackageOptions = SystemOneProviderPackageOptions
+./laya createLayaProvider	function createLayaProvider(options?: LayaProviderOptions): ModelProvider
+./laya default	const _default: import("@arnilo/prism").PackageDefinition<SystemOneProviderConfig>
+./laya defineLayaModel	function defineLayaModel(config: LayaModelConfig): ModelConfig
+./laya laya	function laya(options?: LayaProviderPackageOptions & LayaProviderConfig): PackageInstance
+./laya layaModels	const layaModels: readonly ModelConfig[]
+./liquid LIQUID_API_KEY_ENV	const LIQUID_API_KEY_ENV = "LIQUID_API_KEY"
+./liquid LIQUID_DEFAULT_API_KEY_REF	const LIQUID_DEFAULT_API_KEY_REF = "env:LIQUID_API_KEY"
+./liquid LIQUID_DEFAULT_BASE_URL	const LIQUID_DEFAULT_BASE_URL = "https://api.liquid.ai"
+./liquid LIQUID_DEFAULT_LOCAL_API_KEY_REF	const LIQUID_DEFAULT_LOCAL_API_KEY_REF = "env:LIQUID_LOCAL_API_KEY"
+./liquid LIQUID_DEFAULT_PATH	const LIQUID_DEFAULT_PATH = "/decisions/v1/systemone"
+./liquid LIQUID_LOCAL_BASE_URL	const LIQUID_LOCAL_BASE_URL = "http://127.0.0.1:8080"
+./liquid LiquidModelConfig	interface LiquidModelConfig extends Omit<ModelConfig, "provider"> { readonly compat?: JsonObject; readonly provider?: "liquid" | "liquid-local"; }
+./liquid LiquidProviderConfig	interface LiquidProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly hosted?: boolean; readonly localApiKey?: string; readonly localBaseUrl?: string; readonly maxRetries?: number; readonly path?: string; }
+./liquid LiquidProviderOptions	interface LiquidProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly maxRetries?: number; readonly path?: string; readonly warn?: (message: string) => void; }
+./liquid LiquidProviderPackageOptions	interface LiquidProviderPackageOptions { readonly fetch?: typeof fetch; }
+./liquid createLiquidLocalProvider	function createLiquidLocalProvider(options?: LiquidProviderOptions): ModelProvider
+./liquid createLiquidProvider	function createLiquidProvider(options?: LiquidProviderOptions): ModelProvider
+./liquid default	const definition: import("@arnilo/prism").PackageDefinition<LiquidProviderConfig>
+./liquid defineLiquidModel	function defineLiquidModel(config: LiquidModelConfig): ModelConfig
+./liquid liquid	function liquid(options?: LiquidProviderPackageOptions & LiquidProviderConfig): PackageInstance
+./liquid liquidLocalModels	const liquidLocalModels: readonly ModelConfig[]
+./liquid liquidModels	const liquidModels: readonly ModelConfig[]
+./litellm LITELLM_CALL_ID_HEADER	const LITELLM_CALL_ID_HEADER = "x-litellm-call-id"
+./litellm LITELLM_CALL_ID_METADATA	const LITELLM_CALL_ID_METADATA = "litellmCallId"
+./litellm LITELLM_DEFAULT_API_KEY_REF	const LITELLM_DEFAULT_API_KEY_REF = "env:LITELLM_API_KEY"
+./litellm LITELLM_DEFAULT_BASE_URL	const LITELLM_DEFAULT_BASE_URL = "http://127.0.0.1:4000"
+./litellm LITELLM_HEADERS	const LITELLM_HEADERS: { readonly callId: "x-litellm-call-id"; readonly modelId: "x-litellm-model-id"; readonly modelGroup: "x-litellm-model-group"; readonly apiBase: "x-litellm-model-api-base"; readonly version: "x-litellm-version"; readonly responseCost: "x-litellm-response-cost"; }
+./litellm LITELLM_HEADER_VALUE_LIMIT	const LITELLM_HEADER_VALUE_LIMIT = 256
+./litellm LITELLM_SPEND_WAIT_CAP_MS	const LITELLM_SPEND_WAIT_CAP_MS = 60000
+./litellm LITELLM_SPEND_WAIT_MS	const LITELLM_SPEND_WAIT_MS = 24000
+./litellm ListLiteLLMModelsOptions	interface ListLiteLLMModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly provider?: string; readonly signal?: AbortSignal; }
+./litellm LiteLLMModelInfoEntry	interface LiteLLMModelInfoEntry { readonly litellm_params?: { readonly model?: string; readonly [key: string]: unknown; }; readonly model_id?: string; readonly model_info?: { readonly id?: string; readonly mode?: string | null; readonly max_input_tokens?: number | null; readonly max_output_tokens?: number | null; readonly input_cost_per_token?: number | null; readonly output_cost_per_token?: number | null; readonly cache_read_input_token_cost?: number | null; readonly cache_creation_input_token_cost?: number | null; readonly supports_function_calling?: boolean | null; readonly supports_vision?: boolean | null; readonly supports_reasoning?: boolean | null; readonly supports_response_schema?: boolean | null; readonly litellm_provider?: string | null; }; readonly model_name?: string; }
+./litellm LiteLLMProviderConfig	interface LiteLLMProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; }
+./litellm LiteLLMProviderOptions	interface LiteLLMProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; }
+./litellm LiteLLMProviderPackageOptions	interface LiteLLMProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./litellm LiteLLMSpendLogsOptions	interface LiteLLMSpendLogsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly callIds?: readonly string[]; readonly fetch?: typeof fetch; readonly pollIntervalMs?: number; readonly provider?: string; readonly signal?: AbortSignal; readonly since?: string | Date; readonly until?: string | Date; readonly waitMs?: number; }
+./litellm LiteLLMSpendLogsResult	interface LiteLLMSpendLogsResult { readonly missing: readonly string[]; readonly rows: readonly LiteLLMSpendRow[]; }
+./litellm LiteLLMSpendRow	interface LiteLLMSpendRow { readonly cacheReadTokens?: number; readonly callId: string; readonly completionTokens: number; readonly endTime: string; readonly model: string; readonly modelGroup: string; readonly modelId?: string; readonly promptTokens: number; readonly spend: number; readonly startTime: string; readonly status?: string; }
+./litellm LiteLLMTelemetry	interface LiteLLMTelemetry { readonly apiBase?: string; readonly callId: string; readonly modelGroup?: string; readonly modelId?: string; readonly responseCost?: number; readonly version?: string; }
+./litellm assertLiteLLMBaseUrl	function assertLiteLLMBaseUrl(baseUrl: string): void
+./litellm createLiteLLMProvider	function createLiteLLMProvider(options?: LiteLLMProviderOptions): ModelProvider
+./litellm default	const definition: import("@arnilo/prism").PackageDefinition<LiteLLMProviderConfig>
+./litellm groupLiteLLMModelInfo	function groupLiteLLMModelInfo(entries: readonly LiteLLMModelInfoEntry[], options?: { readonly provider?: string; }): ModelConfig[]
+./litellm isLoopbackHost	function isLoopbackHost(hostname: string): boolean
+./litellm listLiteLLMModels	function listLiteLLMModels(options?: ListLiteLLMModelsOptions): Promise<ModelConfig[]>
+./litellm liteLLMUsageMetadata	function liteLLMUsageMetadata(telemetry: LiteLLMTelemetry): JsonObject
+./litellm litellm	function litellm(options?: LiteLLMProviderPackageOptions & LiteLLMProviderConfig): PackageInstance
+./litellm litellmHttpError	function litellmHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+./litellm litellmSpendLogs	function litellmSpendLogs(options?: LiteLLMSpendLogsOptions): Promise<LiteLLMSpendLogsResult>
+./litellm mapLiteLLMUsage	function mapLiteLLMUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
+./litellm normalizeSpendRow	function normalizeSpendRow(raw: unknown): LiteLLMSpendRow | undefined
+./litellm readLiteLLMApiBase	function readLiteLLMApiBase(value: string | undefined): string | undefined
+./litellm readLiteLLMCost	function readLiteLLMCost(value: string | undefined): number | undefined
+./litellm readLiteLLMHeaders	function readLiteLLMHeaders(headers: Headers, callId: string): LiteLLMTelemetry
+./ollama-cloud ListOllamaCloudModelsOptions	interface ListOllamaCloudModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+./ollama-cloud OLLAMA_CLOUD_CHAT_ROUTE	const OLLAMA_CLOUD_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+./ollama-cloud OLLAMA_CLOUD_DEFAULT_API_KEY_REF	const OLLAMA_CLOUD_DEFAULT_API_KEY_REF = "env:OLLAMA_API_KEY"
+./ollama-cloud OLLAMA_CLOUD_DEFAULT_BASE_URL	const OLLAMA_CLOUD_DEFAULT_BASE_URL = "https://ollama.com"
+./ollama-cloud OLLAMA_CLOUD_MAX_LINE_BYTES	const OLLAMA_CLOUD_MAX_LINE_BYTES = 1048576
+./ollama-cloud OLLAMA_CLOUD_NATIVE_ROUTE	const OLLAMA_CLOUD_NATIVE_ROUTE: { readonly format: "native"; readonly path: "/api/chat"; }
+./ollama-cloud OLLAMA_CLOUD_SYSTEMONE_PATH	const OLLAMA_CLOUD_SYSTEMONE_PATH = "/v1/systemone"
+./ollama-cloud OllamaCloudBalance	interface OllamaCloudBalance { readonly included?: OllamaCloudIncludedBalance; readonly purchasedUsd?: number; readonly session?: OllamaCloudBalanceWindow; readonly weekly?: OllamaCloudBalanceWindow; }
+./ollama-cloud OllamaCloudBalanceOptions	interface OllamaCloudBalanceOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+./ollama-cloud OllamaCloudBalanceWindow	interface OllamaCloudBalanceWindow { readonly remainingPercent: number; readonly resetsAt: string; }
+./ollama-cloud OllamaCloudIncludedBalance	interface OllamaCloudIncludedBalance { readonly allowanceUsd?: number; readonly balanceUsd: number; readonly periodFrom?: string; readonly periodUntil?: string; }
+./ollama-cloud OllamaCloudModelConfig	interface OllamaCloudModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: OllamaCloudRoute; readonly thinkingValues?: JsonValue; readonly thinkingDefault?: JsonValue; readonly thinkingFamily?: ThinkingCompatFamily; readonly preserveThinking?: boolean; }; readonly provider?: "ollama-cloud"; }
+./ollama-cloud OllamaCloudModelEntry	interface OllamaCloudModelEntry { readonly capabilities?: readonly string[]; readonly details?: JsonObject; readonly digest?: string; readonly model?: string; readonly modified_at?: string; readonly name?: string; readonly size?: number; }
+./ollama-cloud OllamaCloudNativePreparedRequest	interface OllamaCloudNativePreparedRequest { readonly body: JsonObject; readonly toolNames: ToolNameMap; }
+./ollama-cloud OllamaCloudProviderConfig	interface OllamaCloudProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; readonly route?: "native" | "openai"; }
+./ollama-cloud OllamaCloudProviderOptions	interface OllamaCloudProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly route?: OllamaCloudRoute; }
+./ollama-cloud OllamaCloudProviderPackageOptions	interface OllamaCloudProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./ollama-cloud OllamaCloudRoute	type OllamaCloudRoute = "native" | "openai"
+./ollama-cloud OllamaCloudShowEntry	interface OllamaCloudShowEntry { readonly capabilities?: readonly string[]; readonly details?: JsonObject; readonly model_info?: Readonly<Record<string, unknown>>; readonly thinking?: { readonly values?: readonly JsonValue[]; readonly default?: JsonValue; } | null; }
+./ollama-cloud contextLength	function contextLength(modelInfo: Readonly<Record<string, unknown>> | undefined): number | undefined
+./ollama-cloud createOllamaCloudProvider	function createOllamaCloudProvider(options?: OllamaCloudProviderOptions): ModelProvider
+./ollama-cloud default	const definition: import("@arnilo/prism").PackageDefinition<OllamaCloudProviderConfig>
+./ollama-cloud defineOllamaCloudDecisionModel	function defineOllamaCloudDecisionModel(config: OllamaCloudModelConfig): ModelConfig
+./ollama-cloud defineOllamaCloudModel	function defineOllamaCloudModel(config: OllamaCloudModelConfig): ModelConfig
+./ollama-cloud listOllamaCloudModels	function listOllamaCloudModels(options?: ListOllamaCloudModelsOptions): Promise<ModelConfig[]>
+./ollama-cloud mapOllamaCloudModel	function mapOllamaCloudModel(entry: OllamaCloudModelEntry, show?: OllamaCloudShowEntry, options?: { readonly provider?: string; }): ModelConfig
+./ollama-cloud ollamaCloud	function ollamaCloud(options?: OllamaCloudProviderPackageOptions & OllamaCloudProviderConfig): PackageInstance
+./ollama-cloud ollamaCloudBalance	function ollamaCloudBalance(options?: OllamaCloudBalanceOptions): Promise<OllamaCloudBalance>
+./ollama-cloud ollamaCloudHttpError	function ollamaCloudHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+./ollama-cloud ollamaCloudModels	const ollamaCloudModels: readonly ModelConfig[]
+./ollama-cloud ollamaCloudNativeBody	function ollamaCloudNativeBody(request: ProviderRequest): Promise<OllamaCloudNativePreparedRequest>
+./ollama-cloud ollamaCloudNativeEvents	function ollamaCloudNativeEvents(request: ProviderRequest, options: { readonly id: string; readonly baseUrl: string; readonly apiKey?: Parameters<typeof resolveProviderApiKey>[0]; readonly fetch?: typeof fetch; }): AsyncIterable<ProviderEvent>
+./ollama-cloud ollamaCloudThink	function ollamaCloudThink(request: { readonly model: ModelConfig; readonly options?: { readonly compat?: JsonObject; }; }): boolean | string | undefined
+./ollama-cloud ollamaCloudThinkingIsBoolean	function ollamaCloudThinkingIsBoolean(values: readonly JsonValue[] | undefined): boolean
+./ollama-cloud ollamaCloudThinkingLevels	function ollamaCloudThinkingLevels(values: readonly JsonValue[] | undefined): readonly string[] | undefined
+./ollama-cloud routeForOllamaCloudRequest	function routeForOllamaCloudRequest(request: ProviderRequest, fallback?: OllamaCloudRoute): OllamaCloudRoute
+./ollama-cloud stripJsonFence	function stripJsonFence(text: string): string
+./ollama-cloud thinkingValues	function thinkingValues(model: ModelConfig): readonly JsonValue[] | undefined
+./openai-codex DYNAMIC_AGENT_CLIENT_ID	const DYNAMIC_AGENT_CLIENT_ID = "dynamic_agent_client"
+./openai-codex ListOpenAICodexModelsOptions	interface ListOpenAICodexModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly credential?: string; readonly credentialSource?: OpenAICodexCredentialSlot; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+./openai-codex OPENAI_CODEX_AUTH_ID	const OPENAI_CODEX_AUTH_ID = "openai-codex"
+./openai-codex OPENAI_CODEX_DEFAULT_BASE_URL	const OPENAI_CODEX_DEFAULT_BASE_URL = "https://api.openai.com/v1"
+./openai-codex OPENAI_CODEX_DEFAULT_CALLBACK_PORT	const OPENAI_CODEX_DEFAULT_CALLBACK_PORT = 1455
+./openai-codex OPENAI_CODEX_DEFAULT_CREDENTIAL_REF	const OPENAI_CODEX_DEFAULT_CREDENTIAL_REF = "keyring:openai-codex"
+./openai-codex OPENAI_CODEX_DIRECT_TOKEN_SCOPE	const OPENAI_CODEX_DIRECT_TOKEN_SCOPE = "chatgpt.tokens.use.direct"
+./openai-codex OPENAI_CODEX_ERROR_CLASSES	const OPENAI_CODEX_ERROR_CLASSES: Readonly<Record<string, ProviderFailureClass>>
+./openai-codex OPENAI_CODEX_EXPIRY_MARGIN_MS	const OPENAI_CODEX_EXPIRY_MARGIN_MS = 300000
+./openai-codex OPENAI_CODEX_MODELS_MAX_BODY_BYTES	const OPENAI_CODEX_MODELS_MAX_BODY_BYTES = 2000000
+./openai-codex OPENAI_CODEX_REGISTRATION_MARKER	const OPENAI_CODEX_REGISTRATION_MARKER = "registration-only"
+./openai-codex OPENAI_CODEX_RESPONSES_ROUTE	const OPENAI_CODEX_RESPONSES_ROUTE: RoutedProviderRoute<"openai-responses">
+./openai-codex OPENAI_CODEX_ROUTE	const OPENAI_CODEX_ROUTE = "responses"
+./openai-codex OPENAI_CODEX_SCOPE	const OPENAI_CODEX_SCOPE = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct"
+./openai-codex OPENAI_CODEX_SESSION_ID_MAX_LENGTH	const OPENAI_CODEX_SESSION_ID_MAX_LENGTH = 128
+./openai-codex OpenAICodexAuthError	class OpenAICodexAuthError extends Error { constructor(code: string, message: string); readonly code: string; }
+./openai-codex OpenAICodexAuthMethod	type OpenAICodexAuthMethod = Extract<AuthMethod, { kind: "oauth"; }>
+./openai-codex OpenAICodexCredentialRecord	interface OpenAICodexCredentialRecord { readonly access: string; readonly clientId: string; readonly earliestRefreshAt?: number; readonly expires: number; readonly hostId: string; readonly idToken?: string; readonly refresh: string; readonly scope: string; readonly sub?: string; readonly v: 1; }
+./openai-codex OpenAICodexCredentialSlot	interface OpenAICodexCredentialSlot { delete?(ref: string): Promise<void>; resolve(ref: string): Promise<Secret | undefined>; store?(ref: string, secret: Secret): Promise<void>; }
+./openai-codex OpenAICodexModelConfig	interface OpenAICodexModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: string; readonly reasoning?: JsonObject; }; readonly provider?: "openai-codex"; }
+./openai-codex OpenAICodexModelEntry	interface OpenAICodexModelEntry { readonly auto_compact_token_limit?: number | null; readonly context_window?: number; readonly default_reasoning_level?: string; readonly description?: string; readonly display_name?: string; readonly input_modalities?: readonly string[]; readonly max_context_window?: number; readonly slug: string; readonly supported_in_api?: boolean; readonly supported_reasoning_levels?: readonly (string | { readonly effort?: string; })[]; readonly supports_parallel_tool_calls?: boolean; readonly supports_reasoning_summary_parameter?: boolean; readonly visibility?: string; }
+./openai-codex OpenAICodexOAuthConfig	interface OpenAICodexOAuthConfig { readonly appName?: string; readonly callback?: "listen" | "paste"; readonly callbackPort?: number; readonly credential: string; readonly fetch?: typeof fetch; readonly now?: () => number; readonly signal?: AbortSignal; readonly slot?: OpenAICodexCredentialSlot; }
+./openai-codex OpenAICodexPlanUsageNotGrantedError	class OpenAICodexPlanUsageNotGrantedError extends OpenAICodexAuthError { constructor(message: string); }
+./openai-codex OpenAICodexProviderConfig	interface OpenAICodexProviderConfig { readonly appName?: string; readonly baseUrl?: string; readonly callbackPort?: number; readonly credential?: string; readonly models?: readonly ModelConfig[]; }
+./openai-codex OpenAICodexProviderPackageOptions	interface OpenAICodexProviderPackageOptions { readonly callback?: "listen" | "paste"; readonly fetch?: typeof fetch; readonly id?: string; }
+./openai-codex OpenAICodexReauthorizeError	class OpenAICodexReauthorizeError extends OpenAICodexAuthError { constructor(message: string); }
+./openai-codex OpenAICodexRegistration	interface OpenAICodexRegistration { readonly clientId: string; readonly hostId: string; }
+./openai-codex OpenAICodexRegistrationError	class OpenAICodexRegistrationError extends OpenAICodexAuthError { constructor(message: string); }
+./openai-codex USAGE_LIMIT_NOTE	const USAGE_LIMIT_NOTE = "ChatGPT plan usage limit reached; see ChatGPT Settings \u2192 Usage"
+./openai-codex assertWritableCredentialRef	function assertWritableCredentialRef(ref: string): void
+./openai-codex createOpenAICodexProvider	function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): ModelProvider
+./openai-codex credentialRecordFromSecret	function credentialRecordFromSecret(secret: Secret | undefined): OpenAICodexCredentialRecord | undefined
+./openai-codex credentialRecordToSecret	function credentialRecordToSecret(record: OpenAICodexCredentialRecord): Secret
+./openai-codex credentialRegistrationFromSecret	function credentialRegistrationFromSecret(secret: Secret | undefined): OpenAICodexRegistration | undefined
+./openai-codex credentialRegistrationToSecret	function credentialRegistrationToSecret(registration: OpenAICodexRegistration): Secret
+./openai-codex default	const definition: import("@arnilo/prism").PackageDefinition<OpenAICodexProviderConfig>
+./openai-codex defineOpenAICodexModel	function defineOpenAICodexModel(config: OpenAICodexModelConfig): ModelConfig
+./openai-codex listOpenAICodexModels	function listOpenAICodexModels(options?: ListOpenAICodexModelsOptions): Promise<readonly ModelConfig[]>
+./openai-codex mapOpenAICodexModel	function mapOpenAICodexModel(entry: OpenAICodexModelEntry, provider?: string): ModelConfig
+./openai-codex openAICodexAffinity	function openAICodexAffinity(request: ProviderRequest): Record<string, string>
+./openai-codex openAICodexApiKey	function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal) => Promise<string>
+./openai-codex openAICodexAuth	function openAICodexAuth(config: OpenAICodexOAuthConfig): OpenAICodexAuthMethod
+./openai-codex openAICodexErrorCode	function openAICodexErrorCode(bodyText: string): string | undefined
+./openai-codex openAICodexHttpError	function openAICodexHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+./openai-codex openAICodexImportCredentials	function openAICodexImportCredentials(config: OpenAICodexOAuthConfig): (ctx: AuthContext, record: unknown) => Promise<void>
+./openai-codex openAICodexLogout	function openAICodexLogout(config: OpenAICodexOAuthConfig): (ctx: AuthContext) => Promise<void>
+./openai-codex openAICodexModels	const openAICodexModels: readonly ModelConfig[]
+./openai-codex openAICodexThinkingLevels	function openAICodexThinkingLevels(levels: readonly (string | { readonly effort?: string; })[] | undefined): readonly string[] | undefined
+./openai-codex openaiCodex	function openaiCodex(options?: OpenAICodexProviderPackageOptions & OpenAICodexProviderConfig): PackageInstance
+./opencode-go ListOpenCodeGoModelsOptions	interface ListOpenCodeGoModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+./opencode-go OPENCODE_GO_CHAT_ROUTE	const OPENCODE_GO_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+./opencode-go OPENCODE_GO_DEFAULT_API_KEY_REF	const OPENCODE_GO_DEFAULT_API_KEY_REF = "env:OPENCODE_GO_API_KEY"
+./opencode-go OPENCODE_GO_DEFAULT_BASE_URL	const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
+./opencode-go OPENCODE_GO_MESSAGES_ROUTE	const OPENCODE_GO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+./opencode-go OPENCODE_SESSION_ID_MAX_LENGTH	const OPENCODE_SESSION_ID_MAX_LENGTH = 128
+./opencode-go OpenCodeGoModelConfig	interface OpenCodeGoModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: OpenCodeGoRoute; readonly preserveThinking?: boolean; readonly reasoning_effort?: string; readonly thinking?: boolean | JsonObject; readonly reasoning?: JsonObject; }; readonly provider?: "opencode-go"; }
+./opencode-go OpenCodeGoModelEntry	interface OpenCodeGoModelEntry { readonly capabilities?: { readonly structured_output?: boolean | "json_schema"; }; readonly created?: number; readonly id: string; readonly object?: string; readonly owned_by?: string; }
+./opencode-go OpenCodeGoProviderConfig	interface OpenCodeGoProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; }
+./opencode-go OpenCodeGoProviderOptions	interface OpenCodeGoProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; }
+./opencode-go OpenCodeGoProviderPackageOptions	interface OpenCodeGoProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./opencode-go OpenCodeGoRoute	type OpenCodeGoRoute = "openai" | "anthropic"
+./opencode-go createOpenCodeGoProvider	function createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): RoutedProvider
+./opencode-go default	const definition: import("@arnilo/prism").PackageDefinition<OpenCodeGoProviderConfig>
+./opencode-go defineOpenCodeGoModel	function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
+./opencode-go listOpenCodeGoModels	function listOpenCodeGoModels(options?: ListOpenCodeGoModelsOptions): Promise<ModelConfig[]>
+./opencode-go mapOpenCodeGoModel	function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options?: { readonly provider?: string; }): ModelConfig
+./opencode-go openCodeGoModels	const openCodeGoModels: readonly ModelConfig[]
+./opencode-go openCodeGoThinkingFamily	function openCodeGoThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
+./opencode-go openCodeGoThinkingLevels	function openCodeGoThinkingLevels(modelId: string): readonly string[] | undefined
+./opencode-go opencodeGo	function opencodeGo(options?: OpenCodeGoProviderPackageOptions & OpenCodeGoProviderConfig): PackageInstance
+./opencode-go opencodeSession	function opencodeSession(request: ProviderRequest): Record<string, string>
+./opencode-go routeForOpenCodeGoModel	function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute
+./openrouter ListOpenRouterModelsOptions	interface ListOpenRouterModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly provider?: string; readonly signal?: AbortSignal; }
+./openrouter OPENROUTER_DEFAULT_API_KEY_REF	const OPENROUTER_DEFAULT_API_KEY_REF = "env:OPENROUTER_API_KEY"
+./openrouter OPENROUTER_DEFAULT_BASE_URL	const OPENROUTER_DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
+./openrouter OpenRouterModelEntry	interface OpenRouterModelEntry { readonly architecture?: { readonly input_modalities?: readonly string[]; readonly output_modalities?: readonly string[]; }; readonly context_length?: number; readonly id: string; readonly name?: string; readonly pricing?: Readonly<Record<string, string | number>>; readonly supported_parameters?: readonly string[]; readonly top_provider?: { readonly max_completion_tokens?: number | null; }; }
+./openrouter OpenRouterProviderConfig	interface OpenRouterProviderConfig { readonly apiKey?: string; readonly appTitle?: string; readonly appUrl?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; readonly routing?: OpenRouterRouting; }
+./openrouter OpenRouterProviderOptions	interface OpenRouterProviderOptions { readonly apiKey?: SecretSource; readonly appTitle?: string; readonly appUrl?: string; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly routing?: OpenRouterRouting; }
+./openrouter OpenRouterProviderPackageOptions	interface OpenRouterProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+./openrouter OpenRouterRouting	interface OpenRouterRouting { readonly allow_fallbacks?: boolean; readonly data_collection?: "allow" | "deny"; readonly ignore?: readonly string[]; readonly max_price?: { readonly prompt?: number; readonly completion?: number; readonly request?: number; readonly image?: number; }; readonly only?: readonly string[]; readonly order?: readonly string[]; readonly quantizations?: readonly string[]; readonly require_parameters?: boolean; readonly sort?: "price" | "throughput" | "latency"; readonly zdr?: boolean; }
+./openrouter createOpenRouterProvider	function createOpenRouterProvider(options?: OpenRouterProviderOptions): ModelProvider
+./openrouter default	const definition: import("@arnilo/prism").PackageDefinition<OpenRouterProviderConfig>
+./openrouter listOpenRouterModels	function listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
+./openrouter mapOpenRouterHttpError	function mapOpenRouterHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+./openrouter mapOpenRouterModel	function mapOpenRouterModel(entry: OpenRouterModelEntry, options?: { readonly provider?: string; }): ModelConfig
+./openrouter mapOpenRouterUsage	function mapOpenRouterUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
+./openrouter openRouterModels	const openRouterModels: readonly ModelConfig[]
+./openrouter openrouter	function openrouter(options?: OpenRouterProviderPackageOptions & OpenRouterProviderConfig): PackageInstance
+./openrouter openrouterSession	function openrouterSession(request: ProviderRequest): Record<string, string>
+./typesafe TYPESAFE_API_KEY_ENV	const TYPESAFE_API_KEY_ENV = "TYPESAFE_API_KEY"
+./typesafe TYPESAFE_DEFAULT_API_KEY_REF	const TYPESAFE_DEFAULT_API_KEY_REF = "env:TYPESAFE_API_KEY"
+./typesafe TYPESAFE_DEFAULT_BASE_URL	const TYPESAFE_DEFAULT_BASE_URL = "https://api.typesafe.ai"
+./typesafe TypeSafeModelConfig	interface TypeSafeModelConfig extends Omit<ModelConfig, "provider"> { readonly compat?: JsonObject; readonly provider?: "typesafe"; }
+./typesafe TypeSafeProviderConfig	type TypeSafeProviderConfig = SystemOneProviderConfig
+./typesafe TypeSafeProviderOptions	interface TypeSafeProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly maxRetries?: number; readonly path?: string; readonly warn?: (message: string) => void; }
+./typesafe TypeSafeProviderPackageOptions	type TypeSafeProviderPackageOptions = SystemOneProviderPackageOptions
+./typesafe createTypeSafeProvider	function createTypeSafeProvider(options?: TypeSafeProviderOptions): ModelProvider
+./typesafe default	const _default: import("@arnilo/prism").PackageDefinition<SystemOneProviderConfig>
+./typesafe defineTypeSafeModel	function defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
+./typesafe typeSafeModels	const typeSafeModels: readonly ModelConfig[]
+./typesafe typesafe	function typesafe(options?: TypeSafeProviderPackageOptions & TypeSafeProviderConfig): PackageInstance

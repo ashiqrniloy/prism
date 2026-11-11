@@ -36,7 +36,7 @@ test("the upgraded host runs on 0.13 with the coding tools rooted at root", asyn
     );
     expect(text).toContain("hello from the note");
     expect(text).toContain("upgraded-ok");
-    expect(agent.inspect().packages.map((entry: { name: string }) => entry.name)).toContain("@arnilo/prism-tools-coding");
+    expect(agent.inspect().packages.map((entry: { name: string }) => entry.name)).toContain("@arnilo/prism-tools/coding");
   } finally {
     await agent.dispose();
   }

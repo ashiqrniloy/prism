@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, definePackage } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 
 /**
  * A session survives a process restart on the SQLite store (roadmap Phase 6 Done):
@@ -18,7 +18,7 @@ import { sqliteStore } from "@arnilo/prism-store-sqlite";
  *   state carried across the process boundary.
  *
  * The stand-in package is defined inline with `definePackage` — no internal seam. Imports only
- * `@arnilo/prism`, `@arnilo/prism/testing`, and `@arnilo/prism-store-sqlite`; no credential, no network.
+ * `@arnilo/prism`, `@arnilo/prism/testing`, and `@arnilo/prism-extensions/store-sqlite`; no credential, no network.
  * Run: bun examples/sqlite-resume.ts
  */
 

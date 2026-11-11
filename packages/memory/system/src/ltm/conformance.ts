@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import type { Embedder, VectorStore } from "@arnilo/prism-memory-core";
-import { MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-core";
+import type { Embedder, VectorStore } from "@arnilo/prism-memory-system/core";
+import { MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { createMemory } from "./memory.js";
 
 export interface MemoryConformanceStores {
@@ -255,7 +255,7 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
       threadId: "thread-scan",
       embedder: stores.embedder,
       vectorStore: stores.vectorStore,
-      });
+    });
     const visible = { source: "user", scope: "thread", visible: true } as const;
     await scanned.remember(
       {

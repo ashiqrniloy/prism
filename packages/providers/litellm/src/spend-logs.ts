@@ -126,7 +126,7 @@ function rowsOf(payload: unknown): { data: readonly unknown[]; totalPages?: numb
  * other tenants' rows still yields only its own.
  */
 export async function litellmSpendLogs(options: LiteLLMSpendLogsOptions = {}): Promise<LiteLLMSpendLogsResult> {
-  const provider = options.provider ?? "litellm";
+  const _provider = options.provider ?? "litellm";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? LITELLM_DEFAULT_BASE_URL);
   assertLiteLLMBaseUrl(baseUrl);
   const token = await options.apiKey?.();

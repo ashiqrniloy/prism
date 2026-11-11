@@ -1,6 +1,6 @@
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { defineDataset, defineScorer, estimateOnline, runExperiment, scoreRunLive } from "@arnilo/prism-evals";
-import { createMemoryEvaluationStore } from "@arnilo/prism-store-codecs";
+import { defineDataset, defineScorer, estimateOnline, runExperiment, scoreRunLive } from "@arnilo/prism-hosts/evals";
+import { createMemoryEvaluationStore } from "@arnilo/prism-extensions/store-codecs";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const scorer = defineScorer({

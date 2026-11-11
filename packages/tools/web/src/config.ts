@@ -6,15 +6,7 @@ import type { ObscuraWebLimits } from "./obscura/limits.js";
 import type { WebLimits } from "./types.js";
 
 /** The search/fetch backend the package operates as. `native` is fetch-only and needs no key. */
-export type ToolsWebBackend =
-  | "brave"
-  | "exa"
-  | "firecrawl"
-  | "native"
-  | "obscura"
-  | "searxng"
-  | "tavily"
-  | "kagi";
+export type ToolsWebBackend = "brave" | "exa" | "firecrawl" | "native" | "obscura" | "searxng" | "tavily" | "kagi";
 
 /** The optional second backend used for `web_fetch` when the search backend cannot fetch. */
 export interface ToolsWebFetchConfig {
@@ -73,7 +65,7 @@ export interface ToolsWebExtractConfig {
   readonly schema: JsonObject;
 }
 
-/** Validated `packageConfig` for `@arnilo/prism-tools-web`. */
+/** Validated `packageConfig` for `@arnilo/prism-tools/web`. */
 export interface ToolsWebConfig {
   /** Required; checked in `setup` with a naming error. */
   readonly backend: ToolsWebBackend;

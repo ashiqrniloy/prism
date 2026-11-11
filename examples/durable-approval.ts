@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, type Decision, type ToolResultContent } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 
 /**
  * A suspended approval is resumed in a new process (roadmap Phase 6 Done):
@@ -17,7 +17,7 @@ import { sqliteStore } from "@arnilo/prism-store-sqlite";
  * - B reopens the session, calls `session.resume([{ approvalId, outcome: "allow_once" }])`, and prints
  *   the completed run and the tool result.
  *
- * Imports only `@arnilo/prism`, `@arnilo/prism/testing`, and `@arnilo/prism-store-sqlite`; no credential,
+ * Imports only `@arnilo/prism`, `@arnilo/prism/testing`, and `@arnilo/prism-extensions/store-sqlite`; no credential,
  * no network. Run: bun examples/durable-approval.ts
  */
 

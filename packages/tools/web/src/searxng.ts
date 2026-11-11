@@ -14,13 +14,7 @@ export interface SearxngSearchOptions extends Omit<WebAdapterOptions, "credentia
 }
 
 /** SearXNG has no country parameter and no `week` window; domains join the query as `site:` operators. */
-const SUPPORTS: ReadonlySet<SearchControl> = new Set([
-  "freshness",
-  "includeDomains",
-  "excludeDomains",
-  "language",
-  "offset",
-]);
+const SUPPORTS: ReadonlySet<SearchControl> = new Set(["freshness", "includeDomains", "excludeDomains", "language", "offset"]);
 const VALUES: WebSearchControlValues = { freshness: ["day", "month", "year"] };
 /** SearXNG's `time_range` spellings; only the narrowed values above are ever sent. */
 const FRESHNESS: Readonly<Record<string, string>> = { day: "day", month: "month", year: "year" };
@@ -55,9 +49,16 @@ export function createSearxngSearch(options: SearxngSearchOptions): WebSearchAda
         if (controls.language !== undefined) url.searchParams.set("language", controls.language);
         if (controls.offset !== undefined) url.searchParams.set("pageno", String(controls.offset + 1));
         if (controls.freshness !== undefined) url.searchParams.set("time_range", FRESHNESS[controls.freshness]!);
-        const response = await transport.json("searxng", "api_key", url, { method: "GET", headers: { accept: "application/json" } }, signal, {
-          retry: "idempotent",
-        });
+        const response = await transport.json(
+          "searxng",
+          "api_key",
+          url,
+          { method: "GET", headers: { accept: "application/json" } },
+          signal,
+          {
+            retry: "idempotent",
+          },
+        );
         const metadata = providerFacts(response.value, response.metadata);
         return boundedJson(
           {

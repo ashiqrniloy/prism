@@ -171,7 +171,10 @@ describe("OpenRouter", () => {
       status: 400,
       responseBody: JSON.stringify({ error: { code: 400, message: "context_length_exceeded" } }),
     };
-    const events = await collectProviderEvents(createOpenRouterProvider({ apiKey: async () => secret, fetch: replayFetch([recording]) }), request);
+    const events = await collectProviderEvents(
+      createOpenRouterProvider({ apiKey: async () => secret, fetch: replayFetch([recording]) }),
+      request,
+    );
     assert.equal(errorEvent(events).failureClass, "context_overflow");
     const { openAIOverflowSession } = await import("./overflow-session.js");
     await openAIOverflowSession(recording);
@@ -275,7 +278,8 @@ describe("OpenRouter", () => {
   });
   it("openrouter_discovery_errors_are_bounded_redacted_and_fail_closed", async () => {
     await assert.rejects(
-      () => listOpenRouterModels({ apiKey: async () => secret, fetch: (async () => new Response(secret, { status: 401 })) as typeof fetch }),
+      () =>
+        listOpenRouterModels({ apiKey: async () => secret, fetch: (async () => new Response(secret, { status: 401 })) as typeof fetch }),
       (error: Error) => !error.message.includes(secret) && error.message.includes("401"),
     );
     await assert.rejects(

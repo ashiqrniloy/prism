@@ -1,11 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import {
-  type Message,
-  selectTranscript,
-  type SessionEntry,
-  toolCallContent,
-} from "../index.js";
+import { type Message, selectTranscript, type SessionEntry, toolCallContent } from "../index.js";
 
 let seq = 0;
 const message = (role: Message["role"], text: string, extra: Message["content"] = []): Message => ({
@@ -125,7 +120,10 @@ describe("selectTranscript", () => {
     const slice = selectTranscript(entries([message("user", "go"), call, result]), { maxChars: 100_000, maxToolChars: 40 });
     const json = JSON.stringify(slice.messages);
     assert.equal(json.includes('"tool_call"'), false);
-    assert.equal(slice.messages.some((m) => m.role === "tool"), false);
+    assert.equal(
+      slice.messages.some((m) => m.role === "tool"),
+      false,
+    );
     assert.match(text(slice.messages[1] ?? message("user", "")), /\[tool_call read \{"path":"\/a"\}\]/);
     assert.match(text(slice.messages[2] ?? message("user", "")), /^\[tool_result read: z{40}…\]/);
     assert.equal(slice.messages[2]?.role, "user", "a tool result is a user-role message");

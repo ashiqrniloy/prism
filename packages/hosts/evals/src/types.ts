@@ -1,4 +1,4 @@
-import type { EvaluationTelemetry } from "@arnilo/prism-observability";
+import type { EvaluationTelemetry } from "@arnilo/prism-extensions/observability";
 import type {
   Agent,
   AgentEventRecord,
@@ -223,11 +223,16 @@ export interface OnlineEstimate {
   readonly effectiveN: number;
   readonly mean: number;
   readonly ci95: { readonly low: number; readonly high: number };
-  readonly byStratum: Readonly<Record<string, {
-    readonly n: number;
-    readonly mean: number;
-    readonly weightSum: number;
-  }>>;
+  readonly byStratum: Readonly<
+    Record<
+      string,
+      {
+        readonly n: number;
+        readonly mean: number;
+        readonly weightSum: number;
+      }
+    >
+  >;
 }
 
 export interface ScoreRunOptions<TInput = unknown, TExpected = unknown> {
@@ -365,17 +370,22 @@ export interface ExperimentComparison {
   /** BH correction across all tag/scorer pairs; tags with fewer than two paired items are omitted. */
   readonly byTag?: Readonly<Record<string, ExperimentComparison>>;
   readonly pairedItems: number;
-  readonly scorers: Readonly<Record<string, {
-    readonly baselineMean: number;
-    readonly candidateMean: number;
-    /** Candidate minus baseline. */
-    readonly difference: number;
-    readonly ci95: { readonly low: number; readonly high: number };
-    readonly pValue: number;
-    readonly qValue: number;
-    readonly test: "mcnemar" | "paired_permutation";
-    readonly significant: boolean;
-  }>>;
+  readonly scorers: Readonly<
+    Record<
+      string,
+      {
+        readonly baselineMean: number;
+        readonly candidateMean: number;
+        /** Candidate minus baseline. */
+        readonly difference: number;
+        readonly ci95: { readonly low: number; readonly high: number };
+        readonly pValue: number;
+        readonly qValue: number;
+        readonly test: "mcnemar" | "paired_permutation";
+        readonly significant: boolean;
+      }
+    >
+  >;
 }
 
 export interface TraceLimits {
@@ -444,8 +454,9 @@ export interface RubricJudgeOptions<TInput = unknown, TExpected = unknown> {
   readonly reference?: (item: DatasetItem<TInput, TExpected>) => string | undefined;
   readonly include?: "answer" | "answer+timeline";
   /** Actual candidate model, including any run override. Missing identity fails closed unless allowed. */
-  readonly judgedModel?: Pick<ModelConfig, "provider" | "model"> |
-    ((input: ScorerInput<TInput, TExpected>) => Pick<ModelConfig, "provider" | "model"> | undefined);
+  readonly judgedModel?:
+    | Pick<ModelConfig, "provider" | "model">
+    | ((input: ScorerInput<TInput, TExpected>) => Pick<ModelConfig, "provider" | "model"> | undefined);
   readonly allowSelfJudging?: boolean;
   readonly maxAttempts?: number;
   readonly timeoutMs?: number;
@@ -467,8 +478,11 @@ export interface PairwiseJudgeOptions<TInput = unknown, TExpected = unknown>
   readonly rubric: Pick<JudgeRubric, "id" | "version" | "criteria">;
   readonly allowTie?: boolean;
   /** Actual models for both candidates, including run overrides. Missing identities fail closed unless allowed. */
-  readonly judgedModels?: { readonly left: Pick<ModelConfig, "provider" | "model">; readonly right: Pick<ModelConfig, "provider" | "model"> } |
-    ((input: PairwiseScorerInput<TInput, TExpected>) => { readonly left: Pick<ModelConfig, "provider" | "model">; readonly right: Pick<ModelConfig, "provider" | "model"> } | undefined);
+  readonly judgedModels?:
+    | { readonly left: Pick<ModelConfig, "provider" | "model">; readonly right: Pick<ModelConfig, "provider" | "model"> }
+    | ((
+        input: PairwiseScorerInput<TInput, TExpected>,
+      ) => { readonly left: Pick<ModelConfig, "provider" | "model">; readonly right: Pick<ModelConfig, "provider" | "model"> } | undefined);
 }
 
 export type PairwisePreference = "left" | "right" | "tie";
@@ -541,11 +555,16 @@ export interface RunComparisonOptions<TInput = unknown, TExpected = unknown> {
 }
 
 export interface EvaluationThresholds {
-  readonly calibrations?: Readonly<Record<string, {
-    readonly report: CalibrationReport;
-    readonly minimumKappa: number;
-    readonly minimumN?: number;
-  }>>;
+  readonly calibrations?: Readonly<
+    Record<
+      string,
+      {
+        readonly report: CalibrationReport;
+        readonly minimumKappa: number;
+        readonly minimumN?: number;
+      }
+    >
+  >;
   readonly minimumMacroMean?: number;
   readonly maximumFailures?: number;
   readonly minimumByScorer?: Readonly<Record<string, number>>;
@@ -602,7 +621,9 @@ export interface EvalManifest {
 export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
   readonly agent:
     | import("@arnilo/prism").Agent
-    | ((extra: Pick<import("@arnilo/prism").AgentConfig, "hooks" | "slots"> & { readonly item: DatasetItem<TInput, TExpected> }) => Promise<import("@arnilo/prism").Agent>);
+    | ((
+        extra: Pick<import("@arnilo/prism").AgentConfig, "hooks" | "slots"> & { readonly item: DatasetItem<TInput, TExpected> },
+      ) => Promise<import("@arnilo/prism").Agent>);
   readonly dataset: Dataset<TInput, TExpected>;
   readonly split?: Split | readonly Split[];
   readonly allowHeldout?: boolean;

@@ -1012,7 +1012,7 @@ test("DockerSandboxSession stop cleanly terminates all active child processes", 
 });
 
 test("Integration: ProcessSessions + DockerSandbox with durable recovery and fail-closed unknown", async () => {
-  const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism-workflows");
+  const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism-extensions/workflows");
   const { createProcessSessions, loadProcessRecoveryRecord, resolveProcessRecoveryLimits } = await import("../../agent/process/index.js");
 
   await withTempDocker(async (dockerPath, sourceRoot) => {

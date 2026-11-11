@@ -15,7 +15,7 @@ import {
   type SessionEntry,
   toolCallContent,
 } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { fitInjection } from "../../excerpt.js";
 import { createMemory, createLongTermMemory, type MemoryFabric, parseMemoryNoteMetadata } from "../../../index.js";
 import { resolvePromoteConfig } from "../../promote.js";

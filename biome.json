@@ -90,7 +90,7 @@
       }
     },
     {
-      "includes": ["packages/integrations/mcp/src/**"],
+      "includes": ["packages/extensions/mcp/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -130,7 +130,7 @@
       }
     },
     {
-      "includes": ["packages/context/engineering/src/**"],
+      "includes": ["packages/extensions/context-engineering/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -180,7 +180,7 @@
       }
     },
     {
-      "includes": ["packages/policy/governance/src/**"],
+      "includes": ["packages/extensions/governance/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -230,7 +230,7 @@
       }
     },
     {
-      "includes": ["packages/memory/compaction/src/**"],
+      "includes": ["packages/extensions/compaction/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -260,7 +260,7 @@
       }
     },
     {
-      "includes": ["packages/drivers/process/src/**"],
+      "includes": ["packages/hosts/driver-process/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -310,7 +310,7 @@
       }
     },
     {
-      "includes": ["packages/integrations/observability/src/**"],
+      "includes": ["packages/extensions/observability/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -320,7 +320,7 @@
       }
     },
     {
-      "includes": ["packages/integrations/workflows/src/**"],
+      "includes": ["packages/extensions/workflows/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -330,7 +330,7 @@
       }
     },
     {
-      "includes": ["packages/policy/guardrail-packs/src/**"],
+      "includes": ["packages/extensions/guardrail-packs/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -340,7 +340,7 @@
       }
     },
     {
-      "includes": ["packages/policy/model-router/src/**"],
+      "includes": ["packages/extensions/model-router/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -350,7 +350,7 @@
       }
     },
     {
-      "includes": ["packages/stores/codecs/src/**"],
+      "includes": ["packages/extensions/store-codecs/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -374,6 +374,19 @@
         "rules": {
           "style": {
             "noNonNullAssertion": "error"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/tools/web/src/__tests__/fixtures/article.html"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noScriptUrl": "off"
+          },
+          "a11y": {
+            "useValidAnchor": "off"
           }
         }
       }

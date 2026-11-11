@@ -11,8 +11,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { applyThinkingLevelForModel, openAIChatBody, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
-import { HYPER_CHAT_ROUTE, hyperModels } from "@arnilo/prism-provider-hyper";
-import { OPENCODE_GO_CHAT_ROUTE, openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
+import { HYPER_CHAT_ROUTE, hyperModels } from "@arnilo/prism-ai/hyper";
+import { OPENCODE_GO_CHAT_ROUTE, openCodeGoModels } from "@arnilo/prism-ai/opencode-go";
 
 /** Reasoning-capable models that must receive NO compat at all despite the core heuristic. */
 const PASSTHROUGH = new Set();
@@ -119,7 +119,10 @@ describe("thinking conformance: wire fields via body builders", () => {
             assert.equal(typeof value, "string", `${id}: ${kind} must be a string`);
             continue;
           }
-          assert.ok(levels.includes(String(value)), `${id}: level ${level} produced illegal ${kind}=${String(value)} (declared: ${levels.join("|")})`);
+          assert.ok(
+            levels.includes(String(value)),
+            `${id}: level ${level} produced illegal ${kind}=${String(value)} (declared: ${levels.join("|")})`,
+          );
         }
 
         // Illegal value must snap into the declared set, never leak verbatim.

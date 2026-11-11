@@ -1,5 +1,7 @@
 # Phase 11 Part O23 — The wiki outside memory: the ontology over long-term memory, panel calibration, development screen
 
+> **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
+
 ## Objectives
 
 - Finish the wiki as a knowledge package outside memory (owner, 2026-11-08: "It should be part of the wiki and not memory"). Plan 216 Task 3 moved the ontology out of the fabric. This plan settles the wiki on the *final* long-term memory:

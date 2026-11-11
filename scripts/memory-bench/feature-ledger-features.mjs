@@ -75,7 +75,7 @@ const ST = "scripts/memory-bench/safety/safety.test.mjs";
 
 const FABRIC = "@arnilo/prism-memory-system";
 const OM = "@arnilo/prism-memory-system";
-const WIKI = "@arnilo/prism-wiki";
+const WIKI = "@arnilo/prism-knowledge/wiki";
 
 const free = { modelCalls: "0", writes: "0", tokens: "0" };
 
@@ -1287,7 +1287,14 @@ export const FEATURES = [
     group: "om",
     name: 'OM dropper, policy "model"',
     owner: OM,
-    config: ["om:rehearsal", "om:rehearsal.model", "om:rehearsal.targetTokens", "om:rehearsal.policy", "om:rehearsal.instruction", "om:rehearsal.thinkingLevel"],
+    config: [
+      "om:rehearsal",
+      "om:rehearsal.model",
+      "om:rehearsal.targetTokens",
+      "om:rehearsal.policy",
+      "om:rehearsal.instruction",
+      "om:rehearsal.thinkingLevel",
+    ],
     defaultRef: "observational.rehearsal",
     cost: { modelCalls: "1 pass under pool pressure", writes: "drop records", tokens: "active observations in" },
     roles: ["cost"],
@@ -1500,7 +1507,7 @@ export const FEATURES = [
     id: "okf.forward-compat",
     group: "safety",
     name: "Notes written by a newer version (unknown keys kept, unreadable notes kept)",
-    owner: "@arnilo/prism-memory-core",
+    owner: "@arnilo/prism-memory-system/core",
     cost: free,
     roles: ["compatibility", "inspectability"],
     evidence: [],
@@ -1896,8 +1903,8 @@ export const MANDATORY_CANDIDATE_TASKS = [6, 7, 8, 9, 10, 11, 12];
 
 /** Out of scope for this plan, listed so their absence is explicit. */
 export const EXCLUDED = [
-  { package: "@arnilo/prism-rag", reason: "document retrieval, a separate capability the owner keeps outside memory" },
-  { package: "@arnilo/prism-memory-compaction", reason: "measured by plan 194's rot curve" },
+  { package: "@arnilo/prism-knowledge/rag", reason: "document retrieval, a separate capability the owner keeps outside memory" },
+  { package: "@arnilo/prism-extensions/compaction", reason: "measured by plan 194's rot curve" },
 ];
 
 /** Features earlier plans listed for this ledger at their plan end. Each maps to row ids. */

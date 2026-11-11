@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { join } from "node:path";
 import { describe, it } from "bun:test";
 import { systemOneConformance } from "@arnilo/prism/provider-kit";
 import {
@@ -11,7 +10,7 @@ import {
   layaModels,
 } from "../index.js";
 
-describe("@arnilo/prism-provider-laya", () => {
+describe("@arnilo/prism-ai/laya", () => {
   it("laya_passes_systemone_conformance", async () => {
     const recordings = new URL("wire/systemone", import.meta.url);
     const result = await systemOneConformance({
@@ -41,7 +40,14 @@ describe("@arnilo/prism-provider-laya", () => {
       [512, 1024, 1024],
     );
     assert.ok(layaModels.every((entry) => entry.limits?.maxOutputTokens === 0));
-    assert.ok(layaModels.every((entry) => entry.capabilities?.structuredOutput === "json_schema" && entry.capabilities.tools === false && entry.capabilities.decisions === true));
+    assert.ok(
+      layaModels.every(
+        (entry) =>
+          entry.capabilities?.structuredOutput === "json_schema" &&
+          entry.capabilities.tools === false &&
+          entry.capabilities.decisions === true,
+      ),
+    );
     assert.equal(layaModels[1]?.metadata?.extendedContextWindow, 8192);
     assert.ok(layaModels.every((entry) => entry.cost?.input === 0 && entry.cost.output === 0));
 

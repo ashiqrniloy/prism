@@ -1,5 +1,5 @@
 import type { AgentEvent, ToolResult } from "@arnilo/prism";
-import type { McpAppsBridge, McpToolBridge } from "@arnilo/prism-mcp";
+import type { McpAppsBridge, McpToolBridge } from "@arnilo/prism-extensions/mcp";
 import type { ParsedAgUiInput } from "./input.js";
 import type { AgUiActivitySnapshot } from "./projection.js";
 import type { AgUiAuthorization } from "./types.js";

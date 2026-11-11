@@ -1,4 +1,4 @@
-import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-extensions/workflows";
 import { unlinkSync } from "node:fs";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
@@ -10,8 +10,8 @@ import {
   resumeWorkflow,
   runWorkflow,
   type WorkflowRunResult,
-} from "@arnilo/prism-workflows";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+} from "@arnilo/prism-extensions/workflows";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // SQLite durable checkpoint, abort, and resume. A two-node workflow writes

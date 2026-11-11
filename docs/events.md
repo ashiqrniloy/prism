@@ -32,7 +32,7 @@ event's own `sessionId`/`runId`, and the redactor runs over every event as befor
 
 ### Remote attribution
 
-`connectAgent` from `@arnilo/prism-remote` preserves each forwarded event's catalog type. An event without an origin gains `{ kind: "prism", agent, agentId, remote: endpointId, depth: 0 }` from the served agent. An existing origin retains its fields and gains `remote` only when absent: the innermost endpoint wins across multiple hops.
+`connectAgent` from `@arnilo/prism-hosts/remote` preserves each forwarded event's catalog type. An event without an origin gains `{ kind: "prism", agent, agentId, remote: endpointId, depth: 0 }` from the served agent. An existing origin retains its fields and gains `remote` only when absent: the innermost endpoint wins across multiple hops.
 
 Every forwarded `tool.*` event sets `origin.executedBy: "external"`, including origins whose `kind` is `"prism"`. The remote agent ran its own tool gate; the connecting host's `tool.call` hook never fires for that activity. `remote` identifies the endpoint, while `executedBy` identifies execution relative to the connecting host. Neither changes the event's session or run id.
 

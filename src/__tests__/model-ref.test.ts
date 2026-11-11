@@ -47,8 +47,23 @@ describe("ModelRef", () => {
   });
 
   it("model_ref_rejects_empty_parts_and_literal_credential", () => {
-    for (const bad of ["", "mock", "/m", "p/", " /m", { provider: "", model: "m" }, { provider: 1, model: "m" }, { provider: "p", model: "" }, null, 3]) {
-      assert.throws(() => parseModelRef(bad as never), (e) => e instanceof ModelRefError && e.code === "model_ref_invalid", String(JSON.stringify(bad)));
+    for (const bad of [
+      "",
+      "mock",
+      "/m",
+      "p/",
+      " /m",
+      { provider: "", model: "m" },
+      { provider: 1, model: "m" },
+      { provider: "p", model: "" },
+      null,
+      3,
+    ]) {
+      assert.throws(
+        () => parseModelRef(bad as never),
+        (e) => e instanceof ModelRefError && e.code === "model_ref_invalid",
+        String(JSON.stringify(bad)),
+      );
     }
     assert.throws(() => parseModelRef({ provider: "p", model: "m", credential: LITERAL }), ModelRefError);
     assert.throws(() => parseModelRef({ provider: "p", model: "m", baseUrl: "" }), ModelRefError);
@@ -72,7 +87,10 @@ describe("ModelRef", () => {
   it("run_options_model_accepts_string_ref", async () => {
     const mock = recorder("mock");
     const other = recorder("other");
-    const agent = await createAgent({ model: "mock/demo", packages: [providerPackage("test-provider", [{ id: "mock", generate: (r) => mock.generate(r) }])] });
+    const agent = await createAgent({
+      model: "mock/demo",
+      packages: [providerPackage("test-provider", [{ id: "mock", generate: (r) => mock.generate(r) }])],
+    });
     assert.equal(agent.config.model?.provider, "mock");
     const session = await agent.session();
     // Fixed provider still wins until Task 5 retires it; the parsed model reaches the request either way.
@@ -85,13 +103,23 @@ describe("ModelRef", () => {
   it("model_provider_type_has_exactly_the_documented_members", () => {
     const provider: ModelProvider = {
       id: "p",
-      auth: [{ kind: "api-key", ref: "env:K" }, { kind: "oauth", id: "o", login: async () => {} }],
+      auth: [
+        { kind: "api-key", ref: "env:K" },
+        { kind: "oauth", id: "o", login: async () => {} },
+      ],
       async *generate() {},
       async models() {
         return [];
       },
     };
-    const members: Record<keyof ModelProvider, true> = { id: true, auth: true, generate: true, models: true, embeddings: true, decisions: true };
+    const members: Record<keyof ModelProvider, true> = {
+      id: true,
+      auth: true,
+      generate: true,
+      models: true,
+      embeddings: true,
+      decisions: true,
+    };
     assert.deepEqual(Object.keys(members).sort(), ["auth", "decisions", "embeddings", "generate", "id", "models"]);
     assert.equal(provider.auth?.length, 2);
   });

@@ -59,7 +59,15 @@ export const SCREEN208_MODELS = Object.freeze([
   { key: "beamfree", provider: "opencode-go", model: "beam-free", family: "reflection", small: false, ontologySettleMs: 600_000 },
   // Owner, 2026-11-04 (gate amendment 11, no USD cap): the trigger-policy arms run on a fast paid model, in parallel, because
   // they were the longest part of the screen on the Kilo free model. Series arms only; no P or P+O pair.
-  { key: "muse", provider: "commandcode", model: "meta/muse-spark-1.2-contributor", family: "meta", small: false, paid: true, seriesOnly: true },
+  {
+    key: "muse",
+    provider: "commandcode",
+    model: "meta/muse-spark-1.2-contributor",
+    family: "meta",
+    small: false,
+    paid: true,
+    seriesOnly: true,
+  },
 ]);
 /** The models that read `P` against `P+O` (O1, O2, O5, O7). */
 export const SCREEN208_PAIRED_MODELS = Object.freeze(SCREEN208_MODELS.filter((model) => !model.seriesOnly));
@@ -71,7 +79,9 @@ export const SCREEN208_SERIES_MODEL = SCREEN208_MODELS.find((model) => model.ser
  */
 export const SCREEN208_JUDGES = Object.freeze(["commandcode/stealth/glyph-cluster:free", "commandcode/stealth/crouton-alpha"]);
 /** A paid answer model runs only when an owner amendment names it with a USD cap (gate amendment 6). */
-export const SCREEN208_PAID_ANSWERS = Object.freeze(SCREEN208_MODELS.filter((model) => model.paid).map((model) => `${model.provider}/${model.model}`));
+export const SCREEN208_PAID_ANSWERS = Object.freeze(
+  SCREEN208_MODELS.filter((model) => model.paid).map((model) => `${model.provider}/${model.model}`),
+);
 /** Questions per job in the quick first read: a balanced prefix (round-robin by ability), reused by the full run. */
 export const SCREEN208_QUICK_QUESTIONS = Object.freeze({ "memoryagentbench-cr": 8, "beam-100k": 10, locomo: 10 });
 /** Smallest first, so a partial run still answers something. */
@@ -167,7 +177,8 @@ export function assertScreen208Jobs(jobs) {
     if (job.subset !== SCREEN208_PARTITION || ROBUSTNESS_PARTITIONS.filter((name) => name.startsWith("heldout")).includes(job.subset))
       throw new Error(`Screen208Partition: ${job.id} reads ${job.subset}; plan 208 reads ${SCREEN208_PARTITION} only`);
     const paid = SCREEN208_PAID_ANSWERS.includes(`${job.provider}/${job.model}`);
-    const freeRoute = job.provider === "kilo" || (job.provider === "opencode-go" && isFreeBenchmarkModel({ provider: job.provider, model: job.model }));
+    const freeRoute =
+      job.provider === "kilo" || (job.provider === "opencode-go" && isFreeBenchmarkModel({ provider: job.provider, model: job.model }));
     if (paid ? job.freeOnly : !job.freeOnly || !freeRoute)
       throw new Error(`Screen208Billing: ${job.id} is not a free Kilo or OpenCode Go job or a named paid answer model`);
   }
@@ -221,7 +232,13 @@ export async function buildScreen208Manifest({ root = "." } = {}) {
         crossProviderClaim: false,
       },
       // Free routes stay $0; the one paid answer model (the small slot) is bounded by the USD cap its owner amendment sets.
-      billing: { mode: "free-plus-named-paid", provider: "kilo", freeProductsOnly: false, paidFallbacks: [], paidAnswers: [...SCREEN208_PAID_ANSWERS] },
+      billing: {
+        mode: "free-plus-named-paid",
+        provider: "kilo",
+        freeProductsOnly: false,
+        paidFallbacks: [],
+        paidAnswers: [...SCREEN208_PAID_ANSWERS],
+      },
       arms: SCREEN208_ARMS.map((arm) => arm.id),
       warmup: SCREEN208_WARMUP,
       cohort: screen208Cohort(),
@@ -272,9 +289,7 @@ export function assertScreen208Gate(gate, manifest) {
       // An owner may also state "no cap" outright (`uncapped: true`); the per-job input cap and the journal ceiling still bound the work.
       .map((item) => [item.paidAnswer.ref, item.paidAnswer.uncapped === true ? Number.POSITIVE_INFINITY : Number(item.paidAnswer.usdCap)]),
   );
-  const freeRefs = new Set(
-    (gate.amendments ?? []).filter((item) => item.by === "owner").flatMap((item) => item.freeAnswers ?? []),
-  );
+  const freeRefs = new Set((gate.amendments ?? []).filter((item) => item.by === "owner").flatMap((item) => item.freeAnswers ?? []));
   for (const job of manifest.jobs) {
     const ref = `${job.provider}/${job.model}`;
     if (job.freeOnly && job.provider === "kilo") continue;
@@ -426,12 +441,21 @@ export async function buildExecutableScreen208Manifest({
  * Command Code's catalog carries no prices, so a row is free only by its id (`:free`, `-free`) or the owner-named
  * preview list, and a paid row runs only when the manifest names it as a paid answer model.
  */
-export async function readCommandCodePanel({ refs = [], paidAnswers = [], baseUrl = "https://api.commandcode.ai/provider/v1", fetchImpl = fetch, catalog } = {}) {
+export async function readCommandCodePanel({
+  refs = [],
+  paidAnswers = [],
+  baseUrl = "https://api.commandcode.ai/provider/v1",
+  fetchImpl = fetch,
+  catalog,
+} = {}) {
   let rows = catalog;
   if (!rows) {
     const key = process.env.COMMAND_CODE_API_KEY;
     if (!key) throw new Error("Screen208Preflight: COMMAND_CODE_API_KEY is not set (load ~/.config/prism/live.env)");
-    const response = await fetchImpl(`${baseUrl}/models`, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(30_000) });
+    const response = await fetchImpl(`${baseUrl}/models`, {
+      headers: { authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(30_000),
+    });
     if (!response.ok) throw new Error(`Screen208Preflight: GET ${baseUrl}/models returned ${response.status}`);
     rows = (await response.json())?.data;
   }
@@ -443,7 +467,11 @@ export async function readCommandCodePanel({ refs = [], paidAnswers = [], baseUr
     if (!row) throw new Error(`Screen208Preflight: ${ref} is not in the Command Code catalog`);
     if (!isFreeBenchmarkModel({ provider: "commandcode", model }) && !paidAnswers.includes(ref))
       throw new Error(`Screen208Preflight: ${ref} is neither free nor a named paid answer model`);
-    if (row.supported_endpoints && !row.supported_endpoints.includes("/chat/completions") && !row.supported_endpoints.includes("/responses"))
+    if (
+      row.supported_endpoints &&
+      !row.supported_endpoints.includes("/chat/completions") &&
+      !row.supported_endpoints.includes("/responses")
+    )
       throw new Error(`Screen208Preflight: ${ref} serves no chat route`);
     return { ref, contextWindow: row.context_length ?? null, paid: paidAnswers.includes(ref) };
   });
@@ -458,7 +486,10 @@ export async function readOpenCodeGoPanel({ refs = [], baseUrl = "https://openco
   if (!rows) {
     const key = process.env.OPENCODE_GO_API_KEY ?? process.env.OPENCODE_API_KEY;
     if (!key) throw new Error("Screen208Preflight: OPENCODE_GO_API_KEY is not set (load ~/.config/prism/live.env)");
-    const response = await fetchImpl(`${baseUrl}/models`, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(30_000) });
+    const response = await fetchImpl(`${baseUrl}/models`, {
+      headers: { authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(30_000),
+    });
     if (!response.ok) throw new Error(`Screen208Preflight: GET ${baseUrl}/models returned ${response.status}`);
     rows = (await response.json())?.data;
   }
@@ -487,7 +518,12 @@ export async function preflightScreen208(manifest, options = {}) {
   const unknown = refs.filter((ref) => !["kilo/", "openrouter/", "commandcode/", "opencode-go/"].some((prefix) => ref.startsWith(prefix)));
   if (unknown.length) throw new Error(`Screen208Preflight: no catalog check for ${unknown.join(", ")}`);
   const record = { kind: "208-free-panel", checkedAt: new Date().toISOString(), provider: "kilo", panel: [] };
-  if (of("kilo").length) record.panel = await readKiloFreePanel({ refs: of("kilo"), ...(options.catalog ? { catalog: options.catalog } : {}), ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}) });
+  if (of("kilo").length)
+    record.panel = await readKiloFreePanel({
+      refs: of("kilo"),
+      ...(options.catalog ? { catalog: options.catalog } : {}),
+      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+    });
   if (of("openrouter").length) {
     const routedPanel = await readKiloFreePanel({ refs: of("openrouter"), baseUrl: "https://openrouter.ai/api/v1", ...options.routed });
     // The key's allowance is read, never spent: the free allowance is what bounds this route.
@@ -497,7 +533,11 @@ export async function preflightScreen208(manifest, options = {}) {
     record.route = { provider: "openrouter", panel: routedPanel, dailyFreeRequests: key.dailyFreeRequests, paidTier: key.paidTier };
   }
   if (of("commandcode").length)
-    record.commandcode = await readCommandCodePanel({ refs: of("commandcode"), paidAnswers: manifest.billing?.paidAnswers ?? [], ...options.commandcode });
+    record.commandcode = await readCommandCodePanel({
+      refs: of("commandcode"),
+      paidAnswers: manifest.billing?.paidAnswers ?? [],
+      ...options.commandcode,
+    });
   if (of("opencode-go").length) record.opencodeGo = await readOpenCodeGoPanel({ refs: of("opencode-go"), ...options.opencodeGo });
   return record;
 }

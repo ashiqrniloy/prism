@@ -211,11 +211,11 @@ describe("agent.inspect()", () => {
     // A sample across families: every package definition reads its own manifest, so a version bump is
     // one edit and inspect() can never report the retired lockstep literal again.
     const sample = [
-      ["@arnilo/prism-store-jsonl", "packages/stores/jsonl"],
-      ["@arnilo/prism-memory-compaction", "packages/memory/compaction"],
-      ["@arnilo/prism-context-files", "packages/context/files"],
-      ["@arnilo/prism-rag", "packages/knowledge/rag"],
-      ["@arnilo/prism-hooks-json", "packages/integrations/hooks-json"],
+      ["@arnilo/prism-extensions/store-jsonl", "packages/extensions"],
+      ["@arnilo/prism-extensions/compaction", "packages/extensions"],
+      ["@arnilo/prism-extensions/context-files", "packages/extensions"],
+      ["@arnilo/prism-knowledge/rag", "packages/knowledge"],
+      ["@arnilo/prism-extensions/hooks-json", "packages/extensions"],
     ] as const;
     const definitions = [];
     for (const [name] of sample) definitions.push((await import(name)).default({}, { optional: true }));
@@ -223,7 +223,7 @@ describe("agent.inspect()", () => {
     const reported = new Map(agent.inspect().packages.map((entry) => [entry.name, entry.version]));
     for (const [name, dir] of sample) {
       const manifest = JSON.parse(readFileSync(join(root, dir, "package.json"), "utf8"));
-      assert.equal(manifest.name, name);
+      assert.equal(manifest.name, name.split("/").slice(0, 2).join("/"));
       assert.equal(reported.get(name), manifest.version, `${name} must report its package.json version`);
       assert.notEqual(manifest.version, "0.12.1", `${name} must not be pinned to the retired lockstep`);
     }

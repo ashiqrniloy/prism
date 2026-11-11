@@ -58,7 +58,7 @@ const configSchema: JsonSchema = {
 };
 function definitionFor(options: OpenRouterProviderPackageOptions) {
   return defineProviderPackage<OpenRouterProviderConfig>({
-    name: "@arnilo/prism-provider-openrouter",
+    name: "@arnilo/prism-ai/openrouter",
     description: "OpenRouter provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {

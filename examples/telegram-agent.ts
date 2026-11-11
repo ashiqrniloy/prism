@@ -10,12 +10,9 @@ import {
   createTelegramWebhookHandler,
   type TelegramWebhookHandler,
   type TelegramWebhookHandlerOptions,
-} from "@arnilo/prism-channels/telegram";
+} from "@arnilo/prism-hosts/channels/telegram";
 
-export async function startTelegramChannel(
-  agent: Agent,
-  options: TelegramConnectOptions,
-): Promise<ChannelConnectionHandle> {
+export async function startTelegramChannel(agent: Agent, options: TelegramConnectOptions): Promise<ChannelConnectionHandle> {
   const handle = await connectTelegram(agent, options);
   await handle.start();
   return handle;

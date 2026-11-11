@@ -1,2 +1,0 @@
-. default	const definition: import("@arnilo/prism").PackageDefinition<ToolsResearchConfig>
-. toolsResearch	function toolsResearch(config?: ToolsResearchConfig): PackageInstance

@@ -1,5 +1,5 @@
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { type ResolvedMemoryWorkerLimits, resolveMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
 import { resolveConsolidationThreshold } from "./consolidate.js";
 import type { CreateMemoryFabricOptions } from "./types.js";
 

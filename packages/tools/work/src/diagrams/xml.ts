@@ -36,14 +36,14 @@ export function assertNotVisio(input: string | Uint8Array): void {
         }
       }
       if (isOle) {
-        throw new DiagramsFormatError("Visio binary format (.vsd) is excluded and unsupported in @arnilo/prism-tools-work (P12)");
+        throw new DiagramsFormatError("Visio binary format (.vsd) is excluded and unsupported in @arnilo/prism-tools/work (P12)");
       }
     }
     // Check for ZIP container containing Visio markers (.vsdx)
     if (input.length >= 4 && input[0] === 0x50 && input[1] === 0x4b && input[2] === 0x03 && input[3] === 0x04) {
       const headerSample = Buffer.from(input.subarray(0, Math.min(input.length, 4096))).toString("utf8");
       if (headerSample.includes("visio/") || headerSample.includes("Visio") || headerSample.includes("drawing.xml")) {
-        throw new DiagramsFormatError("Visio OpenXML format (.vsdx) is excluded and unsupported in @arnilo/prism-tools-work (P12)");
+        throw new DiagramsFormatError("Visio OpenXML format (.vsdx) is excluded and unsupported in @arnilo/prism-tools/work (P12)");
       }
     }
   }
@@ -56,7 +56,7 @@ export function assertNotVisio(input: string | Uint8Array): void {
     text.includes("Visio.Drawing") ||
     text.includes("application/vnd.ms-visio")
   ) {
-    throw new DiagramsFormatError("Visio format (.vsd/.vsdx) is excluded and unsupported in @arnilo/prism-tools-work (P12)");
+    throw new DiagramsFormatError("Visio format (.vsd/.vsdx) is excluded and unsupported in @arnilo/prism-tools/work (P12)");
   }
 }
 

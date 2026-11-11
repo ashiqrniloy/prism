@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Agent, ApprovalOutcome, Decision, JsonObject, Message, PendingDecision, RunResult, Session } from "@arnilo/prism";
-import { McpBridgeError } from "@arnilo/prism-mcp";
+import { McpBridgeError } from "@arnilo/prism-extensions/mcp";
 import {
   acceptedContent,
   type CallToolResult,
@@ -17,7 +17,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod/v4";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 import { bounded, truncateUtf8 } from "./bounds.js";
 import { createPrismMcpWebHandler, servePrismMcpStdio } from "./server.js";
 import { bindMcpSession, type ElicitRequest, type ElicitResult, isMcpHost, unbindMcpSession } from "./session-map.js";

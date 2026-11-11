@@ -1,7 +1,7 @@
 /**
  * Shared diff computation utilities for the edit and similar tools.
  *
- * Behavioral port of pi's core/tools/edit-diff for @arnilo/prism-tools-coding.
+ * Behavioral port of pi's core/tools/edit-diff for @arnilo/prism-tools/coding.
  * The `diff` package provides unified-patch / display-diff generation.
  * Exact matching, BOM/line-ending handling and the changed-line preview are
  * dep-free.
@@ -41,7 +41,9 @@ function applyReplacements(content: string, replacements: TextReplacement[]): st
   for (let i = replacements.length - 1; i >= 0; i--) {
     const replacement = replacements[i];
     result =
-      result.substring(0, replacement.matchIndex) + replacement.newText + result.substring(replacement.matchIndex + replacement.matchLength);
+      result.substring(0, replacement.matchIndex) +
+      replacement.newText +
+      result.substring(replacement.matchIndex + replacement.matchLength);
   }
   return result;
 }
@@ -338,12 +340,7 @@ export interface ChangedLinePreview {
  * `contextLines` lines either side of each region, at most `maxLines` lines
  * total. `more` counts the changed lines the cap left out.
  */
-export function generateChangedLinePreview(
-  oldContent: string,
-  newContent: string,
-  contextLines = 2,
-  maxLines = 40,
-): ChangedLinePreview {
+export function generateChangedLinePreview(oldContent: string, newContent: string, contextLines = 2, maxLines = 40): ChangedLinePreview {
   const parts = Diff.diffLines(oldContent, newContent) as DiffPart[];
   const changed: number[] = [];
   let newLineNumber = 1;

@@ -1,5 +1,5 @@
 {
-  "criteriaHash": "b0030044c398378647846ed932d87caf28563cd8bea5395e9a41dd47e2c129c5",
+  "criteriaHash": "5dd9024de4fae437d8a949a80aced3abb6ed87c04a2a48d98ca43613904a5c07",
   "datasets": {
     "web-research": "sha256:3bf1f78e3f902196492bc54cef2ae2f0cb2c30c40dede880d9e875819c4d3c91",
     "coding-workflow": "sha256:2389d66e275154be4fdb177f03cf3be3208539e4191f8ac297e83a22789746a4",
@@ -12,6 +12,6 @@
     "browser-automation": "sha256:0b0b4a52e6b72e118c5166170800534aa3562ca453eb792265e4fba661d6eee8",
     "delegating-work": "sha256:c5e83076059794e2434f0babb90646fb6934fc7ea46eb25801892f26bdcc880c"
   },
-  "registeredAt": "2026-11-06T18:15:31.409Z",
-  "gitHead": "9bc0db1e9ebc51768f6bad57c0a0d9ef4fe76aa8"
+  "registeredAt": "2026-11-11T10:32:15.029Z",
+  "gitHead": "c8d97b33606ceaae0fc2a4a3f8a3275b62d27743"
 }

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cohensKappa, fleissKappa } from "@arnilo/prism-evals";
+import { cohensKappa, fleissKappa } from "@arnilo/prism-hosts/evals";
 import { stableHash } from "./journal.mjs";
 import prompts from "./judge-prompts.json" with { type: "json" };
 

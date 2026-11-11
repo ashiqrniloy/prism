@@ -1,7 +1,7 @@
 // Semantic memory with a hash embedder: remember, recall with adjacent entries, and context injection.
 // Long-term working memory was retired in 0.13.0 (plan 216 Task 7); the memory system's WM component replaces it.
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createHashEmbedder } from "@arnilo/prism-memory-core";
+import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
 import { createMemory } from "@arnilo/prism-memory-system";
 import { mockProvider } from "@arnilo/prism/testing";
 

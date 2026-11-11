@@ -34,12 +34,12 @@ jobs:
         run: bun run build:core
       - name: network-free adversarial eval fixtures
         run: |
-          bun run --filter @arnilo/prism-tools-coding test -- --test-name-pattern "adversarial"
-          bun run --filter @arnilo/prism-tools-browser test -- --test-name-pattern "adversarial"
+          bun --cwd packages/tools/coding test --timeout=0 src --test-name-pattern "adversarial"
+          bun --cwd packages/tools/browser test --timeout=0 src --test-name-pattern "adversarial"
       - name: sandbox isolation + egress denial legs (network-free)
         run: |
-          bun run --filter @arnilo/prism-tools-coding test -- --test-name-pattern "egress|dns pin"
-          bun run --filter @arnilo/prism-tools-browser test -- --test-name-pattern "browser Task 6 policy"
+          bun --cwd packages/tools/coding test --timeout=0 src --test-name-pattern "egress|dns pin"
+          bun --cwd packages/tools/browser test --timeout=0 src --test-name-pattern "browser Task 6 policy"
       - name: protected Docker sandbox matrix
         if: ${{ vars.PRISM_TEST_DOCKER_IMAGE != '' }}
         timeout-minutes: 5
@@ -48,12 +48,12 @@ jobs:
           PRISM_TEST_DOCKER_BIN: /usr/bin/docker
           PRISM_TEST_DOCKER_IMAGE: ${{ vars.PRISM_TEST_DOCKER_IMAGE }}
           PRISM_TEST_DOCKER_USER: ${{ vars.PRISM_TEST_DOCKER_USER }}
-        run: bun run --filter @arnilo/prism-tools-coding test -- --test-name-pattern "protected Docker"
+        run: bun --cwd packages/tools/coding test --timeout=0 src --test-name-pattern "protected Docker"
       - name: native sandbox capability evidence (plan 020 Task 5)
         timeout-minutes: 5
         run: |
           set +e
-          out=$(bun run --filter @arnilo/prism-tools-coding test -- --test-name-pattern "T9: native reports truthful capabilities" 2>&1)
+          out=$(bun --cwd packages/tools/coding test --timeout=0 src --test-name-pattern "T9: native reports truthful capabilities" 2>&1)
           rc=$?
           set -e
           printf '%s' "$out" | grep "T9: native reports truthful capabilities" | tail -5
@@ -96,7 +96,7 @@ jobs:
         timeout-minutes: 5
         env:
           PRISM_LIVE_PLAYWRIGHT: "1"
-        run: bun run --filter @arnilo/prism-tools-browser test:live
+        run: bun --cwd packages/tools/browser test --timeout=0 src/__tests__/live.test.ts
       - name: protected Obscura binary leg (plan 039)
         if: ${{ vars.PRISM_ENABLE_OBSCURA_GATE == '1' }}
         timeout-minutes: 5
@@ -104,14 +104,14 @@ jobs:
           PRISM_LIVE_OBSCURA: "1"
           PRISM_OBSCURA_BIN: ${{ vars.PRISM_OBSCURA_BIN }}
         run: |
-          bun run --filter @arnilo/prism-tools-web test -- --test-name-pattern "hostile|oversize|garbage|loopback|insecure"
-          bun run --filter @arnilo/prism-tools-web test:live
+          bun --cwd packages/tools/web test --timeout=0 src --test-name-pattern "hostile|oversize|garbage|loopback|insecure"
+          bun --cwd packages/tools/web test --timeout=0 src/__tests__/live.test.ts src/obscura/__tests__/live.test.ts
       - name: protected self-hosted draw.io leg (plan 053 Task 4)
         if: ${{ vars.PRISM_ENABLE_DRAWIO_GATE == '1' }}
         timeout-minutes: 5
         env:
           PRISM_TEST_DRAWIO_URL: ${{ vars.PRISM_TEST_DRAWIO_URL || 'http://localhost:8080' }}
-          # The draw.io suite lives in @arnilo/prism-tools-work (packages/tools/work, diagrams)
+          # The draw.io suite lives in @arnilo/prism-tools/work (packages/tools/work, diagrams)
           # and is owned by the live matrix, which resolves credentials and skips or
           # fails per its contract; the retired @arnilo/prism-diagrams package's
           # `test:drawio` script no longer exists. Plan 071 Task 4.

@@ -11,7 +11,7 @@ import {
   type MemoryVectorMetadataPage,
   type VectorScanMetadataQuery,
   type VectorStore,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import type { ResolvedLifecycleConfig } from "../config.js";
 import {
   estimateNoteTokens,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-09T16:58:47.411Z",
+  "generatedAt": "2026-11-10T09:24:07.529Z",
   "kind": "217-m1-gate-manifest",
   "schemaVersion": 1,
   "plan": 217,
@@ -9,7 +9,7 @@
   "status": "proposal",
   "executable": false,
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
-  "memoryModelCriteriaHash": "f99907bd939cade310204dcca5e9adefeec2ee442a2f89205a31ecc53205479e",
+  "memoryModelCriteriaHash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
   "rows": [
     "S1",
     "S2",
@@ -17,7 +17,7 @@
     "S4"
   ],
   "fixtures": {
-    "long-session": "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674",
+    "long-session": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d",
     "long-session-replay": "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3"
   },
   "baselines": {
@@ -30,13 +30,13 @@
       "worktree": ".cache/memory-bench/216/om-before"
     }
   },
-  "productHash": "31199fee65f349fc7b24b766d2a74382dad2c5c9e1b73162410cb5158554e2b4",
+  "productHash": "650f1eada078dad853b9f36358b40fc97edfd6f4d375d7f5959fad5b6b499ccc",
   "productPaths": [
     "packages/memory/system/src",
     "packages/memory/core/src",
     "src"
   ],
-  "harnessHash": "df665516c8c00a7b920669ecae0d113493488cc187e3c35206e6f19b8c77001e",
+  "harnessHash": "096e6b703ae476cd5b0daac5bc60041b4342acff3fde873405a9d8f4f8df1650",
   "harnessPaths": [
     "scripts/memory-bench/replay.mjs",
     "scripts/memory-bench/run.mjs",
@@ -48,8 +48,8 @@
     "scripts/memory-bench/work-outcome-long-session.json"
   ],
   "productRevision": {
-    "STM": "stm-31199fee65f349fc7b24b766d2a74382",
-    "memory-off": "stm-31199fee65f349fc7b24b766d2a74382",
+    "STM": "stm-650f1eada078dad853b9f36358b40fc9",
+    "memory-off": "stm-650f1eada078dad853b9f36358b40fc9",
     "OM-before": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510"
   },
   "provider": "ollama-cloud",
@@ -112,21 +112,24 @@
     "journalCeiling": 1000000000000
   },
   "estimate": {
-    "questions": {
-      "longmemeval-m": 50,
-      "beam-1m": 40
+    "sample": {
+      "questionsPerSuiteAndArm": 2,
+      "historyTokensPerQuestion": {
+        "longmemeval-m": 1212826,
+        "beam-1m": 1000000
+      }
     },
-    "tokensPerWorkerArmAndModel": 650000000,
-    "inputTokens": 2632000000,
-    "usd": 116,
+    "inputTokens": 102283301,
+    "usd": 6,
+    "wall": "run 1 about 1.5 h; runs 2-4 about 2.5 h each (16k history tokens a minute per stream, three streams)",
     "basis": {
       "tokensPerQuestion": {
         "beam-1m": 10000000,
         "longmemeval-m": 5000000
       },
       "longSessionTokensPerJob": 2000000,
-      "usdPerMillion": 0.044,
-      "rateSource": "Ollama /api/usage, 2026-11-02 to 2026-11-09: $22.97 for 520.9M input tokens (83.6% cached)"
+      "usdPerMillion": 0.0585,
+      "rateSource": "Ollama /api/usage, 2026-11-09 (the smoke and the diagnostics): $1.57 for 26.8M input tokens, output included"
     }
   },
   "cohort": {
@@ -142,7 +145,7 @@
     },
     "long-session": {
       "partition": "dev",
-      "fixtureHash": "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674"
+      "fixtureHash": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d"
     }
   },
   "arms": [
@@ -181,7 +184,8 @@
       "model": "mimo-v2.6-flash",
       "maxInputTokens": 30000000,
       "wallTimeCapHours": 24,
-      "stateDir": ".cache/memory-bench/217/long-session"
+      "stateDir": ".cache/memory-bench/217/long-session",
+      "sitting": 1
     },
     {
       "id": "217-m1.small.STM.long-session",
@@ -196,7 +200,8 @@
       "model": "mimo-v2.6-flash",
       "maxInputTokens": 30000000,
       "wallTimeCapHours": 24,
-      "stateDir": ".cache/memory-bench/217/long-session"
+      "stateDir": ".cache/memory-bench/217/long-session",
+      "sitting": 1
     },
     {
       "id": "217-m1.small.OM-before.long-session",
@@ -212,7 +217,8 @@
       "maxInputTokens": 30000000,
       "wallTimeCapHours": 24,
       "stateDir": ".cache/memory-bench/217/long-session",
-      "cwd": ".cache/memory-bench/216/om-before"
+      "cwd": ".cache/memory-bench/216/om-before",
+      "sitting": 1
     },
     {
       "id": "217-m1.large.memory-off.long-session",
@@ -227,7 +233,8 @@
       "model": "deepseek-v4.1-flash",
       "maxInputTokens": 30000000,
       "wallTimeCapHours": 24,
-      "stateDir": ".cache/memory-bench/217/long-session"
+      "stateDir": ".cache/memory-bench/217/long-session",
+      "sitting": 1
     },
     {
       "id": "217-m1.large.STM.long-session",
@@ -242,7 +249,8 @@
       "model": "deepseek-v4.1-flash",
       "maxInputTokens": 30000000,
       "wallTimeCapHours": 24,
-      "stateDir": ".cache/memory-bench/217/long-session"
+      "stateDir": ".cache/memory-bench/217/long-session",
+      "sitting": 1
     },
     {
       "id": "217-m1.large.OM-before.long-session",
@@ -258,107 +266,8 @@
       "maxInputTokens": 30000000,
       "wallTimeCapHours": 24,
       "stateDir": ".cache/memory-bench/217/long-session",
-      "cwd": ".cache/memory-bench/216/om-before"
-    },
-    {
-      "id": "217-m1.small.memory-off.longmemeval-m",
-      "kind": "robustness",
-      "family": "217-m1.small.longmemeval-m",
-      "role": "memory-off",
-      "arm": "memory-off",
-      "model_key": "small",
-      "suite": "longmemeval-m",
-      "subset": "dev",
-      "config": "none",
-      "provider": "ollama-cloud",
-      "model": "mimo-v2.6-flash",
-      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
-      "judgeText": true,
-      "labelInjections": "off",
-      "maxInputTokens": 25000000,
-      "maxOutputTokens": 8192,
-      "concurrency": 2,
-      "wallTimeCapHours": 24,
-      "finalTurnAnswer": true,
-      "interleaveAbilities": true,
-      "strictQuestions": true,
-      "answersDir": ".cache/memory-bench/217/small/memory-off/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/small/memory-off/longmemeval-m/judge"
-    },
-    {
-      "id": "217-m1.small.memory-off.beam-1m",
-      "kind": "robustness",
-      "family": "217-m1.small.beam-1m",
-      "role": "memory-off",
-      "arm": "memory-off",
-      "model_key": "small",
-      "suite": "beam-1m",
-      "subset": "dev",
-      "config": "none",
-      "provider": "ollama-cloud",
-      "model": "mimo-v2.6-flash",
-      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
-      "judgeText": true,
-      "labelInjections": "off",
-      "maxInputTokens": 25000000,
-      "maxOutputTokens": 8192,
-      "concurrency": 2,
-      "wallTimeCapHours": 24,
-      "finalTurnAnswer": true,
-      "interleaveAbilities": true,
-      "strictQuestions": true,
-      "answersDir": ".cache/memory-bench/217/small/memory-off/beam-1m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/small/memory-off/beam-1m/judge"
-    },
-    {
-      "id": "217-m1.large.memory-off.longmemeval-m",
-      "kind": "robustness",
-      "family": "217-m1.large.longmemeval-m",
-      "role": "memory-off",
-      "arm": "memory-off",
-      "model_key": "large",
-      "suite": "longmemeval-m",
-      "subset": "dev",
-      "config": "none",
-      "provider": "ollama-cloud",
-      "model": "deepseek-v4.1-flash",
-      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
-      "judgeText": true,
-      "labelInjections": "off",
-      "maxInputTokens": 25000000,
-      "maxOutputTokens": 8192,
-      "concurrency": 2,
-      "wallTimeCapHours": 24,
-      "finalTurnAnswer": true,
-      "interleaveAbilities": true,
-      "strictQuestions": true,
-      "answersDir": ".cache/memory-bench/217/large/memory-off/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/large/memory-off/longmemeval-m/judge"
-    },
-    {
-      "id": "217-m1.large.memory-off.beam-1m",
-      "kind": "robustness",
-      "family": "217-m1.large.beam-1m",
-      "role": "memory-off",
-      "arm": "memory-off",
-      "model_key": "large",
-      "suite": "beam-1m",
-      "subset": "dev",
-      "config": "none",
-      "provider": "ollama-cloud",
-      "model": "deepseek-v4.1-flash",
-      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
-      "judgeText": true,
-      "labelInjections": "off",
-      "maxInputTokens": 25000000,
-      "maxOutputTokens": 8192,
-      "concurrency": 2,
-      "wallTimeCapHours": 24,
-      "finalTurnAnswer": true,
-      "interleaveAbilities": true,
-      "strictQuestions": true,
-      "answersDir": ".cache/memory-bench/217/large/memory-off/beam-1m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/large/memory-off/beam-1m/judge"
+      "cwd": ".cache/memory-bench/216/om-before",
+      "sitting": 1
     },
     {
       "id": "217-m1.small.STM.longmemeval-m",
@@ -377,13 +286,15 @@
       "labelInjections": "off",
       "maxInputTokens": 400000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/small/STM/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/small/STM/longmemeval-m/judge"
+      "judgeCacheDir": ".cache/memory-bench/217/small/STM/longmemeval-m/judge",
+      "maxQuestions": 2,
+      "sitting": 2
     },
     {
       "id": "217-m1.small.OM-before.longmemeval-m",
@@ -402,14 +313,16 @@
       "labelInjections": "off",
       "maxInputTokens": 400000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/small/OM-before/longmemeval-m/answers",
       "judgeCacheDir": ".cache/memory-bench/217/small/OM-before/longmemeval-m/judge",
-      "cwd": ".cache/memory-bench/216/om-before"
+      "cwd": ".cache/memory-bench/216/om-before",
+      "maxQuestions": 2,
+      "sitting": 2
     },
     {
       "id": "217-m1.small.STM.beam-1m",
@@ -428,13 +341,15 @@
       "labelInjections": "off",
       "maxInputTokens": 600000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/small/STM/beam-1m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/small/STM/beam-1m/judge"
+      "judgeCacheDir": ".cache/memory-bench/217/small/STM/beam-1m/judge",
+      "maxQuestions": 2,
+      "sitting": 2
     },
     {
       "id": "217-m1.small.OM-before.beam-1m",
@@ -453,14 +368,16 @@
       "labelInjections": "off",
       "maxInputTokens": 600000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/small/OM-before/beam-1m/answers",
       "judgeCacheDir": ".cache/memory-bench/217/small/OM-before/beam-1m/judge",
-      "cwd": ".cache/memory-bench/216/om-before"
+      "cwd": ".cache/memory-bench/216/om-before",
+      "maxQuestions": 2,
+      "sitting": 3
     },
     {
       "id": "217-m1.large.STM.longmemeval-m",
@@ -479,13 +396,15 @@
       "labelInjections": "off",
       "maxInputTokens": 400000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/large/STM/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/large/STM/longmemeval-m/judge"
+      "judgeCacheDir": ".cache/memory-bench/217/large/STM/longmemeval-m/judge",
+      "maxQuestions": 2,
+      "sitting": 3
     },
     {
       "id": "217-m1.large.OM-before.longmemeval-m",
@@ -504,14 +423,16 @@
       "labelInjections": "off",
       "maxInputTokens": 400000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/large/OM-before/longmemeval-m/answers",
       "judgeCacheDir": ".cache/memory-bench/217/large/OM-before/longmemeval-m/judge",
-      "cwd": ".cache/memory-bench/216/om-before"
+      "cwd": ".cache/memory-bench/216/om-before",
+      "maxQuestions": 2,
+      "sitting": 3
     },
     {
       "id": "217-m1.large.STM.beam-1m",
@@ -530,13 +451,15 @@
       "labelInjections": "off",
       "maxInputTokens": 600000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/large/STM/beam-1m/answers",
-      "judgeCacheDir": ".cache/memory-bench/217/large/STM/beam-1m/judge"
+      "judgeCacheDir": ".cache/memory-bench/217/large/STM/beam-1m/judge",
+      "maxQuestions": 2,
+      "sitting": 4
     },
     {
       "id": "217-m1.large.OM-before.beam-1m",
@@ -555,15 +478,17 @@
       "labelInjections": "off",
       "maxInputTokens": 600000000,
       "maxOutputTokens": 8192,
-      "concurrency": 2,
+      "concurrency": 1,
       "wallTimeCapHours": 120,
       "finalTurnAnswer": true,
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/217/large/OM-before/beam-1m/answers",
       "judgeCacheDir": ".cache/memory-bench/217/large/OM-before/beam-1m/judge",
-      "cwd": ".cache/memory-bench/216/om-before"
+      "cwd": ".cache/memory-bench/216/om-before",
+      "maxQuestions": 2,
+      "sitting": 4
     }
   ],
-  "manifestHash": "185793e1aa1e8e05e02dbd1995f5763b1d44b5462b26aef38f02f96c00878f13"
+  "manifestHash": "7d225777fe138bf444b00db3bca5e8b88e8df8cd269fc73e49c0e633bc43982b"
 }

@@ -7,7 +7,7 @@
  * session touched falls inside the concept's `appliesTo` globs. The line costs about fifteen tokens and carries no
  * claim, so a stale or wrong claim cannot be injected this way.
  */
-import { lexicalTerms } from "@arnilo/prism-memory-core";
+import { lexicalTerms } from "@arnilo/prism-memory-system/core";
 import { globMatches } from "./types.js";
 
 interface PointerHit {

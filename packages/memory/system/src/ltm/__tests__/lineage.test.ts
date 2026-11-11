@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import type { MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import {
   collectInvalidationIds,
   createHashEmbedder,
@@ -10,7 +10,7 @@ import {
   MemoryValidationError,
   recordBlocked,
   revokedIdsAbsent,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
 import { HARD_LINEAGE_EDGES, LINEAGE_META_KEY } from "../../../../core/src/lineage.js";
 

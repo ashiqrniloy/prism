@@ -905,7 +905,7 @@ export function generateMarkdown(map) {
   lines.push("|---|---|---|---|");
   lines.push("| `prism` | `@arnilo/prism` | `@arnilo/prism` | `dist/cli.js` (Root CLI) |");
   lines.push("| `prism-dev` | `@arnilo/prism-dev` | `@arnilo/prism-coding-tools` | `dist/dev/cli.js` (Dev Inspector) |");
-  lines.push("| `prism-wiki` | `@arnilo/prism-wiki` | `@arnilo/prism-memory` | `dist/wiki/cli.js` (LLM Wiki & Context7 CLI) |");
+  lines.push("| `prism-wiki` | `@arnilo/prism-knowledge/wiki` | `@arnilo/prism-memory` | `dist/wiki/cli.js` (LLM Wiki & Context7 CLI) |");
   lines.push("| `prism-acp-agent` | `@arnilo/prism-acp-agent` | `@arnilo/prism-acp-agent` | `dist/cli.js` (ACP Protocol CLI) |");
   lines.push("");
   lines.push("---");
@@ -914,8 +914,8 @@ export function generateMarkdown(map) {
   lines.push("");
   lines.push("| Subpath / Family | Requirement | Category | Failure Mode / Enforcement |");
   lines.push("|---|---|---|---|");
-  lines.push("| `@arnilo/prism-store-sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |");
-  lines.push("| `@arnilo/prism-store-postgres` | `pg` | Hard Dependency | Loaded lazily; fail-closed before pool connection |");
+  lines.push("| `@arnilo/prism-extensions/store-sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |");
+  lines.push("| `@arnilo/prism-extensions/store-postgres` | `pg` | Hard Dependency | Loaded lazily; fail-closed before pool connection |");
   lines.push(
     `| \`${RETIRED_CORE}/sessions/nats\` | \`@nats-io/jetstream\`, \`@nats-io/transport-node\` | Optional Peer | Fail-closed before NATS client connect |`,
   );
@@ -954,7 +954,7 @@ export function generateMarkdown(map) {
     "| `web-tools/obscura` | SSRF, loopback forgery, unauthorized CDP session manipulation | Strict loopback pinning, token auth, process isolation | `packages/obscura/src/__tests__/*` |",
   );
   lines.push(
-    "| `store-postgres` | SQL injection, schema corruption, multi-tenant state bleed | Parameterized queries, migration locking, transaction savepoints | `packages/stores/postgres/src/__tests__/*` |",
+    "| `store-postgres` | SQL injection, schema corruption, multi-tenant state bleed | Parameterized queries, migration locking, transaction savepoints | `packages/extensions/store-postgres/src/__tests__/*` |",
   );
   lines.push(
     "| `coding-tools/document-reader` | Billion laughs XML bomb, out-of-memory denial of service | Byte limits, entity expansion limits, memory-bounded parsing | `packages/document-reader/src/__tests__/*` |",

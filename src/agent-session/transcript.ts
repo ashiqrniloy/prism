@@ -86,8 +86,7 @@ export function selectTranscript(entries: readonly SessionEntry[] | readonly Mes
   // A `tool_call` is dropped unless a `tool_result` for its id exists, so an in-flight call (the
   // assistant message is appended before tools run) never reaches a consumer as an unmatched `tool_use`.
   const answered = new Set<string>();
-  for (const message of source)
-    for (const block of message.content) if (block.type === "tool_result") answered.add(block.toolCallId);
+  for (const message of source) for (const block of message.content) if (block.type === "tool_result") answered.add(block.toolCallId);
 
   const portable = (message: Message): Portable | undefined => {
     const parts: string[] = [];
@@ -144,7 +143,9 @@ export function selectTranscript(entries: readonly SessionEntry[] | readonly Mes
   let turnsKept = 0;
   for (let index = turns.length - 1; index >= 0 && turnsKept < limit; index -= 1) {
     const turn = turns[index] as Portable[];
-    const withoutPinned = turn.filter((message) => !(message.id !== undefined ? pinnedIds.has(message.id) : pinnedTexts.has(`${message.role}\u0000${message.text}`)));
+    const withoutPinned = turn.filter(
+      (message) => !(message.id !== undefined ? pinnedIds.has(message.id) : pinnedTexts.has(`${message.role}\u0000${message.text}`)),
+    );
     const remaining = maxChars - used;
     const room = remaining <= 0 ? 0 : remaining;
     const size = cost(withoutPinned);
@@ -182,7 +183,8 @@ export function selectTranscript(entries: readonly SessionEntry[] | readonly Mes
   for (const turn of selected)
     for (const item of turn) {
       const previous = messages.at(-1);
-      if (previous && previous.role === item.role) messages[messages.length - 1] = { ...previous, content: [{ type: "text", text: `${textOf(previous)}\n${item.text}` }] };
+      if (previous && previous.role === item.role)
+        messages[messages.length - 1] = { ...previous, content: [{ type: "text", text: `${textOf(previous)}\n${item.text}` }] };
       else messages.push({ role: item.role, content: [{ type: "text", text: item.text }] });
     }
 

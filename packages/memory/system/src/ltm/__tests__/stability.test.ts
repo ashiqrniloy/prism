@@ -68,7 +68,10 @@ describe("config stability tiers", () => {
     const schemaTiers = new Map<string, DocumentedTier | undefined>(
       fields(memorySystemConfigSchema).map(([path, node]) => [path, EXPERIMENTAL_PATHS.has(path) ? "experimental" : tierOf(node)]),
     );
-    assert.ok([...schemaTiers.keys()].some((path) => path.startsWith("ltm.")), "the schema carries the ltm section");
+    assert.ok(
+      [...schemaTiers.keys()].some((path) => path.startsWith("ltm.")),
+      "the schema carries the ltm section",
+    );
     const documented = readmeTiers(readme());
     assert.deepEqual([...documented.entries()].sort(), [...schemaTiers.entries()].sort());
   });

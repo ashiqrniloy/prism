@@ -21,11 +21,29 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { test } from "bun:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+test("no_relative_import_crosses_a_subpath", () => {
+  const bundle = join(ROOT, "packages/extensions");
+  const violations = [];
+  for (const subpath of readdirSync(bundle, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+    const source = join(bundle, subpath.name, "src");
+    if (!existsSync(source)) continue;
+    for (const file of srcModuleFiles(join(bundle, subpath.name))) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/(?:from\s*|import\s*\(|require\s*\()\s*["'](\.[^"']+)["']/g)) {
+        const target = resolve(dirname(file), match[1]);
+        const inside = relative(bundle, target).split(sep);
+        if (inside[0] !== ".." && inside.length > 1 && inside[0] !== subpath.name) violations.push(`${relative(ROOT, file)}: ${match[1]}`);
+      }
+    }
+  }
+  assert.deepEqual(violations, [], "use a public bundle subpath for sibling imports");
+});
 
 function gitStatus() {
   return execFileSync("git", ["status", "--porcelain"], { cwd: ROOT, encoding: "utf8" });

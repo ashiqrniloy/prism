@@ -1,9 +1,10 @@
+import assert from "node:assert/strict";
 import {
   type AgentEvent,
-  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   definePackage,
+  type ModelProvider,
   providerDone,
   providerTextDelta,
   toolCallContent,
@@ -71,8 +72,10 @@ const counter = definePackage<CounterConfig>({
         description: "Adds one step to the session total.",
         parameters: {},
         execute: async (_args, context) => {
-          const next = { n: total.get(context.session!).n + step };
-          await total.set(context.session!, next);
+          const { session } = context;
+          assert.ok(session);
+          const next = { n: total.get(session).n + step };
+          await total.set(session, next);
           return { toolCallId: context.toolCallId, name: "count", value: next.n };
         },
       },
@@ -82,16 +85,26 @@ const counter = definePackage<CounterConfig>({
       name: "bump",
       description: "Adds one step to the session total.",
       run: async (_args, { session }) => {
-        const next = { n: total.get(session!).n + step };
-        await total.set(session!, next);
+        assert.ok(session);
+        const next = { n: total.get(session).n + step };
+        await total.set(session, next);
         return next.n;
       },
     });
-    prism.commands.register({ name: "total", description: "Reads the session total.", run: (_args, { session }) => total.get(session!).n });
+    prism.commands.register({
+      name: "total",
+      description: "Reads the session total.",
+      run: (_args, { session }) => {
+        assert.ok(session);
+        return total.get(session).n;
+      },
+    });
 
     // A tracked background task; `close()` settles it and a `background.*` event reports it.
     prism.hooks.on("tool.completed", (_event, context) => {
-      context.session!.background("flush", async () => prism.events.emit("flushed", { total: total.get(context.session!).n }));
+      const { session } = context;
+      assert.ok(session);
+      session.background("flush", async () => prism.events.emit("flushed", { total: total.get(session).n }));
     });
   },
 });
@@ -109,7 +122,8 @@ export async function demo(): Promise<Record<string, unknown>> {
       advertised[current] = (request.tools ?? []).map((tool) => tool.name);
       turn += 1;
       // The denied `shell` call reaches the model as an ordinary tool result.
-      if (request.messages.some((m) => m.content.some((b) => b.type === "tool_result" && b.error?.code === "hook_denied"))) sawDenial = true;
+      if (request.messages.some((m) => m.content.some((b) => b.type === "tool_result" && b.error?.code === "hook_denied")))
+        sawDenial = true;
       if (current === "main" && turn === 1) {
         yield { type: "tool_call" as const, call: toolCallContent("c1", "shell", {}) };
         yield { type: "tool_call" as const, call: toolCallContent("c2", "count", {}) };

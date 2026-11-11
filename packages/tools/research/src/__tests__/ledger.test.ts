@@ -10,7 +10,12 @@ describe("research ledger", () => {
     const run = await researchAgent({
       tools: [fetchTool()],
       script: [
-        [fetchCall("c1", "https://a.test/one"), fetchCall("c2", "https://b.test/two"), fetchCall("c3", "https://a.test/one"), providerDone()],
+        [
+          fetchCall("c1", "https://a.test/one"),
+          fetchCall("c2", "https://b.test/two"),
+          fetchCall("c3", "https://a.test/one"),
+          providerDone(),
+        ],
         textTurn("done"),
       ],
     });
@@ -84,10 +89,7 @@ describe("research ledger", () => {
     const secret = "SECRET";
     const run = await researchAgent({
       tools: [fetchTool()],
-      script: [
-        [fetchCall("c1", `https://u:p@x.test/a?token=${secret}&q=1`), providerDone()],
-        textTurn("done"),
-      ],
+      script: [[fetchCall("c1", `https://u:p@x.test/a?token=${secret}&q=1`), providerDone()], textTurn("done")],
     });
     try {
       await run.session.run("fetch");
@@ -124,7 +126,12 @@ describe("research ledger", () => {
       config: { sourceTools: ["web_fetch"], maxSources: 1 },
       tools: [fetchTool()],
       script: [
-        [fetchCall("c1", "https://a.test/one"), fetchCall("c2", "https://b.test/two"), fetchCall("c3", "https://c.test/three"), providerDone()],
+        [
+          fetchCall("c1", "https://a.test/one"),
+          fetchCall("c2", "https://b.test/two"),
+          fetchCall("c3", "https://c.test/three"),
+          providerDone(),
+        ],
         textTurn("done"),
       ],
     });

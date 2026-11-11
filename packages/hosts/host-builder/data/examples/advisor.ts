@@ -1,7 +1,7 @@
 /**
  * Advisor Demo (plan 191 Task 8).
  *
- * `@arnilo/prism-advisor` gives an agent a second opinion. The parent model calls `advise` once and gets
+ * `@arnilo/prism-extensions/advisor` gives an agent a second opinion. The parent model calls `advise` once and gets
  * one model call's worth of advice, then `triggers.beforeFinish` reviews the answer at the natural end of
  * the run: the first review says `revise`, so the run continues with that advice as a steer; the second
  * says `proceed`. Every consult is an `advisor.consult` package event.
@@ -21,7 +21,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import advisor from "@arnilo/prism-advisor";
+import advisor from "@arnilo/prism-extensions/advisor";
 
 function mockProvider(): ModelProvider {
   let parentCalls = 0;
@@ -68,7 +68,7 @@ export async function demo() {
       hooks.on("tool.completed", (event) => {
         if (event.name !== "advise") return;
         const block = event.result.content?.[0];
-        advice = block?.type === "text" ? block.text.split("\n")[0] ?? "" : "";
+        advice = block?.type === "text" ? (block.text.split("\n")[0] ?? "") : "";
       });
       hooks.on("package.event", (event: Extract<AgentEvent, { type: "package.event" }>) => {
         if (event.name === "advisor.consult") consults.push(event.data);

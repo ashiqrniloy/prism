@@ -29,7 +29,9 @@ test("lexical_keys_read_fabric_keywords_tags_context_path", () => {
 test("stores_accept_embeddingless_records_and_empty_vector_query_returns_nothing", async () => {
   const store = createMemoryVectorStore();
   const scope = { tenantId: "t", resourceId: "r", threadId: "a" };
-  await store.upsert([{ ...scope, id: "n1", text: "Deployed the staging servers", embedding: [], sequence: 1, createdAt: "2026-10-19T00:00:00Z" }]);
+  await store.upsert([
+    { ...scope, id: "n1", text: "Deployed the staging servers", embedding: [], sequence: 1, createdAt: "2026-10-19T00:00:00Z" },
+  ]);
   expect(await store.query({ ...scope, embedding: [], topK: 5 })).toEqual([]);
   const hits = await store.lexicalQuery!({ ...scope, text: "deploy server", topK: 5 });
   expect(hits.map((hit) => [hit.id, hit.coverage])).toEqual([["n1", 1]]);

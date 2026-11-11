@@ -1,4 +1,4 @@
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { mergeNoteLinks } from "./links.js";
 import type { MemoryNoteKind, MemoryNoteMetadata } from "./types.js";
 
@@ -14,9 +14,7 @@ export interface MemoryConsolidationCandidate {
   readonly metadata: MemoryNoteMetadata;
 }
 
-export type MemoryConsolidationPlan =
-  | { readonly action: "insert" }
-  | { readonly action: "update"; readonly id: string };
+export type MemoryConsolidationPlan = { readonly action: "insert" } | { readonly action: "update"; readonly id: string };
 
 /** Token comparison so punctuation, case, and spacing rewording is not a contradiction. */
 export function normalizeNoteText(text: string): string {

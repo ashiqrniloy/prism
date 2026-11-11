@@ -1,4 +1,4 @@
-# @arnilo/prism-devtools
+# @arnilo/prism-hosts/devtools
 
 A loopback developer inspector over one Prism `Agent`. It reads the agent's own surface, `inspect()`,
 `sessions`, `session.entries()`, and `subscribe()`, and serves it as a page and a small JSON API. It
@@ -9,7 +9,7 @@ starts no run, builds no agent, and imports only the public `@arnilo/prism` surf
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { serveDevtools } from "@arnilo/prism-devtools";
+import { serveDevtools } from "@arnilo/prism-hosts/devtools";
 
 const agent = await createAgent({ model, packages });
 const devtools = serveDevtools(agent, {
@@ -56,7 +56,7 @@ Unknown sessions answer 404 with `ERR_PRISM_DEVTOOLS_NOT_FOUND`. A malformed que
 - **No prompt, decision, or run routes.** The inspector observes; it does not drive a run or resolve an
   approval. Those belong to the host that owns the session.
 - **No timeline panel.** The page renders raw entries and events. The timeline projector stays in
-  the 0.12 family package until Phase 16 moves it to `@arnilo/prism-observability`.
+  the 0.12 family package until Phase 16 moves it to `@arnilo/prism-extensions/observability`.
 - **The session feed sees its own session object.** A `Session`'s subscribers belong to the instance that
   emitted the events. The `?session=` feed follows the `Session` the route opened (`acrossRuns: true`), so a
   run driven through a different instance of the same id is not visible through the public API. The agent

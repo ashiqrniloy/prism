@@ -131,4 +131,4 @@ export type {
   TransactionalVectorStore,
 } from "./types.js";
 
-export const packageName = "@arnilo/prism-rag";
+export const packageName = "@arnilo/prism-knowledge/rag";

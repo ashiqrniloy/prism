@@ -83,8 +83,8 @@ console.log(bytes.byteLength, config.name, prompt);
 - Helpers do not choose a loader by URI scheme. Hosts can use contribution registries or their own routing when they need that.
 - Helpers do not execute loaded text or imported modules. Package activation remains a host decision.
 - The package manifest is not a resource: `@arnilo/prism/manifest` (`readManifest`, `parseManifest`) reads and validates it.
-- `@arnilo/prism-rag` `createResourceDocumentLoader({ loader, context? })` is the RAG bridge for an already-authorized artifact. It calls the supplied `ResourceLoader` once for a caller-selected URI, preserves text/binary media type, and adds no URI routing, local-file discovery, or network fallback. Pair it with a bounded RAG `Parser`; `replaceDocument()` then chunks and atomically replaces one exact RAG source.
-- For public web documents, use `createWebFetchDocumentLoader({ fetcher })` with a host-configured `@arnilo/prism-tools-web` fetch adapter instead of adding web I/O to a `ResourceLoader`. It reuses normalized citation/trust data; the web adapter retains DNS/SSRF policy ownership.
+- `@arnilo/prism-knowledge/rag` `createResourceDocumentLoader({ loader, context? })` is the RAG bridge for an already-authorized artifact. It calls the supplied `ResourceLoader` once for a caller-selected URI, preserves text/binary media type, and adds no URI routing, local-file discovery, or network fallback. Pair it with a bounded RAG `Parser`; `replaceDocument()` then chunks and atomically replaces one exact RAG source.
+- For public web documents, use `createWebFetchDocumentLoader({ fetcher })` with a host-configured `@arnilo/prism-tools/web` fetch adapter instead of adding web I/O to a `ResourceLoader`. It reuses normalized citation/trust data; the web adapter retains DNS/SSRF policy ownership.
 
 ## Security and performance notes
 
@@ -111,7 +111,7 @@ Fields Prism reads:
 
 ## MCP resources
 
-`@arnilo/prism-mcp` keeps remote MCP resources outside `ToolDefinition`. `connectMcpCapabilities().listResources()/readResource()` apply finite item/page/JSON bounds and return untrusted protocol output. Server `resources` are explicit fixed URIs with per-read host authorization. MCP roots are host-consented client callbacks; Prism neither discovers filesystem roots nor widens `ResourceLoader` access.
+`@arnilo/prism-extensions/mcp` keeps remote MCP resources outside `ToolDefinition`. `connectMcpCapabilities().listResources()/readResource()` apply finite item/page/JSON bounds and return untrusted protocol output. Server `resources` are explicit fixed URIs with per-read host authorization. MCP roots are host-consented client callbacks; Prism neither discovers filesystem roots nor widens `ResourceLoader` access.
 
 ## Related APIs
 

@@ -8,17 +8,18 @@ import { spawnSync } from "node:child_process";
 //   bun scripts/post-publish-smoke.mjs --version 0.11.0   # pin the version
 //
 // Registry mode is the post-publish gate: it proves the published artifacts (not the working
-// tree) resolve `./fabric`, `./scoped`, the hooks adapter, and the work `./document-extraction`
+// tree) resolve memory-system, knowledge, the hooks adapter, and work/document-extraction
 // subpath with and without its optional `@firecrawl/anydoc` peer. `--local` runs the same checks
 // against `bun pm pack` output, so a broken `files` entry or subpath export fails before the tag
 // is pushed. Network-free after install; exit code 1 on any failed check.
 //
 // Plan 125 Task 2: tarballs come from `bun pm pack` (plan 164 Task 8.4) and the registry specs are
 // the npm names; the consumer installs and runs on Bun.
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createPackedConsumer } from "./fixtures/packed-consumer.mjs";
 import { loadRelease } from "./release.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,13 +29,19 @@ const versionIndex = argv.indexOf("--version");
 const version = versionIndex === -1 ? null : argv[versionIndex + 1];
 if (versionIndex !== -1 && !version) throw new Error("--version requires a value");
 
-const PACKAGES = ["@arnilo/prism", "@arnilo/prism-memory-core", "@arnilo/prism-hooks-json", "@arnilo/prism-tools-work"];
+const PACKAGES = [
+  "@arnilo/prism",
+  "@arnilo/prism-memory-system",
+  "@arnilo/prism-knowledge",
+  "@arnilo/prism-extensions",
+  "@arnilo/prism-tools",
+];
 const resolvedVersion = version ?? JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
-const anydocPin = JSON.parse(readFileSync(join(root, "packages/tools/work/package.json"), "utf8")).peerDependencies["@firecrawl/anydoc"];
+const anydocPin = JSON.parse(readFileSync(join(root, "packages/tools/package.json"), "utf8")).peerDependencies["@firecrawl/anydoc"];
 const odtFixture = join(root, "packages/tools/work/src/document-extraction/__tests__/fixtures/hello.odt");
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { encoding: "utf8", stdio: options.quiet ? "pipe" : "inherit", ...options });
+  const result = spawnSync(command, args, { encoding: "utf8", stdio: options.quiet ? "pipe" : "inherit", timeout: 60_000, ...options });
   if (result.status !== 0) {
     if (options.quiet && result.stderr) process.stderr.write(result.stderr);
     throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
@@ -42,36 +49,53 @@ function run(command, args, options = {}) {
   return result.stdout ?? "";
 }
 
+const officePeers = JSON.parse(readFileSync(join(root, "packages/tools/package.json"), "utf8")).peerDependencies;
 const workdir = mkdtempSync(join(tmpdir(), "prism-post-publish-smoke-"));
-const consumer = join(workdir, "consumer");
-run("mkdir", ["-p", consumer]);
-writeFileSync(
-  join(consumer, "package.json"),
-  `${JSON.stringify({ name: "prism-post-publish-smoke", private: true, type: "module" }, null, 2)}\n`,
-);
+let consumer;
+process.on("exit", () => rmSync(workdir, { recursive: true, force: true }));
 
 let specs;
 if (local) {
-  const byName = loadRelease(root).byName;
-  specs = PACKAGES.map((pkg) => {
-    const entry = byName.get(pkg);
-    const dir = entry.path === "." ? root : join(root, entry.path);
-    const packed = run("bun", ["pm", "pack", "--quiet", "--destination", workdir], { cwd: dir, quiet: true }).trim();
-    return join(workdir, packed);
-  });
+  const release = loadRelease(root);
+  const fixture = createPackedConsumer(PACKAGES.map((name) => ({ name, dir: release.byName.get(name).path })));
+  if (fixture.installStatus !== 0) {
+    fixture.cleanup();
+    throw new Error(fixture.installOut);
+  }
+  // Reuse the closure-pinned consumer so unpublished peers never resolve from the registry.
+  consumer = fixture.consumer;
+  process.on("exit", fixture.cleanup);
+  specs = [];
 } else {
-  specs = PACKAGES.map((pkg) => `${pkg}@${resolvedVersion}`);
+  consumer = join(workdir, "consumer");
+  mkdirSync(consumer);
+  writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-post-publish-smoke", private: true, type: "module" }));
+  const byName = loadRelease(root).byName;
+  specs = PACKAGES.map((pkg) => `${pkg}@${byName.get(pkg).experimental ? "experimental" : resolvedVersion}`);
 }
 console.log(`post-publish smoke: ${local ? "local tarballs" : "registry"} — ${specs.join(" ")}`);
 
-run("bun", ["install", ...specs, "--no-audit", "--no-fund", ...(local ? ["--prefer-offline"] : [])], { cwd: consumer });
+if (!local) run("bun", ["install", ...specs, "--ignore-scripts", "--no-audit", "--no-fund"], { cwd: consumer });
 writeFileSync(join(consumer, "smoke.mjs"), smokeSource());
 run("bun", ["smoke.mjs"], { cwd: consumer });
 
-// Work family: default import with no optional peers, then the opt-in anydoc route.
+// Direct Office library imports need their declared peers; anydoc remains absent for the first leg.
+run(
+  "bun",
+  [
+    "add",
+    ...Object.entries(officePeers)
+      .filter(([name]) => name.startsWith("@office-open/") || name === "ajv" || name === "fast-xml-parser")
+      .map(([name, range]) => `${name}@${range}`),
+    "--ignore-scripts",
+    "--prefer-offline",
+  ],
+  { cwd: consumer },
+);
+// Work family: direct library imports, then the opt-in anydoc route.
 writeFileSync(join(consumer, "smoke-work.mjs"), workSmokeSource({ consumer, odt: odtFixture, anydocPin }));
 run("bun", ["smoke-work.mjs"], { cwd: consumer });
-run("bun", ["add", `@firecrawl/anydoc@${anydocPin}`, "--prefer-offline", "--no-audit", "--no-fund"], { cwd: consumer });
+run("bun", ["add", `@firecrawl/anydoc@${anydocPin}`, "--ignore-scripts", "--prefer-offline", "--no-audit", "--no-fund"], { cwd: consumer });
 writeFileSync(join(consumer, "smoke-anydoc.mjs"), anydocSmokeSource({ odt: odtFixture, anydocPin }));
 run("bun", ["smoke-anydoc.mjs"], { cwd: consumer });
 
@@ -82,12 +106,12 @@ function smokeSource() {
   return `import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
-import hooksJson, { hookCommandHash } from "@arnilo/prism-hooks-json";
+import hooksJson, { hookCommandHash } from "@arnilo/prism-extensions/hooks-json";
 
 const checks = [];
 checks.push(["root: createAgent + definePackage", [createAgent, definePackage].every((f) => typeof f === "function")]);
 checks.push(["memory-system: createMemory + createLongTermMemory", [createMemory, createLongTermMemory].every((f) => typeof f === "function")]);
-checks.push(["hooks-json default export", typeof hooksJson === "function" && hooksJson.name === "@arnilo/prism-hooks-json"]);
+checks.push(["hooks-json default export", typeof hooksJson === "function" && hooksJson.name === "@arnilo/prism-extensions/hooks-json"]);
 checks.push(["hooks-json hash helper", typeof hookCommandHash === "function"]);
 
 const provider = { id: "mock", async *generate() { yield providerTextDelta("ok"); yield providerDone(); } };
@@ -98,7 +122,7 @@ const agent = await createAgent({
 });
 const session = (await agent.session({ id: "post-publish-smoke", create: true }));
 const result = await session.run("hi");
-checks.push(["run with a stop hook settles", typeof result?.status === "string"]);
+checks.push(["run with a stop hook settles", result?.status === "completed" && result.text === "ok"]);
 checks.push(["Session.close() present", typeof session.close === "function"]);
 await session.close();
 await session.close();
@@ -122,13 +146,13 @@ const odt = readFileSync(${JSON.stringify(odt)});
 const checks = [];
 
 const documentsStart = performance.now();
-const documents = await import("@arnilo/prism-tools-work/documents");
+const documents = await import("@arnilo/prism-tools/work/documents");
 const documentsMs = performance.now() - documentsStart;
 const extractionStart = performance.now();
-const extraction = await import("@arnilo/prism-tools-work/document-extraction");
+const extraction = await import("@arnilo/prism-tools/work/document-extraction");
 const extractionMs = performance.now() - extractionStart;
-checks.push(["work ./documents imports with no optional peer installed", typeof documents.parseDocument === "function"]);
-checks.push(["work ./document-extraction subpath exports the extractor and ingest adapter", typeof extraction.createDocumentExtractor === "function" && typeof extraction.createDocumentIngest === "function"]);
+checks.push(["work ./documents imports with its declared Office peers installed", typeof documents.parseDocument === "function"]);
+checks.push(["work ./document-extraction exports the extractor and ingest adapter without anydoc", typeof extraction.createDocumentExtractor === "function" && typeof extraction.createDocumentIngest === "function"]);
 checks.push(["optional anydoc peer is not installed by default", existsSync(join(consumer, "node_modules", "@firecrawl")) === false]);
 
 let missingPeer = null;
@@ -141,7 +165,7 @@ checks.push(["building the extractor without the peer fails closed as missingPee
 checks.push(["the failure carries no document content", Boolean(missingPeer) && !String(missingPeer.message).includes("Hello Prism")]);
 
 const ingest = extraction.createDocumentIngest({ extract: async () => ({ markdown: "SMOKE-MARKDOWN", format: "odt", ocrUsed: false }) });
-const wiki = await import("@arnilo/prism-wiki");
+const wiki = await import("@arnilo/prism-knowledge/wiki");
 checks.push([
   "the wiki package exports the wiki factory, its definition, the ingest, search and read tool names, and no retired CLI",
   typeof wiki.wiki === "function" &&
@@ -156,7 +180,7 @@ checks.push(["rag parser returns the markdown plus untrusted metadata", parsed.t
 checks.push(["rag metadata never carries the markdown body", JSON.stringify(parsed.metadata).includes("SMOKE-MARKDOWN") === false]);
 checks.push(["ingest stats stay content-free", JSON.stringify(ingest.stats()).includes("SMOKE-MARKDOWN") === false]);
 
-const helper = join(consumer, "node_modules", "@arnilo/prism-tools-work", "docling", "ocr.py");
+const helper = join(consumer, "node_modules", "@arnilo/prism-tools", "work", "docling", "ocr.py");
 checks.push(["work tarball ships docling/ocr.py", existsSync(helper) && statSync(helper).size > 1000]);
 
 const manifests = [];
@@ -179,7 +203,7 @@ for (const file of manifests) {
 }
 checks.push(["no shipped manifest claims support for the retired Node runtime", nodeEngines === 0]);
 checks.push(["no shipped manifest references the retired sqlite driver", retiredRefs === 0]);
-const work = JSON.parse(readFileSync(join(consumer, "node_modules", "@arnilo/prism-tools-work", "package.json"), "utf8"));
+const work = JSON.parse(readFileSync(join(consumer, "node_modules", "@arnilo/prism-tools", "package.json"), "utf8"));
 checks.push(["work declares anydoc as an optional peer, never a dependency", work.peerDependencies?.["@firecrawl/anydoc"] === ${JSON.stringify(anydocPin)} && work.peerDependenciesMeta?.["@firecrawl/anydoc"]?.optional === true && work.dependencies?.["@firecrawl/anydoc"] === undefined]);
 checks.push(["work engines stay Bun-only", typeof work.engines?.bun === "string" && work.engines?.node === undefined]);
 
@@ -196,7 +220,7 @@ function anydocSmokeSource({ odt, anydocPin }) {
 
 const odt = readFileSync(${JSON.stringify(odt)});
 const checks = [];
-const { createDocumentExtractor } = await import("@arnilo/prism-tools-work/document-extraction");
+const { createDocumentExtractor } = await import("@arnilo/prism-tools/work/document-extraction");
 const extractor = await createDocumentExtractor();
 const result = await extractor.extract({ bytes: odt, filename: "hello.odt" });
 checks.push(["opt-in peer converts an odt locally", result.markdown.includes("Hello Prism ODT") && result.format === "odt"]);

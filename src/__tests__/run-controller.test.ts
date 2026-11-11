@@ -211,7 +211,9 @@ describe("RunController driver surface (K2 first half)", () => {
     });
     bus.observe("run.started", { type: "run.started", sessionId: "s", runId: "r" } as never);
     assert.equal((failure as { code?: string }).code, "emit_reserved_name");
-    assert.deepEqual(events, [{ type: "package.event", sessionId: "s", runId: "r", package: "pkg-a", name: "my.event", data: { ok: true } }]);
+    assert.deepEqual(events, [
+      { type: "package.event", sessionId: "s", runId: "r", package: "pkg-a", name: "my.event", data: { ok: true } },
+    ]);
   });
 
   it("execute_tools_returns_results_in_order", async () => {

@@ -82,7 +82,7 @@
     },
     {
       "id": "saga",
-      "owner": "@arnilo/prism-workflows",
+      "owner": "@arnilo/prism-extensions/workflows",
       "exports": [
         "defineSaga",
         "runSaga",

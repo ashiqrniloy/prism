@@ -144,13 +144,17 @@ describe("plan 079 Signal adapter", () => {
       id: "signal-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield providerTextDelta("final answer");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield providerTextDelta("final answer");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     const runtime = createChannelRuntime(agent, {
       checkpoints: adapterOptions.checkpoints,

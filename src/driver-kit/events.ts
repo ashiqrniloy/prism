@@ -16,5 +16,8 @@ type Guards = { [K in keyof typeof EXTERNAL_ACTIVITY_EVENTS as `is${Capitalize<K
 
 /** One guard per standard name, over a `package.event` name: `isSkillEvent("agent.skill")`. */
 export const agentEventGuards: Guards = Object.fromEntries(
-  Object.entries(EXTERNAL_ACTIVITY_EVENTS).map(([kind, name]) => [`is${kind[0]?.toUpperCase()}${kind.slice(1)}Event`, (candidate: string) => candidate === name]),
+  Object.entries(EXTERNAL_ACTIVITY_EVENTS).map(([kind, name]) => [
+    `is${kind[0]?.toUpperCase()}${kind.slice(1)}Event`,
+    (candidate: string) => candidate === name,
+  ]),
 ) as Guards;

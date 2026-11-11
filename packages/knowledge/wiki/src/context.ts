@@ -6,7 +6,7 @@
  * byte-identical, and nothing changes until the next turn or the next LTM retraction epoch.
  */
 import { type ContextBlock, type ContextDraft, type HookContext, type Message, withContextBlocks } from "@arnilo/prism";
-import { lexicalTerms } from "@arnilo/prism-memory-core";
+import { lexicalTerms } from "@arnilo/prism-memory-system/core";
 import type { WikiOntologyPort } from "./ontology/port.js";
 import { conceptInPlay, conceptPointerLine } from "./ontology/pointer.js";
 import { WIKI_SCOPE_LEVELS } from "./ontology/types.js";

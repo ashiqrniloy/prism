@@ -15,7 +15,7 @@ The kernel `store` slot (`SessionStore` contract, in-memory default, entry types
 - Kernel: the `store` slot contract (`src/contracts-core/{session,persistence}.ts`), the in-memory default (`src/session-stores.ts`, `createMemorySessionStore`), session links and the session index, and the run ledger (`src/run-ledger.ts`).
 - Packages (`packages/stores/*`): `jsonl` (`createJsonlSessionStore`), `sqlite` and `postgres` (sessions, migrations, plus the checkpoint and lease services `prism-workflows` consumes), and `codecs` (shared persistence schema, cursors, query semantics, and conformance helpers).
 - Checkpoints and leases moved out of the kernel into `prism-workflows` and the durable stores (roadmap Phase 16).
-- Current docs: [slots.md](../../../../docs/slots.md) (store slot, start here), [`jsonl`](../../../../packages/stores/jsonl/README.md), [`sqlite`](../../../../packages/stores/sqlite/README.md), [`postgres`](../../../../packages/stores/postgres/README.md), [`codecs`](../../../../packages/stores/codecs/README.md), [disaster-recovery.md](../../../../docs/disaster-recovery.md).
+- Current docs: [slots.md](../../../../docs/slots.md) (store slot, start here), [`jsonl`](../../../../packages/extensions/store-jsonl/README.md), [`sqlite`](../../../../packages/extensions/store-sqlite/README.md), [`postgres`](../../../../packages/extensions/store-postgres/README.md), [`codecs`](../../../../packages/extensions/store-codecs/README.md), [disaster-recovery.md](../../../../docs/disaster-recovery.md).
 
 ## Graft queries
 

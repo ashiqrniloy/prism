@@ -13,7 +13,7 @@ import {
   SheetsValidationError,
 } from "../index.js";
 
-describe("@arnilo/prism-tools-work — Caps & Oversize Refusal", () => {
+describe("@arnilo/prism-tools/work — Caps & Oversize Refusal", () => {
   it("refuses oversized synthetic CSV at row cap boundary without multi-GB memory explosion", async () => {
     // Generate synthetic rows that exceed the configured row cap
     const configuredCap = 1_000;

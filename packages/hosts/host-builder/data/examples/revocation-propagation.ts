@@ -20,7 +20,7 @@
  *
  * Offline: hash embedder, in-memory vector/session stores, no network.
  */
-import { type Session, type ContextBlock, createAgent, createMemorySessionStore, createSessionEntry, } from "@arnilo/prism";
+import { type Session, type ContextBlock, createAgent, createMemorySessionStore, createSessionEntry } from "@arnilo/prism";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -28,7 +28,7 @@ import {
   listInvalidatedIds,
   type MemoryScope,
   type VectorStore,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import {
   activeObservations,
   buildObservationalMemoryContextBlocks,
@@ -36,7 +36,7 @@ import {
   foldObservationalMemoryLedger,
   OBSERVATIONS_RECORDED,
 } from "@arnilo/prism-memory-system";
-import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-rag";
+import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-knowledge/rag";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const TENANT = "t1";

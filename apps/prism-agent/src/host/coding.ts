@@ -1,12 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Agent, createAgent } from "@arnilo/prism";
-import { approvalPackage } from "@arnilo/prism-approval";
-import contextEngineering from "@arnilo/prism-context-engineering";
-import { contextFiles } from "@arnilo/prism-context-files";
-import { type HooksJsonConfig, hooksJson } from "@arnilo/prism-hooks-json";
-import compaction from "@arnilo/prism-memory-compaction";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import compaction from "@arnilo/prism-extensions/compaction";
+import contextEngineering from "@arnilo/prism-extensions/context-engineering";
+import { contextFiles } from "@arnilo/prism-extensions/context-files";
+import { type HooksJsonConfig, hooksJson } from "@arnilo/prism-extensions/hooks-json";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 import type { HostConfig, HostDeps } from "./config.js";
 import { hostPortOf } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
@@ -14,7 +14,7 @@ import { memoryProfileFor } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
 import { sqlitePackage } from "./store.js";
 
-const COMPACTION = "@arnilo/prism-memory-compaction";
+const COMPACTION = "@arnilo/prism-extensions/compaction";
 
 function hooksFromWorkspace(workspace: string) {
   const path = join(workspace, ".prism", "hooks.json");

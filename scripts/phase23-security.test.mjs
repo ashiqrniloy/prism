@@ -106,7 +106,7 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
         artifact = JSON.parse(readFileSync(join(tmp, "artifact.json"), "utf8"));
       }
       assert.ok(artifact.packages, "coverage artifact must carry per-package rows");
-      const mcp = artifact.packages["@arnilo/prism-mcp"];
+      const mcp = artifact.packages["@arnilo/prism-extensions/mcp"];
       assert.ok(mcp && typeof mcp.lines === "number", "mcp row must exist in the artifact");
       assert.ok(mcp.lines >= 80, `mcp lines ${mcp.lines} prove the core-dist-free denominator (0.2.2 polluted value was 45.47)`);
       assert.deepEqual(artifact.belowThreshold, [], "no non-protected package may sit below its threshold");

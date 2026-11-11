@@ -136,7 +136,10 @@ test("readme_quickstart_runs_on_mock_provider", () => {
   const source = block
     .replace(/^import (?:anthropic|hyper) from .*\n/m, 'import { mockProvider } from "@arnilo/prism/testing";\n')
     .replace(/model: "(?:anthropic|hyper)\/claude-sonnet-4-5"/, 'model: "mock/demo"')
-    .replace(/(?:anthropic\(\)|hyper\([^)]*\))/, 'mockProvider([[{ type: "content_delta", content: { type: "text", text: "Hello" } }, { type: "done" }]])');
+    .replace(
+      /(?:anthropic\(\)|hyper\([^)]*\))/,
+      'mockProvider([[{ type: "content_delta", content: { type: "text", text: "Hello" } }, { type: "done" }]])',
+    );
   assert.notEqual(source, block, "substitution did not apply");
   const dir = mkdtempSync(join(ROOT, "node_modules", ".readme-quickstart-"));
   try {

@@ -21,7 +21,7 @@ Every agent is one `createAgent` call with a package list. The host code for eac
 | Agent | Source | Why it has these packages |
 | --- | --- | --- |
 | orchestrator | [`src/host/orchestrator.ts`](src/host/orchestrator.ts) | `workflows` for the graph, `delegate` for a research child, and one `definePackage` that registers the host's `build` command |
-| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and `memory-compaction`; with `memory` set, also `memory-fabric` and `memory-system` (and `@arnilo/prism-wiki` when `ontology` is on, with or without `memory`) |
+| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and `memory-compaction`; with `memory` set, also `memory-fabric` and `memory-system` (and `@arnilo/prism-knowledge/wiki` when `ontology` is on, with or without `memory`) |
 | research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `tools-research` (the citation ledger and `run.end` check), `memory-compaction`, and the same fold/accounting with a 20% block cap; `memory-rag` only when `embeddings` is set, and `memory-fabric` with `memory-system` only when `memory` is set |
 | external | [`src/host/external.ts`](src/host/external.ts) | a host-owned adapter over `driver-process`, for a vendor CLI the host does not control |
 | remote | [`src/host/remote.ts`](src/host/remote.ts) | `connectAgent`, reaching a worker served from a second process |
@@ -30,16 +30,16 @@ The coding worker, in full shape:
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { approvalPackage } from "@arnilo/prism-approval";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 const agent = await createAgent({
   name: "coding",
   model: config.models.coding,
   principal: { kind: "user", id: "prism-agent" },
   ownership: { tenantId: "prism-agent", userId: "prism-agent" },
-  slots: { compaction: "@arnilo/prism-memory-compaction" },
+  slots: { compaction: "@arnilo/prism-extensions/compaction" },
   packages: [
     sqliteStore({ path: config.storePath }),
     toolsCoding({ root: config.workspace, principal: { id: "prism-agent" } }),
@@ -52,7 +52,7 @@ With `memory` set, `memory-compaction` and `memory-system` both claim the `compa
 
 ```ts
 import { createAgent, definePackage } from "@arnilo/prism";
-import workflows, { workflowCommand } from "@arnilo/prism-workflows";
+import workflows, { workflowCommand } from "@arnilo/prism-extensions/workflows";
 
 const orchestrator = await createAgent({
   name: "orchestrator",
@@ -130,7 +130,7 @@ decisions take the pinned-core slice (decisions first, then preferences), and pa
 reach the turn through at most three path cues. The option makes no decision-model or other
 generative write call; a decision model is opt-in plan 202 Task 12.
 
-`ontology: true` (off by default) adds `@arnilo/prism-wiki` on the research and coding workers. The wiki
+`ontology: true` (off by default) adds `@arnilo/prism-knowledge/wiki` on the research and coding workers. The wiki
 is knowledge outside memory: it keeps concepts, claims and ingested sources in its own store under
 `<workspace>/.prism/wiki`, and with `memory` on it reads the fabric's notes read-only (`memory.ltm`). A
 background pass consolidates that evidence into concepts that cite it, `wiki.search` returns concepts
@@ -172,7 +172,7 @@ those points reuse the prefix.
 [`src/host/workflow.ts`](src/host/workflow.ts) is one declarative graph: a research brief, a `fanOut` across the coding, external, and remote workers, a deterministic `gateNode`, a `humanGate`, and a report. No engine lives in the host.
 
 ```ts
-import { agentNode, defineWorkflow, fanOut, gateNode, humanGate } from "@arnilo/prism-workflows";
+import { agentNode, defineWorkflow, fanOut, gateNode, humanGate } from "@arnilo/prism-extensions/workflows";
 
 const graph = defineWorkflow({
   id: "prism-agent.build",
@@ -207,7 +207,7 @@ The **external worker** runs a vendor CLI through a host-owned adapter. `createP
 
 ```ts
 import { createProfiles } from "@arnilo/prism/driver-kit";
-import { adapterDriver, processDriver } from "@arnilo/prism-driver-process";
+import { adapterDriver, processDriver } from "@arnilo/prism-hosts/driver-process";
 
 await createProfiles({ root: profilesRoot, driver: adapterDriver(hostStreamCli) }).create("external", {
   mode: "key",
@@ -223,7 +223,7 @@ const agent = await createAgent({
 The **remote worker** is a second Bun process (`bin/remote-worker.ts`) that serves one agent over stdio with `serveAgent`. The host connects with `connectAgent` and lends its own `HostUi` and store:
 
 ```ts
-import { connectAgent } from "@arnilo/prism-remote";
+import { connectAgent } from "@arnilo/prism-hosts/remote";
 
 const agent = await connectAgent(
   {
@@ -242,7 +242,7 @@ const agent = await connectAgent(
 [`src/host/host-ui.ts`](src/host/host-ui.ts) routes every human request — an approval, a selection, a free-text input, a notice, a terminal request — through `routeHostUi`: the attached client, then a paired channel, then the fail-closed policy default.
 
 ```ts
-import { policyDefault, routeHostUi } from "@arnilo/prism-headless";
+import { policyDefault, routeHostUi } from "@arnilo/prism-hosts/headless";
 
 const ui = routeHostUi([
   { name: "client", ui: client, kinds: ["confirm", "select", "input", "notify", "terminal"] },
@@ -258,8 +258,8 @@ const ui = routeHostUi([
 [`src/host/schedule.ts`](src/host/schedule.ts) declares fixed targets over the store's `checkpoints` and `leases` services. Cron strings and prompts come from config, never model output.
 
 ```ts
-import { createScheduler } from "@arnilo/prism-headless";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createScheduler } from "@arnilo/prism-hosts/headless";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 
 const persistence = createSqlitePersistence({ filename: config.storePath });
 const scheduler = createScheduler({
@@ -369,14 +369,14 @@ PRISM_LIVE_STRICT=1 PRISM_LIVE_RELEASE_JOURNEY=1 PRISM_LIVE_FILTER=release/journ
 
 ## Building a host with an agent
 
-The reference host's code does not change for this. A Prism agent can also be the *builder* of a host: [`@arnilo/prism-host-builder`](../../packages/hosts/host-builder/README.md) installs a skill and serves lookup and check tools over MCP, and [`examples/host-builder-agent.ts`](../../examples/host-builder-agent.ts) wires an agent with `tools-coding`, `contextFiles` and `@arnilo/prism-mcp` to them on the mock provider. The host starts the MCP server with its own flags (`--root`, `--entry`), never from model output.
+The reference host's code does not change for this. A Prism agent can also be the *builder* of a host: [`@arnilo/prism-hosts/host-builder`](../../packages/hosts/host-builder/README.md) installs a skill and serves lookup and check tools over MCP, and [`examples/host-builder-agent.ts`](../../examples/host-builder-agent.ts) wires an agent with `tools-coding`, `contextFiles` and `@arnilo/prism-extensions/mcp` to them on the mock provider. The host starts the MCP server with its own flags (`--root`, `--entry`), never from model output.
 
 ## Gating a host release on evals
 
-`evals/dataset.ts` and `src/evals/suite.ts` evaluate the coding and research workers with `@arnilo/prism-evals` across 12 items (`dev` and `heldout` splits, `trials: 4`, `timeline: "metadata"`), scoring `approval_before_effect` (using `agent.tools`), `citation_integrity`, `createStateMatchScorer` over the workspace files, and `task_success` (including `web_fetch` prompt-injection items built from `createInjectionDataset`).
+`evals/dataset.ts` and `src/evals/suite.ts` evaluate the coding and research workers with `@arnilo/prism-hosts/evals` across 12 items (`dev` and `heldout` splits, `trials: 4`, `timeline: "metadata"`), scoring `approval_before_effect` (using `agent.tools`), `citation_integrity`, `createStateMatchScorer` over the workspace files, and `task_success` (including `web_fetch` prompt-injection items built from `createInjectionDataset`).
 
 ```ts
-import { assertEvaluationThreshold } from "@arnilo/prism-evals";
+import { assertEvaluationThreshold } from "@arnilo/prism-hosts/evals";
 import { loadHostEvalBaseline, reconstructReportFromRecord, runHostEvalSuite } from "./src/evals/suite.js";
 
 const baseline = loadHostEvalBaseline();

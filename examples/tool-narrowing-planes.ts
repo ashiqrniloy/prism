@@ -34,22 +34,26 @@ export async function demo() {
   let generate = 0;
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate() {
-        generate += 1;
-        if (generate === 1) {
-          yield providerTextDelta("I'll search the wiki.");
-          yield {
-            type: "tool_call",
-            call: { type: "tool_call", id: "c1", name: "objects.list", arguments: {} },
-          };
-        } else {
-          yield providerTextDelta("I'll query metrics.");
-        }
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            generate += 1;
+            if (generate === 1) {
+              yield providerTextDelta("I'll search the wiki.");
+              yield {
+                type: "tool_call",
+                call: { type: "tool_call", id: "c1", name: "objects.list", arguments: {} },
+              };
+            } else {
+              yield providerTextDelta("I'll query metrics.");
+            }
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     tools: { add: [tool("wiki.search"), tool("wiki.read"), tool("metrics.query"), tool("scenario.run"), tool("objects.list")] },
     hooks: (hooks) => {
       let plane: Plane = "objects";

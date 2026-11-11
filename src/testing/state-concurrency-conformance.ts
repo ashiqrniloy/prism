@@ -8,7 +8,7 @@ import { isSessionMetadataConflict } from "../contracts-core.js";
 
 /**
  * Narrow router-state seam (structurally satisfied by
- * `@arnilo/prism-model-router`'s `ModelRouterStateStore`). Core stays
+ * `@arnilo/prism-extensions/model-router`'s `ModelRouterStateStore`). Core stays
  * dependency-free; adapter packages pass their real stores.
  */
 export interface StateConcurrencyRouterKey {
@@ -72,7 +72,7 @@ export interface StateConcurrencyRouterFactory {
   readonly nowInjected?: boolean;
 }
 
-/** Narrow idempotency seam (structurally satisfied by `@arnilo/prism-tools-work`'s `IdempotencyStore`). */
+/** Narrow idempotency seam (structurally satisfied by `@arnilo/prism-tools/work`'s `IdempotencyStore`). */
 export interface StateConcurrencyIdempotencyStore {
   get(input: StateConcurrencyIdempotencyKey): Promise<StateConcurrencyIdempotencyRecord | undefined>;
   begin(input: StateConcurrencyIdempotencyKey): Promise<{
@@ -91,7 +91,7 @@ export interface StateConcurrencyIdempotencyStore {
 /**
  * Structural stand-in for a host-verified identity. The conformance probes only
  * pass it through to a store's idempotency key. The verified-identity type lives
- * in `@arnilo/prism-governance`; the kernel names only `Principal`.
+ * in `@arnilo/prism-extensions/governance`; the kernel names only `Principal`.
  */
 interface ConformanceIdentity {
   readonly tenantId: string;

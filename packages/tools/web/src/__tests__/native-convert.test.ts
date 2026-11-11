@@ -34,7 +34,11 @@ describe("native HTML conversion", () => {
 
   it("native_convert_honors_meta_charset", async () => {
     // 0xE9 is "é" in ISO-8859-1 and an invalid continuation byte in UTF-8.
-    const bytes = new Uint8Array([...Buffer.from('<html><head><meta charset="iso-8859-1"></head><body>caf', "latin1"), 0xe9, ...Buffer.from("</body></html>", "latin1")]);
+    const bytes = new Uint8Array([
+      ...Buffer.from('<html><head><meta charset="iso-8859-1"></head><body>caf', "latin1"),
+      0xe9,
+      ...Buffer.from("</body></html>", "latin1"),
+    ]);
     assert.match(decodeBody(bytes, "text/html"), /café/u);
     assert.match(decodeBody(bytes, "text/html; charset=iso-8859-1"), /café/u);
     // An unknown label falls back to UTF-8 with replacement instead of throwing.

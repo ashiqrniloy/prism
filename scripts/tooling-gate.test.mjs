@@ -5,6 +5,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { publishArgs } from "./release.mjs";
 
 // Negative fixtures proving the formatting/linting/coverage gates actually fail
 // on a violation (plan 079, Task 6). Mirrors scripts/release-gate.test.mjs.
@@ -86,7 +87,7 @@ describe("tooling gates fail on violations", () => {
       "scripts/branch-coverage-audit.mjs",
       "packages/tools/coding/src/security/__tests__/docker-sandbox.test.ts",
       // Plan 126 Task 2: the wrong-runtime probe must actually run on node.
-      "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
+      "packages/extensions/store-sqlite/src/__tests__/sqlite-persistence.test.ts",
       // Plan 164 Task 8.3: the release gate must be observed refusing a non-Bun runtime.
       "scripts/release-gate.test.mjs",
     ]);
@@ -156,7 +157,7 @@ describe("tooling gates fail on violations", () => {
     const SECURITY_PATHS = [
       "src/agent-approval.ts",
       "src/agent-run-state.ts",
-      "src/artifacts.ts",
+      "src/artifacts/artifacts.ts",
       "packages/hosts/channels/src/approvals.ts",
       "packages/hosts/channels/src/pairing.ts",
       "packages/hosts/channels/src/telegram.ts",
@@ -212,15 +213,15 @@ describe("tooling gates fail on violations", () => {
   // registry toolchain (plan 125 Task 5: pack, publish, sbom, view) and prose about npm *naming*
   // rules — the registry's rules, not a command.
   it("scaffolds and hint strings emit Bun commands only", () => {
-    const ALLOWED_NPM = /\bnpm\s+(?:pack|publish|sbom|view)\b|\bnpm[-\s](?:names?|validated|package)/;
     const violations = (source) =>
-      [...source.matchAll(/\bnpm\b[^\n]*/g)].map((match) => match[0].trim()).filter((line) => !ALLOWED_NPM.test(line));
+      [...source.matchAll(/\bnpm\s+(?:install|i|add|test|start|run|ci|exec|x|init|update|audit)\b[^\n]*/g)].map((match) => match[0].trim());
     for (const allowed of [
       '"pack:dry-run": "npm pack --dry-run"',
       "  bun install",
       "  bun test",
       "npm-validated provider/package name",
       "npm names are lowercase",
+      "npm root @fixture/bundle; declares capabilities",
     ]) {
       assert.deepEqual(violations(allowed), [], `an allowlisted npm use must pass the scan: ${allowed}`);
     }
@@ -252,11 +253,9 @@ describe("tooling gates fail on violations", () => {
     assert.deepEqual(offenders, [], `scaffold and hint surfaces must not emit npm commands (plan 125 Task 3): ${offenders.join(" | ")}`);
   });
 
-  // Plan 164 Task 8.4: the release path is Bun-only — `bun pm pack` and `bun publish` ship the
-  // attested tarballs, and `scripts/sbom.mjs` replaces `npm sbom`. npm survives only in the plan 054
-  // legacy retirement path (`dist-tag`/`deprecate`, which Bun 1.4.2 lacks). Every remaining npm call
-  // site carries the boundary comment.
-  it("release tooling is Bun-only and npm survives only for legacy retirement", () => {
+  // Plan 215 Task 38: Bun packs; npm publishes those attested tarballs with OIDC.
+  // Registry call sites keep the boundary comment; npm never runs contributor build/test commands.
+  it("release tooling uses npm only for declared registry operations", () => {
     const REGISTRY_OPS = new Set(["pack", "publish", "sbom", "view", "dist-tag", "deprecate"]);
     const BOUNDARY_COMMENT = "release-host registry toolchain";
     const RETIRED_NPM = /\bnpm\s+(?:install|i|add|test|start|run|ci|exec|x|init|update|audit)\b/;
@@ -309,6 +308,9 @@ describe("tooling gates fail on violations", () => {
       // Retired npm hints are banned in every non-fixture script, whether or not it spawns npm.
       if (!/\.test\.mjs$/.test(rel) && !rel.startsWith("scripts/fixtures/")) {
         for (const match of source.matchAll(/\bnpm\b[^\n]*/g)) {
+          const line = source.slice(0, match.index).split("\n").at(-1) + match[0];
+          // This benchmark's wrong answer is a negative control, never an emitted command.
+          if (rel === "scripts/memory-bench/work-outcome/personas.mjs" && /^\s*wrong: "npm test",$/.test(line)) continue;
           if (RETIRED_NPM.test(match[0])) offenders.push(`${rel}: ${match[0].trim()} is retired (plan 125 Task 5)`);
         }
       }
@@ -323,7 +325,12 @@ describe("tooling gates fail on violations", () => {
         const line = source.slice(0, site.index).split("\n").length;
         const text = source.slice(site.index).split(";")[0];
         // Computed args are only allowed where the file declares the registry op it builds.
-        const declared = /publishArgs/.test(text) && /function publishArgs\([\s\S]{0,400}?\["publish"/.test(source);
+        const declared =
+          rel === "scripts/release.mjs" &&
+          /publishArgs\(pkg, pubVersion,/.test(text) &&
+          /function publishArgs\([\s\S]{0,400}?\[\s*"publish",\s*join\(artifactsDir, tarballName\(pkg.manifest.name, version\)\)/.test(
+            source,
+          );
         sites.push(`${rel}:${line} npm ${declared ? "publish" : "<computed>"}`);
         if (!declared) {
           offenders.push(`${rel}:Line ${line}: npm spawn with computed args is not a declared registry op`);
@@ -357,27 +364,37 @@ describe("tooling gates fail on violations", () => {
     const opsSeen = new Set(sites.map((site) => site.split(" npm ").at(-1)));
     for (const op of ["view", "dist-tag", "deprecate"]) assert.ok(opsSeen.has(op), `registry op ${op} must appear in the census`);
 
-    // Plan 164 Task 8.4: the release path packs and publishes with Bun, and provenance is the
-    // GitHub build attestation, not an npm sigstore statement.
+    // The release publishes exactly the packed path and asks npm for provenance in CI.
     const release = readFileSync("scripts/release.mjs", "utf8");
-    assert.ok(!/spawnSync\(\s*["']npm["']/.test(release), "release.mjs must spawn no npm");
-    assert.match(release, /spawnSync\(\s*["']bun["'],\s*publishArgs/, "release.mjs must publish with bun");
-    assert.match(release, /function publishArgs\([\s\S]{0,300}?"publish",/, "publishArgs must name a tarball argument");
-    assert.ok(!release.includes("--provenance"), "npm provenance is retired");
+    assert.match(release, /spawnSync\(\s*["']npm["'],\s*publishArgs/, "release.mjs must use npm OIDC publishing");
+    const args = publishArgs({ manifest: { name: "@fixture/release" }, experimental: false }, "0.13.0", { provenance: true });
+    assert.deepEqual(args, [
+      "publish",
+      join("release-artifacts", "fixture-release-0.13.0.tgz"),
+      "--access",
+      "public",
+      "--tag",
+      "latest",
+      "--provenance",
+    ]);
     const releaseYml = readFileSync(".github/workflows/release.yml", "utf8");
-    assert.match(releaseYml, /NODE_AUTH_TOKEN:\s*\$\{\{ secrets\.NPM_TOKEN \}\}/, "release.yml must keep the publish token");
+    assert.doesNotMatch(releaseYml, /NPM_TOKEN|NODE_AUTH_TOKEN/, "release.yml must carry no long-lived npm credential");
     for (const token of [
       "bun scripts/release.mjs pack --destination release-artifacts",
       "bun scripts/sbom.mjs",
       "id-token: write",
       "actions/attest-build-provenance@",
       "bun scripts/verify-sbom.mjs",
-      "bun audit --audit-level=moderate",
       "bun run release:publish",
     ]) {
       assert.ok(releaseYml.includes(token), `release.yml must keep the release surface: ${token}`);
     }
-    assert.ok(!/\bnpm\s+(pack|publish|sbom|view)\b/.test(releaseYml), "release.yml must invoke no npm");
+    assert.match(
+      readFileSync(".github/workflows/security.yml", "utf8"),
+      /bun audit --audit-level=moderate/,
+      "the required security job keeps the supply-chain audit",
+    );
+    assert.ok(!/^\s*(?:- run:|run:)\s*npm\b/m.test(releaseYml), "release.yml delegates npm execution to release.mjs");
   });
 });
 

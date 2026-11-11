@@ -25,7 +25,7 @@ import {
   HARD_MAX_WORKER_TOOL_CALLS_PER_TURN,
   HARD_MAX_WORKER_TURNS,
   type MemoryWorkerLimitOptions,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import {
   type ChunkStoreLocation,
   DEFAULT_MAX_CHUNK_BYTES,

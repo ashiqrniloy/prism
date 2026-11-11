@@ -4,7 +4,7 @@ A production-grade, modular deep research agent built on **Prism**.
 
 The agent executes an end-to-end research pipeline:
 1. **Plan:** Generates a structured research plan with targeted queries.
-2. **Search & Extract:** Fetches search results and content via `@arnilo/prism-tools-web`.
+2. **Search & Extract:** Fetches search results and content via `@arnilo/prism-tools/web`.
 3. **Refine (Bounded Loop):** Evaluates coverage and refines queries across bounded iterations.
 4. **Cite & Synthesize:** Synthesizes findings with verifiable, traceable source citations.
 5. **HITL Clarification:** Proposes structured clarification choices when research topics are ambiguous.
@@ -30,8 +30,8 @@ bun run dev
 | Stage / Seam | Component | Documentation |
 | --- | --- | --- |
 | **Orchestration** | `@arnilo/prism-workflows` DAG with bounded refine loop & checkpoints | [`docs/workflows.md`](https://github.com/arniloy/prism/blob/main/docs/workflows.md) |
-| **Search & Fetch** | `@arnilo/prism-tools-web` Brave/Exa search & Firecrawl fetch | [`docs/web-tools.md`](https://github.com/arniloy/prism/blob/main/docs/web-tools.md) |
-| **Citations & RAG** | Attribution via `@arnilo/prism-tools-web` & `@arnilo/prism-rag` (experimental, install with `@experimental`) | [`docs/rag.md`](https://github.com/arniloy/prism/blob/main/docs/rag.md) |
+| **Search & Fetch** | `@arnilo/prism-tools/web` Brave/Exa search & Firecrawl fetch | [`docs/web-tools.md`](https://github.com/arniloy/prism/blob/main/docs/web-tools.md) |
+| **Citations & RAG** | Attribution via `@arnilo/prism-tools/web` & `@arnilo/prism-rag` (experimental, install with `@experimental`) | [`docs/rag.md`](https://github.com/arniloy/prism/blob/main/docs/rag.md) |
 | **HITL Clarification** | Structured decision tool with durable suspend/resume | [`docs/coding-agent-tools.md`](https://github.com/arniloy/prism/blob/main/docs/coding-agent-tools.md) |
 | **Security & Trust** | Untrusted content boundaries for search & web data | [`docs/host-security.md`](https://github.com/arniloy/prism/blob/main/docs/host-security.md) |
 | **Inspector** | Local loopback playground via `prism dev` | [`docs/cli-rpc.md`](https://github.com/arniloy/prism/blob/main/docs/cli-rpc.md) |

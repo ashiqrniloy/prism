@@ -5,14 +5,14 @@
 // Runs in the bun run test gate segment after the workspace tests. The dist is built
 // before this runs (`bun run test` begins with `bun run build`), so the package imports
 // resolve via the workspace symlinks.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
-import { encodeLspFrame, LspFrameReader } from "@arnilo/prism-tools-coding";
-import { createImportTarStream, SandboxTarError, summarizeTarStream } from "@arnilo/prism-tools-coding";
+import { createImportTarStream, encodeLspFrame, LspFrameReader, SandboxTarError, summarizeTarStream } from "@arnilo/prism-tools/coding";
 
 // Synthetic 0.2.4 accumulator: `buf = Buffer.concat([buf, chunk])` in a loop. This is
 // the exact quadratic pattern Task 3 replaced; kept here as a self-validating reference
@@ -227,6 +227,6 @@ test("cli: collectOutput is already linear (plan 020 Task 3 audit-only — no ch
   // toString()) — the exact pattern Task 3 applied to framing/tar. It was linearized in
   // plan 020 Task 3 and has no residual quadratic site. The import below confirms the
   // module loads unchanged (no regression from Task 3's adjacent edits).
-  const mod = await import("@arnilo/prism-tools-work/connectors");
+  const mod = await import("@arnilo/prism-tools/work/connectors");
   assert.ok(typeof mod.createCliRunner === "function", "work-tools cli module loads (collectOutput audit-clean)");
 });

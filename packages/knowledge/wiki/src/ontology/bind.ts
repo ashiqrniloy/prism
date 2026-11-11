@@ -9,7 +9,7 @@
  * token of a multi-token name does (an exact alias). Exactly one qualifying subject binds the note. Zero, or
  * several, leave it unbound for the concept pass to decide: guessing here would fragment the ontology.
  */
-import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 /** Two matched tokens of one name, or one whole multi-token name. Tuning (`ontology.bindThreshold`). */
 export const DEFAULT_BIND_THRESHOLD = 2;

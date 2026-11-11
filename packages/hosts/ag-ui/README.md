@@ -1,4 +1,4 @@
-# @arnilo/prism-ag-ui
+# @arnilo/prism-hosts/ag-ui
 
 Host library that serves a Prism `Agent` over AG-UI, plus the framework-free protocol adapters and a reference renderer. Import is inert: no network, listener, run, tool, state, filesystem, or editor capability starts or appears on import.
 
@@ -7,7 +7,7 @@ Host library that serves a Prism `Agent` over AG-UI, plus the framework-free pro
 ## AG-UI
 
 ```ts
-import { createAgUiHandler } from "@arnilo/prism-ag-ui";
+import { createAgUiHandler } from "@arnilo/prism-hosts/ag-ui";
 
 const handle = createAgUiHandler(agent, { authorize: (req) => checkBearer(req) });
 Bun.serve({ port: 8787, fetch: handle });
@@ -32,13 +32,13 @@ Other root exports:
 - `createMessagesFromSessionProjection` / `createStateFromStoreProjection` / `createActivityFromToolProgressProjection` / `composeAgUiProjections` — standard projectors. `Awaitable<T>` hooks are awaited in event order, never `Promise.all`.
 - `createAgUiMcpAdapter()` — host-selected reviewed Prism MCP tools for a host-assembled agent; linked Apps emit standard activity.
 - `createAgUiMcpAppHandler()` / `createAgUiMcpAppSandbox()` — authenticated single-bridge Apps JSON-RPC proxy plus renderer sandbox/CSP config; never executes HTML.
-- `@arnilo/prism-ag-ui/renderer` — framework-free reference renderer: `createA2UiRenderer({ stream, catalog?, limits?, onAction?, onError?, dom? })` consumes an AG-UI event stream and renders `a2ui-surface` snapshots/deltas into DOM surfaces from a host component catalog. DOM-free `reduceA2UiOps` core, thin DOM binding with default text/container catalog, server-side A2UI caps enforced client-side, fail-closed drops with bounded error events, unknown components render explicit placeholders, never executes remote HTML. Main entry stays runtime-agnostic.
+- `@arnilo/prism-hosts/ag-ui/renderer` — framework-free reference renderer: `createA2UiRenderer({ stream, catalog?, limits?, onAction?, onError?, dom? })` consumes an AG-UI event stream and renders `a2ui-surface` snapshots/deltas into DOM surfaces from a host component catalog. DOM-free `reduceA2UiOps` core, thin DOM binding with default text/container catalog, server-side A2UI caps enforced client-side, fail-closed drops with bounded error events, unknown components render explicit placeholders, never executes remote HTML. Main entry stays runtime-agnostic.
 
 Hosts supply authorization, redaction, safe projections, and replay correlation storage. Raw tool args/results/progress, state, activity, reasoning, and raw events stay absent unless a bounded projector returns safe data. Secrets never reach an SSE frame.
 
 ## ACP
 
-ACP v1 serving lives in [`@arnilo/prism-acp`](../acp/README.md) (plan 161). `@arnilo/prism-ag-ui` no longer ships the `./acp` subpath: `serveAcp(agent, …)` and `acpHost()` serve any Prism `Agent`, and the ACP event mapper lives there too. See [docs/acp.md](../acp/README.md) for the released 0.12 contract.
+ACP v1 serving lives in [`@arnilo/prism-hosts/acp`](../acp/README.md) (plan 161). `@arnilo/prism-hosts/ag-ui` no longer ships the `./acp` subpath: `serveAcp(agent, …)` and `acpHost()` serve any Prism `Agent`, and the ACP event mapper lives there too. See [docs/acp.md](../acp/README.md) for the released 0.12 contract.
 
 ## Cost, security, and failure behavior
 
@@ -52,3 +52,5 @@ ACP v1 serving lives in [`@arnilo/prism-acp`](../acp/README.md) (plan 161). `@ar
 Defaults / hard: request/event/state/activity/reasoning/raw 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 256 tools/contexts, 8 / 64 interrupts, 16 / 64 media parts; patches 128 / 4096 operations; JSON depth 16 / 64, properties 128 / 4096, arrays 512 / 8192; replay 100 / 500 records; queue 128 / 4096 events; stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. SSE only; WebSocket/protobuf/push stay undeclared. Overflow closes with a bounded error. Resume decisions are bounded to 128 entries, 8 KiB reasons, and 64 KiB payloads before the kernel re-validates them.
 
 Run the demos with `bun examples/ag-ui-server.ts` (approval interrupt/resume), `bun examples/ag-ui-a2ui.ts` (A2UI painting), and `bun examples/ag-ui-mcp-apps.ts` (MCP Apps proxy).
+
+Protocol dependencies are optional peers of `@arnilo/prism-hosts`. Install `@ag-ui/core@0.0.59`. Protocol entrypoints require these peers; see the [bundle dependency table](../README.md).

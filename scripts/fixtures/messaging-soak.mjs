@@ -18,8 +18,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, providerDone, providerTextDelta } from "../../src/index.ts";
-import { createChannelRuntime } from "@arnilo/prism-channels";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createChannelRuntime } from "@arnilo/prism-hosts/channels";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import { providerPackage } from "../../src/provider-kit/index.ts";
 
 const DEFAULT_DURATION_MS = 30_000;

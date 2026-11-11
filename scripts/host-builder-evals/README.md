@@ -1,6 +1,6 @@
 # Host-builder evaluation (plan 215 Task 20)
 
-Measures whether the `@arnilo/prism-host-builder` kit (the skill, the version-exact indexes, the MCP server) helps a
+Measures whether the `@arnilo/prism-hosts/host-builder` kit (the skill, the version-exact indexes, the MCP server) helps a
 Prism builder agent build a Prism host. The builder works on fixture tasks and is graded by hidden tests it never sees.
 
 ## Arms
@@ -9,7 +9,7 @@ Prism builder agent build a Prism host. The builder works on fixture tasks and i
 | --- | --- |
 | `none` | `tools-coding` (shell enabled inside the project), `contextFiles`, and the installed Prism docs under `node_modules/@arnilo` |
 | `skill` | the same, plus the host-builder package installed (indexes, example sources) and the skill copied to `.agents/skills` by `prism-host-builder install --target agents` |
-| `skill+mcp` | the `skill` arm plus `@arnilo/prism-mcp` connected over stdio to `prism-host-builder mcp --root <project>` |
+| `skill+mcp` | the `skill` arm plus `@arnilo/prism-extensions/mcp` connected over stdio to `prism-host-builder mcp --root <project>` |
 
 `host_builder_eval_arms_differ_only_by_the_kit` checks that nothing else differs. The `skill+mcp` server is started
 without `--entry` or `--package`, so only the lookup tools and docs resources are offered.
@@ -92,7 +92,7 @@ refused. Keys come from `~/.config/prism/live.env`; the builder's shell inherits
 (`host_builder_eval_builder_shell_never_sees_live_keys`). Models come from
 `PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE,OLLAMA_GPT_OSS,OLLAMA_BEAM,OLLAMA_GEMMA4}_MODEL`.
 
-Evidence is written to `docs/_evidence/host-builder/212/<providers>.json` and `.md` (`.dry-run` and `.round2` suffixes).
+Evidence is written to `docs/_evidence/host-builder/224/<providers>.json` and `.md` (`.dry-run` and `.round2` suffixes).
 It passes `redactSecrets` and a no-secret assertion. `--dump-dir <dir>` writes each trial's tool-by-tool transcript and
 check output outside the evidence directory, for debugging a fixture.
 
@@ -103,3 +103,5 @@ the docs from the builder. Each trial therefore gets real copies of `@arnilo/pri
 tarball lays them out (sources without tests, docs without `_evidence`, READMEs, indexes, skills), and symlinks to every
 other dependency. The `none` arm's tree has no host-builder package. Diagnostics inside `node_modules` do not count
 against `typecheck_passes`: the installed sources are checked by the repository's own gates.
+
+Plan 224 Task 7 re-registers the bundle specifiers and regenerated kit. Earlier paid evidence remains unchanged under `212/`; new results go under `224/` so evidence from different registered inputs cannot be mixed. Offline verification makes no paid performance claim.

@@ -1,5 +1,10 @@
 import type { ModelClient, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
-import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
+import {
+  joinWorkerText,
+  type MemoryWorkerLimitOptions,
+  resolveMemoryWorkerLimits,
+  runMemoryWorkerLoop,
+} from "@arnilo/prism-memory-system/core";
 import { type MemoryObservation } from "../types.js";
 
 export const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach the target token budget. Call drop_observations.";

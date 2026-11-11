@@ -1,7 +1,7 @@
 /**
  * Shell tool: execute a command in the host shell.
  *
- * Behavioral port of pi's core/tools/bash for @arnilo/prism-tools-coding, adapted to
+ * Behavioral port of pi's core/tools/bash for @arnilo/prism-tools/coding, adapted to
  * Prism's `ToolDefinition` contract. Drops pi's TUI (live `onUpdate` streaming,
  * `renderCall`/`renderResult`) and process-shutdown child tracking; re-ports spawn/
  * kill/waitForChildProcess directly over stdlib so the package stays self-contained.

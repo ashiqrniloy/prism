@@ -12,7 +12,7 @@ carries the rule.
 | The host | which agents exist, their package lists, prompts, routing, vendor adapters, deployment | it is an opinion about one product |
 
 Nothing sits between the host and the SDK. The host imports `@arnilo/prism`, its public subpaths, and published
-packages. It never imports a path inside a package (`@arnilo/prism-tools-coding/src/x`), and it never reaches into
+packages. It never imports a path inside a package (`@arnilo/prism-tools/coding/src/x`), and it never reaches into
 `node_modules`.
 
 ## Decide where new code goes

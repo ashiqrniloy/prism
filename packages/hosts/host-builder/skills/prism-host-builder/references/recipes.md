@@ -1,6 +1,6 @@
 # Recipes
 
-One entry per common change. Each names a CI-tested example to copy (`node_modules/@arnilo/prism-host-builder/data/examples/<file>`)
+One entry per common change. Each names a CI-tested example to copy (`node_modules/@arnilo/prism-hosts/host-builder/data/examples/<file>`)
 and the page that explains it. The example is the code; this file never restates it, so it cannot drift.
 `data/examples.json` says whether an example needs credentials.
 
@@ -19,7 +19,7 @@ Copy `examples/coding-approval.ts` and drop the approval parts you do not need. 
 `root` reach the agent. Pass `principal: { kind: "user", id }` and `ownership` to `createAgent`: `shell` and the other
 durable tools refuse to run without a principal. Add approval before you give the agent to anyone else
 (`references/security.md`).
-Pages: `node_modules/@arnilo/prism-tools-coding/README.md`, `node_modules/@arnilo/prism-context-files/README.md`.
+Pages: `node_modules/@arnilo/prism-tools/coding/README.md`, `node_modules/@arnilo/prism-extensions/context-files/README.md`.
 
 ## Add a tool the host owns
 
@@ -53,7 +53,7 @@ Page: `node_modules/@arnilo/prism/docs/hooks.md`.
 ## Load AGENTS.md, SYSTEM.md and workspace skills
 
 Copy `examples/system-project-prompts.ts` and `examples/discover-skills.ts`. Context files are trust-gated.
-Page: `node_modules/@arnilo/prism-context-files/README.md`.
+Page: `node_modules/@arnilo/prism-extensions/context-files/README.md`.
 
 ## Make runs durable and resumable
 
@@ -64,7 +64,7 @@ Page: `node_modules/@arnilo/prism/docs/slots.md`.
 ## Gate tool calls with approval
 
 Copy `examples/approval.ts`, then `examples/coding-approval.ts` for a coding agent.
-Page: `node_modules/@arnilo/prism-approval/README.md`.
+Page: `node_modules/@arnilo/prism-extensions/approval/README.md`.
 
 ## Add a model provider
 
@@ -78,12 +78,12 @@ Page: `node_modules/@arnilo/prism/docs/models.md`.
 
 ## Serve an agent
 
-- ACP (editors): `examples/acp.ts`. Page: `node_modules/@arnilo/prism-acp/README.md`.
-- AG-UI (browser): `examples/ag-ui-server.ts`. Page: `node_modules/@arnilo/prism-ag-ui/README.md`.
-- MCP: `examples/mcp-server.ts`. Page: `node_modules/@arnilo/prism-mcp-server/README.md`.
+- ACP (editors): `examples/acp.ts`. Page: `node_modules/@arnilo/prism-hosts/acp/README.md`.
+- AG-UI (browser): `examples/ag-ui-server.ts`. Page: `node_modules/@arnilo/prism-hosts/ag-ui/README.md`.
+- MCP: `examples/mcp-server.ts`. Page: `node_modules/@arnilo/prism-hosts/mcp-server/README.md`.
 - Remote: `examples/remote-agent-server.ts` and `examples/remote-agent.ts`.
-  Page: `node_modules/@arnilo/prism-remote/README.md`.
-- Chat: `examples/telegram-agent.ts`. Page: `node_modules/@arnilo/prism-channels/README.md`.
+  Page: `node_modules/@arnilo/prism-hosts/remote/README.md`.
+- Chat: `examples/telegram-agent.ts`. Page: `node_modules/@arnilo/prism-hosts/channels/README.md`.
 
 Every server needs authentication and an ownership mapping before it listens beyond loopback: read
 `references/security.md` first.
@@ -92,13 +92,13 @@ Every server needs authentication and an ownership mapping before it listens bey
 
 Copy `examples/mcp-trust.ts` for the trust decision and `examples/connected-slack-mcp.ts` for a hosted server with
 tokens kept out of model context.
-Page: `node_modules/@arnilo/prism-mcp/README.md`.
+Page: `node_modules/@arnilo/prism-extensions/mcp/README.md`.
 
 ## Orchestrate several agents
 
 Copy `examples/workflow-research-and-review.ts`, then `examples/workflow-sqlite-resume.ts` for durable checkpoints.
 For a model-facing sub-agent tool, copy `examples/delegate.ts`.
-Pages: `node_modules/@arnilo/prism-workflows/README.md`, `node_modules/@arnilo/prism-delegate/README.md`.
+Pages: `node_modules/@arnilo/prism-extensions/workflows/README.md`, `node_modules/@arnilo/prism-extensions/delegate/README.md`.
 
 ## Drive a vendor coding agent
 
@@ -110,7 +110,7 @@ Pages: `node_modules/@arnilo/prism/docs/drivers.md`, `node_modules/@arnilo/prism
 Copy `examples/compaction.ts`. If any other package you list also provides `compaction` (observational memory, or a
 package the project already has), assign the owner in `slots` and check `agent.inspect().slots`
 (`references/choosing.md`).
-Page: `node_modules/@arnilo/prism-memory-compaction/README.md`.
+Page: `node_modules/@arnilo/prism-extensions/compaction/README.md`.
 
 ## Drive the host from a manifest
 
@@ -121,9 +121,9 @@ Page: `node_modules/@arnilo/prism/docs/manifest.md`.
 ## Route across models with a budget
 
 Copy `examples/model-router.ts`, then `examples/model-router-aggregate-budgets.ts`.
-Page: `node_modules/@arnilo/prism-model-router/README.md`.
+Page: `node_modules/@arnilo/prism-extensions/model-router/README.md`.
 
 ## Observe and evaluate
 
 Copy `examples/observability.ts` for OpenTelemetry and `examples/evals.ts` for a dataset and scorers.
-Pages: `node_modules/@arnilo/prism-observability/README.md`, `node_modules/@arnilo/prism-evals/README.md`.
+Pages: `node_modules/@arnilo/prism-extensions/observability/README.md`, `node_modules/@arnilo/prism-hosts/evals/README.md`.

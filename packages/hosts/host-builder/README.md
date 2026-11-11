@@ -1,4 +1,4 @@
-# @arnilo/prism-host-builder
+# @arnilo/prism-hosts/host-builder
 
 Version-exact reference data for coding agents that build or change a [Prism](../../../README.md) host. It ships
 indexes generated from the `@arnilo/prism` version it is released with, so what an agent reads is what the
@@ -7,7 +7,7 @@ installed kernel and packages export, and never a remembered 0.12 contract.
 ## Install
 
 ```bash
-bun add -d @arnilo/prism-host-builder
+bun add -d @arnilo/prism-hosts
 ```
 
 It is a development dependency: it adds nothing to an agent at run time and registers no package, hook, slot,
@@ -37,7 +37,7 @@ secret-shaped literal.
 ## Use
 
 ```ts
-import { loadHostBuilderIndex, readExampleSource } from "@arnilo/prism-host-builder";
+import { loadHostBuilderIndex, readExampleSource } from "@arnilo/prism-hosts/host-builder";
 
 const api = await loadHostBuilderIndex("api");
 const kernel = api.packages.find((pkg) => pkg.name === "@arnilo/prism");
@@ -85,8 +85,8 @@ Editing the skill, a docs page or an example changes the indexes: run `bun scrip
 ## Installing into your coding agent
 
 ```bash
-bunx prism-host-builder install --target claude --mcp
-bunx prism-host-builder install --target codex --mcp --dry-run   # prints the TOML snippet; writes nothing
+bunx --package @arnilo/prism-hosts prism-host-builder install --target claude --mcp
+bunx --package @arnilo/prism-hosts prism-host-builder install --target codex --mcp --dry-run   # prints the TOML snippet; writes nothing
 ```
 
 `install --target <name> [--mcp] [--root <dir>] [--force] [--dry-run]` works on the project in `--root` (default: the
@@ -98,9 +98,9 @@ current directory) and nothing else.
 | `cursor` | `.agents/skills/prism-host-builder` (Cursor also reads `.claude/skills`) | Merged into `.cursor/mcp.json` under `mcpServers`. |
 | `codex` | `.agents/skills/prism-host-builder` | Prints the `[mcp_servers.prism]` table for `.codex/config.toml` and writes nothing: the package takes no TOML dependency. Codex loads project configuration only for a trusted project. |
 | `agents` | `.agents/skills/prism-host-builder` (Codex, Cursor and Prism's `contextFiles` read it) | None. |
-| `prism` | `.agents/skills/prism-host-builder` | Always prints the `contextFiles` and `@arnilo/prism-mcp` packages a Prism builder agent lists. |
+| `prism` | `.agents/skills/prism-host-builder` | Always prints the `contextFiles` and `@arnilo/prism-extensions/mcp` packages a Prism builder agent lists. |
 
-The server entry is `prism: { command: "bunx", args: ["prism-host-builder", "mcp"] }`: no env, no token. A JSON config
+The server entry is `prism: { command: "bunx", args: ["--package", "@arnilo/prism-hosts", "prism-host-builder", "mcp"] }`: no env, no token. A JSON config
 is parsed, given that one key and written back with its own indent, line ending and trailing newline; every other key
 keeps its value and order. A file that is not plain JSON (invalid, empty, or with comments) or whose `mcpServers` is not
 an object is refused with `ERR_PRISM_HOST_BUILDER_INSTALL_CONFIG` and left as it was. Add start flags such as
@@ -123,7 +123,7 @@ an object is refused with `ERR_PRISM_HOST_BUILDER_INSTALL_CONFIG` and left as it
 
 `prism-host-builder mcp [--root <dir>] [--allow-version-mismatch] [--entry <file>#<export>] [--package <file>#<export>]
 [--trust-project] [--check-timeout <seconds>] [--pass-env <NAME>]` serves over stdio through `servePrismMcpStdio`
-(`@arnilo/prism-mcp-server`). It is local: no listener, no network, no model, no embeddings, and it never writes. The
+(`@arnilo/prism-hosts/mcp-server`). It is local: no listener, no network, no model, no embeddings, and it never writes. The
 four lookup tools read only files. The three check tools (see "Checking your host") run the host's own code, and only
 when the server was started with a target for them. `--root` is the host project (default: the current directory).
 
@@ -141,14 +141,14 @@ when the server was started with a target for them. `--root` is the host project
   matching reference and the tools.
 - **Version rule.** Every tool call compares the `@arnilo/prism` installed under `--root` with the version the
   indexes describe. A mismatch, or no install, is a tool error `ERR_PRISM_HOST_BUILDER_VERSION` naming both versions
-  and the fix (`bun add -d @arnilo/prism-host-builder@<installed>`). `--allow-version-mismatch` turns it into a
+  and the fix (`bun add -d @arnilo/prism-hosts@<installed>`). `--allow-version-mismatch` turns it into a
   `warning` field on every result.
 - **Bounds.** Every result and resource read is at most 64 KiB; a cut is marked `[truncated: N bytes omitted]`. An
   unknown symbol, code or path is `found: false` with the nearest matches, never an exception.
 - **Examples.** `path` resolves only to a path `examples.json` lists; anything else is not found.
 
 ```json
-{ "mcpServers": { "prism-host-builder": { "command": "bunx", "args": ["prism-host-builder", "mcp"] } } }
+{ "mcpServers": { "prism-host-builder": { "command": "bunx", "args": ["--package", "@arnilo/prism-hosts", "prism-host-builder", "mcp"] } } }
 ```
 
 The lookups are plain functions in `src/lookup/` and `src/server.ts` only registers them.
@@ -165,7 +165,7 @@ the user named when the server started. A tool argument can pick among those tar
 | `--package <file>#<export>` (repeatable) | `prism_check_package({ package })` | `packageConformance` from the project's installed `@arnilo/prism/testing` on a package definition or factory; one result per check. |
 
 ```bash
-bunx prism-host-builder mcp --entry src/agent.ts#createInspectionAgent --package src/my-package.ts#default
+bunx --package @arnilo/prism-hosts prism-host-builder mcp --entry src/agent.ts#createInspectionAgent --package src/my-package.ts#default
 ```
 
 **The factory convention.** An inspection factory builds the agent on the mock provider and runs nothing:
@@ -247,3 +247,5 @@ check tool costs one child process per call (see "Checking your host").
 - The generator copies example sources into `data/`. It scans them for key-shaped literals and for values found in
   the environment or `scripts/live.env`, and a hit fails generation. No `_evidence` content enters `data/`.
 - `readExampleSource` rejects absolute paths, `..` segments and any path the examples index does not list.
+
+Protocol dependencies are optional peers of `@arnilo/prism-hosts`. Install `@modelcontextprotocol/server@^2.3.0` and `zod@^4.6.2` for the MCP command. Protocol entrypoints require these peers; see the [bundle dependency table](../README.md).

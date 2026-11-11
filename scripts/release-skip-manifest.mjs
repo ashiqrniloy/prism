@@ -7,7 +7,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { auditBlockedGates, protectedGateSurfaces } from "./blocked-gate.mjs";
-import { publishableWorkspaceDirs } from "./package-truth.mjs";
+import { packagePages } from "./bundles.mjs";
+import { loadRelease } from "./release.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const MANIFEST_PATH = process.env.PRISM_RELEASE_EVIDENCE ?? join(ROOT, "scripts", "release-evidence.json");
@@ -110,15 +111,12 @@ function envsInTree(dir) {
 }
 
 function workspacePackages() {
-  // `expandWorkspaceDirs` handles every workspace entry form, including the grouped
-  // "packages/providers/*" and "packages/integrations/*" bases (plan 147/152), so a standalone
-  // provider package can never be invisible to the live-leg scan. `dir` stays relative to
-  // `packages/` because every consumer joins it onto that root.
-  const workspaces = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).workspaces ?? [];
-  return publishableWorkspaceDirs(ROOT, workspaces)
-    .map((dir) => ({
-      dir: relative(join(ROOT, "packages"), dir),
-      name: JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name,
+  return packagePages(ROOT, loadRelease(ROOT).packages)
+    .filter((pkg) => pkg.path !== ".")
+    .map((pkg) => ({
+      dir: relative(join(ROOT, "packages"), join(ROOT, pkg.path)),
+      name: pkg.manifest.name,
+      provider: pkg.path.startsWith("packages/providers/"),
     }))
     .sort((a, b) => a.dir.localeCompare(b.dir));
 }
@@ -154,9 +152,9 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
   const thresholdMap = thresholds?.packages ?? {};
   for (const { dir, name } of packages) {
     const row = artifact?.packages?.[name];
-    const exception = thresholdMap[name]?.protectedException;
-    // Packages without a test suite are not test surfaces (no dist/__tests__).
-    const hasSuite = existsSync(join(ROOT, "packages", dir, "dist", "__tests__"));
+    const exception = thresholdMap[join("packages", dir)]?.protectedException;
+    // Source units require their own coverage evidence even when the artifact is missing.
+    const hasSuite = existsSync(join(ROOT, "packages", dir, "src")) || existsSync(join(ROOT, "packages", dir, "dist", "__tests__"));
     if (!hasSuite && !row) continue;
     if (exception) {
       const srcEnvs = envsInTree(join(ROOT, "packages", dir, "src"));
@@ -245,10 +243,9 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
 
   // Protected: provider live legs (offline conformance suites cover the same
   // mapping code, so the measured offline baseline is the regression signal).
-  // Plan 152 Task 8: every adapter is a standalone package under packages/providers/,
-  // so the workspace list already enumerates each one (no family subpath scan).
-  for (const { dir, name } of packages) {
-    if (envsInTree(join(ROOT, "packages", dir)).has("PRISM_LIVE_PROVIDER_TESTS")) {
+  // Bundle pages preserve one protected row per provider subpath.
+  for (const { dir, name, provider } of packages) {
+    if (provider || envsInTree(join(ROOT, "packages", dir)).has("PRISM_LIVE_PROVIDER_TESTS")) {
       surfaces.push({
         name: `${name} live provider legs`,
         state: "protected",

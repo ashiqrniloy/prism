@@ -1,6 +1,6 @@
 # Pitfalls
 
-Match the error code first. `node_modules/@arnilo/prism-host-builder/data/errors.json` gives each code's owning package,
+Match the error code first. `node_modules/@arnilo/prism-hosts/host-builder/data/errors.json` gives each code's owning package,
 file and meaning. A package load error carries a short code; a `createAgent` that fails to load rejects before any run.
 
 In the tables below the **Code** column holds only codes that exist in `errors.json`.
@@ -38,13 +38,13 @@ In the tables below the **Code** column holds only codes that exist in `errors.j
   a project unless asked; edit `package.json` and tell the person to install.
 - **Copying a 0.12 sample.** A `store: "memory"` field, a `loop:` option or a model-invoked workflow no longer exists.
   Read `references/upgrading.md` and copy from `data/examples/`.
-- **Two memory packages and no `slots`.** Listing `@arnilo/prism-memory-compaction` with
+- **Two memory packages and no `slots`.** Listing `@arnilo/prism-extensions/compaction` with
   `@arnilo/prism-memory-system` is valid only with a `compaction` owner assigned.
 - **A tool in `requiresTools` that is off.** The skill disappears from the catalog; it is not an error. Check
   `agent.inspect().skills` before you debug the prompt.
 - **A host answering nothing.** With no `host.ui`, every ask answers `unavailable`. Approval asks then suspend the run
   and resume only when an answer arrives. A run that stops "for no reason" often waits for one.
-- **Importing a package path.** `@arnilo/prism-tools-coding/src/x` is not public and is not in the tarball layout you
+- **Importing a package path.** `@arnilo/prism-tools/coding/src/x` is not public and is not in the tarball layout you
   expect. Import the entry or a documented subpath listed in `api.json`.
 - **Experimental memory shape.** A `^0.13.0` range cannot install an experimental package. Install it by tag and
   expect the API to move.

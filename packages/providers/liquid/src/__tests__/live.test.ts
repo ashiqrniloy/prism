@@ -34,7 +34,7 @@ for (const model of hostedModels) {
     model,
     secretEnv: "LIQUID_API_KEY",
     decideTestName: "liquid_live_decide",
-    title: `@arnilo/prism-provider-liquid hosted live tests (${model})`,
+    title: `@arnilo/prism-ai/liquid hosted live tests (${model})`,
   });
 }
 
@@ -50,7 +50,7 @@ await runSystemOneLiveScenarios({
       ? "set PRISM_LIVE_PROVIDER_TESTS=1 and PRISM_LIVE_LLAMA_SERVER_URL to run the local d1-3B live tests"
       : false,
   decideTestName: "liquid_live_decide",
-  title: "@arnilo/prism-provider-liquid local d1-3B live tests",
+  title: "@arnilo/prism-ai/liquid local d1-3B live tests",
 });
 
 // One image request per provider: the hosted rows also prove which model id answers and what `model` it echoes.
@@ -58,7 +58,7 @@ const hostedSkip = !process.env.LIQUID_API_KEY ? "set LIQUID_API_KEY to run the 
 const localSkip =
   process.env.PRISM_LIVE_LLAMA_SERVER_URL === undefined ? "set PRISM_LIVE_LLAMA_SERVER_URL to run the local image probe" : false;
 
-describe("@arnilo/prism-provider-liquid live image probes", () => {
+describe("@arnilo/prism-ai/liquid live image probes", () => {
   it.skipIf(hostedSkip !== false)("liquid_live_hosted_decide_with_image", async () => {
     const provider = createLiquidProvider({ apiKey: async () => process.env.LIQUID_API_KEY });
     const result = await provider.decisions!().decide({
@@ -84,7 +84,7 @@ describe("@arnilo/prism-provider-liquid live image probes", () => {
   });
 });
 
-describe("@arnilo/prism-provider-liquid live skip probe", () => {
+describe("@arnilo/prism-ai/liquid live skip probe", () => {
   it("liquid_local_live_skips_cleanly_when_server_absent", async () => {
     const check = await llamaServerReachable("http://127.0.0.1:59999");
     assert.equal(check.reachable, false);

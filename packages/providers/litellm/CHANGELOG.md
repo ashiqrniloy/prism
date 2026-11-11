@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- Add `@arnilo/prism-provider-litellm`: one Chat Completions route to a host-run LiteLLM Proxy, conservative
+- Add `@arnilo/prism-ai/litellm`: one Chat Completions route to a host-run LiteLLM Proxy, conservative
   per-group discovery from `/model/info` (fallback `/v1/models`), a Prism-minted `x-litellm-call-id` with
   `x-litellm-*` response telemetry on `usage.metadata.litellm`, cost from `x-litellm-response-cost` with the
   catalog as fallback, marker-free prompt caching with a per-model `anthropic-blocks` opt-in, and error mapping

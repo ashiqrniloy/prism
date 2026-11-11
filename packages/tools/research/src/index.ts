@@ -1,19 +1,20 @@
 /**
- * `@arnilo/prism-tools-research` — research skills, a source ledger, and a citation check.
+ * `@arnilo/prism-tools/research` — research skills, a source ledger, and a citation check.
  *
  * `tool.result` records sources from the configured tool names. `cite` returns a `[[cite:<id>]]`
  * marker for a ledger id. `run.end` continues while repairs remain, then records a failed verdict.
  * `maxRepairs: 0` spends no extra model turn.
  */
-import manifest from "../package.json" with { type: "json" };
+
 import { fileURLToPath } from "node:url";
 import { definePackage, type JsonValue, type PackageInstance, type SessionContext, type ToolResult } from "@arnilo/prism";
+import manifest from "../../package.json" with { type: "json" };
 
 import { citationDecision, citationIds, citeMarker, lastAssistantText, unresolvedIds, withLedgerLine } from "./check.js";
 import { type ToolsResearchConfig, toolsResearchConfigSchema } from "./config.js";
 import { EMPTY_STATE, ledgerLine, type ResearchState, recordSources, sourcesIn } from "./ledger.js";
 
-const PACKAGE = "@arnilo/prism-tools-research";
+const PACKAGE = "@arnilo/prism-tools/research";
 
 interface Flags {
   readonly missingNoted: boolean;

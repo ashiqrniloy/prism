@@ -54,19 +54,23 @@ function gatedAgent(options: { readonly gate?: (hooks: HookRegistrar) => void } 
         });
         options.gate?.(registrar);
       },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { path: "ok" }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("finished");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { path: "ok" }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("finished");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: {
         add: [
           {
@@ -179,7 +183,11 @@ describe("resume goes through the full tool pipeline (plan 177 Task 3)", () => {
     hooks.length = 0;
     const events = await collect(session.resume(allow(first)));
     assert.deepEqual(executed, [{ path: "ok" }], "the approved call runs exactly once");
-    assert.equal(events.some((event) => event.type === "run.suspended"), false, "the resumed approval does not suspend again");
+    assert.equal(
+      events.some((event) => event.type === "run.suspended"),
+      false,
+      "the resumed approval does not suspend again",
+    );
     assert.equal(hooks.filter((entry) => entry.startsWith("tool.call:")).length, 1, "tool.call fired once for the resumed call");
   });
 
@@ -195,8 +203,14 @@ describe("resume goes through the full tool pipeline (plan 177 Task 3)", () => {
     rewriteNext = true;
     const events = await collect(session.resume(allow(first)));
     assert.deepEqual(executed, [], "a rewritten call the approval does not cover never executes");
-    assert.ok(events.some((event) => event.type === "run.suspended"), "the run suspends again");
-    assert.ok(events.some((event) => event.type === "decision.pending"), "the rewritten call is staged as a new pending decision");
+    assert.ok(
+      events.some((event) => event.type === "run.suspended"),
+      "the run suspends again",
+    );
+    assert.ok(
+      events.some((event) => event.type === "decision.pending"),
+      "the rewritten call is staged as a new pending decision",
+    );
   });
 
   it("resume_across_process_is_gated", async () => {
@@ -212,7 +226,10 @@ describe("resume goes through the full tool pipeline (plan 177 Task 3)", () => {
       reopened.resume([{ approvalId: first.pending![0]!.approvalId, outcome: "allow_once", modifiedArguments: { path: "/etc/shadow" } }]),
     );
     assert.deepEqual(executed, []);
-    assert.ok((await store.list("s")).some((entry) => entry.kind === "suspended_run"), "a denied resume leaves the suspension consumed");
+    assert.ok(
+      (await store.list("s")).some((entry) => entry.kind === "suspended_run"),
+      "a denied resume leaves the suspension consumed",
+    );
   });
 
   it("no_direct_dispatch_callers", () => {

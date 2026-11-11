@@ -45,27 +45,27 @@ const DECIDE_PROBE = {
  * `run(ctx)` returns a short detail string or throws; `ctx.load(specifier)` imports the package.
  */
 export const PROBES = [
-  catalogProbe("hyper", "HYPER_API_KEY", "@arnilo/prism-provider-hyper", "listHyperModels", { publicCatalog: true }),
-  catalogProbe("opencode-go", "OPENCODE_GO_API_KEY", "@arnilo/prism-provider-opencode-go", "listOpenCodeGoModels"),
-  catalogProbe("openrouter", "OPENROUTER_API_KEY", "@arnilo/prism-provider-openrouter", "listOpenRouterModels", {
+  catalogProbe("hyper", "HYPER_API_KEY", "@arnilo/prism-ai/hyper", "listHyperModels", { publicCatalog: true }),
+  catalogProbe("opencode-go", "OPENCODE_GO_API_KEY", "@arnilo/prism-ai/opencode-go", "listOpenCodeGoModels"),
+  catalogProbe("openrouter", "OPENROUTER_API_KEY", "@arnilo/prism-ai/openrouter", "listOpenRouterModels", {
     publicCatalog: true,
   }),
-  catalogProbe("kilo", "KILO_API_KEY", "@arnilo/prism-provider-kilo", "listKiloModels", { publicCatalog: true }),
-  catalogProbe("litellm", "LITELLM_API_KEY", "@arnilo/prism-provider-litellm", "listLiteLLMModels", {
+  catalogProbe("kilo", "KILO_API_KEY", "@arnilo/prism-ai/kilo", "listKiloModels", { publicCatalog: true }),
+  catalogProbe("litellm", "LITELLM_API_KEY", "@arnilo/prism-ai/litellm", "listLiteLLMModels", {
     baseUrlEnv: "PRISM_LIVE_LITELLM_BASE_URL",
     defaultBaseUrl: "http://127.0.0.1:4000",
   }),
-  catalogProbe("commandcode", "COMMAND_CODE_API_KEY", "@arnilo/prism-provider-commandcode", "listCommandCodeModels"),
-  catalogProbe("ollama-cloud", "OLLAMA_API_KEY", "@arnilo/prism-provider-ollama-cloud", "listOllamaCloudModels"),
+  catalogProbe("commandcode", "COMMAND_CODE_API_KEY", "@arnilo/prism-ai/commandcode", "listCommandCodeModels"),
+  catalogProbe("ollama-cloud", "OLLAMA_API_KEY", "@arnilo/prism-ai/ollama-cloud", "listOllamaCloudModels"),
   decideProbe(
     "typesafe",
     "TYPESAFE_API_KEY",
-    "@arnilo/prism-provider-typesafe",
+    "@arnilo/prism-ai/typesafe",
     "createTypeSafeProvider",
     () => "jev-latest",
     "PRISM_LIVE_TYPESAFE_MODEL",
   ),
-  decideProbe("liquid", "LIQUID_API_KEY", "@arnilo/prism-provider-liquid", "createLiquidProvider", (env) =>
+  decideProbe("liquid", "LIQUID_API_KEY", "@arnilo/prism-ai/liquid", "createLiquidProvider", (env) =>
     (env.PRISM_LIVE_LIQUID_MODELS ?? "d1.1").split(",")[0].trim(),
   ),
   {
@@ -75,7 +75,7 @@ export const PROBES = [
     async run(ctx) {
       // The suite's own reachability check (src/testing), so the probe and the T1 row agree.
       const { checkLayaServerReachable } = await ctx.load("@arnilo/prism/testing");
-      const { LAYA_DEFAULT_BASE_URL } = await ctx.load("@arnilo/prism-provider-laya");
+      const { LAYA_DEFAULT_BASE_URL } = await ctx.load("@arnilo/prism-ai/laya");
       const result = await withFetch(ctx.fetch, () => checkLayaServerReachable(ctx.env.LAYA_BASE_URL ?? LAYA_DEFAULT_BASE_URL));
       if (!result.reachable) throw new Error(result.reason ?? "laya-serve is not reachable");
       return "reachable";

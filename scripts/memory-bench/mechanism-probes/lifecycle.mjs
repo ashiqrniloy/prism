@@ -5,7 +5,7 @@ import { digest, fabricAgent, lastHits, packages, SCOPE, scripted, TENANT } from
 /** A library-level fabric over one in-memory store; the lifecycle code is the package's own. */
 export async function lib({ lifecycle = {}, scopes, memoryFor, ...options } = {}) {
   const { fabric } = await packages();
-  const core = await import("@arnilo/prism-memory-core");
+  const core = await import("@arnilo/prism-memory-system/core");
   const store = core.createMemoryVectorStore();
   const make = (resourceId) => fabric.createMemory({ ...SCOPE, resourceId, vectorStore: store });
   const memory = make(SCOPE.resourceId);

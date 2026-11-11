@@ -1,6 +1,6 @@
 import { type OwnershipScope } from "@arnilo/prism";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
-import type { Embedder, SourceAccessGrant } from "@arnilo/prism-memory-core";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
+import type { Embedder, SourceAccessGrant } from "@arnilo/prism-memory-system/core";
 import { chunkText } from "./chunk.js";
 import { RagLimitError, RagSyncCursorError, RagSyncThrottleError, RagValidationError } from "./errors.js";
 import { isValidContentHash } from "./hash.js";

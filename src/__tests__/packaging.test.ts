@@ -6,6 +6,10 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+// @ts-expect-error stdlib-only bundle tooling.
+import { activeBundles } from "../../scripts/bundles.mjs";
+// @ts-expect-error stdlib-only release tooling.
+import { loadRelease } from "../../scripts/release.mjs";
 // @ts-expect-error stdlib-only release gate scripts intentionally ship as runnable JavaScript.
 import { assertTarballAllowDeny } from "../../scripts/release-gates.mjs";
 import { parseRange, parseVersion, satisfies } from "../packages/semver.js";
@@ -56,60 +60,16 @@ const packages: Array<{
   sourceBin?: boolean;
   /** Ships generated reference data under `data/`, including verbatim example sources (plan 215 Task 14). */
   shipsData?: boolean;
-}> = [
-  { dir: ".", name: "@arnilo/prism", isCore: true, sourceExport: true },
-  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp", sourceExport: true },
-  { dir: "packages/hosts/mcp-server", name: "@arnilo/prism-mcp-server", sourceExport: true },
-  { dir: "packages/hosts/acp", name: "@arnilo/prism-acp", sourceExport: true },
-  { dir: "packages/hosts/headless", name: "@arnilo/prism-headless", sourceExport: true },
-  { dir: "packages/hosts/remote", name: "@arnilo/prism-remote", sourceExport: true },
-  { dir: "packages/memory/core", name: "@arnilo/prism-memory-core", sourceExport: true },
-  { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag", sourceExport: true },
-  { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki", sourceExport: true },
-  { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction", sourceExport: true },
-  { dir: "packages/memory/system", name: "@arnilo/prism-memory-system", sourceExport: true },
-  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser", sourceExport: true },
-  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui", sourceExport: true },
-  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding", sourceExport: true },
-  { dir: "packages/tools/web", name: "@arnilo/prism-tools-web", sourceExport: true },
-  { dir: "packages/tools/research", name: "@arnilo/prism-tools-research", sourceExport: true },
-  { dir: "packages/tools/openapi", name: "@arnilo/prism-tools-openapi", sourceExport: true },
-  { dir: "packages/tools/computer-use", name: "@arnilo/prism-tools-computer-use", sourceExport: true },
-  { dir: "packages/policy/approval", name: "@arnilo/prism-approval", sourceExport: true },
-  { dir: "packages/policy/guardrail-packs", name: "@arnilo/prism-guardrail-packs", sourceExport: true },
-  { dir: "packages/policy/governance", name: "@arnilo/prism-governance", sourceExport: true },
-  { dir: "packages/policy/model-router", name: "@arnilo/prism-model-router", sourceExport: true },
-  { dir: "packages/integrations/observability", name: "@arnilo/prism-observability", sourceExport: true },
-  { dir: "packages/integrations/workflows", name: "@arnilo/prism-workflows", sourceExport: true },
-  { dir: "packages/drivers/process", name: "@arnilo/prism-driver-process", sourceExport: true },
-  { dir: "packages/integrations/delegate", name: "@arnilo/prism-delegate", sourceExport: true },
-  { dir: "packages/integrations/advisor", name: "@arnilo/prism-advisor", sourceExport: true },
-  { dir: "packages/context/files", name: "@arnilo/prism-context-files", sourceExport: true },
-  { dir: "packages/context/engineering", name: "@arnilo/prism-context-engineering", sourceExport: true },
-  { dir: "packages/hosts/channels", name: "@arnilo/prism-channels", sourceExport: true },
-  { dir: "packages/hosts/evals", name: "@arnilo/prism-evals", sourceExport: true },
-  { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools", sourceExport: true, sourceBin: true },
-  { dir: "packages/hosts/host-builder", name: "@arnilo/prism-host-builder", sourceExport: true, sourceBin: true, shipsData: true },
-  { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json", sourceExport: true },
-  { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring", sourceExport: true },
-  { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl", sourceExport: true },
-  { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs", sourceExport: true },
-  { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite", sourceExport: true },
-  { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres", sourceExport: true },
-  { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper", sourceExport: true },
-  { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya", sourceExport: true },
-  { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid", sourceExport: true },
-  { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex", sourceExport: true },
-  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode", sourceExport: true },
-  { dir: "packages/providers/kilo", name: "@arnilo/prism-provider-kilo", sourceExport: true },
-  { dir: "packages/providers/litellm", name: "@arnilo/prism-provider-litellm", sourceExport: true },
-  { dir: "packages/providers/ollama-cloud", name: "@arnilo/prism-provider-ollama-cloud", sourceExport: true },
-  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
-  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter", sourceExport: true },
-  { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
-  // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
-  { dir: "packages/tools/work", name: "@arnilo/prism-tools-work", sourceExport: true, isSubpaths: true },
-];
+}> = loadRelease(repoRoot)
+  .packages.filter((pkg: { manifest: { private?: boolean } }) => !pkg.manifest.private)
+  .map((pkg: { path: string; manifest: { name: string; bin?: unknown } }) => ({
+    dir: pkg.path,
+    name: pkg.manifest.name,
+    isCore: pkg.path === ".",
+    sourceExport: true,
+    sourceBin: !!pkg.manifest.bin,
+    shipsData: pkg.path === "packages/hosts",
+  }));
 
 const deniedPatterns: ReadonlyArray<{ pattern: RegExp; label: string }> = [
   { pattern: /__tests__\//, label: "compiled tests" },
@@ -159,16 +119,10 @@ function readPkg(dir: string): Record<string, unknown> {
  */
 function workspaceManifests(): Array<{ dir: string; manifest: Record<string, unknown> }> {
   const root = readPkg(".");
-  const dirs = (root.workspaces as string[]).flatMap((glob) => {
-    const star = glob.indexOf("*");
-    assert.ok(star !== -1, `workspace glob ${glob} must contain a star`);
-    const base = join(repoRoot, glob.slice(0, star));
-    return readdirSync(base, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => join(glob.slice(0, star), entry.name))
-      .filter((dir) => existsSync(join(repoRoot, dir, "package.json")));
-  });
-  return [{ dir: ".", manifest: root }, ...dirs.map((dir) => ({ dir, manifest: readPkg(dir) }))];
+  const dirs = loadRelease(repoRoot)
+    .packages.filter((pkg: { path: string }) => pkg.path !== ".")
+    .map((pkg: { path: string }) => pkg.path);
+  return [{ dir: ".", manifest: root }, ...dirs.map((dir: string) => ({ dir, manifest: readPkg(dir) }))];
 }
 
 describe("packaging guard", () => {
@@ -180,9 +134,9 @@ describe("packaging guard", () => {
           // Checked-in init templates intentionally include *.tmpl names that look like
           // tsconfig/tests; they are scaffold inputs, not package internals.
           if (f.startsWith("templates/")) return false;
-          if (pkg.sourceExport && f.startsWith("src/") && f.endsWith(".ts") && !f.includes("__tests__")) return false;
-          if (pkg.sourceBin && f.startsWith("bin/") && f.endsWith(".ts") && !f.includes("__tests__")) return false;
-          if (pkg.shipsData && f.startsWith("data/") && !deniedPatterns.some((d) => d.pattern.test(f))) return false;
+          if (pkg.sourceExport && /(?:^|\/)src\//.test(f) && f.endsWith(".ts") && !f.includes("__tests__")) return false;
+          if (pkg.sourceBin && /(?:^|\/)bin\//.test(f) && f.endsWith(".ts") && !f.includes("__tests__")) return false;
+          if (pkg.shipsData && f.startsWith("host-builder/data/") && !deniedPatterns.some((d) => d.pattern.test(f))) return false;
           return deniedPatterns.some((d) => d.pattern.test(f)) || isSourceTs(f);
         });
         const labels = junk.map((f) => `${f} (${deniedPatterns.find((d) => d.pattern.test(f))?.label ?? "source .ts"})`);
@@ -218,20 +172,23 @@ describe("packaging guard", () => {
         it("ships the generated indexes and example sources, and the bin", () => {
           const files = getPackList(pkg.dir, pkg.name);
           for (const file of [
-            "data/api.json",
-            "data/errors.json",
-            "data/examples.json",
-            "data/examples/define-package.ts",
-            "bin/prism-host-builder.ts",
-            "skills/prism-host-builder/SKILL.md",
+            "host-builder/data/api.json",
+            "host-builder/data/errors.json",
+            "host-builder/data/examples.json",
+            "host-builder/data/examples/define-package.ts",
+            "host-builder/bin/prism-host-builder.ts",
+            "host-builder/skills/prism-host-builder/SKILL.md",
             ...["choosing", "layout", "recipes", "pitfalls", "security", "verification", "upgrading"].map(
-              (name) => `skills/prism-host-builder/references/${name}.md`,
+              (name) => `host-builder/skills/prism-host-builder/references/${name}.md`,
             ),
           ]) {
             assert.ok(files.includes(file), `${pkg.name} missing ${file} in pack`);
           }
           assert.equal(
-            files.some((file) => file.startsWith("data/examples/fixtures/") || file.startsWith("data/examples/example-workspace/")),
+            files.some(
+              (file) =>
+                file.startsWith("host-builder/data/examples/fixtures/") || file.startsWith("host-builder/data/examples/example-workspace/"),
+            ),
             false,
             "fixtures and workspaces stay out of the data",
           );
@@ -303,49 +260,54 @@ describe("packaging guard", () => {
   }
 
   it("the research package ships its four bundled skills", () => {
-    const research = packages.find((pkg) => pkg.name === "@arnilo/prism-tools-research");
+    const research = packages.find((pkg) => pkg.name === "@arnilo/prism-tools");
     assert.ok(research, "prism-tools-research missing from packaging package list");
     const files = getPackList(research.dir, research.name);
     for (const skill of ["research-scoping", "source-triage", "research-synthesis", "research-report"]) {
-      assert.ok(files.includes(`skills/${skill}/SKILL.md`), `research package missing ${skill}`);
+      assert.ok(files.includes(`research/skills/${skill}/SKILL.md`), `research package missing ${skill}`);
     }
   });
 
   it("packed_tarball_includes_skills: web, browser and delegate ship their bundled skill", () => {
     const shipped = [
-      ["@arnilo/prism-tools-web", "web-research"],
-      ["@arnilo/prism-tools-browser", "browser-automation"],
-      ["@arnilo/prism-delegate", "delegating-work"],
+      ["@arnilo/prism-tools", "web-research", "web/skills"],
+      ["@arnilo/prism-tools", "browser-automation", "browser/skills"],
+      ["@arnilo/prism-extensions", "delegating-work", "delegate/skills"],
     ] as const;
-    for (const [name, skill] of shipped) {
+    for (const [name, skill, folder] of shipped) {
       const pkg = packages.find((entry) => entry.name === name);
       assert.ok(pkg, `${name} missing from packaging package list`);
-      assert.ok(getPackList(pkg.dir, pkg.name).includes(`skills/${skill}/SKILL.md`), `${name} tarball missing skills/${skill}/SKILL.md`);
-      assert.ok((readPkg(pkg.dir).files as string[] | undefined)?.includes("skills"), `${name} manifest files must include skills`);
+      assert.ok(getPackList(pkg.dir, pkg.name).includes(`${folder}/${skill}/SKILL.md`), `${name} tarball missing ${skill}`);
+      assert.ok((readPkg(pkg.dir).files as string[] | undefined)?.includes(folder), `${name} manifest files must include ${folder}`);
     }
   });
 
   it("the computer-use package ships its local skill", () => {
-    const desktop = packages.find((pkg) => pkg.name === "@arnilo/prism-tools-computer-use");
+    const desktop = packages.find((pkg) => pkg.name === "@arnilo/prism-tools");
     assert.ok(desktop, "prism-tools-computer-use missing from packaging package list");
     const files = getPackList(desktop.dir, desktop.name);
-    assert.ok(files.includes("skills/computer-use-linux/SKILL.md"), "desktop package missing bundled skill");
+    assert.ok(files.includes("computer-use/skills/computer-use-linux/SKILL.md"), "desktop package missing bundled skill");
     const manifest = readPkg(desktop.dir);
-    assert.ok((manifest.files as string[] | undefined)?.includes("skills"), "desktop package manifest must include skills");
+    assert.ok((manifest.files as string[] | undefined)?.includes("computer-use/skills"), "desktop package manifest must include skills");
   });
 
-  it("prism-channels publishes source surface, keeps telegram isolated from signal, and has no third-party peers", () => {
-    const manifest = readPkg("packages/hosts/channels");
+  it("hosts bundle publishes channel source and keeps telegram isolated from signal", () => {
+    const manifest = readPkg("packages/hosts");
     const exportsMap = manifest.exports as Record<string, string>;
-    assert.deepEqual(Object.keys(exportsMap).sort(), [".", "./signal", "./telegram"]);
-    assert.deepEqual(Object.keys((manifest.peerDependencies as Record<string, string>) ?? {}), ["@arnilo/prism"]);
-    assert.equal(manifest.dependencies, undefined, "channels must not add runtime dependencies");
-    const files = getPackList("packages/hosts/channels", "@arnilo/prism-channels");
-    for (const required of ["src/index.ts", "src/telegram.ts", "src/signal.ts"]) {
+    assert.deepEqual(
+      Object.keys(exportsMap)
+        .filter((key) => key === "./channels" || key.startsWith("./channels/"))
+        .sort(),
+      ["./channels", "./channels/signal", "./channels/telegram"],
+    );
+    assert.ok((manifest.peerDependencies as Record<string, string>)["@arnilo/prism"]);
+    assert.deepEqual(Object.keys(manifest.dependencies ?? {}), ["@arnilo/prism-extensions"]);
+    const files = getPackList("packages/hosts", "@arnilo/prism-hosts");
+    for (const required of ["channels/src/index.ts", "channels/src/telegram.ts", "channels/src/signal.ts"]) {
       assert.ok(files.includes(required), `channels pack missing ${required}`);
     }
     assert.equal(
-      files.some((file) => file.includes("__tests__") || file.includes("fixtures")),
+      files.filter((file) => file.startsWith("channels/")).some((file) => file.includes("__tests__") || file.includes("fixtures")),
       false,
       "channels tarball must not ship tests or fixtures",
     );
@@ -356,15 +318,19 @@ describe("packaging guard", () => {
   it("tools-browser publishes the browser source surface and the web-tools workspace is gone", () => {
     assert.equal(existsSync(join(repoRoot, "packages/web-tools")), false, "the web-tools workspace is deleted");
 
-    const browser = readPkg("packages/tools/browser");
-    assert.equal((browser.exports as Record<string, string>)["."], "./src/index.ts", "tools-browser publishes TypeScript source");
+    const browser = readPkg("packages/tools");
+    assert.equal(
+      (browser.exports as Record<string, string>)["./browser"],
+      "./browser/src/index.ts",
+      "tools-browser publishes TypeScript source",
+    );
     const peers = browser.peerDependencies as Record<string, string>;
     const meta = browser.peerDependenciesMeta as Record<string, { optional?: boolean }>;
     assert.equal(peers["playwright-core"], "1.63.0", "tools-browser pins the playwright-core peer");
     assert.equal(meta["playwright-core"]?.optional, true, "playwright-core must stay an optional peer");
-    const files = getPackList("packages/tools/browser", "@arnilo/prism-tools-browser");
+    const files = getPackList("packages/tools", "@arnilo/prism-tools");
     for (const required of ["src/index.ts", "src/tools.ts", "src/manager.ts", "src/config.ts"]) {
-      assert.ok(files.includes(required), `tools-browser pack missing ${required}`);
+      assert.ok(files.includes(`browser/${required}`), `tools-browser pack missing ${required}`);
     }
     assert.equal(
       files.some((file) => file.includes("__tests__")),
@@ -373,48 +339,22 @@ describe("packaging guard", () => {
     );
   });
 
-  it("memory family workspace is deleted, not shimmed, and the wiki package owns the bin, skills, and CLI", () => {
-    // Plan 158 Task 6: the family is gone; the six packages are the only memory workspaces.
-    assert.ok(!existsSync(join(repoRoot, "packages", "memory", "package.json")), "packages/memory/package.json must be deleted");
+  it("experimental memory and knowledge bundles publish source without retired CLI or fixtures", () => {
+    assert.equal(readPkg("packages/memory").name, "@arnilo/prism-memory-system");
+    assert.equal(readPkg("packages/knowledge").name, "@arnilo/prism-knowledge");
+    const wiki = readPkg("packages/knowledge");
+    assert.equal(wiki.bin, undefined, "the wiki CLI stays retired");
+    const wikiFiles = getPackList("packages/knowledge", "@arnilo/prism-knowledge");
+    assert.ok(wikiFiles.includes("wiki/src/index.ts"));
     assert.equal(
-      packages.some((pkg) => pkg.name === "@arnilo/prism-memory"),
+      wikiFiles.some((file) => file.startsWith("wiki/skills/") || file.startsWith("wiki/src/cli")),
       false,
-      "@arnilo/prism-memory must not be in the package list",
     );
-    assert.deepEqual(
-      packages
-        .filter((pkg) => pkg.name.startsWith("@arnilo/prism-memory"))
-        .map((pkg) => pkg.name)
-        .sort(),
-      [
-        "@arnilo/prism-memory-compaction",
-        "@arnilo/prism-memory-core",
-        "@arnilo/prism-memory-system",
-      ],
-      "the three memory packages are present and the family root is absent",
-    );
-    // Plan 216 Task 3: retrieval and the wiki are knowledge packages outside memory, under packages/knowledge.
-    for (const name of ["@arnilo/prism-rag", "@arnilo/prism-wiki"]) {
-      assert.ok(packages.some((pkg) => pkg.name === name), `${name} is a workspace`);
-    }
-
-    const wiki = readPkg("packages/knowledge/wiki");
-    assert.equal(wiki.bin, undefined, "the prism-wiki bin is retired with the 0.12 compiler (plan 207 Task 5)");
-    const wikiFiles = getPackList("packages/knowledge/wiki", "@arnilo/prism-wiki");
-    assert.ok(wikiFiles.includes("src/index.ts"), "wiki pack missing src/index.ts");
-    assert.equal(
-      wikiFiles.some((file) => file.startsWith("skills/") || file.startsWith("src/cli")),
-      false,
-      "the wiki pack ships no bundled skills and no CLI",
-    );
-
-    // No memory tarball may ship the retired family's build output or its canary fixture.
-    for (const dir of ["packages/memory/core", "packages/knowledge/rag", "packages/memory/system", "packages/knowledge/wiki"]) {
+    for (const dir of ["packages/memory", "packages/knowledge"]) {
       const files = getPackList(dir, readPkg(dir).name as string);
       assert.equal(
-        files.some((file) => file.startsWith("dist/") || file.startsWith(".wiki/")),
+        files.some((file) => /(^|\/)(dist|\.wiki|fixtures|__tests__)\//.test(file) || /\.(?:js|map|d\.ts)$/.test(file)),
         false,
-        `${dir} must publish TypeScript source only, without the retired family dist or the wiki canary fixture`,
       );
     }
   });
@@ -505,7 +445,8 @@ describe("packaging guard", () => {
     // A provider is shipped when it has a manifest. Plan 204 Task 4 lands the sign-in client under
     // packages/providers/openai-codex/src before the shell exists; Task 5 adds the manifest, and this
     // list grows with it.
-    const shipped = providerDirs.filter((name) => existsSync(join(repoRoot, "packages/providers", name, "package.json")));
+    const bundle = activeBundles(repoRoot).find((bundle: { dir: string }) => bundle.dir === "packages/providers");
+    const shipped = bundle.subpaths.map((row: { dir: string }) => row.dir).sort();
     assert.deepEqual(shipped, [
       "commandcode",
       "hyper",
@@ -532,14 +473,14 @@ describe("packaging guard", () => {
 
     for (const vendor of shipped) {
       const pkgDir = join(repoRoot, "packages/providers", vendor);
-      const pkgName = `@arnilo/prism-provider-${vendor}`;
-      const entry = packages.find((pkg) => pkg.name === pkgName);
+      const pkgName = `@arnilo/prism-ai/${vendor}`;
+      const entry = packages.find((pkg) => pkg.name === bundle.name);
       assert.ok(entry, `${pkgName} missing from packaging package list`);
 
       const files = getPackList(entry.dir, entry.name);
-      assert.ok(files.includes("src/index.ts"), `${vendor} pack missing src/index.ts`);
+      assert.ok(files.includes(`${vendor}/src/index.ts`), `${vendor} pack missing src/index.ts`);
       const manifest = readPkg(entry.dir);
-      assert.deepEqual(manifest.exports, { ".": "./src/index.ts" }, `${pkgName} must export its TypeScript entrypoint`);
+      assert.equal((manifest.exports as Record<string, string>)[`./${vendor}`], `./${vendor}/src/index.ts`);
       assert.equal(
         (manifest.peerDependencies as Record<string, string>)["@arnilo/prism"],
         KERNEL_PEER,
@@ -678,29 +619,38 @@ describe("packaging guard", () => {
   });
 
   it("process driver publishes the isolated testing subpath", () => {
-    assert.deepEqual(readPkg("packages/drivers/process").exports, { ".": "./src/index.ts", "./testing": "./src/testing.ts" });
+    assert.equal(
+      (readPkg("packages/hosts").exports as Record<string, string>)["./driver-process/testing"],
+      "./driver-process/src/testing.ts",
+    );
   });
 
   it("work package exports the family subpaths behind one root barrel", () => {
-    const manifest = readPkg("packages/tools/work");
+    const manifest = readPkg("packages/tools");
     const exports = manifest.exports as Record<string, string>;
-    assert.deepEqual(Object.keys(exports).sort(), [
-      ".",
-      "./connectors",
-      "./connectors/drafts",
-      "./connectors/google-workspace",
-      "./connectors/microsoft365",
-      "./diagrams",
-      "./document-extraction",
-      "./document-reader",
-      "./documents",
-      "./sandbox",
-      "./sheets",
-      "./skills",
-      "./tools",
-    ]);
-    assert.equal(exports["."], "./src/index.ts", "the root barrel holds the definePackage entry");
-    const files = getPackList("packages/tools/work", "@arnilo/prism-tools-work");
+    assert.deepEqual(
+      Object.keys(exports)
+        .filter((key) => key === "./work" || key.startsWith("./work/"))
+        .map((key) => (key === "./work" ? "." : key.replace("./work/", "./")))
+        .sort(),
+      [
+        ".",
+        "./connectors",
+        "./connectors/drafts",
+        "./connectors/google-workspace",
+        "./connectors/microsoft365",
+        "./diagrams",
+        "./document-extraction",
+        "./document-reader",
+        "./documents",
+        "./sandbox",
+        "./sheets",
+        "./skills",
+        "./tools",
+      ],
+    );
+    assert.equal(exports["./work"], "./work/src/index.ts", "the root barrel holds the definePackage entry");
+    const files = getPackList("packages/tools", "@arnilo/prism-tools");
     for (const required of [
       "src/connectors/index.ts",
       "src/connectors/drafts.ts",
@@ -720,7 +670,7 @@ describe("packaging guard", () => {
       "vendor/hermes-agent/skills/productivity/powerpoint/SKILL.md",
       "vendor/hermes-agent/skills/productivity/pdf/SKILL.md",
     ]) {
-      assert.ok(files.includes(required), `work pack missing ${required}`);
+      assert.ok(files.includes(`work/${required}`), `work pack missing ${required}`);
     }
     const connectors = readFileSync(join(repoRoot, "packages/tools/work/src/connectors/index.ts"), "utf8");
     assert.doesNotMatch(connectors, /office-open|\.\.\/documents/, "connectors subpath must not load document dependencies");
@@ -762,13 +712,13 @@ describe("packaging guard", () => {
   });
 
   it("work move has no forbidden runtime package edges", () => {
-    const work = readPkg("packages/tools/work");
+    const work = readPkg("packages/tools");
     for (const manifest of [work]) {
       const runtime = {
         ...(manifest.dependencies as Record<string, string> | undefined),
         ...(manifest.peerDependencies as Record<string, string> | undefined),
       };
-      assert.equal(runtime["@arnilo/prism-tools-work"], undefined, "core must not runtime-depend on work");
+      assert.equal(runtime["@arnilo/prism-tools/work"], undefined, "core must not runtime-depend on work");
       assert.equal(runtime["@arnilo/" + "prism-core"], undefined, "work must not runtime-depend on core");
       assert.equal(runtime["@arnilo/prism-" + "coding-tools"], undefined, "work must not runtime-depend on coding tools");
     }
@@ -783,7 +733,7 @@ describe("packaging guard", () => {
     for (const dir of [join(repoRoot, "packages/tools/work/src")]) {
       for (const file of walk(dir)) {
         const text = readFileSync(file, "utf8");
-        // The trailing delimiter keeps `@arnilo/prism-workflows` (a different, allowed package) out of the match.
+        // The trailing delimiter keeps `@arnilo/prism-extensions/workflows` (a different, allowed package) out of the match.
         assert.doesNotMatch(
           text,
           /(?:from\s+|import\s*(?:\(\s*)?)["']@arnilo\/prism-(?:core|coding-tools|work)["'/]/,
@@ -798,11 +748,11 @@ describe("packaging guard", () => {
     // It is stricter about what actually broke the gate: a retired workspace used to leave a
     // dangling `node_modules/@arnilo/*` symlink behind, which made npm exit non-zero.
     const workspaces = workspaceManifests();
-    assert.ok(workspaces.length >= 40, `expected the workspace globs to expand, found ${workspaces.length}`);
+    assert.equal(workspaces.length, loadRelease(repoRoot).packages.length, "workspace globs match release units");
 
     // A declared dependency must resolve from its own workspace: `dependencies` always, peers unless
     // the manifest marks them optional (optional peers and optionalDependencies may be absent —
-    // `@arnilo/prism-tools-coding`'s `e2b` peer is one, and npm only warned about those).
+    // `@arnilo/prism-tools/coding`'s `e2b` peer is one, and npm only warned about those).
     const unresolved: string[] = [];
     for (const { dir, manifest } of workspaces) {
       const optionalPeers = new Set(
@@ -837,7 +787,7 @@ describe("packaging guard", () => {
 
     // And every `@arnilo` link must be a working link to a live publishable workspace.
     const scopeDir = join(repoRoot, "node_modules", "@arnilo");
-    const live = new Set(workspaces.map(({ manifest }) => manifest.name));
+    const live = new Set([...workspaces.map(({ manifest }) => manifest.name), "@arnilo/prism-agent"]);
     const stale = readdirSync(scopeDir).filter(
       (link) => link !== "prism" && (!existsSync(join(scopeDir, link)) || !live.has(`@arnilo/${link}`)),
     );
@@ -894,9 +844,9 @@ describe("packaging guard", () => {
   });
 
   it("plan 054 Task 8: the historical migration guide preserves office subpaths", () => {
-    const work = readPkg("packages/tools/work");
+    const work = readPkg("packages/tools");
     const exports = Object.keys(work.exports as Record<string, unknown>).sort();
-    assert.ok(["./diagrams", "./documents", "./sheets"].every((subpath) => exports.includes(subpath)));
+    assert.ok(["./work/diagrams", "./work/documents", "./work/sheets"].every((subpath) => exports.includes(subpath)));
     const guide = readFileSync(join(repoRoot, "docs/history/migrate-to-0.4.md"), "utf8");
     assert.ok(guide.includes("### Office suite"), "migration guide missing Office suite heading");
     for (const spec of ["@arnilo/prism-office/documents", "@arnilo/prism-office/sheets", "@arnilo/prism-office/diagrams"]) {
@@ -909,8 +859,8 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 51, "51 active packages including root (Kilo, LiteLLM, Ollama Cloud, then host-builder added; plan 216 Task 5 folded the fabric into memory-system)");
-    assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
+    assert.equal(names.length, 7, "plan 224 Tasks 4–8: six bundles and the kernel");
+    assert.ok(names.includes("@arnilo/prism-tools"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).
     const independentLines = new Set<string>([...INDEPENDENT_LINES, ...EXPERIMENTAL_LINES]);
@@ -927,9 +877,9 @@ describe("packaging guard", () => {
     for (const name of retired) {
       assert.ok(!names.includes(name), `retired ${name} must not be a workspace package`);
     }
-    for (const dir of ["packages/tools/work"]) {
+    for (const dir of ["packages/tools"]) {
       const exports = Object.keys((readPkg(dir).exports as Record<string, unknown>) ?? {});
-      assert.ok(exports.includes("."), `${dir} must expose the definePackage root barrel`);
+      assert.ok(exports.includes("./work"), `${dir} must expose the definePackage root barrel`);
     }
   });
 

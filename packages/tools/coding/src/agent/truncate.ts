@@ -1,7 +1,7 @@
 /**
  * Shared truncation utilities for tool outputs.
  *
- * Behavioral port of pi's core/tools/truncate for @arnilo/prism-tools-coding.
+ * Behavioral port of pi's core/tools/truncate for @arnilo/prism-tools/coding.
  * stdlib only (Buffer). Truncation is based on two independent limits — whichever
  * is hit first wins:
  * - Line limit (default: 2000 lines)

@@ -1,11 +1,17 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
-import { assertAccessConstraint } from "@arnilo/prism-memory-core";
-import { MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-core";
-import { indexInvalidations, recordBlocked } from "@arnilo/prism-memory-core";
-import type { MemoryInvalidationRecord, MemoryVectorHit, RagAccessConstraint, StoreDenial, VectorStore } from "@arnilo/prism-memory-core";
+import { assertAccessConstraint } from "@arnilo/prism-memory-system/core";
+import { MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { indexInvalidations, recordBlocked } from "@arnilo/prism-memory-system/core";
+import type {
+  MemoryInvalidationRecord,
+  MemoryVectorHit,
+  RagAccessConstraint,
+  StoreDenial,
+  VectorStore,
+} from "@arnilo/prism-memory-system/core";
 import { createAccessRecheck } from "./access-recheck.js";
 import { RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
-import { fuseRankings } from "@arnilo/prism-memory-core";
+import { fuseRankings } from "@arnilo/prism-memory-system/core";
 import { HARD_CHUNK_SIZE_CAP, HARD_RETRIEVE_SCOPE_CAP, resolveRagLimits } from "./limits.js";
 import { rerankHits } from "./rerank.js";
 import type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js";

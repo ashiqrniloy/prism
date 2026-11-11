@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { activeBundles } from "./bundles.mjs";
 import { buildPackageMap, generateMarkdown } from "./phase54-package-map.mjs";
 
 const rootDir = join(fileURLToPath(import.meta.url), "../..");
@@ -16,8 +17,8 @@ test("phase54 package map: exact manifest counts and topology invariants", () =>
   // Total current manifests in repo after consolidation and delegated CLI adapter removal.
   assert.ok(
     [
-      13, 12, 14, 16, 17, 26, 30, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 58, 59, 60, 61, 62, 63,
-      65,
+      7, 13, 12, 14, 16, 18, 24, 17, 26, 30, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 58, 59, 60, 61,
+      62, 63, 65,
     ].includes(map.counts.totalCurrentManifests),
     "Total repository manifests must be a recorded historical count (plan 174 Tasks 6-7 leave 60)",
   );
@@ -49,83 +50,69 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
 
   const allowedManifests = new Set([
     ...baselineUnion,
+    "@arnilo/prism-extensions",
     "@arnilo/prism-channels",
     "@arnilo/prism-coding-tools",
     // Plan 106 R4: the hooks.json adapter package, added after the 0.4 consolidation.
-    "@arnilo/prism-hooks-json",
+    "@arnilo/prism-extensions/hooks-json",
     // Plan 134: agent SDK package
     "@arnilo/prism-agent-sdk",
-    // Plan 152 Task 5: adapters that never shipped as a standalone 0.3 package, so the
-    // phase54 baseline union cannot name them.
-    "@arnilo/prism-provider-hyper",
-    "@arnilo/prism-provider-laya",
-    "@arnilo/prism-provider-typesafe",
-    // Plan 195 Task 5: the Liquid provider adapter.
-    "@arnilo/prism-provider-liquid",
-    // Plan 203 Task 4: OpenRouter reuses its retired name for the new adapter.
-    "@arnilo/prism-provider-openrouter",
-    // Plan 204 Task 5: OpenAI models on a ChatGPT plan; the name never shipped in 0.3.x.
-    "@arnilo/prism-provider-openai-codex",
-    // Plan 205 Task 2: Command Code reuses its retired name for the new adapter.
-    "@arnilo/prism-provider-commandcode",
-    // Plan 206 Task 2: the Ollama Cloud adapter; the name never shipped in 0.3.x.
-    "@arnilo/prism-provider-ollama-cloud",
-    "@arnilo/prism-provider-kilo",
-    // Plan 214 Task 2: the LiteLLM Proxy adapter.
-    "@arnilo/prism-provider-litellm",
+    "@arnilo/prism-ai", // plan 224 Task 4: eleven providers share one manifest
     // Plan 152 Task 7: the credentials-slot keyring package, added after the 0.4 consolidation.
-    "@arnilo/prism-credentials-keyring",
+    "@arnilo/prism-extensions/keyring",
     // Plan 153 Task 3: the JSONL session store package, moved out of the root `./node/` subpath.
-    "@arnilo/prism-store-jsonl",
+    "@arnilo/prism-extensions/store-jsonl",
     // Plan 153 Task 4: the shared SQL codecs and the SQLite store, moved out of prism-core subpaths.
-    "@arnilo/prism-store-codecs",
-    "@arnilo/prism-store-sqlite",
-    "@arnilo/prism-store-postgres",
+    "@arnilo/prism-extensions/store-codecs",
+    "@arnilo/prism-extensions/store-sqlite",
+    "@arnilo/prism-extensions/store-postgres",
     // Plan 154 Task 3: the coding tools package, moved out of prism-coding-tools/{agent,security}.
-    "@arnilo/prism-tools-coding",
+    "@arnilo/prism-tools/coding",
     // Plan 155 Task 2: the web tools package, moved out of prism-web-tools/{root,brave,exa,firecrawl,obscura}.
-    "@arnilo/prism-tools-web",
+    "@arnilo/prism-tools/web",
     // Plan 155 Task 3: the browser tools package, moved out of prism-web-tools/browser.
-    "@arnilo/prism-tools-browser",
+    "@arnilo/prism-tools/browser",
     // Plan 155 Task 4: the OpenAPI and computer-use packages, moved out of prism-coding-tools.
-    "@arnilo/prism-tools-openapi",
-    "@arnilo/prism-tools-computer-use",
+    "@arnilo/prism-tools/openapi",
+    "@arnilo/prism-tools/computer-use",
     // Plan 154 Task 6: the approval package.
-    "@arnilo/prism-approval",
+    "@arnilo/prism-extensions/approval",
     // Plan 159 Task 5: the guardrail-packs package, moved out of the kernel's pack compile path.
-    "@arnilo/prism-guardrail-packs",
+    "@arnilo/prism-extensions/guardrail-packs",
     // Plan 159 Task 6: the governance package, moved out of prism-core's policy subpaths.
-    "@arnilo/prism-governance",
-    "@arnilo/prism-context-files",
+    "@arnilo/prism-extensions/governance",
+    "@arnilo/prism-extensions/context-files",
     // Plan 158 Task 7: the context-engineering package, moved out of the kernel's opt-in fields.
-    "@arnilo/prism-context-engineering",
+    "@arnilo/prism-extensions/context-engineering",
     // Plan 158 Task 2: the shared memory library, moved out of @arnilo/prism-memory's root.
-    "@arnilo/prism-memory-core",
+    "@arnilo/prism-memory-system/core",
     // Plan 158 Task 3: the RAG package, moved out of @arnilo/prism-memory/rag.
-    "@arnilo/prism-rag",
+    "@arnilo/prism-knowledge/rag",
     // Plan 158 Task 5: the wiki package, moved out of @arnilo/prism-memory/wiki.
-    "@arnilo/prism-wiki",
+    "@arnilo/prism-knowledge/wiki",
     // Plan 157 Tasks 3-4: the compaction and observational-memory packages; plan 216 Tasks 4-5 made the latter the
     // memory system and moved the fabric (plan 158 Task 4) into it.
-    "@arnilo/prism-memory-compaction",
+    "@arnilo/prism-extensions/compaction",
     "@arnilo/prism-memory-system",
     // Plan 159 Task 3: the MCP server host library package.
     "@arnilo/prism-mcp-server",
     // Plan 161 Task 2: the ACP host library.
     "@arnilo/prism-acp",
     "@arnilo/prism-driver-process",
-    "@arnilo/prism-observability",
-    "@arnilo/prism-delegate",
+    "@arnilo/prism-extensions/observability",
+    "@arnilo/prism-extensions/delegate",
     // Plan 191 Task 8: the advisor package.
-    "@arnilo/prism-advisor",
+    "@arnilo/prism-extensions/advisor",
     "@arnilo/prism-evals",
     "@arnilo/prism-devtools",
     // Plan 174 Task 6: post-0.4 packages that never shipped as a standalone 0.3 package.
     "@arnilo/prism-remote",
     "@arnilo/prism-headless",
-    "@arnilo/prism-tools-research",
-    ...(existsSync(join(rootDir, "packages/tools/work/package.json")) ? ["@arnilo/prism-tools-work"] : []),
+    "@arnilo/prism-tools/research",
+    ...(existsSync(join(rootDir, "packages/tools/work/package.json")) ? ["@arnilo/prism-tools/work"] : []),
   ]);
+  for (const bundle of activeBundles(rootDir)) allowedManifests.add(bundle.name);
+  allowedManifests.add("@arnilo/prism-host-builder");
   for (const name of manifestNames) {
     assert.ok(allowedManifests.has(name), `Manifest ${name} must be classified in package map`);
   }

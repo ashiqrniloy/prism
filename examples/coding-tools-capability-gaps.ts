@@ -6,12 +6,12 @@ import {
   createDeleteTool,
   createEditTool,
   createGlobTool,
+  createGrepTool,
   createMoveTool,
   createReadPathSet,
   createReadTool,
-  createGrepTool,
   createWriteTool,
-} from "@arnilo/prism-tools-coding";
+} from "@arnilo/prism-tools/coding";
 
 function textOf(result: { content?: ReadonlyArray<{ type: string; text?: string }> }): string {
   const block = result.content?.[0];

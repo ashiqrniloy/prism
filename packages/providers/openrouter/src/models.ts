@@ -93,7 +93,9 @@ export async function listOpenRouterModels(options: ListOpenRouterModelsOptions 
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`OpenRouter model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = await readBoundedResponseJson<{ data?: OpenRouterModelEntry[] }>(response, { maxResponseBodyBytes: OPENROUTER_CATALOG_BYTES });
+  const payload = await readBoundedResponseJson<{ data?: OpenRouterModelEntry[] }>(response, {
+    maxResponseBodyBytes: OPENROUTER_CATALOG_BYTES,
+  });
   if (!Array.isArray(payload.data)) throw new Error("OpenRouter model discovery response missing data array");
   return payload.data.map((entry) => mapOpenRouterModel(entry, { provider }));
 }

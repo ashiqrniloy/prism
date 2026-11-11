@@ -9,7 +9,7 @@
  * file (plan 147 onward; the kernel joined them in plan 174 Task 8), and by
  * "has *.test.js under dist/" (recursive) for any package that still builds —
  * not by a top-level dist/__tests__ directory. Plan 155 Task 5 moved the work family
- * to the source-only `@arnilo/prism-tools-work`, which has no dist and is outside the
+ * to the source-only `@arnilo/prism-tools/work`, which has no dist and is outside the
  * coverage stage like the other `packages/tools/*` packages.
  * Scoping: Bun 1.4.2 reads coveragePathIgnorePatterns only from $cwd/bunfig.toml,
  * so the core run scopes with the root bunfig and each gated workspace carries a
@@ -36,8 +36,10 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { packagePages } from "./bundles.mjs";
 import { failureRow, TAIL_LINES, tailOf } from "./coverage-failure.mjs";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { loadRelease } from "./release.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -140,7 +142,7 @@ function sourcePackage(packageDir) {
     const target = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")).exports?.["."];
     return typeof target === "string" && target.endsWith(".ts");
   } catch {
-    return false;
+    return existsSync(join(packageDir, "src"));
   }
 }
 
@@ -227,7 +229,15 @@ if (!corePass) anyFailed = true;
 // Plan 176 Task 1: the grouped `packages/<group>/<name>` layout is discovered through the
 // same `expandWorkspaceDirs` the test runner trusts (scripts/run-all-tests.mjs), not a flat
 // `packages/*` readdir that saw only the group directories and measured nothing.
-const workspaceDirs = expandWorkspaceDirs(root, readManifest(join(root, "package.json")).workspaces)
+const pages = packagePages(root, loadRelease(root).packages);
+const workspaceDirs = [
+  ...new Set([
+    ...pages.filter((pkg) => pkg.path !== ".").map((pkg) => join(root, pkg.path)),
+    ...expandWorkspaceDirs(root, readManifest(join(root, "package.json")).workspaces).filter(
+      (dir) => readManifest(join(dir, "package.json")).private,
+    ),
+  ]),
+]
   .filter((dir) => findTestFiles(dir).length > 0)
   .sort();
 if (workspaceDirs.length === 0) {
@@ -235,9 +245,9 @@ if (workspaceDirs.length === 0) {
   process.exit(1);
 }
 for (const dir of workspaceDirs) {
-  const pkgName = readManifest(join(dir, "package.json")).name;
+  const pkgName = pages.find((pkg) => join(root, pkg.path) === dir)?.manifest.name ?? readManifest(join(dir, "package.json")).name;
   const run = runCoverage(findTestFiles(dir), dir);
-  const thresholdEntry = thresholds.packages?.[pkgName];
+  const thresholdEntry = thresholds.packages?.[relative(root, dir)];
   const denominatorFiles = countDenominatorFiles(dir);
   if (!thresholdEntry) {
     // Fail-closed: a workspace with no evidence-based threshold is a config gap.

@@ -42,6 +42,11 @@ function makeFixture() {
 describe("host-builder index", () => {
   test("host_builder_index_is_fresh: the committed data matches the tree", () => {
     const { stale } = checkIndexes({ root: ROOT });
+    const errors = JSON.parse(readFileSync(join(ROOT, "packages/hosts/host-builder/data/errors.json"), "utf8")).codes;
+    assert.ok(
+      errors.some((row) => row.code === "ERR_PRISM_CODING_PRINCIPAL_REQUIRED"),
+      "bundle subfolder errors must be indexed",
+    );
     assert.deepEqual(stale, [], `run bun scripts/host-builder-index.mjs\n${stale.join("\n")}`);
   });
 
@@ -120,7 +125,10 @@ describe("host-builder index", () => {
     const api = JSON.parse(readFileSync(join(ROOT, "packages/hosts/host-builder/data/api.json"), "utf8"));
     const names = api.packages.map((pkg) => pkg.name);
     assert.ok(names.includes("@arnilo/prism"));
-    assert.ok(names.includes("@arnilo/prism-host-builder"), "the package indexes itself");
+    assert.ok(
+      api.packages.some((pkg) => pkg.entries.some((entry) => entry.specifier === "@arnilo/prism-hosts/host-builder")),
+      "the package indexes itself",
+    );
     assert.equal(
       names.some((name) => /prism-(agent-sdk|code|core)$/.test(name)),
       false,
@@ -137,10 +145,10 @@ describe("host-builder index", () => {
   });
 
   test("the host-builder tarball is inside its budget and the budget rejects growth", () => {
-    const budget = loadBudgets().hostBuilder;
-    const pack = packStats(ROOT, "packages/hosts/host-builder");
-    assert.ok(pack.files.includes("data/api.json"), "the tarball carries the api index");
-    assert.ok(pack.files.includes("bin/prism-host-builder.ts"));
+    const budget = loadBudgets().hosts;
+    const pack = packStats(ROOT, "packages/hosts");
+    assert.ok(pack.files.includes("host-builder/data/api.json"), "the tarball carries the api index");
+    assert.ok(pack.files.includes("host-builder/bin/prism-host-builder.ts"));
     assert.equal(
       pack.files.some((file) => file.includes("__tests__")),
       false,

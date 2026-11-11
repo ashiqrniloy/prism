@@ -43,10 +43,10 @@ test("conversational_memory_scenario_recalls_across_sessions_and_forgets", async
 });
 
 const EXPERIMENTAL = [
-  "@arnilo/prism-memory-core",
+  "@arnilo/prism-memory-system/core",
   "@arnilo/prism-memory-system",
-  "@arnilo/prism-wiki",
-  "@arnilo/prism-rag",
+  "@arnilo/prism-knowledge/wiki",
+  "@arnilo/prism-knowledge/rag",
 ];
 
 test("reference_host_default_loads_no_experimental_package", async () => {
@@ -67,7 +67,7 @@ test("reference_host_default_loads_no_experimental_package", async () => {
           "a default agent loads no experimental package",
         );
       }
-      const compaction = research.inspect().packages.find((entry) => entry.name === "@arnilo/prism-memory-compaction");
+      const compaction = research.inspect().packages.find((entry) => entry.name === "@arnilo/prism-extensions/compaction");
       assert.ok(compaction, "memory-compaction owns compaction on the default path");
     } finally {
       await Promise.all([coding.dispose(), research.dispose(), orchestrator.dispose()]);
@@ -92,13 +92,26 @@ test("reference_host_memory_opt_in_loads_the_memory_system_with_ltm", async () =
         assert.notEqual((memory?.config as { ltm?: unknown } | undefined)?.ltm ?? null, null, "the memory opt-in configures ltm");
         // Plan 216 Task 6: the opt-in is the `ltm` profile plus the `session` profile (stm + wm, OM's per-session
         // opt-in), with rehearsal resolved on, as before the components existed.
-        assert.ok(agent.inspect().tools.some((tool) => tool.name === "memory.recall"), "ltm's tools");
-        assert.ok(agent.inspect().commands.some((command) => command.name === "memory:session"), "the session tiers' toggle");
-        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), ["background", "credentials", "host-ui", "models", "session-state", "slot:compaction"]);
-        assert.equal(names.includes("@arnilo/prism-memory-compaction"), true, "compaction stays on the compaction slot");
+        assert.ok(
+          agent.inspect().tools.some((tool) => tool.name === "memory.recall"),
+          "ltm's tools",
+        );
+        assert.ok(
+          agent.inspect().commands.some((command) => command.name === "memory:session"),
+          "the session tiers' toggle",
+        );
+        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), [
+          "background",
+          "credentials",
+          "host-ui",
+          "models",
+          "session-state",
+          "slot:compaction",
+        ]);
+        assert.equal(names.includes("@arnilo/prism-extensions/compaction"), true, "compaction stays on the compaction slot");
       }
       assert.equal(
-        research.inspect().packages.some((entry) => entry.name === "@arnilo/prism-rag"),
+        research.inspect().packages.some((entry) => entry.name === "@arnilo/prism-knowledge/rag"),
         false,
         "rag needs embeddings",
       );
@@ -119,7 +132,7 @@ test("research_worker_loads_memory_rag_only_with_embeddings", async () => {
     const research = await createResearchWorker({ ...config(root), embeddings: { model: "mock/embed" } }, { packages: [provider] });
     try {
       const names = research.inspect().packages.map((entry) => entry.name);
-      assert.equal(names.includes("@arnilo/prism-rag"), true);
+      assert.equal(names.includes("@arnilo/prism-knowledge/rag"), true);
       assert.equal(names.includes("@arnilo/prism-memory-system"), false);
     } finally {
       await research.dispose();
@@ -203,14 +216,14 @@ test("reference_host_ontology_off_by_default", async () => {
     };
     for (const list of await names({ ...config(root), memory: "coding" })) {
       assert.equal(list.includes("@arnilo/prism-memory-system"), true);
-      assert.equal(list.includes("@arnilo/prism-wiki"), false, "memory alone never adds the ontology tier");
+      assert.equal(list.includes("@arnilo/prism-knowledge/wiki"), false, "memory alone never adds the ontology tier");
     }
     for (const list of await names({ ...config(root), memory: "coding", ontology: true })) {
-      assert.equal(list.includes("@arnilo/prism-wiki"), true, "ontology: true adds the wiki beside long-term memory");
+      assert.equal(list.includes("@arnilo/prism-knowledge/wiki"), true, "ontology: true adds the wiki beside long-term memory");
     }
     // The wiki runs without memory on its own sources (plan 216 Task 3).
     for (const list of await names({ ...config(root), ontology: true })) {
-      assert.equal(list.includes("@arnilo/prism-wiki"), true);
+      assert.equal(list.includes("@arnilo/prism-knowledge/wiki"), true);
       assert.equal(list.includes("@arnilo/prism-memory-system"), false);
     }
   } finally {

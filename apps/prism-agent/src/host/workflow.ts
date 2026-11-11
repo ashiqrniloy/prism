@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import type { Agent } from "@arnilo/prism";
-import { agentNode, defineWorkflow, fanOut, gateNode, humanGate, type WorkflowDefinition } from "@arnilo/prism-workflows";
+import { agentNode, defineWorkflow, fanOut, gateNode, humanGate, type WorkflowDefinition } from "@arnilo/prism-extensions/workflows";
 import type { HostConfig } from "./config.js";
 
 /** The four workers the build graph closes over. The host passes these factories' agents; it never loads a manifest. */

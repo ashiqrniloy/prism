@@ -1,4 +1,4 @@
-import type { ContentBlock, JsonObject, Message, ModelCapabilities, StructuredOutputOptions, ToolDefinition, Usage } from "../contracts.js";
+import type { ContentBlock, JsonObject, Message, StructuredOutputOptions, ToolDefinition, Usage } from "../contracts.js";
 import { canonicalizeJsonSchema } from "./schema.js";
 import { type ToolNameMap, wireToolName } from "./tool-names.js";
 import { normalizeUsage } from "./usage.js";

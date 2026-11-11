@@ -1,0 +1,162 @@
+{
+  "name": "@arnilo/prism-extensions",
+  "version": "0.13.0",
+  "description": "Prism context, credentials, integrations, policy and stores. Import each package through its subpath.",
+  "type": "module",
+  "exports": {
+    "./context-engineering": "./context-engineering/src/index.ts",
+    "./context-files": "./context-files/src/index.ts",
+    "./keyring": "./keyring/src/index.ts",
+    "./advisor": "./advisor/src/index.ts",
+    "./delegate": "./delegate/src/index.ts",
+    "./hooks-json": "./hooks-json/src/index.ts",
+    "./mcp": "./mcp/src/index.ts",
+    "./observability": "./observability/src/index.ts",
+    "./workflows": "./workflows/src/index.ts",
+    "./workflows/testing": "./workflows/src/testing.ts",
+    "./approval": "./approval/src/index.ts",
+    "./governance": "./governance/src/index.ts",
+    "./guardrail-packs": "./guardrail-packs/src/index.ts",
+    "./model-router": "./model-router/src/index.ts",
+    "./store-codecs": "./store-codecs/src/index.ts",
+    "./store-jsonl": "./store-jsonl/src/index.ts",
+    "./store-postgres": "./store-postgres/src/index.ts",
+    "./store-sqlite": "./store-sqlite/src/index.ts",
+    "./compaction": "./compaction/src/index.ts"
+  },
+  "files": [
+    "context-engineering/src",
+    "!context-engineering/src/**/__tests__",
+    "context-engineering/README.md",
+    "context-files/src",
+    "!context-files/src/**/__tests__",
+    "context-files/README.md",
+    "keyring/src",
+    "!keyring/src/**/__tests__",
+    "keyring/README.md",
+    "advisor/src",
+    "!advisor/src/**/__tests__",
+    "advisor/README.md",
+    "delegate/src",
+    "!delegate/src/**/__tests__",
+    "delegate/skills",
+    "delegate/README.md",
+    "hooks-json/src",
+    "!hooks-json/src/**/__tests__",
+    "hooks-json/README.md",
+    "mcp/src",
+    "!mcp/src/**/__tests__",
+    "mcp/README.md",
+    "observability/src",
+    "!observability/src/**/__tests__",
+    "observability/README.md",
+    "workflows/src",
+    "!workflows/src/**/__tests__",
+    "workflows/README.md",
+    "approval/src",
+    "!approval/src/**/__tests__",
+    "approval/README.md",
+    "governance/src",
+    "!governance/src/**/__tests__",
+    "governance/README.md",
+    "guardrail-packs/src",
+    "!guardrail-packs/src/**/__tests__",
+    "guardrail-packs/README.md",
+    "model-router/src",
+    "!model-router/src/**/__tests__",
+    "model-router/README.md",
+    "store-codecs/src",
+    "!store-codecs/src/**/__tests__",
+    "!store-codecs/src/**/*.js",
+    "store-codecs/README.md",
+    "store-jsonl/src",
+    "!store-jsonl/src/**/__tests__",
+    "!store-jsonl/src/**/*.js",
+    "store-jsonl/README.md",
+    "store-postgres/src",
+    "!store-postgres/src/**/__tests__",
+    "!store-postgres/src/**/*.js",
+    "store-postgres/README.md",
+    "store-sqlite/src",
+    "!store-sqlite/src/**/__tests__",
+    "!store-sqlite/src/**/*.js",
+    "store-sqlite/README.md",
+    "compaction/src",
+    "!compaction/src/**/__tests__",
+    "!compaction/src/**/*.js",
+    "!compaction/src/**/*.js.map",
+    "!compaction/src/**/*.d.ts",
+    "compaction/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 context-engineering/src context-files/src keyring/src advisor/src delegate/src hooks-json/src mcp/src observability/src workflows/src approval/src governance/src guardrail-packs/src model-router/src store-codecs/src store-jsonl/src store-postgres/src store-sqlite/src compaction/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:postgres": "bun ../../scripts/require-postgres-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 store-postgres/src",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@napi-rs/keyring": "^2.0.0",
+    "@modelcontextprotocol/client": "^2.3.0",
+    "zod": "^4.6.2",
+    "@opentelemetry/api": "^1.9.0",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2",
+    "@arnilo/prism-ai": "workspace:*",
+    "@modelcontextprotocol/server": "^2.3.0",
+    "@opentelemetry/api": "1.9.0",
+    "@types/bun": "1.4.2",
+    "@types/pg": "^8.23.1",
+    "@napi-rs/keyring": "^2.0.0",
+    "pg": "^8.23.0",
+    "@arnilo/prism-tools": "workspace:*",
+    "@arnilo/prism-hosts": "workspace:*",
+    "@arnilo/prism-memory-system": "workspace:*",
+    "@arnilo/prism-knowledge": "workspace:*"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/extensions"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/extensions#readme",
+  "keywords": [
+    "prism",
+    "extensions",
+    "agents"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependenciesMeta": {
+    "@napi-rs/keyring": {
+      "optional": true
+    },
+    "@modelcontextprotocol/client": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "@opentelemetry/api": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    }
+  }
+}

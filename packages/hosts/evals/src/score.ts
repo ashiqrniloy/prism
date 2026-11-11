@@ -133,8 +133,8 @@ async function scoreOne<TInput, TExpected>(
         ...base,
         status: "failed",
         error: toErrorInfo(
-          error instanceof EvalScoreError || (error instanceof EvalError
-            && (error.code.startsWith("ERR_PRISM_EVAL_JUDGE") || error.code === "ERR_PRISM_EVAL_STATE_BOUNDS"))
+          error instanceof EvalScoreError ||
+            (error instanceof EvalError && (error.code.startsWith("ERR_PRISM_EVAL_JUDGE") || error.code === "ERR_PRISM_EVAL_STATE_BOUNDS"))
             ? error
             : new EvalScoreError(error instanceof Error ? error.message : String(error), { cause: error }),
         ),
@@ -156,9 +156,7 @@ export async function scoreRun<TInput = unknown, TExpected = unknown>(
   }
   const random =
     options.random ??
-    (seed !== undefined
-      ? mulberry32(hash32(seed, options.itemId ?? options.item?.id ?? options.result.runId ?? "", 0))
-      : undefined);
+    (seed !== undefined ? mulberry32(hash32(seed, options.itemId ?? options.item?.id ?? options.result.runId ?? "", 0)) : undefined);
   const { probability, metadata: samplingMetadata } = resolveSampling(options.result, options.sampling);
   if (probability <= 0) return [];
   const sampled = shouldSample(probability, random);
@@ -261,12 +259,24 @@ export function scoreRunLive<TInput = unknown, TExpected = unknown>(
 ): Promise<readonly EvaluationRecord[]> {
   const telemetry = options.telemetry;
   const sampling = options.sampling ?? { rate: DEFAULT_SAMPLE_RATE };
-  return scoreRun({ ...options, result, sampling, ...(telemetry ? { telemetry: {
-    handleEvaluation(evaluation) {
-      try { telemetry.handleEvaluation(evaluation); }
-      catch (error) { options.onError?.(error); }
-    },
-  } } : {}) }).catch((error) => {
+  return scoreRun({
+    ...options,
+    result,
+    sampling,
+    ...(telemetry
+      ? {
+          telemetry: {
+            handleEvaluation(evaluation) {
+              try {
+                telemetry.handleEvaluation(evaluation);
+              } catch (error) {
+                options.onError?.(error);
+              }
+            },
+          },
+        }
+      : {}),
+  }).catch((error) => {
     options.onError?.(error);
     return [];
   });
@@ -285,16 +295,31 @@ function isMessage(value: unknown): value is Message {
 
 /** Infrastructure failure skips all scorers without inventing an agent result or invoking scorers. */
 export async function skipScorers<TInput, TExpected>(
-  options: Omit<ScoreRunOptions<TInput, TExpected>, "result"> & { result?: RunResult }, reason: string,
+  options: Omit<ScoreRunOptions<TInput, TExpected>, "result"> & { result?: RunResult },
+  reason: string,
 ): Promise<EvaluationRecord[]> {
   const records: EvaluationRecord[] = [];
   for (const scorer of options.scorers) {
-    const record = redactEvaluationRecord({ id: randomId("eval"), scorerId: scorer.id, sampled: false,
-      status: "skipped", reason, sessionId: options.result?.sessionId, runId: options.result?.runId,
-      datasetId: options.datasetId, itemId: options.itemId, experimentId: options.experimentId,
-      traceId: options.traceId, createdAt: new Date().toISOString(), ...options.ownership,
-      metadata: scorer.invariant ? { ...options.metadata, invariant: true } : options.metadata,
-    }, options.redactor, options.secrets);
+    const record = redactEvaluationRecord(
+      {
+        id: randomId("eval"),
+        scorerId: scorer.id,
+        sampled: false,
+        status: "skipped",
+        reason,
+        sessionId: options.result?.sessionId,
+        runId: options.result?.runId,
+        datasetId: options.datasetId,
+        itemId: options.itemId,
+        experimentId: options.experimentId,
+        traceId: options.traceId,
+        createdAt: new Date().toISOString(),
+        ...options.ownership,
+        metadata: scorer.invariant ? { ...options.metadata, invariant: true } : options.metadata,
+      },
+      options.redactor,
+      options.secrets,
+    );
     await options.store?.append(record);
     emitEvaluation(record, options.telemetry);
     records.push(record);

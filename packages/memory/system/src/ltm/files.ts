@@ -1,6 +1,6 @@
 import { appendFile, mkdir, open, opendir, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve, sep } from "node:path";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 /** File notes live in a host-owned directory; reads are bounded the way coding-tool reads are. */
 export const DEFAULT_FABRIC_MAX_FILE_BYTES = 50 * 1024;

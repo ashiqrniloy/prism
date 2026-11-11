@@ -15,10 +15,7 @@ export const OPENCODE_SESSION_ID_MAX_LENGTH = 128;
  * Derives the `x-opencode-session` affinity header from the request's sanitized cacheKey or sessionId.
  */
 export function opencodeSession(request: ProviderRequest): Record<string, string> {
-  const session = sanitizeCacheKey(
-    request.options?.cacheKey ?? request.options?.sessionId,
-    OPENCODE_SESSION_ID_MAX_LENGTH,
-  );
+  const session = sanitizeCacheKey(request.options?.cacheKey ?? request.options?.sessionId, OPENCODE_SESSION_ID_MAX_LENGTH);
   return session ? { "x-opencode-session": session } : {};
 }
 

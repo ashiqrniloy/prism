@@ -8,5 +8,5 @@ runProviderLiveScenarios({
     anthropic: process.env.PRISM_LIVE_HYPER_MESSAGES_MODEL ?? "qwen3.6-plus",
   },
   secretEnv: "HYPER_API_KEY",
-  title: "@arnilo/prism-provider-hyper live probes",
+  title: "@arnilo/prism-ai/hyper live probes",
 });

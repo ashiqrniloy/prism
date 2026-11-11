@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { CredentialResolver } from "../index.js";
-import {
-  createEnvRefCredentialResolver,
-  createProviderRegistry,
-  errorToErrorInfo,
-  redactSecrets,
-} from "../index.js";
+import { createEnvRefCredentialResolver, createProviderRegistry, errorToErrorInfo, redactSecrets } from "../index.js";
 
 describe("credential boundary", () => {
   it("provider registry does not accept or store credentials", () => {

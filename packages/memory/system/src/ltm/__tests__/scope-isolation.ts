@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { Embedder, VectorStore } from "@arnilo/prism-memory-core";
+import type { Embedder, VectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory } from "../../index.js";
 
 export const PROJECT_A = "projects/alpha--00000001";
@@ -10,12 +10,8 @@ export const PROJECT_B = "projects/beta--00000002";
  * come back in both projects; a project fact and a path note never cross over; forgetting one
  * project's note leaves the other untouched.
  */
-export async function assertScopeIsolation(
-  stores: { readonly vectorStore: VectorStore },
-  embedder: Embedder,
-): Promise<void> {
-  const open = (resourceId: string) =>
-    createMemory({ tenantId: "prism", resourceId, threadId: "default", embedder, ...stores });
+export async function assertScopeIsolation(stores: { readonly vectorStore: VectorStore }, embedder: Embedder): Promise<void> {
+  const open = (resourceId: string) => createMemory({ tenantId: "prism", resourceId, threadId: "default", embedder, ...stores });
   const projectA = open(PROJECT_A);
   const projectB = open(PROJECT_B);
   const agent = open("agent");
@@ -48,12 +44,21 @@ export async function assertScopeIsolation(
   assert.deepEqual(await facts(a), [factA.id], "project A sees only its own fact");
   assert.deepEqual(await facts(b), [factB.id], "project B sees only its own fact");
 
-  assert.ok((await b.recall("pnpm npm scripts", { topK: 5 })).hits.some((hit) => hit.id === preference.id), "the user preference crosses projects");
-  assert.ok((await b.recall("typecheck committing", { topK: 5 })).hits.some((hit) => hit.id === agentNote.id), "the agent note crosses projects");
+  assert.ok(
+    (await b.recall("pnpm npm scripts", { topK: 5 })).hits.some((hit) => hit.id === preference.id),
+    "the user preference crosses projects",
+  );
+  assert.ok(
+    (await b.recall("typecheck committing", { topK: 5 })).hits.some((hit) => hit.id === agentNote.id),
+    "the agent note crosses projects",
+  );
 
   const touched = ["packages/memory/fabric/src/index.ts"];
   const pathHits = await a.recall("alpha release checklist", { topK: 5, kinds: ["procedure"], touchedPaths: touched });
-  assert.ok(pathHits.hits.some((hit) => hit.id === pathNote.id), "the path note is recalled on a matching touched path");
+  assert.ok(
+    pathHits.hits.some((hit) => hit.id === pathNote.id),
+    "the path note is recalled on a matching touched path",
+  );
   const leaked = await b.recall("alpha release checklist", { topK: 5, kinds: ["procedure"], touchedPaths: touched });
   assert.ok(!leaked.hits.some((hit) => hit.id === pathNote.id), "the path note never crosses into project B");
 

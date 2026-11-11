@@ -9,13 +9,20 @@ import type {
 } from "./api.js";
 import { isCapability } from "./capabilities.js";
 import { PackageLoadError } from "./errors.js";
-import { type JsonSchema, assertJsonSchemaSupported } from "./schema.js";
+import { assertJsonSchemaSupported, type JsonSchema } from "./schema.js";
 import { isValidVersion, parseRange } from "./semver.js";
 
 /** Owners the kernel uses for itself: `AgentConfig.hooks` is `host`, session packs are `kernel`. */
 const RESERVED_NAMES: ReadonlySet<string> = new Set(["host", "kernel"]);
-const NPM_NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
-const MAX_NAME_LENGTH = 214;
+/** A lower-case npm root followed by exported subpath segments, at most 214 characters. */
+export const MODULE_SPECIFIER = /^(?=.{1,214}$)(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*(?:\/[a-z0-9][a-z0-9._~-]*)*$(?![\s\S])/;
+
+/** Splits a validated package identity into its npm install unit and optional exports subpath. */
+export function splitSpecifier(spec: string): { readonly root: string; readonly subpath?: string } {
+  if (typeof spec !== "string" || !MODULE_SPECIFIER.test(spec)) throw new TypeError("Invalid package module specifier.");
+  const end = spec.indexOf("/", spec.startsWith("@") ? spec.indexOf("/") + 1 : 0);
+  return end < 0 ? { root: spec } : { root: spec.slice(0, end), subpath: spec.slice(end + 1) };
+}
 const MAX_NAMES = 256;
 
 const definitions = new WeakSet<object>();
@@ -30,7 +37,7 @@ function invalid(name: string | undefined, message: string): never {
 }
 
 function validateName(name: unknown, label: string, owner?: string): asserts name is string {
-  if (typeof name !== "string" || name.length === 0 || name.length > MAX_NAME_LENGTH || !NPM_NAME.test(name)) {
+  if (typeof name !== "string" || name.length === 0 || !MODULE_SPECIFIER.test(name)) {
     invalid(owner, `${label} must be a valid npm package name`);
   }
 }

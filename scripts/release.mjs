@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { activeBundles, validateBundles } from "./bundles.mjs";
 import { lockWorkspace, readBunLock } from "./bun-lock.mjs";
 import { runGates } from "./release-gates.mjs";
 
@@ -16,7 +17,9 @@ const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependen
 const INDEPENDENT_PACKAGES_FILE = "independent-packages.json";
 
 export function loadRelease(root = process.cwd()) {
+  validateBundles(root);
   const paths = ["."];
+  const bundled = new Set(activeBundles(root).map((bundle) => bundle.dir));
   const packagesDir = join(root, "packages");
   if (existsSync(packagesDir)) {
     const children = (dir) =>
@@ -28,8 +31,10 @@ export function loadRelease(root = process.cwd()) {
       const dir = join(packagesDir, entry.name);
       if (existsSync(join(dir, "package.json"))) {
         paths.push(`packages/${entry.name}`);
-        // A family directory may also nest packages (`packages/memory/compaction`).
-        for (const child of children(dir)) paths.push(`packages/${entry.name}/${child.name}`);
+        // A family directory may also nest packages (`packages/extensions/compaction`).
+        if (!bundled.has(`packages/${entry.name}`)) {
+          for (const child of children(dir)) paths.push(`packages/${entry.name}/${child.name}`);
+        }
         continue;
       }
       for (const child of children(dir)) paths.push(`packages/${entry.name}/${child.name}`);
@@ -130,18 +135,19 @@ export function topologicalOrder(release) {
     remaining.set(pkg.manifest.name, dependencies);
   }
 
+  const priority = new Map(activeBundles(release.root).map((bundle) => [bundle.name, bundle.publishOrder ?? 0]));
+  priority.set(release.packages.find((pkg) => pkg.path === ".")?.manifest.name, 0);
   const order = [];
   while (remaining.size) {
     const ready = [...remaining]
       .filter(([, dependencies]) => dependencies.size === 0)
       .map(([name]) => name)
-      .sort();
+      .sort((a, b) => (priority.get(a) ?? 0) - (priority.get(b) ?? 0) || a.localeCompare(b));
     if (!ready.length) throw new Error(`internal dependency cycle: ${[...remaining.keys()].sort().join(", ")}`);
-    for (const name of ready) {
-      order.push(release.byName.get(name));
-      remaining.delete(name);
-      for (const dependencies of remaining.values()) dependencies.delete(name);
-    }
+    const name = ready[0];
+    order.push(release.byName.get(name));
+    remaining.delete(name);
+    for (const dependencies of remaining.values()) dependencies.delete(name);
   }
   return order;
 }
@@ -471,10 +477,12 @@ export function releaseTag(pkg, version) {
   const prerelease = parseSemver(version)?.prerelease.length > 0;
   const name = pkg.manifest.name;
   if (pkg.experimental) {
-    if (!prerelease) throw new Error(`experimental_version_mismatch: ${name}@${version} is on the experimental line but has no prerelease identifier`);
+    if (!prerelease)
+      throw new Error(`experimental_version_mismatch: ${name}@${version} is on the experimental line but has no prerelease identifier`);
     return "experimental";
   }
-  if (prerelease) throw new Error(`stable_version_prerelease: ${name}@${version} has a prerelease identifier but is not in the experimental list`);
+  if (prerelease)
+    throw new Error(`stable_version_prerelease: ${name}@${version} has a prerelease identifier but is not in the experimental list`);
   return "latest";
 }
 
@@ -491,12 +499,15 @@ function releaseLineErrors(release) {
   return errors;
 }
 
-export function publishArgs(
-  pkg,
-  version,
-  { dryRun = false, registry, provenance = false, artifactsDir = "release-artifacts" } = {},
-) {
-  const args = ["publish", join(artifactsDir, tarballName(pkg.manifest.name, version)), "--access", "public", "--tag", releaseTag(pkg, version)];
+export function publishArgs(pkg, version, { dryRun = false, registry, provenance = false, artifactsDir = "release-artifacts" } = {}) {
+  const args = [
+    "publish",
+    join(artifactsDir, tarballName(pkg.manifest.name, version)),
+    "--access",
+    "public",
+    "--tag",
+    releaseTag(pkg, version),
+  ];
   // npm's OIDC trusted publishing: the sigstore statement needs the workflow's `id-token: write`
   // and a GitHub-hosted runner, so it is passed in CI only (a local bootstrap publish has no OIDC).
   if (provenance && !dryRun) args.push("--provenance");
@@ -673,7 +684,9 @@ export function parseArgs(argv) {
     const lockstep = options.from && options.to;
     const single = options.package && options.type;
     if (lockstep === single)
-      throw new Error("bump requires either --from <v> --to <v> (lockstep) or --package <name> --type <patch|minor|major|prerelease> (single)");
+      throw new Error(
+        "bump requires either --from <v> --to <v> (lockstep) or --package <name> --type <patch|minor|major|prerelease> (single)",
+      );
     if (options.ranges && (!lockstep || options.ranges !== "caret"))
       throw new Error("--ranges supports only caret with lockstep --from/--to");
     return options;

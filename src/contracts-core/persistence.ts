@@ -193,19 +193,24 @@ export interface ExperimentReportRecord extends OwnershipScope {
     readonly skippedCount: number;
     readonly failedCount: number;
     readonly macroMean?: number;
-    readonly scorers: Readonly<Record<string, {
-      readonly items: number;
-      readonly records: number;
-      readonly mean: number;
-      readonly passRate: number;
-      readonly passAtK?: Readonly<Record<number, number>>;
-      readonly passHatK?: Readonly<Record<number, number>>;
-      readonly passKCounts?: Readonly<Record<number, { readonly items: number; readonly excludedItems: number }>>;
-      readonly se?: number;
-      readonly ci95?: { readonly low: number; readonly high: number };
-      readonly judgeAgreement?: number;
-      readonly method: "single_item" | "wilson" | "cluster_bootstrap";
-    }>>;
+    readonly scorers: Readonly<
+      Record<
+        string,
+        {
+          readonly items: number;
+          readonly records: number;
+          readonly mean: number;
+          readonly passRate: number;
+          readonly passAtK?: Readonly<Record<number, number>>;
+          readonly passHatK?: Readonly<Record<number, number>>;
+          readonly passKCounts?: Readonly<Record<number, { readonly items: number; readonly excludedItems: number }>>;
+          readonly se?: number;
+          readonly ci95?: { readonly low: number; readonly high: number };
+          readonly judgeAgreement?: number;
+          readonly method: "single_item" | "wilson" | "cluster_bootstrap";
+        }
+      >
+    >;
     readonly cost?: Omit<Usage, "metadata" | "confidence"> & {
       readonly costComplete: boolean;
       readonly meanPerItem: Omit<Usage, "metadata" | "confidence"> & { readonly durationMs?: number };
@@ -400,7 +405,7 @@ export interface MigrationQuery extends PersistenceQuery {
  * checkpoints and leases capabilities through the service contracts their own
  * packages publish (plan 168 Task 4-5).
  *
- * Implemented by `@arnilo/prism-store-sqlite` and `@arnilo/prism-store-postgres` (their `persistence`
+ * Implemented by `@arnilo/prism-extensions/store-sqlite` and `@arnilo/prism-extensions/store-postgres` (their `persistence`
  * modules); `@arnilo/prism/testing` ships the query and state-concurrency conformance suites they run.
  */
 export interface ProductionPersistenceStore {

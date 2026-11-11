@@ -102,7 +102,11 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
   // `createAgent` and `reload()` assemble through this one view: `skills.list()` during setup sees the
   // host's own config, never the packages being replaced.
   const registryView: { config: ResolvedAgentConfig; packages: LoadedPackages | undefined } = { config, packages: undefined };
-  const assemblePackages = async (baseConfig: ResolvedAgentConfig, bus: ReturnType<typeof createHookBus>, slotRegistry: ReturnType<typeof createSlotRegistry>) => {
+  const assemblePackages = async (
+    baseConfig: ResolvedAgentConfig,
+    bus: ReturnType<typeof createHookBus>,
+    slotRegistry: ReturnType<typeof createSlotRegistry>,
+  ) => {
     // `skills.dirs` reads through the same reader as `PackageAPI.skills.addDir`, on every assembly.
     const resolved = await resolveHostSkillDirs(baseConfig, readSkillDir);
     // A manifest instance may assign slots to its package; `AgentConfig.slots` wins per slot.
@@ -127,7 +131,10 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       readSkillDir,
       fetch: internals.fetch,
       emitAgentEvent: (event) => emitAgentEvent(event),
-      registry: { tools: () => toolListFor(registryView.config, registryView.packages), skills: () => skillSourceFor(registryView.config, registryView.packages) },
+      registry: {
+        tools: () => toolListFor(registryView.config, registryView.packages),
+        skills: () => skillSourceFor(registryView.config, registryView.packages),
+      },
     });
     return { config: nextConfig, packages: loaded };
   };

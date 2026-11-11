@@ -1,6 +1,6 @@
 import { type Agent, createAgent, type ModelSpec, type PackageInput } from "@arnilo/prism";
-import { contextFiles } from "@arnilo/prism-context-files";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { contextFiles } from "@arnilo/prism-extensions/context-files";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 export interface HostOptions {
   readonly model: ModelSpec;

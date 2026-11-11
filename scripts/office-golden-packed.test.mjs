@@ -4,11 +4,12 @@
 // entry points) fail here while unit tests stay green. Single test body so a
 // failure names the first diffing file only, never a log wall. Network-free;
 // LibreOffice conversion stays in release.yml `office-validation`.
+
+import { afterAll as after, beforeAll as before, test } from "bun:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,7 +28,7 @@ before(async () => {
   // hoisted prod deps; removed in after().
   packedDir = mkdtempSync(join(ROOT, "node_modules", ".prism-work-packed-"));
   // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-tools-work", "--pack-destination", packedDir], {
+  const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-tools", "--pack-destination", packedDir], {
     cwd: ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -37,7 +38,7 @@ before(async () => {
     .at(-1)
     .trim();
   execFileSync("tar", ["-xzf", join(packedDir, tgz), "-C", packedDir], { stdio: "pipe" });
-  const base = join(packedDir, "package", "src");
+  const base = join(packedDir, "package", "work", "src");
   documents = await import(pathToFileURL(join(base, "documents", "index.ts")).href);
   diagrams = await import(pathToFileURL(join(base, "diagrams", "index.ts")).href);
 });

@@ -45,7 +45,7 @@ const EXPECTED_EFFECTS: Readonly<Record<string, readonly string[]>> = {
   ask_user_decision: [],
 };
 
-describe("@arnilo/prism-tools-coding package", () => {
+describe("@arnilo/prism-tools/coding package", () => {
   it("tools_coding_package_conformance", async () => {
     const root = await tempRoot();
     const result = await packageConformance(toolsCoding({ root }));
@@ -63,7 +63,7 @@ describe("@arnilo/prism-tools-coding package", () => {
       assert.deepEqual(agent.tools.map((tool) => tool.name).sort(), Object.keys(EXPECTED_EFFECTS).sort());
       for (const tool of agent.tools) {
         assert.deepEqual(tool.effects, EXPECTED_EFFECTS[tool.name], `${tool.name} must declare its effects`);
-        assert.equal(tool.package, "@arnilo/prism-tools-coding");
+        assert.equal(tool.package, "@arnilo/prism-tools/coding");
       }
     } finally {
       await agent.dispose();
@@ -285,7 +285,7 @@ describe("@arnilo/prism-tools-coding package", () => {
 
   it("tools_coding_loads_no_heavy_dependency", async () => {
     const script = [
-      'const pkg = (await import("@arnilo/prism-tools-coding")).default;',
+      'const pkg = (await import("@arnilo/prism-tools/coding")).default;',
       'const { createAgent } = await import("@arnilo/prism");',
       'const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [pkg({ root: process.cwd() })] });',
       "const names = agent.tools.map((tool) => tool.name);",
@@ -308,9 +308,9 @@ describe("@arnilo/prism-tools-coding package", () => {
       const inspect = agent.inspect();
       const warnNote = inspect.statusNotes.find(
         (n) =>
-          n.package === "@arnilo/prism-tools-coding" &&
+          n.package === "@arnilo/prism-tools/coding" &&
           n.level === "warn" &&
-          n.message === "shell runs on the host without a sandbox; pair it with @arnilo/prism-approval or set sandbox",
+          n.message === "shell runs on the host without a sandbox; pair it with @arnilo/prism-extensions/approval or set sandbox",
       );
       assert.ok(warnNote, "warn note emitted when shell runs on the host without sandbox");
     } finally {

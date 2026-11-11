@@ -1,5 +1,5 @@
 import { createSessionIndex } from "@arnilo/prism";
-import { createSqlitePersistence, sqliteStore } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence, sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 
 /** One SQLite file, listed on every agent. Not `AgentConfig.store`. */
 export function sqlitePackage(path: string) {

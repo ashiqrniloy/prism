@@ -151,9 +151,7 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
   };
   const fresh = await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] });
   const resumed = await fresh.session({ id: "s1" });
-  for await (const _event of resumed.resume(
-    first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
-  )) {
+  for await (const _event of resumed.resume(first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })))) {
     // drain: the resumed leg keeps the stored per-run allow-list
   }
   assert.deepEqual(seen, [["probe"]]);

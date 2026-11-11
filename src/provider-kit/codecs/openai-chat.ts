@@ -8,8 +8,6 @@ import type {
   PromptCacheBreakpoint,
   ProviderEvent,
   ProviderRequest,
-  StructuredOutputOptions,
-  ToolDefinition,
   Usage,
 } from "../../contracts.js";
 import {
@@ -48,7 +46,7 @@ import {
   thinkingObject,
 } from "../thinking.js";
 import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
-import { httpStatusError, ProviderTransportError, readSseEvents } from "../transport.js";
+import { ProviderTransportError, readSseEvents } from "../transport.js";
 
 export {
   applyOpenAIChatStructuredOutput,

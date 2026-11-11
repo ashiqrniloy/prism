@@ -13,9 +13,9 @@ import { Buffer } from "node:buffer";
 import type {
   JsonObject,
   Message,
-  SessionEntry,
   RunEndDecision,
   RunEndPayload,
+  SessionEntry,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
@@ -307,11 +307,8 @@ export interface TodoNoProgressStopInfo {
   readonly noProgress: number;
 }
 
-/** The `run.end` decide function the package registers as `@arnilo/prism-tools-coding:run.end#todo`. */
-export type TodoContinuationDecision = (
-  payload: RunEndPayload,
-  context: { readonly signal?: AbortSignal },
-) => RunEndDecision | undefined;
+/** The `run.end` decide function the package registers as `@arnilo/prism-tools/coding:run.end#todo`. */
+export type TodoContinuationDecision = (payload: RunEndPayload, context: { readonly signal?: AbortSignal }) => RunEndDecision | undefined;
 
 interface TodoRunState {
   signature: string;
@@ -340,7 +337,7 @@ function continueDecision(open: readonly TodoItem[], maxSteerItems: number, maxS
  * Build the todo continuation gate: a `run.end` decide function (roadmap §2.4). While open todos
  * remain, the run is asked to continue once per loop end, carrying the list as a steer. It stops
  * continuing after `maxNoProgress` consecutive ends with no new tool call and no list change. The
- * package registers it as `@arnilo/prism-tools-coding:run.end#todo`; the kernel caps continuations
+ * package registers it as `@arnilo/prism-tools/coding:run.end#todo`; the kernel caps continuations
  * through `limits.maxContinuations`.
  */
 export function createTodoContinuationDecision(options?: TodoContinuationOptions): TodoContinuationDecision {

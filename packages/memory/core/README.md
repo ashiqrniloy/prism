@@ -1,13 +1,13 @@
-# @arnilo/prism-memory-core
+# @arnilo/prism-memory-system/core
 
-> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-core@experimental`. Outside the
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-system@experimental`. Outside the
 > [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
 > config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
 
 The memory contracts, in-memory, SQLite, Postgres, and markdown vector stores, lineage, deletion propagation, source
-repointing, recall scoring, limits, and JSON-schema helpers that `@arnilo/prism-rag`,
-`@arnilo/prism-wiki`, and `@arnilo/prism-memory-system` (its session tiers and long-term memory)
+repointing, recall scoring, limits, and JSON-schema helpers that `@arnilo/prism-knowledge/rag`,
+`@arnilo/prism-knowledge/wiki`, and `@arnilo/prism-memory-system` (its session tiers and long-term memory)
 share, so three packages cannot drift on how a memory record is scoped, scored, invalidated, or
 stored.
 
@@ -18,7 +18,7 @@ no slot, and changes nothing on its own. Nothing in the kernel imports it, and i
 ## Install
 
 ```bash
-bun add @arnilo/prism-memory-core@experimental
+bun add @arnilo/prism-memory-system@experimental
 ```
 
 A host needs it only when it imports a memory package directly; the memory packages depend on it
@@ -27,9 +27,9 @@ themselves.
 ## Usage
 
 ```ts
-import { createHashEmbedder, createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-system/core";
 // The Postgres stores are the one heavy dependency, so they live behind a subpath.
-const { createPostgresVectorStore } = await import("@arnilo/prism-memory-core/postgres");
+const { createPostgresVectorStore } = await import("@arnilo/prism-memory-system/core/postgres");
 ```
 
 ## What it provides
@@ -56,7 +56,7 @@ const { createPostgresVectorStore } = await import("@arnilo/prism-memory-core/po
   only when a caller constructs one.
 - **No secret reads.** The library never reads `process.env`. A Postgres connection, reranker key,
   or connector token is supplied already resolved by the consuming package.
-- **`pg` is optional and lazy.** The root entry imports no `pg`; only `@arnilo/prism-memory-core/postgres`
+- **`pg` is optional and lazy.** The root entry imports no `pg`; only `@arnilo/prism-memory-system/core/postgres`
   does, and it loads the driver dynamically. An agent that never touches the Postgres store never
   loads it.
 - **Bounded by construction.** Every input is checked against the shared `HARD_*` caps before it
@@ -134,7 +134,7 @@ it) and delegates the scan and listing to its index. Postgres adds
 ## SQLite persistence
 
 ```ts
-const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
+const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-system/core/sqlite");
 const stores = await createSqliteMemoryStores({ path: "./memory.sqlite", dimensions: 64 });
 // Pass stores.vectorStore to the memory consumer.
 // Close after all memory operations finish.
@@ -159,7 +159,7 @@ not enforce a filesystem root.
 ## Markdown stores (`./fabric`)
 
 ```ts
-const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
 const stores = await createMarkdownMemoryStores({ root: "./memory/notes" });
 // stores.vectorStore satisfies the same contract as the SQLite store.
 // stores.reconcile() re-indexes changed files; stores.rebuild() re-indexes every file.

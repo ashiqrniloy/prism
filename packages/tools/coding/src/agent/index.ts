@@ -1,4 +1,4 @@
-// @arnilo/prism-tools-coding public barrel.
+// @arnilo/prism-tools/coding public barrel.
 //
 // First-party coding tools for the Prism agent harness. Factory functions return Prism
 // `ToolDefinition`s that hosts register into a `ToolRegistry` (e.g.
@@ -88,6 +88,8 @@ export type {
   ResolvedDiagnosticsLimits,
 } from "./diagnostics.js";
 export { diagnosticDelta, diagnosticIdentity, normalizeDiagnostics, resolveDiagnosticsLimits } from "./diagnostics.js";
+export type { DiagnosticsToolHandle, DiagnosticsToolOptions } from "./diagnostics-tool.js";
+export { createDiagnosticsTool } from "./diagnostics-tool.js";
 export type { Edit, EditOperations, EditToolDetails, EditToolOptions } from "./edit.js";
 export { createEditTool } from "./edit.js";
 export type { CodingEffectReconciliation, CodingEffectReconciliationInput } from "./effects.js";
@@ -366,8 +368,6 @@ export {
 } from "./shell-background.js";
 export type { ShellOutputToolOptions } from "./shell-output.js";
 export { createShellOutputTool } from "./shell-output.js";
-export type { DiagnosticsToolHandle, DiagnosticsToolOptions } from "./diagnostics-tool.js";
-export { createDiagnosticsTool } from "./diagnostics-tool.js";
 export type {
   TodoContinuationDecision,
   TodoContinuationOptions,

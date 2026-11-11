@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { splitSpecifier } from "../packages/define.js";
 import { ManifestError } from "./errors.js";
 import type { ManifestScope } from "./format.js";
 
@@ -121,7 +122,7 @@ export async function hashPackageTree(dir: string, context: HashPackageTreeConte
 
 /** The installed package directory inside a scope's managed project. */
 export function installedPackageDir(packagesDir: string, name: string): string {
-  return join(packagesDir, "node_modules", ...name.split("/"));
+  return join(packagesDir, "node_modules", ...splitSpecifier(name).root.split("/"));
 }
 
 async function resolveDependencyDir(
@@ -162,11 +163,11 @@ async function resolveDependencyDir(
     curr = parent;
   }
 
-  throw new ManifestError(
-    "package_missing",
-    `Package ${rootName} (${scope}) dependency ${depName} is not installed in ${packagesDir}.`,
-    { scope, package: rootName, dependency: depName },
-  );
+  throw new ManifestError("package_missing", `Package ${rootName} (${scope}) dependency ${depName} is not installed in ${packagesDir}.`, {
+    scope,
+    package: rootName,
+    dependency: depName,
+  });
 }
 
 export interface HashPackageClosureOptions {
@@ -185,33 +186,31 @@ export async function hashPackageClosure(
   scope: ManifestScope,
   options: HashPackageClosureOptions = {},
 ): Promise<string> {
+  rootName = splitSpecifier(rootName).root;
   const maxClosurePackages = options.maxClosurePackages ?? MAX_CLOSURE_PACKAGES;
   const rootDir = installedPackageDir(packagesDir, rootName);
 
   try {
     const st = await lstat(rootDir);
     if (st.isSymbolicLink()) {
-      throw new ManifestError(
-        "integrity_mismatch",
-        `Package ${rootName} (${scope}) is a symlink, which is refused.`,
-        { scope, package: rootName },
-      );
+      throw new ManifestError("integrity_mismatch", `Package ${rootName} (${scope}) is a symlink, which is refused.`, {
+        scope,
+        package: rootName,
+      });
     }
     if (!st.isDirectory()) {
-      throw new ManifestError(
-        "package_missing",
-        `Package ${rootName} (${scope}) is not installed in ${packagesDir}.`,
-        { scope, package: rootName },
-      );
+      throw new ManifestError("package_missing", `Package ${rootName} (${scope}) is not installed in ${packagesDir}.`, {
+        scope,
+        package: rootName,
+      });
     }
   } catch (error) {
     if (error instanceof ManifestError) throw error;
     if ((error as NodeJS.ErrnoException).code === "ENOENT" || (error as NodeJS.ErrnoException).code === "ENOTDIR") {
-      throw new ManifestError(
-        "package_missing",
-        `Package ${rootName} (${scope}) is not installed in ${packagesDir}.`,
-        { scope, package: rootName },
-      );
+      throw new ManifestError("package_missing", `Package ${rootName} (${scope}) is not installed in ${packagesDir}.`, {
+        scope,
+        package: rootName,
+      });
     }
     throw error;
   }
@@ -219,12 +218,8 @@ export async function hashPackageClosure(
   const visitedDirs = new Set<string>();
   visitedDirs.add(rootDir);
 
-  const packages: Array<{ readonly name: string; readonly dir: string; readonly dependency?: string }> = [
-    { name: rootName, dir: rootDir },
-  ];
-  const queue: Array<{ readonly name: string; readonly dir: string; readonly dependency?: string }> = [
-    { name: rootName, dir: rootDir },
-  ];
+  const packages: Array<{ readonly name: string; readonly dir: string; readonly dependency?: string }> = [{ name: rootName, dir: rootDir }];
+  const queue: Array<{ readonly name: string; readonly dir: string; readonly dependency?: string }> = [{ name: rootName, dir: rootDir }];
 
   while (queue.length > 0) {
     const current = queue.shift()!;
@@ -240,11 +235,10 @@ export async function hashPackageClosure(
           { scope, package: rootName, dependency: current.dependency },
         );
       }
-      throw new ManifestError(
-        "package_missing",
-        `Package ${rootName} (${scope}) is not installed in ${packagesDir}.`,
-        { scope, package: rootName },
-      );
+      throw new ManifestError("package_missing", `Package ${rootName} (${scope}) is not installed in ${packagesDir}.`, {
+        scope,
+        package: rootName,
+      });
     }
 
     const dependencies = new Set<string>();
@@ -310,13 +304,26 @@ export async function verifyInstalled(
   entry: { readonly name: string; readonly integrity: string },
   packagesDir: string,
   scope: ManifestScope,
-  options: HashPackageClosureOptions = {},
+  options: HashPackageClosureOptions & { readonly cache?: Map<string, Promise<string>> } = {},
 ): Promise<void> {
   let actual: string;
   try {
-    actual = await hashPackageClosure(packagesDir, entry.name, scope, options);
+    const { root } = splitSpecifier(entry.name);
+    const key = JSON.stringify([packagesDir, root]);
+    let hash = options.cache?.get(key);
+    if (!hash) {
+      hash = hashPackageClosure(packagesDir, root, scope, options);
+      options.cache?.set(key, hash);
+    }
+    actual = await hash;
   } catch (error) {
-    if (error instanceof ManifestError) throw error;
+    if (error instanceof ManifestError) {
+      throw new ManifestError(error.code, `Package ${entry.name} (${scope}): ${error.message}`, {
+        scope,
+        package: entry.name,
+        ...(error.dependency ? { dependency: error.dependency } : {}),
+      });
+    }
     if ((error as NodeJS.ErrnoException).code === "ENOENT" || (error as NodeJS.ErrnoException).code === "ENOTDIR") {
       throw new ManifestError("package_missing", `Package ${entry.name} (${scope}) is not installed in ${packagesDir}.`, {
         scope,
@@ -336,4 +343,3 @@ export async function verifyInstalled(
     );
   }
 }
-

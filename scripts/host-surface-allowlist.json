@@ -79,7 +79,8 @@
     "ExperimentReportRecord",
     "ExperimentReportStore",
     "ModelConfig",
-    "RunFeedbackQuery"
+    "RunFeedbackQuery",
+    "Skill"
   ],
   "phase17": [
     "parseSuspendedRunEntry",

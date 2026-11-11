@@ -117,7 +117,11 @@ describe("host ui", () => {
     );
   });
 
-  const askTerminal = async (script: Parameters<typeof createScriptedHostUi>[0], request: Record<string, unknown>, capabilities: string[] = ["host-ui"]) => {
+  const askTerminal = async (
+    script: Parameters<typeof createScriptedHostUi>[0],
+    request: Record<string, unknown>,
+    capabilities: string[] = ["host-ui"],
+  ) => {
     const { load } = harness();
     const scripted = createScriptedHostUi(script);
     let result: unknown;
@@ -270,7 +274,11 @@ describe("host ui", () => {
       const answers: unknown[] = [];
       const { load } = harness();
       await load(
-        [pkg("asker", ({ host }) => void host.ui.request(REQUEST_OF.confirm as never).then((r: unknown) => answers.push(r)), { capabilities: ["host-ui"] })],
+        [
+          pkg("asker", ({ host }) => void host.ui.request(REQUEST_OF.confirm as never).then((r: unknown) => answers.push(r)), {
+            capabilities: ["host-ui"],
+          }),
+        ],
         { host: { ui: { request: async () => answer as never } } },
       );
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -288,7 +296,11 @@ describe("host ui", () => {
       const answers: unknown[] = [];
       const { load } = harness();
       await load(
-        [pkg("asker", ({ host }) => void host.ui.request(REQUEST_OF[kind] as never).then((r: unknown) => answers.push(r)), { capabilities: ["host-ui"] })],
+        [
+          pkg("asker", ({ host }) => void host.ui.request(REQUEST_OF[kind] as never).then((r: unknown) => answers.push(r)), {
+            capabilities: ["host-ui"],
+          }),
+        ],
         { host: { ui: { request: async () => answer as never } } },
       );
       await new Promise((resolve) => setTimeout(resolve, 0));

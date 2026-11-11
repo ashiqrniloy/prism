@@ -5,7 +5,7 @@
  * and the counter lives in the store so two processes on one project share it. The session key is
  * remembered in session state, so a restored session never counts itself twice.
  */
-import { MemoryValidationError, type ScopeCounterStore } from "@arnilo/prism-memory-core";
+import { MemoryValidationError, type ScopeCounterStore } from "@arnilo/prism-memory-system/core";
 
 /** The only counter name today. */
 export const SCOPE_CLOCK_COUNTER = "sessions";

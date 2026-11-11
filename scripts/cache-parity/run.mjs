@@ -177,7 +177,10 @@ export function prepareScratch(steps, scratch) {
       cpSync(step.from, step.path);
     } else if (step.op === "symlink") symlinkSync(step.target, step.path);
     else if (step.op === "copyDir") {
-      cpSync(step.from, step.path, { recursive: true, filter: (source) => !relative(step.from, source).split(sep).includes("node_modules") });
+      cpSync(step.from, step.path, {
+        recursive: true,
+        filter: (source) => !relative(step.from, source).split(sep).includes("node_modules"),
+      });
       if (step.replace !== undefined) {
         const file = join(step.path, step.replaceIn);
         let text = readFileSync(file, "utf8");

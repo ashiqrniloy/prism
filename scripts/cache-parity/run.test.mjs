@@ -385,7 +385,15 @@ describe("prepareScratch copyDir", () => {
       mkdirSync(scratch);
       const path = join(scratch, "pi-extension", "ext");
       prepareScratch(
-        [{ op: "copyDir", from, path, replaceIn: "models.ts", replace: [['const CLOUD_BASE_URL = "https://ollama.com";', 'const CLOUD_BASE_URL = "http://127.0.0.1:1";']] }],
+        [
+          {
+            op: "copyDir",
+            from,
+            path,
+            replaceIn: "models.ts",
+            replace: [['const CLOUD_BASE_URL = "https://ollama.com";', 'const CLOUD_BASE_URL = "http://127.0.0.1:1";']],
+          },
+        ],
         scratch,
       );
       expect(readFileSync(join(path, "models.ts"), "utf8")).toContain("http://127.0.0.1:1");

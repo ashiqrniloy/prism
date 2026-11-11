@@ -11,11 +11,11 @@
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import type { Memory, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-core";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-system/core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { type MemoryNoteStatus, normalizeNoteStatus } from "../lifecycle/status.js";
 import { createMemory } from "../memory.js";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import {
   encodeMemoryNoteMetadata,
   MEMORY_NOTE_METADATA_KEY,
@@ -133,7 +133,7 @@ export async function createFabricTeam(input: {
   readonly index: string;
   readonly signal?: AbortSignal;
 }): Promise<FabricTeam> {
-  const { createMarkdownMemoryStores, noteRelPath } = await import("@arnilo/prism-memory-core/fabric");
+  const { createMarkdownMemoryStores, noteRelPath } = await import("@arnilo/prism-memory-system/core/fabric");
   // The index is derived and lives outside the checked-in tree: refuse one inside the team directory.
   const indexPath = resolve(input.index);
   const inside = relative(resolve(input.options.dir), indexPath);

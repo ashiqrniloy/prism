@@ -198,11 +198,10 @@ describe("callback broker", () => {
         });
       });
       try {
-        const input =
-          `${[
-            JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
-            JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-          ].join("\n")}\n`;
+        const input = `${[
+          JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+          JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+        ].join("\n")}\n`;
         const out = await relay(runDir, "mcp", input);
         assert.equal(out.code, 0);
         const lines = out.stdout.trim().split("\n");

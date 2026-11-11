@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AgentEvent, createAgent, definePackage } from "@arnilo/prism";
 import { bindManifestInstance, createScriptedHostUi, mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import mcpPackageDefinition, { type McpPackageConfig } from "@arnilo/prism-mcp";
+import mcpPackageDefinition, { type McpPackageConfig } from "@arnilo/prism-extensions/mcp";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 
 /**

@@ -18,8 +18,6 @@ import {
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider } from "@arnilo/prism/testing";
-import type { ExecutionStep, ExecutionTimeline } from "@arnilo/prism-observability";
-import { summarizeTimeline } from "@arnilo/prism-observability";
 import {
   createApprovalBeforeEffectScorer,
   createCitationIntegrityScorer,
@@ -33,9 +31,11 @@ import {
   runScenario,
   validateEvalManifest,
   validateReleaseEvalManifest,
-} from "@arnilo/prism-evals";
-import { type AgentIdentity } from "@arnilo/prism-governance";
-import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools-work/connectors";
+} from "@arnilo/prism-hosts/evals";
+import { type AgentIdentity } from "@arnilo/prism-extensions/governance";
+import type { ExecutionStep, ExecutionTimeline } from "@arnilo/prism-extensions/observability";
+import { summarizeTimeline } from "@arnilo/prism-extensions/observability";
+import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools/work/connectors";
 import { compareInspectorRuns, parseInspectorCompareBody, serveDevtools } from "../index.js";
 
 const _OWNERSHIP = { tenantId: "local", userId: "local" } as const;
@@ -187,7 +187,15 @@ describe("host-journey gates over plan 072 evals", () => {
         await approval.score({
           result: result(),
           timeline: timeline([
-            { id: "h", kind: "hitl", name: "approve", order: 0, status: "approved", startedAt: "2026-01-01T00:00:00.000Z", metadata: { toolCallId: "c1", via: "inline" } },
+            {
+              id: "h",
+              kind: "hitl",
+              name: "approve",
+              order: 0,
+              status: "approved",
+              startedAt: "2026-01-01T00:00:00.000Z",
+              metadata: { toolCallId: "c1", via: "inline" },
+            },
             tool(1, "write_record", "succeeded", { id: "tool:c1", metadata: { toolCallId: "c1" } }),
           ]),
         })
@@ -199,7 +207,15 @@ describe("host-journey gates over plan 072 evals", () => {
         await approval.score({
           result: result(),
           timeline: timeline([
-            { id: "h", kind: "hitl", name: "approve", order: 0, status: "approved", startedAt: "2026-01-01T00:00:00.000Z", metadata: { toolCallId: "c1" } },
+            {
+              id: "h",
+              kind: "hitl",
+              name: "approve",
+              order: 0,
+              status: "approved",
+              startedAt: "2026-01-01T00:00:00.000Z",
+              metadata: { toolCallId: "c1" },
+            },
             tool(1, "write_record", "succeeded", { id: "tool:c2", metadata: { toolCallId: "c2" } }),
           ]),
         })
@@ -563,17 +579,17 @@ describe("host-activity packs on true 072 primitives", () => {
   });
 });
 
-
 it("devtools_quality_winner_uses_ci_overlap", () => {
   const side = (mean: number, low: number, high: number) => ({
     summary: { durationMs: 1, errorCount: 0, toolCallCount: 0, status: "succeeded" },
     aggregate: { macroMean: mean, scorers: { s: { mean, ci95: { low, high } } } },
   });
-  const left = side(.8, .6, .9), right = side(.7, .5, .85);
+  const left = side(0.8, 0.6, 0.9),
+    right = side(0.7, 0.5, 0.85);
   assert.equal(compareInspectorRuns(left, right).qualityWinner, "tie");
   assert.equal(parseInspectorCompareBody(JSON.stringify({ left, right })).qualityWinner, "tie");
-  assert.equal(compareInspectorRuns(left, side(.3, .2, .4)).qualityWinner, "left");
-  assert.equal(compareInspectorRuns(side(.3, .2, .4), left).qualityWinner, "right");
-  assert.equal(compareInspectorRuns(left, { ...right, aggregate: { macroMean: .7 } }).qualityWinner, "left");
-  assert.throws(() => parseInspectorCompareBody(JSON.stringify({ left, right: side(.7, .9, .2) })));
+  assert.equal(compareInspectorRuns(left, side(0.3, 0.2, 0.4)).qualityWinner, "left");
+  assert.equal(compareInspectorRuns(side(0.3, 0.2, 0.4), left).qualityWinner, "right");
+  assert.equal(compareInspectorRuns(left, { ...right, aggregate: { macroMean: 0.7 } }).qualityWinner, "left");
+  assert.throws(() => parseInspectorCompareBody(JSON.stringify({ left, right: side(0.7, 0.9, 0.2) })));
 });

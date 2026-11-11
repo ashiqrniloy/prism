@@ -36,7 +36,7 @@ Then connect provider accounts in the console at `http://127.0.0.1:3000`.
 ## Wire it into Prism
 
 ```ts
-import { createConnectedAppSession } from "@arnilo/prism-mcp";
+import { createConnectedAppSession } from "@arnilo/prism-extensions/mcp";
 
 const origin = "http://127.0.0.1:3000";
 const apps = createConnectedAppSession({

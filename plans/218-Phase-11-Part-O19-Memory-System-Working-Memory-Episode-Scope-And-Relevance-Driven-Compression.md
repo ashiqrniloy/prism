@@ -1,5 +1,7 @@
 # Phase 11 Part O19 — Memory system: working memory, the episode scope, and relevance-driven compression
 
+> **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
+
 ## Objectives
 
 - Add the **episode scope**: a natural-language statement of what the current body of work must achieve, including its later planned steps (for example a plan document). The host or user sets it; WM and Rehearsal read it; STM never does (design §5.3).

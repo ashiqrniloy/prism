@@ -17,8 +17,8 @@ import { runCommand } from "../../apps/prism-agent/src/cli/run.js";
 import { withCatalogFields } from "./host-model.js";
 
 const providers = {
-  commandcode: { module: "@arnilo/prism-provider-commandcode", factory: "commandcode", catalog: "commandCodeModels" },
-  "ollama-cloud": { module: "@arnilo/prism-provider-ollama-cloud", factory: "ollamaCloud", catalog: "ollamaCloudModels" },
+  commandcode: { module: "@arnilo/prism-ai/commandcode", factory: "commandcode", catalog: "commandCodeModels" },
+  "ollama-cloud": { module: "@arnilo/prism-ai/ollama-cloud", factory: "ollamaCloud", catalog: "ollamaCloudModels" },
 } as const;
 
 const id = process.env.PRISM_PARITY_PROVIDER as keyof typeof providers | undefined;

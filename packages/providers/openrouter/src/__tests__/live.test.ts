@@ -20,7 +20,7 @@ runProviderLiveScenarios({
   routes: { openai: { model: freeModel, structuredOutput: "json_schema" } },
   scenarios: ["text", "tool-loop", "structured-output", "abort", "error"],
   secretEnv: "OPENROUTER_API_KEY",
-  title: "@arnilo/prism-provider-openrouter pinned free live",
+  title: "@arnilo/prism-ai/openrouter pinned free live",
   skipUnless: () => (freeModel.endsWith(":free") ? false : "PRISM_LIVE_OPENROUTER_MODEL must pin a :free model, not a random router"),
 });
 runProviderLiveScenarios({
@@ -34,7 +34,7 @@ runProviderLiveScenarios({
   },
   scenarios: ["cache"],
   secretEnv: "OPENROUTER_API_KEY",
-  title: "@arnilo/prism-provider-openrouter paid cache live",
+  title: "@arnilo/prism-ai/openrouter paid cache live",
   skipUnless: () =>
     process.env.PRISM_LIVE_OPENROUTER_PAID !== "1"
       ? "paid cache disabled; set PRISM_LIVE_OPENROUTER_PAID=1 with spend approval"

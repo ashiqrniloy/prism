@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { PackageInstance } from "@arnilo/prism";
-import { wiki } from "@arnilo/prism-wiki";
+import { wiki } from "@arnilo/prism-knowledge/wiki";
 import type { HostConfig } from "./config.js";
 
 /**

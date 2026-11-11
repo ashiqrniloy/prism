@@ -473,10 +473,12 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
       assertNotAborted(options.signal);
       const s = requireScope(scope, true);
       if (!ids.length) return [];
-      const result = await q.query(`SELECT ${VECTOR_COLUMNS} FROM ${table}
+      const result = await q.query(
+        `SELECT ${VECTOR_COLUMNS} FROM ${table}
         WHERE tenant_id=$1 AND resource_id=$2 AND thread_id=$3 AND id = ANY($4)`,
-        [s.tenantId, s.resourceId, s.threadId, ids]);
-      return result.rows.map(row => mapVectorRow(row));
+        [s.tenantId, s.resourceId, s.threadId, ids],
+      );
+      return result.rows.map((row) => mapVectorRow(row));
     },
 
     async getByThread(scope) {

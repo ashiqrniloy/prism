@@ -23,14 +23,14 @@ import type {
   RepointHandler,
   RepointStore,
   VectorStore,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import {
   assertNotAborted,
   HARD_INVALIDATION_BATCH,
   MemoryScopeError,
   MemoryValidationError,
   requireScope,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import {
   encodeMemoryNoteMetadata,
   MEMORY_NOTE_METADATA_KEY,

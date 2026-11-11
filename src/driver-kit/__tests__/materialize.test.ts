@@ -33,7 +33,12 @@ describe("materializer", () => {
     await dir.overlay(wt, [{ path: ".vendor/config.json", content: "{}" }]);
     assert.equal(execFileSync("git", ["status", "--porcelain"], { cwd: wt }).toString(), "");
     const exclude = join(wt, ".git/info/exclude");
-    assert.equal(readFileSync(exclude, "utf8").split("\n").filter((l) => l === "/.vendor/config.json").length, 1);
+    assert.equal(
+      readFileSync(exclude, "utf8")
+        .split("\n")
+        .filter((l) => l === "/.vendor/config.json").length,
+      1,
+    );
     await dir.dispose();
     assert.equal(existsSync(join(wt, ".vendor/config.json")), false);
     assert.ok(!readFileSync(exclude, "utf8").includes(".vendor/config.json"));
@@ -46,7 +51,14 @@ describe("materializer", () => {
     writeFileSync(join(src, "SKILL.md"), "# one");
     writeFileSync(join(src, "res/note.md"), "note");
     const dir = await createRunDirectory(tmp(), "run-3");
-    const out = await materializeSkills(dir, registryOf([{ name: "one", path: join(src, "SKILL.md") }, { name: "two", instructions: "do it" }]), "all");
+    const out = await materializeSkills(
+      dir,
+      registryOf([
+        { name: "one", path: join(src, "SKILL.md") },
+        { name: "two", instructions: "do it" },
+      ]),
+      "all",
+    );
     assert.equal(readFileSync(join(out.root, "one/res/note.md"), "utf8"), "note");
     assert.match(readFileSync(out.pathToSkill.get("two") as string, "utf8"), /do it/);
     assert.equal(out.pathToSkill.size, 2);

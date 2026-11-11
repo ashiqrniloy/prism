@@ -148,7 +148,7 @@ export function createWebTransport(
         if (acquired) release();
       }
     },
-    async json(_provider, credentialName, url, init, signal, request = {}) {
+    async json(_provider, _credentialName, url, init, signal, request = {}) {
       const retry = request.retry ?? "idempotent";
       const mayRetryStatus = (status: number) =>
         retry === "idempotent" ? status === 429 || status >= 500 : retry === "safe-post" ? status === 429 : false;

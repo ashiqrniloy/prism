@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
 import { assertSsrfAllowedUrl, MediaContentError } from "@arnilo/prism";
-import { MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import type { OntologySourceResult } from "./ontology/port.js";
-import { HARD_MAX_DOCUMENT_BYTES_CAP, pdfParser } from "@arnilo/prism-rag";
+import { HARD_MAX_DOCUMENT_BYTES_CAP, pdfParser } from "@arnilo/prism-knowledge/rag";
 import type {
   WikiExtensionOptions,
   WikiIngestFetch,

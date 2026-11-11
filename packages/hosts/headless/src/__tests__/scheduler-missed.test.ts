@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism-workflows";
+import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism-extensions/workflows";
 import { createScheduler } from "../index.js";
 import { build } from "./fixtures/agent.js";
 

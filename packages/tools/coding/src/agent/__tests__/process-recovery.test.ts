@@ -14,8 +14,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CheckpointStore, LeaseStore } from "@arnilo/prism-workflows";
-import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore, LeaseStore } from "@arnilo/prism-extensions/workflows";
+import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism-extensions/workflows";
 import {
   acquireRecordLease,
   createProcessSessions,

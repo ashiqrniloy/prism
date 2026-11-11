@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-rag` — retrieval over indexed sources as a package (plan 158 Task 3).
+ * `@arnilo/prism-knowledge/rag` — retrieval over indexed sources as a package (plan 158 Task 3).
  *
  * The package owns the 0.12 RAG library (chunking, retrieval, fusion, reranking, connectors, sync) and
  * adds the package surface the roadmap §2.9 row asks for: one `rag_search` tool (`effects: ["read"]`),
@@ -11,7 +11,7 @@
  * `context.build` call, never during `createAgent`.
  *
  * ```ts
- * import memoryRag from "@arnilo/prism-rag";
+ * import memoryRag from "@arnilo/prism-knowledge/rag";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -20,18 +20,19 @@
  * });
  * ```
  */
-import manifest from "../package.json" with { type: "json" };
+
 import {
+  definePackage,
   type JsonObject,
   type ModelRef,
   type PackageAPI,
   type PackageCommand,
   type PackageInstance,
   type Secret,
-  definePackage,
 } from "@arnilo/prism";
-import { type Embedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import type { WebFetchService } from "@arnilo/prism-tools-web";
+import { createMemoryVectorStore, type Embedder } from "@arnilo/prism-memory-system/core";
+import type { WebFetchService } from "@arnilo/prism-tools/web";
+import manifest from "../../package.json" with { type: "json" };
 
 import {
   type RagConfig,
@@ -49,8 +50,6 @@ import { retrieveContext } from "./retrieve.js";
 import { createRagSearchTool } from "./tool.js";
 import type { RagScope, Reranker, TransactionalVectorStore } from "./types.js";
 
-// The moved 0.12 library surface keeps its names, now behind one entry point.
-export * from "./exports.js";
 export {
   DEFAULT_RAG_EMBED_BATCH,
   DEFAULT_RAG_GLOB,
@@ -66,15 +65,17 @@ export {
   ragConfigSchema,
   resolveRagConfig,
 } from "./config.js";
-export { createProviderEmbedder, probeEmbedderDimensions, type ProviderEmbedderOptions } from "./embedder.js";
+export { createProviderEmbedder, type ProviderEmbedderOptions, probeEmbedderDimensions } from "./embedder.js";
+// The moved 0.12 library surface keeps its names, now behind one entry point.
+export * from "./exports.js";
 export {
-  HARD_MAX_SOURCE_FILES,
   globToRegExp,
+  HARD_MAX_SOURCE_FILES,
+  type IndexSourcesOptions,
+  type IndexSourcesResult,
   indexSources,
   resolveSourceFiles,
   type SourceFile,
-  type IndexSourcesOptions,
-  type IndexSourcesResult,
 } from "./index-sources.js";
 export { createRagSearchTool, type RagSearchToolOptions } from "./tool.js";
 
@@ -82,7 +83,7 @@ const RAG_TOOL_NAME = "rag_search";
 const RAG_CONTEXT_HOOK_ID = "memory-rag:context.build";
 
 const definition = definePackage<RagConfig>({
-  name: "@arnilo/prism-rag",
+  name: "@arnilo/prism-knowledge/rag",
   version: manifest.version,
   description: "Retrieval over indexed sources: a rag_search tool, an opt-in context block, and the embeddings service.",
   requires: { api: 1 },
@@ -225,7 +226,7 @@ async function resolveStore(prism: PackageAPI<RagConfig>, config: ResolvedRagCon
     prism.status.note("warn", `rag: connection ref ${JSON.stringify(postgres.connection)} did not resolve`);
     return undefined;
   }
-  const { createPostgresVectorStore } = await import("@arnilo/prism-memory-core/postgres");
+  const { createPostgresVectorStore } = await import("@arnilo/prism-memory-system/core/postgres");
   return createPostgresVectorStore({
     connectionString: secret.value,
     ...(postgres.schema === undefined ? {} : { schema: postgres.schema }),

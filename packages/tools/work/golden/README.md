@@ -1,6 +1,6 @@
 # Prism Documents Golden Files
 
-This directory contains reference golden files and source models for the `@arnilo/prism-tools-work` document tools.
+This directory contains reference golden files and source models for the `@arnilo/prism-tools/work` document tools.
 
 ## Files
 

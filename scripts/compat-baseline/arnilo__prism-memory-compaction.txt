@@ -1,3 +1,0 @@
-. MemoryCompactionConfig	interface MemoryCompactionConfig { readonly keepRecentTokens?: number; readonly maxSummaryTokens?: number; readonly model?: ModelRef; readonly profile?: MemoryCompactionProfile; readonly summaryPrompt?: string; readonly trigger?: CompactionTrigger; }
-. MemoryCompactionProfile	type MemoryCompactionProfile = "default" | "coding"
-. default	const definition: import("@arnilo/prism").PackageDefinition<MemoryCompactionConfig>

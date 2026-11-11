@@ -48,13 +48,15 @@ async function parseSseEvents(response: Response) {
     .map((line) => JSON.parse(line.slice(6)) as Record<string, unknown>);
 }
 
-async function createIsolatedAgent(options: {
-  readonly id?: string;
-  readonly store?: SessionStore;
-  readonly ownership?: OwnershipScope;
-  readonly executed?: string[];
-  readonly requireApproval?: boolean;
-} = {}): Promise<{ readonly agent: Agent; readonly store: SessionStore }> {
+async function createIsolatedAgent(
+  options: {
+    readonly id?: string;
+    readonly store?: SessionStore;
+    readonly ownership?: OwnershipScope;
+    readonly executed?: string[];
+    readonly requireApproval?: boolean;
+  } = {},
+): Promise<{ readonly agent: Agent; readonly store: SessionStore }> {
   const store = options.store ?? createMemorySessionStore();
   let turn = 0;
   const agent = await createAgent({
@@ -149,9 +151,7 @@ describe("createAgUiHandler session ownership isolation (plan 178 Task 4)", () =
     });
     const handler = createAgUiHandler(agent, { authorize: authorizeFromHeaders });
 
-    const startEvents = await parseSseEvents(
-      await handler(requestForUser("user-a", body({ threadId: "thread-a", runId: "run-1" }))),
-    );
+    const startEvents = await parseSseEvents(await handler(requestForUser("user-a", body({ threadId: "thread-a", runId: "run-1" }))));
     const finish = startEvents.at(-1) as { outcome?: { type?: string; interrupts?: Array<{ id: string }> } } | undefined;
     assert.equal(finish?.outcome?.type, "interrupt");
     const interrupt = finish?.outcome?.interrupts?.[0];
@@ -185,9 +185,7 @@ describe("createAgUiHandler session ownership isolation (plan 178 Task 4)", () =
     });
     const handler = createAgUiHandler(agent, { authorize: authorizeFromHeaders });
 
-    const startEvents = await parseSseEvents(
-      await handler(requestForUser("user-a", body({ threadId: "thread-a", runId: "run-1" }))),
-    );
+    const startEvents = await parseSseEvents(await handler(requestForUser("user-a", body({ threadId: "thread-a", runId: "run-1" }))));
     const finish = startEvents.at(-1) as { outcome?: { type?: string; interrupts?: Array<{ id: string }> } } | undefined;
     const interrupt = finish?.outcome?.interrupts?.[0];
     assert.ok(interrupt);
@@ -234,9 +232,7 @@ describe("createAgUiHandler session ownership isolation (plan 178 Task 4)", () =
     const handler = createAgUiHandler(agent, { authorize: authorizeFromHeaders });
 
     // Create a suspended thread for User A, then delete the session from the store so resuming it hits an absent session.
-    const startEvents = await parseSseEvents(
-      await handler(requestForUser("user-a", body({ threadId: "thread-absent", runId: "run-1" }))),
-    );
+    const startEvents = await parseSseEvents(await handler(requestForUser("user-a", body({ threadId: "thread-absent", runId: "run-1" }))));
     const finish = startEvents.at(-1) as { outcome?: { interrupts?: Array<{ id: string }> } } | undefined;
     const interrupt = finish?.outcome?.interrupts?.[0];
     assert.ok(interrupt);

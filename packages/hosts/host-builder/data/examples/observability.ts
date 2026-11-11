@@ -2,7 +2,7 @@
  * Observability Demo (plan 160 Task 3).
  *
  * The host owns OpenTelemetry: it registers a tracer provider (here an in-memory recorder standing in for
- * an SDK + exporter) through `@opentelemetry/api`. `@arnilo/prism-observability` only reads the global
+ * an SDK + exporter) through `@opentelemetry/api`. `@arnilo/prism-extensions/observability` only reads the global
  * tracer and meter, so it sends nothing anywhere itself.
  *
  * Runs a two-turn mock run with one tool call and prints the span tree:
@@ -21,7 +21,7 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism";
-import observability from "@arnilo/prism-observability";
+import observability from "@arnilo/prism-extensions/observability";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 interface Recorded {

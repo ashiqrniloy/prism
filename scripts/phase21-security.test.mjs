@@ -35,16 +35,10 @@ import { describe, it } from "bun:test";
 import { MediaContentError } from "@arnilo/prism";
 import { pinnedFetch } from "@arnilo/prism/net";
 import { createOpenAICompatibleProvider, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
-import { createHyperProvider, listHyperModels } from "@arnilo/prism-provider-hyper";
-import { createOpenCodeGoProvider } from "@arnilo/prism-provider-opencode-go";
+import { createHyperProvider, listHyperModels } from "@arnilo/prism-ai/hyper";
+import { createOpenCodeGoProvider } from "@arnilo/prism-ai/opencode-go";
 
-const BLOCKER_IDS = [
-  "strict-completion",
-  "adapter-strict",
-  "bounded-bodies",
-  "pinned-fetch",
-  "credential-once",
-];
+const BLOCKER_IDS = ["strict-completion", "adapter-strict", "bounded-bodies", "pinned-fetch", "credential-once"];
 const blockerIds = new Set();
 
 const request = {
@@ -99,7 +93,12 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
     ];
     for (const provider of adapters) {
       const events = [];
-      for await (const event of provider.generate({ ...request, model: { provider: provider.id, model: "demo" }, options: { sessionId: "s1" } })) events.push(event);
+      for await (const event of provider.generate({
+        ...request,
+        model: { provider: provider.id, model: "demo" },
+        options: { sessionId: "s1" },
+      }))
+        events.push(event);
       const error = events.find((event) => event.type === "error");
       assert.ok(error, `${provider.id} must reject a truncated stream`);
       assert.match(String(error.error?.message ?? ""), /without completion evidence/);

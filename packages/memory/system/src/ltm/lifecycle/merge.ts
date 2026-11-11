@@ -4,7 +4,7 @@
  * `create.ts` only performs the writes the plan names.
  */
 
-import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-core";
+import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-system/core";
 import { unionStrings } from "../consolidate.js";
 import { mergeNoteLinks } from "../links.js";
 import type { MemoryNoteLink, MemoryNoteMetadata, MemoryNotePromotionStamp } from "../types.js";

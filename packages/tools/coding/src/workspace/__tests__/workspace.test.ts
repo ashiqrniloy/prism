@@ -328,7 +328,7 @@ describe("workspace service", () => {
         agent
           .inspect()
           .statusNotes.some(
-            (note) => note.package === "@arnilo/prism-tools-coding" && note.message.includes("workspace service unavailable"),
+            (note) => note.package === "@arnilo/prism-tools/coding" && note.message.includes("workspace service unavailable"),
           ),
         `expected a status note, got ${JSON.stringify(agent.inspect().statusNotes)}`,
       );

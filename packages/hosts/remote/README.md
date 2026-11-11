@@ -1,11 +1,11 @@
-# @arnilo/prism-remote
+# @arnilo/prism-hosts/remote
 
 Host library that serves a Prism `Agent` to remote clients and connects to remote agents over `prism.remote/1`.
 
 ## Install
 
 ```bash
-bun add @arnilo/prism @arnilo/prism-remote
+bun add @arnilo/prism @arnilo/prism-hosts
 ```
 
 This is a host library, not a native package: import it in the host; do not add it to an agent's manifest or `packages` list. Network serving requires Bun. It registers no tools, skills, commands, hooks, slots, or services and declares no package capabilities.
@@ -181,13 +181,13 @@ serveAgent(agent, {
 
 ## Conformance
 
-`@arnilo/prism-remote/testing` exercises run, stream, steer, abort, resume,
+`@arnilo/prism-hosts/remote/testing` exercises run, stream, steer, abort, resume,
 inline HostUi answers, commands, and suspension on disconnect over stdio,
 WebSocket, and HTTP with SSE. Every collected event must carry `origin.remote`
 and must exclude the network bearer token. Results identify each transport and leg.
 
 ```ts
-import { remoteConformance } from "@arnilo/prism-remote/testing";
+import { remoteConformance } from "@arnilo/prism-hosts/remote/testing";
 
 const result = await remoteConformance({
   module: new URL("./fixture-agent.ts", import.meta.url).href,
@@ -219,7 +219,7 @@ A manifest-free host can serve an already constructed agent:
 ```ts
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { connectAgent, remoteHostUi, serveAgent } from "@arnilo/prism-remote";
+import { connectAgent, remoteHostUi, serveAgent } from "@arnilo/prism-hosts/remote";
 
 const ui = remoteHostUi();
 const agent = await createAgent({

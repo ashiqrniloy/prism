@@ -100,9 +100,7 @@ export function resolvePromptCachePlan(
   breakpoints: readonly PromptCacheBreakpoint[] | undefined,
   options: ApplyCacheControlOptions = {},
 ): PromptCachePlan {
-  const cacheControl: CacheControlValue = options.ttl
-    ? { type: "ephemeral", ttl: options.ttl }
-    : { type: "ephemeral" };
+  const cacheControl: CacheControlValue = options.ttl ? { type: "ephemeral", ttl: options.ttl } : { type: "ephemeral" };
 
   if (!breakpoints || breakpoints.length === 0) {
     return {
@@ -173,9 +171,7 @@ export function applyCacheControl(
     const blockIndex = findLastNonEmptyBlockIndex(message.content);
     if (blockIndex < 0) return message as CacheControlledMessage;
 
-    const content = message.content.map((block, i) =>
-      i === blockIndex ? { ...block, cache_control: plan.cacheControl } : block,
-    );
+    const content = message.content.map((block, i) => (i === blockIndex ? { ...block, cache_control: plan.cacheControl } : block));
     return { ...message, content };
   });
 }

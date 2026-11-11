@@ -11,8 +11,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
+import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
 import memorySystem, { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
 
 // Network-free: session one consolidates an explicit statement into a typed project note through

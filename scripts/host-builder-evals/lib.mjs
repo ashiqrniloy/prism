@@ -3,12 +3,13 @@
  * workspace, the hidden checks and their scorers, and the pre-registered claim rules. Nothing here calls a model.
  */
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { builtinModules } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { compareExperiments, defineScorer } from "@arnilo/prism-evals";
+import { compareExperiments, defineScorer } from "@arnilo/prism-hosts/evals";
 import { sha256 } from "../skill-evals/lib.mjs";
+import { loadRelease } from "../release.mjs";
 
 export { canonicalJson, sha256 } from "../skill-evals/lib.mjs";
 
@@ -16,13 +17,14 @@ export const ROOT = import.meta.dir;
 export const REPO = resolve(ROOT, "../..");
 export const CRITERIA_PATH = join(ROOT, "criteria.json");
 export const LOCK_PATH = join(ROOT, "criteria.lock.json");
-export const EVIDENCE_DIR = join(REPO, "docs/_evidence/host-builder/212");
+// Bundle specifiers change the registered inputs; keep prior paid evidence under 212.
+export const EVIDENCE_DIR = join(REPO, "docs/_evidence/host-builder/224");
 export const WORKSPACES = join(ROOT, "workspaces");
 export const HIDDEN = join(ROOT, "hidden");
 export const SOLUTIONS = join(ROOT, "solutions");
 export const BIN = join(REPO, "packages/hosts/host-builder/bin/prism-host-builder.ts");
 export const ARMS = Object.freeze(["none", "skill", "skill+mcp"]);
-export const KIT_PACKAGE = "@arnilo/prism-host-builder";
+export const KIT_PACKAGE = "@arnilo/prism-hosts/host-builder";
 
 export function loadCriteria() {
   const text = readFileSync(CRITERIA_PATH, "utf8");
@@ -67,7 +69,6 @@ export function registeredInputs() {
 // ── the staged "installed" tree ─────────────────────────────────────────────────
 
 const KERNEL_ENTRIES = ["src", "docs", "templates", "package.json", "README.md", "CHANGELOG.md", "manifest/schema.json"];
-const PACKAGE_ENTRIES = ["src", "bin", "data", "skills", "package.json", "README.md", "CHANGELOG.md"];
 const SKIP_DIRS = new Set(["__tests__", "_evidence", "node_modules", ".git"]);
 
 function copyFiltered(source, destination) {
@@ -85,24 +86,17 @@ function copyFiltered(source, destination) {
 
 /** Non-private packages under `packages/<group>/<name>`: `{ name, dir, subpaths }`. */
 export function repoPackages() {
-  const found = [];
-  for (const group of readdirSync(join(REPO, "packages"))) {
-    const groupDir = join(REPO, "packages", group);
-    if (!statSync(groupDir).isDirectory() || existsSync(join(groupDir, "package.json"))) continue;
-    for (const name of readdirSync(groupDir)) {
-      const manifestPath = join(groupDir, name, "package.json");
-      if (!existsSync(manifestPath)) continue;
-      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-      if (manifest.private === true || typeof manifest.name !== "string") continue;
-      const subpaths = new Set(
-        Object.keys(manifest.exports ?? {})
-          .filter((key) => key.startsWith("./") && key !== ".")
+  return loadRelease(REPO)
+    .packages.filter((pkg) => pkg.path !== ".")
+    .map((pkg) => ({
+      name: pkg.manifest.name,
+      dir: join(REPO, pkg.path),
+      subpaths: new Set(
+        Object.keys(pkg.manifest.exports ?? {})
+          .filter((key) => key.startsWith("./"))
           .map((key) => key.slice(2)),
-      );
-      found.push({ name: manifest.name, dir: join(groupDir, name), subpaths });
-    }
-  }
-  return found;
+      ),
+    }));
 }
 
 /**
@@ -116,9 +110,12 @@ export function stageInstalled(dest, { withKit }) {
   mkdirSync(scope, { recursive: true });
   for (const entry of KERNEL_ENTRIES) copyFiltered(join(REPO, entry), join(scope, "prism", entry));
   for (const pkg of repoPackages()) {
-    if (!withKit && pkg.name === KIT_PACKAGE) continue;
     const target = join(scope, pkg.name.split("/")[1]);
-    for (const entry of PACKAGE_ENTRIES) copyFiltered(join(pkg.dir, entry), join(target, entry));
+    const manifest = JSON.parse(readFileSync(join(pkg.dir, "package.json"), "utf8"));
+    for (const entry of ["package.json", ...(manifest.files ?? []).filter((entry) => !entry.startsWith("!"))]) {
+      if (!withKit && pkg.name === "@arnilo/prism-hosts" && entry.startsWith("host-builder/")) continue;
+      copyFiltered(join(pkg.dir, entry), join(target, entry));
+    }
   }
   const repoModules = join(REPO, "node_modules");
   for (const name of readdirSync(repoModules)) {

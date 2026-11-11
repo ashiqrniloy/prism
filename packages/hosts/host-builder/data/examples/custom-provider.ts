@@ -5,11 +5,7 @@ import { createRoutedProvider, providerPackage, replayFetch, type RecordedExchan
  * Custom provider implementation using the routed provider builder.
  * Dispatches between OpenAI-compatible and Anthropic Messages routes.
  */
-export function createAcmeProvider(options: {
-  apiKey?: SecretSource;
-  baseUrl?: string;
-  fetch?: typeof fetch;
-}) {
+export function createAcmeProvider(options: { apiKey?: SecretSource; baseUrl?: string; fetch?: typeof fetch }) {
   return createRoutedProvider({
     id: "acme",
     baseUrl: options.baseUrl ?? "https://api.acme.example/v1",

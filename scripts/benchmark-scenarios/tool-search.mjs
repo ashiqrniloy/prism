@@ -21,7 +21,7 @@ import {
   createToolSearchState,
   scoreTools,
   selectDisclosedTools,
-} from "../../packages/context/engineering/src/exports.js";
+} from "../../packages/extensions/context-engineering/src/exports.js";
 
 const TOOL_COUNT = 128;
 const TOP_K = 16;

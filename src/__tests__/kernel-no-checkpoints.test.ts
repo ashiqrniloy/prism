@@ -2,7 +2,7 @@
  * Plan 168 Task 5 pin: the kernel owns no checkpoint or lease store.
  *
  * The checkpoint and lease contracts, their memory defaults, and the checkpoint-based run-state
- * lifecycle moved to `@arnilo/prism-workflows` and the service contracts store packages provide. A
+ * lifecycle moved to `@arnilo/prism-extensions/workflows` and the service contracts store packages provide. A
  * durable run anchors on the store slot's `suspended_run` entry, and the kernel's own in-flight
  * state lives in the private run-state cell. This test fails if the retired files, identifiers, or
  * root exports come back.
@@ -60,7 +60,7 @@ describe("kernel checkpoint retirement (plan 168 Task 5)", () => {
     for (const name of ["createMemoryCheckpointStore", "createMemoryLeaseStore", "resumeAgentRun", "createAgentRunLifecycle"]) {
       assert.equal(built[name], undefined, `the built barrel must not export ${name}`);
     }
-    // Plan 174 Task 4: the runner moved to @arnilo/prism-workflows.
+    // Plan 174 Task 4: the runner moved to @arnilo/prism-extensions/workflows.
     assert.equal(built.runCheckpointRestoreHooks, undefined);
   });
 });

@@ -72,8 +72,7 @@ describe("catalog cost pricing (plan 182 Task 4)", () => {
     // cost = (1_000_000 * 3 + 800_000 * 0.3 + 100_000 * 3.75 + 50_000 * 15) / 1_000_000
     //      = (3_000_000 + 240_000 + 375_000 + 750_000) / 1_000_000
     //      = 4.365.
-    const expectedCost =
-      (100_000 * 3 + 800_000 * 0.3 + 100_000 * 3.75 + 50_000 * 15) / 1_000_000;
+    const expectedCost = (100_000 * 3 + 800_000 * 0.3 + 100_000 * 3.75 + 50_000 * 15) / 1_000_000;
 
     assert.equal(recorded.cost, expectedCost);
     assert.equal(recorded.cost, 1.665);

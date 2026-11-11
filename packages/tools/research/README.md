@@ -1,17 +1,17 @@
-# @arnilo/prism-tools-research
+# @arnilo/prism-tools/research
 
 Installing this package gives an agent four research skills, a per-session source ledger, a read-only `cite` tool, and a citation check at the end of a run.
 
 ## Install
 
 ```bash
-prism add @arnilo/prism-tools-research
+prism add @arnilo/prism-tools/research
 ```
 
 ```jsonc
 {
   "packages": {
-    "@arnilo/prism-tools-research": {}
+    "@arnilo/prism-tools/research": {}
   }
 }
 ```
@@ -60,7 +60,7 @@ Ledger entries store the URL, title, tool name, and ids only. Userinfo and the `
 ```ts
 import { createAgent } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import toolsResearch from "@arnilo/prism-tools-research";
+import toolsResearch from "@arnilo/prism-tools/research";
 
 const agent = await createAgent({
   model: { provider: "mock", model: "m" },

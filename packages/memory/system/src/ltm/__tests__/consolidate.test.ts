@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { DEFAULT_CONSOLIDATION_THRESHOLD } from "../consolidate.js";
 
@@ -24,7 +24,14 @@ describe("memory fabric consolidation", () => {
   it("similar_different_text_inserts_both_notes_without_a_link", async () => {
     const { memory } = makeMemory();
     let modelCalls = 0;
-    const fabric = createLongTermMemory({ memory, consolidate: { threshold: 0.4 }, resolveModelClient: () => { modelCalls++; throw new Error("off"); } });
+    const fabric = createLongTermMemory({
+      memory,
+      consolidate: { threshold: 0.4 },
+      resolveModelClient: () => {
+        modelCalls++;
+        throw new Error("off");
+      },
+    });
     const alice = await fabric.remember({ kind: "fact", content: "Alice flight leaves at noon" });
     const bob = await fabric.remember({ kind: "fact", content: "Bob flight leaves at noon" });
     assert.notEqual(alice.id, bob.id);
@@ -33,12 +40,9 @@ describe("memory fabric consolidation", () => {
     assert.equal(parseMemoryNoteMetadata((await memory.getEntry(alice.id))?.metadata)?.validTo, undefined);
     const result = await fabric.recall("flight");
     assert.equal(result.hits.length, 2);
-    assert.equal(result.explain.find(row => row.id === bob.id)?.links, undefined);
+    assert.equal(result.explain.find((row) => row.id === bob.id)?.links, undefined);
     assert.equal(modelCalls, 0);
   });
-
-
-
 
   it("folds an identical note in place instead of duplicating it", async () => {
     const { memory } = makeMemory();
@@ -130,10 +134,6 @@ describe("memory fabric consolidation", () => {
     assert.notEqual(second.id, first.id);
     assert.equal((await rawRows(memory, "User prefers metric units")).length, 2);
   });
-
-
-
-
 
   it("validates consolidation options and keeps distant notes apart", async () => {
     const { memory } = makeMemory();

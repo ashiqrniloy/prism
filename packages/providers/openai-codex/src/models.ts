@@ -1,9 +1,4 @@
-import {
-  type JsonObject,
-  type ModelConfig,
-  redactSecrets,
-  trimTrailingSlashes,
-} from "@arnilo/prism";
+import { type JsonObject, type ModelConfig, redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText, THINKING_LEVELS, type SecretSource } from "@arnilo/prism/provider-kit";
 import { type OpenAICodexCredentialSlot, openAICodexApiKey } from "./oauth.js";
 

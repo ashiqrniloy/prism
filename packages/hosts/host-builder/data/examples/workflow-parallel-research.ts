@@ -1,4 +1,4 @@
-import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-extensions/workflows";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
 import {
@@ -9,7 +9,7 @@ import {
   functionNode,
   joinNode,
   runWorkflow,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // True parallel research DAG: fan-out normalizes bounded topics, join exposes

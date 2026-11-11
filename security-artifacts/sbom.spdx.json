@@ -2972,10 +2972,10 @@
       ]
     },
     {
-      "name": "@arnilo/prism-ag-ui",
+      "name": "@arnilo/prism-hosts/ag-ui",
       "SPDXID": "SPDXRef-Package-arnilo.prism-ag-ui-0.10.0",
       "versionInfo": "0.10.0",
-      "packageFileName": "node_modules/@arnilo/prism-ag-ui",
+      "packageFileName": "node_modules/@arnilo/prism-hosts/ag-ui",
       "description": "Optional bounded AG-UI event mapper for Prism agent events.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
@@ -3008,10 +3008,10 @@
       ]
     },
     {
-      "name": "@arnilo/prism-mcp",
+      "name": "@arnilo/prism-extensions/mcp",
       "SPDXID": "SPDXRef-Package-arnilo.prism-mcp-0.10.0",
       "versionInfo": "0.10.0",
-      "packageFileName": "node_modules/@arnilo/prism-mcp",
+      "packageFileName": "node_modules/@arnilo/prism-extensions/mcp",
       "description": "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
@@ -3044,10 +3044,10 @@
       ]
     },
     {
-      "name": "@arnilo/prism-channels",
+      "name": "@arnilo/prism-hosts/channels",
       "SPDXID": "SPDXRef-Package-arnilo.prism-channels-0.10.0",
       "versionInfo": "0.10.0",
-      "packageFileName": "node_modules/@arnilo/prism-channels",
+      "packageFileName": "node_modules/@arnilo/prism-hosts/channels",
       "description": "Messaging channels family for Prism: transport-neutral channel contracts, Prism execution adapter, durable bindings/journal/pairing, and (as subpaths) Telegram/Signal adapters.",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,

@@ -12,7 +12,12 @@ import { fileURLToPath } from "node:url";
 
 const KERNEL = "@arnilo/prism";
 const KERNEL_SUBPATHS = new Set(["manifest", "driver-kit"]);
-export const REJECT = new Set(["@arnilo/" + "prism-core", "@arnilo/prism-" + "coding-tools", "@arnilo/prism-" + "agent-sdk", "@arnilo/prism-code"]);
+export const REJECT = new Set([
+  "@arnilo/" + "prism-core",
+  "@arnilo/prism-" + "coding-tools",
+  "@arnilo/prism-" + "agent-sdk",
+  "@arnilo/prism-code",
+]);
 const BUILTINS = new Set(builtinModules);
 
 function exportSubpaths(exports: unknown): Set<string> {
@@ -30,9 +35,10 @@ export function referenceHostPackages(repo = join(dirname(fileURLToPath(import.m
   const packages = join(repo, "packages");
   for (const group of readdirSync(packages)) {
     const groupDir = join(packages, group);
-    if (!statSync(groupDir).isDirectory() || existsSync(join(groupDir, "package.json"))) continue;
-    for (const name of readdirSync(groupDir)) {
-      const manifestPath = join(groupDir, name, "package.json");
+    if (!statSync(groupDir).isDirectory()) continue;
+    const owners = existsSync(join(groupDir, "package.json")) ? [groupDir] : readdirSync(groupDir).map((name) => join(groupDir, name));
+    for (const owner of owners) {
+      const manifestPath = join(owner, "package.json");
       if (!existsSync(manifestPath)) continue;
       const pkg = JSON.parse(readFileSync(manifestPath, "utf8")) as { name?: string; private?: boolean; exports?: unknown };
       if (pkg.private === true || typeof pkg.name !== "string" || REJECT.has(pkg.name)) continue;

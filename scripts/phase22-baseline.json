@@ -107,11 +107,11 @@
     "version literal 0.2.1 -> 0.2.2",
     "PERSISTENCE_SCHEMA_VERSION 7 -> 8",
     "EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE + EventMultiplexerError (core)",
-    "ModelRouterStateStore reserveBudget/commitBudget/releaseBudget + ModelRouterReservation + ModelRouterBudgets.reservationTtlMs + ModelRouterLimits maxRateKeys/maxBudgetKeys (@arnilo/prism-model-router)",
+    "ModelRouterStateStore reserveBudget/commitBudget/releaseBudget + ModelRouterReservation + ModelRouterBudgets.reservationTtlMs + ModelRouterLimits maxRateKeys/maxBudgetKeys (@arnilo/prism-extensions/model-router)",
     "SessionRecord.version + appendSession expectedVersion (core)",
     "buildMigration008Ddl + MIGRATION_008_SESSION_VERSION (session-store-postgres)",
     "buildEnterpriseMigration003Ddl (enterprise-postgres)",
-    "ActiveWorkflowRun.startedAt + ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE + MAX_ACTIVE_WORKFLOW_RUNS + sweepActiveWorkflowRuns (@arnilo/prism-workflows)",
+    "ActiveWorkflowRun.startedAt + ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE + MAX_ACTIVE_WORKFLOW_RUNS + sweepActiveWorkflowRuns (@arnilo/prism-extensions/workflows)",
     "./testing/state-concurrency-conformance subpath (core package.json exports)"
   ],
   "sdkReady": {

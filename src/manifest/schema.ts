@@ -1,13 +1,12 @@
 import { CAPABILITIES } from "../packages/capabilities.js";
+import { MODULE_SPECIFIER } from "../packages/define.js";
 import type { JsonSchema } from "../packages/schema.js";
 import { SLOT_NAMES } from "../slots/index.js";
 
-/** npm-style package name: optional `@scope/`, lower-case. */
-const NAME_PATTERN = "^(@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$";
 /** SRI sha512: 64 bytes in base64 is 86 characters plus `==`. */
 const INTEGRITY_PATTERN = "^sha512-[A-Za-z0-9+/]{86}==$";
 
-const NAME: JsonSchema = { type: "string", minLength: 1, maxLength: 214, pattern: NAME_PATTERN };
+const NAME: JsonSchema = { type: "string", minLength: 1, maxLength: 214, pattern: MODULE_SPECIFIER.source };
 
 /**
  * The manifest v1 schema, in the keyword subset the kernel validator supports (roadmap §2.7). It is

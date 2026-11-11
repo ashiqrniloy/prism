@@ -283,7 +283,7 @@ describe("createFakeReranker + runRerankerConformance", () => {
   });
 
   it("caps reject oversized input at the seam before the reranker is invoked", async () => {
-    const { createHashEmbedder, createMemoryVectorStore } = await import("@arnilo/prism-memory-core");
+    const { createHashEmbedder, createMemoryVectorStore } = await import("@arnilo/prism-memory-system/core");
     const { chunkText, replaceSource, retrieveContext } = await import("../index.js");
     const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };
     const embedder = createHashEmbedder({ dimensions: 8 });

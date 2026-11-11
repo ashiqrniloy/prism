@@ -1,8 +1,4 @@
-import type {
-  ToolEffectKey,
-  ToolEffectStore,
-  ToolEffectTransition,
-} from "@arnilo/prism";
+import type { ToolEffectKey, ToolEffectStore, ToolEffectTransition } from "@arnilo/prism";
 
 import { sha256Hex } from "../artifacts.js";
 import type { BoundGitRunner } from "../git-exec.js";

@@ -1,10 +1,10 @@
 /**
- * `@arnilo/prism-provider-kilo` — Kilo AI Gateway provider package for Prism: registers `kilo`,
+ * `@arnilo/prism-ai/kilo` — Kilo AI Gateway provider package for Prism: registers `kilo`,
  * resolves its key from `env:`/`keyring:` refs, and serves Chat Completions, Responses and
  * Anthropic Messages from one gateway, plus the model catalog.
  *
  * ```ts
- * import { kilo } from "@arnilo/prism-provider-kilo";
+ * import { kilo } from "@arnilo/prism-ai/kilo";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({ model: "kilo/anthropic/claude-haiku-5.5", packages: [kilo()] });
@@ -85,7 +85,7 @@ function storedOrganization(secret: { readonly metadata?: unknown } | undefined)
 
 function definitionFor(options: KiloProviderPackageOptions) {
   return defineProviderPackage<KiloProviderConfig>({
-    name: "@arnilo/prism-provider-kilo",
+    name: "@arnilo/prism-ai/kilo",
     description: "Kilo AI Gateway provider package for Prism: Chat, Responses and Messages wires.",
     capabilities: ["credentials", "credentials:write"],
     config: configSchema,

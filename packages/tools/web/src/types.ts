@@ -188,7 +188,7 @@ export interface WebToolsOptions {
   readonly prompt?: PromptFetch;
 }
 
-/** The `web.fetch` service `@arnilo/prism-tools-web` provides when a fetch backend is configured. */
+/** The `web.fetch` service `@arnilo/prism-tools/web` provides when a fetch backend is configured. */
 export interface WebFetchService {
   fetch(url: string, options?: WebFetchOptions): Promise<WebDocument>;
 }

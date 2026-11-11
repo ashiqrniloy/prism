@@ -10,7 +10,7 @@
  * Recall adds the two strength priors (plan 188.4 Task 3) here, after fusion and the scope prior: a
  * well-used note outranks an equally relevant neglected one, and neither prior can override relevance.
  */
-import { fuseRankings, MemoryValidationError, type MemoryVectorHit, type RecallScoringOptions } from "@arnilo/prism-memory-core";
+import { fuseRankings, MemoryValidationError, type MemoryVectorHit, type RecallScoringOptions } from "@arnilo/prism-memory-system/core";
 import type { FabricCandidate } from "../recall.js";
 import type { FabricScopeLevel, MemoryFabricExplainEntry, MemoryNoteMetadata, MemoryNoteScope } from "../types.js";
 
@@ -113,7 +113,7 @@ export type ScopeCandidateLoader = (
 
 export interface ScopeRecallScope {
   readonly level: FabricScopeLevel;
-  readonly memory: import("@arnilo/prism-memory-core").Memory;
+  readonly memory: import("@arnilo/prism-memory-system/core").Memory;
 }
 
 export function createScopeRecall(deps: {
@@ -126,7 +126,7 @@ export function createScopeRecall(deps: {
     signal?: AbortSignal,
     scoring?: RecallScoringOptions,
     minSimilarity?: number,
-    source?: import("@arnilo/prism-memory-core").Memory,
+    source?: import("@arnilo/prism-memory-system/core").Memory,
     allowArchived?: boolean,
     window?: { readonly from?: number; readonly to?: number },
   ) => Promise<FabricCandidate[]>;
@@ -202,10 +202,7 @@ export function createScopeRecall(deps: {
         metadata: candidate.metadata,
         hit: {
           ...candidate.hit,
-          score:
-            entry.score +
-            priorFor(candidate.metadata, priors, touchedPaths) +
-            (strengthPrior?.(candidate.metadata) ?? 0),
+          score: entry.score + priorFor(candidate.metadata, priors, touchedPaths) + (strengthPrior?.(candidate.metadata) ?? 0),
           retrieval: entry.retrieval,
         },
       });

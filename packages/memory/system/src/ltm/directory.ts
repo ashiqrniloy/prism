@@ -1,8 +1,8 @@
 import { opendir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { resolveRedactor, type SecretRedactor } from "@arnilo/prism";
-import type { Memory, MemoryTagCount } from "@arnilo/prism-memory-core";
-import { lexicalTerms, MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryTagCount } from "@arnilo/prism-memory-system/core";
+import { lexicalTerms, MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-system/core";
 import type { FabricFileJail } from "./files.js";
 import type { MemoryNoteKind } from "./types.js";
 
@@ -33,7 +33,12 @@ export interface ResolvedFabricDirectoryOptions {
   readonly stopWords: boolean;
 }
 
-export const DEFAULT_DIRECTORY_OPTIONS: ResolvedFabricDirectoryOptions = Object.freeze({ maxTopics: 8, maxFiles: 10, maxTokens: 200, stopWords: false });
+export const DEFAULT_DIRECTORY_OPTIONS: ResolvedFabricDirectoryOptions = Object.freeze({
+  maxTopics: 8,
+  maxFiles: 10,
+  maxTokens: 200,
+  stopWords: false,
+});
 export const HARD_DIRECTORY_TOPICS = 50;
 export const HARD_DIRECTORY_FILES = 100;
 export const HARD_DIRECTORY_TOKENS = 500;
@@ -57,7 +62,8 @@ export function resolveFabricDirectoryOptions(
     }
     return value;
   };
-  if (config.stopWords !== undefined && typeof config.stopWords !== "boolean") throw new MemoryValidationError("directory.stopWords must be a boolean");
+  if (config.stopWords !== undefined && typeof config.stopWords !== "boolean")
+    throw new MemoryValidationError("directory.stopWords must be a boolean");
   return {
     maxTopics: pick("maxTopics", HARD_DIRECTORY_TOPICS),
     maxFiles: pick("maxFiles", HARD_DIRECTORY_FILES),

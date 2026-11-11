@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-wiki` — the wiki: Prism's knowledge base outside memory (plan 216 Task 3; plan 207 built it as the
+ * `@arnilo/prism-knowledge/wiki` — the wiki: Prism's knowledge base outside memory (plan 216 Task 3; plan 207 built it as the
  * ontology tier over the fabric).
  *
  * The wiki keeps its own store (markdown under `root` by default): one concept per subject, every claim citing the
@@ -17,7 +17,7 @@
  *
  * ```ts
  * import memorySystem from "@arnilo/prism-memory-system";
- * import { wiki } from "@arnilo/prism-wiki";
+ * import { wiki } from "@arnilo/prism-knowledge/wiki";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({

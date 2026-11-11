@@ -1,10 +1,10 @@
-# @arnilo/prism-provider-ollama-cloud
+# @arnilo/prism-ai/ollama-cloud
 
 Ollama Cloud provider package for Prism. Registers the `ollama-cloud` provider, resolves its key
 from an `env:`/`keyring:` ref per request, and serves hosted models from `https://ollama.com`.
 
 ```ts
-import ollamaCloud from "@arnilo/prism-provider-ollama-cloud";
+import ollamaCloud from "@arnilo/prism-ai/ollama-cloud";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
@@ -83,7 +83,7 @@ reset times instead. Both carry the purchased balance. It is an explicit helper 
 preflight checks and is never called during a run. It never returns or logs the key.
 
 ```ts
-import { ollamaCloudBalance } from "@arnilo/prism-provider-ollama-cloud";
+import { ollamaCloudBalance } from "@arnilo/prism-ai/ollama-cloud";
 
 const balance = await ollamaCloudBalance({ apiKey: "env:OLLAMA_API_KEY" });
 // current: { included: { balanceUsd, allowanceUsd, periodFrom, periodUntil }, purchasedUsd }

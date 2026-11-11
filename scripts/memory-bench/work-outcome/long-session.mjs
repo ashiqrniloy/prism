@@ -6,9 +6,11 @@
  * large log, so the earlier task has left the context window by the time its dependent task starts; only memory (or
  * re-deriving from the files) can supply it.
  *
- * S1 counts, per related task, the `grep` and `read_file` calls whose target names something the earlier task
- * changed (`rederivationCalls`, shared with the offline fixture in `../long-session.mjs`). The targets are hidden
- * labels: the agent never sees them.
+ * S1 counts, per related task, the searches and guesses in the dependent task: every `grep`, and every `read_file`
+ * of a path that does not exist (`searchRederivationCalls` in `../long-session.mjs`). Plan 217 Task 6 replaced the
+ * earlier count of every `grep`/`read_file` naming a target, which scored an agent's ordinary verification reads. Tasks 1 and 4 name neither the file nor the symbol they change, so
+ * tasks 3 and 6 depend on what the agent found, not on the user's own prompt. The targets are hidden labels: the
+ * agent never sees them.
  *
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family long-session --offline [--partition dev]
  *
@@ -23,11 +25,19 @@ import { tmpdir } from "node:os";
 import { dirname, join, normalize } from "node:path";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { rederivationCalls } from "../long-session.mjs";
+import { searchRederivationCalls } from "../long-session.mjs";
 import { ROBUSTNESS_PARTITIONS, robustnessIdsHash } from "../robustness.mjs";
 
 export const LONG_SESSION_FAMILY = "long-session";
-export const LONG_SESSION_PERSONA_COUNT = 12;
+/** The original twelve personas, drawn label-blind into dev / heldout-a / heldout-b (plan 217 Task 5). */
+export const LONG_SESSION_BASE_COUNT = 12;
+/**
+ * The dev extension (owner decision `m1DevPersonas`, 2026-11-10): `ls12`-`ls23`, every one in dev. The rule is fixed
+ * before any of them runs and reads ids only, so it is label-blind by construction; the held-out partitions and the
+ * first twelve personas are unchanged (a persona's content is a function of its id).
+ */
+export const LONG_SESSION_DEV_EXTENSION = 12;
+export const LONG_SESSION_PERSONA_COUNT = LONG_SESSION_BASE_COUNT + LONG_SESSION_DEV_EXTENSION;
 /** Personas per partition: [dev, heldout-a, heldout-b]. */
 export const LONG_SESSION_STRATA = Object.freeze({ "long-session-coding": [4, 4, 4] });
 export const LONG_SESSION_SEED = "prism-217-long-session";
@@ -40,7 +50,13 @@ const PARTITION_FILE = new URL("../work-outcome-long-session.json", import.meta.
 
 const hex = (value) => createHash("sha256").update(value).digest("hex");
 
-export const longSessionPersonaIds = () => Array.from({ length: LONG_SESSION_PERSONA_COUNT }, (_, index) => `ls${index}`);
+/** The ids the label-blind three-way draw reads: the original twelve. */
+export const longSessionPersonaIds = () => Array.from({ length: LONG_SESSION_BASE_COUNT }, (_, index) => `ls${index}`);
+/** The dev extension's ids, in the draw's seed order. */
+export const longSessionExtensionIds = () =>
+  Array.from({ length: LONG_SESSION_DEV_EXTENSION }, (_, index) => `ls${LONG_SESSION_BASE_COUNT + index}`).sort((a, b) =>
+    hex(`${LONG_SESSION_SEED}:${a}`).localeCompare(hex(`${LONG_SESSION_SEED}:${b}`)),
+  );
 
 /** Label-blind draw: ids ordered by `SHA-256(seed + ":" + id)`; it reads ids only. Throws when the stratum is short. */
 export function drawLongSessionPartitions(ids = longSessionPersonaIds()) {
@@ -63,6 +79,9 @@ export function drawLongSessionPartitions(ids = longSessionPersonaIds()) {
 
 export function longSessionPartitionFile() {
   const draw = drawLongSessionPartitions();
+  const extension = longSessionExtensionIds();
+  const abilities = structuredClone(draw.abilities);
+  abilities.dev["long-session-coding"] = [...abilities.dev["long-session-coding"], ...extension];
   return {
     seed: draw.seed,
     draw: `SHA-256("${draw.seed}:" + id), ascending inside the family stratum`,
@@ -70,16 +89,22 @@ export function longSessionPartitionFile() {
     strata: LONG_SESSION_STRATA,
     part: "dev | heldout-a | heldout-b; dev is plan 217 Task 6's gate M-1; heldout-a and heldout-b belong to the memory model's gate A",
     residualPool: draw.residualPool,
-    idsHash: draw.idsHash,
-    abilities: draw.abilities,
+    extension: {
+      decision: "m1DevPersonas (memory-model-criteria.json ownerDecisions, 2026-11-10)",
+      rule: `ls${LONG_SESSION_BASE_COUNT}-ls${LONG_SESSION_PERSONA_COUNT - 1} all join dev, in the draw's seed order; the three-way draw of the first ${LONG_SESSION_BASE_COUNT} is unchanged`,
+      dev: extension,
+      baseIdsHash: draw.idsHash,
+    },
+    idsHash: robustnessIdsHash(abilities),
+    abilities,
   };
 }
 
 /** The committed partitions; refuses a file that no longer re-derives from the ids. */
 export async function longSessionPartitions() {
   const file = JSON.parse(await readFile(PARTITION_FILE, "utf8"));
-  const draw = drawLongSessionPartitions();
-  if (file.idsHash !== draw.idsHash || robustnessIdsHash(file.abilities) !== file.idsHash)
+  const expected = longSessionPartitionFile();
+  if (file.idsHash !== expected.idsHash || robustnessIdsHash(file.abilities) !== file.idsHash)
     throw new Error("LongSessionPartitions: work-outcome-long-session.json no longer matches its draw");
   return file;
 }
@@ -122,8 +147,9 @@ export function createLongSessionPersona(index) {
   }
   const tasks = [
     {
+      // Plan 217 Task 6: the prompt names neither the function nor its module, so task 3 depends on what the agent found.
       id: "task1",
-      prompt: `Task 1. Rename the function \`${from}\` to \`${to}\` everywhere in this project (its definition and every caller), then run the tests.`,
+      prompt: `Task 1. Rename the function that formats cents (src/cli.ts uses it) to \`${to}\` everywhere in this project (its definition and every caller), then run the tests.`,
     },
     {
       id: "task2",
@@ -135,7 +161,11 @@ export function createLongSessionPersona(index) {
       prompt:
         'Task 3. Create src/report.ts exporting `summary(cents: number): string`, which returns "summary: " followed by the result of the function you renamed in task 1 (import it from its module). Run the tests.',
     },
-    { id: "task4", prompt: `Task 4. In ${configPath}, change \`${key}\` from ${before} to ${after}. Run the tests.` },
+    {
+      // Plan 217 Task 6: the prompt names neither the config file nor the key, so task 6 depends on what the agent found.
+      id: "task4",
+      prompt: `Task 4. The ${word} service retries too few times: raise its retry limit in the project config from ${before} to ${after}. Run the tests.`,
+    },
     {
       id: "task5",
       prompt: "Task 5. Read the deploy log, in four parts logs/deploy-1.log to logs/deploy-4.log, and list the steps that failed.",
@@ -217,6 +247,8 @@ function projectTools(root, persona, log) {
         execute(args, context) {
           record("read_file", args);
           const path = safe(args.path);
+          // A guessed path is a re-derivation probe (S1); reading an existing file is not.
+          if (files[path] === undefined) log.calls.at(-1).missing = true;
           return reply(context, "read_file", files[path] ?? `no such file: ${path}`);
         },
       },
@@ -227,9 +259,13 @@ function projectTools(root, persona, log) {
         execute(args, context) {
           record("grep", args);
           const pattern = String(args.pattern ?? "");
-          const scope = args.path ? safe(args.path) : "";
+          // Plan 217 Task 6 (gate M-1 run 1): `path: "."` normalised to "." and matched no file, so every
+          // directory-wide grep answered "(no matches)". A root path searches everything; a directory, its files.
+          const raw = String(args.path ?? "").trim();
+          const scope = !raw || /^\.?\/?$/.test(raw) ? "" : safe(raw).replace(/\/+$/, "");
+          const inScope = (path) => !scope || path === scope || path.startsWith(`${scope}/`);
           const hits = Object.entries(files)
-            .filter(([path]) => path.startsWith(scope))
+            .filter(([path]) => inScope(path))
             .flatMap(([path, text]) =>
               text.split("\n").flatMap((line, index) => (pattern && line.includes(pattern) ? [`${path}:${index + 1}:${line}`] : [])),
             )
@@ -287,6 +323,14 @@ function projectTools(root, persona, log) {
   };
 }
 
+/** Tests only: the project tools of a persona over an in-memory file set, by name. */
+export function longSessionProjectToolsForTest(persona) {
+  const log = { task: "task1", started: new Set(["task1"]), calls: [], eligibleChars: 0 };
+  return Object.fromEntries(
+    projectTools(join(tmpdir(), `long-session-test-${persona.id}`), persona, log).tools.map((tool) => [tool.name, tool]),
+  );
+}
+
 const plain = (content) =>
   Array.isArray(content) ? content.map((block) => (block.type === "text" ? block.text : "")).join("") : String(content ?? "");
 const isContextMessage = (message) => Array.isArray(message.metadata?.contextBlocks);
@@ -326,10 +370,14 @@ function mockStep(request) {
     .slice(0, taskIndex)
     .map((m) => plain(m.content))
     .join("\n")}`;
-  let match = /rename the function `(\w+)` to `(\w+)`/i.exec(task);
+  let match = /rename the function that formats cents \(src\/cli\.ts uses it\) to `(\w+)`/i.exec(task);
   if (match) {
-    const [, from, to] = match;
-    if (!did("grep")) return { call: ["grep", { pattern: from }] };
+    const [, to] = match;
+    // Discover the function from the CLI's import, then find every use.
+    if (!did("read_file", (a) => a.path === "src/cli.ts")) return { call: ["read_file", { path: "src/cli.ts" }] };
+    const from = /import \{ (\w+) \}/.exec(readResult(since, "src/cli.ts") ?? "")?.[1];
+    if (!from) return { text: "Task 1: could not find the function." };
+    if (!did("grep")) return { call: ["grep", { pattern: from, path: "." }] };
     const hits = [
       ...new Set(
         (calls.find((c) => c.name === "grep") ? grepResult(since) : "")
@@ -384,9 +432,17 @@ function mockStep(request) {
     if (!did("run_tests")) return { call: ["run_tests", {}] };
     return { text: "Task 3 done: src/report.ts exports summary; tests run." };
   }
-  match = /In (config\/[\w.-]+), change `(\w+)` from (\d+) to (\d+)/.exec(task);
+  match = /raise its retry limit in the project config from (\d+) to (\d+)/.exec(task);
   if (match) {
-    const [, path, key, before, after] = match;
+    const [, before, after] = match;
+    // Discover the config file and key: the line that holds the current retry value.
+    if (!did("grep")) return { call: ["grep", { pattern: "retry", path: "config" }] };
+    const line = grepResult(since)
+      .split("\n")
+      .find((l) => l.includes(`: ${before}`));
+    const path = line?.split(":")[0];
+    const key = /"(\w+)": \d+/.exec(line ?? "")?.[1];
+    if (!path || !key) return { text: "Task 4: could not find the retry setting." };
     if (!did("edit_file")) return { call: ["edit_file", { path, find: `"${key}": ${before}`, replace: `"${key}": ${after}` }] };
     if (!did("run_tests")) return { call: ["run_tests", {}] };
     return { text: `Task 4 done: set \`${key}\` to ${after} in ${path}; tests pass.` };
@@ -491,7 +547,7 @@ export function longSessionWorkerMock() {
  * the worker is the mock route `worker/stm`; live it is the arm's answer model (as in the robustness suites). The STM
  * arm's chunk store is metered (gate M-1's chunk bytes at peak); the pinned tree has no chunks.
  */
-async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter } = {}) {
+async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter, stmOverrides = {} } = {}) {
   if (arm === "memory-off") return [];
   if (arm === "STM") {
     const { default: memorySystem } = await import("@arnilo/prism-memory-system");
@@ -500,7 +556,7 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
       ...meter,
       memorySystem({
         enabled: true,
-        stm: { model: workerModel, triggerTokens: 1_000 },
+        stm: { model: workerModel, triggerTokens: 1_000, ...stmOverrides },
         wm: false,
         context: { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
       }),
@@ -509,7 +565,8 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
   if (arm === "OM-before") {
     let observational;
     try {
-      observational = await import("@arnilo/prism-memory-observational");
+      const historicalPackage = "@arnilo/prism-memory-observational"; // Resolved only in the pinned pre-216 checkout.
+      observational = await import(historicalPackage);
     } catch {
       throw new Error(
         "LongSessionArguments: OM-before runs from the pinned pre-216 revision (baselines.json omBefore.revision; plan 217 Task 6)",
@@ -566,7 +623,7 @@ export function meteredLongSessionProviders(providers, meter, log) {
  * replaces memory-off's default compactor (tests pass `createDefaultCompactor({ maxSummaryChars: 1 })`, a no-carry
  * control).
  */
-export async function runLongSessionPersona({ persona, arm, providers, model, temp, compactor, workerModel, usage }) {
+export async function runLongSessionPersona({ persona, arm, providers, model, temp, compactor, workerModel, usage, stmOverrides }) {
   if (compactor && arm !== "memory-off") throw new Error("LongSessionArguments: a compactor override is for memory-off only");
   const root = join(temp, `${persona.id}-${arm.replace(/[^A-Za-z0-9-]/g, "_")}`);
   for (const [path, text] of Object.entries(persona.files)) {
@@ -584,7 +641,11 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
     model,
     packages: [
       providerPackage("long-session-providers", meteredLongSessionProviders(providers, meter, log)),
-      ...(await armMemory(arm, { ...(workerModel ? { workerModel } : {}), ...(chunkMeter ? { chunkMeter } : {}) })),
+      ...(await armMemory(arm, {
+        ...(workerModel ? { workerModel } : {}),
+        ...(chunkMeter ? { chunkMeter } : {}),
+        ...(stmOverrides ? { stmOverrides } : {}),
+      })),
     ],
     tools: { add: project.tools },
     slots: { store: createMemorySessionStore(), ...(compactor ? { compaction: compactor } : {}) },
@@ -637,7 +698,7 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
       persona: persona.id,
       arm,
       pair: pair.id,
-      rederivations: rederivationCalls(calls, pair.targets).length,
+      rederivations: searchRederivationCalls(calls).length,
       toolCalls: calls.length,
       success: Boolean(checks[pair.b]),
       sourceSucceeded: Boolean(checks[pair.a]),

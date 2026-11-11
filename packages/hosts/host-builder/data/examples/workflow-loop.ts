@@ -1,8 +1,8 @@
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent, type ModelProvider } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createScriptedHostUi } from "@arnilo/prism/testing";
-import { approvalPackage } from "@arnilo/prism-approval";
-import { defineWorkflow, functionNode, gateNode, loopAgentNode, workflowLoop } from "@arnilo/prism-workflows";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import { defineWorkflow, functionNode, gateNode, loopAgentNode, workflowLoop } from "@arnilo/prism-extensions/workflows";
 
 /**
  * A generate-validate-revise loop as a `workflowLoop` (roadmap §2.12.13): one agent, one session. The

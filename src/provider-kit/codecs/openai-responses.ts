@@ -344,7 +344,7 @@ function replayReasoningItem(data: string | undefined, provider: string): JsonOb
   if (!parsed || typeof parsed !== "object") return undefined;
   if (parsed.provider !== provider) return undefined;
   const item = parsed.item;
-  if (!item || item.type !== "reasoning" || typeof item.encrypted_content !== "string" || !item.encrypted_content) return undefined;
+  if (item?.type !== "reasoning" || typeof item.encrypted_content !== "string" || !item.encrypted_content) return undefined;
   return cleanObject({
     type: "reasoning",
     id: item.id,
@@ -568,7 +568,11 @@ export function mapOpenAIResponsesUsage(usage: unknown): Usage | undefined {
     readonly input_tokens?: number;
     readonly output_tokens?: number;
     readonly total_tokens?: number;
-    readonly input_tokens_details?: { readonly cached_tokens?: number; readonly cache_write_tokens?: number; readonly cache_creation_input_tokens?: number };
+    readonly input_tokens_details?: {
+      readonly cached_tokens?: number;
+      readonly cache_write_tokens?: number;
+      readonly cache_creation_input_tokens?: number;
+    };
     readonly output_tokens_details?: { readonly reasoning_tokens?: number };
   };
   const reasoningTokens = wire.output_tokens_details?.reasoning_tokens;

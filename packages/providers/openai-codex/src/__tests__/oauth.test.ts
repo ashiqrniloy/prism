@@ -4,10 +4,10 @@
  * stubbed. The listener tests bind a real loopback port.
  */
 
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { describe, it } from "node:test";
 import type { AuthContext, HostPort, Secret } from "@arnilo/prism";
 import {
   credentialRecordFromSecret,
@@ -179,7 +179,8 @@ function fakeHost(paste?: (authorize: URL) => string | undefined): FakeHost {
         if (request.kind === "open-url") return { status: "answered" as const, value: undefined };
         if (request.kind === "input") {
           const authorize = calls.find((call) => call.kind === "open-url")?.payload as { url: string } | undefined;
-          const answer = paste?.(new URL(authorize!.url));
+          assert.ok(authorize);
+          const answer = paste?.(new URL(authorize.url));
           return answer === undefined ? { status: "unavailable" as const } : { status: "answered" as const, value: answer };
         }
         return { status: "unavailable" as const };
@@ -190,9 +191,13 @@ function fakeHost(paste?: (authorize: URL) => string | undefined): FakeHost {
 }
 
 function callbackUrl(authorize: URL, overrides: Record<string, string> = {}): string {
-  const redirect = new URL(authorize.searchParams.get("redirect_uri")!);
+  const redirectUri = authorize.searchParams.get("redirect_uri");
+  assert.ok(redirectUri);
+  const redirect = new URL(redirectUri);
   redirect.searchParams.set("code", "code-sentinel-CHARLIE");
-  redirect.searchParams.set("state", authorize.searchParams.get("state")!);
+  const state = authorize.searchParams.get("state");
+  assert.ok(state);
+  redirect.searchParams.set("state", state);
   redirect.searchParams.set("client_id", "oaiapp_test123");
   for (const [key, value] of Object.entries(overrides)) redirect.searchParams.set(key, value);
   return redirect.toString();
@@ -232,7 +237,9 @@ async function loginWithPaste(
   issuedClientId = "oaiapp_test123",
 ) {
   const paste = (authorize: URL) => {
-    auth.nonce = authorize.searchParams.get("nonce")!;
+    const nonce = authorize.searchParams.get("nonce");
+    assert.ok(nonce);
+    auth.nonce = nonce;
     return callbackUrl(authorize, { client_id: issuedClientId });
   };
   const fake = fakeHost(paste);
@@ -245,7 +252,9 @@ async function loginWithPaste(
     callbackPort: 0,
     ...extra,
   }).login(context(fake.host, value));
-  const authorize = new URL((fake.calls.find((call) => call.kind === "open-url")!.payload as { url: string }).url);
+  const opened = fake.calls.find((call) => call.kind === "open-url");
+  assert.ok(opened);
+  const authorize = new URL((opened.payload as { url: string }).url);
   return { authorize, calls: fake.calls };
 }
 
@@ -256,10 +265,12 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     const { authorize } = await loginWithPaste(auth, value);
     assert.equal(authorize.searchParams.get("client_id"), DYNAMIC_AGENT_CLIENT_ID);
     assert.equal(authorize.searchParams.get("agent_name_hint"), "Prism Test");
-    const exchange = auth.calls.find((call) => call.url === TOKEN_URL)!;
+    const exchange = auth.calls.find((call) => call.url === TOKEN_URL);
+    assert.ok(exchange);
     assert.equal(exchange.form.client_id, "oaiapp_test123", "the exchange uses the issued client ID");
     assert.equal(exchange.form.resource, OPENAI_CODEX_RESOURCE);
-    const stored = value.record()!;
+    const stored = value.record();
+    assert.ok(stored);
     assert.equal(stored.clientId, "oaiapp_test123");
     assert.match(stored.hostId, /^urn:uuid:[0-9a-f-]{36}$/);
     assert.equal(stored.access, "access-sentinel-ALPHA");
@@ -274,7 +285,9 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     const sentinel = fakeAuth();
     const rejected = vault();
     const fake = fakeHost((url) => {
-      sentinel.nonce = url.searchParams.get("nonce")!;
+      const nonce = url.searchParams.get("nonce");
+      assert.ok(nonce);
+      sentinel.nonce = nonce;
       return callbackUrl(url, { client_id: DYNAMIC_AGENT_CLIENT_ID });
     });
     await assert.rejects(
@@ -343,7 +356,9 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     const auth = fakeAuth();
     const value = vault();
     const fake = fakeHost((url) => {
-      auth.nonce = url.searchParams.get("nonce")!;
+      const nonce = url.searchParams.get("nonce");
+      assert.ok(nonce);
+      auth.nonce = nonce;
       const callback = new URL(callbackUrl(url));
       callback.searchParams.delete("client_id");
       return callback.toString();
@@ -370,7 +385,9 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     assert.equal(authorize.searchParams.get("client_id"), "oaiapp_stored");
     assert.equal(authorize.searchParams.get("agent_name_hint"), null, "a registration hint is sent only on the first sign-in");
     assert.equal(authorize.searchParams.get("ext_agent_host_id"), "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-    assert.equal(value.record()!.hostId, "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    const stored = value.record();
+    assert.ok(stored);
+    assert.equal(stored.hostId, "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
   });
 
   it("oauth_authorize_url_params_exact", async () => {
@@ -394,15 +411,25 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     assert.equal(authorize.searchParams.get("scope"), OPENAI_CODEX_SCOPE);
     assert.equal(authorize.searchParams.get("resource"), OPENAI_CODEX_RESOURCE);
     assert.equal(authorize.searchParams.get("code_challenge_method"), "S256");
-    assert.match(authorize.searchParams.get("code_challenge")!, /^[A-Za-z0-9_-]{43}$/);
-    assert.equal(authorize.searchParams.get("state")!.length, 43);
-    assert.equal(authorize.searchParams.get("nonce")!.length, 43);
-    assert.match(authorize.searchParams.get("redirect_uri")!, /^http:\/\/127\.0\.0\.1:\d+\/auth\/callback$/);
+    const challenge = authorize.searchParams.get("code_challenge");
+    assert.ok(challenge);
+    assert.match(challenge, /^[A-Za-z0-9_-]{43}$/);
+    const state = authorize.searchParams.get("state");
+    assert.ok(state);
+    assert.equal(state.length, 43);
+    const nonce = authorize.searchParams.get("nonce");
+    assert.ok(nonce);
+    assert.equal(nonce.length, 43);
+    const redirectUri = authorize.searchParams.get("redirect_uri");
+    assert.ok(redirectUri);
+    assert.match(redirectUri, /^http:\/\/127\.0\.0\.1:\d+\/auth\/callback$/);
     // The challenge must be S256 of the verifier the same login sends at exchange.
     const auth2 = fakeAuth();
     const value2 = vault();
     const fake2 = fakeHost((url) => {
-      auth2.nonce = url.searchParams.get("nonce")!;
+      const nonce = url.searchParams.get("nonce");
+      assert.ok(nonce);
+      auth2.nonce = nonce;
       return callbackUrl(url);
     });
     await openAICodexAuth({
@@ -412,13 +439,19 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
       now: () => NOW,
       slot: value2.slot,
     }).login(context(fake2.host, value2));
-    const own = new URL((fake2.calls.find((call) => call.kind === "open-url")!.payload as { url: string }).url);
-    const form = auth2.calls.find((call) => call.url === TOKEN_URL)!.form;
+    const opened = fake2.calls.find((call) => call.kind === "open-url");
+    assert.ok(opened);
+    const own = new URL((opened.payload as { url: string }).url);
+    const exchange = auth2.calls.find((call) => call.url === TOKEN_URL);
+    assert.ok(exchange);
+    const form = exchange.form;
     assert.equal(form.grant_type, "authorization_code");
     assert.equal(form.redirect_uri, own.searchParams.get("redirect_uri"));
-    assert.match(form.code_verifier!, /^[A-Za-z0-9_-]{64}$/, "the verifier is the PKCE verifier the challenge came from");
+    const verifier = form.code_verifier;
+    assert.ok(verifier);
+    assert.match(verifier, /^[A-Za-z0-9_-]{64}$/, "the verifier is the PKCE verifier the challenge came from");
     assert.equal(
-      b64u(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(form.code_verifier!)))),
+      b64u(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)))),
       own.searchParams.get("code_challenge"),
       "the challenge is S256 of the verifier",
     );
@@ -503,10 +536,14 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     assert.equal(auth.tokenCalls, 1, "two calls made one refresh");
     assert.equal(first, "rotated-access-1");
     assert.equal(second, "rotated-access-1", "the second call reused the rotated token");
-    assert.equal(value.record()!.access, "rotated-access-1");
-    assert.equal(value.record()!.refresh, "rotated-refresh-1");
+    const stored = value.record();
+    assert.ok(stored);
+    assert.equal(stored.access, "rotated-access-1");
+    assert.equal(stored.refresh, "rotated-refresh-1");
     assert.equal(value.writes.length, 1, "the rotation was persisted once");
-    const form = auth.calls.find((call) => call.form.grant_type === "refresh_token")!.form;
+    const exchange = auth.calls.find((call) => call.form.grant_type === "refresh_token");
+    assert.ok(exchange);
+    const form = exchange.form;
     assert.deepEqual(Object.keys(form).sort(), ["client_id", "grant_type", "refresh_token", "resource"]);
     assert.equal(form.client_id, "oaiapp_stored");
     assert.equal(form.refresh_token, "stored-refresh");
@@ -561,7 +598,9 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     // The server accepts the pre-rotation token inside its grace window; a crash after a rotation must
     // therefore not wedge the provider.
     assert.equal(await apiKey(), "rotated-access-1");
-    assert.equal(value.record()!.refresh, "rotated-refresh-1");
+    const stored = value.record();
+    assert.ok(stored);
+    assert.equal(stored.refresh, "rotated-refresh-1");
     assert.equal(await apiKey(), "rotated-access-1", "the stored rotation is used on the next call");
     assert.equal(auth.tokenCalls, 1);
   });
@@ -588,16 +627,20 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     await openAICodexLogout({ credential: "keyring:openai-codex", fetch: auth.fetch, now: () => NOW, slot: value.slot })(
       context(fake.host, value),
     );
-    const revoke = auth.calls.find((call) => call.url === REVOKE_URL)!;
+    const revoke = auth.calls.find((call) => call.url === REVOKE_URL);
+    assert.ok(revoke);
     assert.deepEqual(Object.keys(revoke.form).sort(), ["client_id", "token", "token_type_hint"]);
     assert.equal(revoke.form.token, "stored-refresh");
     assert.equal(revoke.form.token_type_hint, "refresh_token");
     assert.equal(revoke.form.client_id, "oaiapp_stored");
     assert.equal(value.record(), undefined, "no grant survives the 200");
-    const kept = credentialRegistrationFromSecret(value.writes.at(-1))!;
+    const written = value.writes.at(-1);
+    assert.ok(written);
+    const kept = credentialRegistrationFromSecret(written);
+    assert.ok(kept);
     assert.deepEqual(kept, { clientId: "oaiapp_stored", hostId: "urn:uuid:11111111-2222-3333-4444-555555555555" });
-    assert.equal(value.writes.at(-1)!.type, "custom", "the kept secret is not a bearer token");
-    assert.equal(value.writes.at(-1)!.value, "registration-only", "and its value is a marker, not a credential");
+    assert.equal(written.type, "custom", "the kept secret is not a bearer token");
+    assert.equal(written.value, "registration-only", "and its value is a marker, not a credential");
     await assert.rejects(
       openAICodexApiKey({ credential: "keyring:openai-codex", fetch: auth.fetch, now: () => NOW, slot: value.slot })(),
       /sign in with ChatGPT/,
@@ -613,7 +656,9 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     );
     // A re-sign-in's callback carries no issued client (measured 2026-10-25): the presented one stands in.
     const fake = fakeHost((url) => {
-      auth.nonce = url.searchParams.get("nonce")!;
+      const nonce = url.searchParams.get("nonce");
+      assert.ok(nonce);
+      auth.nonce = nonce;
       const callback = new URL(callbackUrl(url));
       callback.searchParams.delete("client_id");
       return callback.toString();
@@ -626,11 +671,15 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
       slot: value.slot,
       callbackPort: 0,
     }).login(context(fake.host, value));
-    const authorize = new URL((fake.calls.find((call) => call.kind === "open-url")!.payload as { url: string }).url);
+    const opened = fake.calls.find((call) => call.kind === "open-url");
+    assert.ok(opened);
+    const authorize = new URL((opened.payload as { url: string }).url);
     assert.equal(authorize.searchParams.get("client_id"), "oaiapp_stored", "the issued client is reused");
     assert.equal(authorize.searchParams.get("ext_agent_host_id"), "urn:uuid:11111111-2222-3333-4444-555555555555");
     assert.equal(authorize.searchParams.get("agent_name_hint"), null, "a kept registration is not a first sign-in");
-    assert.equal(value.record()!.clientId, "oaiapp_stored");
+    const stored = value.record();
+    assert.ok(stored);
+    assert.equal(stored.clientId, "oaiapp_stored");
 
     // A callback that swaps in another client is refused rather than stored.
     const swapped = vault(record());
@@ -666,12 +715,16 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     const value = vault(record({ clientId: "oaiapp_local", hostId: "urn:uuid:aaaa1111-2222-3333-4444-555555555555" }));
     const imported = record({ hostId: "urn:uuid:bbbb1111-2222-3333-4444-555555555555", access: "imported-access" });
     await openAICodexImportCredentials({ credential: "keyring:openai-codex", slot: value.slot })(context(fakeHost().host, value), imported);
-    assert.equal(value.record()!.hostId, "urn:uuid:aaaa1111-2222-3333-4444-555555555555", "the local host ID wins");
-    assert.equal(value.record()!.access, "imported-access");
+    const stored = value.record();
+    assert.ok(stored);
+    assert.equal(stored.hostId, "urn:uuid:aaaa1111-2222-3333-4444-555555555555", "the local host ID wins");
+    assert.equal(stored.access, "imported-access");
     const fresh = vault();
     await openAICodexImportCredentials({ credential: "keyring:openai-codex", slot: fresh.slot })(context(fakeHost().host, fresh), imported);
-    assert.match(fresh.record()!.hostId, /^urn:uuid:/, "a host without a record mints its own ID");
-    assert.notEqual(fresh.record()!.hostId, imported.hostId, "and does not adopt the imported host's");
+    const freshStored = fresh.record();
+    assert.ok(freshStored);
+    assert.match(freshStored.hostId, /^urn:uuid:/, "a host without a record mints its own ID");
+    assert.notEqual(freshStored.hostId, imported.hostId, "and does not adopt the imported host's");
     await assert.rejects(
       openAICodexImportCredentials({ credential: "keyring:openai-codex", slot: fresh.slot })(context(fakeHost().host, fresh), { v: 2 }),
       /not a v1 record/,
@@ -683,13 +736,16 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     const value = vault();
     const seen: string[] = [];
     const fake = fakeHost((authorize) => {
-      auth.nonce = authorize.searchParams.get("nonce")!;
+      const nonce = authorize.searchParams.get("nonce");
+      assert.ok(nonce);
+      auth.nonce = nonce;
       return callbackUrl(authorize);
     });
     const spyHost = {
       ui: {
         async request(request: { kind: string }) {
-          const answer = await fake.host.ui!.request(request as never);
+          assert.ok(fake.host.ui);
+          const answer = await fake.host.ui.request(request as never);
           seen.push(JSON.stringify(request));
           return answer;
         },
@@ -702,9 +758,14 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
       now: () => NOW,
       slot: value.slot,
     }).login(context(spyHost, value));
-    const verifier = auth.calls.find((call) => call.form.grant_type === "authorization_code")!.form.code_verifier!;
-    const stored = value.record()!;
-    for (const secret of ["access-sentinel-ALPHA", "refresh-sentinel-BRAVO", "code-sentinel-CHARLIE", verifier, stored.idToken!]) {
+    const exchange = auth.calls.find((call) => call.form.grant_type === "authorization_code");
+    assert.ok(exchange);
+    const verifier = exchange.form.code_verifier;
+    assert.ok(verifier);
+    const stored = value.record();
+    assert.ok(stored);
+    assert.ok(stored.idToken);
+    for (const secret of ["access-sentinel-ALPHA", "refresh-sentinel-BRAVO", "code-sentinel-CHARLIE", verifier, stored.idToken]) {
       for (const payload of seen) assert.equal(payload.includes(secret), false, "a token, code, or verifier reached host.ui");
     }
     // The failure paths are quieter still: each message is checked against the same sentinels.
@@ -728,9 +789,14 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
       ui: {
         async request(request: { kind: string; url?: string }) {
           if (request.kind === "open-url") {
-            const authorize = new URL(request.url!);
-            auth.nonce = authorize.searchParams.get("nonce")!;
-            redirect = new URL(authorize.searchParams.get("redirect_uri")!);
+            assert.ok(request.url);
+            const authorize = new URL(request.url);
+            const nonce = authorize.searchParams.get("nonce");
+            assert.ok(nonce);
+            auth.nonce = nonce;
+            const redirectUri = authorize.searchParams.get("redirect_uri");
+            assert.ok(redirectUri);
+            redirect = new URL(redirectUri);
             assert.equal(redirect.hostname, "127.0.0.1", "the listener is loopback only");
             assert.notEqual(redirect.hostname, "localhost");
             const wrong = await fetch(`${redirect.origin}/not-the-callback`);
@@ -752,7 +818,8 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
       slot: value.slot,
     }).login(context(host, value));
     assert.ok(value.record(), "the listener login completed");
-    await assert.rejects(fetch(`${redirect!.origin}/auth/callback?code=x&state=y&client_id=z`), "the listener closed after the callback");
+    assert.ok(redirect);
+    await assert.rejects(fetch(`${redirect.origin}/auth/callback?code=x&state=y&client_id=z`), "the listener closed after the callback");
   });
 
   it("listener_falls_back_to_an_ephemeral_port", async () => {
@@ -767,9 +834,14 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
         ui: {
           async request(request: { kind: string; url?: string }) {
             if (request.kind !== "open-url") return { status: "unavailable" as const };
-            const authorize = new URL(request.url!);
-            auth.nonce = authorize.searchParams.get("nonce")!;
-            redirect = new URL(authorize.searchParams.get("redirect_uri")!);
+            assert.ok(request.url);
+            const authorize = new URL(request.url);
+            const nonce = authorize.searchParams.get("nonce");
+            assert.ok(nonce);
+            auth.nonce = nonce;
+            const redirectUri = authorize.searchParams.get("redirect_uri");
+            assert.ok(redirectUri);
+            redirect = new URL(redirectUri);
             const response = await fetch(callbackUrl(authorize));
             assert.equal(response.status, 200);
             return { status: "answered" as const, value: undefined };
@@ -784,7 +856,8 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
         now: () => NOW,
         slot: value.slot,
       }).login(context(host, value));
-      assert.notEqual(Number(redirect!.port), port, "a busy port falls back to an ephemeral one");
+      assert.ok(redirect);
+      assert.notEqual(Number(redirect.port), port, "a busy port falls back to an ephemeral one");
       assert.ok(value.record());
     } finally {
       taken.close();

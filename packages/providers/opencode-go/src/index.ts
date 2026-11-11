@@ -1,8 +1,8 @@
 /**
- * `@arnilo/prism-provider-opencode-go` — OpenCode Go provider package for Prism: registers the opencode-go provider, resolves its key from an `env:`/`keyring:` ref per request, and ships the OpenAI-compatible and Anthropic Messages wires plus the model catalog.
+ * `@arnilo/prism-ai/opencode-go` — OpenCode Go provider package for Prism: registers the opencode-go provider, resolves its key from an `env:`/`keyring:` ref per request, and ships the OpenAI-compatible and Anthropic Messages wires plus the model catalog.
  *
  * ```ts
- * import opencodeGo from "@arnilo/prism-provider-opencode-go";
+ * import opencodeGo from "@arnilo/prism-ai/opencode-go";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -62,7 +62,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: OpenCodeGoProviderPackageOptions) {
   return defineProviderPackage<OpenCodeGoProviderConfig>({
-    name: "@arnilo/prism-provider-opencode-go",
+    name: "@arnilo/prism-ai/opencode-go",
     description: "OpenCode Go provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {
@@ -119,4 +119,3 @@ export {
   openCodeGoThinkingLevels,
   routeForOpenCodeGoModel,
 } from "./models.js";
-

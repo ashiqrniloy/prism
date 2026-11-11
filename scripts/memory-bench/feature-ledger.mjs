@@ -15,7 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { memoryFabricConfigSchema } from "@arnilo/prism-memory-system";
 import { memorySystemConfigSchema } from "@arnilo/prism-memory-system";
-import wiki from "@arnilo/prism-wiki";
+import wiki from "@arnilo/prism-knowledge/wiki";
 import { presetFields } from "../../packages/memory/system/src/ltm/config.ts";
 import {
   CLOSURE_202,
@@ -65,14 +65,18 @@ export function enumerateSurface() {
   if (!kindsUnion) throw new Error("feature-ledger: MemoryNoteKind union not found in fabric types.ts");
   const kinds = [...kindsUnion[1].matchAll(/"([a-z]+)"/g)].map((m) => m[1]);
 
-  const fabricTools = [...read("packages/memory/system/src/ltm/tools.ts").matchAll(/const \w+Name = "(memory\.[a-z]+)";/g)].map((m) => m[1]);
+  const fabricTools = [...read("packages/memory/system/src/ltm/tools.ts").matchAll(/const \w+Name = "(memory\.[a-z]+)";/g)].map(
+    (m) => m[1],
+  );
   const omTool = /options\.name \?\? "([a-z_]+)"/.exec(read("packages/memory/system/src/session/recall-tool.ts"))?.[1];
   const wikiTool = /WIKI_INGEST_TOOL_NAME = "([a-z_]+)"/.exec(read("packages/knowledge/wiki/src/tools/ingest.ts"))?.[1];
   if (!omTool || !wikiTool || fabricTools.length === 0) throw new Error("feature-ledger: a tool name was not found in source");
   const tools = [...fabricTools, omTool, wikiTool];
 
   const fabricCommands = [...read("packages/memory/system/src/ltm/index.ts").matchAll(/name: "(memory(?::[a-z]+)?)",/g)].map((m) => m[1]);
-  const omCommands = [...read("packages/memory/system/src/session/commands.ts").matchAll(/name: "(memory:session(?::[a-z]+)?)",/g)].map((m) => m[1]);
+  const omCommands = [...read("packages/memory/system/src/session/commands.ts").matchAll(/name: "(memory:session(?::[a-z]+)?)",/g)].map(
+    (m) => m[1],
+  );
   const wikiCommands = ["status", "lint", "ingest", "consolidate"].map(
     (file) => /_COMMAND_NAME = "(wiki:[a-z]+)"/.exec(read(`packages/knowledge/wiki/src/commands/${file}.ts`))?.[1],
   );
@@ -382,8 +386,8 @@ export function buildLedger({ features: rows = FEATURES, closure: closureRows = 
       packages: [
         "@arnilo/prism-memory-system",
         "@arnilo/prism-memory-system",
-        "@arnilo/prism-wiki",
-        "@arnilo/prism-memory-core (parts only they use)",
+        "@arnilo/prism-knowledge/wiki",
+        "@arnilo/prism-memory-system/core (parts only they use)",
       ],
       excluded: EXCLUDED,
     },

@@ -160,3 +160,11 @@ deleted the two working-memory tests, one of them a named 4.12-4.14 test). The e
 ([216/equivalence.json](../../216/equivalence.json), base `37ee1a24` on its own harness): 54 requests, `different` for
 `preset-r1` (system, tools) and `passive-only` (system), all of it the Task 7 tool text; context, transcript and tail are
 identical. See [216/README.md](../../216/README.md).
+
+Plan 224 Task 8 (2026-11-10) re-attested the bundle consolidation: **54/54 provider requests are byte-identical**
+for `preset-r1` and `passive-only`, with two deterministic captures before and two after. Because Tasks 4–7 and
+memory work were already uncommitted, the base is the actual pre-edit working-tree snapshot captured by
+`prefix-probe.mjs --capture-answers` with `equivalence-preload.mjs`, rather than an older commit substituted for
+that state. The report records this method, both product/harness/supporting hashes, and the unchanged HEAD.
+The final prefix suite has **27 pass / 0 fail**. This attests only the package move; it does not reverse the
+historical plan 202/216 differences above, refresh paid evidence, or authorize mixing historical screen cells.

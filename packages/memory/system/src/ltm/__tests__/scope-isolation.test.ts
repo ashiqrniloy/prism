@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, it } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import { assertScopeIsolation } from "./scope-isolation.js";
 
 const dirs: string[] = [];

@@ -5,7 +5,7 @@
  * config omits it; callers await {@link probeEmbedderDimensions} before the first retrieval.
  */
 import type { EmbeddingsProvider } from "@arnilo/prism";
-import type { Embedder } from "@arnilo/prism-memory-core";
+import type { Embedder } from "@arnilo/prism-memory-system/core";
 
 import { DEFAULT_RAG_EMBED_BATCH } from "./config.js";
 

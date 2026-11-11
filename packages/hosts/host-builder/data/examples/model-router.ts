@@ -20,7 +20,7 @@ import {
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
-import modelRouter from "@arnilo/prism-model-router";
+import modelRouter from "@arnilo/prism-extensions/model-router";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 function primaryProvider(): ModelProvider {
@@ -80,9 +80,7 @@ export async function demo() {
 
   const result = await runPromise;
 
-  const decisionEvents = events.filter(
-    (e) => e.type === "package.event" && (e as any).name === "router.decision",
-  );
+  const decisionEvents = events.filter((e) => e.type === "package.event" && (e as any).name === "router.decision");
   const turnCompletedEvents = events.filter((e) => e.type === "turn.completed");
 
   await agent.dispose();

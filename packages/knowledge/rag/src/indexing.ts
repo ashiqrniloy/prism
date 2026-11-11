@@ -1,5 +1,5 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
-import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import type { MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import { RagValidationError } from "./errors.js";
 import { isValidContentHash } from "./hash.js";
 import { ingestionStatus } from "./ingestion-status.js";

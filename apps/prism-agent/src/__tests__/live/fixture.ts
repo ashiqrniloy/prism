@@ -21,13 +21,13 @@ import {
   type ProviderEvent,
   type ProviderRequest,
 } from "@arnilo/prism";
-import { approvalPackage } from "@arnilo/prism-approval";
-import { commandcode } from "@arnilo/prism-provider-commandcode";
-import { hyper } from "@arnilo/prism-provider-hyper";
-import { ollamaCloud } from "@arnilo/prism-provider-ollama-cloud";
-import { opencodeGo } from "@arnilo/prism-provider-opencode-go";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { commandcode } from "@arnilo/prism-ai/commandcode";
+import { hyper } from "@arnilo/prism-ai/hyper";
+import { ollamaCloud } from "@arnilo/prism-ai/ollama-cloud";
+import { opencodeGo } from "@arnilo/prism-ai/opencode-go";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 /** One journey provider: its package (with the counting transport), key variable, and model. */
 export interface JourneyProvider {
@@ -44,7 +44,7 @@ export interface JourneyProvider {
 export const JOURNEY_PROVIDERS: Readonly<Record<string, JourneyProvider>> = {
   hyper: {
     name: "hyper",
-    packageName: "@arnilo/prism-provider-hyper",
+    packageName: "@arnilo/prism-ai/hyper",
     keyEnv: "HYPER_API_KEY",
     modelEnv: "PRISM_LIVE_HYPER_JOURNEY_MODEL",
     defaultModel: "deepseek-v4-pro",
@@ -52,7 +52,7 @@ export const JOURNEY_PROVIDERS: Readonly<Record<string, JourneyProvider>> = {
   },
   "opencode-go": {
     name: "opencode-go",
-    packageName: "@arnilo/prism-provider-opencode-go",
+    packageName: "@arnilo/prism-ai/opencode-go",
     keyEnv: "OPENCODE_GO_API_KEY",
     modelEnv: "PRISM_LIVE_OPENCODE_GO_JOURNEY_MODEL",
     defaultModel: "mimo-v2.5",
@@ -61,7 +61,7 @@ export const JOURNEY_PROVIDERS: Readonly<Record<string, JourneyProvider>> = {
   // Owner direction 2026-11-08: the journey also runs on Command Code and Ollama Cloud.
   commandcode: {
     name: "commandcode",
-    packageName: "@arnilo/prism-provider-commandcode",
+    packageName: "@arnilo/prism-ai/commandcode",
     keyEnv: "COMMAND_CODE_API_KEY",
     modelEnv: "PRISM_LIVE_COMMANDCODE_JOURNEY_MODEL",
     defaultModel: "Qwen/Qwen3.7-Flash",
@@ -69,7 +69,7 @@ export const JOURNEY_PROVIDERS: Readonly<Record<string, JourneyProvider>> = {
   },
   "ollama-cloud": {
     name: "ollama-cloud",
-    packageName: "@arnilo/prism-provider-ollama-cloud",
+    packageName: "@arnilo/prism-ai/ollama-cloud",
     keyEnv: "OLLAMA_API_KEY",
     modelEnv: "PRISM_LIVE_OLLAMA_CLOUD_JOURNEY_MODEL",
     defaultModel: "gemma4:31b",

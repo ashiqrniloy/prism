@@ -10,6 +10,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { packagePages } from "./bundles.mjs";
+import { loadRelease } from "./release.mjs";
 import { loadBudgets, wallClockBudget } from "./budget-gates.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -86,8 +88,8 @@ export function defaultFixtures(root = REPO_ROOT) {
       });
       return [toolsBrowser({ headless: true })];
     }),
-    fixture("packages/integrations/delegate", async () => {
-      const { default: delegate } = await load("packages/integrations/delegate/src/index.ts");
+    fixture("packages/extensions/delegate", async () => {
+      const { default: delegate } = await load("packages/extensions/delegate/src/index.ts");
       // One visible child registers `delegate`, `delegate_wait` and `delegate_cancel`; the child inherits no package.
       return [delegate({ children: { reviewer: { inherit: [], description: "Reviews a diff.", instructions: "Review the diff." } } })];
     }),
@@ -98,7 +100,7 @@ export function defaultFixtures(root = REPO_ROOT) {
       const skills = join(root, "packages/hosts/host-builder/skills");
       return [
         definePackage({
-          name: "@arnilo/prism-host-builder",
+          name: "@arnilo/prism-hosts/host-builder",
           version: "0.0.0",
           requires: { api: 1 },
           setup: (prism) => prism.skills.addDir(skills),
@@ -133,19 +135,13 @@ function walk(dir, visit) {
 }
 
 function workspacePackageDirs(root) {
-  const dirs = [];
-  for (const group of readdirSync(join(root, "packages"))) {
-    const groupDir = join(root, "packages", group);
-    if (!statSync(groupDir).isDirectory()) continue;
-    for (const name of readdirSync(groupDir)) {
-      if (existsSync(join(groupDir, name, "package.json"))) dirs.push(join(groupDir, name));
-    }
-  }
-  return dirs;
+  return packagePages(root, loadRelease(root).packages)
+    .filter((pkg) => pkg.path !== ".")
+    .map((pkg) => join(root, pkg.path));
 }
 
 /** Packages that load skills from the user's files and ship none of their own. */
-const SKILL_LOADER_PACKAGES = ["packages/context/files"];
+const SKILL_LOADER_PACKAGES = ["packages/extensions/context-files"];
 
 /**
  * Workspace packages that ship skills (a `skills/` directory, or a non-test source file that calls
@@ -276,7 +272,8 @@ export function checkCatalogBudget(agents, budget) {
 function checkSkills({ packageName, packageDir, agent, skills, owners, budget, retired, universe, redactSecrets }) {
   const failures = [];
   const fail = (skill, check, message) => failures.push({ package: packageName, ...(skill ? { skill } : {}), check, message });
-  const pkgJson = readJson(join(packageDir, "package.json"));
+  const owner = packagePages(REPO_ROOT, loadRelease(REPO_ROOT).packages).find((pkg) => resolve(REPO_ROOT, pkg.path) === packageDir);
+  const pkgJson = owner?.manifest ?? readJson(join(packageDir, "package.json"));
   const registered = new Map();
   for (const tool of agent.tools) {
     if (!registered.has(tool.name)) registered.set(tool.name, tool.package);
@@ -329,7 +326,7 @@ function checkSkills({ packageName, packageDir, agent, skills, owners, budget, r
     if (skill.path) {
       const rel = relative(packageDir, skill.path);
       if (rel.startsWith("..")) fail(name, "files", "the skill file is outside its package directory");
-      else if (!filesCovers(pkgJson.files, rel))
+      else if (!filesCovers(pkgJson.files, owner?.bundlePath ? relative(resolve(REPO_ROOT, owner.bundlePath), skill.path) : rel))
         fail(name, "files", `package.json "files" does not include ${rel.split(sep).slice(0, -2).join("/") || rel}`);
     }
   }
@@ -399,7 +396,9 @@ export async function runPackageSkillsGate(options = {}) {
   const built = [];
   for (const entry of fixtures) {
     const packageDir = resolve(root, entry.dir);
-    const packageName = readJson(join(packageDir, "package.json")).name;
+    const packageName =
+      packagePages(root, loadRelease(root).packages).find((pkg) => resolve(root, pkg.path) === packageDir)?.manifest.name ??
+      readJson(join(packageDir, "package.json")).name;
     let agent;
     try {
       agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: await entry.build() });

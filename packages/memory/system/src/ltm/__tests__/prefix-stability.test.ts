@@ -8,7 +8,7 @@ import type { ContextDraft, HookContext } from "@arnilo/prism";
 import { createAgent, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 import { runPrefixStabilityConformance } from "@arnilo/prism/testing/prefix-stability-conformance";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "../context.js";
 import { createFabricRules, DEFAULT_RULES_OPTIONS } from "../delivery/rules.js";
 import { createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, memoryRetractionVersion } from "../directory.js";

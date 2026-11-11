@@ -9,9 +9,9 @@ Scaffold inputs shipped with the kernel.
 | `package` | Package scaffold used by `prism new package` | `@arnilo/prism` |
 | `provider` | Provider-package scaffold: package manifest, provider, models, cache, conformance test, and docs stub | `@arnilo/prism` |
 | `init` | Minimal starter Prism agent with one selected provider and an offline mock test | `@arnilo/prism` |
-| `deep-research` | Deep research agent: plan -> search -> extract -> refine loop -> citations -> HITL clarify | `@arnilo/prism`, `@arnilo/prism-tools-web`, `@arnilo/prism-rag` (experimental: `bun add @arnilo/prism-rag@experimental`), `@arnilo/prism-workflows` |
+| `deep-research` | Deep research agent: plan -> search -> extract -> refine loop -> citations -> HITL clarify | `@arnilo/prism`, `@arnilo/prism-tools`, `@arnilo/prism-rag` (experimental: `bun add @arnilo/prism-rag@experimental`), `@arnilo/prism-extensions/workflows` |
 | `personal-assistant` | Personal workstation assistant: single-user ownership, local tools, credential references, and dev inspection | `@arnilo/prism` |
-| `business-worker` | Multi-tenant business worker: durable storage, tenant isolation, verified identity, and governed boundaries | `@arnilo/prism`, `@arnilo/prism-tools-work` |
+| `business-worker` | Multi-tenant business worker: durable storage, tenant isolation, verified identity, and governed boundaries | `@arnilo/prism`, `@arnilo/prism-tools/work` |
 
 ## Host skills
 

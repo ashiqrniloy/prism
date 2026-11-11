@@ -237,7 +237,7 @@ describe("package skills", () => {
   it("a_workspace_package_that_ships_skills_without_a_fixture_fails", () => {
     const uncovered = gate.findUncoveredSkillPackages([]) as string[];
     assert.ok(uncovered.includes("packages/tools/research"), JSON.stringify(uncovered));
-    assert.ok(!uncovered.includes("packages/context/files"), "the file-based skill loader ships no skills of its own");
+    assert.ok(!uncovered.includes("packages/extensions/context-files"), "the file-based skill loader ships no skills of its own");
     assert.deepEqual(gate.findUncoveredSkillPackages(gate.defaultFixtures()), []);
   });
 

@@ -15,7 +15,7 @@
 
 ### Added
 
-- New provider package (plan 152 Task 5): `@arnilo/prism-provider-hyper` replaces the
+- New provider package (plan 152 Task 5): `@arnilo/prism-ai/hyper` replaces the
   `@arnilo/prism-providers/hyper` subpath. The default export is a `definePackage` definition that
   registers the `hyper` provider, declares `capabilities: ["credentials"]`, and takes a ref-only config
   (`apiKey` defaults to `env:HYPER_API_KEY`, plus `baseUrl`, `models`). The key resolves through the

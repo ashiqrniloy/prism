@@ -9,7 +9,7 @@
  * payloads cross the scorer boundary (the journey redacts before scoring).
  *
  * Frozen additive API (plan 027 Task 0): `erpInvariantDataset` +
- * `createErpInvariantScorers`, both exported from `@arnilo/prism-evals`.
+ * `createErpInvariantScorers`, both exported from `@arnilo/prism-hosts/evals`.
  */
 import { defineDataset } from "./dataset.js";
 import { defineScorer } from "./scorer.js";

@@ -1,5 +1,5 @@
 import { createAgent, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
-import { hyper } from "@arnilo/prism-provider-hyper";
+import { hyper } from "@arnilo/prism-ai/hyper";
 import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 
 // Load a provider package, then resolve a host-owned mock from host registries.

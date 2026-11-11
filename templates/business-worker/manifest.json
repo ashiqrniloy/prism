@@ -5,6 +5,6 @@
   "tags": ["business", "worker", "multi-tenant", "enterprise", "secure"],
   "packages": [
     "@arnilo/prism",
-    "@arnilo/prism-tools-work"
+    "@arnilo/prism-tools/work"
   ]
 }

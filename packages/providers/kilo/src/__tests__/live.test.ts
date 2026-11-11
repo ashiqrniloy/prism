@@ -23,5 +23,5 @@ runProviderLiveScenarios({
   // a green run must not claim Prism's markers caused a hit.
   scenarios: ["text", "tool-loop", "structured-output", "abort", "error"],
   secretEnv: ["KILO_API_KEY"],
-  title: "@arnilo/prism-provider-kilo live tests",
+  title: "@arnilo/prism-ai/kilo live tests",
 });

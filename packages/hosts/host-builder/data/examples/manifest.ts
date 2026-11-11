@@ -60,7 +60,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     );
     const trusted = { root, home, trustProject: () => true };
     const run = async (): Promise<string> => {
-      const agent = await createAgent({ id: "manifest-demo", model: MODEL, packages: [...await loadManifest(trusted), provider] });
+      const agent = await createAgent({ id: "manifest-demo", model: MODEL, packages: [...(await loadManifest(trusted)), provider] });
       try {
         return (await (await agent.session()).run("greet prism")).status;
       } finally {

@@ -29,14 +29,14 @@ const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pat
 // file to inspect its imports — no side effects, no database access).
 let pgMigrations, createPostgresPersistence, createSqlitePersistence, Pool, Database, expectedStepCount, createPersistenceMigrationContract;
 if (invokedDirectly) {
-  const postgres = await import("@arnilo/prism-store-postgres");
+  const postgres = await import("@arnilo/prism-extensions/store-postgres");
   // The step count comes from the store's own contract: hard-coded, it read 9 while the store
   // shipped 11 migrations, so this drill failed every scheduled run (plan 215 Task 36).
-  ({ createPersistenceMigrationContract } = await import("@arnilo/prism-store-codecs"));
+  ({ createPersistenceMigrationContract } = await import("@arnilo/prism-extensions/store-codecs"));
   expectedStepCount = createPersistenceMigrationContract().steps.length;
   pgMigrations = postgres;
   ({ createPostgresPersistence } = postgres);
-  ({ createSqlitePersistence } = await import("@arnilo/prism-store-sqlite"));
+  ({ createSqlitePersistence } = await import("@arnilo/prism-extensions/store-sqlite"));
   Pool = (await import("pg")).Pool;
   Database = (await import("bun:sqlite")).Database;
 }

@@ -12,7 +12,7 @@ import {
 } from "@agentclientprotocol/sdk";
 import type { Agent, AgentEvent, AgentFinishReason, Decision, JsonObject, PendingDecision, Session } from "@arnilo/prism";
 import { isSessionNotFound } from "@arnilo/prism";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 import { AcpError } from "./errors.js";
 import { resolveAcpLimits } from "./limits.js";
 import { createAcpEventMapper } from "./mapper.js";

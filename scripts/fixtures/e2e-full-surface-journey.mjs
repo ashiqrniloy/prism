@@ -174,17 +174,17 @@ await section("@arnilo/prism: node/* node adapters", async () => {
     }
     assert.equal(failed, true, `@arnilo/prism/${removed} must not resolve`);
   }
-  const contextFiles = await import("@arnilo/prism-context-files");
+  const contextFiles = await import("@arnilo/prism-extensions/context-files");
   assert.equal(typeof contextFiles.default, "function");
   assert.equal(typeof contextFiles.readContextFileLayers, "function");
   assert.equal(typeof contextFiles.resolveInstructionSources, "function");
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-context-engineering (the four stages as one package)
+// @arnilo/prism-extensions/context-engineering (the four stages as one package)
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-context-engineering: budget, fold, search, attention", async () => {
-  const engineering = await import("@arnilo/prism-context-engineering");
+await section("@arnilo/prism-extensions/context-engineering: budget, fold, search, attention", async () => {
+  const engineering = await import("@arnilo/prism-extensions/context-engineering");
   assert.equal(typeof engineering.default, "function");
   const messages = [
     { role: "system", content: [{ type: "text", text: "Policy" }] },
@@ -200,14 +200,14 @@ await section("@arnilo/prism-context-engineering: budget, fold, search, attentio
   const fold = engineering.resolveToolResultFold({ minBytes: 1, summarize: engineering.truncateSummarize }, undefined);
   assert.ok(fold, "the deterministic summarizer resolves");
   const folded = await engineering.foldToolResultHistory(messages, fold, { sessionId: "s", runId: "r", turn: 9 });
-  assert.match(String(folded.at(-1).content[0].result), /^Tool result lookup \[call_1\]: /);
+  assert.match(String(folded.at(-1).content[0].result), /^\[folded: lookup \[call_1\], 4,002 bytes — re-run the tool to see it again\] /);
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-memory-core (the shared core the family used to re-export)
+// @arnilo/prism-memory-system/core (the shared core the family used to re-export)
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-memory-core: shared core", async () => {
-  const core = await import("@arnilo/prism-memory-core");
+await section("@arnilo/prism-memory-system/core: shared core", async () => {
+  const core = await import("@arnilo/prism-memory-system/core");
   const vectors = core.createMemoryVectorStore();
   assert.ok(vectors, "in-memory vector store must construct");
   const embeddings = await core.embedBatched(core.createHashEmbedder({ dimensions: 8 }), ["a", "b"], 2, { maxDimensions: 8 });
@@ -217,7 +217,7 @@ await section("@arnilo/prism-memory-core: shared core", async () => {
 
 await section("@arnilo/prism-memory-system: semantic memory (ltm)", async () => {
   const fabric = await import("@arnilo/prism-memory-system");
-  const core = await import("@arnilo/prism-memory-core");
+  const core = await import("@arnilo/prism-memory-system/core");
   const m = fabric.createMemory({
     tenantId: "t",
     resourceId: "full-surface-probe",
@@ -230,34 +230,34 @@ await section("@arnilo/prism-memory-system: semantic memory (ltm)", async () => 
   assert.equal("updateWorking" in m, false, "working memory left long-term memory (plan 216 Task 7)");
 });
 
-await section("@arnilo/prism-rag: rag + loaders + parsers", async () => {
-  const rag = await import("@arnilo/prism-rag");
+await section("@arnilo/prism-knowledge/rag: rag + loaders + parsers", async () => {
+  const rag = await import("@arnilo/prism-knowledge/rag");
   assert.ok(Object.keys(rag).length > 0);
-  const loaders = await import("@arnilo/prism-rag");
+  const loaders = await import("@arnilo/prism-knowledge/rag");
   assert.equal(typeof loaders.createResourceDocumentLoader, "function");
-  const parsers = await import("@arnilo/prism-rag");
+  const parsers = await import("@arnilo/prism-knowledge/rag");
   assert.ok(parsers.textParser && parsers.markdownParser, "rag parsers must be exported");
 });
 
-await section("@arnilo/prism-memory-compaction: summarization compaction", async () => {
-  const compaction = await import("@arnilo/prism-memory-compaction");
+await section("@arnilo/prism-extensions/compaction: summarization compaction", async () => {
+  const compaction = await import("@arnilo/prism-extensions/compaction");
   assert.equal(typeof compaction.default, "function", "the package definition must be callable");
 });
 
-await section("@arnilo/prism-memory-compaction: compaction strategies", async () => {
+await section("@arnilo/prism-extensions/compaction: compaction strategies", async () => {
   const om = await import("@arnilo/prism-memory-system");
   assert.equal(typeof om.foldObservationalMemoryLedger, "function", "observational memory must export the ledger fold");
 });
 
-await section("@arnilo/prism-wiki: knowledge outside memory", async () => {
-  const wiki = await import("@arnilo/prism-wiki");
+await section("@arnilo/prism-knowledge/wiki: knowledge outside memory", async () => {
+  const wiki = await import("@arnilo/prism-knowledge/wiki");
   assert.equal(typeof wiki.wiki, "function");
   assert.equal(wiki.default.requires?.services, undefined, "the wiki requires no service: it runs without memory");
   assert.equal(wiki.MEMORY_LTM_SERVICE, "memory.ltm", "it reads memory, when installed, through the read-only port");
 });
 
-await section("@arnilo/prism-workflows: .", async () => {
-  const workflows = await import("@arnilo/prism-workflows");
+await section("@arnilo/prism-extensions/workflows: .", async () => {
+  const workflows = await import("@arnilo/prism-extensions/workflows");
   const graph = workflows.buildGraph(
     workflows.defineWorkflow({
       id: "full-surface-probe",
@@ -275,15 +275,15 @@ await section("@arnilo/prism-workflows: .", async () => {
   );
 });
 
-await section("@arnilo/prism-store-codecs: .", async () => {
-  const codecs = await import("@arnilo/prism-store-codecs");
+await section("@arnilo/prism-extensions/store-codecs: .", async () => {
+  const codecs = await import("@arnilo/prism-extensions/store-codecs");
   assert.ok(codecs.createSessionRowMappers, "session codecs must export row mappers");
   assert.equal(typeof codecs.clipSearchSnippet, "function");
   assert.equal(typeof codecs.ownershipScopeMatches, "function");
 });
 
-await section("@arnilo/prism-store-sqlite: .", async () => {
-  const sqlite = await import("@arnilo/prism-store-sqlite");
+await section("@arnilo/prism-extensions/store-sqlite: .", async () => {
+  const sqlite = await import("@arnilo/prism-extensions/store-sqlite");
   assert.ok(sqlite.default.capabilities.includes("slot:store"), "the sqlite store must claim the store slot");
   try {
     const store = sqlite.createSqlitePersistence({ filename: ":memory:" });
@@ -320,21 +320,21 @@ await section("@arnilo/prism-store-sqlite: .", async () => {
   }
 });
 
-await section("@arnilo/prism-store-postgres: .", async () => {
-  const postgres = await import("@arnilo/prism-store-postgres");
+await section("@arnilo/prism-extensions/store-postgres: .", async () => {
+  const postgres = await import("@arnilo/prism-extensions/store-postgres");
   assert.equal(postgres.default.capabilities.includes("slot:store"), true);
   assert.equal(postgres.quoteIdentifier("safe"), '"safe"');
   assert.equal(typeof postgres.createPostgresPersistence, "function");
   assert.equal(typeof postgres.createPostgresAgentEventSource, "function");
 });
 
-
-await section("@arnilo/prism-evals + @arnilo/prism-governance + @arnilo/prism-model-router", async () => {
-  const evals = await import("@arnilo/prism-evals");
-  const evalStore = codecs.createMemoryEvaluationStore();
+await section("@arnilo/prism-hosts/evals + @arnilo/prism-extensions/governance + @arnilo/prism-extensions/model-router", async () => {
+  const _evals = await import("@arnilo/prism-hosts/evals");
+  const { createMemoryEvaluationStore } = await import("@arnilo/prism-extensions/store-codecs");
+  const evalStore = createMemoryEvaluationStore();
   assert.ok(evalStore, "memory evaluation store must construct");
 
-  const router = await import("@arnilo/prism-model-router");
+  const router = await import("@arnilo/prism-extensions/model-router");
   const modelRouter = router.createModelRouter({
     resolver: () => ({ id: "mock", async *generate() {} }),
   });
@@ -350,14 +350,14 @@ await section("@arnilo/prism-evals + @arnilo/prism-governance + @arnilo/prism-mo
   });
   assert.equal(routed.model.model, "mock-1", "model router must resolve the requested model");
 
-  const observability = await import("@arnilo/prism-observability");
+  const observability = await import("@arnilo/prism-extensions/observability");
   const telemetry = observability.createInMemoryTelemetry();
   telemetry.counter?.("prism.probe", 1);
   assert.ok(telemetry, "in-memory telemetry must construct");
 });
 
-await section("@arnilo/prism-credentials-keyring", async () => {
-  const keyring = await import("@arnilo/prism-credentials-keyring");
+await section("@arnilo/prism-extensions/keyring", async () => {
+  const keyring = await import("@arnilo/prism-extensions/keyring");
   const store = keyring.createEncryptedCredentialStore({
     path: "./full-surface.vault",
     getPassphrase: () => "full-surface-test-passphrase-0123456789",
@@ -366,17 +366,17 @@ await section("@arnilo/prism-credentials-keyring", async () => {
   assert.equal(typeof keyring.createKeyringCredentialResolver, "function");
 });
 
-await section("@arnilo/prism-tools-work: connectors", async () => {
-  const work = await import("@arnilo/prism-tools-work/connectors");
+await section("@arnilo/prism-tools/work: connectors", async () => {
+  const work = await import("@arnilo/prism-tools/work/connectors");
   assert.equal(typeof work.buildMicrosoft365Argv, "function");
-  const m365 = await import("@arnilo/prism-tools-work/connectors/microsoft365");
+  const m365 = await import("@arnilo/prism-tools/work/connectors/microsoft365");
   assert.equal(typeof m365.createMicrosoft365CliAdapter, "function");
-  const gws = await import("@arnilo/prism-tools-work/connectors/google-workspace");
+  const gws = await import("@arnilo/prism-tools/work/connectors/google-workspace");
   assert.equal(typeof gws.createGoogleWorkspaceCliAdapter, "function");
 });
 
-await section("@arnilo/prism-channels", async () => {
-  const channels = await import("@arnilo/prism-channels");
+await section("@arnilo/prism-hosts/channels", async () => {
+  const channels = await import("@arnilo/prism-hosts/channels");
   assert.equal(typeof channels.connectTelegram, "function");
   assert.equal(typeof channels.connectSignal, "function");
   const prism = await import("@arnilo/prism");
@@ -418,7 +418,7 @@ await section("@arnilo/prism-channels", async () => {
   assert.equal(typeof channels.createChannelPairingStore, "function");
   assert.equal(typeof channels.createChannelDeliveryJournal, "function");
 
-  const telegram = await import("@arnilo/prism-channels/telegram");
+  const telegram = await import("@arnilo/prism-hosts/channels/telegram");
   assert.equal(typeof telegram.createTelegramAdapter, "function");
   const adapter = telegram.createTelegramAdapter({
     connectionId: "probe-telegram",
@@ -430,7 +430,7 @@ await section("@arnilo/prism-channels", async () => {
   assert.equal(adapter.capabilities.acknowledgement, "telegram_offset", "Telegram construction remains network-free");
   await adapter.stop();
 
-  const signal = await import("@arnilo/prism-channels/signal");
+  const signal = await import("@arnilo/prism-hosts/channels/signal");
   assert.equal(typeof signal.createSignalAdapter, "function");
   assert.equal(signal.SIGNAL_CLI_VERSION, "0.14.8", "Signal adapter must pin its signal-cli compatibility target");
   const signalAdapter = signal.createSignalAdapter({
@@ -449,11 +449,11 @@ await section("@arnilo/prism-channels", async () => {
 
 // ---------------------------------------------------------------------------
 await section("provider packages: adapter surfaces", async () => {
-  const hyper = await import("@arnilo/prism-provider-hyper");
+  const hyper = await import("@arnilo/prism-ai/hyper");
   assert.equal(typeof hyper.createHyperProvider, "function");
   assert.ok(hyper.hyperModels.length >= 1);
 
-  const opencodeGo = await import("@arnilo/prism-provider-opencode-go");
+  const opencodeGo = await import("@arnilo/prism-ai/opencode-go");
   assert.equal(typeof opencodeGo.createOpenCodeGoProvider, "function");
   // Plan-066: opencode-go fail-fast must fire from the packed install before
   // any wire call when session correlation is missing.
@@ -482,50 +482,34 @@ await section("provider packages: adapter surfaces", async () => {
   );
   assert.equal(opencodeFetches, 0, "fail-fast must fire before any fetch");
 
-  const typesafe = await import("@arnilo/prism-provider-typesafe");
+  const typesafe = await import("@arnilo/prism-ai/typesafe");
   assert.equal(typeof typesafe.createTypeSafeProvider, "function");
   assert.ok(typesafe.typeSafeModels.length >= 1);
 
-  const laya = await import("@arnilo/prism-provider-laya");
+  const laya = await import("@arnilo/prism-ai/laya");
   assert.equal(typeof laya.createLayaProvider, "function");
   assert.ok(laya.layaModels.length >= 1);
 });
 
-await section("provider-kit: model-discovery", async () => {
-  const discovery = await import("@arnilo/prism/provider-kit");
-  const fake = discovery.createFakeModelDiscovery({
-    models: [
-      {
-        provider: "fake",
-        model: "fake-1",
-        limits: { contextWindow: 1024 },
-        capabilities: { input: ["text"], output: ["text"], tools: false, streaming: false },
-      },
-    ],
-  });
-  const catalog = await fake.listModels();
-  assert.equal(catalog.models[0]?.model, "fake-1", "fake discovery must return the seeded catalog");
-});
-
 // ---------------------------------------------------------------------------
-// @arnilo/prism-tools-coding (the moved agent + security surfaces)
+// @arnilo/prism-tools/coding (the moved agent + security surfaces)
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-tools-coding: agent", async () => {
-  const agent = await import("@arnilo/prism-tools-coding");
+await section("@arnilo/prism-tools/coding: agent", async () => {
+  const agent = await import("@arnilo/prism-tools/coding");
   const tool = agent.createDeleteTool({ fsRoot: mkdtempSync(join(tmpdir(), "prism-full-surface-agent-")) });
   assert.equal(tool.name.length > 0, true, "coding tool must expose a name");
 });
 
-await section("@arnilo/prism-tools-coding: security", async () => {
-  const security = await import("@arnilo/prism-tools-coding");
+await section("@arnilo/prism-tools/coding: security", async () => {
+  const security = await import("@arnilo/prism-tools/coding");
   const redactor = security.createSecretRedactor(["hush"]);
   assert.equal(redactor("a hush b"), "a [REDACTED] b");
   // Deny-by-default sandbox fence: no flags => no admission.
   assert.equal(typeof security.resolveSandboxCapabilities, "function");
 });
 
-await section("@arnilo/prism-tools-work: document-reader", async () => {
-  const reader = await import("@arnilo/prism-tools-work/document-reader");
+await section("@arnilo/prism-tools/work: document-reader", async () => {
+  const reader = await import("@arnilo/prism-tools/work/document-reader");
   const documentReader = await reader.createDocumentReader({
     // ponytail: hermetic leg — host-selected text-only parser instead of the
     // optional pdf-parse/mammoth peers the packed consumer does not install.
@@ -540,7 +524,7 @@ await section("@arnilo/prism-tools-work: document-reader", async () => {
   const extracted = await documentReader.extract({ buffer: Buffer.from("full surface document probe") });
   assert.match(extracted?.text ?? "", /full surface document probe/, "document reader must extract via the host-selected parser");
 
-  const openapi = await import("@arnilo/prism-tools-openapi");
+  const openapi = await import("@arnilo/prism-tools/openapi");
   const compiled = openapi.createOpenApiTools({
     document: {
       openapi: "3.1.0",
@@ -562,45 +546,45 @@ await section("@arnilo/prism-tools-work: document-reader", async () => {
   assert.equal(compiled[0]?.name, "listThings");
 });
 
-await section("@arnilo/prism-tools-computer-use: classify", async () => {
-  const cul = await import("@arnilo/prism-tools-computer-use");
+await section("@arnilo/prism-tools/computer-use: classify", async () => {
+  const cul = await import("@arnilo/prism-tools/computer-use");
   assert.equal(cul.classifyComputerUseLinuxTool("screenshot"), "read");
 });
 
-await section("@arnilo/prism-devtools: developer inspector host library", async () => {
-  const devtools = await import("@arnilo/prism-devtools");
+await section("@arnilo/prism-hosts/devtools: developer inspector host library", async () => {
+  const devtools = await import("@arnilo/prism-hosts/devtools");
   assert.equal(typeof devtools.serveDevtools, "function");
   assert.equal(typeof devtools.compareInspectorRuns, "function");
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-tools-work Office subpaths — local generation/parsing, no LibreOffice.
+// @arnilo/prism-tools/work Office subpaths — local generation/parsing, no LibreOffice.
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-tools-work: documents + sheets + diagrams", async () => {
-  const documents = await import("@arnilo/prism-tools-work/documents");
+await section("@arnilo/prism-tools/work: documents + sheets + diagrams", async () => {
+  const documents = await import("@arnilo/prism-tools/work/documents");
   assert.ok(documents.resolveDocumentCaps({}), "documents caps must resolve");
-  const sheets = await import("@arnilo/prism-tools-work/sheets");
+  const sheets = await import("@arnilo/prism-tools/work/sheets");
   const csv = sheets.parseCsv("a,b\n1,2\n");
   assert.ok(csv, "sheets csv parser must parse");
-  const diagrams = await import("@arnilo/prism-tools-work/diagrams");
+  const diagrams = await import("@arnilo/prism-tools/work/diagrams");
   assert.ok(diagrams.canonicalizeDrawioXml('<mxfile><diagram name="d"><mxGraphModel/></diagram></mxfile>'), "drawio xml must canonicalize");
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-ag-ui (2 subpaths)
+// @arnilo/prism-hosts/ag-ui (2 subpaths)
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-ag-ui: . + renderer", async () => {
-  const agui = await import("@arnilo/prism-ag-ui");
+await section("@arnilo/prism-hosts/ag-ui: . + renderer", async () => {
+  const agui = await import("@arnilo/prism-hosts/ag-ui");
   assert.ok(agui.resolveAgUiLimits({}), "ag-ui limits must resolve");
-  const renderer = await import("@arnilo/prism-ag-ui/renderer");
+  const renderer = await import("@arnilo/prism-hosts/ag-ui/renderer");
   assert.equal(renderer.resolvePointer({ a: { b: 1 } }, "/a/b"), 1, "renderer pointer must resolve");
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-tools-web (1 root surface)
+// @arnilo/prism-tools/web (1 root surface)
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-tools-web: . (search + fetch + obscura)", async () => {
-  const web = await import("@arnilo/prism-tools-web");
+await section("@arnilo/prism-tools/web: . (search + fetch + obscura)", async () => {
+  const web = await import("@arnilo/prism-tools/web");
   assert.equal(web.canonicalUrl("https://example.com/a?b=1#frag"), "https://example.com/a?b=1");
   const cited = web.citation("brave", "https://example.com/x", "src-1");
   assert.match(cited.citationId, /web:brave:src-1/);
@@ -610,25 +594,25 @@ await section("@arnilo/prism-tools-web: . (search + fetch + obscura)", async () 
   assert.ok(web.DEFAULT_OBSCURA_PROCESS_LIMITS, "obscura surface must export bounded defaults");
 });
 
-await section("@arnilo/prism-tools-browser: browser", async () => {
-  const browser = await import("@arnilo/prism-tools-browser");
+await section("@arnilo/prism-tools/browser: browser", async () => {
+  const browser = await import("@arnilo/prism-tools/browser");
   assert.ok(browser.DEFAULT_BROWSER_LIMITS, "browser surface must export bounded defaults");
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-mcp (1 subpath) — client bridge and helpers.
+// @arnilo/prism-extensions/mcp (1 subpath) — client bridge and helpers.
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-mcp: .", async () => {
-  const mcp = await import("@arnilo/prism-mcp");
+await section("@arnilo/prism-extensions/mcp: .", async () => {
+  const mcp = await import("@arnilo/prism-extensions/mcp");
   assert.equal(typeof mcp.connectMcpTools, "function", "mcp must export connectMcpTools");
   assert.equal(typeof mcp.DEFAULT_MAX_TOOLS, "number", "mcp must export bounds");
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-mcp-server (1 subpath) — agent serving over MCP.
+// @arnilo/prism-hosts/mcp-server (1 subpath) — agent serving over MCP.
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-mcp-server: .", async () => {
-  const mcpServer = await import("@arnilo/prism-mcp-server");
+await section("@arnilo/prism-hosts/mcp-server: .", async () => {
+  const mcpServer = await import("@arnilo/prism-hosts/mcp-server");
   assert.equal(typeof mcpServer.serveMcp, "function", "serveMcp must be exported");
   assert.equal(typeof mcpServer.mcpHost, "function", "mcpHost must be exported");
   assert.equal(typeof mcpServer.createPrismMcpWebHandler, "function", "the web transport helper must be exported");
@@ -636,10 +620,10 @@ await section("@arnilo/prism-mcp-server: .", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-store-jsonl (1 subpath) — the session store package.
+// @arnilo/prism-extensions/store-jsonl (1 subpath) — the session store package.
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-store-jsonl: .", async () => {
-  const jsonlStore = await import("@arnilo/prism-store-jsonl");
+await section("@arnilo/prism-extensions/store-jsonl: .", async () => {
+  const jsonlStore = await import("@arnilo/prism-extensions/store-jsonl");
   const dir = mkdtempSync(join(tmpdir(), "prism-full-surface-jsonl-"));
   const store = jsonlStore.createJsonlSessionStore({ dir });
   const entry = {

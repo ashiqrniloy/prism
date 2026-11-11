@@ -12,16 +12,9 @@
  *
  * Run: bun examples/validator.ts
  */
-import {
-  type AgentEvent,
-  createAgent,
-  createMemorySessionStore,
-  type ModelProvider,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
+import { type AgentEvent, createAgent, createMemorySessionStore, type ModelProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import advisor from "@arnilo/prism-advisor";
+import advisor from "@arnilo/prism-extensions/advisor";
 
 function mockProvider(): ModelProvider {
   let reviews = 0;

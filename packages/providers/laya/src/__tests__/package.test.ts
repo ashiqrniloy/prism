@@ -41,7 +41,7 @@ function completion(): Response {
   return jsonResponse(OK_RESPONSE);
 }
 
-describe("@arnilo/prism-provider-laya package", () => {
+describe("@arnilo/prism-ai/laya package", () => {
   it("laya_passes_package_conformance", async () => {
     const result = await packageConformance(layaDefinition, { config: { apiKey: "env:PRISM_TEST_LAYA_CONFORMANCE" } });
     assert.deepEqual(
@@ -97,21 +97,26 @@ describe("@arnilo/prism-provider-laya package", () => {
       assert.equal(notes.length, 0, "a missing key notes nothing for Laya");
       // Registration and the curated catalog must not depend on the credential.
       const listed = await agent.models.list();
-      assert.ok(listed.some((entry) => entry.model === model.model), "the catalog still lists");
+      assert.ok(
+        listed.some((entry) => entry.model === model.model),
+        "the catalog still lists",
+      );
 
-      const events = await collectProviderEvents(createLayaProvider({
-        fetch: (async (_input: unknown, init?: RequestInit) => {
-          capturedAuth = new Headers(init?.headers).get("authorization");
-          return ok(completion());
-        }) as typeof fetch,
-      }), request);
+      const events = await collectProviderEvents(
+        createLayaProvider({
+          fetch: (async (_input: unknown, init?: RequestInit) => {
+            capturedAuth = new Headers(init?.headers).get("authorization");
+            return ok(completion());
+          }) as typeof fetch,
+        }),
+        request,
+      );
       assert.equal(capturedAuth, null, "sends no authorization header without key");
       assert.equal(events.at(-1)?.type, "done");
     } finally {
       await agent.dispose();
     }
   });
-
 
   it("laya_literal_api_key_fails_config_validation", async () => {
     await assert.rejects(

@@ -90,4 +90,4 @@ export type {
   WorkToolSet,
   WorkToolsOptions,
 } from "./types.js";
-export const packageName = "@arnilo/prism-tools-work";
+export const packageName = "@arnilo/prism-tools/work";

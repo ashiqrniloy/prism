@@ -34,7 +34,7 @@ function recordingProvider(seen: string[][]) {
   });
 }
 
-describe("@arnilo/prism-tools-coding disable.tools", () => {
+describe("@arnilo/prism-tools/coding disable.tools", () => {
   it("disable_tools_shell_removes_shell", async () => {
     const root = await tempRoot();
     const seen: string[][] = [];

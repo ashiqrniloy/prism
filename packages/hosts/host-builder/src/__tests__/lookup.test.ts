@@ -67,11 +67,11 @@ describe("prism_api", () => {
     const result = lookupApi(api, { query: "package conformance" });
     assert.equal(result.found, true);
     assert.equal(result.matches[0]?.name, "packageConformance");
-    const none = lookupApi(api, { query: "package conformance", package: "@arnilo/prism-approval" });
-    assert.ok(none.matches.every((match) => match.package === "@arnilo/prism-approval"));
-    const unknown = lookupApi(api, { symbol: "createAgent", package: "@arnilo/prism-approvl" });
+    const none = lookupApi(api, { query: "package conformance", package: "@arnilo/prism-extensions/approval" });
+    assert.ok(none.matches.every((match) => match.specifier === "@arnilo/prism-extensions/approval"));
+    const unknown = lookupApi(api, { symbol: "createAgent", package: "@arnilo/prism-extensions/approvl" });
     assert.equal(unknown.found, false);
-    assert.ok(unknown.nearest.includes("@arnilo/prism-approval"));
+    assert.ok(unknown.nearest.includes("@arnilo/prism-extensions/approval"));
   });
 
   it("prism_api_exact_and_query: an empty request is not found, not an exception", async () => {
@@ -134,7 +134,7 @@ describe("prism_examples", () => {
 
   it("prism_examples_path_outside_index_not_found: traversal, absolute and unlisted paths are not found", async () => {
     const { examples } = await indexes();
-    for (const path of ["../package.json", "/etc/passwd", "examples/../package.json", "examples/nope.ts", "data/api.json"]) {
+    for (const path of ["../../package.json", "/etc/passwd", "examples/../package.json", "examples/nope.ts", "data/api.json"]) {
       const result = await lookupExamples(examples, { path });
       assert.equal(result.found, false, path);
       assert.equal(result.source, undefined, path);
@@ -145,8 +145,10 @@ describe("prism_examples", () => {
     const { examples } = await indexes();
     const ranked = await lookupExamples(examples, { query: "define package" });
     assert.equal(ranked.matches[0]?.path, "examples/define-package.ts");
-    const approval = await lookupExamples(examples, { package: "@arnilo/prism-approval" });
-    assert.ok(approval.matches.length > 0 && approval.matches.every((match) => match.imports.includes("@arnilo/prism-approval")));
+    const approval = await lookupExamples(examples, { package: "@arnilo/prism-extensions/approval" });
+    assert.ok(
+      approval.matches.length > 0 && approval.matches.every((match) => match.imports.includes("@arnilo/prism-extensions/approval")),
+    );
   });
 });
 
@@ -166,7 +168,7 @@ describe("prism_docs", () => {
     const docs = new DocsIndex(await projectRoot());
     assert.equal(docs.search("retiredquokka").found, false);
     assert.ok(!docs.listPages().some((page) => /migrat/.test(page.path)));
-    assert.ok(docs.listPages().some((page) => page.uri === "prism-docs://prism-approval/README.md"));
+    assert.ok(docs.listPages().some((page) => page.uri === "prism-docs://prism-extensions/approval/README.md"));
   });
 
   it("a query that no section fully contains is not found", async () => {
@@ -189,7 +191,7 @@ describe("prism_docs", () => {
     assert.equal(docs.search("leakedsecretword").found, false);
     assert.equal(docs.read("prism-docs://prism/docs/agent.md"), undefined);
     // The unlinked page still reads.
-    assert.match(docs.read("prism-docs://prism-approval/README.md")?.text ?? "", /Modes/);
+    assert.match(docs.read("prism-docs://prism-extensions/approval/README.md")?.text ?? "", /Modes/);
   });
 });
 

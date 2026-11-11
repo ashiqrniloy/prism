@@ -9,9 +9,9 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { RepointStore } from "@arnilo/prism-memory-core";
-import type { DeletionPropagationContext } from "@arnilo/prism-memory-core";
-import type { MemoryScope, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-core";
+import type { RepointStore } from "@arnilo/prism-memory-system/core";
+import type { DeletionPropagationContext } from "@arnilo/prism-memory-system/core";
+import type { MemoryScope, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-system/core";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -19,7 +19,7 @@ import {
   MemoryScopeError,
   type RagAccessConstraint,
   repointSource,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { createFabricRepointHandler } from "../repoint.js";
 

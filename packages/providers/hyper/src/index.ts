@@ -1,9 +1,9 @@
 /**
- * `@arnilo/prism-provider-hyper` — Charm Hyper provider package for Prism: registers the hyper provider,
+ * `@arnilo/prism-ai/hyper` — Charm Hyper provider package for Prism: registers the hyper provider,
  * resolves its key from an `env:`/`keyring:` ref per request, and ships the dual-route wire (Anthropic Messages and OpenAI Chat), quota/telemetry helpers, and the model catalog.
  *
  * ```ts
- * import hyper from "@arnilo/prism-provider-hyper";
+ * import hyper from "@arnilo/prism-ai/hyper";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -63,7 +63,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: HyperProviderPackageOptions) {
   return defineProviderPackage<HyperProviderConfig>({
-    name: "@arnilo/prism-provider-hyper",
+    name: "@arnilo/prism-ai/hyper",
     description: "Charm Hyper provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {

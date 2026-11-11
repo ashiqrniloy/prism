@@ -36,7 +36,9 @@ describe("native fetch", () => {
   });
 
   it("native_fetch_follows_redirect_and_cites_final_url", async () => {
-    const fetch = adapter(async (url) => (url.pathname === "/start" ? redirect("/final?x=1") : html("<html><body>final page</body></html>")));
+    const fetch = adapter(async (url) =>
+      url.pathname === "/start" ? redirect("/final?x=1") : html("<html><body>final page</body></html>"),
+    );
     const page = await fetch.fetch("https://example.com/start");
     assert.equal(page.url, "https://example.com/final?x=1");
     assert.deepEqual(page.redirects, ["https://example.com/final?x=1"]);

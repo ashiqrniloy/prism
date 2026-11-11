@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { createAgent, definePackage, PackageLoadError, type PackageAPI, type Skill, type ToolDefinition } from "../index.js";
 
 const tool = (name: string): ToolDefinition =>
-  ({ name, description: name, parameters: { type: "object", properties: {} }, execute: (_args, context) => ({ toolCallId: context.toolCallId, name, value: null }) }) as ToolDefinition;
+  ({
+    name,
+    description: name,
+    parameters: { type: "object", properties: {} },
+    execute: (_args, context) => ({ toolCallId: context.toolCallId, name, value: null }),
+  }) as ToolDefinition;
 const skill = (name: string): Skill => ({ name, description: name, instructions: name });
 
 function pkg(name: string, setup: (prism: PackageAPI<any>) => void | Promise<void>) {
@@ -30,10 +35,15 @@ function reader() {
 describe("PackageAPI registry reads", () => {
   it("package_api_tools_list_returns_effective_registry", async () => {
     const { held, definition } = reader();
-    await createAgent({ model: { provider: "openai-compatible", model: "m" },
+    await createAgent({
+      model: { provider: "openai-compatible", model: "m" },
       tools: { add: [tool("host_tool"), tool("hidden")] },
       disable: { tools: ["hidden"] },
-      packages: [pkg("one", (prism) => prism.tools.register(tool("one_tool"))), pkg("two", (prism) => prism.tools.register(tool("two_tool"))), definition],
+      packages: [
+        pkg("one", (prism) => prism.tools.register(tool("one_tool"))),
+        pkg("two", (prism) => prism.tools.register(tool("two_tool"))),
+        definition,
+      ],
     });
     const names = held.api!.tools.list().map((entry) => entry.name);
     for (const expected of ["host_tool", "one_tool", "two_tool"]) assert.ok(names.includes(expected), `${expected} is listed`);
@@ -42,7 +52,8 @@ describe("PackageAPI registry reads", () => {
 
   it("package_api_skills_get_and_list", async () => {
     const { held, definition } = reader();
-    await createAgent({ model: { provider: "openai-compatible", model: "m" },
+    await createAgent({
+      model: { provider: "openai-compatible", model: "m" },
       skills: { add: [skill("host-skill"), skill("hidden-skill")] },
       disable: { skills: ["hidden-skill"] },
       packages: [pkg("one", (prism) => prism.skills.register(skill("pkg-skill"))), definition],
@@ -50,7 +61,13 @@ describe("PackageAPI registry reads", () => {
     assert.equal(held.api!.skills.get("pkg-skill")?.name, "pkg-skill");
     assert.equal(held.api!.skills.get("host-skill")?.name, "host-skill");
     assert.equal(held.api!.skills.get("hidden-skill"), undefined);
-    assert.deepEqual(held.api!.skills.list().map((entry) => entry.name).sort(), ["host-skill", "pkg-skill"]);
+    assert.deepEqual(
+      held
+        .api!.skills.list()
+        .map((entry) => entry.name)
+        .sort(),
+      ["host-skill", "pkg-skill"],
+    );
   });
 
   it("package_api_reads_throw_state_not_ready_in_setup", async () => {
@@ -65,7 +82,12 @@ describe("PackageAPI registry reads", () => {
 
   it("package_api_reads_are_frozen", async () => {
     const { held, definition } = reader();
-    await createAgent({ model: { provider: "openai-compatible", model: "m" }, tools: { add: [tool("host_tool")] }, skills: { add: [skill("host-skill")] }, packages: [definition] });
+    await createAgent({
+      model: { provider: "openai-compatible", model: "m" },
+      tools: { add: [tool("host_tool")] },
+      skills: { add: [skill("host-skill")] },
+      packages: [definition],
+    });
     const tools = held.api!.tools.list() as ToolDefinition[];
     assert.throws(() => tools.push(tool("x")), TypeError);
     assert.throws(() => {

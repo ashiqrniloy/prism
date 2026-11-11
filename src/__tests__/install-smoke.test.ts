@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+// @ts-expect-error stdlib-only release tooling.
+import { loadRelease } from "../../scripts/release.mjs";
 
 // Root manifest version drives the core tarball name (arnilo-prism-<v>.tgz).
 const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 // Plan 066 lockstep bump: all manifests carry the 0.5.1 cut.
-const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-provider-hyper";
+const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-ai";
 
 import { afterAll as after, beforeAll as before, describe, it, setDefaultTimeout } from "bun:test";
 
@@ -19,65 +21,14 @@ import { fileURLToPath } from "node:url";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 // ponytail: one config entry per published package; adding a package is one line
-const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?: boolean; isMeta?: boolean }> = [
-  { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/integrations/workflows", name: "@arnilo/prism-workflows" },
-  { dir: "packages/hosts/mcp-server", name: "@arnilo/prism-mcp-server" },
-  { dir: "packages/hosts/acp", name: "@arnilo/prism-acp" },
-  { dir: "packages/memory/core", name: "@arnilo/prism-memory-core" },
-  { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction" },
-  { dir: "packages/memory/system", name: "@arnilo/prism-memory-system" },
-  { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag" },
-  { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki" },
-  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
-  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
-  { dir: "packages/tools/web", name: "@arnilo/prism-tools-web" },
-  { dir: "packages/tools/openapi", name: "@arnilo/prism-tools-openapi" },
-  { dir: "packages/tools/computer-use", name: "@arnilo/prism-tools-computer-use" },
-  { dir: "packages/policy/approval", name: "@arnilo/prism-approval" },
-  // Plan 174 Task 8: security22.mjs exercises the packed router state store, so its tarball
-  // must be in the offline install set.
-  { dir: "packages/policy/model-router", name: "@arnilo/prism-model-router" },
-  // Plan 159 Task 7: the readiness report and field policy moved to @arnilo/prism-governance.
-  { dir: "packages/policy/governance", name: "@arnilo/prism-governance" },
-  { dir: "packages/context/files", name: "@arnilo/prism-context-files" },
-  { dir: "packages/context/engineering", name: "@arnilo/prism-context-engineering" },
-  { dir: "packages/hosts/channels", name: "@arnilo/prism-channels" },
-  { dir: "packages/hosts/evals", name: "@arnilo/prism-evals" },
-  { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools" },
-  // Plan 215 Task 14: the host-builder indexes ship in the tarball, so it joins the offline install set.
-  { dir: "packages/hosts/host-builder", name: "@arnilo/prism-host-builder" },
-  { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
-  // Plan 175 Task 7: the 0.13 host libraries and integration packages that the truth graph ships.
-  { dir: "packages/drivers/process", name: "@arnilo/prism-driver-process" },
-  { dir: "packages/hosts/headless", name: "@arnilo/prism-headless" },
-  { dir: "packages/hosts/remote", name: "@arnilo/prism-remote" },
-  { dir: "packages/integrations/delegate", name: "@arnilo/prism-delegate" },
-  { dir: "packages/integrations/advisor", name: "@arnilo/prism-advisor" },
-  { dir: "packages/integrations/observability", name: "@arnilo/prism-observability" },
-  { dir: "packages/policy/guardrail-packs", name: "@arnilo/prism-guardrail-packs" },
-  { dir: "packages/tools/research", name: "@arnilo/prism-tools-research" },
-  { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring" },
-  { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl" },
-  { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs" },
-  { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite" },
-  { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres" },
-  { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
-  { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
-  { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid" },
-  { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex" },
-  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode" },
-  { dir: "packages/providers/kilo", name: "@arnilo/prism-provider-kilo" },
-  { dir: "packages/providers/litellm", name: "@arnilo/prism-provider-litellm" },
-  { dir: "packages/providers/ollama-cloud", name: "@arnilo/prism-provider-ollama-cloud" },
-  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter" },
-  { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
-  // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
-  { dir: "packages/tools/work", name: "@arnilo/prism-tools-work", isSubpaths: true },
-];
+const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?: boolean; isMeta?: boolean }> = loadRelease(
+  repoRoot,
+).packages.map((pkg: { path: string; manifest: { name: string; exports?: Record<string, unknown> } }) => ({
+  dir: pkg.path,
+  name: pkg.manifest.name,
+  isCore: pkg.path === ".",
+  isSubpaths: !pkg.manifest.exports?.["."],
+}));
 
 // Derive every documented core import specifier from the root `exports` map and
 // prism-core subpaths map so the smoke test cannot drift from the public contract.
@@ -158,7 +109,27 @@ before(() => {
   );
   writeFileSync(
     join(consumer, "package.json"),
-    JSON.stringify({ name: "@arnilo-prism-install-smoke", type: "module", overrides }, null, 2),
+    JSON.stringify(
+      {
+        name: "@arnilo-prism-install-smoke",
+        type: "module",
+        overrides,
+        dependencies: {
+          "@modelcontextprotocol/client": "^2.3.0",
+          zod: "^4.6.2",
+          "@agentclientprotocol/sdk": "1.4.0",
+          "@ag-ui/core": "0.0.59",
+          "@modelcontextprotocol/server": "^2.3.0",
+          ...Object.fromEntries(
+            Object.entries(
+              JSON.parse(readFileSync(join(repoRoot, "packages/tools/package.json"), "utf8")).peerDependencies as Record<string, string>,
+            ).filter(([name]) => name.startsWith("@office-open/") || name === "ajv" || name === "fast-xml-parser"),
+          ),
+        },
+      },
+      null,
+      2,
+    ),
   );
   // @ai-sdk/provider is the optional peer of the provider family's /ai-sdk
   // adapter; the composition leg exercises that adapter, so the host supplies it
@@ -184,39 +155,39 @@ before(() => {
   const specs = [
     ...coreSpecifiers(),
     ...packages.filter((p) => !p.isCore && !p.isMeta && !p.isSubpaths).map((p) => p.name),
-    "@arnilo/prism-acp",
-    "@arnilo/prism-ag-ui/renderer",
-    "@arnilo/prism-rag",
-    "@arnilo/prism-memory-compaction",
+    "@arnilo/prism-hosts/acp",
+    "@arnilo/prism-hosts/ag-ui/renderer",
+    "@arnilo/prism-knowledge/rag",
+    "@arnilo/prism-extensions/compaction",
     "@arnilo/prism-memory-system",
-    "@arnilo/prism-wiki",
-    "@arnilo/prism-tools-browser",
-    "@arnilo/prism-tools-web",
-    "@arnilo/prism-tools-openapi",
-    "@arnilo/prism-tools-computer-use",
-    "@arnilo/prism-provider-hyper",
-    "@arnilo/prism-provider-laya",
-    "@arnilo/prism-provider-liquid",
-    "@arnilo/prism-provider-openai-codex",
-    "@arnilo/prism-provider-commandcode",
-    "@arnilo/prism-provider-kilo",
-    "@arnilo/prism-provider-litellm",
-    "@arnilo/prism-provider-ollama-cloud",
-    "@arnilo/prism-provider-opencode-go",
-    "@arnilo/prism-provider-openrouter",
-    "@arnilo/prism-provider-typesafe",
-    "@arnilo/prism-tools-work",
-    "@arnilo/prism-tools-work/connectors",
-    "@arnilo/prism-tools-work/connectors/microsoft365",
-    "@arnilo/prism-tools-work/connectors/google-workspace",
-    "@arnilo/prism-tools-work/connectors/drafts",
-    "@arnilo/prism-tools-work/documents",
-    "@arnilo/prism-tools-work/sheets",
-    "@arnilo/prism-tools-work/diagrams",
-    "@arnilo/prism-tools-work/document-extraction",
-    "@arnilo/prism-tools-work/document-reader",
-    "@arnilo/prism-channels/telegram",
-    "@arnilo/prism-channels/signal",
+    "@arnilo/prism-knowledge/wiki",
+    "@arnilo/prism-tools/browser",
+    "@arnilo/prism-tools/web",
+    "@arnilo/prism-tools/openapi",
+    "@arnilo/prism-tools/computer-use",
+    "@arnilo/prism-ai/hyper",
+    "@arnilo/prism-ai/laya",
+    "@arnilo/prism-ai/liquid",
+    "@arnilo/prism-ai/openai-codex",
+    "@arnilo/prism-ai/commandcode",
+    "@arnilo/prism-ai/kilo",
+    "@arnilo/prism-ai/litellm",
+    "@arnilo/prism-ai/ollama-cloud",
+    "@arnilo/prism-ai/opencode-go",
+    "@arnilo/prism-ai/openrouter",
+    "@arnilo/prism-ai/typesafe",
+    "@arnilo/prism-tools/work",
+    "@arnilo/prism-tools/work/connectors",
+    "@arnilo/prism-tools/work/connectors/microsoft365",
+    "@arnilo/prism-tools/work/connectors/google-workspace",
+    "@arnilo/prism-tools/work/connectors/drafts",
+    "@arnilo/prism-tools/work/documents",
+    "@arnilo/prism-tools/work/sheets",
+    "@arnilo/prism-tools/work/diagrams",
+    "@arnilo/prism-tools/work/document-extraction",
+    "@arnilo/prism-tools/work/document-reader",
+    "@arnilo/prism-hosts/channels/telegram",
+    "@arnilo/prism-hosts/channels/signal",
   ];
   writeFileSync(
     join(consumer, "smoke.mjs"),
@@ -226,7 +197,7 @@ before(() => {
       "  catch (e) { console.error('IMPORT FAILED:', s, e.message); process.exit(1); }\n" +
       "}\n" +
       "const prism = await import('@arnilo/prism');\n" +
-      "const compaction = await import('@arnilo/prism-memory-compaction');\n" +
+      "const compaction = await import('@arnilo/prism-extensions/compaction');\n" +
       "if (typeof prism.agentFingerprint !== 'function' || typeof compaction.default !== 'function') process.exit(1);\n" +
       "console.log('ALL IMPORTS OK');\n",
   );
@@ -244,8 +215,8 @@ import {
   providerDone, providerTextDelta,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createShellTool, createWriteTool, assertPathInsideRoots } from "@arnilo/prism-tools-coding";
-import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
+import { createShellTool, createWriteTool, assertPathInsideRoots } from "@arnilo/prism-tools/coding";
+import { mapMcpToolsToDefinitions } from "@arnilo/prism-extensions/mcp";
 import { validateJsonSchema } from "@arnilo/prism";
 const createJsonSchemaToolArgumentValidator = () => ({
   validate(schema, value) {
@@ -353,20 +324,20 @@ import {
   createAgent,
   providerDone, providerTextDelta,
 } from "@arnilo/prism";
-import { createMemoryRunFeedbackStore } from "@arnilo/prism-store-codecs";
+import { createMemoryRunFeedbackStore } from "@arnilo/prism-extensions/store-codecs";
 import { createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createHyperProvider } from "@arnilo/prism-provider-hyper";
-import { appendEvaluationFeedback, defineScorer, scoreRun } from "@arnilo/prism-evals";
-import { createMemoryEvaluationStore } from "@arnilo/prism-store-codecs";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHyperProvider } from "@arnilo/prism-ai/hyper";
+import { appendEvaluationFeedback, defineScorer, scoreRun } from "@arnilo/prism-hosts/evals";
+import { createMemoryEvaluationStore } from "@arnilo/prism-extensions/store-codecs";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory } from "@arnilo/prism-memory-system";
-import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-rag";
+import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-knowledge/rag";
 import {
   createMemoryWorkflowCheckpoints, createWorkflowCheckpoints,
   defineWorkflow, functionNode, replayWorkflow, resumeWorkflow, runWorkflow, suspend,
-} from "@arnilo/prism-workflows";
-import { mcpHost, serveMcp } from "@arnilo/prism-mcp-server";
+} from "@arnilo/prism-extensions/workflows";
+import { mcpHost, serveMcp } from "@arnilo/prism-hosts/mcp-server";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/client";
 
@@ -418,7 +389,7 @@ assert.equal(approved.status, "succeeded");
 
 // Plan 168 Task 7: the 0.12 schedules/coordinator are gone (Phase 16 Part B rebuilds them), so the
 // durable-replay leg runs its source run directly.
-const store = (await import("@arnilo/prism-workflows")).createMemoryCheckpointStore();
+const store = (await import("@arnilo/prism-extensions/workflows")).createMemoryCheckpointStore();
 const checkpoints = createWorkflowCheckpoints({ store });
 const replayableFlow = defineWorkflow({ revision: "1", id: "replayable", nodes: { done: functionNode({ execute: () => ({ done: true }) }) } });
 const source = await runWorkflow(replayableFlow, {}, { checkpoints, ownership, runId: "replay-source" });
@@ -435,7 +406,7 @@ assert.equal((await mcpClient.callTool({ name: "prompt", arguments: { prompt: "h
 await mcpClient.close(); await mcpHandle.close();
 
 // FR-6: durable AgentEventSource resolves from the packed package root (no dist/... subpath).
-const { createPostgresAgentEventSource } = await import("@arnilo/prism-store-postgres");
+const { createPostgresAgentEventSource } = await import("@arnilo/prism-extensions/store-postgres");
 assert.equal(typeof createPostgresAgentEventSource, "function");
 const postgresSource = createPostgresAgentEventSource({ pool: {}, schema: "prism" });
 assert.equal(typeof postgresSource.append, "function");
@@ -464,8 +435,8 @@ import {
   providerDone, providerTextDelta, toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-tools-coding";
-import { createCliRunner } from "@arnilo/prism-tools-work/connectors";
+import { createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-tools/coding";
+import { createCliRunner } from "@arnilo/prism-tools/work/connectors";
 
 // --- phase20 blocker 1: unknown durable-resume decision fails closed, no tool call ---
 const executed = [];
@@ -584,9 +555,9 @@ console.log("PACKED PHASE21 SECURITY OK");
     `
 import assert from "node:assert/strict";
 import { SessionMetadataConflictError } from "@arnilo/prism";
-import { EventMultiplexerError, createEventMultiplexer } from "@arnilo/prism-workflows";
-import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { EventMultiplexerError, createEventMultiplexer } from "@arnilo/prism-extensions/workflows";
+import { createMemoryModelRouterStateStore } from "@arnilo/prism-extensions/model-router";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 
 // --- phase22 blocker 1 (matrix item 9): parallel admissions cannot exceed the reserved budget ---
 const store = createMemoryModelRouterStateStore();
@@ -725,7 +696,7 @@ console.log("PACKED PHASE23 SECURITY OK");
   result.security23Out = security23.stdout + security23.stderr;
 
   // 5f. Packed plain-JavaScript host compositions and readiness enforcement (plan 073 Task 5;
-  //     `createSecureAgent` is gone and the readiness report moved to @arnilo/prism-governance in
+  //     `createSecureAgent` is gone and the readiness report moved to @arnilo/prism-extensions/governance in
   //     plan 159 Task 7)
   writeFileSync(
     join(consumer, "host-compositions.mjs"),
@@ -740,7 +711,7 @@ import {
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
-import { assertHostCompositionReadiness, HostCompositionError, inspectHostComposition } from "@arnilo/prism-governance";
+import { assertHostCompositionReadiness, HostCompositionError, inspectHostComposition } from "@arnilo/prism-extensions/governance";
 import { createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { validateJsonSchema } from "@arnilo/prism";
@@ -750,7 +721,7 @@ const createJsonSchemaArgumentValidator = () => ({
     return result.ok ? { ok: true, value: result.value } : { ok: false, errors: result.errors };
   },
 });
-import { serveDevtools } from "@arnilo/prism-devtools";
+import { serveDevtools } from "@arnilo/prism-hosts/devtools";
 
 const canary = "packed-host-composition-secret";
 const redactor = createSecretRedactor([canary]);
@@ -1048,7 +1019,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // Plan 152 Task 8: the provider family workspace is deleted, so no family tarball is packed;
     // the work umbrella still is.
-    assert.ok(result.tarballNames.includes(`arnilo-prism-tools-work-${ROOT_VERSION}.tgz`), "missing tools-work tarball");
+    assert.ok(result.tarballNames.includes(`arnilo-prism-tools-${ROOT_VERSION}.tgz`), "missing tools-work tarball");
     assert.ok(
       !result.tarballNames.some((name) => name.startsWith("arnilo-prism-providers-")),
       "the retired @arnilo/prism-providers workspace must not pack a tarball",
@@ -1126,18 +1097,18 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
       "the retired @arnilo/prism-providers tarball must not be installed",
     );
     assert.ok(truth.umbrella["prism-providers"] === undefined, "the retired family must not appear as an umbrella closure");
-    assert.ok(existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-hyper")), "a standalone adapter must install");
+    assert.ok(existsSync(join(consumer, "node_modules", "@arnilo", "prism-ai")), "a standalone adapter must install");
   });
 
   it("the installed work tarball exports work and document subpaths", () => {
     if (skipIfInstallFailed()) return;
-    const workRoot = join(consumer, "node_modules", "@arnilo", "prism-tools-work");
+    const workRoot = join(consumer, "node_modules", "@arnilo", "prism-tools", "work");
     for (const sub of ["connectors", "documents", "sheets", "diagrams", "document-extraction", "document-reader"]) {
       assert.ok(existsSync(join(workRoot, "src", sub, "index.ts")), `work tarball missing ${sub} subpath`);
     }
     // Plan 182 Task 2: OpenCode Go adapter ships its own src/index.ts.
     assert.ok(
-      existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-opencode-go", "src", "index.ts")),
+      existsSync(join(consumer, "node_modules", "@arnilo", "prism-ai", "opencode-go", "src", "index.ts")),
       "OpenCode Go adapter must ship as its own provider package",
     );
   });

@@ -2,7 +2,7 @@
 // embedder, the in-memory vector store, revocation and repoint helpers); the rest is the shared
 // tier the sibling memory packages import and carries no host promise. Everything else stays
 // inside the package; its own tests import it by relative path. The Postgres stores are the one
-// heavy dependency and live under `@arnilo/prism-memory-core/postgres`.
+// heavy dependency and live under `@arnilo/prism-memory-system/core/postgres`.
 export { assertAccessConstraint } from "./acl.js";
 export type {
   MemoryDirectoryQuery,

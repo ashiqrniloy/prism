@@ -1,6 +1,6 @@
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import memoryCompaction from "@arnilo/prism-memory-compaction";
+import memoryCompaction from "@arnilo/prism-extensions/compaction";
 
 // LLM compaction as a package: it claims the `compaction` slot and summarizes the
 // history a cut drops with one model call per compaction, then appends a

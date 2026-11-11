@@ -192,7 +192,12 @@ export function createDriverLoop<Extra extends object>(
       }
       const lease = guard === undefined ? undefined : await guard.acquire({ profile: spec.profile, config });
       try {
-        await definition.start.run({ run, spec, config, binary, descriptor: definition.descriptor,
+        await definition.start.run({
+          run,
+          spec,
+          config,
+          binary,
+          descriptor: definition.descriptor,
           ...(lease ? { lease } : {}),
           tools: runtime.tools(),
           skills: runtime.skills(),

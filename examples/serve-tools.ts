@@ -5,19 +5,19 @@
  * `session.run` and, for that run's session, it:
  *  - binds a git worktree through the `workspace` service, and materializes the vendor's MCP configuration into
  *    that worktree with `excludeOverlay`, so the file is git-excluded and never reaches a diff or a commit
- *  - serves `read` and `edit` from `@arnilo/prism-tools-coding`, plus the permission tool, with `serveTools`,
+ *  - serves `read` and `edit` from `@arnilo/prism-tools/coding`, plus the permission tool, with `serveTools`,
  *    and lends the one skill those two tools satisfy (a small host skill the example writes, `edit-notes`) as an MCP resource with `skillResources`
  *  - runs the vendor binary (the scripted CLI from `@arnilo/prism/testing`, `jsonl-stream` dialect) over
  *    `loopback-http` first and `stdio-relay` second, handing it the endpoint as `--mcp-endpoint`
  *  - closes the served handle and runs the vendor again, to show a call after `close()` is refused
  * The run shows, in order:
  *  - an allowed `edit`, which changes the file in the worktree because the session is bound to it (Task 7)
- *  - a declined `edit` under `@arnilo/prism-approval` in `ask` mode, whose deny text reaches the vendor
+ *  - a declined `edit` under `@arnilo/prism-extensions/approval` in `ask` mode, whose deny text reaches the vendor
  *  - the permission tool's deny and allow, each one `run.ask` that never executes anything
  *  - a tool outside the allow list, which the vendor cannot see
  *  - the worktree diff, which lists the edit and not the overlay, and a conflicting merge, reported unresolved
- * Imports only `@arnilo/prism`, `@arnilo/prism/driver-kit`, `@arnilo/prism/testing`, `@arnilo/prism-mcp-server`,
- * `@arnilo/prism-tools-coding`, `@arnilo/prism-approval`, and Node built-ins.
+ * Imports only `@arnilo/prism`, `@arnilo/prism/driver-kit`, `@arnilo/prism/testing`, `@arnilo/prism-hosts/mcp-server`,
+ * `@arnilo/prism-tools/coding`, `@arnilo/prism-extensions/approval`, and Node built-ins.
  * Run: npm run build:core && bun examples/serve-tools.ts
  */
 import { type ChildProcessWithoutNullStreams, spawn, spawnSync } from "node:child_process";
@@ -29,39 +29,39 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 import {
   type AgentEvent,
+  createAgent,
+  createMemorySessionStore,
+  definePackage,
   type EventOrigin,
   type JsonValue,
   type PackageInstance,
   type RunController,
-  createAgent,
-  createMemorySessionStore,
-  definePackage,
 } from "@arnilo/prism";
 import {
-  type DriverBinary,
-  type DriverRunContext,
-  type HookCodec,
-  type McpEndpoint,
   buildChildEnv,
   createCallbackBroker,
   createProfiles,
   createRunDirectory,
+  type DriverBinary,
+  type DriverRunContext,
   defineDriver,
   driverPackage,
+  type HookCodec,
+  type McpEndpoint,
   relayCommand,
   signalLadder,
 } from "@arnilo/prism/driver-kit";
 import {
-  type ScriptStep,
-  type ScriptedCli,
-  type ScriptedRecordEntry,
   createScriptedCli,
   createScriptedHostUi,
   jsonlStreamDialect,
+  type ScriptedCli,
+  type ScriptedRecordEntry,
+  type ScriptStep,
 } from "@arnilo/prism/testing";
-import { type ServeToolsTransport, serveTools, skillResources } from "@arnilo/prism-mcp-server";
-import approval from "@arnilo/prism-approval";
-import toolsCoding, { type WorkspaceService } from "@arnilo/prism-tools-coding";
+import approval from "@arnilo/prism-extensions/approval";
+import { type ServeToolsTransport, serveTools, skillResources } from "@arnilo/prism-hosts/mcp-server";
+import toolsCoding, { type WorkspaceService } from "@arnilo/prism-tools/coding";
 
 /** The vendor's MCP configuration, written into the worktree and excluded from git. */
 const MCP_CONFIG = ".mcp.json";
@@ -90,7 +90,7 @@ interface DriverConfig {
 const VENDOR_SCRIPT: readonly ScriptStep[] = [
   // What the vendor can see: the allow list in order, then the permission tool.
   { mcp: { method: "tools/list" } },
-  // An allowed edit. `@arnilo/prism-approval` asks the host; the host approves once, and the file changes.
+  // An allowed edit. `@arnilo/prism-extensions/approval` asks the host; the host approves once, and the file changes.
   { mcp: { method: "tools/call", params: { name: "edit", arguments: { path: "a.txt", edits: [{ oldText: "one", newText: "served" }] } } } },
   // A read is allowed without a prompt, so it costs no host request.
   { mcp: { method: "tools/call", params: { name: "read", arguments: { path: "a.txt" } } } },

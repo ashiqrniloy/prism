@@ -21,7 +21,7 @@ const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.
 const hasDevInspectorPackage = existsSync(join(ROOT, "packages", "prism-dev", "package.json")); // plan 040 dev inspector (omitted from umbrellas)
 const hasPromptPackage = existsSync(join(ROOT, "packages", "prompts", "package.json")); // plan 042 versioned prompt registry (omitted from umbrellas)
 const packages = workspacePackageCounts();
-const hasWorkPackage = packages.has("work"); // plan 083 Task 2 work family; plan 155 Task 5 moved it under packages/tools/
+const hasWorkPackage = packages.has("work") || packages.has("tools"); // plan 083 Task 2 work family; plan 155 Task 5 moved it under packages/tools/
 const hasDocumentsPackage = existsSync(join(ROOT, "packages", "documents", "package.json")); // plan 051 documents engine (omitted from umbrellas)
 const hasSheetsPackage = existsSync(join(ROOT, "packages", "sheets", "package.json")); // plan 052 sheets engine (omitted from umbrellas)
 const hasDiagramsPackage = existsSync(join(ROOT, "packages", "diagrams", "package.json")); // plan 053 diagrams engine (omitted from umbrellas)
@@ -30,7 +30,7 @@ const hasCodingToolsPackage = packages.has("prism-" + "coding-tools");
 const hasCorePackage = packages.has("prism-core");
 // Plan 174 Tasks 6-7: the 0.13 tree has no core, no 0.12 family workspaces, and no umbrella profiles.
 // Branches written for the pre-0.13 shape key off this instead of the retired coding-tools workspace.
-const isThirteen = !hasCodingToolsPackage && !hasCorePackage && packages.has("coding");
+const isThirteen = !hasCodingToolsPackage && !hasCorePackage && (packages.has("coding") || packages.has("tools"));
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -58,61 +58,13 @@ test("counts match manifests at the truth graph", () => {
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
   if (hasWorkPackage) {
-    // Current package set: delegated CLI adapter removed; every first-party provider adapter is a
-    // standalone @arnilo/prism-provider-<vendor> package (plan 152 Tasks 3-6) and the retired
-    // @arnilo/prism-providers umbrella workspace is deleted (plan 152 Task 8).
-    // Plan 152 Task 7: the credentials-slot keyring package is a capability package; plan 153
-    // Tasks 3-5 add the JSONL, codecs, SQLite, and Postgres store packages; plan 154 Task 3 adds
-    // @arnilo/prism-tools-coding, so capability is 15; plan 154 Task 6 adds
-    // @arnilo/prism-approval and Task 7 adds @arnilo/prism-context-files, so capability is 17.
-    // Plan 155 Task 2 adds @arnilo/prism-tools-web, Task 3 adds @arnilo/prism-tools-browser, and
-    // Task 4 adds @arnilo/prism-tools-openapi and @arnilo/prism-tools-computer-use, so capability is 20.
-    // Plan 157 Tasks 3-4 add the compaction and observational-memory packages, so capability is 22;
-    // plan 158 Task 2 adds the shared memory-core library, Task 3 adds memory-rag, Task 4 adds
-    // memory-fabric, and Task 5 adds memory-wiki, so capability is 26. Plan 158 Task 6 deletes the
-    // `@arnilo/prism-memory` family workspace, so publishable was 50, workspace 49, capability 25,
-    // and codeWithPeer 47. Plan 158 Task 7 adds the @arnilo/prism-context-engineering capability
-    // package, so publishable was 51, workspace 50, capability 26, and codeWithPeer 48.
-    // Plan 159 Task 3 adds the @arnilo/prism-mcp-server host library and Task 5 adds the
-    // @arnilo/prism-guardrail-packs capability package, so publishable is 53, workspace 52,
-    // capability 28, and codeWithPeer 50. Plan 159 Task 6 adds the @arnilo/prism-governance
-    // capability package, so publishable is 54, workspace 53, capability 29, and codeWithPeer 51.
-    // Plan 160 Task 2 adds the @arnilo/prism-model-router capability package, so publishable is 55,
-    // workspace 54, capability 30, and codeWithPeer 52. Plan 160 Task 3 adds the
-    // @arnilo/prism-observability capability package, so publishable is 56, workspace 55,
-    // capability 31, and codeWithPeer 53. Plan 160 Task 4 adds the @arnilo/prism-delegate capability
-    // package, so publishable is 57, workspace 56, capability 32, and codeWithPeer 54.
-    // Plan 161 Task 2 adds the @arnilo/prism-acp host library, so publishable is 58,
-    // workspace 57, capability 33, and codeWithPeer 55.
-    // Plans 162 and 166 add evals, devtools, and the process driver. Plan 168 Task 2 adds the
-    // @arnilo/prism-workflows capability package; plans 170-172 add @arnilo/prism-remote,
-    // @arnilo/prism-headless, and @arnilo/prism-tools-research, so publishable is 65, workspace 64,
-    // capability 40, and codeWithPeer 62. Plan 173 Task 8 deletes the Prism Code app workspace, so
-    // publishable is 64, workspace 63, capability 39, codeWithPeer 62, and pureManifest 1.
-    // Plan 174 Task 6 retires the core family package, so publishable is 63, workspace 62,
-    // prismFamily 2, and codeWithPeer 61. Plan 174 Task 7 retires the three 0.12 workspaces,
-    // so publishable is 60, workspace 59, prismFamily 1, capability 37, codeWithPeer 59,
-    // and pureManifest 0. Plan 182 Task 2 retires the 17 provider packages, so publishable is 43,
-    // workspace 42, provider 4, capability 37, codeWithPeer 42, and pureManifest 0.
-    // Plan 195 Task 5 adds the @arnilo/prism-provider-liquid provider package, so provider is 5;
-    // plan 191 Task 8 adds the @arnilo/prism-advisor capability package, so publishable is 45,
-    // workspace 44, capability 38, and codeWithPeer 44.
-    // Plan 203 Task 4 restores OpenRouter as a lockstep provider package.
-    // Plan 204 Task 5 adds the @arnilo/prism-provider-openai-codex provider package, so publishable
-    // is 47, workspace 46, provider 7, capability 38, and codeWithPeer 46.
-    // Plan 205 Task 2 adds the @arnilo/prism-provider-commandcode provider package, so publishable is
-    // 48, workspace 47, provider 8, and codeWithPeer 47. Plan 213 Task 2 adds
-    // @arnilo/prism-provider-kilo: publishable 49, workspace 48, provider 9, codeWithPeer 48.
-    // Plan 214 Task 2 adds @arnilo/prism-provider-litellm: publishable 50, workspace 49, provider 10,
-    // codeWithPeer 49. Plan 206 Task 2 adds @arnilo/prism-provider-ollama-cloud: publishable 51,
-    // workspace 50, provider 11, codeWithPeer 50. Plan 215 Task 14 adds @arnilo/prism-host-builder:
-    // publishable 52, workspace 51, capability 39, codeWithPeer 51.
-    assert.equal(t.counts.publishable, 52);
-    assert.equal(t.counts.workspace, 51);
+    // Plan 224: one kernel and six bundles; provider entries remain individual subpaths.
+    assert.equal(t.counts.publishable, 7);
+    assert.equal(t.counts.workspace, 6);
     assert.equal(t.counts.provider, 11);
-    assert.equal(t.counts.prismFamily, 1);
-    assert.equal(t.counts.capability, 39);
-    assert.equal(t.counts.codeWithPeer, 51);
+    assert.equal(t.counts.prismFamily, 0);
+    assert.equal(t.counts.capability, 6);
+    assert.equal(t.counts.codeWithPeer, 6);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
@@ -175,7 +127,11 @@ test("profile closures match manifests", () => {
     for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
       assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
     }
-    for (const name of ["@arnilo/prism-workflows", "@arnilo/prism-credentials-node", "@arnilo/prism-observability-opentelemetry"]) {
+    for (const name of [
+      "@arnilo/prism-extensions/workflows",
+      "@arnilo/prism-credentials-node",
+      "@arnilo/prism-observability-opentelemetry",
+    ]) {
       assert.ok(t.profiles["prism-sdk"].includes(name), `prism-sdk closure includes ${name}`);
     }
   }
@@ -252,38 +208,38 @@ test("peer policy Decision B: all code packages peer the 0.x kernel window", () 
     assert.equal(p.devDependencies?.["@arnilo/prism"], undefined, `${p.name} must not carry a file: kernel devDependency`);
   }
   if (hasCodingToolsPackage || isThirteen) {
-    // Plan 054 Task 6: the provider family is now a code package with a core peer.
+    // Bundle manifests own peer declarations; sibling subpaths share one install unit.
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp"],
-      "@arnilo/prism-tools-coding": ["@arnilo/prism-workflows"], // plan 168 Task 7: the goal→verify helper runs the workflow engine
-      "@arnilo/prism-rag": ["@arnilo/prism-tools-web"], // type-only optional peer: the web.fetch service shape
-      "@arnilo/prism-wiki": ["@arnilo/prism-tools-web"], // type-only optional peer: the web.fetch service shape. No memory peer: the wiki runs without memory (plan 216 Task 3)
-      "@arnilo/prism-tools-web": ["@arnilo/prism-mcp"],
-      "@arnilo/prism-tools-computer-use": ["@arnilo/prism-mcp"],
+      "@arnilo/prism-tools": ["@arnilo/prism-extensions"],
+      "@arnilo/prism-knowledge": ["@arnilo/prism-tools"],
     });
   } else if (hasCorePackage) {
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp"],
+      "@arnilo/prism-hosts/ag-ui": ["@arnilo/prism-extensions"],
       "@arnilo/prism-coding-agent": [],
       "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
-      ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
-      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui"] } : {}),
+      ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-extensions/mcp"] } : {}),
+      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-hosts/ag-ui"] } : {}),
       "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
-      ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
-      "@arnilo/prism-rag": ["@arnilo/prism-memory"],
+      ...(hasObscuraPackage
+        ? { "@arnilo/prism-obscura": ["@arnilo/prism-extensions/mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] }
+        : {}),
+      "@arnilo/prism-knowledge/rag": ["@arnilo/prism-memory"],
     });
   } else {
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp", "@arnilo/prism-supervisor"],
-      "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
+      "@arnilo/prism-hosts/ag-ui": ["@arnilo/prism-extensions/mcp", "@arnilo/prism-supervisor"],
+      "@arnilo/prism-coding-agent": ["@arnilo/prism-extensions/workflows"],
       "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
-      ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
-      ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
-      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-server"] } : {}),
+      ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-extensions/mcp"] } : {}),
+      ...(hasObscuraPackage
+        ? { "@arnilo/prism-obscura": ["@arnilo/prism-extensions/mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] }
+        : {}),
+      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-hosts/ag-ui", "@arnilo/prism-server"] } : {}),
       "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
-      "@arnilo/prism-rag": ["@arnilo/prism-memory"],
-      "@arnilo/prism-server": ["@arnilo/prism-workflows"],
-      ...(hasPromptPackage ? { "@arnilo/prism-prompts": ["@arnilo/prism-evals"] } : {}),
+      "@arnilo/prism-knowledge/rag": ["@arnilo/prism-memory"],
+      "@arnilo/prism-server": ["@arnilo/prism-extensions/workflows"],
+      ...(hasPromptPackage ? { "@arnilo/prism-prompts": ["@arnilo/prism-hosts/evals"] } : {}),
     });
   }
   // Plan 107 Task 2 removed the caveman/ponytail persona subpaths and their optional peer; plan 174

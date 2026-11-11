@@ -58,7 +58,10 @@ test("cache_refresh_bypasses", async () => {
 test("cache_entries_expire_after_ttl", async () => {
   let now = 1_000;
   const { adapter, calls } = countingFetch();
-  const fetch = withFetchCache(adapter, createFetchCache(annotated({ ttlSeconds: 60 }), () => now));
+  const fetch = withFetchCache(
+    adapter,
+    createFetchCache(annotated({ ttlSeconds: 60 }), () => now),
+  );
   await fetch.fetch("https://example.com/doc", { sessionId: "s" });
   now += 60_000;
   await fetch.fetch("https://example.com/doc", { sessionId: "s" });
@@ -165,5 +168,12 @@ test("web_fetch_exposes_refresh_only_with_cache_config", async () => {
 });
 
 function page(url: string): WebDocument {
-  return { citationId: `web:native:${url}`, provider: "native", url, markdown: "page", retrievedAt: new Date().toISOString(), untrusted: true };
+  return {
+    citationId: `web:native:${url}`,
+    provider: "native",
+    url,
+    markdown: "page",
+    retrievedAt: new Date().toISOString(),
+    untrusted: true,
+  };
 }

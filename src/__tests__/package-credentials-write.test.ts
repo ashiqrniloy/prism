@@ -21,7 +21,9 @@ const pkg = (name: string, setup: (api: any) => void, extra: Record<string, unkn
   definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra }) as PackageInput;
 
 /** A credentials slot that records writes; `store`/`delete` are omitted when asked. */
-const recordingSlot = (options: { store?: boolean; delete?: boolean } = {}): { resolver: CredentialResolver; writes: Array<[string, unknown]> } => {
+const recordingSlot = (
+  options: { store?: boolean; delete?: boolean } = {},
+): { resolver: CredentialResolver; writes: Array<[string, unknown]> } => {
   const writes: Array<[string, unknown]> = [];
   const resolver: CredentialResolver = {
     resolve: () => undefined,
@@ -39,10 +41,7 @@ const recordingSlot = (options: { store?: boolean; delete?: boolean } = {}): { r
   return { resolver, writes };
 };
 
-const load = async (
-  user: PackageInput,
-  options: { slot?: CredentialResolver; secrets?: string[] } = {},
-): Promise<void> => {
+const load = async (user: PackageInput, options: { slot?: CredentialResolver; secrets?: string[] } = {}): Promise<void> => {
   const slots = createSlotRegistry({ ...createSlotDefaults(), ...(options.slot ? { credentials: options.slot } : {}) });
   await loadPackages({
     inputs: [user],

@@ -1,6 +1,6 @@
-# @arnilo/prism-rag
+# @arnilo/prism-knowledge/rag
 
-> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-rag@experimental`. Outside the
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-knowledge@experimental`. Outside the
 > [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
 > config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
@@ -11,24 +11,24 @@ Retrieval-augmented generation for Prism agents: index local files or URLs, quer
 
 The package owns the whole 0.12 RAG library — chunking, hybrid retrieval, reciprocal-rank fusion,
 reranking (TEI, hosted, local), connectors, knowledge sync, and the ingestion-status store — behind
-one entry point. It consumes `web.fetch` from `@arnilo/prism-tools-web` for URL sources and never
+one entry point. It consumes `web.fetch` from `@arnilo/prism-tools/web` for URL sources and never
 fetches a URL itself.
 
 ## Install
 
 ```bash
-bun add @arnilo/prism-rag@experimental @arnilo/prism
+bun add @arnilo/prism-knowledge@experimental @arnilo/prism
 ```
 
 An embedding model comes from a host-registered provider (registered via
-`prism.providers.register(...)` or a host provider package); a URL source needs `@arnilo/prism-tools-web` for `web.fetch`.
+`prism.providers.register(...)` or a host provider package); a URL source needs `@arnilo/prism-tools/web` for `web.fetch`.
 
 ## Usage
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import memoryRag from "@arnilo/prism-rag";
-import hyper from "@arnilo/prism-provider-hyper";
+import memoryRag from "@arnilo/prism-knowledge/rag";
+import hyper from "@arnilo/prism-ai/hyper";
 
 const agent = await createAgent({
   model: "hyper/hyper",

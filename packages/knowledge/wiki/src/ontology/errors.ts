@@ -1,4 +1,4 @@
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 /** A concept body or an edit batch failed validation; `reason` is a stable code, never model text. */
 export class ConceptFormatError extends MemoryValidationError {

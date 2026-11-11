@@ -36,7 +36,11 @@ describe("prism bin", () => {
   it("prism_bin_dispatches_manifest_and_relay", async () => {
     const out = sink();
     const err = sink();
-    const code = await runManifestCommand(["list"], { stdout: out.stream, stderr: err.stream, cwd: await mkdtemp(join(tmpdir(), "prism-list-")) });
+    const code = await runManifestCommand(["list"], {
+      stdout: out.stream,
+      stderr: err.stream,
+      cwd: await mkdtemp(join(tmpdir(), "prism-list-")),
+    });
     assert.equal(code, 0);
     assert.match(out.text(), /No packages are installed/);
 

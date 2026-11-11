@@ -5,10 +5,10 @@ import type { ProviderRequest, SystemPromptContribution } from "@arnilo/prism";
 import { composeSystemPrompt, createAgent, providerDone } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMockProvider } from "@arnilo/prism/testing";
-import { contextFiles, readContextFileLayers } from "@arnilo/prism-context-files";
+import { contextFiles, readContextFileLayers } from "@arnilo/prism-extensions/context-files";
 
 // Context files: AGENTS.md (workspace, source: app) and SYSTEM.md (source: user) load as
-// system-prompt layers through `@arnilo/prism-context-files`, which registers one
+// system-prompt layers through `@arnilo/prism-extensions/context-files`, which registers one
 // `context.build` handler and composes them with `AgentConfig.instructions` (the base) via the
 // kernel's `composeSystemPrompt`. The package is trust-gated, reads no home directory unless
 // `globalRoot` is set, and caches the files per session.

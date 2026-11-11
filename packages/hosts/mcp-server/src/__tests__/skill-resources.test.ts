@@ -67,7 +67,7 @@ describe("skillResources", () => {
     const text = resources[0]?.text ?? "";
     assert.match(
       text,
-      /^---\nname: "web-research"\ndescription: .*\nmetadata:\n  prism-requires-tools: "web_fetch"\n---\n\n# Web research/,
+      /^---\nname: "web-research"\ndescription: .*\nmetadata:\n {2}prism-requires-tools: "web_fetch"\n---\n\n# Web research/,
     );
     // The rendered file parses back to the same skill: name, description, requirement, and body.
     const reparsed = parseSkillFile(text, "/lent/SKILL.md");
@@ -76,6 +76,40 @@ describe("skillResources", () => {
     assert.deepEqual(reparsed.requiresTools, ["web_fetch"]);
     assert.equal(reparsed.instructions, original.instructions);
     assert.doesNotMatch(text, /\/skills\/web-research/, "the source path is never sent");
+  });
+
+  it("skill_metadata_lists_and_empty_collections_are_preserved", () => {
+    const original = skill({
+      name: "metadata",
+      requiresTools: ["read"],
+      metadata: {
+        tags: ["read", "edit"],
+        examples: [{ tool: "read", count: 1 }],
+        empty: [],
+        policy: { "quoted key": {} },
+      },
+    });
+    const { resources } = skillResources([original], ["read"]);
+    assert.ok(resources[0]);
+    assert.equal(
+      resources[0].text,
+      [
+        "---",
+        'name: "metadata"',
+        'description: "Use when testing."',
+        "tags:",
+        '  - "read"',
+        '  - "edit"',
+        "examples:",
+        '  - {"tool":"read","count":1}',
+        "empty: []",
+        "policy:",
+        '  "quoted key": {}',
+        "---",
+        "",
+        original.instructions,
+      ].join("\n"),
+    );
   });
 
   it("skill_resources_are_deterministic_and_keep_the_first_duplicate", () => {

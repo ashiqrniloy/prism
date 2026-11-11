@@ -1,4 +1,4 @@
-# @arnilo/prism-mcp-server
+# @arnilo/prism-hosts/mcp-server
 
 Host library serving a Prism **agent** over the Model Context Protocol (MCP).
 
@@ -11,7 +11,7 @@ same transport helpers.
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { mcpHost, serveMcp } from "@arnilo/prism-mcp-server";
+import { mcpHost, serveMcp } from "@arnilo/prism-hosts/mcp-server";
 
 const agent = await createAgent({ model, packages, host: mcpHost() });
 await serveMcp(agent, { stdio: true }).closed;
@@ -39,7 +39,7 @@ the internal loop uses. It is what a Prism *driver* hands its vendor binary; the
 neutral `endpoint` into its own MCP configuration.
 
 ```ts
-import { serveTools } from "@arnilo/prism-mcp-server";
+import { serveTools } from "@arnilo/prism-hosts/mcp-server";
 
 const served = await serveTools(run, {
   broker,
@@ -107,7 +107,7 @@ redacted ones.
 `skillResources(skills, servedToolNames)` turns the skills that go with the served tools into `resources` entries, so a vendor agent that lists MCP resources can read how to use what it was lent. A driver passes its run context's skills and the same list it gives `serveTools` as `allow`:
 
 ```ts
-import { serveTools, skillResources } from "@arnilo/prism-mcp-server";
+import { serveTools, skillResources } from "@arnilo/prism-hosts/mcp-server";
 
 const lent = skillResources(context.skills.list(), allow);
 const served = await serveTools(run, { broker, tools: context.tools, allow, transport: "loopback-http", origin, resources: lent.resources });
@@ -207,7 +207,7 @@ materializes the vendor's MCP configuration into it with `excludeOverlay` (so th
 a diff), and serves `read`, `edit`, and the permission tool with `serveTools` — first over
 `loopback-http`, then over `stdio-relay` — driving the scripted `jsonl-stream` CLI as the vendor
 binary through `--mcp-endpoint`. It prints, per transport: the served names, an allowed `edit` that
-changes the file in the worktree, a declined `edit` under `@arnilo/prism-approval` in `ask` mode, the
+changes the file in the worktree, a declined `edit` under `@arnilo/prism-extensions/approval` in `ask` mode, the
 permission tool's `deny` and `allow`, an unserved name as a JSON-RPC error, a call after `close()`
 refused, and the served calls' `origin` on the run's events. Then the worktree diff (the edit, not
 the overlay) and a conflicting `merge` reported unresolved. `bun examples/serve-tools.ts` prints the
@@ -215,3 +215,5 @@ result as JSON; the served environment is printed as `[redacted]`, never with th
 
 `examples/external-agent.ts` is the Phase 13 counterpart: it bridges tools to a vendor through the
 broker's MCP route itself, without `serveTools`.
+
+Protocol dependencies are optional peers of `@arnilo/prism-hosts`. Install `@modelcontextprotocol/server@^2.3.0` and `zod@^4.6.2`. Protocol entrypoints require these peers; see the [bundle dependency table](../README.md).

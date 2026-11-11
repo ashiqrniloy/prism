@@ -14,13 +14,24 @@ function note(fields: Partial<Omit<MemoryNoteMetadata, "v">> = {}): MemoryNoteMe
 
 describe("lifecycle inspection (plan 188.4 Further Action 4)", () => {
   it("shows_both_strengths_and_the_use_log", () => {
-    const metadata = note({ uses: [{ s: 12, at: "2026-01-01T00:00:00.000Z" }, { s: 40, at: "2026-01-02T00:00:00.000Z" }], useSessions: 2, created: 12 });
+    const metadata = note({
+      uses: [
+        { s: 12, at: "2026-01-01T00:00:00.000Z" },
+        { s: 40, at: "2026-01-02T00:00:00.000Z" },
+      ],
+      useSessions: 2,
+      created: 12,
+    });
     const view = inspectNote({ id: "aaaaaaaaaaaa", metadata, status: "verified", clock: 42 });
     assert.equal(view.status, "verified");
-    assert.deepEqual(view.uses, [
-      { s: 12, at: "2026-01-01T00:00:00.000Z" },
-      { s: 40, at: "2026-01-02T00:00:00.000Z" },
-    ], "the log is shown as recorded");
+    assert.deepEqual(
+      view.uses,
+      [
+        { s: 12, at: "2026-01-01T00:00:00.000Z" },
+        { s: 40, at: "2026-01-02T00:00:00.000Z" },
+      ],
+      "the log is shown as recorded",
+    );
     assert.equal(view.useSessions, 2);
     // R = ln(3^-0.4 + 31^-0.4) at clock 42; S = 0.5·ln(1 + 2) with the default weights.
     const storage = Math.log(3) / 2;

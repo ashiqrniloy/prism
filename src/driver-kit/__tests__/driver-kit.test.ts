@@ -4,7 +4,16 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, definePackage, type ToolDefinition } from "../../index.js";
-import { createDriverLoop, createProfiles, defineDriver, driverPackage, type DriverDescriptor, type DriverRequires, type DriverRunContext, type DriverRuntime } from "../index.js";
+import {
+  createDriverLoop,
+  createProfiles,
+  defineDriver,
+  driverPackage,
+  type DriverDescriptor,
+  type DriverRequires,
+  type DriverRunContext,
+  type DriverRuntime,
+} from "../index.js";
 
 const runtime = {
   tools: () => [],
@@ -185,7 +194,12 @@ describe("driver kit", () => {
       requires: { api: 1 },
       capabilities: [],
       async setup(prism) {
-        prism.tools.register({ name: "other_tool", description: "x", parameters: { type: "object", properties: {} }, execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "other_tool", value: null }) } as ToolDefinition);
+        prism.tools.register({
+          name: "other_tool",
+          description: "x",
+          parameters: { type: "object", properties: {} },
+          execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "other_tool", value: null }),
+        } as ToolDefinition);
         prism.skills.register({ name: "other-skill", description: "x", instructions: "y" });
         prism.services.provide("other-service", { ok: true });
       },

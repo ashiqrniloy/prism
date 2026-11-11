@@ -13,7 +13,7 @@ import type { ResearchCitation, ResearchFinding, ResearchPlan, ResearchReport } 
 
 export interface ResearchWorkflowOptions {
   readonly maxIterations?: number;
-  readonly searchAdapter?: import("@arnilo/prism-tools-web").WebSearchAdapter;
+  readonly searchAdapter?: import("@arnilo/prism-tools/web").WebSearchAdapter;
   readonly onEvent?: (event: WorkflowEvent) => void;
   readonly onClarify?: (question: string, choices: readonly string[]) => Promise<string>;
 }

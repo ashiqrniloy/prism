@@ -19,7 +19,8 @@ export interface UsageLike {
 export function mapUsage(raw: UsageLike): Usage {
   const inputTokens = count(raw.input);
   const outputTokens = count(raw.output);
-  const totalTokens = count(raw.total) ?? (inputTokens !== undefined || outputTokens !== undefined ? (inputTokens ?? 0) + (outputTokens ?? 0) : undefined);
+  const totalTokens =
+    count(raw.total) ?? (inputTokens !== undefined || outputTokens !== undefined ? (inputTokens ?? 0) + (outputTokens ?? 0) : undefined);
   const cacheReadTokens = count(raw.cacheRead);
   const cacheWriteTokens = count(raw.cacheWrite);
   const cost = count(raw.cost);

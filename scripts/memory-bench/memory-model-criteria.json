@@ -7,7 +7,7 @@
   "ownerDecisions": {
     "memoryModel": {
       "date": "2026-11-08",
-      "decision": "one memory system modelled on human memory (STM -> WM -> Rehearsal -> LTM, plus Sleep), in @arnilo/prism-memory-system; the ontology moves to the wiki (@arnilo/prism-wiki), outside memory",
+      "decision": "one memory system modelled on human memory (STM -> WM -> Rehearsal -> LTM, plus Sleep), in @arnilo/prism-memory-system; the ontology moves to the wiki (@arnilo/prism-knowledge/wiki), outside memory",
       "reason": "docs/_evidence/memory-model/design.md; roadmap Phase 11 \"Memory model (owner decision 2026-11-08)\"."
     },
     "rulesFirst": {
@@ -24,6 +24,16 @@
       "date": "2026-11-08",
       "decision": "each gate runs on the providers of plan 210 gate C-1 unless the owner names others; never openrouter/free",
       "reason": "Design section 9; the 0.13.0 release owner decisions."
+    },
+    "m1DevPersonas": {
+      "date": "2026-11-10",
+      "decision": "the long-session family's dev partition gains ls12-ls23 (16 personas, 32 related tasks per answer model); the first twelve personas, their three-way draw and the held-out partitions are unchanged",
+      "reason": "Owner, 2026-11-10: \"Once 3 is done, I would do 1 and 2 together\" (option 2: more dev personas). With 4 dev personas S1's paired interval was about +/-1.6 calls per related task (DeepSeek +0.375 [-1.25, 2.0]), so the row could not resolve an effect of that size."
+    },
+    "m1S3Deferred": {
+      "date": "2026-11-10",
+      "decision": "gate M-1 defers row S3 (QA accuracy, non-inferior to OM-before) to gate A, which reads S3 on the held-out partition under the same row; M-1 is decided by S1, S2 and S4",
+      "reason": "Owner, 2026-11-10: \"Let's do run 1-4 and go with option B\". Gate C-1's paired arms on these dev cohorts (40-50 questions) had 95% intervals of about +/-7 to +/-13 points, so S3's lower bound of -2 cannot be resolved at development size, and the full cohort costs about $110 and 5 days at the account's concurrency."
     }
   },
   "pins": {
@@ -103,7 +113,7 @@
     }
   },
   "gates": {
-    "M-1": { "plan": 217, "component": "STM", "record": "docs/_evidence/memory-bench/217/gates/owner-gate-m1.json", "rows": ["S1", "S2", "S3", "S4"] },
+    "M-1": { "plan": 217, "component": "STM", "record": "docs/_evidence/memory-bench/217/gates/owner-gate-m1.json", "rows": ["S1", "S2", "S3", "S4"], "deferred": { "S3": { "to": "A", "decision": "m1S3Deferred" } } },
     "M-2": { "plan": 218, "component": "WM", "record": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json", "rows": ["M1", "M2", "M3", "M4", "M5"] },
     "M-3": { "plan": 219, "component": "Rehearsal", "record": "docs/_evidence/memory-bench/219/gates/owner-gate-m3.json", "rows": ["R1", "R2", "R3", "R4", "R5", "R6"] },
     "M-T": { "plan": "219.1", "component": "Retrieval", "record": "docs/_evidence/memory-bench/219.1/gates/owner-gate-mt.json", "rows": ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"] },
@@ -407,7 +417,7 @@
       "conversational+O": "ltm+wiki",
       "coding+O": "coding+wiki"
     },
-    "mappingRule": "`ltm+wiki` is the `ltm` profile of @arnilo/prism-memory-system with @arnilo/prism-wiki; the base arm of each pairing is the same configuration without the wiki"
+    "mappingRule": "`ltm+wiki` is the `ltm` profile of @arnilo/prism-memory-system with @arnilo/prism-knowledge/wiki; the base arm of each pairing is the same configuration without the wiki"
   },
   "acceptance": {
     "gate": "A",
@@ -424,7 +434,7 @@
     "rule": "each fixture is built by its owner plan, frozen, and its hash added by an amendment before the gate that reads it; dataset-derived text stays in the gitignored bench cache, evidence holds hashes",
     "index": [
       { "id": "long-session-replay", "kind": "offline", "plan": 217, "spec": "offline long-session coding replay, >= 6 tasks and >= 200 entries", "extendedBy": { "218": ["re-plan", "protected items"], "219": ["preference stated once", "superseded fact"], "220": ["repeated benign event", "repeated failure"], "221": ["episode:end"] }, "hash": "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3", "hashOf": "scripts/memory-bench/fixtures/memory-model/long-session/index.json" },
-      { "id": "long-session", "kind": "live", "plan": 217, "spec": "live long-session coding family, added to the work-outcome runner", "hash": "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674", "hashOf": "scripts/memory-bench/work-outcome-long-session.json" },
+      { "id": "long-session", "kind": "live", "plan": 217, "spec": "live long-session coding family, added to the work-outcome runner", "hash": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d", "hashOf": "scripts/memory-bench/work-outcome-long-session.json" },
       { "id": "re-plan", "kind": "live", "plan": 218, "spec": "live re-plan family (a mid-episode re-plan), added to the work-outcome runner", "hash": null },
       { "id": "recurring-failure", "kind": "live", "plan": 220, "spec": "live recurring-failure family (a repeated failure signature), added to the work-outcome runner", "hash": null },
       { "id": "multi-session-lifecycle", "kind": "offline+live", "plan": "219, 221", "spec": "multi-session lifecycle built on plan 202 Task 16's offline lifecycle suite (scripts/memory-bench/lifecycle)", "hash": null },
@@ -449,6 +459,22 @@
       "plan": 217,
       "task": 6,
       "reason": "fixtures.rule: the two plan 217 fixtures gate M-1 reads get their hashes before the gate (long-session-replay: the sha256 of its index.json, which pins session.json and annotations.json; long-session: the sha256 of its frozen partition file). No row, threshold or partition changes."
+    },
+    {
+      "previousHash": "f99907bd939cade310204dcca5e9adefeec2ee442a2f89205a31ecc53205479e",
+      "date": "2026-11-10",
+      "plan": 217,
+      "task": 6,
+      "kind": "owner-decision",
+      "reason": "ownerDecisions.m1S3Deferred: gate M-1 lists S3 under deferred (to gate A). The S3 row, its tests, thresholds and partitions are unchanged; gate A still reads it."
+    },
+    {
+      "previousHash": "9ed0adf03609287da27442612b02d55f0290e75df86d504a66ee7ec08cf896ce",
+      "date": "2026-11-10",
+      "plan": 217,
+      "task": 6,
+      "kind": "owner-decision",
+      "reason": "ownerDecisions.m1DevPersonas: the long-session fixture hash moves to the extended partition file (dev 16 personas; base draw idsHash db5632ff... and the held-out ids unchanged). No row, threshold or partition rule changes."
     }
   ]
 }

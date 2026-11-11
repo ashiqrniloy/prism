@@ -6,7 +6,7 @@
  * A suspension is the durable unit: the run writes one self-contained `suspended_run` entry through
  * the store slot, and `session.resume(decisions)` continues it. The retired host checkpoint store,
  * its CAS/version surface, and the `every-turn` crash-recovery cadence are covered by the
- * `@arnilo/prism-workflows` conformance instead.
+ * `@arnilo/prism-extensions/workflows` conformance instead.
  */
 
 import { describe, it } from "bun:test";

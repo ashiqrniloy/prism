@@ -1,1 +1,5 @@
-{"name":"lifecycle-gamma","private":true,"type":"module"}
+{
+  "name": "lifecycle-gamma",
+  "private": true,
+  "type": "module"
+}

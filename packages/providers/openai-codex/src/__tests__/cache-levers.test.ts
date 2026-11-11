@@ -56,7 +56,7 @@ it("cache_levers_match_pi_openai_chatgpt", async () => {
     }) as typeof fetch,
   });
 
-  for (const [index, count] of fixture.turnMessageCounts.entries()) {
+  for (const [_index, count] of fixture.turnMessageCounts.entries()) {
     const request: ProviderRequest = {
       model,
       messages: messagesFor(count),

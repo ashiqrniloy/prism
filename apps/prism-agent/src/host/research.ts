@@ -1,18 +1,18 @@
 import { type Agent, createAgent } from "@arnilo/prism";
-import { approvalPackage } from "@arnilo/prism-approval";
-import contextEngineering from "@arnilo/prism-context-engineering";
-import compaction from "@arnilo/prism-memory-compaction";
-import { memoryRag } from "@arnilo/prism-rag";
-import { toolsBrowser } from "@arnilo/prism-tools-browser";
-import { toolsResearch } from "@arnilo/prism-tools-research";
-import { toolsWeb } from "@arnilo/prism-tools-web";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
+import compaction from "@arnilo/prism-extensions/compaction";
+import contextEngineering from "@arnilo/prism-extensions/context-engineering";
+import { memoryRag } from "@arnilo/prism-knowledge/rag";
+import { toolsBrowser } from "@arnilo/prism-tools/browser";
+import { toolsResearch } from "@arnilo/prism-tools/research";
+import { toolsWeb } from "@arnilo/prism-tools/web";
 import type { HostConfig, HostDeps } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
 import { memoryProfileFor } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
 import { sqlitePackage } from "./store.js";
 
-const COMPACTION = "@arnilo/prism-memory-compaction";
+const COMPACTION = "@arnilo/prism-extensions/compaction";
 
 /**
  * Network and read tools the research worker may run without a prompt. Browser writes stay ask.

@@ -1,0 +1,132 @@
+{
+  "name": "@arnilo/prism-hosts",
+  "version": "0.13.0",
+  "description": "Prism host libraries, process driver and version-exact host-builder kit. Import each library through its subpath.",
+  "type": "module",
+  "exports": {
+    "./mcp-server": "./mcp-server/src/index.ts",
+    "./acp": "./acp/src/index.ts",
+    "./ag-ui": "./ag-ui/src/index.ts",
+    "./ag-ui/renderer": "./ag-ui/src/renderer/index.ts",
+    "./channels": "./channels/src/index.ts",
+    "./channels/telegram": "./channels/src/telegram.ts",
+    "./channels/signal": "./channels/src/signal.ts",
+    "./evals": "./evals/src/index.ts",
+    "./devtools": "./devtools/src/index.ts",
+    "./remote": "./remote/src/index.ts",
+    "./remote/testing": "./remote/src/testing.ts",
+    "./headless": "./headless/src/index.ts",
+    "./host-builder": "./host-builder/src/index.ts",
+    "./driver-process": "./driver-process/src/index.ts",
+    "./driver-process/testing": "./driver-process/src/testing.ts"
+  },
+  "files": [
+    "mcp-server/src",
+    "!mcp-server/src/**/__tests__",
+    "mcp-server/README.md",
+    "acp/src",
+    "!acp/src/**/__tests__",
+    "acp/README.md",
+    "ag-ui/src",
+    "!ag-ui/src/**/__tests__",
+    "ag-ui/README.md",
+    "channels/src",
+    "!channels/src/**/__tests__",
+    "channels/README.md",
+    "evals/src",
+    "!evals/src/**/__tests__",
+    "evals/README.md",
+    "devtools/src",
+    "!devtools/src/**/__tests__",
+    "devtools/bin",
+    "devtools/README.md",
+    "remote/src",
+    "!remote/src/**/__tests__",
+    "remote/README.md",
+    "headless/src",
+    "!headless/src/**/__tests__",
+    "headless/README.md",
+    "host-builder/src",
+    "!host-builder/src/**/__tests__",
+    "host-builder/bin",
+    "host-builder/data",
+    "host-builder/skills",
+    "host-builder/README.md",
+    "driver-process/src",
+    "!driver-process/src/**/__tests__",
+    "driver-process/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 mcp-server/src acp/src ag-ui/src channels/src evals/src devtools/src remote/src headless/src host-builder/src driver-process/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:postgres": "bun ../../scripts/require-postgres-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --timeout=0 channels/src/__tests__/postgres.integration.test.ts",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@agentclientprotocol/sdk": "1.4.0",
+    "@ag-ui/core": "0.0.59",
+    "@modelcontextprotocol/server": "^2.3.0",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.0",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2",
+    "@arnilo/prism-extensions": "workspace:*",
+    "@arnilo/prism-tools": "workspace:*",
+    "@ag-ui/client": "0.0.59",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "@agentclientprotocol/sdk": "1.4.0",
+    "@ag-ui/core": "0.0.59",
+    "@modelcontextprotocol/server": "^2.3.0",
+    "zod": "^4.6.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/hosts"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/hosts#readme",
+  "keywords": [
+    "prism",
+    "hosts",
+    "agents"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "prism-devtools": "./devtools/bin/prism-devtools.ts",
+    "prism-host-builder": "./host-builder/bin/prism-host-builder.ts"
+  },
+  "dependencies": {
+    "@arnilo/prism-extensions": "^0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "@agentclientprotocol/sdk": {
+      "optional": true
+    },
+    "@ag-ui/core": {
+      "optional": true
+    },
+    "@modelcontextprotocol/server": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  }
+}

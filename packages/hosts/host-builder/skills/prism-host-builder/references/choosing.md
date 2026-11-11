@@ -8,18 +8,18 @@ defaults live in the README, not here: they change, and the README is version-ex
 A host library serves or drives an agent from outside. It is imported by host code and is never listed in `packages`.
 The index is `node_modules/@arnilo/prism/docs/index.md` under "Host libraries".
 
-- No UI, jobs, cron, or answers arrive from chat or another process: `@arnilo/prism-headless` routes `HostUi`
+- No UI, jobs, cron, or answers arrive from chat or another process: `@arnilo/prism-hosts/headless` routes `HostUi`
   requests and schedules agent or workflow runs. Example: `examples/headless-host.ts`.
-- An editor speaks the Agent Client Protocol: `@arnilo/prism-acp` (`serveAcp`). Example: `examples/acp.ts`.
-- A browser UI speaks AG-UI over SSE: `@arnilo/prism-ag-ui`. Example: `examples/ag-ui-server.ts`.
-- An MCP client should call the agent: `@arnilo/prism-mcp-server` (`serveMcp`). Example: `examples/mcp-server.ts`.
+- An editor speaks the Agent Client Protocol: `@arnilo/prism-hosts/acp` (`serveAcp`). Example: `examples/acp.ts`.
+- A browser UI speaks AG-UI over SSE: `@arnilo/prism-hosts/ag-ui`. Example: `examples/ag-ui-server.ts`.
+- An MCP client should call the agent: `@arnilo/prism-hosts/mcp-server` (`serveMcp`). Example: `examples/mcp-server.ts`.
   To hand a vendor agent your tools instead, use `serveTools`; example: `examples/serve-tools.ts`.
-- People talk to it in Telegram or Signal: `@arnilo/prism-channels`. Examples: `examples/telegram-agent.ts`,
+- People talk to it in Telegram or Signal: `@arnilo/prism-hosts/channels`. Examples: `examples/telegram-agent.ts`,
   `examples/signal-agent.ts`.
-- Another process or machine calls it: `@arnilo/prism-remote` serves and connects (`prism.remote/1`). Examples:
+- Another process or machine calls it: `@arnilo/prism-hosts/remote` serves and connects (`prism.remote/1`). Examples:
   `examples/remote-agent-server.ts`, `examples/remote-agent.ts`.
-- You want to see events and state while developing: `@arnilo/prism-devtools` (a loopback inspector; do not expose it).
-- You are scoring behavior: `@arnilo/prism-evals`. Example: `examples/evals.ts`.
+- You want to see events and state while developing: `@arnilo/prism-hosts/devtools` (a loopback inspector; do not expose it).
+- You are scoring behavior: `@arnilo/prism-hosts/evals`. Example: `examples/evals.ts`.
 
 Several can serve the same agent. Each needs the host to answer approvals, so settle the approval route first
 (see "Approval" below).
@@ -28,15 +28,15 @@ Several can serve the same agent. Each needs the host to answer approvals, so se
 
 The `store` slot holds sessions. The kernel default is in memory and lost on exit.
 
-- Single process, a file is enough: `@arnilo/prism-store-jsonl`.
-- Single machine, queries, durable approvals and resume: `@arnilo/prism-store-sqlite`. Example:
+- Single process, a file is enough: `@arnilo/prism-extensions/store-jsonl`.
+- Single machine, queries, durable approvals and resume: `@arnilo/prism-extensions/store-sqlite`. Example:
   `examples/sqlite-resume.ts`.
-- Several processes or machines, backups, enterprise state: `@arnilo/prism-store-postgres`. Read
+- Several processes or machines, backups, enterprise state: `@arnilo/prism-extensions/store-postgres`. Read
   `node_modules/@arnilo/prism/docs/operations.md` before you rely on it.
 - A product database of your own: implement `SessionStore` and run `storeConformance`. Example:
   `examples/custom-session-store.ts`. Details in `node_modules/@arnilo/prism/docs/slots.md`.
 
-`@arnilo/prism-store-codecs` is a shared library, not a store. Do not list it.
+`@arnilo/prism-extensions/store-codecs` is a shared library, not a store. Do not list it.
 
 ## Slot owners and compaction
 
@@ -44,15 +44,15 @@ There are four slots: `loop`, `compaction`, `store`, `credentials`. Each holds o
 provide one slot with no assignment fail the load (`ERR_PRISM_SLOT_CONFLICT`). Assign the owner by package name in
 `slots`, as `node_modules/@arnilo/prism/docs/slots.md` shows.
 
-- Need summarised history: `@arnilo/prism-memory-compaction` (stable). Example: `examples/compaction.ts`.
+- Need summarised history: `@arnilo/prism-extensions/compaction` (stable). Example: `examples/compaction.ts`.
 - Need observational memory too: `@arnilo/prism-memory-system` also claims `compaction`. List both and
   assign the owner you want. Example: `examples/session-memory.ts`.
 - Need a different loop (workflow, external agent): `slots.loop`, or a package that claims it
-  (`@arnilo/prism-workflows`, `@arnilo/prism-driver-process`). Example: `examples/custom-loop.ts`.
+  (`@arnilo/prism-extensions/workflows`, `@arnilo/prism-hosts/driver-process`). Example: `examples/custom-loop.ts`.
 
 ## The experimental memory line
 
-`@arnilo/prism-memory-core` and `-system`, `@arnilo/prism-wiki` and `@arnilo/prism-rag` ship as `0.13.0-experimental.N` on the npm
+`@arnilo/prism-memory-system/core` and `-system`, `@arnilo/prism-knowledge/wiki` and `@arnilo/prism-knowledge/rag` ship as `0.13.0-experimental.N` on the npm
 dist-tag `experimental`. They sit outside the compatibility promise: API, config and defaults may change in any release.
 A `^0.13.0` range never matches a prerelease, so opt in by tag and keep the host able to run without them:
 
@@ -60,19 +60,19 @@ A `^0.13.0` range never matches a prerelease, so opt in by tag and keep the host
 bun add @arnilo/prism-memory-system@experimental
 ```
 
-Say in your report that the host depends on an experimental package. Use `@arnilo/prism-memory-compaction` unless
+Say in your report that the host depends on an experimental package. Use `@arnilo/prism-extensions/compaction` unless
 the product needs more. Examples: `examples/long-term-memory.ts`, `examples/memory-and-wiki.ts`.
 
 ## Approval and governance
 
-- Ask a person before a write, a shell command or a delete: `@arnilo/prism-approval`, with a `mode` (`deny`, `ask`,
+- Ask a person before a write, a shell command or a delete: `@arnilo/prism-extensions/approval`, with a `mode` (`deny`, `ask`,
   `edits`, `auto`). Examples: `examples/approval.ts`, `examples/coding-approval.ts`. With no `host.ui`, an ask
   suspends the run durably instead of running the tool: `examples/durable-approval.ts`.
-- Per-user policy, identity, an audit ledger: `@arnilo/prism-governance`. Examples: `examples/governance-deny.ts`,
+- Per-user policy, identity, an audit ledger: `@arnilo/prism-extensions/governance`. Examples: `examples/governance-deny.ts`,
   `examples/enterprise-policy-audit.ts`.
-- Prompt-injection and PII checks on inputs, tool results and model output: `@arnilo/prism-guardrail-packs`.
+- Prompt-injection and PII checks on inputs, tool results and model output: `@arnilo/prism-extensions/guardrail-packs`.
   Example: `examples/guardrail-packs.ts`.
-- Cost caps and failover across models: `@arnilo/prism-model-router`. Example: `examples/model-router.ts`.
+- Cost caps and failover across models: `@arnilo/prism-extensions/model-router`. Example: `examples/model-router.ts`.
 
 Approval gates a call; it does not sandbox a tool. Isolation is the host's job (`references/security.md`).
 

@@ -43,22 +43,22 @@
     },
     {
       "id": "stm.cost",
-      "fires": 102,
+      "fires": 103,
       "reaches": true,
       "correct": true,
       "verdict": "works",
       "surface": "worker-request",
       "property": "on the long-session fixture, STM worker tokens per 10k eligible tokens against the pre-redesign observer, and stored chunk bytes under 25% of the transcript they cover",
-      "onSha256": "194b92b3b6f8ae65464382a95df56db3f978cf63d1e0b2d68e391021a8d8c250",
+      "onSha256": "9b0d59de019a5f83d5187234943a24617528ec00c7550dd604a57e68edd51776",
       "offSha256": "a6f94de4a910fcd97b97ed9e154d785050c711555e3d0cce9aa6a97216b55fab",
       "counts": {
         "stm": {
           "eligibleTokens": 46160,
-          "passes": 102,
+          "passes": 103,
           "outputTokens": 3628,
-          "inputTokens": 214025,
+          "inputTokens": 224957,
           "outputPer10k": 786,
-          "inputPer10k": 46365.9,
+          "inputPer10k": 48734.2,
           "records": 45,
           "savedByHabituation": 11,
           "chunks": 9,
@@ -178,20 +178,20 @@
     },
     {
       "id": "stm.scope-blind",
-      "fires": 47,
+      "fires": 35,
       "reaches": true,
       "correct": true,
       "verdict": "works",
       "surface": "worker-request",
       "property": "an STM request carries only the batch, the task state and the recent STM index: never the episode scope, a WM item or an LTM note",
-      "onSha256": "31489056e0916d59fe3add79e63f095af3ffb81604691f21cad442a85c7be617",
+      "onSha256": "9f14025af0065b30e47e23ebb3b491d39ae8ed17d33739e5ff3827ffb3634953",
       "offSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
       "counts": {
-        "stmRequests": 47,
+        "stmRequests": 35,
         "leaks": 0
       },
       "group": "stm"
     }
   ],
-  "durationSeconds": 14
+  "durationSeconds": 12
 }

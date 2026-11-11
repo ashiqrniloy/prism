@@ -35,13 +35,9 @@ import {
   providerTextDelta,
   type Usage,
 } from "@arnilo/prism";
-import {
-  createModelRouter,
-  type ModelRouter,
-  ModelRouterError,
-} from "@arnilo/prism-model-router";
+import { createModelRouter, type ModelRouter, ModelRouterError } from "@arnilo/prism-extensions/model-router";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { type AgentIdentity } from "@arnilo/prism-governance";
+import { type AgentIdentity } from "@arnilo/prism-extensions/governance";
 
 interface GovernedInvocationSettlement {
   readonly model: ModelConfig;
@@ -232,7 +228,10 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "aggregate-budget-agent",
     model: pinned,
     slots: { store: createMemorySessionStore() },
-    packages: [providerPackage("test-provider", [mockProvider({ inputTokens: 7, outputTokens: 5, totalTokens: perRunUsageTokens })]), governedHook],
+    packages: [
+      providerPackage("test-provider", [mockProvider({ inputTokens: 7, outputTokens: 5, totalTokens: perRunUsageTokens })]),
+      governedHook,
+    ],
   });
   const session = await agent.session({ id: "aggregate-budget-session", create: true });
 

@@ -45,8 +45,10 @@ function scriptFiles(script, cwd) {
     tail
       // A source package (`exports: "./src/index.ts"`, plan 147 Task 5) tests `src`, and one that
       // lists explicit files lists `.test.ts` (plan 175 Task 8: the channels host package).
-      .filter((arg) => arg === "dist" || arg === "src" || arg.includes(".test.js") || arg.includes(".test.ts"))
-      .flatMap((arg) => globSync(arg === "dist" ? "dist/**/*.test.js" : arg === "src" ? "src/**/*.test.ts" : arg, { cwd }))
+      .filter((arg) => arg === "dist" || arg === "src" || arg.endsWith("/src") || arg.includes(".test.js") || arg.includes(".test.ts"))
+      .flatMap((arg) =>
+        globSync(arg === "dist" ? "dist/**/*.test.js" : arg === "src" || arg.endsWith("/src") ? `${arg}/**/*.test.ts` : arg, { cwd }),
+      )
       .filter((file) => ignores.length === 0 || !ignorePattern.test(file))
       .sort()
   );
@@ -188,9 +190,9 @@ test("the workspace test scripts declare bun test file sets that resolve on disk
   // Packages whose pre-flip globs needed shell quoting now pass a directory: Bun's glob engine
   // matches only the last path segment (measured 2026-09-25), so `dist/**` matched nothing.
   assert.match(
-    readManifest(join(ROOT, "packages/integrations/hooks-json", "package.json")).scripts.test,
-    /--timeout=0 src$/,
-    "hooks-json publishes source and tests src",
+    readManifest(join(ROOT, "packages/extensions", "package.json")).scripts.test,
+    /hooks-json\/src/,
+    "the extensions bundle tests hooks-json source",
   );
 });
 
@@ -204,7 +206,7 @@ test("every stage runs bun test with --timeout=0 and the sqlite stage owns its m
   const testStages = STAGES.filter((stage) => stage.args?.includes("test"));
   assert.deepEqual(
     testStages.map((stage) => stage.name),
-    ["performance budget", "root suites", "gate suites", "build race", "examples execution"],
+    ["performance budget", "timing benchmarks", "root suites", "gate suites", "build race", "examples execution"],
     "every bun test stage must be named here (build and branch coverage run scripts, not test sets)",
   );
   for (const stage of STAGES) {
@@ -258,11 +260,14 @@ test("ownership, checkpoint, snapshot, and timestamp regressions stay in mandato
   const regressions = [
     ["src/__tests__/session-stores.test.ts", "memory session store snapshots initial and appended entries before indexing"],
     // Plan 168 Task 7 deleted the 0.12 engine: the regression lives in the ported package's own suite.
-    ["packages/integrations/workflows/src/__tests__/run.test.ts", "never retries effects after a post-execution checkpoint failure"],
-    ["packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts", "scopes ordinary and leaf entry queries to the owning session"],
-    ["packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts", "filters and keyset-paginates branch entry queries"],
+    ["packages/extensions/workflows/src/__tests__/run.test.ts", "never retries effects after a post-execution checkpoint failure"],
     [
-      "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
+      "packages/extensions/store-sqlite/src/__tests__/sqlite-persistence.test.ts",
+      "scopes ordinary and leaf entry queries to the owning session",
+    ],
+    ["packages/extensions/store-sqlite/src/__tests__/sqlite-persistence.test.ts", "filters and keyset-paginates branch entry queries"],
+    [
+      "packages/extensions/store-sqlite/src/__tests__/sqlite-persistence.test.ts",
       "keeps session activity monotonic across run, usage, and event writes",
     ],
   ];
@@ -301,10 +306,9 @@ test("every workspace test file runs exactly once: default suite or an opt-in le
     for (const file of declared) claim(join(dir, file), `${dir} default suite`);
     const optIn = new Set([...scriptFiles(scripts["test:postgres"], pkgDir), ...scriptFiles(scripts["test:live"], pkgDir)]);
     // A source package (`exports: "./src/index.ts"`) has no dist, so its built set is its sources.
-    const built =
-      manifest.exports?.["."] === "./src/index.ts"
-        ? globSync("src/**/*.test.ts", { cwd: pkgDir })
-        : globSync("dist/**/*.test.js", { cwd: pkgDir });
+    const built = Object.values(manifest.exports ?? {}).some((target) => typeof target === "string" && target.endsWith(".ts"))
+      ? globSync("**/src/**/*.test.ts", { cwd: pkgDir, exclude: ["**/node_modules/**"] })
+      : globSync("dist/**/*.test.js", { cwd: pkgDir });
     for (const file of built) {
       if (declared.includes(file)) continue;
       assert.ok(optIn.has(file), `${dir}/${file} runs in no stage — add it to the package test script or an opt-in leg`);
@@ -417,4 +421,15 @@ test("the parallel pool bounds concurrency and never hides a later leaf after a 
     ["leaf-2"],
     "exactly the failing leaf fails the stage",
   );
+});
+
+test("frozen benchmark ceilings run serially outside the parallel gate workers", () => {
+  const timing = STAGES.find((stage) => stage.name === "timing benchmarks");
+  const gates = STAGES.find((stage) => stage.name === "gate suites");
+  assert.ok(timing);
+  assert.ok(!timing.args.some((arg) => arg.startsWith("--parallel")));
+  for (const file of GATE_FILES.filter((file) => file.startsWith("scripts/benchmark-") || file === "scripts/memory-bench/run.test.mjs")) {
+    assert.ok(timing.args.includes(file), file);
+    assert.ok(!gates.args.includes(file), `${file} must run exactly once`);
+  }
 });

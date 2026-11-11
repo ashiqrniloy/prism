@@ -1,4 +1,4 @@
-import type { LeaseAcquireInput, LeaseStore } from "@arnilo/prism-workflows";
+import type { LeaseAcquireInput, LeaseStore } from "@arnilo/prism-extensions/workflows";
 import { systemClock } from "./clock.js";
 
 export async function holdFiringLease(store: LeaseStore, input: LeaseAcquireInput) {

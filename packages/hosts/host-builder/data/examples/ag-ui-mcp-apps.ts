@@ -1,5 +1,5 @@
-import { createAgUiMcpAppHandler, createAgUiMcpAppSandbox } from "@arnilo/prism-ag-ui";
-import type { McpAppsBridge } from "@arnilo/prism-mcp";
+import { createAgUiMcpAppHandler, createAgUiMcpAppSandbox } from "@arnilo/prism-hosts/ag-ui";
+import type { McpAppsBridge } from "@arnilo/prism-extensions/mcp";
 
 const apps: McpAppsBridge = {
   serverId: "demo",

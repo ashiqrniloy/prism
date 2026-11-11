@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`runMemoryWorkerLoop` takes `endAfterCleanTurn` (plan 217 Task 6).** With `true`, the loop ends after a turn whose tool calls all ran without an error result, an `{ ok: false }` value or a `warning`, none refused, and whose reply did not stop on the output limit, instead of asking the model again. Default `false`, unchanged. Additive.
+
 - **`runMemoryWorkerLoop` takes `onToolCallLimit` (plan 217 Task 6).** `"fail"` (the default, unchanged) throws `MemoryWorkerLimitError` on a call past `maxToolCallsPerTurn` or `maxToolCalls`. `"refuse"` does not run the extra call and answers it with an error result whose code is the new `MEMORY_WORKER_TOOL_CALL_LIMIT` (`tool_call_limit`), so the calls within the limits keep their effect: past the per-turn limit the model may repeat the call next turn, and past the total limit the loop ends after that turn. Byte limits fail either way. Additive.
 
 - **`openSqliteDatabase(path)` on `./sqlite` (plan 217 Task 2).** Opens a local SQLite file the way the memory stores do: created mode 0600 when absent, strict bindings, a 5 s busy timeout. `createSqliteMemoryStores` uses it, and memory-system's chunk store opens through it. Additive.

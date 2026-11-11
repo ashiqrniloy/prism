@@ -28,6 +28,6 @@ export function probeBinary(
       if (out.length < 4096) out += chunk.toString();
     });
     child.on("error", () => finish(undefined));
-    child.on("close", (code) => finish(code === 0 ? (out.split("\n")[0]?.trim() || undefined) : undefined));
+    child.on("close", (code) => finish(code === 0 ? out.split("\n")[0]?.trim() || undefined : undefined));
   });
 }

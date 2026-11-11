@@ -139,4 +139,3 @@ function declaredMediaType(block: MediaContentBlock): string {
 }
 
 export const DEFAULT_PROVIDER_MEDIA_ITEM_BYTES = DEFAULT_MAX_MEDIA_ITEM_BYTES;
-

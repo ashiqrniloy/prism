@@ -2,7 +2,12 @@ export type { AgentEventSourceErrorCode, CheckpointRestoreAudit, CheckpointResto
 export { AgentEventSourceError, isKnownAgentEventType, isTerminalAgentEventType } from "./contracts-protocol.js";
 export { ContextOverflowError } from "./agent-session/context-overflow.js";
 export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
-export { AGENT_RUN_STATE_SCHEMA_VERSION, agentFingerprint, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES } from "./agent-run-state.js";
+export {
+  AGENT_RUN_STATE_SCHEMA_VERSION,
+  agentFingerprint,
+  DEFAULT_MAX_AGENT_RUN_STATE_BYTES,
+  HARD_MAX_AGENT_RUN_STATE_BYTES,
+} from "./agent-run-state.js";
 export { SubscriberOverflowError } from "./agent-session/event-subscriber.js";
 export { createAgent } from "./agents.js";
 export type { DefaultCompactorOptions } from "./compaction.js";
@@ -183,7 +188,7 @@ export {
   UnsupportedStoreCapabilityError,
 } from "./contracts.js";
 // Plan 159 Task 8: `Principal` is the only identity type the kernel names; the rest of the identity
-// module moved to `@arnilo/prism-governance`.
+// module moved to `@arnilo/prism-extensions/governance`.
 export type { Principal } from "./contracts-core/principal.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
 export type { CredentialRecord } from "./credentials/index.js";

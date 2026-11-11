@@ -28,7 +28,7 @@ This document is the host checklist for upgrading from Prism 0.12.1 to 0.13.0.
 | `memory: { compaction: "llm" }` | `packages: [compactionLlm()]` |
 | `web: { backend: "brave" }` | `packages: [toolsWeb({ backend: "brave" })]` |
 | `extensions: [...]`, `activateKernel()` | `packages: [...]` — installed is listed is active |
-| `identity: { profile: "local-operator" }` | `principal: { kind, id }` — opaque to the kernel; enforcement lives in the packages that need it. Tools with durable effects (`shell`, `write`, `edit`) in `@arnilo/prism-tools-coding` fail closed with `ERR_PRISM_CODING_PRINCIPAL_REQUIRED` unless the agent has one |
+| `identity: { profile: "local-operator" }` | `principal: { kind, id }` — opaque to the kernel; enforcement lives in the packages that need it. Tools with durable effects (`shell`, `write`, `edit`) in `@arnilo/prism-tools/coding` fail closed with `ERR_PRISM_CODING_PRINCIPAL_REQUIRED` unless the agent has one |
 | `stopHooks: [...]` | a package's `run.end` hook, or `AgentConfig.hooks` |
 | `store: "memory"` | the store slot default; list a store package for anything durable |
 
@@ -40,17 +40,17 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 
 | 0.12 field | 0.13 home |
 | --- | --- |
-| `contextBudget`, `toolResultFold`, `toolsDisclosure`, `toolsSearch`, `attentionCompiler` | `@arnilo/prism-context-engineering` (`context.build`) |
+| `contextBudget`, `toolResultFold`, `toolsDisclosure`, `toolsSearch`, `attentionCompiler` | `@arnilo/prism-extensions/context-engineering` (`context.build`) |
 | `middleware` (`provider_request`, `tool_call`, `tool_result`, …) | the matching hook: `model.request`, `tool.call`, `tool.result` |
-| `guardrails` (4 stages) | `@arnilo/prism-guardrail-packs` (`tool.call`, `tool.result`, `run.input`, `model.response`) |
-| `stopHooks` | `run.end` (`@arnilo/prism-tools-coding`'s continuation stop hook is the reference) |
+| `guardrails` (4 stages) | `@arnilo/prism-extensions/guardrail-packs` (`tool.call`, `tool.result`, `run.input`, `model.response`) |
+| `stopHooks` | `run.end` (`@arnilo/prism-tools/coding`'s continuation stop hook is the reference) |
 | `turnPolicy` / `TurnPolicyOptions` | `turn.before`, cost policy |
 | `providerRequestPolicies` | `model.request` |
-| `instructionInjectors`, `context`, `promptBuilder`, `inputBuilder` | `context.build` (`@arnilo/prism-context-files`, `@arnilo/prism-context-engineering`) |
+| `instructionInjectors`, `context`, `promptBuilder`, `inputBuilder` | `context.build` (`@arnilo/prism-extensions/context-files`, `@arnilo/prism-extensions/context-engineering`) |
 | `toolNarrowing` | `RunOptions.tools.only` (a run narrows; a package registers tools) |
-| `permission` / `PermissionPolicy` | `@arnilo/prism-approval` (`tool.call`); hard denies stay in `@arnilo/prism-tools-coding` |
-| `loop` options (`AgentLoopStrategy`) | the `loop` slot; `@arnilo/prism-driver-process` and `@arnilo/prism-workflows`' `workflowLoop` claim it |
-| `identity`, `resolveRunIdentity` | `@arnilo/prism-governance` |
+| `permission` / `PermissionPolicy` | `@arnilo/prism-extensions/approval` (`tool.call`); hard denies stay in `@arnilo/prism-tools/coding` |
+| `loop` options (`AgentLoopStrategy`) | the `loop` slot; `@arnilo/prism-hosts/driver-process` and `@arnilo/prism-extensions/workflows`' `workflowLoop` claim it |
+| `identity`, `resolveRunIdentity` | `@arnilo/prism-extensions/governance` |
 | `beforeProviderTurn` | `model.call` (around) |
 | `forwardAgentEvents` | the `observe` hook for every `AgentEvent` type |
 
@@ -61,9 +61,9 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 | 0.12 SDK plane | 0.13 home |
 | --- | --- |
 | `defineAgent({ skills })` | kernel skills (`AgentConfig.skills`) |
-| `defineAgent({ instructions })` | `@arnilo/prism-context-files` (`AGENTS.md` / `SYSTEM.md` layering) |
-| `defineAgent({ hooks })` | `@arnilo/prism-hooks-json` or a host `hooks` registration |
-| `defineAgent({ mcp })` | `@arnilo/prism-mcp` |
+| `defineAgent({ instructions })` | `@arnilo/prism-extensions/context-files` (`AGENTS.md` / `SYSTEM.md` layering) |
+| `defineAgent({ hooks })` | `@arnilo/prism-extensions/hooks-json` or a host `hooks` registration |
+| `defineAgent({ mcp })` | `@arnilo/prism-extensions/mcp` |
 | `defineAgent({ tools })` | `packages: [...]` plus `tools: { add }` / `disable.tools` |
 | presets | removed; there is no preset registry |
 
@@ -71,39 +71,39 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 
 | 0.12 package | 0.13 package(s) |
 | --- | --- |
-| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, kilo, litellm, liquid, openai-codex, opencode-go, openrouter, typesafe, laya}` (the 16 other 0.3 vendors are not shipped in 0.13.0; for a ChatGPT plan use `openai-codex`, otherwise write a package on `@arnilo/prism/provider-kit`). `commandcode` and `ollama-cloud` publish in the first release after 0.13.0. |
+| `@arnilo/prism-providers` | `@arnilo/prism-ai/<vendor>` — install `@arnilo/prism-ai` once, then import or add a provider subpath. All eleven providers, including `commandcode` and `ollama-cloud`, ship at 0.13.0. For other vendors, write a package on `@arnilo/prism/provider-kit`. |
 | `@arnilo/prism-core` | the kernel `@arnilo/prism` plus the native packages below |
-| `@arnilo/prism-coding-tools` | `@arnilo/prism-tools-coding`, `@arnilo/prism-tools-openapi`, `@arnilo/prism-tools-computer-use`, `@arnilo/prism-approval`, `@arnilo/prism-devtools` |
-| `@arnilo/prism-web-tools` | `@arnilo/prism-tools-web`, `@arnilo/prism-tools-browser` |
-| `@arnilo/prism-memory` | `@arnilo/prism-memory-{core, compaction, system}` (the fabric is `memory-system`'s `ltm`), `@arnilo/prism-rag`, `@arnilo/prism-wiki` |
-| `@arnilo/prism-work` | `@arnilo/prism-tools-work` |
-| `@arnilo/prism-hooks` | `@arnilo/prism-hooks-json` |
-| `@arnilo/prism-office` (retired in 0.8) | `@arnilo/prism-tools-work` |
+| `@arnilo/prism-coding-tools` | `@arnilo/prism-tools/coding`, `@arnilo/prism-tools/openapi`, `@arnilo/prism-tools/computer-use`, `@arnilo/prism-extensions/approval`, `@arnilo/prism-hosts/devtools` |
+| `@arnilo/prism-web-tools` | `@arnilo/prism-tools/web`, `@arnilo/prism-tools/browser` |
+| `@arnilo/prism-memory` | `@arnilo/prism-memory-{core, compaction, system}` (the fabric is `memory-system`'s `ltm`), `@arnilo/prism-knowledge/rag`, `@arnilo/prism-knowledge/wiki` |
+| `@arnilo/prism-work` | `@arnilo/prism-tools/work` |
+| `@arnilo/prism-hooks` | `@arnilo/prism-extensions/hooks-json` |
+| `@arnilo/prism-office` (retired in 0.8) | `@arnilo/prism-tools/work` |
 | `@arnilo/prism-agent-sdk` | retired; `@arnilo/prism` plus the native packages |
-| `@arnilo/prism-acp-agent` | `@arnilo/prism-acp` (`serveAcp`) |
+| `@arnilo/prism-acp-agent` | `@arnilo/prism-hosts/acp` (`serveAcp`) |
 | `@arnilo/prism-code` | retired; the private reference host `apps/prism-agent` |
 | `@arnilo/prism-all` | retired; install the packages you list |
-| `@arnilo/prism-mcp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-channels`, `@arnilo/prism-evals`, `@arnilo/prism-workflows`, `@arnilo/prism-model-router` | the same name, reused by the 0.13 package or host library |
+| `@arnilo/prism-extensions/mcp`, `@arnilo/prism-hosts/ag-ui`, `@arnilo/prism-hosts/channels`, `@arnilo/prism-hosts/evals`, `@arnilo/prism-extensions/workflows`, `@arnilo/prism-extensions/model-router` | the same name, reused by the 0.13 package or host library |
 
 ### The retired names are unpublished from npm
 
 The 0.12 family is deleted, not deprecated. On 2026-11-09 the 66 legacy names were unpublished, so a
 0.12 host that adds `@arnilo/prism-core` now gets a 404 instead of a deprecation warning. Only
 `@arnilo/prism` keeps its 0.12.x line, because it is the kernel. The names 0.13.0 reuses —
-`@arnilo/prism-mcp`, `prism-ag-ui`, `prism-channels`, `prism-evals`, `prism-workflows`,
+`@arnilo/prism-extensions/mcp`, `prism-ag-ui`, `prism-channels`, `prism-evals`, `prism-workflows`,
 `prism-model-router`, `prism-provider-openrouter`, `prism-rag`, `prism-wiki`,
 `prism-provider-opencode-go` — do not resolve until that publish either. The migration path is the map
 above; the inventory, the plan and the commands that ran are under `docs/_evidence/registry/`.
 
 ## Memory packages
 
-`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-{core, compaction, system}`, with retrieval and the wiki outside memory as `@arnilo/prism-rag` and `@arnilo/prism-wiki` (the map above). In 0.13.0 four of them are **experimental**: `memory-core`, `memory-system`, `wiki` and `rag` ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
+`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-system` (root and `/core` store libraries) and `@arnilo/prism-extensions/compaction`, with retrieval and the wiki outside memory as `@arnilo/prism-knowledge/rag` and `@arnilo/prism-knowledge/wiki`. The memory-system and knowledge bundles ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
 
 ```bash
 bun add @arnilo/prism-memory-system@experimental
 ```
 
-Their API, config, preset contents and defaults may change or be removed in any release until they graduate. `@arnilo/prism-memory-compaction` is stable and is the only memory package the stable core and the reference host's default agents load.
+Their API, config, preset contents and defaults may change or be removed in any release until they graduate. `@arnilo/prism-extensions/compaction` is stable and is the only memory package the stable core and the reference host's default agents load.
 
 ## Fabric: the pinned core is now the standing rules
 
@@ -118,7 +118,7 @@ Their API, config, preset contents and defaults may change or be removed in any 
 | decision capture only in the `coding` preset | `rules: { capture: "confirm" }` in any preset; it also captures preferences and procedures. The `coding` preset sets it, adds `procedure` to its kinds, and is revision 2. |
 | path-scoped notes could ride in the core | path-scoped rules are not in the block; they load as path cues |
 
-`@arnilo/prism-memory-core`'s markdown store: `writeDerivedFile` now keeps a file a person edited (it resolves `false`) instead of overwriting it, accepts `{ replaceEdited: true }`, and the store gains `readDerivedFile(scope, name)`. The `**overwritten**` `log.md` line is gone.
+`@arnilo/prism-memory-system/core`'s markdown store: `writeDerivedFile` now keeps a file a person edited (it resolves `false`) instead of overwriting it, accepts `{ replaceEdited: true }`, and the store gains `readDerivedFile(scope, name)`. The `**overwritten**` `log.md` line is gone.
 
 ## Fabric: features removed by the plan 210 audit
 
@@ -148,8 +148,8 @@ Plan 216 Task 3 (owner decision 2026-11-08) moved the ontology out of memory. Th
 
 | Before | Now |
 | --- | --- |
-| `@arnilo/prism-memory-wiki` (`packages/memory/wiki`) | `@arnilo/prism-wiki` (`packages/knowledge/wiki`); the factory is `wiki(config)` (was `memoryWiki`) |
-| `@arnilo/prism-memory-rag` (`packages/memory/rag`) | `@arnilo/prism-rag` (`packages/knowledge/rag`); behaviour unchanged |
+| `@arnilo/prism-memory-wiki` (`packages/memory/wiki`) | `@arnilo/prism-knowledge/wiki` (`packages/knowledge/wiki`); the factory is `wiki(config)` (was `memoryWiki`) |
+| `@arnilo/prism-memory-rag` (`packages/memory/rag`) | `@arnilo/prism-knowledge/rag` (`packages/knowledge/rag`); behaviour unchanged |
 | the `memory.fabric` service (`MEMORY_FABRIC_SERVICE`, `FabricOntologyPort`, `createFabricOntology`) | `memory.ltm` (`MEMORY_LTM_SERVICE`, `MemoryLtmPort`, `createMemoryLtmPort`): read-only (`scopes`, `scopeId`, `epoch`, `read`, `scanMetadata`, `activity`, `deletions`); the wiki keeps its own concepts |
 | `memory.fabric.concept-deletion` (`createConceptDeletionHandler`, `MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE`) | none: the wiki reads memory's deletion feed after every retraction epoch and reads every cited id back when it opens |
 | the fabric's `concept` note kind, concept-first `memory.recall`, the concept prior, the directory's concepts line, the passive and path-cue concept pointers, concept sharing (`memory:share`) | concepts live in the wiki's store (markdown under `wiki.root`); `wiki.search` returns them with their cited claims, `wiki.read` drills down, and the wiki adds its own passive pointer. A concept note an older version stored in memory is unreadable there (reason `retired-concept`) |
@@ -157,8 +157,8 @@ Plan 216 Task 3 (owner decision 2026-11-08) moved the ontology out of memory. Th
 | subject binding at memory write time and through the extractor | the wiki binds at ingest and on its pass; memory keeps a `subject` a writer gives as a topic key, and the extractor's `subject` field is ignored |
 | `wiki_ingest` staged under the fabric's `tools.root` as a fabric `file` note | staged under `<wiki.root>/sources/<id>/` and recorded in the wiki's store; no LTM note is written. Keep `wiki.root` outside memory's `tools.root`, which mirrors the files under it as notes |
 | the wiki required `memory.fabric` and failed closed without it | no required service: the wiki runs on its own sources without memory, and `wiki:status` says so. A wiki root serves one project's memory; pointing a second project at it fails closed with `MemoryScopeError` |
-| `resolveMemoryWorkerLimits`, `measureWorkerJson`, `truncateWorkerText`, `runMemoryWorkerLoop` (and their types) from `@arnilo/prism-memory-observational`; `ObservationalMemoryError`/`ObservationalMemoryLimitError` from the worker loop | `@arnilo/prism-memory-core`, with `MemoryWorkerError`/`MemoryWorkerLimitError` |
-| `scanScopedMemoryContent` inside the fabric | `@arnilo/prism-memory-core` (the wiki runs the same trust scan) |
+| `resolveMemoryWorkerLimits`, `measureWorkerJson`, `truncateWorkerText`, `runMemoryWorkerLoop` (and their types) from `@arnilo/prism-memory-observational`; `ObservationalMemoryError`/`ObservationalMemoryLimitError` from the worker loop | `@arnilo/prism-memory-system/core`, with `MemoryWorkerError`/`MemoryWorkerLimitError` |
+| `scanScopedMemoryContent` inside the fabric | `@arnilo/prism-memory-system/core` (the wiki runs the same trust scan) |
 
 ## Observational memory → `@arnilo/prism-memory-system`
 
@@ -205,7 +205,7 @@ Plan 216 Task 7 (owner decision 2026-11-08) removed three long-term memory featu
 | the `block` parameter of `memory.insert`, `memory.replace` and `memory.forget`; `working` in `memory.recall` `kinds`; `MemoryFabricForgetInput.block` | edits to a labeled working block | `memory.insert { kind \| path }`, `memory.replace { path \| id }`, `memory.forget { id }`. With `semantic: false` only file paths remain writable |
 | config `ltm.workingMemoryTemplate`, `ltm.limits.maxWorkingMemoryBytes`, `"working"` in `ltm.inject.kinds` | the working block's template and byte cap | remove them |
 | `Memory.getWorking`, `updateWorking`, `deleteWorking`, `renderWorking`, `createWorkingMemoryProcessor`; `CreateMemoryOptions.workingStore`, `.schema`, `.validateWorkingMemory`, `.workingMemoryTemplate`; `MemoryContextProviderOptions.includeWorking`; `MemoryLimits.maxWorkingMemoryBytes` | the library working-memory API | none in long-term memory; drop the calls and options |
-| `WorkingMemoryStore`, `WorkingMemoryRecord`, `WorkingMemoryKey`, `WorkingMemoryUpdateMode`, `WorkingMemoryUpdateOptions`, `WorkingMemoryProcessorOptions`, `renderTemplate` (`@arnilo/prism-memory-core`); `createMemoryWorkingStore`, `MemoryWorkingStoreOptions` (`@arnilo/prism-memory-system`); the `workingStore` member of the SQLite, Postgres, markdown and conformance store sets and of `MemoryOkfStores`; `ExportMemoryOkfResult.working` | the working store contract and its drivers | pass only `vectorStore`. A markdown store (or OKF bundle) that still holds `<resource>/working/<thread>.md` fails to open with `working_memory_retired`: export what you need from the file (one fenced JSON block), then move the `working/` directory out of the root. An SQL `working_memory` table is left in place and never read |
+| `WorkingMemoryStore`, `WorkingMemoryRecord`, `WorkingMemoryKey`, `WorkingMemoryUpdateMode`, `WorkingMemoryUpdateOptions`, `WorkingMemoryProcessorOptions`, `renderTemplate` (`@arnilo/prism-memory-system/core`); `createMemoryWorkingStore`, `MemoryWorkingStoreOptions` (`@arnilo/prism-memory-system`); the `workingStore` member of the SQLite, Postgres, markdown and conformance store sets and of `MemoryOkfStores`; `ExportMemoryOkfResult.working` | the working store contract and its drivers | pass only `vectorStore`. A markdown store (or OKF bundle) that still holds `<resource>/working/<thread>.md` fails to open with `working_memory_retired`: export what you need from the file (one fenced JSON block), then move the `working/` directory out of the root. An SQL `working_memory` table is left in place and never read |
 | the episode view: `remember({ kind: "episode", id })` over an observational-memory id | a note read from the session ledger without writing a row | none yet: the `episode` kind is reserved for the stored episode (plan 219) and writing it fails with `episode_kind_not_available`. `observational` stays for `reflectionId` promotion and `searchConversation` |
 | config `ltm.lifecycle.merge.episodes` (`minCluster`, `model`); `EPISODE_MERGE_TOOL`, `EPISODE_MERGE_SYSTEM`, `episodeClusters`, `summarizeEpisodeCluster`, `MAX_EPISODE_CLUSTER`, `DEFAULT_EPISODE_MIN_CLUSTER`, `EpisodeCluster`, `EpisodeSummary`; `memory:maintain` / `maintain()` report field `episodesMerged` | one model call per episode cluster during maintenance | remove the field; maintenance makes no model call |
 
@@ -236,21 +236,21 @@ The presets' context blocks are unchanged. Their tool schemas changed (the `bloc
 | Removed from `@arnilo/prism` | 0.13 home |
 | --- | --- |
 | `thinking`, `cache-helpers`, `provider-request-policy`, `structured-output` helpers (`applyCacheControl`, `applyDefaultProviderRequestOptions`, the structured-output validators) | `@arnilo/prism/provider-kit` |
-| `createEventMultiplexer` | `@arnilo/prism-workflows` |
-| `runCheckpointRestoreHooks` | `@arnilo/prism-workflows` (`CheckpointRestoreAudit` stays on the kernel) |
-| `CheckpointStore`, `LeaseStore`, their record/key/query types, `createMemoryCheckpointStore`, `createMemoryLeaseStore`, `CheckpointConflictError`, `LeaseConflictError` | `@arnilo/prism-workflows`; SQLite and Postgres store packages provide the durable services |
+| `createEventMultiplexer` | `@arnilo/prism-extensions/workflows` |
+| `runCheckpointRestoreHooks` | `@arnilo/prism-extensions/workflows` (`CheckpointRestoreAudit` stays on the kernel) |
+| `CheckpointStore`, `LeaseStore`, their record/key/query types, `createMemoryCheckpointStore`, `createMemoryLeaseStore`, `CheckpointConflictError`, `LeaseConflictError` | `@arnilo/prism-extensions/workflows`; SQLite and Postgres store packages provide the durable services |
 | `AgentConfig.runState`, `RunOptions.runState`, `AgentRunStateOptions`, `createAgentRunLifecycle`, `resumeAgentRun`, `resumeAgentRunStream`, `loadAgentRunState` | deleted; resume through the store slot's `suspended_run` entry and `session.resume(decisions)` |
-| `prepareRunFeedback` | `@arnilo/prism-store-codecs` |
-| `describeStorage` | `@arnilo/prism-governance` |
-| `resolveDevicePolicy` | `@arnilo/prism-tools-computer-use` |
-| `checkCitationIntegrity` | `@arnilo/prism-evals` |
-| `createWorkflowInstrumentation`, `createTimelineFolder`, `createWorkflowTimelineFolder`, `projectAgentTimeline`, `projectTraceTimeline`, `projectWorkflowTimeline`, `TimelineError`, `summarizeTimeline`, `summarizeSession`, `addUsage`, `capToolCounts`, `createRagTelemetry` | `@arnilo/prism-observability` |
-| `defineWorkflow`, `buildGraph`, `functionNode`, `agentNode`, `fanOutNode`, `joinNode`, `loopNode`, `conditionalNode`, `routeNode`, `workflowNode`, `runWorkflow`, `resumeWorkflow`, `suspend`, `replayWorkflow`, `createWorkflowCheckpoints`, `serializeWorkflowGraph`, `workflowGraphToMermaid`, `projectWorkflowGraphRun`, `createWorkflowEventBus` | `@arnilo/prism-workflows` |
+| `prepareRunFeedback` | `@arnilo/prism-extensions/store-codecs` |
+| `describeStorage` | `@arnilo/prism-extensions/governance` |
+| `resolveDevicePolicy` | `@arnilo/prism-tools/computer-use` |
+| `checkCitationIntegrity` | `@arnilo/prism-hosts/evals` |
+| `createWorkflowInstrumentation`, `createTimelineFolder`, `createWorkflowTimelineFolder`, `projectAgentTimeline`, `projectTraceTimeline`, `projectWorkflowTimeline`, `TimelineError`, `summarizeTimeline`, `summarizeSession`, `addUsage`, `capToolCounts`, `createRagTelemetry` | `@arnilo/prism-extensions/observability` |
+| `defineWorkflow`, `buildGraph`, `functionNode`, `agentNode`, `fanOutNode`, `joinNode`, `loopNode`, `conditionalNode`, `routeNode`, `workflowNode`, `runWorkflow`, `resumeWorkflow`, `suspend`, `replayWorkflow`, `createWorkflowCheckpoints`, `serializeWorkflowGraph`, `workflowGraphToMermaid`, `projectWorkflowGraphRun`, `createWorkflowEventBus` | `@arnilo/prism-extensions/workflows` |
 | `snapshotRunBundle`, `resolveUseCaseModel`, `createCacheTelemetry`, `createProviderCapture`, `createMemoryPersistenceLifecycle`, `resolveAgentDefinition`, `discoverAgentBundles`, `createStaticSettingsProvider`, `createBatchedRunLedger` | deleted; no 0.13 replacement |
 | `createMemoryAgentEventSource` | `@arnilo/prism/testing` |
-| `runRpcServer`, `parseRpcRequest` | `@arnilo/prism-remote` (`serveAgent`, `connectAgent`) |
+| `runRpcServer`, `parseRpcRequest` | `@arnilo/prism-hosts/remote` (`serveAgent`, `connectAgent`) |
 | `runPromptMode`, `CLI_PROVIDERS` | deleted; the `prism` bin is the manifest CLI plus `prism relay` |
-| `isNodeErrorCode` | `@arnilo/prism-tools-coding` |
+| `isNodeErrorCode` | `@arnilo/prism-tools/coding` |
 | `DelegationTelemetry.childId`, the `prism.delegation.child` attribute | `origin` on the event and `prism.origin.*` span attributes |
 | `CommandDefinition`, `CommandExecutionContext`, `CommandDrivers`, `CommandWorkflowRun`, `CommandResult` | `PackageCommand` / `PackageCommandContext` — a package registers `{ name, description, args?, run(args, { session, host, agent }) }`, and the host-driver seam (`startRun`, `startWorkflow`, `steer`) is gone |
 | `SpeechProvider`, `TranscriptionProvider`, `BatchJobsProvider`, `ModerationProvider`, `RealtimeSession`, `VideoGenerationProvider` | deleted from kernel; implement vendor-specific APIs in provider or host packages |
@@ -265,8 +265,8 @@ The presets' context blocks are unchanged. Their tool schemas changed (the `bloc
 | `InputAssemblyLayout` `"legacy"`, `RunOptions` / `AgentConfig` `inputLayout: "legacy"` | deleted; `"cache_aware"` is the only layout |
 | `ModelCapabilities.toolCallStrictness: "legacy"` | deleted; `"strict"`, `"lenient"`, or absent (unknown) |
 | The `RunOptions.maxToolRounds` `TypeError` guard (removed in 0.1.5) | deleted; set `RunOptions.limits.maxToolRounds` |
-| `@arnilo/prism-channels/telegram` `CredentialValueSource`; literal `botToken` / `webhookSecret` | `ChannelSecretSource` (`() => Promise<string>`) on `createTelegramAdapter` / `createTelegramWebhookHandler`; `connectTelegram({ webhookSecret })` takes an `env:`/`keyring:` ref and rejects a literal with `ChannelTokenLiteralError` |
-| `@arnilo/prism-tools-web` `WebCredentialSource` (accepted a literal, a callback, or a resolver) | `() => Promise<string \| undefined>`; the package resolves its `x-prism-secret` ref config and builds it |
+| `@arnilo/prism-hosts/channels/telegram` `CredentialValueSource`; literal `botToken` / `webhookSecret` | `ChannelSecretSource` (`() => Promise<string>`) on `createTelegramAdapter` / `createTelegramWebhookHandler`; `connectTelegram({ webhookSecret })` takes an `env:`/`keyring:` ref and rejects a literal with `ChannelTokenLiteralError` |
+| `@arnilo/prism-tools/web` `WebCredentialSource` (accepted a literal, a callback, or a resolver) | `() => Promise<string \| undefined>`; the package resolves its `x-prism-secret` ref config and builds it |
 | Memory internals that were never documented: prompts, `DEFAULT_*` / `MAX_*` / `MIN_*` / `HARD_*` tuning constants, scoring and eviction helpers, the lifecycle / directory / core builders, the observational workers, settings, flush, commands and compactor, and core's cursor codecs and directory scan (`@arnilo/prism-memory-fabric`, `-core`, `-system` roots) | no longer exported; the stable set is listed under `## Compatibility` in each package README |
 
 ## Retired interception mechanisms → hooks
@@ -297,8 +297,8 @@ The kernel prompt runner (`prism -p`, `--provider`, `--model`, and the rest of t
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import hyper from "@arnilo/prism-provider-hyper";
-import coding from "@arnilo/prism-tools-coding";
+import hyper from "@arnilo/prism-ai/hyper";
+import coding from "@arnilo/prism-tools/coding";
 
 const agent = await createAgent({ model: "hyper/claude-sonnet-4-5", packages: [hyper({ apiKey: "env:HYPER_API_KEY" }), coding({ root: process.cwd() })] });
 const session = await agent.session();
@@ -361,3 +361,19 @@ level 2 instead, and the loader rejects a package targeting a level it does not 
 ## Rollback
 
 0.13.0 is a break, not a compatible widening, so rollback is a downgrade to the 0.12.1 line: restore the `^0.12.1` dependencies and peers, revert `createAgent` to the synchronous call, and restore the 0.12 family packages. Store schemas are unchanged by this cut, so a 0.12.1 host reopens a 0.13.0 store; a durable run suspended on the 0.13 `suspended_run` entry does not resume on 0.12.1, because that path is new.
+
+### Extensions bundle
+
+Install `@arnilo/prism-extensions` once and import its exported subpaths (for example `@arnilo/prism-extensions/store-sqlite`). Manifest entries retain the full subpath specifier. [The bundle page](../packages/extensions/README.md) lists all eighteen packages and optional peers. OS keyring, MCP, Postgres and observability dependencies are host-installed optional peers. No former package name is an alias.
+
+### Tools bundle
+
+Install `@arnilo/prism-tools` once, then import and list `@arnilo/prism-tools/{coding,web,browser,research,openapi,computer-use,work}`. Work libraries use `@arnilo/prism-tools/work/<library>`. Install the [optional Office peers](../packages/tools/README.md#dependencies-and-footprint) to keep Office tools enabled. No alias or compatibility package is shipped.
+
+### Hosts bundle (plan 224 Task 7)
+
+Install `@arnilo/prism-hosts` once and import host libraries through its subpaths; `packages/drivers/process` moved to `packages/hosts/driver-process`. Replace former host package names with `@arnilo/prism-hosts/{acp,ag-ui,channels,devtools,evals,headless,host-builder,mcp-server,remote,driver-process}`. Nested renderer, channel and testing imports keep their suffixes. Run the bins with `bunx --package @arnilo/prism-hosts prism-host-builder` or `bunx --package @arnilo/prism-hosts prism-devtools`. There are no compatibility aliases.
+
+### Experimental bundle entries (plan 224 Task 8)
+
+Install `@arnilo/prism-memory-system@experimental` and `@arnilo/prism-knowledge@experimental`. The memory system stays the default entry; its shared library is `/core` (also `/core/fabric`, `/core/sqlite`, `/core/postgres`). Knowledge uses `/wiki` and `/rag`, with no root barrel. The three former standalone names are retired; use these bundle specifiers in imports and manifest entries. Knowledge pins the memory-system version exactly. No memory behavior changes.

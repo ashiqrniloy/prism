@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { type JsonObject, type OwnershipScope, type SecretRedactor } from "@arnilo/prism";
 import { type ArtifactBodyRef, type ArtifactBodyStore } from "@arnilo/prism/artifacts";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { WorkToolError } from "./errors.js";
 import { identityKey } from "./idempotency.js";
 import { type AgentIdentity, assertIdentityActive } from "./identity.js";

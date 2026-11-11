@@ -8,14 +8,8 @@ import {
   type ToolExecutionContext,
   type ToolResult,
 } from "@arnilo/prism";
-import {
-  acceptDeviceChunk,
-  assertDeviceAdmit,
-  type DeviceAdapter,
-  DevicePolicyError,
-  resolveDevicePolicy,
-} from "./devices.js";
-import type { ConnectMcpToolsOptions, McpStdioTransport, McpToolBridge } from "@arnilo/prism-mcp";
+import { acceptDeviceChunk, assertDeviceAdmit, type DeviceAdapter, DevicePolicyError, resolveDevicePolicy } from "./devices.js";
+import type { ConnectMcpToolsOptions, McpStdioTransport, McpToolBridge } from "@arnilo/prism-extensions/mcp";
 import { classifyComputerUseLinuxTool, isComputerUseLinuxTool } from "./classify.js";
 import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "./env.js";
 
@@ -46,7 +40,7 @@ export interface ComputerUseLinuxToolsOptions {
   readonly redactor?: SecretRedactor;
   /** Test/host platform seam; defaults to `process.platform`. */
   readonly platform?: NodeJS.Platform;
-  /** Test/host seam; production dynamically imports `connectMcpTools` from `@arnilo/prism-mcp`. */
+  /** Test/host seam; production dynamically imports `connectMcpTools` from `@arnilo/prism-extensions/mcp`. */
   readonly connect?: ComputerUseLinuxConnect;
 }
 
@@ -76,7 +70,7 @@ export async function createComputerUseLinuxTools(options: ComputerUseLinuxTools
     env: options.env ?? buildChildEnv({ inherit: DEFAULT_CHILD_ENV_INHERIT }),
     ...(options.stderr === undefined ? {} : { stderr: options.stderr }),
   };
-  const bridge = await (options.connect ?? (await import("@arnilo/prism-mcp")).connectMcpTools)({
+  const bridge = await (options.connect ?? (await import("@arnilo/prism-extensions/mcp")).connectMcpTools)({
     serverId: options.serverId ?? DEFAULT_SERVER_ID,
     transport,
     namePrefix: "",

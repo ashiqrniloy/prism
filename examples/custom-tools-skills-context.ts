@@ -1,4 +1,15 @@
-import { type AgentEvent, createAgent, providerDone, providerTextDelta, providerToolCall, providerUsage, registerContextSources, type Skill, type ToolDefinition, type ToolResult } from "@arnilo/prism";
+import {
+  type AgentEvent,
+  createAgent,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  providerUsage,
+  registerContextSources,
+  type Skill,
+  type ToolDefinition,
+  type ToolResult,
+} from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
 
 // Custom tools + skills + context in one host app: register a host-owned
@@ -44,12 +55,16 @@ export async function demo(): Promise<{
 }> {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [mockProvider([[
-      providerToolCall({ type: "tool_call", id: "tc1", name: "notes/save", arguments: { text: "extensible SDK" } }),
-      providerTextDelta("Saved the summary."),
-      providerUsage({ inputTokens: 10, outputTokens: 6, totalTokens: 16 }),
-      providerDone(),
-    ]])],
+    packages: [
+      mockProvider([
+        [
+          providerToolCall({ type: "tool_call", id: "tc1", name: "notes/save", arguments: { text: "extensible SDK" } }),
+          providerTextDelta("Saved the summary."),
+          providerUsage({ inputTokens: 10, outputTokens: 6, totalTokens: 16 }),
+          providerDone(),
+        ],
+      ]),
+    ],
     instructions: "You are a concise assistant.",
     tools: { add: [saveNoteTool] },
     skills: { add: [summarizeSkill] },

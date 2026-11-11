@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import { discoverFreeModels, PROVIDERS, poolMatch, renderMarkdown, stripUpstream } from "./free-models.mjs";
 import { DEPLOYMENTS } from "./free-pool.mjs";
 

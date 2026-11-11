@@ -59,12 +59,16 @@ function counterPackage(options: { readonly capabilities?: Loose["capabilities"]
     ({ state, commands }) => {
       const om = state.session<JsonValue>("om", { n: 0 });
       options.onState?.(om);
-      const read = (session: SessionContext | undefined) => (om.get(session!) as unknown as Counter).n;
+      const read = (session: SessionContext | undefined) => {
+        assert.ok(session);
+        return (om.get(session) as unknown as Counter).n;
+      };
       commands.register({
         name: "bump",
         description: "adds one",
         run: async (_args, ctx) => {
-          await om.set(ctx.session!, { n: read(ctx.session) + 1 });
+          assert.ok(ctx.session);
+          await om.set(ctx.session, { n: read(ctx.session) + 1 });
           return read(ctx.session);
         },
       });
@@ -73,7 +77,10 @@ function counterPackage(options: { readonly capabilities?: Loose["capabilities"]
         name: "set",
         description: "stores any value",
         args: { type: "object", additionalProperties: true },
-        run: (args, ctx) => om.set(ctx.session!, args.value as JsonValue),
+        run: (args, ctx) => {
+          assert.ok(ctx.session);
+          return om.set(ctx.session, args.value as JsonValue);
+        },
       });
     },
     { capabilities: options.capabilities ?? ["session-state"] },
@@ -93,9 +100,19 @@ function logPackage(
         name: "log",
         description: "appends one record",
         args: { type: "object", additionalProperties: true },
-        run: (args, ctx) => log.append(ctx.session!, args.value as JsonValue),
+        run: (args, ctx) => {
+          assert.ok(ctx.session);
+          return log.append(ctx.session, args.value as JsonValue);
+        },
       });
-      commands.register({ name: "logged", description: "reads the log", run: (_args, ctx) => log.entries(ctx.session!) });
+      commands.register({
+        name: "logged",
+        description: "reads the log",
+        run: (_args, ctx) => {
+          assert.ok(ctx.session);
+          return log.entries(ctx.session);
+        },
+      });
       commands.register({ name: "grab", description: "keeps the session view", run: (_args, ctx) => void options.onView?.(ctx.session) });
     },
     { capabilities: ["session-state"] },
@@ -148,14 +165,19 @@ describe("package session state", () => {
     const cycle: Record<string, unknown> = {};
     cycle.self = cycle;
     for (const value of [() => 1, new Map(), Number.NaN, cycle, { nested: { fn() {} } }]) {
-      await rejects(om!.set(view!, value), "state_not_json");
+      assert.ok(om);
+      assert.ok(view);
+      await rejects(om.set(view, value), "state_not_json");
     }
     assert.equal((await store.list("s")).filter((entry) => entry.kind === "package_state").length, 0, "nothing was persisted");
     // A non-JSON initial value fails the load.
     await rejects(
       createAgent({
         model: MODEL,
-        packages: [pkg("@acme/bad", ({ state }) => void state.session("k", (() => 1) as never), { capabilities: ["session-state"] }), providerPackage("test-provider", [provider])],
+        packages: [
+          pkg("@acme/bad", ({ state }) => void state.session("k", (() => 1) as never), { capabilities: ["session-state"] }),
+          providerPackage("test-provider", [provider]),
+        ],
       }),
       "state_not_json",
     );
@@ -173,11 +195,15 @@ describe("package session state", () => {
     // A view the session handed out, read before the session read its branch.
     let view: SessionContext | undefined;
     const spy = pkg("@acme/spy", ({ hooks }) => hooks.on("run.started", (_event, ctx) => void (view = ctx.session)));
-    const early = await createAgent({ model: MODEL, packages: [counterPackage({ onState: (om) => (handle = om) }), spy, providerPackage("test-provider", [provider])] });
+    const early = await createAgent({
+      model: MODEL,
+      packages: [counterPackage({ onState: (om) => (handle = om) }), spy, providerPackage("test-provider", [provider])],
+    });
     const earlySession = await early.session();
     await earlySession.run("hi");
     assert.ok(view, "a hook saw a session view");
-    assert.deepEqual(handle!.get(view!), { n: 0 }, "after a run the session has read its branch");
+    assert.ok(handle);
+    assert.deepEqual(handle.get(view), { n: 0 }, "after a run the session has read its branch");
 
     // `agent.session()` and `session.fork()` resolve hydrated, so no public session can answer
     // `initial` before it has read its branch; `state_not_ready` guards only internal construction.
@@ -194,11 +220,19 @@ describe("package session state", () => {
       "@acme/writer",
       ({ state, hooks }) => {
         const keep = state.session<JsonValue>("keep", "");
-        hooks.on("turn.completed", async (_event, ctx) => void (await keep.set(ctx.session!, `token ${SECRET}`)));
+        hooks.on("turn.completed", async (_event, ctx) => {
+          assert.ok(ctx.session);
+          await keep.set(ctx.session, `token ${SECRET}`);
+        });
       },
       { capabilities: ["session-state"] },
     );
-    const agent = await createAgent({ model: MODEL, packages: [counterPackage(), writer, providerPackage("test-provider", [provider])], redactor, slots: { store } });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [counterPackage(), writer, providerPackage("test-provider", [provider])],
+      redactor,
+      slots: { store },
+    });
     const session = await agent.session({ id: "s", create: true });
     await session.run("hi");
     // Between runs: a command writes state with no run active.
@@ -212,7 +246,11 @@ describe("package session state", () => {
 
   it("package_state_does_not_enter_the_message_view", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model: MODEL, packages: [counterPackage(), providerPackage("test-provider", [provider])], slots: { store } });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [counterPackage(), providerPackage("test-provider", [provider])],
+      slots: { store },
+    });
     const session = await agent.session({ id: "s", create: true });
     await session.run("hello");
     const before = rebuildSessionContext(await store.list("s"), {}).messages;
@@ -222,7 +260,13 @@ describe("package session state", () => {
     assert.equal(entries.filter((entry) => entry.kind === "package_state").length, 2);
     assert.deepEqual(rebuildSessionContext(entries, {}).messages, before, "state entries add no message");
     // The branch stays linear: state entries chain onto the tip.
-    for (const [index, entry] of entries.entries()) if (index > 0) assert.equal(entry.parentId, entries[index - 1]!.id);
+    for (const [index, entry] of entries.entries()) {
+      if (index > 0) {
+        const previous = entries[index - 1];
+        assert.ok(previous);
+        assert.equal(entry.parentId, previous.id);
+      }
+    }
   });
 
   it("state_write_racing_a_run_append_keeps_one_branch", async () => {
@@ -241,7 +285,10 @@ describe("package session state", () => {
       "@acme/racer",
       ({ state, hooks }) => {
         const mark = state.session<JsonValue>("mark", 0);
-        hooks.on("message.completed", (_event, ctx) => void mark.set(ctx.session!, 1).catch(() => undefined));
+        hooks.on("message.completed", (_event, ctx) => {
+          assert.ok(ctx.session);
+          void mark.set(ctx.session, 1).catch(() => undefined);
+        });
       },
       { capabilities: ["session-state"] },
     );
@@ -263,7 +310,10 @@ describe("package session state", () => {
 
   it("session_state_needs_its_capability", async () => {
     const undeclared = pkg("@acme/nope", ({ state }) => void state.session("k", 1));
-    const error = await rejects(createAgent({ model: MODEL, packages: [undeclared, providerPackage("test-provider", [provider])] }), "capability_missing");
+    const error = await rejects(
+      createAgent({ model: MODEL, packages: [undeclared, providerPackage("test-provider", [provider])] }),
+      "capability_missing",
+    );
     assert.match(error.message, /state\.session/);
     assert.equal(error.package, "@acme/nope");
   });
@@ -274,11 +324,17 @@ describe("package session state", () => {
     const reader = pkg(
       "@acme/reader",
       ({ hooks, commands }) => {
-        hooks.on("turn.completed", async (_event, ctx) => void (fromHook = (await ctx.session!.entries()).map((entry) => entry.id)));
+        hooks.on("turn.completed", async (_event, ctx) => {
+          assert.ok(ctx.session);
+          fromHook = (await ctx.session.entries()).map((entry) => entry.id);
+        });
         commands.register({
           name: "branch",
           description: "reads the branch",
-          run: async (_args, ctx) => (await ctx.session!.entries()).map((entry) => entry.id),
+          run: async (_args, ctx) => {
+            assert.ok(ctx.session);
+            return (await ctx.session.entries()).map((entry) => entry.id);
+          },
         });
       },
       { capabilities: ["session-state"] },
@@ -295,7 +351,14 @@ describe("package session state", () => {
 
   it("session_context_entries_requires_session_state", async () => {
     const reader = pkg("@acme/plain", ({ commands }) =>
-      commands.register({ name: "branch", description: "reads the branch", run: (_args, ctx) => ctx.session!.entries() }),
+      commands.register({
+        name: "branch",
+        description: "reads the branch",
+        run: (_args, ctx) => {
+          assert.ok(ctx.session);
+          return ctx.session.entries();
+        },
+      }),
     );
     const agent = await createAgent({ model: MODEL, packages: [reader, providerPackage("test-provider", [provider])] });
     const session = await agent.session();
@@ -323,7 +386,9 @@ describe("package session state", () => {
           name: "read",
           description: "reads the branch in the background",
           run: (_args, ctx) => {
-            ctx.session!.background("read", async () => void (branch = (await ctx.session!.entries()).map((entry) => entry.id)));
+            const session = ctx.session;
+            assert.ok(session);
+            session.background("read", async () => void (branch = (await session.entries()).map((entry) => entry.id)));
           },
         });
       },
@@ -399,8 +464,10 @@ describe("package session state", () => {
     await agent.commands.run("grab", {}, { session });
     const cycle: Record<string, unknown> = {};
     cycle.self = cycle;
-    for (const value of [() => 1, new Map(), Number.NaN, cycle]) await rejects(log!.append(view!, value as never), "state_not_json");
-    await rejects(log!.append(view!, { big: "x".repeat(65 * 1024) }), "state_too_large");
+    assert.ok(log);
+    assert.ok(view);
+    for (const value of [() => 1, new Map(), Number.NaN, cycle]) await rejects(log.append(view, value as never), "state_not_json");
+    await rejects(log.append(view, { big: "x".repeat(65 * 1024) }), "state_too_large");
     assert.equal((await store.list("s")).filter((entry) => entry.kind === "package_state").length, 0, "nothing was persisted");
   });
 
@@ -453,17 +520,21 @@ describe("package session state", () => {
       model: MODEL,
       packages: [pkg("@acme/mem", ({ state }) => void (handle = state.agent("hits", 0))), providerPackage("test-provider", [provider])],
     });
-    handle!.set(5);
-    assert.equal(handle!.get(), 5);
+    assert.ok(handle);
+    handle.set(5);
+    assert.equal(handle.get(), 5);
     await agent.dispose();
-    assert.equal(handle!.get(), 0, "cleared on dispose");
+    assert.equal(handle.get(), 0, "cleared on dispose");
     await rejects(
       createAgent({
         model: MODEL,
-        packages: [pkg("@acme/dup", ({ state }) => {
+        packages: [
+          pkg("@acme/dup", ({ state }) => {
             state.agent("k", 1);
             state.agent("k", 2);
-          }), providerPackage("test-provider", [provider])],
+          }),
+          providerPackage("test-provider", [provider]),
+        ],
       }),
       "setup_failed",
     );
@@ -502,7 +573,11 @@ describe("session lifecycle events", () => {
         ...(loop ? [pkg("@acme/loop", ({ slots }) => slots.loop.provide(loop), { capabilities: ["slot:loop"] })] : []),
       ];
       const store = createMemorySessionStore();
-      const agent = await createAgent({ model: MODEL, packages: [...packages, providerPackage("test-provider", [provider])], slots: { store } });
+      const agent = await createAgent({
+        model: MODEL,
+        packages: [...packages, providerPackage("test-provider", [provider])],
+        slots: { store },
+      });
       const session = await agent.session({ id: "s", create: true });
       const streamed: string[] = [];
       for await (const event of session.stream("hi")) streamed.push(event.type);
@@ -525,7 +600,11 @@ describe("session lifecycle events", () => {
       status.note("info", `connected with ${SECRET}`);
       status.note("warn", "degraded");
     });
-    const agent = await createAgent({ model: MODEL, packages: [first, second, providerPackage("test-provider", [provider])], redactor: createSecretRedactor([SECRET]) });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [first, second, providerPackage("test-provider", [provider])],
+      redactor: createSecretRedactor([SECRET]),
+    });
     const notes = events.flatMap((event) => (event.type === "package.status" ? [event] : []));
     assert.deepEqual(
       notes.map(({ package: owner, level }) => [owner, level]),
@@ -534,8 +613,10 @@ describe("session lifecycle events", () => {
         ["@acme/second", "warn"],
       ],
     );
-    assert.equal(notes[1]!.message, "degraded");
-    assert.equal(notes[0]!.sessionId, "", "agent-scoped");
+    assert.ok(notes[0]);
+    assert.ok(notes[1]);
+    assert.equal(notes[1].message, "degraded");
+    assert.equal(notes[0].sessionId, "", "agent-scoped");
     assert.equal(JSON.stringify(events).includes(SECRET), false, "redacted outside a run");
     assert.equal(agentRuntime(agent).packages.statusNotes().length, 2);
   });
@@ -556,16 +637,17 @@ describe("background tasks", () => {
           name: "start",
           description: "starts tasks",
           run: (_args, ctx) => {
-            ctx.session!.background("fast", async () => "done");
-            ctx.session!.background("hangs", (signal) => {
+            assert.ok(ctx.session);
+            ctx.session.background("fast", async () => "done");
+            ctx.session.background("hangs", (signal) => {
               hungSignal = signal;
               return new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(new Error("aborted by close"))));
             });
-            ctx.session!.background("ignores", (signal) => {
+            ctx.session.background("ignores", (signal) => {
               ignoredSignal = signal;
               return new Promise(() => {});
             });
-            ctx.session!.background("breaks", async () => {
+            ctx.session.background("breaks", async () => {
               throw new Error(`failed with ${SECRET}`);
             });
           },
@@ -609,20 +691,25 @@ describe("background tasks", () => {
   it("close_returns_at_once_when_nothing_runs_and_a_zero_bound_aborts_immediately", async () => {
     const agent = await createAgent({
       model: MODEL,
-      packages: [pkg(
+      packages: [
+        pkg(
           "@acme/slow",
           ({ commands }) =>
             commands.register({
               name: "go",
               description: "x",
-              run: (_args, ctx) =>
-                ctx.session!.background(
+              run: (_args, ctx) => {
+                assert.ok(ctx.session);
+                return ctx.session.background(
                   "slow",
                   (signal) => new Promise((_r, reject) => signal.addEventListener("abort", () => reject(new Error("x")))),
-                ),
+                );
+              },
             }),
           { capabilities: ["background"] },
-        ), providerPackage("test-provider", [provider])],
+        ),
+        providerPackage("test-provider", [provider]),
+      ],
       limits: { backgroundSettleMs: 0 },
     });
     const idle = await agent.session();
@@ -632,8 +719,11 @@ describe("background tasks", () => {
     const startedAt = performance.now();
     await busy.close();
     assert.ok(performance.now() - startedAt < 200);
-    const bad = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], limits: { backgroundSettleMs: -1 } });
+    const bad = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      limits: { backgroundSettleMs: -1 },
+    });
     await assert.rejects((await bad.session({ id: "x", create: true })).close(), /backgroundSettleMs/);
   });
 });
-

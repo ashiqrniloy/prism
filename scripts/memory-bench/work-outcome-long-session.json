@@ -13,14 +13,45 @@
   "residualPool": {
     "long-session-coding": 0
   },
-  "idsHash": "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730",
+  "extension": {
+    "decision": "m1DevPersonas (memory-model-criteria.json ownerDecisions, 2026-11-10)",
+    "rule": "ls12-ls23 all join dev, in the draw's seed order; the three-way draw of the first 12 is unchanged",
+    "dev": [
+      "ls15",
+      "ls12",
+      "ls19",
+      "ls14",
+      "ls18",
+      "ls17",
+      "ls21",
+      "ls13",
+      "ls23",
+      "ls22",
+      "ls16",
+      "ls20"
+    ],
+    "baseIdsHash": "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730"
+  },
+  "idsHash": "949b2ae2d5202e65251ab90ca3904c4d8a615fb501699126761c5ae0f527999c",
   "abilities": {
     "dev": {
       "long-session-coding": [
         "ls10",
         "ls7",
         "ls11",
-        "ls1"
+        "ls1",
+        "ls15",
+        "ls12",
+        "ls19",
+        "ls14",
+        "ls18",
+        "ls17",
+        "ls21",
+        "ls13",
+        "ls23",
+        "ls22",
+        "ls16",
+        "ls20"
       ]
     },
     "heldout-a": {

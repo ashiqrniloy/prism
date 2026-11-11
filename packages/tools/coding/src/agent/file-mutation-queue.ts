@@ -2,7 +2,7 @@
  * Serialize file mutation operations targeting the same file.
  * Operations for different files still run in parallel.
  *
- * Behavioral port of pi's core/tools/file-mutation-queue for @arnilo/prism-tools-coding.
+ * Behavioral port of pi's core/tools/file-mutation-queue for @arnilo/prism-tools/coding.
  * stdlib only (node:fs/promises realpath, node:path resolve).
  *
  * ponytail: global process-wide Map mutex keyed by realpath. Ceiling: all

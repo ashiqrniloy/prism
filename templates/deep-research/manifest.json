@@ -5,8 +5,8 @@
   "tags": ["research", "workflows", "web-tools", "rag", "hitl"],
   "packages": [
     "@arnilo/prism",
-    "@arnilo/prism-tools-web",
-    "@arnilo/prism-rag",
-    "@arnilo/prism-workflows"
+    "@arnilo/prism-tools/web",
+    "@arnilo/prism-knowledge/rag",
+    "@arnilo/prism-extensions/workflows"
   ]
 }

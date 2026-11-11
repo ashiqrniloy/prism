@@ -1,6 +1,6 @@
 # `scripts/litellm`
 
-Operator tooling for the LiteLLM provider (`@arnilo/prism-provider-litellm`, plan 214). Nothing here
+Operator tooling for the LiteLLM provider (`@arnilo/prism-ai/litellm`, plan 214). Nothing here
 ships in a package and nothing here runs during a normal Prism session.
 
 ## `reconcile.mjs` — Prism cost vs. the proxy's spend log

@@ -11,7 +11,7 @@
  *
  * It never calls a model and reads nothing but the file and the last body the wiki wrote.
  */
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import type { WikiConceptRecord } from "../store.js";
 import { type ConceptDoc, type ConceptItem, parseConceptBody, renderConceptBody } from "./codec.js";
 import type { ConceptDirtyReason } from "./types.js";

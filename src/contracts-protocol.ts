@@ -1,6 +1,6 @@
 import type { CacheUsageReport } from "./provider-kit/cache-helpers.js";
 
-/** One hook that completed during a restore. The runner lives in `@arnilo/prism-workflows`. */
+/** One hook that completed during a restore. The runner lives in `@arnilo/prism-extensions/workflows`. */
 export interface CheckpointRestoreAuditEntry {
   readonly hook: string;
   readonly durationMs: number;

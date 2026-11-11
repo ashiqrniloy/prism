@@ -4,7 +4,7 @@ import { EventSchemas, EventType } from "@ag-ui/core";
 import { type AgentEvent, createSecretRedactor } from "@arnilo/prism";
 import { createAgUiEventMapper, packageName, resolveAgUiLimits } from "../index.js";
 
-describe("@arnilo/prism-ag-ui", () => {
+describe("@arnilo/prism-hosts/ag-ui", () => {
   it("maps a redacted message, safe tool lifecycle, usage, and finish through official schemas", async () => {
     const mapper = createAgUiEventMapper({
       redactor: createSecretRedactor(["secret", "/host/workspace"]),
@@ -230,7 +230,7 @@ describe("@arnilo/prism-ag-ui", () => {
   });
 
   it("enforces finite limits and truncates oversized text before schema output", async () => {
-    assert.equal(packageName, "@arnilo/prism-ag-ui");
+    assert.equal(packageName, "@arnilo/prism-hosts/ag-ui");
     assert.throws(() => resolveAgUiLimits({ maxEventBytes: 1_000 }), /maxEventBytes/);
     assert.throws(() => resolveAgUiLimits({ maxErrorBytes: 65_537 }), /maxErrorBytes/);
     const mapper = createAgUiEventMapper();

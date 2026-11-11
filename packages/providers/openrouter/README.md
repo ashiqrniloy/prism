@@ -1,18 +1,18 @@
-# @arnilo/prism-provider-openrouter
+# @arnilo/prism-ai/openrouter
 
 Registers OpenRouter's Chat Completions provider with reasoning replay, routing preferences, prompt caching, and model discovery.
 
 ## Install
 
 ```bash
-prism add @arnilo/prism-provider-openrouter
+prism add @arnilo/prism-ai/openrouter
 ```
 
 ```jsonc
 {
-  "packages": ["@arnilo/prism-provider-openrouter"],
+  "packages": ["@arnilo/prism-ai/openrouter"],
   "packageConfig": {
-    "@arnilo/prism-provider-openrouter": { "apiKey": "env:OPENROUTER_API_KEY" }
+    "@arnilo/prism-ai/openrouter": { "apiKey": "env:OPENROUTER_API_KEY" }
   }
 }
 ```
@@ -116,7 +116,7 @@ cache-hit performance; see the wire fixture README.
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import openrouter from "@arnilo/prism-provider-openrouter";
+import openrouter from "@arnilo/prism-ai/openrouter";
 
 const agent = await createAgent({
   model: "openrouter/anthropic/claude-haiku-4.5",

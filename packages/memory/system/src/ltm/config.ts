@@ -7,8 +7,8 @@
  */
 import { isAbsolute, relative, resolve } from "node:path";
 import type { JsonSchema } from "@arnilo/prism";
-import { HARD_TOP_K_CAP, MemoryValidationError } from "@arnilo/prism-memory-core";
-import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-core";
+import { HARD_TOP_K_CAP, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-system/core";
 import {
   HARD_RULES_TOKENS,
   type MemoryFabricRulesConfig,
@@ -75,7 +75,6 @@ import {
 } from "./lifecycle/index.js";
 import { type MemoryFabricPromoteConfig, memoryFabricPromoteSchema, type ResolvedPromoteConfig, resolvePromoteConfig } from "./promote.js";
 
-
 import { projectResourceId, resolveProjectIdentity } from "./scope/identity.js";
 import { resolveScopePriors, type ScopePriors } from "./scope/recall.js";
 import type { FabricScopeLevel, MemoryFabricConsolidationOptions, MemoryNoteKind } from "./types.js";
@@ -138,7 +137,6 @@ export interface MemoryFabricToolsConfig {
   readonly root?: string;
   readonly maxFileBytes?: number;
 }
-
 
 export interface MemoryFabricInjectConfig {
   /**
@@ -212,7 +210,6 @@ export interface MemoryFabricLifecycleConfig {
 export interface ResolvedMergeConfig {
   readonly duplicateDice: number;
 }
-
 
 export interface ResolvedLifecycleConfig {
   readonly verifyAfterSessions: number;
@@ -388,7 +385,6 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
     merge,
   };
 }
-
 
 function resolveMergeConfig(value: MemoryFabricLifecycleConfig["merge"]): ResolvedMergeConfig {
   const duplicateDice = value?.duplicateDice ?? DEFAULT_DUPLICATE_DICE;
@@ -895,7 +891,8 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
 
 /** Tag every field with its stability tier; `validateJsonSchema` ignores the extension keyword. */
 function withStability(schema: JsonSchema, tuning: ReadonlySet<string>, path = ""): JsonSchema {
-  const tierOf = (field: string): "tuning" | "contract" => (EXPERIMENTAL_CONFIG_FIELDS.has(field) || tuning.has(field) ? "tuning" : "contract");
+  const tierOf = (field: string): "tuning" | "contract" =>
+    EXPERIMENTAL_CONFIG_FIELDS.has(field) || tuning.has(field) ? "tuning" : "contract";
   const properties = schema.properties;
   const tagged: JsonSchema = properties
     ? {
@@ -903,10 +900,7 @@ function withStability(schema: JsonSchema, tuning: ReadonlySet<string>, path = "
         properties: Object.fromEntries(
           Object.entries(properties).map(([key, child]) => {
             const childPath = path ? `${path}.${key}` : key;
-            return [
-              key,
-              { ...withStability(child, tuning, childPath), "x-prism-stability": tierOf(childPath) },
-            ];
+            return [key, { ...withStability(child, tuning, childPath), "x-prism-stability": tierOf(childPath) }];
           }),
         ),
       }
@@ -992,7 +986,6 @@ function resolveExpansion(value: unknown): boolean {
   if (typeof value === "boolean") return value;
   throw new MemoryValidationError("recall.expansion must be a boolean");
 }
-
 
 export function resolveMemoryFabricConfig(config: MemoryFabricConfig = {}): ResolvedMemoryFabricConfig {
   const expanded = expandPreset(config);

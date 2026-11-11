@@ -242,10 +242,7 @@ test("required ordering; missing/stale approval-before-effect -> 0", async () =>
   assert.ok(resUnapproved.reason?.includes("without prior approval"));
 
   // 2. Approved: an `approved` HITL step for the same tool call precedes the effect
-  const approvedTimeline = makeTimeline([
-    makeApprovalStep(0, "approved", "c1"),
-    makeToolStep(1, "execute_refund", { amount: 50 }, "c1"),
-  ]);
+  const approvedTimeline = makeTimeline([makeApprovalStep(0, "approved", "c1"), makeToolStep(1, "execute_refund", { amount: 50 }, "c1")]);
   const resApproved = await approvalScorer.score({
     result: makeRunResult(),
     timeline: approvedTimeline,
@@ -538,6 +535,17 @@ test("approval_denied_on_resume_fails_effect", async () => {
   assert.equal(res.score, 0);
   assert.match(res.reason ?? "", /denied/);
   assert.equal(scorer.invariant, true);
+});
+
+test("blocked_tool_has_no_effect_but_unapproved_failed_execution_still_fails", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("write_record", ["write"])] });
+  for (const status of ["blocked", "failed"] as const) {
+    const result = await scorer.score({
+      result: makeRunResult(),
+      timeline: makeTimeline([{ ...makeToolStep(0, "write_record", {}, "c1"), status }]),
+    });
+    assert.equal(result.score, status === "blocked" ? 1 : 0);
+  }
 });
 
 test("approval_for_other_call_does_not_cover_effect", async () => {

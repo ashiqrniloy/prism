@@ -22,7 +22,7 @@
  * (`serveMcp`'s `input_required` round trip) are covered by
  * packages/hosts/mcp-server/src/__tests__/serve.test.ts, and the bridge-side
  * MRTR elicitation round-trip Prism speaks over real HTTP by
- * packages/integrations/mcp/src/__tests__/modern-bridge.test.ts.
+ * packages/extensions/mcp/src/__tests__/modern-bridge.test.ts.
  *
  * Usage: PRISM_TEST_MCP_CLIENT=1 bun scripts/mcp-client-smoke.mjs
  */

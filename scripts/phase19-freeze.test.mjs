@@ -57,7 +57,7 @@ function resolveFile(file) {
     "packages/policy/": "packages/prism-core/src/governance/policy/",
     "packages/evals/": "packages/prism-core/src/governance/evals/",
     "packages/prompts/": "packages/prism-core/src/governance/prompts/",
-    "packages/model-router/": "packages/policy/model-router/src/router/",
+    "packages/model-router/": "packages/extensions/model-router/src/router/",
     "packages/observability-opentelemetry/": "packages/prism-core/src/governance/observability/",
     "packages/credentials-node/": "packages/prism-core/src/credentials/node/",
     "packages/enterprise-postgres/": "packages/prism-core/src/enterprise/postgres/",
@@ -339,8 +339,8 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist and are wired per item
     const sel = readFileSync(resolveFile("packages/model-router/src/selection.ts"), "utf8");
     assert.ok(sel.includes("ModelRouterSelectionPolicy"), "selection.ts defines the policy seam");
     assert.ok(sel.includes("createCostLatencySelection"), "selection.ts ships the reference policy");
-    if (existsSync(url("../packages/policy/model-router/src/index.ts"))) {
-      const idx = readFileSync(url("../packages/policy/model-router/src/index.ts"), "utf8");
+    if (existsSync(url("../packages/extensions/model-router/src/index.ts"))) {
+      const idx = readFileSync(url("../packages/extensions/model-router/src/index.ts"), "utf8");
       assert.ok(idx.includes("selection"), "model-router index re-exports the selection module");
     }
     assert.ok(existsSync(resolveFile("packages/model-router/src/__tests__/selection.test.ts")), "selection tests exist");

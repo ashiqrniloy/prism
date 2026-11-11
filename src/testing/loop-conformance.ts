@@ -189,7 +189,12 @@ export async function loopConformance(input: LoopStrategy | LoopConformanceOptio
         // session's observe dispatch path regardless of which loop drives the run.
         const types = options.emitEvents;
         hooks.on("turn.before", ((_payload: unknown, ctx: HookContext) => {
-          for (const type of types) (ctx as unknown as Record<symbol, (event: AgentEvent) => void>)[RAW_EMIT]!({ type, sessionId, runId: "" } as unknown as AgentEvent);
+          for (const type of types)
+            (ctx as unknown as Record<symbol, (event: AgentEvent) => void>)[RAW_EMIT]!({
+              type,
+              sessionId,
+              runId: "",
+            } as unknown as AgentEvent);
           return undefined;
         }) as never);
       }

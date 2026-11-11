@@ -148,7 +148,7 @@ jobs:
       - name: install libreoffice headless
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc libreoffice-impress
       - name: run office golden validation
-        run: bun run --filter @arnilo/prism-tools-work test:office
+        run: bun run --filter @arnilo/prism-tools test:office
 
   publish:
     name: publish (deterministic, resumable, provenance)
@@ -170,7 +170,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.4.4"
-      # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1; `npm publish --provenance`
+      # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1; the npm provenance command
       # exchanges the job's OIDC token for a short-lived credential, so no npm token is stored.
       # Node 24.10.0 bundles npm 11.6.2, above the trusted-publishing floor of 11.5.1. The publish
       # itself runs inside `bun run release:publish` (scripts/release.mjs), so no npm command line

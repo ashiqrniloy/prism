@@ -1,0 +1,216 @@
+./rag AccessDenial	interface AccessDenial { readonly error?: string; readonly hits: number; readonly reason: AccessDenialReason; readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string; }; readonly sourceId: string; }
+./rag AccessDenialReason	type AccessDenialReason = "no_grant" | "check_failed"
+./rag AccessRecheck	interface AccessRecheck { allows(hit: RagHit): Promise<boolean>; allowsAfterRerank(hit: RagHit): Promise<boolean>; noteStoreDenials(scope: RagScope, denials: readonly StoreDenial[]): void; report(): readonly AccessDenial[]; }
+./rag ChunkOptions	interface ChunkOptions { readonly maxChunks?: number; readonly maxDocumentChars?: number; readonly metadata?: JsonObject; readonly overlap?: number; readonly size?: number; readonly sourceId: string; }
+./rag Chunker	type Chunker = (text: string, options: ChunkOptions) => readonly RagChunk[]
+./rag CreateAccessRecheckOptions	interface CreateAccessRecheckOptions { readonly authorization: RagAccessConstraint; readonly onDenied?: (denial: AccessDenial) => void; readonly redact?: (value: string) => string; readonly signal?: AbortSignal; readonly store: VectorStore; }
+./rag CreateLocalRerankerOptions	interface CreateLocalRerankerOptions extends TransformersRerankRuntimeOptions { readonly model?: string; readonly onLoad?: (info: { readonly model: string; readonly loadMs: number; }) => void; readonly runtime?: LocalRerankRuntime; }
+./rag CreateOpenAiCompatibleRerankerOptions	interface CreateOpenAiCompatibleRerankerOptions extends HostedRerankerOptions {}
+./rag CreateTeiRerankerOptions	interface CreateTeiRerankerOptions { readonly allowLoopback?: boolean; readonly baseUrl: string; readonly fetch?: typeof globalThis.fetch; readonly maxResponseBytes?: number; readonly model?: string; readonly ssrf?: SsrfPolicy; readonly timeoutMs?: number; }
+./rag CreateVoyageRerankerOptions	interface CreateVoyageRerankerOptions extends HostedRerankerOptions { readonly apiKey: string; }
+./rag DEFAULT_CHUNK_OVERLAP	const DEFAULT_CHUNK_OVERLAP = 100
+./rag DEFAULT_CHUNK_SIZE	const DEFAULT_CHUNK_SIZE = 1000
+./rag DEFAULT_EMBED_BATCH_SIZE	const DEFAULT_EMBED_BATCH_SIZE = 32
+./rag DEFAULT_INGESTION_STATUS_PAGE_SIZE	const DEFAULT_INGESTION_STATUS_PAGE_SIZE = 50
+./rag DEFAULT_LOCAL_RERANK_MODEL	const DEFAULT_LOCAL_RERANK_MODEL = "Xenova/bge-reranker-base"
+./rag DEFAULT_MAX_CHUNKS	const DEFAULT_MAX_CHUNKS = 2048
+./rag DEFAULT_MAX_CONTEXT_TOKENS	const DEFAULT_MAX_CONTEXT_TOKENS = 2000
+./rag DEFAULT_MAX_DOCUMENT_BYTES	const DEFAULT_MAX_DOCUMENT_BYTES = 1048576
+./rag DEFAULT_MAX_DOCUMENT_CHARS	const DEFAULT_MAX_DOCUMENT_CHARS = 1048576
+./rag DEFAULT_MAX_METADATA_BYTES	const DEFAULT_MAX_METADATA_BYTES: number
+./rag DEFAULT_MAX_PARSE_MS	const DEFAULT_MAX_PARSE_MS = 30000
+./rag DEFAULT_MAX_PDF_PAGES	const DEFAULT_MAX_PDF_PAGES = 256
+./rag DEFAULT_MAX_RERANK_BYTES	const DEFAULT_MAX_RERANK_BYTES: number
+./rag DEFAULT_MAX_RERANK_MS	const DEFAULT_MAX_RERANK_MS = 2000
+./rag DEFAULT_MAX_RESULT_BYTES	const DEFAULT_MAX_RESULT_BYTES: number
+./rag DEFAULT_MAX_VECTOR_DIMENSIONS	const DEFAULT_MAX_VECTOR_DIMENSIONS = 4096
+./rag DEFAULT_QUERY_CANDIDATES	const DEFAULT_QUERY_CANDIDATES = 20
+./rag DEFAULT_RAG_EMBED_BATCH	const DEFAULT_RAG_EMBED_BATCH = 64
+./rag DEFAULT_RAG_GLOB	const DEFAULT_RAG_GLOB = "**/*.{md,markdown,mdx,txt,html,htm,pdf}"
+./rag DEFAULT_RAG_SCOPE	const DEFAULT_RAG_SCOPE: Readonly<{ tenantId: "prism"; resourceId: "rag"; corpusId: "default"; }>
+./rag DEFAULT_RERANK_CONCURRENCY	const DEFAULT_RERANK_CONCURRENCY = 2
+./rag DEFAULT_SYNC_MAX_PAGES	const DEFAULT_SYNC_MAX_PAGES = 8
+./rag DEFAULT_SYNC_PAGE_SIZE	const DEFAULT_SYNC_PAGE_SIZE = 50
+./rag DEFAULT_SYNC_RETRIES	const DEFAULT_SYNC_RETRIES = 3
+./rag DEFAULT_TOP_K	const DEFAULT_TOP_K = 5
+./rag DeleteSourceOptions	interface DeleteSourceOptions { readonly scope: RagScope; readonly signal?: AbortSignal; readonly sourceId: string; readonly statusStore?: IngestionStatusStore; readonly store: SourceVectorStore; }
+./rag DocumentLoadOptions	interface DocumentLoadOptions { readonly maxBytes?: number; readonly signal?: AbortSignal; }
+./rag DocumentLoader	interface DocumentLoader { load(uri: string, options?: DocumentLoadOptions): Promise<LoadedDocument>; }
+./rag DocumentParseOptions	interface DocumentParseOptions extends DocumentLoadOptions { readonly maxPages?: number; readonly maxParseMs?: number; }
+./rag DriveAccessMapping	interface DriveAccessMapping { readonly groupId?: string; readonly principalId?: string; }
+./rag DrivePermission	interface DrivePermission { readonly emailAddress?: string; readonly id?: string; readonly role?: string; readonly type?: string; }
+./rag GoogleDriveConnectorOptions	interface GoogleDriveConnectorOptions { readonly allowLoopback?: boolean; readonly baseUrl?: string; readonly driveId?: string; readonly fetch?: typeof globalThis.fetch; readonly folderId?: string; readonly maxResponseBytes?: number; readonly resolveAccess: (permission: DrivePermission) => DriveAccessMapping | undefined; readonly signal?: AbortSignal; readonly ssrf?: SsrfPolicy; readonly tokenProvider: (input?: { readonly signal?: AbortSignal; }) => Promise<string> | string; }
+./rag HARD_CHUNK_OVERLAP_CAP	const HARD_CHUNK_OVERLAP_CAP = 4096
+./rag HARD_CHUNK_SIZE_CAP	const HARD_CHUNK_SIZE_CAP = 16384
+./rag HARD_EMBED_BATCH_SIZE_CAP	const HARD_EMBED_BATCH_SIZE_CAP = 128
+./rag HARD_INGESTION_STATUS_PAGE_SIZE_CAP	const HARD_INGESTION_STATUS_PAGE_SIZE_CAP = 200
+./rag HARD_MAX_CHUNKS_CAP	const HARD_MAX_CHUNKS_CAP = 8192
+./rag HARD_MAX_CONTEXT_TOKENS_CAP	const HARD_MAX_CONTEXT_TOKENS_CAP = 8000
+./rag HARD_MAX_DOCUMENT_BYTES_CAP	const HARD_MAX_DOCUMENT_BYTES_CAP: number
+./rag HARD_MAX_DOCUMENT_CHARS_CAP	const HARD_MAX_DOCUMENT_CHARS_CAP = 8388608
+./rag HARD_MAX_METADATA_BYTES_CAP	const HARD_MAX_METADATA_BYTES_CAP: number
+./rag HARD_MAX_PARSE_MS_CAP	const HARD_MAX_PARSE_MS_CAP = 30000
+./rag HARD_MAX_PDF_PAGES_CAP	const HARD_MAX_PDF_PAGES_CAP = 256
+./rag HARD_MAX_RERANK_BYTES_CAP	const HARD_MAX_RERANK_BYTES_CAP: number
+./rag HARD_MAX_RERANK_MS_CAP	const HARD_MAX_RERANK_MS_CAP = 10000
+./rag HARD_MAX_RESULT_BYTES_CAP	const HARD_MAX_RESULT_BYTES_CAP: number
+./rag HARD_MAX_SOURCE_FILES	const HARD_MAX_SOURCE_FILES = 4096
+./rag HARD_QUERY_CANDIDATES_CAP	const HARD_QUERY_CANDIDATES_CAP = 128
+./rag HARD_RERANK_CONCURRENCY_CAP	const HARD_RERANK_CONCURRENCY_CAP = 8
+./rag HARD_RETRIEVE_SCOPE_CAP	const HARD_RETRIEVE_SCOPE_CAP = 8
+./rag HARD_SYNC_MAX_PAGES_CAP	const HARD_SYNC_MAX_PAGES_CAP = 64
+./rag HARD_SYNC_PAGE_SIZE_CAP	const HARD_SYNC_PAGE_SIZE_CAP = 200
+./rag HARD_SYNC_RETRIES_CAP	const HARD_SYNC_RETRIES_CAP = 8
+./rag HARD_TOP_K_CAP	const HARD_TOP_K_CAP = 32
+./rag IndexChunksOptions	interface IndexChunksOptions { readonly batchSize?: number; readonly chunks: readonly RagChunk[]; readonly contentHash?: string; readonly embedder: Embedder; readonly maxChunkChars?: number; readonly maxChunks?: number; readonly maxMetadataBytes?: number; readonly maxVectorDimensions?: number; readonly redactor?: SecretRedactor; readonly reuseEmbeddings?: ReadonlyMap<string, ReusableEmbedding>; readonly scope: RagScope; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly statusStore?: IngestionStatusStore; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly telemetryParent?: RagTelemetrySpan; }
+./rag IndexChunksResult	interface IndexChunksResult { readonly indexed: number; readonly sourceIds: readonly string[]; }
+./rag IndexSourcesOptions	interface IndexSourcesOptions { readonly embedder: Embedder; readonly onSkip?: (source: RagSourceConfig, reason: string) => void; readonly scope: RagScope; readonly signal?: AbortSignal; readonly sources: readonly RagSourceConfig[]; readonly store: TransactionalVectorStore; readonly webFetch?: WebFetchService; }
+./rag IndexSourcesResult	interface IndexSourcesResult { readonly files: number; readonly indexed: number; readonly skipped: number; }
+./rag IngestionState	type IngestionState = "pending" | "indexed" | "failed" | "partial"
+./rag IngestionStatus	interface IngestionStatus { readonly bytes: number; readonly chunks: number; readonly error?: string; readonly freshness?: SourceFreshness; readonly scope: RagScope; readonly sourceId: string; readonly state: IngestionState; readonly updatedAt: string; }
+./rag IngestionStatusQuery	interface IngestionStatusQuery { readonly cursor?: string; readonly limit?: number; readonly scope: RagScope; readonly signal?: AbortSignal; readonly store: IngestionStatusStore; }
+./rag IngestionStatusStore	interface IngestionStatusStore { delete(scope: RagScope, sourceId: string, options?: { readonly signal?: AbortSignal; }): Promise<void>; list(scope: RagScope, options: { readonly limit: number; readonly cursor?: string; readonly signal?: AbortSignal; }): Promise<{ readonly entries: readonly IngestionStatus[]; readonly nextCursor?: string; }>; set(status: IngestionStatus, options?: { readonly signal?: AbortSignal; }): Promise<void>; }
+./rag KnowledgeChange	type KnowledgeChange = { readonly kind: "upsert"; readonly sourceId: string; readonly text: string; readonly contentHash: string; readonly grants?: SourceAccessGrant; readonly metadata?: import("@arnilo/prism").JsonObject; } | { readonly kind: "delete"; readonly sourceId: string; } | { readonly kind: "acl"; readonly sourceId: string; readonly grants: SourceAccessGrant; } | { readonly kind: "withhold"; readonly sourceId: string; readonly freshness: Exclude<SourceFreshness, "current">; }
+./rag KnowledgeChangePage	interface KnowledgeChangePage { readonly changes: readonly KnowledgeChange[]; readonly done: boolean; readonly resumeCursor: string; }
+./rag KnowledgeConnector	interface KnowledgeConnector { listChanges(input: { readonly cursor?: string; readonly limit: number; readonly signal?: AbortSignal; }): Promise<KnowledgeChangePage>; }
+./rag LoadedDocument	interface LoadedDocument { readonly data?: Uint8Array; readonly mediaType?: string; readonly metadata?: JsonObject; readonly sourceId?: string; readonly text?: string; readonly uri: string; }
+./rag LocalRerankModel	interface LocalRerankModel { readonly id: string; score(input: { readonly query: string; readonly documents: readonly string[]; readonly signal?: AbortSignal; }): Promise<readonly number[]>; }
+./rag LocalRerankRuntime	interface LocalRerankRuntime { load(model: string): Promise<LocalRerankModel>; }
+./rag ParsedDocument	interface ParsedDocument { readonly metadata?: JsonObject; readonly text: string; }
+./rag Parser	interface Parser { parse(document: LoadedDocument, options?: DocumentParseOptions): Promise<ParsedDocument>; }
+./rag ProviderEmbedderOptions	interface ProviderEmbedderOptions { readonly batchSize?: number; readonly dimensions?: number; readonly model: string; readonly provider: EmbeddingsProvider; }
+./rag RagAbortError	class RagAbortError extends RagError { constructor(); }
+./rag RagAccessConstraint	reexport RagAccessConstraint from "@arnilo/prism-memory-system/core"
+./rag RagChunk	interface RagChunk { readonly citationId: string; readonly end: number; readonly id: string; readonly index: number; readonly metadata?: JsonObject; readonly sourceId: string; readonly start: number; readonly text: string; }
+./rag RagCitation	interface RagCitation { readonly chunkId: string; readonly id: string; readonly metadata?: JsonObject; readonly provenance: RagProvenance; readonly sourceId: string; readonly trust: RagContentTrust; }
+./rag RagConfig	interface RagConfig { readonly context?: boolean; readonly embeddings?: RagEmbeddingsConfig | RagEmbeddingsServiceConfig; readonly reranker?: RagRerankerConfig; readonly scope?: RagScopeConfig; readonly sources?: readonly RagSourceConfig[]; readonly store?: "memory" | { readonly postgres?: RagPostgresStoreConfig; }; readonly topK?: number; }
+./rag RagContentTrust	interface RagContentTrust { readonly inert: true; readonly injectionCapable: true; readonly untrusted: true; }
+./rag RagContextBuild	type RagContextBuild = (hooks: import("@arnilo/prism").HookRegistrar, options: RagContextProviderOptions) => void
+./rag RagContextProviderOptions	interface RagContextProviderOptions extends Omit<RetrieveContextOptions, "signal"> { readonly name?: string; readonly prepare?: (signal?: AbortSignal) => Promise<void>; readonly query?: string | ((context: { readonly messages: readonly Message[]; }) => string | undefined); readonly title?: string; }
+./rag RagContextResult	interface RagContextResult { readonly citations: readonly RagCitation[]; readonly hits: readonly RagHit[]; readonly query: string; readonly text: string; readonly truncated: boolean; readonly trust: RagContentTrust; }
+./rag RagEmbeddingsConfig	interface RagEmbeddingsConfig { readonly batchSize?: number; readonly dimensions?: number; readonly model?: ModelRef; }
+./rag RagEmbeddingsServiceConfig	interface RagEmbeddingsServiceConfig { readonly service: string; }
+./rag RagError	class RagError extends Error { constructor(message: string, code?: string); readonly code: string; }
+./rag RagHit	interface RagHit extends RagChunk { readonly provenance: RagProvenance; readonly retrievalRank: number; readonly score: number; readonly trust: RagContentTrust; }
+./rag RagLimitError	class RagLimitError extends RagError { constructor(message: string); }
+./rag RagLimits	interface RagLimits { readonly chunkOverlap: number; readonly chunkSize: number; readonly embedBatchSize: number; readonly ingestionStatusPageSize: number; readonly maxChunks: number; readonly maxContextTokens: number; readonly maxDocumentBytes: number; readonly maxDocumentChars: number; readonly maxMetadataBytes: number; readonly maxParseMs: number; readonly maxPdfPages: number; readonly maxRerankBytes: number; readonly maxRerankMs: number; readonly maxResultBytes: number; readonly maxVectorDimensions: number; readonly queryCandidates: number; readonly rerankConcurrency: number; readonly rrfK: number; readonly topK: number; }
+./rag RagLimitsInput	type RagLimitsInput = Partial<RagLimits>
+./rag RagPostgresStoreConfig	interface RagPostgresStoreConfig { readonly connection?: string; readonly schema?: string; readonly table?: string; }
+./rag RagProvenance	interface RagProvenance { readonly chunkId: string; readonly citationId: string; readonly corpusId: string; readonly provider: string; readonly resourceId: string; readonly retrieval: "vector" | "lexical" | "hybrid"; readonly retrievedAt: string; readonly sourceId: string; readonly tenantId: string; }
+./rag RagRerankerConfig	type RagRerankerConfig = RagRerankerNoneConfig | RagRerankerFakeConfig | RagRerankerLocalConfig | RagRerankerHttpConfig
+./rag RagScope	interface RagScope { readonly corpusId: string; readonly resourceId: string; readonly tenantId: string; }
+./rag RagScopeConfig	interface RagScopeConfig { readonly corpusId?: string; readonly resourceId?: string; readonly tenantId?: string; }
+./rag RagScopeError	class RagScopeError extends RagError { constructor(message: string); }
+./rag RagSearchToolOptions	interface RagSearchToolOptions { readonly name?: string; readonly retrieve: (query: string, signal?: AbortSignal) => Promise<RagContextResult>; }
+./rag RagSourceConfig	interface RagSourceConfig { readonly glob?: string; readonly path?: string; readonly url?: string; }
+./rag RagSyncCursorError	class RagSyncCursorError extends RagError { constructor(message?: string); }
+./rag RagSyncThrottleError	class RagSyncThrottleError extends RagError { constructor(retryAfterMs?: number, message?: string); readonly retryAfterMs: number; }
+./rag RagTelemetry	interface RagTelemetry { startSpan(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>, parent?: RagTelemetrySpan): RagTelemetrySpan; }
+./rag RagTelemetryAttributeValue	type RagTelemetryAttributeValue = string | number | boolean
+./rag RagTelemetrySpan	interface RagTelemetrySpan { addEvent(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>): void; end(): void; recordError(): void; setAttribute(name: string, value: RagTelemetryAttributeValue): void; }
+./rag RagValidationError	class RagValidationError extends RagError { constructor(message: string); }
+./rag ReplaceDocumentOptions	interface ReplaceDocumentOptions extends Omit<ReplaceSourceOptions, "sourceId" | "chunks"> { readonly chunk?: Omit<ChunkOptions, "sourceId">; readonly chunker?: Chunker; readonly loader: DocumentLoader; readonly loaderOptions?: DocumentLoadOptions; readonly parser: Parser; readonly parserOptions?: DocumentParseOptions; readonly sourceId?: string; readonly uri: string; }
+./rag ReplaceSourceOptions	interface ReplaceSourceOptions extends Omit<IndexChunksOptions, "chunks" | "store"> { readonly advanceGeneration?: boolean; readonly chunks: readonly RagChunk[]; readonly contentHash?: string; readonly skipIfUnchanged?: boolean; readonly sourceId: string; readonly store: TransactionalVectorStore; }
+./rag Reranker	interface Reranker { rerank(input: { readonly query: string; readonly hits: readonly RagHit[]; readonly signal?: AbortSignal; }): Promise<readonly RagHit[]>; }
+./rag RerankerConfig	type RerankerConfig = { readonly kind: "none"; } | { readonly kind: "fake"; } | ({ readonly kind: "local"; } & CreateLocalRerankerOptions) | ({ readonly kind: "tei"; } & CreateTeiRerankerOptions) | ({ readonly kind: "openai-compatible"; } & CreateOpenAiCompatibleRerankerOptions) | ({ readonly kind: "voyage"; } & CreateVoyageRerankerOptions)
+./rag ResolvedRagConfig	interface ResolvedRagConfig { readonly context: boolean; readonly embeddings?: RagEmbeddingsConfig | RagEmbeddingsServiceConfig; readonly reranker?: RagRerankerConfig; readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly corpusId: string; }; readonly sources: readonly RagSourceConfig[]; readonly store: "memory" | { readonly postgres?: RagPostgresStoreConfig; }; readonly topK?: number; }
+./rag RetrieveContextOptions	interface RetrieveContextOptions { readonly authorization?: RagAccessConstraint; readonly embedder: Embedder; readonly filter?: JsonObject; readonly fusion?: "rrf"; readonly lexical?: "fts" | "bm25" | "off"; readonly maxContextTokens?: number; readonly maxMetadataBytes?: number; readonly maxRerankBytes?: number; readonly maxRerankMs?: number; readonly maxResultBytes?: number; readonly maxVectorDimensions?: number; readonly onAccessDenied?: (denial: AccessDenial) => void; readonly queryCandidates?: number; readonly redactor?: SecretRedactor; readonly rerankConcurrency?: number; readonly reranker?: Reranker; readonly rrfK?: number; readonly scope?: RagScope; readonly scopes?: readonly RagScope[]; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly topK?: number; }
+./rag ReusableEmbedding	interface ReusableEmbedding { readonly embedding: readonly number[]; readonly text: string; }
+./rag SourceAccessGrant	reexport SourceAccessGrant from "@arnilo/prism-memory-system/core"
+./rag SourceFile	interface SourceFile { readonly path: string; readonly sourceId: string; }
+./rag SourceFreshness	type SourceFreshness = "current" | "stale" | "unavailable"
+./rag SourceMutationResult	interface SourceMutationResult { readonly deleted: number; readonly indexed: number; readonly skipped?: true; readonly sourceId: string; }
+./rag SourceVectorStore	interface SourceVectorStore extends VectorStore { getBySource(scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string; }, sourceId: string, options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorRecord[]>; }
+./rag SyncKnowledgeOptions	interface SyncKnowledgeOptions { readonly checkpoint: { readonly namespace: string; readonly key: string; } & OwnershipScope; readonly checkpoints: CheckpointStore; readonly chunker?: Chunker; readonly connector: KnowledgeConnector; readonly embedder: Embedder; readonly maxPages?: number; readonly maxRetries?: number; readonly onInvalidCursor?: "resync" | "fail"; readonly pageSize?: number; readonly scope: RagScope; readonly signal?: AbortSignal; readonly sleep?: (ms: number) => Promise<void>; readonly statusStore?: IngestionStatusStore; readonly store: TransactionalVectorStore; }
+./rag SyncKnowledgeResult	interface SyncKnowledgeResult { readonly cursor?: string; readonly deleted: number; readonly exhausted: boolean; readonly pages: number; readonly skipped: number; readonly upserted: number; readonly withheld: number; }
+./rag TransactionalVectorStore	interface TransactionalVectorStore extends SourceVectorStore { transaction<T>(operation: (store: SourceVectorStore) => Promise<T>, options?: { readonly signal?: AbortSignal; }): Promise<T>; }
+./rag TransformersRerankRuntimeOptions	interface TransformersRerankRuntimeOptions { readonly allowRemoteModels?: boolean; readonly cacheDir?: string; readonly device?: string; readonly dtype?: string; }
+./rag chunkMarkdown	function chunkMarkdown(markdown: string, options: ChunkOptions): readonly RagChunk[]
+./rag chunkText	function chunkText(text: string, options: ChunkOptions): readonly RagChunk[]
+./rag createAccessRecheck	function createAccessRecheck(options: CreateAccessRecheckOptions): AccessRecheck
+./rag createGoogleDriveConnector	function createGoogleDriveConnector(options: GoogleDriveConnectorOptions): KnowledgeConnector
+./rag createLocalReranker	function createLocalReranker(options?: CreateLocalRerankerOptions): Reranker
+./rag createMemoryIngestionStatusStore	function createMemoryIngestionStatusStore(): IngestionStatusStore
+./rag createOpenAiCompatibleReranker	function createOpenAiCompatibleReranker(options: CreateOpenAiCompatibleRerankerOptions): Reranker
+./rag createProviderEmbedder	function createProviderEmbedder(options: ProviderEmbedderOptions): Embedder
+./rag createRagDeletionHandler	function createRagDeletionHandler(options: { readonly store: SourceVectorStore; readonly scope: RagScope; readonly statusStore?: IngestionStatusStore; }): DeletionPropagationHandler
+./rag createRagSearchTool	function createRagSearchTool(options: RagSearchToolOptions): ToolDefinition
+./rag createResourceDocumentLoader	function createResourceDocumentLoader(options: ResourceDocumentLoaderOptions): DocumentLoader
+./rag createTeiReranker	function createTeiReranker(options: CreateTeiRerankerOptions): Reranker
+./rag createTransformersRerankRuntime	function createTransformersRerankRuntime(options?: TransformersRerankRuntimeOptions): LocalRerankRuntime
+./rag createVoyageReranker	function createVoyageReranker(options: CreateVoyageRerankerOptions): Reranker
+./rag createWebFetchDocumentLoader	function createWebFetchDocumentLoader(options: WebFetchDocumentLoaderOptions): DocumentLoader
+./rag default	const definition: import("@arnilo/prism").PackageDefinition<RagConfig>
+./rag deleteSource	function deleteSource(options: DeleteSourceOptions): Promise<SourceMutationResult>
+./rag evidenceFromRagCitation	function evidenceFromRagCitation(citation: RagCitation, input: { readonly contentHash: string; readonly revision: string; readonly excerpt?: string; readonly span?: { readonly start: number; readonly end: number; }; readonly uri?: string; }): ArtifactCitation
+./rag globToRegExp	function globToRegExp(glob: string): RegExp
+./rag htmlParser	const htmlParser: Parser
+./rag indexChunks	function indexChunks(options: IndexChunksOptions): Promise<IndexChunksResult>
+./rag indexSources	function indexSources(options: IndexSourcesOptions): Promise<IndexSourcesResult>
+./rag isValidContentHash	function isValidContentHash(value: unknown): value is string
+./rag listIngestionStatus	function listIngestionStatus(options: IngestionStatusQuery): Promise<{ readonly entries: readonly IngestionStatus[]; readonly nextCursor?: string; }>
+./rag markdownParser	const markdownParser: Parser
+./rag memoryRag	function memoryRag(config: RagConfig): PackageInstance
+./rag packageName	const packageName = "@arnilo/prism-knowledge/rag"
+./rag pdfParser	const pdfParser: Parser
+./rag probeEmbedderDimensions	function probeEmbedderDimensions(embedder: Embedder, signal?: AbortSignal): Promise<void>
+./rag ragConfigSchema	const ragConfigSchema: JsonSchema
+./rag registerRagContext	function registerRagContext(hooks: HookRegistrar, options: RagContextProviderOptions): void
+./rag replaceDocument	function replaceDocument(options: ReplaceDocumentOptions): Promise<SourceMutationResult>
+./rag replaceSource	function replaceSource(options: ReplaceSourceOptions): Promise<SourceMutationResult>
+./rag resolveRagConfig	function resolveRagConfig(config?: RagConfig): ResolvedRagConfig
+./rag resolveRagLimits	function resolveRagLimits(input?: RagLimitsInput): RagLimits
+./rag resolveReranker	function resolveReranker(config: RerankerConfig | undefined): Reranker | undefined
+./rag resolveSourceFiles	function resolveSourceFiles(source: RagSourceConfig, signal?: AbortSignal): Promise<readonly SourceFile[]>
+./rag retrieveContext	function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult>
+./rag runRerankerConformance	function runRerankerConformance(createReranker: () => Reranker): Promise<void>
+./rag syncKnowledge	function syncKnowledge(options: SyncKnowledgeOptions): Promise<SyncKnowledgeResult>
+./rag textParser	const textParser: Parser
+./wiki ApplyConceptEditsOptions	interface ApplyConceptEditsOptions { readonly generatedBy: ConceptWriter; readonly signal?: AbortSignal; }
+./wiki ApplyConceptEditsResult	interface ApplyConceptEditsResult { readonly archived: readonly string[]; readonly edits: number; readonly subjects: readonly string[]; }
+./wiki CONCEPT_RELATIONS	const CONCEPT_RELATIONS: readonly ["part-of", "instance-of", "uses", "related"]
+./wiki ConceptDoc	interface ConceptDoc { readonly claims: readonly ConceptItem[]; readonly contradictions: readonly ConceptItem[]; readonly questions: readonly ConceptItem[]; readonly title: string; }
+./wiki ConceptEdit	type ConceptEdit = { readonly op: "create_subject"; readonly subject: string; readonly title: string; readonly conceptType: ConceptType; readonly aliases?: readonly string[]; readonly appliesTo?: readonly string[]; } | { readonly op: "add_claim"; readonly subject: string; readonly text: string; readonly cites: readonly string[]; } | { readonly op: "update_claim"; readonly subject: string; readonly claimId: string; readonly text: string; readonly cites: readonly string[]; } | { readonly op: "retire_claim"; readonly subject: string; readonly claimId: string; readonly reason: string; } | { readonly op: "merge_claims"; readonly subject: string; readonly claimIds: readonly string[]; readonly text: string; readonly cites: readonly string[]; } | { readonly op: "add_relation"; readonly subject: string; readonly relation: ConceptRelation; readonly target: string; } | { readonly op: "add_open_question"; readonly subject: string; readonly text: string; readonly cites: readonly string[]; } | { readonly op: "note_contradiction"; readonly subject: string; readonly text: string; readonly claimIds?: readonly string[]; readonly noteIds?: readonly string[]; }
+./wiki ConceptFormatError	class ConceptFormatError extends MemoryValidationError { constructor(reason: string, message: string); readonly reason: string; }
+./wiki ConceptItem	interface ConceptItem { readonly cites: readonly string[]; readonly human?: true; readonly id: string; readonly text: string; }
+./wiki ConceptRelation	type ConceptRelation = (typeof CONCEPT_RELATIONS)[number]
+./wiki ConceptType	type ConceptType = (typeof CONCEPT_TYPES)[number]
+./wiki LtmPort	interface LtmPort { deletions(scope: LtmScopeLevel, options?: { readonly since?: string; readonly signal?: AbortSignal; }): Promise<{ readonly deletions: readonly LtmDeletion[]; readonly cursor?: string; }>; epoch(): number; read(scope: LtmScopeLevel, ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<readonly LtmNoteView[]>; scanMetadata(scope: LtmScopeLevel, options?: LtmPageOptions): Promise<{ readonly notes: readonly LtmNoteMeta[]; readonly cursor?: string; }>; scopeId(scope: LtmScopeLevel): string; scopes(): readonly LtmScopeLevel[]; }
+./wiki MAX_CLAIM_CHARS	const MAX_CLAIM_CHARS = 280
+./wiki MEMORY_LTM_SERVICE	const MEMORY_LTM_SERVICE = "memory.ltm"
+./wiki OntologyNoteView	interface OntologyNoteView { readonly coRead?: readonly { readonly s: number; readonly t: number; readonly with: readonly string[]; }[]; readonly createdAt: string; readonly generatedBy?: string; readonly id: string; readonly key?: string; readonly keywords?: readonly string[]; readonly kind: string; readonly links?: readonly { readonly id: string; readonly relation?: string; }[]; readonly path?: string; readonly scope: WikiScopeLevel; readonly stale?: readonly string[]; readonly status?: string; readonly subject?: string; readonly tRef?: string; readonly text: string; }
+./wiki OntologySubject	interface OntologySubject { readonly aliases: readonly string[]; readonly conceptId: string; readonly conceptType: ConceptType; readonly dirty: readonly ConceptDirtyReason[]; readonly subject: string; readonly title: string; }
+./wiki WIKI_CONSOLIDATE_COMMAND_NAME	const WIKI_CONSOLIDATE_COMMAND_NAME = "wiki:consolidate"
+./wiki WIKI_INGEST_COMMAND_NAME	const WIKI_INGEST_COMMAND_NAME = "wiki:ingest"
+./wiki WIKI_INGEST_TOOL_NAME	const WIKI_INGEST_TOOL_NAME = "wiki_ingest"
+./wiki WIKI_LINT_COMMAND_NAME	const WIKI_LINT_COMMAND_NAME = "wiki:lint"
+./wiki WIKI_READ_TOOL	const WIKI_READ_TOOL = "wiki.read"
+./wiki WIKI_SEARCH_TOOL	const WIKI_SEARCH_TOOL = "wiki.search"
+./wiki WIKI_STATUS_COMMAND_NAME	const WIKI_STATUS_COMMAND_NAME = "wiki:status"
+./wiki WikiConceptRecord	interface WikiConceptRecord { readonly aliases: readonly string[]; readonly appliesTo?: readonly string[]; readonly body: string; readonly conceptType: ConceptType; readonly createdAt: string; readonly dirty: readonly ConceptDirtyReason[]; readonly flags: readonly string[]; readonly generated: { readonly by: ConceptWriter; readonly at: string; }; readonly id: string; readonly links: readonly { readonly id: string; readonly relation: ConceptRelation; }[]; readonly scope: WikiScopeLevel; readonly stale: readonly string[]; readonly status: WikiConceptStatus; readonly subject: string; readonly title: string; readonly uses: number; }
+./wiki WikiConfig	interface WikiConfig { readonly bindThreshold?: number; readonly consolidate?: WikiConsolidateConfig; readonly ingest?: WikiIngestConfig; readonly pointer?: boolean; readonly root?: string; readonly search?: WikiSearchConfig; readonly store?: "markdown" | "memory"; readonly workspaceRoot?: string; }
+./wiki WikiConsolidateConfig	interface WikiConsolidateConfig { readonly maxClaimsPerConcept?: number; readonly maxOutputTokens?: number; readonly maxSubjectsPerPass?: number; readonly minCoReads?: number; readonly minIntervalTurns?: number; readonly minNotes?: number; readonly model?: string; readonly triggers?: readonly WikiTrigger[]; readonly workerLimits?: MemoryWorkerLimitOptions; }
+./wiki WikiIngestConfig	interface WikiIngestConfig { readonly maxExtractBytes?: number; readonly maxInputBytes?: number; }
+./wiki WikiIngestResult	interface WikiIngestResult extends Omit<WikiStagedSource, "contentHash" | "keywords"> { readonly indexed: boolean; readonly noteId?: string; readonly refused?: string; readonly scope: WikiScopeLevel; readonly subject?: string; }
+./wiki WikiLintFinding	interface WikiLintFinding { readonly detail: string; readonly id?: string; readonly rule: WikiLintRuleId; readonly scope: WikiScopeLevel; readonly subject?: string; }
+./wiki WikiLintReport	interface WikiLintReport { readonly counts: Readonly<Partial<Record<WikiLintRuleId, number>>>; readonly findings: readonly WikiLintFinding[]; readonly ok: boolean; readonly scopes: readonly WikiLintScopeReport[]; readonly skipped?: string; }
+./wiki WikiLintRuleId	type WikiLintRuleId = "unresolved-citation" | "alias-collision" | "stale-claim" | "uncited-human-claim" | "candidate-only-claim" | "relation-missing-subject" | "over-claim-cap" | "shared-without-evidence" | "unbound-note" | "human-edited" | "invalid-body"
+./wiki WikiOntologyPort	interface WikiOntologyPort { applyConceptEdits(scope: WikiScopeLevel, edits: readonly ConceptEdit[], options: ApplyConceptEditsOptions): Promise<ApplyConceptEditsResult>; bind(scope: WikiScopeLevel, noteId: string, subject: string, options?: { readonly signal?: AbortSignal; }): Promise<boolean>; bindPending(scope: WikiScopeLevel, options?: { readonly signal?: AbortSignal; }): Promise<number>; concepts(scope: WikiScopeLevel): Promise<readonly WikiConceptRecord[]>; dirty(scope: WikiScopeLevel, options?: { readonly signal?: AbortSignal; }): Promise<readonly OntologyDirtyEntry[]>; indexSource(input: OntologySourceInput): Promise<OntologySourceResult>; memory(): boolean; noteUse(scope: WikiScopeLevel, id: string): Promise<void>; pending(scope: WikiScopeLevel, options?: OntologyPendingOptions): Promise<OntologyPendingPage>; read(scope: WikiScopeLevel, ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<readonly OntologyNoteView[]>; readable(scope: WikiScopeLevel, ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<ReadonlySet<string>>; readonly store: WikiStore; reconcile(scope: WikiScopeLevel, options?: { readonly liveness?: boolean; readonly signal?: AbortSignal; }): Promise<WikiReconcileReport>; refresh(options?: { readonly signal?: AbortSignal; }): Promise<WikiReconcileReport>; scopes(): readonly WikiScopeLevel[]; screen(text: string): string | undefined; settle(scope: WikiScopeLevel, subject: string, options?: { readonly signal?: AbortSignal; }): Promise<boolean>; sourceRoot(): string | undefined; subjects(scope: WikiScopeLevel, options?: { readonly signal?: AbortSignal; }): Promise<readonly OntologySubject[]>; }
+./wiki WikiPassReport	interface WikiPassReport { readonly at: string; readonly binds: number; readonly cacheReadTokens: number; readonly correctionCalls: number; readonly declined: number; readonly due: number; readonly edits: number; readonly failures: Readonly<Record<string, number>>; readonly inputTokens: number; readonly left: number; readonly modelCalls: number; readonly outputTokens: number; readonly pass: string; readonly rejected: { readonly trust: number; readonly secret: number; readonly invalid: number; }; readonly scopes: readonly string[]; readonly subjects: number; readonly trigger: "auto" | "manual"; }
+./wiki WikiReconcileReport	interface WikiReconcileReport { readonly archived: number; readonly concepts: number; readonly removed: number; readonly stale: number; }
+./wiki WikiScopeLevel	type WikiScopeLevel = "user" | "project" | "agent" | "team"
+./wiki WikiSearchConfig	interface WikiSearchConfig { readonly maxClaimsRendered?: number; }
+./wiki WikiSourceRecord	interface WikiSourceRecord { readonly contentHash: string; readonly createdAt: string; readonly id: string; readonly keywords: readonly string[]; readonly path: string; readonly refused?: string; readonly title: string; }
+./wiki WikiStatusReport	interface WikiStatusReport { readonly dirty: number; readonly last?: WikiPassReport; readonly memory: boolean; readonly scopes: readonly WikiStatusScope[]; readonly sources: number; readonly subjects: number; }
+./wiki WikiStatusScope	interface WikiStatusScope { readonly dirty: number; readonly reasons: Readonly<Record<string, number>>; readonly scope: string; readonly subjects: number; }
+./wiki WikiStore	interface WikiStore { bind(scope: WikiScopeLevel, noteId: string, subject: string): Promise<void>; bindings(scope: WikiScopeLevel): Promise<ReadonlyMap<string, string>>; concepts(scope: WikiScopeLevel): Promise<readonly WikiConceptRecord[]>; log(verb: string, note: string): Promise<void>; putConcept(record: WikiConceptRecord): Promise<void>; putSource(record: WikiSourceRecord, extract: string): Promise<void>; readonly root: string | undefined; reload(scope: WikiScopeLevel): Promise<void>; setState(scope: WikiScopeLevel, state: WikiScopeState): Promise<void>; sourceText(id: string): Promise<string | undefined>; sources(): Promise<readonly WikiSourceRecord[]>; state(scope: WikiScopeLevel): Promise<WikiScopeState>; version(): number; }
+./wiki WikiTrigger	type WikiTrigger = "co-read" | "accumulation" | "repair"
+./wiki conceptSources	function conceptSources(doc: ConceptDoc): readonly string[]
+./wiki createMarkdownWikiStore	function createMarkdownWikiStore(options: { readonly root: string; readonly now?: () => Date; }): WikiStore
+./wiki createMemoryWikiStore	function createMemoryWikiStore(): WikiStore
+./wiki createWikiOntology	function createWikiOntology(options?: CreateWikiOntologyOptions): WikiOntologyPort
+./wiki default	const definition: import("@arnilo/prism").PackageDefinition<WikiConfig>
+./wiki definition	const definition: import("@arnilo/prism").PackageDefinition<WikiConfig>
+./wiki parseConceptBody	function parseConceptBody(text: string, options?: ParseConceptOptions): ConceptDoc
+./wiki renderConceptBody	function renderConceptBody(doc: ConceptDoc): string
+./wiki wiki	function wiki(config?: WikiConfig): PackageInstance

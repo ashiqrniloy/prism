@@ -118,7 +118,13 @@ test("cleanup_plan_touches_only_old_line_of_reused_names", () => {
     versions: ["0.11.0", "0.12.1", `${NEW_LINE_VERSION}`, `${NEW_LINE_VERSION}-experimental.0`],
     deprecatedVersions: ["0.11.0", "0.12.1"],
   });
-  const kept = entry({ name: "@arnilo/prism-wiki", shipped: true, retired: null, versions: ["0.3.0"], deprecatedVersions: ["0.3.0"] });
+  const kept = entry({
+    name: "@arnilo/prism-knowledge/wiki",
+    shipped: true,
+    retired: null,
+    versions: ["0.3.0"],
+    deprecatedVersions: ["0.3.0"],
+  });
   const plan = buildPlan(evidenceOf([reused, kept]));
   assert.equal(plan.steps.length, 1, "a shipped name off every list stays");
   const commands = plan.steps[0].commands;
@@ -146,7 +152,7 @@ test("cleanup_plan_touches_only_old_line_of_reused_names", () => {
     "a partly deprecated name off every list is the owner's call, not the sweep's",
   );
   assert.ok(
-    sweptCommands.includes("npm unpublish @arnilo/prism-wiki --force"),
+    sweptCommands.includes("npm unpublish @arnilo/prism-knowledge/wiki --force"),
     "every version of the shipped name is retired, so the sweep deletes the name in one command",
   );
 });
@@ -188,14 +194,14 @@ test("cleanup_plan_deletes_a_name_retired_before_0_13", () => {
     versions: ["0.6.0", "0.7.0"],
     deprecatedVersions: [],
   });
-  const shipped = entry({ name: "@arnilo/prism-tools-work", retired: null, shipped: true, versions: ["0.12.1"] });
-  const ledger = new Set(["@arnilo/prism-office", "@arnilo/prism-tools-work"]);
+  const shipped = entry({ name: "@arnilo/prism-tools/work", retired: null, shipped: true, versions: ["0.12.1"] });
+  const ledger = new Set(["@arnilo/prism-office", "@arnilo/prism-tools/work"]);
   const classified = classifyEntries([office, shipped], { ledger });
   assert.deepEqual(
     classified.map((item) => [item.name, item.action]),
     [
       ["@arnilo/prism-office", "delete-name"],
-      ["@arnilo/prism-tools-work", "keep"],
+      ["@arnilo/prism-tools/work", "keep"],
     ],
     "the ledger retires an unshipped name and never reaches a name 0.13.0 ships",
   );
@@ -208,7 +214,7 @@ test("cleanup_plan_deletes_a_name_retired_before_0_13", () => {
 });
 
 test("trusted_publishers_render_lists_names_and_settings", () => {
-  const text = renderTrustedPublishers(["@arnilo/prism", "@arnilo/prism-tools-coding"], {
+  const text = renderTrustedPublishers(["@arnilo/prism", "@arnilo/prism-tools"], {
     owner: "ashiqrniloy",
     repository: "prism",
     published: new Set(["@arnilo/prism"]),
@@ -224,7 +230,7 @@ test("trusted_publishers_render_lists_names_and_settings", () => {
   assert.match(text, /- @arnilo\/prism\n/, "a published name is listed without a note");
   assert.match(
     text,
-    /- @arnilo\/prism-tools-coding {2}# never published: configure after the first manual publish/,
+    /- @arnilo\/prism-tools {2}# never published: configure after the first manual publish/,
     "a name npm has never seen is marked for the bootstrap",
   );
   assert.ok(!text.includes("--token") && !text.includes("npm_token"), "the checklist carries no credential");
@@ -291,7 +297,7 @@ test("cleanup_shipped_names_are_the_root_and_the_workspaces", () => {
   const shipped = shippedNames(ROOT);
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).name;
   assert.ok(shipped.has(root), "the root package is published, so its name is shipped");
-  assert.ok(shipped.size > 40, `expected every workspace package, got ${shipped.size}`);
+  assert.equal(shipped.size, 7, "plan 224: kernel and six bundles");
   assert.ok(!shipped.has("@arnilo/prism-agent"), "a private workspace (apps/prism-agent) is never published");
   assert.equal(
     classifyName({ name: root, state: "present", shipped: true, retired: null, versions: ["0.12.1"], deprecatedVersions: [] }).category,

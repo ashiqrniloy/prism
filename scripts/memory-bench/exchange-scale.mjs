@@ -9,8 +9,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createPostgresVectorStore } from "@arnilo/prism-memory-core/postgres";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { createPostgresVectorStore } from "@arnilo/prism-memory-system/core/postgres";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 
 const SCOPE = { tenantId: "growth", resourceId: "archive", threadId: "scale" };
 const DIMENSIONS = 8;

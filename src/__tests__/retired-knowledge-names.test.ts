@@ -1,6 +1,6 @@
 /**
- * Plan 216 Task 3: `@arnilo/prism-memory-wiki` and `@arnilo/prism-memory-rag` were renamed `@arnilo/prism-wiki` and
- * `@arnilo/prism-rag` with no alias. A manifest or host config that still names an old package fails closed with the
+ * Plan 216 Task 3: `@arnilo/prism-memory-wiki` and `@arnilo/prism-memory-rag` were renamed `@arnilo/prism-knowledge/wiki` and
+ * `@arnilo/prism-knowledge/rag` with no alias. A manifest or host config that still names an old package fails closed with the
  * loader's existing code, which names the package; there is no `package_renamed` code (the kernel names no package).
  * The migration page carries the successor.
  */
@@ -14,8 +14,8 @@ import { ManifestError } from "../manifest/errors.js";
 
 const RETIRED = ["@arnilo/prism-memory-wiki", "@arnilo/prism-memory-rag"] as const;
 const SUCCESSOR: Record<(typeof RETIRED)[number], string> = {
-  "@arnilo/prism-memory-wiki": "@arnilo/prism-wiki",
-  "@arnilo/prism-memory-rag": "@arnilo/prism-rag",
+  "@arnilo/prism-memory-wiki": "@arnilo/prism-knowledge/wiki",
+  "@arnilo/prism-memory-rag": "@arnilo/prism-knowledge/rag",
 };
 
 describe("retired knowledge package names (plan 216 Task 3)", () => {
@@ -49,8 +49,8 @@ describe("retired knowledge package names (plan 216 Task 3)", () => {
       "scripts/independent-packages.json",
       "scripts/package-truth.json",
       "bun.lock",
-      "packages/knowledge/wiki/package.json",
-      "packages/knowledge/rag/package.json",
+      "packages/knowledge/package.json",
+      "packages/knowledge/package.json",
     ];
     for (const file of lists) {
       const text = readFileSync(file, "utf8");

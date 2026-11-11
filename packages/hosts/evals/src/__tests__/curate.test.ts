@@ -2,7 +2,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { AgentEventRecord, OwnershipScope, PersistencePage, ProductionPersistenceStore, RunRecord } from "@arnilo/prism";
 import { createSecretRedactor, type RunFeedbackStore } from "@arnilo/prism";
-import { createMemoryRunFeedbackStore } from "@arnilo/prism-store-codecs";
+import { createMemoryRunFeedbackStore } from "@arnilo/prism-extensions/store-codecs";
 import { datasetFromRuns, defineDataset, EvalError } from "../index.js";
 
 const SECRET = "SECRET_CANARY_VALUE";

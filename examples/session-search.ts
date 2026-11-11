@@ -3,8 +3,8 @@ import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSessionEntry, type SessionSearchHit } from "@arnilo/prism";
-import { createJsonlSessionStore } from "@arnilo/prism-store-jsonl";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createJsonlSessionStore } from "@arnilo/prism-extensions/store-jsonl";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 
 // Workspace session search over stored sessions (plan 095). One query API covers the indexed
 // stores (SQLite FTS5 / Postgres tsvector) and the linear-scan fallbacks (memory, JSONL): hits

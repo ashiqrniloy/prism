@@ -1,7 +1,7 @@
 import { type AgentEvent, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMockProvider } from "@arnilo/prism/testing";
-import { hyper } from "@arnilo/prism-provider-hyper";
+import { hyper } from "@arnilo/prism-ai/hyper";
 
 // A loaded provider package resolves `model.provider`. A host-owned provider is one more package
 // (`providerPackage`), listed next to the vendor's. No network, no real credentials.

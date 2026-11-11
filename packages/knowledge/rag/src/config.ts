@@ -1,5 +1,5 @@
 /**
- * Validated `packageConfig` for `@arnilo/prism-rag` (plan 158 Task 3).
+ * Validated `packageConfig` for `@arnilo/prism-knowledge/rag` (plan 158 Task 3).
  *
  * Every secret field is a ref (`env:` / `keyring:`) and fails validation as a literal. The schema
  * declares no `required` key: a required field with no default would fail package conformance, so
@@ -72,13 +72,9 @@ export interface RagRerankerHttpConfig {
   readonly maxResponseBytes?: number;
 }
 
-export type RagRerankerConfig =
-  | RagRerankerNoneConfig
-  | RagRerankerFakeConfig
-  | RagRerankerLocalConfig
-  | RagRerankerHttpConfig;
+export type RagRerankerConfig = RagRerankerNoneConfig | RagRerankerFakeConfig | RagRerankerLocalConfig | RagRerankerHttpConfig;
 
-/** Validated `packageConfig` for `@arnilo/prism-rag`. */
+/** Validated `packageConfig` for `@arnilo/prism-knowledge/rag`. */
 export interface RagConfig {
   readonly sources?: readonly RagSourceConfig[];
   readonly embeddings?: RagEmbeddingsConfig | RagEmbeddingsServiceConfig;
@@ -116,7 +112,10 @@ const secretString: JsonSchema = {
 
 const modelRef: JsonSchema = {
   additionalProperties: true,
-  anyOf: [{ type: "string", minLength: 1 }, { type: "object", additionalProperties: true }],
+  anyOf: [
+    { type: "string", minLength: 1 },
+    { type: "object", additionalProperties: true },
+  ],
 };
 
 const sourceProperties: Readonly<Record<string, JsonSchema>> = {

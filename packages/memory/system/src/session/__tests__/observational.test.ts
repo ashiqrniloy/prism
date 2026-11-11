@@ -147,8 +147,8 @@ describe("observational memory package", () => {
     const off = requests.filter((request) => request.options?.sessionId === "other").at(-1);
     assert.equal(names(on).includes("recall"), true, "the toggled session sees recall");
     assert.equal(names(off).includes("recall"), false, "the other session does not");
-    // One pass is two provider calls: the turn that records, then the turn that ends the worker loop.
-    assert.equal(state.calls, 2, "only the toggled session observed");
+    // One pass is one provider call: a clean recording turn ends the worker loop (plan 217 Task 6).
+    assert.equal(state.calls, 1, "only the toggled session observed");
     await session.close();
     await other.close();
   });
@@ -158,7 +158,7 @@ describe("observational memory package", () => {
     await agent.commands.run("memory:session", {}, { session });
     await session.run("one");
     await settle();
-    assert.deepEqual(state.models, ["om-model", "om-model"], "the observer answers on its own model");
+    assert.deepEqual(state.models, ["om-model"], "the observer answers on its own model");
     assert.deepEqual(
       requests.at(-1)?.model,
       { provider: "main", model: "main-model", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
@@ -186,7 +186,7 @@ describe("observational memory package", () => {
     await agent.commands.run("memory:session", {}, { session });
     await session.run("one");
     await settle();
-    assert.equal(first.calls, 2);
+    assert.equal(first.calls, 1);
 
     const switched = (await agent.commands.run("memory:session:model", { stm: "observer2/other-model" }, { session })) as {
       stm: unknown;
@@ -194,13 +194,14 @@ describe("observational memory package", () => {
     assert.equal(switched.stm, "observer2/other-model");
     await session.run("two");
     await settle();
-    assert.deepEqual(second.models, ["other-model", "other-model"], "the next pass uses the new model");
+    assert.deepEqual(second.models, ["other-model"], "the next pass uses the new model");
 
     await assert.rejects(agent.commands.run("memory:session:model", { stm: "nope/model" }, { session }), /Unknown provider: nope/);
     await session.run("three");
     await settle();
-    assert.equal(second.models.length, 4, "the failed command left the stored ref unchanged");
-    assert.equal(second.models.filter((model) => model === "other-model").length, 4);
+    // Two passes, one call each (a clean recording turn ends the loop, plan 217 Task 6).
+    assert.equal(second.models.length, 2, "the failed command left the stored ref unchanged");
+    assert.equal(second.models.filter((model) => model === "other-model").length, 2);
     await session.close();
   });
 
@@ -243,7 +244,7 @@ describe("observational memory package", () => {
     await session.close();
   });
 
-  it("om_flush_in_flight_skipped", async () => {
+  it("om_flush_in_flight_request_runs_one_follow_up_pass", async () => {
     let release = (): void => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -254,14 +255,16 @@ describe("observational memory package", () => {
     await session.run("one");
     await session.run("two");
     await settle();
-    assert.equal(state.calls, 1, "the second request was skipped, not queued: the first pass is still in its model call");
+    assert.equal(state.calls, 1, "the second request did not start a second pass: the first is still in its model call");
     release();
     await settle();
-    assert.equal(state.calls, 2, "the released pass finished its own worker loop");
+    // Plan 217 Task 6: the request that arrived during the pass is folded in as one follow-up pass over the new tail,
+    // instead of waiting for the next turn (one worker call each: a clean recording turn ends the loop).
+    assert.equal(state.calls, 2, "the released pass finished its worker loop, then the follow-up pass ran its own");
     const started = events.filter((event) => event.type === "background.started" && event.name === "memory.session.observe");
     assert.equal(started.length, 2, "each turn started a tracked pass");
-    // The skipped pass reports no start/end status of its own: the one running pass stays `inFlight`,
-    // and the second turn's pass returned `skipped: "in_flight"` without touching the observer.
+    // The second request reports no start/end status of its own: the one running flush stays `inFlight` through
+    // its follow-up pass, and the second turn's request returned `skipped: "in_flight"` without touching the observer.
     const statuses = events
       .filter((event) => event.type === "package.event" && event.name === "memory.session.status")
       .map((event) => (event.type === "package.event" ? (event.data as { inFlight?: boolean }) : {}));

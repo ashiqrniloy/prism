@@ -41,7 +41,7 @@ function completion(): Response {
   return jsonResponse(OK_RESPONSE);
 }
 
-describe("@arnilo/prism-provider-typesafe package", () => {
+describe("@arnilo/prism-ai/typesafe package", () => {
   it("typesafe_passes_package_conformance", async () => {
     const result = await packageConformance(typesafeDefinition, { config: { apiKey: "env:PRISM_TEST_TYPESAFE_CONFORMANCE" } });
     assert.deepEqual(
@@ -89,7 +89,10 @@ describe("@arnilo/prism-provider-typesafe package", () => {
       assert.equal(notes[0]?.level, "warn");
       // Registration and the curated catalog must not depend on the credential.
       const listed = await agent.models.list();
-      assert.ok(listed.some((entry) => entry.model === model.model), "the catalog still lists");
+      assert.ok(
+        listed.some((entry) => entry.model === model.model),
+        "the catalog still lists",
+      );
       // The decision gate runs before credential resolution, so a plain session run fails on the
       // gate (never on `Unknown provider`); the unresolvable ref still throws inside `generate`.
       const session = await agent.session();
@@ -116,7 +119,6 @@ describe("@arnilo/prism-provider-typesafe package", () => {
       await agent.dispose();
     }
   });
-
 
   it("typesafe_literal_api_key_fails_config_validation", async () => {
     await assert.rejects(

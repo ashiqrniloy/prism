@@ -37,7 +37,13 @@ describe("retired observational package name (plan 216 Task 4)", () => {
       migration.split("\n").some((line) => line.includes(RETIRED) && line.includes(SUCCESSOR)),
       `docs/migrate-to-0.13.md maps ${RETIRED} to ${SUCCESSOR}`,
     );
-    for (const file of ["package.json", "scripts/independent-packages.json", "scripts/package-truth.json", "bun.lock", "packages/memory/system/package.json"]) {
+    for (const file of [
+      "package.json",
+      "scripts/independent-packages.json",
+      "scripts/package-truth.json",
+      "bun.lock",
+      "packages/memory/package.json",
+    ]) {
       assert.equal(readFileSync(file, "utf8").includes(`"${RETIRED}"`), false, `${file} still names ${RETIRED}`);
     }
   });
@@ -46,7 +52,16 @@ describe("retired observational package name (plan 216 Task 4)", () => {
     // The old package name, its commands, event and rendered heading, in live code and docs. The migration page,
     // CHANGELOGs, plans, history and evidence keep them; so do this test, the retired-name lists, the system
     // package's own migration error and README migration lines, and the compat baselines of retired 0.12 names.
-    const patterns = [RETIRED, 'run("om"', '"om:model"', '"om:status"', '"om:view"', '"om.status"', "om.observe\"", "# Observational Memory"];
+    const patterns = [
+      RETIRED,
+      'run("om"',
+      '"om:model"',
+      '"om:status"',
+      '"om:view"',
+      '"om.status"',
+      'om.observe"',
+      "# Observational Memory",
+    ];
     const allowed = [
       /^docs\/(history|_evidence)\//,
       /^docs\/migrate-to-0\.(7|9|13)\.md$/,
@@ -56,13 +71,34 @@ describe("retired observational package name (plan 216 Task 4)", () => {
       /^src\/__tests__\/(docs|retired-observational-names)\.test\.ts$/,
       /^packages\/memory\/system\/src\/session\/types\.ts$/,
       /^packages\/memory\/system\/README\.md$/,
+      /^packages\/memory\/system\/src\/session\/__tests__\/memory-system\.test\.ts$/, // negative controls for the retired commands
+      /^scripts\/memory-bench\/(session-replay\.mjs|preservation\.test\.mjs|work-outcome\/long-session\.mjs)$/, // replay of the pinned pre-216 product
       /^scripts\/memory-bench\/(cleanup-criteria|memory-model-criteria)\.json$/,
     ];
     const hits: string[] = [];
     for (const pattern of patterns) {
-      const result = spawnSync("git", ["grep", "-l", "-F", pattern, "--", "src", "packages", "apps", "scripts", "examples", "templates", "docs", "README.md", "PRODUCT.md"], {
-        encoding: "utf8",
-      });
+      const result = spawnSync(
+        "git",
+        [
+          "grep",
+          "-l",
+          "-F",
+          pattern,
+          "--",
+          "src",
+          "packages",
+          "apps",
+          "scripts",
+          "examples",
+          "templates",
+          "docs",
+          "README.md",
+          "PRODUCT.md",
+        ],
+        {
+          encoding: "utf8",
+        },
+      );
       for (const file of result.stdout.split("\n").filter(Boolean)) {
         if (!allowed.some((rule) => rule.test(file))) hits.push(`${file}: ${pattern}`);
       }

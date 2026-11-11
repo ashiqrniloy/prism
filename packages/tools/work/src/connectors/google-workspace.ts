@@ -1,6 +1,6 @@
 import { type JsonObject } from "@arnilo/prism";
 import { type ArtifactBodyStore } from "@arnilo/prism/artifacts";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { assertSafeArgv, createCliRunner, parseCliJson, parseCliNdjson } from "./cli.js";
 import { createCheckpointWorkDraftStore, createMemoryWorkDraftStore } from "./drafts.js";
 import { WorkToolError } from "./errors.js";

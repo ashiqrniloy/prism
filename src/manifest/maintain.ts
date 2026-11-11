@@ -242,11 +242,12 @@ export async function verify(options: VerifyOptions = {}): Promise<VerifyResult[
   };
 
   const results: VerifyResult[] = [];
+  const cache = new Map<string, Promise<string>>();
   for (const entry of merged.packages) {
     const issues: VerifyIssue[] = [];
     let configChecked = false;
     try {
-      await verifyInstalled(entry, scopes.dirs[entry.scope].packagesDir, entry.scope);
+      await verifyInstalled(entry, scopes.dirs[entry.scope].packagesDir, entry.scope, { cache });
       if (entry.enabled && (entry.scope === "user" || (await trusted()))) {
         configChecked = true;
         const definition = await importDefinition(scopes.dirs[entry.scope].packagesDir, entry, entry.scope);

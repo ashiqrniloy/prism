@@ -1,5 +1,5 @@
 import type { HookRegistrar } from "@arnilo/prism";
-import type { Memory, MemoryContextProviderOptions } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryContextProviderOptions } from "@arnilo/prism-memory-system/core";
 import type { MemoryFabricInjectConfig } from "./config.js";
 import { createFabricCitationTracker, createFabricContext, type FabricCitationTracker } from "./context.js";
 import { createLongTermMemory } from "./create.js";

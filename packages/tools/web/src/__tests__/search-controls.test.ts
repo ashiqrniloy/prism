@@ -74,9 +74,7 @@ describe("search controls", () => {
   });
 
   it("obscura_profile_maps_controls_into_search_url", () => {
-    const url = new URL(
-      DEFAULT_OBSCURA_SEARCH_PROFILE.searchUrl("bun site:bun.sh", { freshness: "day", country: "de", language: "de" }),
-    );
+    const url = new URL(DEFAULT_OBSCURA_SEARCH_PROFILE.searchUrl("bun site:bun.sh", { freshness: "day", country: "de", language: "de" }));
     assert.equal(url.origin, "https://html.duckduckgo.com");
     assert.equal(url.searchParams.get("q"), "bun site:bun.sh");
     assert.equal(url.searchParams.get("df"), "d");
@@ -94,20 +92,31 @@ describe("search controls", () => {
       resolver: async () => [{ address: "93.184.216.34", family: 4 }],
     });
     const tool = toolSet.tools.find((candidate) => candidate.name === "web_search")!;
-    const result = await tool.execute({ query: 'kept "quotes"', freshness: "year", country: "FR", include_domains: ["example.com"] }, context as never);
+    const result = await tool.execute(
+      { query: 'kept "quotes"', freshness: "year", country: "FR", include_domains: ["example.com"] },
+      context as never,
+    );
     assert.equal(result.error, undefined);
     // The fake CLI echoes the query it was given, including the operator added for the domain.
     const value = result.value as { results: readonly { url: string }[] };
-    assert.equal(
-      decodeURIComponent(value.results[0]!.url),
-      'https://example.com/a?q=kept "quotes" site:example.com',
-    );
+    assert.equal(decodeURIComponent(value.results[0]!.url), 'https://example.com/a?q=kept "quotes" site:example.com');
   });
 
   it("schema_lists_only_backend_supported_controls", () => {
     const properties = (search: Parameters<typeof createWebTools>[0]["search"]) =>
-      Object.keys((createWebTools({ search }).find((tool) => tool.name === "web_search")!.parameters as JsonObject).properties as object).sort();
-    assert.deepEqual(properties(brave()), ["count", "country", "exclude_domains", "freshness", "include_domains", "language", "offset", "query"]);
+      Object.keys(
+        (createWebTools({ search }).find((tool) => tool.name === "web_search")!.parameters as JsonObject).properties as object,
+      ).sort();
+    assert.deepEqual(properties(brave()), [
+      "count",
+      "country",
+      "exclude_domains",
+      "freshness",
+      "include_domains",
+      "language",
+      "offset",
+      "query",
+    ]);
     const exa = createExaSearch({ credentials: async () => "key", fetch: async () => json({ results: [] }) });
     assert.deepEqual(properties(exa), ["count", "country", "exclude_domains", "freshness", "include_domains", "query"]);
     const obscura = createObscuraWebTools({ command: process.execPath, argsBefore: [fakeObscuraCliPath()] });
@@ -140,11 +149,22 @@ describe("search controls", () => {
 
   it("domain_control_rejects_operator_injection", async () => {
     const search = brave();
-    for (const domain of ["example.com OR site:evil.test", "site:evil.test", "https://example.com", "example.com/path", "*.example.com", "example", "a b.test"]) {
+    for (const domain of [
+      "example.com OR site:evil.test",
+      "site:evil.test",
+      "https://example.com",
+      "example.com/path",
+      "*.example.com",
+      "example",
+      "a b.test",
+    ]) {
       await assert.rejects(() => search.search("q", { includeDomains: [domain] }), input("include_domains"));
       await assert.rejects(() => search.search("q", { excludeDomains: [domain] }), input("exclude_domains"));
     }
-    await assert.rejects(() => search.search("q", { includeDomains: Array.from({ length: 11 }, (_unused, i) => `d${i}.test`) }), input("include_domains"));
+    await assert.rejects(
+      () => search.search("q", { includeDomains: Array.from({ length: 11 }, (_unused, i) => `d${i}.test`) }),
+      input("include_domains"),
+    );
     await assert.rejects(() => search.search("q", { freshness: "hour" as never }), input("freshness"));
     await assert.rejects(() => search.search("q", { country: "DEU" }), input("country"));
     await assert.rejects(() => search.search("q", { language: "eng" }), input("language"));

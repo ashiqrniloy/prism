@@ -69,7 +69,7 @@ test("postgres support is non-empty and matches the CI image", () => {
 });
 
 test("postgres schemaVersion matches the shipped migration contract", async () => {
-  const { createPersistenceMigrationContract } = await import(url("../packages/stores/codecs/src/persistence-schema.ts"));
+  const { createPersistenceMigrationContract } = await import(url("../packages/extensions/store-codecs/src/persistence-schema.ts"));
   const contract = createPersistenceMigrationContract();
   assert.equal(
     manifest.support.postgres.schemaVersion,

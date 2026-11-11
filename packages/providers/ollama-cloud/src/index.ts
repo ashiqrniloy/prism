@@ -1,11 +1,11 @@
 /**
- * `@arnilo/prism-provider-ollama-cloud` — Ollama Cloud provider package for Prism: registers the
+ * `@arnilo/prism-ai/ollama-cloud` — Ollama Cloud provider package for Prism: registers the
  * `ollama-cloud` provider, resolves its key from an `env:`/`keyring:` ref per request, and serves the
  * native NDJSON `/api/chat` route (default) plus the OpenAI-compatible `/v1/chat/completions` route
  * used by `pi-ollama-cloud`.
  *
  * ```ts
- * import ollamaCloud from "@arnilo/prism-provider-ollama-cloud";
+ * import ollamaCloud from "@arnilo/prism-ai/ollama-cloud";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -71,7 +71,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: OllamaCloudProviderPackageOptions) {
   return defineProviderPackage<OllamaCloudProviderConfig>({
-    name: "@arnilo/prism-provider-ollama-cloud",
+    name: "@arnilo/prism-ai/ollama-cloud",
     description: "Ollama Cloud provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {

@@ -1,6 +1,6 @@
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { mcpHost, serveMcp } from "@arnilo/prism-mcp-server";
+import { mcpHost, serveMcp } from "@arnilo/prism-hosts/mcp-server";
 
 // One agent, one tool: `serveMcp` exposes the agent as a single `prompt` tool and
 // lists its commands as MCP prompts. `mcpHost()` wires approvals: a suspended run

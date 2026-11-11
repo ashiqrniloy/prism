@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { EventSchemas, EventType } from "@ag-ui/core";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createAcpEventMapper } from "@arnilo/prism-acp";
+import { createAcpEventMapper } from "@arnilo/prism-hosts/acp";
 import {
   type CoWorkEvent,
   type CoWorkReplayPage,

@@ -1,11 +1,11 @@
-# @arnilo/prism-headless
+# @arnilo/prism-hosts/headless
 
 Host library routing Prism `HostUi` requests through ordered routes. Import it in your host; it is not a native package and does not belong in an agent's `packages` list. It registers no tools, hooks, slots, commands, or services.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism @arnilo/prism-headless
+bun add @arnilo/prism @arnilo/prism-hosts
 ```
 
 ## Host example
@@ -19,7 +19,7 @@ The host chooses where people answer requests and when agent or workflow runs st
 ## Routing
 
 ```ts
-import { routeHostUi, policyDefault } from "@arnilo/prism-headless";
+import { routeHostUi, policyDefault } from "@arnilo/prism-hosts/headless";
 
 const ui = routeHostUi([
   { name: "client", ui: attachedClient, kinds: ["confirm", "select", "input", "terminal", "notify"] },
@@ -56,7 +56,7 @@ Routes are plain `HostUi`s, tried sequentially once per request. `unavailable`, 
 | `routeHostUi` option | Default | Meaning |
 | --- | --- | --- |
 | `limits.maxAnswers` | 1,000 | Maximum in-memory records and returned rows; integer 1–100,000. |
-| `answerLog` | absent | Optional `CheckpointStore` from `@arnilo/prism-workflows`. |
+| `answerLog` | absent | Optional `CheckpointStore` from `@arnilo/prism-extensions/workflows`. |
 | `ownership` | absent | Exact tenant/account/user scope for persisted rows; when resuming, these fields must match the authority’s agent scope. |
 | `resumeAuthority` | absent | `createResumeAuthority(agent)`; required for `resumeWhenAnswered`. |
 
@@ -73,7 +73,7 @@ Only approval asks and elicitations suspend durably when no route answers; other
 Create one authority for the agent and share it with every router and `serveAgent` that can resume it:
 
 ```ts
-import { createResumeAuthority, routeHostUi } from "@arnilo/prism-headless";
+import { createResumeAuthority, routeHostUi } from "@arnilo/prism-hosts/headless";
 
 // agent was created with host.ui: routeHostUi(routes), for inline routing.
 const resumeAuthority = createResumeAuthority(agent);
@@ -106,7 +106,7 @@ Construction rejects empty routes (`no_routes`), duplicate labels (`duplicate_ro
 `createScheduler` drives agents and workflows through their public APIs. It starts no model run or timer until `trigger()` or `start()` is called.
 
 ```ts
-import { createScheduler } from "@arnilo/prism-headless";
+import { createScheduler } from "@arnilo/prism-hosts/headless";
 
 const scheduler = createScheduler({
   checkpoints, // CheckpointStore supplied by the host's store package
@@ -127,7 +127,7 @@ const firing = await scheduler.trigger("nightly", { input: { goal: "manual" } })
 await scheduler.stop();
 ```
 
-The workflow target's `command` must already be registered on `agent` using `workflowCommand(prism, "nightly-build", definition, { args: schema })` from `@arnilo/prism-workflows`. Declare the input properties in that command's schema. The scheduler invokes `agent.commands.run` on the schedule session; the command supplies the real package and session context to `startWorkflow`. It does not register commands or construct agents. Workflow input is a JSON object; agent input is a string, with optional `runOptions` on the target.
+The workflow target's `command` must already be registered on `agent` using `workflowCommand(prism, "nightly-build", definition, { args: schema })` from `@arnilo/prism-extensions/workflows`. Declare the input properties in that command's schema. The scheduler invokes `agent.commands.run` on the schedule session; the command supplies the real package and session context to `startWorkflow`. It does not register commands or construct agents. Workflow input is a JSON object; agent input is a string, with optional `runOptions` on the target.
 
 The command target runs **one registered package command** on the schedule session and nothing else: no model turn, no prompt, no agent loop. Register the command in a package (or on the host with `prism.commands.register`) and name it; `{ kind: "command", agent, command, input: {} }` passes `input` as the command's arguments, validated by the command's own schema before it runs. The firing status comes from the command's result — a `status` from `completed`/`stopped`/`suspended`/`failed`/`aborted`/`succeeded`/`denied`, else `ok: false` ⇒ `failed`, else `completed` — and a throw records `failed` without persisting the error or the result. This is how a package with a maintenance-style pass (`memory:maintain` in `@arnilo/prism-memory-system`'s long-term memory) runs nightly without spending a model call.
 

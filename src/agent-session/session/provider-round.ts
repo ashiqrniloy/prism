@@ -238,7 +238,8 @@ function contextOverflowEvidence(
     return tokens.tokens + extras;
   };
   const windowTokens = resolveTurnInputCap(request.model);
-  if (info.failureClass === "context_overflow") return { estimatedTokens: estimate(), ...(windowTokens === undefined ? {} : { windowTokens }) };
+  if (info.failureClass === "context_overflow")
+    return { estimatedTokens: estimate(), ...(windowTokens === undefined ? {} : { windowTokens }) };
   const status = readProviderHttpStatus(info);
   if (windowTokens === undefined || status === undefined || !OVERFLOW_STATUSES.has(status)) return undefined;
   const estimatedTokens = estimate();
@@ -263,7 +264,8 @@ export async function generateWithRetry(
     sessionId: session.id,
     runId,
     signal,
-    passthrough: (error) => isSteerSoftInterrupt(error) || error instanceof ProviderOverflowRecovery || error instanceof ContextOverflowError,
+    passthrough: (error) =>
+      isSteerSoftInterrupt(error) || error instanceof ProviderOverflowRecovery || error instanceof ContextOverflowError,
     classify(error) {
       const failure = error instanceof ProviderTurnFailure ? error : undefined;
       return {

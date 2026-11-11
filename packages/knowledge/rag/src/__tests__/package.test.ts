@@ -16,7 +16,7 @@ import {
   createAgent,
   definePackage,
 } from "@arnilo/prism";
-import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-system/core";
 import {
   createMockProvider,
   mockProvider,
@@ -95,7 +95,7 @@ function toolResultText(requests: readonly ProviderRequest[]): string {
   return JSON.stringify(last?.messages ?? []);
 }
 
-describe("@arnilo/prism-rag package (plan 158 Task 3)", () => {
+describe("@arnilo/prism-knowledge/rag package (plan 158 Task 3)", () => {
   it("memory_rag_package_conformance", async () => {
     const embeddings = embeddingsFixture();
     const base = createMockProvider([providerTextDelta("conformance"), providerDone()]);
@@ -117,7 +117,10 @@ describe("@arnilo/prism-rag package (plan 158 Task 3)", () => {
 
   it("memory_rag_search_returns_indexed_chunk", async () => {
     const root = await tempRoot();
-    await writeFile(join(root, "approval.md"), "# Durable approval\n\nA resumed tool rechecks current execution policy before side effects.");
+    await writeFile(
+      join(root, "approval.md"),
+      "# Durable approval\n\nA resumed tool rechecks current execution policy before side effects.",
+    );
     await writeFile(join(root, "unrelated.md"), "# House plants\n\nWater the ferns on Tuesdays.");
     const { agent, requests } = await harness({ config: baseConfig({ sources: [{ path: root }] }), script: RAG_TOOL_SCRIPT });
     const session = await agent.session({ id: "rag-search", create: true });
@@ -282,7 +285,7 @@ describe("@arnilo/prism-rag package (plan 158 Task 3)", () => {
     assert.deepEqual(offenders, [], "no rag source module may statically import the local reranker runtime");
 
     const script = [
-      'const rag = await import("@arnilo/prism-rag");',
+      'const rag = await import("@arnilo/prism-knowledge/rag");',
       'const seen = () => Object.keys(require.cache ?? {}).some((key) => key.includes("@huggingface/transformers"));',
       "const before = seen();",
       'rag.resolveReranker({ kind: "none" });',

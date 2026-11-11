@@ -4,7 +4,8 @@ import { createAgentWith } from "../agent-session/create-agent.js";
 import type { AgentConfig, CredentialResolver } from "../index.js";
 
 let stub: typeof fetch | undefined;
-const createAgent = (config: AgentConfig) => createAgentWith(config, { fetch: ((...args: Parameters<typeof fetch>) => stub!(...args)) as typeof fetch });
+const createAgent = (config: AgentConfig) =>
+  createAgentWith(config, { fetch: ((...args: Parameters<typeof fetch>) => stub!(...args)) as typeof fetch });
 
 const KEY = "sk-live-canary-0123456789";
 const sse = (body: string) => new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
@@ -41,7 +42,9 @@ describe("built-in openai-compatible provider", () => {
     });
     const session = await agent.session();
     assert.equal((await session.run("a")).status, "completed");
-    await session.run("b", { model: { provider: "openai-compatible", model: "m", baseUrl: "http://two.test/api", credential: "env:KEY_TWO" } });
+    await session.run("b", {
+      model: { provider: "openai-compatible", model: "m", baseUrl: "http://two.test/api", credential: "env:KEY_TWO" },
+    });
     assert.deepEqual(
       calls.map((call) => [call.url, call.headers.authorization]),
       [

@@ -1,7 +1,7 @@
 import type { CallToolResult, GetPromptResult, ReadResourceResult } from "@modelcontextprotocol/server";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 import { checkPackage } from "./check/conformance.js";
 import { inspectHost } from "./check/inspect.js";
 import { checkManifest } from "./check/manifest.js";
@@ -33,7 +33,7 @@ export interface HostBuilderMcpOptions extends LoadHostBuilderIndexOptions {
   readonly passEnv?: readonly string[];
 }
 
-const SKILL_PATH = "node_modules/@arnilo/prism-host-builder/skills/prism-host-builder/SKILL.md";
+const SKILL_PATH = "node_modules/@arnilo/prism-hosts/host-builder/skills/prism-host-builder/SKILL.md";
 
 const READ_ONLY = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
 
@@ -97,7 +97,7 @@ export function createHostBuilderMcpServer(options: HostBuilderMcpOptions): McpS
     {
       title: "Prism API lookup",
       description:
-        "Look up a public Prism name. Pass `symbol` for an exact export name (case-sensitive), or `query` for words matched against names, signatures and summaries; `package` limits either to one package (for example @arnilo/prism-approval). Returns signature, package, import specifier, docs pages and examples, and for an interface or class its `members` (field and method declarations): read a field name there, never guess it. An unknown name returns the nearest names.",
+        "Look up a public Prism name. Pass `symbol` for an exact export name (case-sensitive), or `query` for words matched against names, signatures and summaries; `package` limits either to one package (for example @arnilo/prism-extensions/approval). Returns signature, package, import specifier, docs pages and examples, and for an interface or class its `members` (field and method declarations): read a field name there, never guess it. An unknown name returns the nearest names.",
       inputSchema: z.object({
         symbol: z.string().max(200).optional(),
         query: z.string().max(200).optional(),

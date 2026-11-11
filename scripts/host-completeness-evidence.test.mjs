@@ -3,15 +3,35 @@
  * Hermetic. Fails if a required ledger row or live suite is missing,
  * claimed passed while blocked/out, or a required test path vanished.
  */
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { loadMatrix } from "./live-matrix.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const evidence = JSON.parse(readFileSync(join(ROOT, "docs/_evidence/0.7.0-host-completeness.json"), "utf8"));
 const matrix = loadMatrix(ROOT);
+
+// Preserve the 0.7.0 record; these are directory moves, not fresh attestations of its results.
+const movedDirectories = [
+  ["packages/policy/model-router/", "packages/extensions/model-router/"],
+  ["packages/policy/governance/", "packages/extensions/governance/"],
+  ["packages/drivers/process/", "packages/hosts/driver-process/"],
+  ["packages/integrations/workflows/", "packages/extensions/workflows/"],
+  ["packages/integrations/observability/", "packages/extensions/observability/"],
+  ["packages/context/engineering/", "packages/extensions/context-engineering/"],
+  ["packages/memory/fabric/src/", "packages/memory/system/src/ltm/"],
+  ["packages/memory/observational/src/", "packages/memory/system/src/session/"],
+  ["packages/memory/fabric/", "packages/memory/system/"],
+  ["packages/memory/observational/", "packages/memory/system/"],
+];
+
+function currentPath(file) {
+  const moved = movedDirectories.find(([former]) => file.startsWith(former));
+  return moved ? moved[1] + file.slice(moved[0].length) : file;
+}
 
 const LEDGER = [
   "Trap A",
@@ -79,14 +99,12 @@ test("rows cannot claim passed while out, blocked, or live-only", () => {
 test("hermetic/live rows name existing tests; required live suites are active", () => {
   assertRequiredLive(matrix.suites);
   const isRetired = (p) =>
-    /providers\/(ai-sdk|alibaba|anthropic|azure|bedrock|clinepass|deepseek|google|kimi|neuralwatt|ollama|openai|vertex|xai|zai)\b/.test(
-      p,
-    );
+    /providers\/(ai-sdk|alibaba|anthropic|azure|bedrock|clinepass|deepseek|google|kimi|neuralwatt|ollama|openai|vertex|xai|zai)\b/.test(p);
   const byId = new Map(matrix.suites.map((suite) => [suite.id, suite]));
   for (const row of evidence.rows) {
     for (const file of row.tests ?? []) {
       if (isRetired(file)) continue;
-      assert.ok(existsSync(join(ROOT, file)), `missing test ${file} for ${row.id}`);
+      assert.ok(existsSync(join(ROOT, currentPath(file))), `missing test ${file} (now ${currentPath(file)}) for ${row.id}`);
     }
     for (const id of row.live ?? []) {
       if (isRetired(id)) continue;
@@ -96,7 +114,7 @@ test("hermetic/live rows name existing tests; required live suites are active", 
     }
     for (const file of row.docs ?? []) {
       if (isRetired(file)) continue;
-      assert.ok(existsSync(join(ROOT, file)), `missing docs pointer ${file} for ${row.id}`);
+      assert.ok(existsSync(join(ROOT, currentPath(file))), `missing docs pointer ${file} (now ${currentPath(file)}) for ${row.id}`);
     }
     if (row.status === "passed") assert.ok(row.tests?.length, `${row.id} passed without a test`);
   }

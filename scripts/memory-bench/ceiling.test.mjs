@@ -26,7 +26,15 @@ test("ceiling_report_pairs_recall_and_oracle_per_question_and_carries_no_text", 
       { id: "qx", ability: "single-hop", outcome: "run_limit" }, // not scored: dropped from both sides
     ],
   };
-  const oracle = { results: [row("q1", "temporal", true), row("q2", "temporal", true), row("q3", "multi-hop", false), row("q4", "multi-hop", true), row("q5", "single-hop", false)] };
+  const oracle = {
+    results: [
+      row("q1", "temporal", true),
+      row("q2", "temporal", true),
+      row("q3", "multi-hop", false),
+      row("q4", "multi-hop", true),
+      row("q5", "single-hop", false),
+    ],
+  };
   const report = ceilingReport({ recall, oracle });
   assert.equal(report.n, 5);
   assert.equal(report.recall.correct, 2);
@@ -39,5 +47,8 @@ test("ceiling_report_pairs_recall_and_oracle_per_question_and_carries_no_text", 
   assert.equal(report.judgeTies.recall, 1);
   assert.equal(JSON.stringify(report).includes("SECRET"), false, "no question or answer text in the report");
   assert.equal(retrievalStage({ evidenceCounts: {} }), "neverCandidate");
-  assert.throws(() => ceilingReport({ recall: { results: [row("a", "x", true)] }, oracle: { results: [row("b", "x", true)] } }), /share no scored question/);
+  assert.throws(
+    () => ceilingReport({ recall: { results: [row("a", "x", true)] }, oracle: { results: [row("b", "x", true)] } }),
+    /share no scored question/,
+  );
 });

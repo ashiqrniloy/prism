@@ -1,7 +1,7 @@
 /**
  * Path resolution helpers.
  *
- * Behavioral port of pi's core/tools/path-utils for @arnilo/prism-tools-coding.
+ * Behavioral port of pi's core/tools/path-utils for @arnilo/prism-tools/coding.
  * stdlib only (node:fs, node:os, node:path, node:url). pi's version delegates
  * homedir/tilde expansion to an internal utils/paths.js; that logic is inlined
  * here as normalizePath/resolvePath so the package stays self-contained.

@@ -29,7 +29,7 @@ import {
   openAICodexHttpError,
   openAICodexImportCredentials,
   openAICodexLogout,
-} from "@arnilo/prism-provider-openai-codex";
+} from "@arnilo/prism-ai/openai-codex";
 
 const PROVIDERS = new Set(["openai-codex"]);
 const REF_PATTERN = /^keyring:[A-Za-z0-9._:-]{1,128}$/;
@@ -196,11 +196,11 @@ export function credentialsHandle(resolver) {
 
 /** Resolve the ref to a slot the provider can read and write; a missing record is `undefined`, not an error. */
 export async function openSlot({ service, importer = (name) => import(name) } = {}) {
-  const keyring = await importer("@arnilo/prism-credentials-keyring");
+  const keyring = await importer("@arnilo/prism-extensions/keyring");
   const createResolver = keyring.createKeyringCredentialResolver ?? keyring.default?.createKeyringCredentialResolver;
   const createStore = keyring.createKeychainCredentialStore ?? keyring.default?.createKeychainCredentialStore;
   if (typeof createResolver !== "function" || typeof createStore !== "function")
-    throw new Error("ProviderLogin: @arnilo/prism-credentials-keyring exposes no credential resolver");
+    throw new Error("ProviderLogin: @arnilo/prism-extensions/keyring exposes no credential resolver");
   const store = createStore({ service: service ?? keyring.KEYRING_DEFAULT_SERVICE ?? "prism" });
   return { resolver: createResolver({ store }), store, service: service ?? keyring.KEYRING_DEFAULT_SERVICE ?? "prism" };
 }

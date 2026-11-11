@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { resolveMemoryFabricConfig } from "../config.js";
 import { fitInjection } from "../excerpt.js";
 import { createMemory, createLongTermMemory } from "../../index.js";

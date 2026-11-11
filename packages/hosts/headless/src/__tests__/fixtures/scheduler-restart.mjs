@@ -1,7 +1,7 @@
 import { createAgent, definePackage } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import workflows, { defineWorkflow, functionNode, workflowCommand } from "@arnilo/prism-workflows";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
+import workflows, { defineWorkflow, functionNode, workflowCommand } from "@arnilo/prism-extensions/workflows";
 import { createScheduler } from "../../index.js";
 
 const [filename, mode] = process.argv.slice(2);

@@ -29,6 +29,7 @@ import {
   WORKFLOW_CONCURRENCY,
 } from "./benchmark-scenarios/multi-agent-runtime.mjs";
 import { loadBudgets } from "./budget-gates.mjs";
+import { activeBundles } from "./bundles.mjs";
 import { workspacePackageCounts } from "./package-truth.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -68,67 +69,69 @@ describe("multi-agent runtime coverage and baselines", () => {
     const names = workspaceManifests();
     const packages = workspacePackageCounts();
     const hasCore = packages.has("prism-core");
-    const hasChannels = names.includes("@arnilo/prism-channels");
+    const hasChannels = names.includes("@arnilo/prism-hosts/channels");
     const hasWorkFamily = packages.has("work");
     // The tree's shape is discovered, not assumed: one manifest per workspace package plus the root.
     // (The pre-0.12 branches hardcoded 17/34/45/50/65 and went stale on every package split.)
     assert.equal(names.length, packages.size + 1, `expected ${packages.size + 1} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
+    const bundleNames = new Set(activeBundles(join(here, "..")).map((bundle) => bundle.name));
     for (const name of names) {
-      if (hasWorkFamily && name === "@arnilo/prism-tools-work") continue;
-      if (hasChannels && name === "@arnilo/prism-channels") continue;
+      if (bundleNames.has(name) || name === "@arnilo/prism-hosts/host-builder") continue;
+      if (hasWorkFamily && name === "@arnilo/prism-tools/work") continue;
+      if (hasChannels && name === "@arnilo/prism-hosts/channels") continue;
       if (hasCore && name === "@arnilo/" + "prism-core") continue;
       // Covered by their own suites, not the frozen 0.3.3 multi-agent evidence matrix.
       if (
-        name === "@arnilo/prism-hooks-json" ||
+        name === "@arnilo/prism-extensions/hooks-json" ||
         // Plan 152 Task 5: these four never shipped as a standalone 0.3 package either.
-        name === "@arnilo/prism-provider-hyper" ||
-        name === "@arnilo/prism-provider-laya" ||
-        name === "@arnilo/prism-provider-typesafe" ||
+        name === "@arnilo/prism-ai/hyper" ||
+        name === "@arnilo/prism-ai/laya" ||
+        name === "@arnilo/prism-ai/typesafe" ||
         // Plan 152 Task 7: the keyring package never shipped as a 0.3 package either.
-        name === "@arnilo/prism-credentials-keyring" ||
+        name === "@arnilo/prism-extensions/keyring" ||
         // Plan 153 Tasks 3-5: the store packages never shipped as a 0.3 package either.
-        name === "@arnilo/prism-store-jsonl" ||
-        name === "@arnilo/prism-store-codecs" ||
-        name === "@arnilo/prism-store-sqlite" ||
-        name === "@arnilo/prism-store-postgres" ||
+        name === "@arnilo/prism-extensions/store-jsonl" ||
+        name === "@arnilo/prism-extensions/store-codecs" ||
+        name === "@arnilo/prism-extensions/store-sqlite" ||
+        name === "@arnilo/prism-extensions/store-postgres" ||
         // Plan 154 Task 3: the coding-tools package, split out of the retired family package.
-        name === "@arnilo/prism-tools-coding" ||
+        name === "@arnilo/prism-tools/coding" ||
         // Plan 155 Task 2: the web-tools package, split out of prism-web-tools.
-        name === "@arnilo/prism-tools-web" ||
+        name === "@arnilo/prism-tools/web" ||
         // Plan 155 Task 3: the browser-tools package, split out of prism-web-tools.
-        name === "@arnilo/prism-tools-browser" ||
+        name === "@arnilo/prism-tools/browser" ||
         // Plan 155 Task 4: the OpenAPI and computer-use packages, split out of the retired family.
-        name === "@arnilo/prism-tools-openapi" ||
-        name === "@arnilo/prism-tools-computer-use" ||
+        name === "@arnilo/prism-tools/openapi" ||
+        name === "@arnilo/prism-tools/computer-use" ||
         // Plan 154 Task 6: the approval package never shipped as a 0.3 package either.
-        name === "@arnilo/prism-approval" ||
+        name === "@arnilo/prism-extensions/approval" ||
         // Plan 157 Tasks 3-5: the compaction and observational-memory packages, split out of the
         // memory family (which is the 0.3 package this matrix froze).
-        name === "@arnilo/prism-memory-compaction" ||
+        name === "@arnilo/prism-extensions/compaction" ||
         name === "@arnilo/prism-memory-system" ||
         // Plan 158 Tasks 2-6: the memory core/rag/fabric/wiki split plus the context-engineering
         // package. None of them shipped as a standalone 0.3 package.
-        name === "@arnilo/prism-memory-core" ||
-        name === "@arnilo/prism-rag" ||
-        name === "@arnilo/prism-wiki" ||
-        name === "@arnilo/prism-context-engineering" ||
+        name === "@arnilo/prism-memory-system/core" ||
+        name === "@arnilo/prism-knowledge/rag" ||
+        name === "@arnilo/prism-knowledge/wiki" ||
+        name === "@arnilo/prism-extensions/context-engineering" ||
         // Plan 160 Task 4: the delegate package replaces the in-process supervisor; no 0.3 package.
-        name === "@arnilo/prism-delegate" ||
+        name === "@arnilo/prism-extensions/delegate" ||
         // Plan 161 Task 3: the acp-agent package renamed to acp; the frozen row keeps the 0.3 name.
-        name === "@arnilo/prism-acp" ||
+        name === "@arnilo/prism-hosts/acp" ||
         // Plans 159-164: the 0.13 packages that split out of the kernel, the memory family, or the
         // retired tool families after the frozen 0.3.3 matrix was written.
-        name === "@arnilo/prism-mcp-server" ||
-        name === "@arnilo/prism-guardrail-packs" ||
-        name === "@arnilo/prism-governance" ||
-        name === "@arnilo/prism-observability" ||
-        name === "@arnilo/prism-devtools" ||
-        name === "@arnilo/prism-tools-research" ||
-        name === "@arnilo/prism-headless" ||
-        name === "@arnilo/prism-driver-process" ||
-        name === "@arnilo/prism-remote" ||
-        name === "@arnilo/prism-context-files"
+        name === "@arnilo/prism-hosts/mcp-server" ||
+        name === "@arnilo/prism-extensions/guardrail-packs" ||
+        name === "@arnilo/prism-extensions/governance" ||
+        name === "@arnilo/prism-extensions/observability" ||
+        name === "@arnilo/prism-hosts/devtools" ||
+        name === "@arnilo/prism-tools/research" ||
+        name === "@arnilo/prism-hosts/headless" ||
+        name === "@arnilo/prism-hosts/driver-process" ||
+        name === "@arnilo/prism-hosts/remote" ||
+        name === "@arnilo/prism-extensions/context-files"
       )
         continue;
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);

@@ -12,10 +12,10 @@ items (the skill should help) and 3 non-trigger items (it should not load), in t
 
 | Skill | Package | Environment (all local) | `task_success` is graded on |
 | --- | --- | --- | --- |
-| `web-research` | `@arnilo/prism-tools-web` | a loopback SearXNG endpoint and a documentation site the native fetcher reaches through a request override | the final answer: the fact, no injected text, a cited URL where asked |
-| `coding-workflow` (removed after v3; text archived in `archive/`) | `@arnilo/prism-tools-coding` | a scratch repository per trial | hidden tests the agent never saw, plus untouched protected tests and forbidden-pattern sweeps |
-| `browser-automation` | `@arnilo/prism-tools-browser` (manager over a real Chromium) | a loopback site with forms, a wizard, tabs, a modal and a prompt-injection page | what the server recorded (submissions, settings, no `/evil` hit) and the final answer |
-| `delegating-work` | `@arnilo/prism-delegate` | an `analyst` child that sees only the brief and answers `MISSING DATA` otherwise | the final answer and a child answer that carries the result |
+| `web-research` | `@arnilo/prism-tools/web` | a loopback SearXNG endpoint and a documentation site the native fetcher reaches through a request override | the final answer: the fact, no injected text, a cited URL where asked |
+| `coding-workflow` (removed after v3; text archived in `archive/`) | `@arnilo/prism-tools/coding` | a scratch repository per trial | hidden tests the agent never saw, plus untouched protected tests and forbidden-pattern sweeps |
+| `browser-automation` | `@arnilo/prism-tools/browser` (manager over a real Chromium) | a loopback site with forms, a wizard, tabs, a modal and a prompt-injection page | what the server recorded (submissions, settings, no `/evil` hit) and the final answer |
+| `delegating-work` | `@arnilo/prism-extensions/delegate` | an `analyst` child that sees only the brief and answers `MISSING DATA` otherwise | the final answer and a child answer that carries the result |
 
 ## Pre-registration
 

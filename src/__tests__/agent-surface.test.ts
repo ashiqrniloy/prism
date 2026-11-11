@@ -1,6 +1,23 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AgentEvent, type ModelProvider, createAgent, createMemorySessionStore, createSecretRedactor, definePackage, isUnsupportedStoreCapability, type ModelConfig, type PackageDefinitionInput, providerDone, providerTextDelta, SessionNotFoundError, type SessionStore, type Skill, type ToolDefinition, UnsupportedStoreCapabilityError } from "../index.js";
+import {
+  type AgentEvent,
+  type ModelProvider,
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  definePackage,
+  isUnsupportedStoreCapability,
+  type ModelConfig,
+  type PackageDefinitionInput,
+  providerDone,
+  providerTextDelta,
+  SessionNotFoundError,
+  type SessionStore,
+  type Skill,
+  type ToolDefinition,
+  UnsupportedStoreCapabilityError,
+} from "../index.js";
 import { mockProvider, createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -97,8 +114,18 @@ describe("agent.sessions", () => {
 
   it("sessions_respect_ownership_scope", async () => {
     const store = createMemorySessionStore();
-    const mine = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], slots: { store }, ownership: { tenantId: "tenant-a" } });
-    const theirs = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], slots: { store }, ownership: { tenantId: "tenant-b" } });
+    const mine = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider()])],
+      slots: { store },
+      ownership: { tenantId: "tenant-a" },
+    });
+    const theirs = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider()])],
+      slots: { store },
+      ownership: { tenantId: "tenant-b" },
+    });
     await (await mine.session({ id: "mine", create: true })).run("private to a");
     await (await theirs.session({ id: "theirs", create: true })).run("private to b");
 
@@ -132,7 +159,8 @@ describe("agent.commands", () => {
     const seen: { session?: string } = {};
     const agent = await createAgent({
       model: MODEL,
-      packages: [pkg("@acme/cmd", ({ commands }) => {
+      packages: [
+        pkg("@acme/cmd", ({ commands }) => {
           commands.register({
             name: "who",
             description: "reports its session",
@@ -141,7 +169,9 @@ describe("agent.commands", () => {
               return "ok";
             },
           });
-        }), providerPackage("test-provider", [provider()])],
+        }),
+        providerPackage("test-provider", [provider()]),
+      ],
     });
     assert.deepEqual(agent.commands.list(), [{ name: "who", description: "reports its session", package: "@acme/cmd" }]);
     const session = await agent.session({ id: "S", create: true });
@@ -224,11 +254,14 @@ describe("agent.tools and agent.skills", () => {
       model: MODEL,
       tools: { add: [tool("host-keep", { effects: ["read"] }), tool("host-drop")] },
       skills: { add: [skill("host-skill"), skill("host-skill-drop")] },
-      packages: [pkg("@acme/tools", ({ tools, skills }) => {
+      packages: [
+        pkg("@acme/tools", ({ tools, skills }) => {
           tools.register(tool("pkg-keep", { effects: ["write", "network"] }));
           tools.register(tool("pkg-drop"));
           skills.register(skill("pkg-skill"));
-        }), providerPackage("test-provider", [provider()])],
+        }),
+        providerPackage("test-provider", [provider()]),
+      ],
       disable: { tools: ["host-drop", "pkg-drop"], skills: ["host-skill-drop"] },
     });
     assert.deepEqual(
@@ -256,7 +289,11 @@ describe("agent.tools and agent.skills", () => {
       agent.tools.map((entry) => entry.name),
     );
     // An unannotated tool can touch anything.
-    const open = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], tools: { add: [tool("open")] } });
+    const open = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider()])],
+      tools: { add: [tool("open")] },
+    });
     assert.deepEqual(open.tools[0]?.effects, ["read", "write", "execute", "network", "external"]);
 
     await agent.dispose();
@@ -265,8 +302,14 @@ describe("agent.tools and agent.skills", () => {
   });
 
   it("agent_id_is_configured_or_generated", async () => {
-    assert.equal((await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], id: "named" })).id, "named");
-    assert.equal((await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], name: "label" })).id, "label");
+    assert.equal(
+      (await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], id: "named" })).id,
+      "named",
+    );
+    assert.equal(
+      (await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], name: "label" })).id,
+      "label",
+    );
     const a = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])] });
     const b = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])] });
     assert.ok(a.id.length > 0 && a.id !== b.id, "an unnamed agent gets its own generated id");
@@ -287,7 +330,8 @@ describe("agent.subscribe", () => {
     const agent = await createAgent({
       model: MODEL,
       redactor: createSecretRedactor([SECRET]),
-      packages: [pkg(
+      packages: [
+        pkg(
           "@acme/bg",
           ({ commands, status }) => {
             status.note("info", `starting with ${SECRET}`);
@@ -301,7 +345,9 @@ describe("agent.subscribe", () => {
             });
           },
           { capabilities: ["background"] },
-        ), providerPackage("test-provider", [provider()])],
+        ),
+        providerPackage("test-provider", [provider()]),
+      ],
     });
     const subscription = agent.subscribe();
     const collected = drain(subscription, (event) => event.type === "session.closed");
@@ -320,7 +366,10 @@ describe("agent.subscribe", () => {
     const noisy = await createAgent({
       model: MODEL,
       redactor: createSecretRedactor([SECRET]),
-      packages: [pkg("@acme/noisy", ({ status }) => void (note = (level, message) => status.note(level, message))), providerPackage("test-provider", [provider()])],
+      packages: [
+        pkg("@acme/noisy", ({ status }) => void (note = (level, message) => status.note(level, message))),
+        providerPackage("test-provider", [provider()]),
+      ],
     });
     const noisyStream = drain(noisy.subscribe(), (event) => event.type === "package.status");
     note?.("warn", `late note ${SECRET}`);

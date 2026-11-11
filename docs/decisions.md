@@ -126,7 +126,7 @@ const decisionPackage = (name: string, options: Omit<SystemOneDecisionProviderOp
 
 ### Ollama Cloud
 
-The shipped `@arnilo/prism-provider-ollama-cloud` package serves Ollama's decision models (`/api/show` capability `decision`, e.g. `clef:27b`) at `/v1/systemone` with the same key as its chat models; no extra package is needed.
+The shipped `@arnilo/prism-ai/ollama-cloud` package serves Ollama's decision models (`/api/show` capability `decision`, e.g. `clef:27b`) at `/v1/systemone` with the same key as its chat models; no extra package is needed.
 
 ```ts
 // packages: [ollamaCloud({ apiKey: "env:OLLAMA_API_KEY" })]

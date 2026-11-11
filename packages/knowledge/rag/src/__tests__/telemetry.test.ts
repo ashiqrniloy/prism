@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { chunkText, indexChunks, replaceSource, retrieveContext } from "../index.js";
 import type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "../telemetry.js";
 

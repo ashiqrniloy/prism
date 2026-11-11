@@ -14,7 +14,7 @@ import {
   type RunResult,
 } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import { createMemoryEvaluationStore, createMemoryRunFeedbackStore } from "@arnilo/prism-store-codecs";
+import { createMemoryEvaluationStore, createMemoryRunFeedbackStore } from "@arnilo/prism-extensions/store-codecs";
 import {
   appendEvaluationFeedback,
   assertEvaluationThreshold,
@@ -477,22 +477,26 @@ describe("bounded trace, judge, comparison, and thresholds", () => {
     });
     const dataset = defineDataset({ id: "seam", items: [{ id: "i", input: "ask with SECRET_CANARY_VALUE" }] });
     const result = { ...sampleResult(), text: "answer with SECRET_CANARY_VALUE" };
+    const item = dataset.items[0];
+    assert.ok(item);
     const options = {
       result,
       scorers: [judge],
-      item: dataset.items[0]!,
+      item,
       datasetId: dataset.id,
       itemId: "i",
     };
 
     const explicit = await scoreRun({ ...options, redactor: createSecretRedactor(["SECRET_CANARY_VALUE"]) });
     assert.equal(explicit[0]?.score, 1);
-    assert.ok(!leaked[0]!.includes("SECRET_CANARY_VALUE"), "the judge prompt must not carry the secret");
+    assert.ok(leaked[0] !== undefined);
+    assert.ok(!leaked[0].includes("SECRET_CANARY_VALUE"), "the judge prompt must not carry the secret");
 
     // `secrets` is the same seam without a redactor instance.
     leaked.length = 0;
     await scoreRun({ ...options, secrets: ["SECRET_CANARY_VALUE"] });
-    assert.ok(!leaked[0]!.includes("SECRET_CANARY_VALUE"), "secrets must reach the scorer as a redactor");
+    assert.ok(leaked[0] !== undefined);
+    assert.ok(!leaked[0].includes("SECRET_CANARY_VALUE"), "secrets must reach the scorer as a redactor");
 
     // With no redactor configured there is nothing to redact, and the seam stays undefined.
     let sawRedactor: unknown = "unset";
@@ -531,7 +535,9 @@ describe("bounded trace, judge, comparison, and thresholds", () => {
       dataset,
       scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
     });
-    assert.doesNotThrow(() => assertEvaluationThreshold(experiment, { minimumMacroMean: 1, maximumFailures: 0, minimumByScorer: { s: 1 } }));
+    assert.doesNotThrow(() =>
+      assertEvaluationThreshold(experiment, { minimumMacroMean: 1, maximumFailures: 0, minimumByScorer: { s: 1 } }),
+    );
     assert.throws(
       () => assertEvaluationThreshold(experiment, { minimumMacroMean: 1, maximumFailures: 0, minimumByScorer: { missing: 1 } }),
       /missing mean/,
@@ -639,7 +645,7 @@ describe("optional observability peer", () => {
   it("timeline_unavailable_throws_named_error", async () => {
     const agent = await mockAgent("search");
     setTimelineImporterForTests(async () => {
-      throw new Error("Cannot find module '@arnilo/prism-observability'");
+      throw new Error("Cannot find module '@arnilo/prism-extensions/observability'");
     });
     try {
       await assert.rejects(
@@ -647,7 +653,7 @@ describe("optional observability peer", () => {
         (error: unknown) =>
           error instanceof EvalError &&
           error.code === "ERR_PRISM_EVAL_TIMELINE_UNAVAILABLE" &&
-          error.message.includes("@arnilo/prism-observability") &&
+          error.message.includes("@arnilo/prism-extensions/observability") &&
           error.cause instanceof Error,
       );
       // The named error also reaches the public entry points that need a timeline.
@@ -659,7 +665,7 @@ describe("optional observability peer", () => {
       });
       assert.equal(report.status, "failed");
       assert.equal(report.items[0]?.error?.code, "ERR_PRISM_EVAL_TIMELINE_UNAVAILABLE");
-      assert.match(report.items[0]?.error?.message ?? "", /@arnilo\/prism-observability/);
+      assert.match(report.items[0]?.error?.message ?? "", /@arnilo\/prism-extensions\/observability/);
     } finally {
       setTimelineImporterForTests();
     }
@@ -693,7 +699,7 @@ describe("optional observability peer", () => {
     let loads = 0;
     setTimelineImporterForTests(async () => {
       loads += 1;
-      return await import("@arnilo/prism-observability");
+      return await import("@arnilo/prism-extensions/observability");
     });
     try {
       const projected = await runExperiment({
@@ -710,75 +716,108 @@ describe("optional observability peer", () => {
   });
 });
 
-
 describe("per-scorer aggregate statistics", () => {
   async function report(values: number[][], seed = 7, passThreshold?: number) {
     const calls = new Map<string, number>();
     return runExperiment({
       agent: await mockAgent("ok"),
       dataset: defineDataset({ id: "stats", items: values.map((_, i) => ({ id: String(i), input: String(i) })) }),
-      trials: Math.max(1, ...values.map(v => v.length)), seed,
-      scorers: [defineScorer({ id: "s", passThreshold, score: ({ item }) => {
-        const id = item!.id, i = Number(id), trial = calls.get(id) ?? 0;
-        calls.set(id, trial + 1);
-        if (trial >= values[i]!.length) throw new Error("unscored trial");
-        return { score: values[i]![trial]! };
-      } })],
+      trials: Math.max(1, ...values.map((v) => v.length)),
+      seed,
+      scorers: [
+        defineScorer({
+          id: "s",
+          passThreshold,
+          score: ({ item }) => {
+            assert.ok(item);
+            const id = item.id,
+              i = Number(id),
+              trial = calls.get(id) ?? 0;
+            calls.set(id, trial + 1);
+            const scores = values[i];
+            assert.ok(scores);
+            if (trial >= scores.length) throw new Error("unscored trial");
+            const score = scores[trial];
+            assert.ok(score !== undefined);
+            return { score };
+          },
+        }),
+      ],
     });
   }
 
   it("pass_hat_k_drops_with_flaky_item", async () => {
-    const stats = (await report([[1, 0, 1, 0]])).aggregate.scorers.s!;
-    assert.equal(stats.passRate, .5);
+    const stats = (await report([[1, 0, 1, 0]])).aggregate.scorers.s;
+    assert.ok(stats);
+    assert.equal(stats.passRate, 0.5);
     assert.equal(stats.passAtK?.[4], 1);
     assert.equal(stats.passHatK?.[4], 0);
     assert.deepEqual(JSON.parse(serializeEvaluationReport({ stats })).stats.passHatK, stats.passHatK);
     assert.deepEqual(stats.passKCounts?.[4], { items: 1, excludedItems: 0 });
     for (let n = 2; n <= 6; n++) {
       for (let c = 0; c <= n; c++) {
-        const actual = (await report([[...Array(c).fill(1), ...Array(n - c).fill(0)]])).aggregate.scorers.s!;
+        const actual = (await report([[...Array(c).fill(1), ...Array(n - c).fill(0)]])).aggregate.scorers.s;
+        assert.ok(actual);
         for (let k = 1; k <= n; k++) {
-          assert.ok(Math.abs(actual.passAtK![k]! - passAtK(n, c, k)) < 1e-12);
-          assert.ok(Math.abs(actual.passHatK![k]! - passHatK(n, c, k)) < 1e-12);
+          assert.ok(actual.passAtK);
+          assert.ok(actual.passHatK);
+          const passAt = actual.passAtK[k];
+          const passHat = actual.passHatK[k];
+          assert.ok(passAt !== undefined);
+          assert.ok(passHat !== undefined);
+          assert.ok(Math.abs(passAt - passAtK(n, c, k)) < 1e-12);
+          assert.ok(Math.abs(passHat - passHatK(n, c, k)) < 1e-12);
         }
       }
     }
   });
 
   it("items_with_too_few_trials_are_excluded_and_counted", async () => {
-    const stats = (await report([[1, 0, 1, 0], [1], []])).aggregate.scorers.s!;
-    assert.equal(stats.passRate, .75);
-    assert.equal(stats.passHatK?.[1], .75);
+    const stats = (await report([[1, 0, 1, 0], [1], []])).aggregate.scorers.s;
+    assert.ok(stats);
+    assert.equal(stats.passRate, 0.75);
+    assert.equal(stats.passHatK?.[1], 0.75);
     assert.deepEqual(stats.passKCounts?.[1], { items: 2, excludedItems: 1 });
     assert.deepEqual(stats.passKCounts?.[4], { items: 1, excludedItems: 2 });
     assert.equal(stats.passHatK?.[4], 0);
-    const missing = (await report([[1], [], [], []])).aggregate.scorers.s!;
+    const missing = (await report([[1], [], [], []])).aggregate.scorers.s;
+    assert.ok(missing);
     assert.equal(missing.passAtK, undefined); // Only one configured trial.
-    const unscored = (await report([[1, 1], [1]])).aggregate.scorers.s!;
+    const unscored = (await report([[1, 1], [1]])).aggregate.scorers.s;
+    assert.ok(unscored);
     assert.deepEqual(unscored.passKCounts?.[2], { items: 1, excludedItems: 1 });
   });
 
   it("pass_threshold_defaults_to_one_and_accepts_boundary_scores", async () => {
-    assert.equal((await report([[.5, .7]])).aggregate.scorers.s?.passRate, 0);
-    assert.equal((await report([[.5, .7]], 7, .7)).aggregate.scorers.s?.passRate, .5);
-    assert.equal((await report([[0, .5]], 7, 0)).aggregate.scorers.s?.passRate, 1);
+    assert.equal((await report([[0.5, 0.7]])).aggregate.scorers.s?.passRate, 0);
+    assert.equal((await report([[0.5, 0.7]], 7, 0.7)).aggregate.scorers.s?.passRate, 0.5);
+    assert.equal((await report([[0, 0.5]], 7, 0)).aggregate.scorers.s?.passRate, 1);
     for (const passThreshold of [-1, 1.1, NaN, Infinity]) {
       assert.throws(() => defineScorer({ id: "bad", passThreshold, score: () => ({ score: 1 }) }), EvalError);
       let built = false;
-      await assert.rejects(runExperiment({
-        agent: async () => { built = true; return mockAgent("ok"); },
-        dataset: defineDataset({ id: "bad", items: [{ id: "a", input: "a" }] }),
-        scorers: [{ id: "bad", passThreshold, score: () => ({ score: 1 }) }],
-      }), EvalError);
+      await assert.rejects(
+        runExperiment({
+          agent: async () => {
+            built = true;
+            return mockAgent("ok");
+          },
+          dataset: defineDataset({ id: "bad", items: [{ id: "a", input: "a" }] }),
+          scorers: [{ id: "bad", passThreshold, score: () => ({ score: 1 }) }],
+        }),
+        EvalError,
+      );
       assert.equal(built, false);
     }
   });
 
   it("minimum_pass_hat_k_gate_fails", async () => {
     const r = await report([[1, 0, 1, 0]]);
-    assert.throws(() => assertEvaluationThreshold(r, { minimumPassHatK: { s: { k: 4, minimum: .8 } } }), /s pass\^4/);
-    assert.doesNotThrow(() => assertEvaluationThreshold(r, { minimumPassHatK: { s: { k: 1, minimum: .5 } } }));
-    for (const [scorer, k] of [["missing", 1], ["s", 5]] as const) {
+    assert.throws(() => assertEvaluationThreshold(r, { minimumPassHatK: { s: { k: 4, minimum: 0.8 } } }), /s pass\^4/);
+    assert.doesNotThrow(() => assertEvaluationThreshold(r, { minimumPassHatK: { s: { k: 1, minimum: 0.5 } } }));
+    for (const [scorer, k] of [
+      ["missing", 1],
+      ["s", 5],
+    ] as const) {
       assert.throws(() => assertEvaluationThreshold(r, { minimumPassHatK: { [scorer]: { k, minimum: 0 } } }));
     }
     for (const k of [0, -1, 1.5, NaN, Infinity]) {
@@ -790,16 +829,34 @@ describe("per-scorer aggregate statistics", () => {
     const short = await report([[1]]);
     assert.throws(() => assertEvaluationThreshold(short, { minimumPassHatK: { s: { k: 1, minimum: 0 } } }));
     let calls = 0;
-    const insufficient = await runExperiment({ agent: await mockAgent("ok"), trials: 4,
+    const insufficient = await runExperiment({
+      agent: await mockAgent("ok"),
+      trials: 4,
       dataset: defineDataset({ id: "short", items: [{ id: "a", input: "a" }] }),
-      scorers: [defineScorer({ id: "s", score: () => { if (calls++) throw new Error("unscored"); return { score: 1 }; } })],
+      scorers: [
+        defineScorer({
+          id: "s",
+          score: () => {
+            if (calls++) throw new Error("unscored");
+            return { score: 1 };
+          },
+        }),
+      ],
     });
     assert.deepEqual(insufficient.aggregate.scorers.s?.passKCounts?.[4], { items: 0, excludedItems: 1 });
     assert.equal(insufficient.aggregate.scorers.s?.passHatK?.[4], undefined);
-    assert.throws(() => assertEvaluationThreshold(insufficient, {
-      maximumFailures: 3, minimumPassHatK: { s: { k: 4, minimum: 0 } },
-    }), /s pass\^4/);
-    const skipped = await runExperiment({ agent: await mockAgent("ok"), trials: 4, sampling: { rate: 0 },
+    assert.throws(
+      () =>
+        assertEvaluationThreshold(insufficient, {
+          maximumFailures: 3,
+          minimumPassHatK: { s: { k: 4, minimum: 0 } },
+        }),
+      /s pass\^4/,
+    );
+    const skipped = await runExperiment({
+      agent: await mockAgent("ok"),
+      trials: 4,
+      sampling: { rate: 0 },
       dataset: defineDataset({ id: "skip", items: [{ id: "a", input: "a" }] }),
       scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
     });
@@ -809,26 +866,39 @@ describe("per-scorer aggregate statistics", () => {
 
   it("trials_do_not_outweigh_items_in_mean", async () => {
     const r = await report([[1, 1, 1, 1, 1], [0]]);
-    assert.equal(r.aggregate.scorers.s?.mean, .5);
+    assert.equal(r.aggregate.scorers.s?.mean, 0.5);
     assert.equal(r.aggregate.scorers.s?.items, 2);
     assert.equal(r.aggregate.scorers.s?.records, 6);
     assert.equal(r.aggregate.failedCount, 4);
-    assert.equal(r.aggregate.macroMean, .5);
+    assert.equal(r.aggregate.macroMean, 0.5);
   });
 
   it("se_is_clustered_by_item and bootstrap is reproducible", async () => {
     const single = await report([[1], [0], [1]]);
-    const repeated = await report([[1, 1, 1], [0, 0, 0], [1, 1, 1]]);
+    const repeated = await report([
+      [1, 1, 1],
+      [0, 0, 0],
+      [1, 1, 1],
+    ]);
     assert.equal(repeated.aggregate.scorers.s?.se, single.aggregate.scorers.s?.se);
     assert.equal(repeated.aggregate.scorers.s?.method, "cluster_bootstrap");
-    assert.deepEqual(repeated.aggregate.scorers, (await report([[1, 1, 1], [0, 0, 0], [1, 1, 1]])).aggregate.scorers);
+    assert.deepEqual(
+      repeated.aggregate.scorers,
+      (
+        await report([
+          [1, 1, 1],
+          [0, 0, 0],
+          [1, 1, 1],
+        ])
+      ).aggregate.scorers,
+    );
     assert.equal(single.aggregate.scorers.s?.method, "wilson");
     assert.ok(single.aggregate.scorers.s?.ci95);
   });
 
   it("single item and empty samples have no uncertainty", async () => {
-    const one = await report([[.5, .7]]);
-    assert.equal(one.aggregate.scorers.s?.mean, .6);
+    const one = await report([[0.5, 0.7]]);
+    assert.equal(one.aggregate.scorers.s?.mean, 0.6);
     assert.equal(one.aggregate.scorers.s?.method, "single_item");
     assert.equal(one.aggregate.scorers.s?.ci95, undefined);
     assert.equal(one.aggregate.scorers.s?.se, undefined);
@@ -839,12 +909,18 @@ describe("per-scorer aggregate statistics", () => {
 
   it("lower_bound_gate_fails_on_small_noisy_suite", async () => {
     const r = await report(Array.from({ length: 10 }, (_, i) => [Number(i < 9)]));
-    assert.doesNotThrow(() => assertEvaluationThreshold(r, { minimumByScorer: { s: .8 } }));
-    assert.throws(() => assertEvaluationThreshold(r, { minimumLowerBound: { s: .8 } }), /s.*lower bound.*0\.8.*ci95/);
-    assert.doesNotThrow(() => assertEvaluationThreshold(r, {
-      minimumLowerBound: { s: r.aggregate.scorers.s!.ci95!.low },
-    }));
-    for (const minimum of [NaN, Infinity, -.1, 1.1]) {
+    assert.doesNotThrow(() => assertEvaluationThreshold(r, { minimumByScorer: { s: 0.8 } }));
+    assert.throws(() => assertEvaluationThreshold(r, { minimumLowerBound: { s: 0.8 } }), /s.*lower bound.*0\.8.*ci95/);
+    const stats = r.aggregate.scorers.s;
+    assert.ok(stats);
+    const interval = stats.ci95;
+    assert.ok(interval);
+    assert.doesNotThrow(() =>
+      assertEvaluationThreshold(r, {
+        minimumLowerBound: { s: interval.low },
+      }),
+    );
+    for (const minimum of [NaN, Infinity, -0.1, 1.1]) {
       assert.throws(() => assertEvaluationThreshold(r, { minimumLowerBound: { s: minimum } }), EvalError);
     }
   });
@@ -855,14 +931,25 @@ describe("per-scorer aggregate statistics", () => {
       assert.throws(() => assertEvaluationThreshold(r, { minimumLowerBound: { [scorer]: 0 } }), /ci95 unavailable/);
     }
     const valid = await report([[1], [1]]);
-    for (const ci95 of [{ low: NaN, high: 1 }, { low: .9, high: .8 }, { low: 0, high: Infinity }]) {
-      const malformed = { ...valid, aggregate: { ...valid.aggregate, scorers: {
-        s: { ...valid.aggregate.scorers.s!, ci95 },
-      } } };
+    const stats = valid.aggregate.scorers.s;
+    assert.ok(stats);
+    for (const ci95 of [
+      { low: NaN, high: 1 },
+      { low: 0.9, high: 0.8 },
+      { low: 0, high: Infinity },
+    ]) {
+      const malformed = {
+        ...valid,
+        aggregate: {
+          ...valid.aggregate,
+          scorers: {
+            s: { ...stats, ci95 },
+          },
+        },
+      };
       assert.throws(() => assertEvaluationThreshold(malformed, { minimumLowerBound: { s: 0 } }));
     }
-    assert.throws(() => assertEvaluationThreshold({ wins: {}, failures: 0 } as never,
-      { minimumLowerBound: { s: 0 } }));
+    assert.throws(() => assertEvaluationThreshold({ wins: {}, failures: 0 } as never, { minimumLowerBound: { s: 0 } }));
   });
 
   it("regression_gate_fails_on_significant_drop_and_passes_on_noise", async () => {
@@ -870,82 +957,123 @@ describe("per-scorer aggregate statistics", () => {
     const candidate = await report(Array.from({ length: 40 }, (_, i) => [Number(i < 32)]));
     const noise = await report(Array.from({ length: 40 }, (_, i) => [Number(i < 39)]));
     const maximumRegression = { baseline };
-    assert.throws(() => assertEvaluationThreshold(candidate, { maximumRegression }),
-      /s.*difference.*-0\.2.*-0.*ci95.*p=.*q=/);
+    assert.throws(() => assertEvaluationThreshold(candidate, { maximumRegression }), /s.*difference.*-0\.2.*-0.*ci95.*p=.*q=/);
     assert.doesNotThrow(() => assertEvaluationThreshold(baseline, { maximumRegression }));
     assert.doesNotThrow(() => assertEvaluationThreshold(noise, { maximumRegression }));
     assert.doesNotThrow(() => assertEvaluationThreshold(baseline, { maximumRegression: { baseline: candidate } }));
-    assert.doesNotThrow(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, delta: .2 } }));
-    assert.doesNotThrow(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, alpha: .001 } }));
-    for (const delta of [NaN, Infinity, -.1, 1.1]) {
+    assert.doesNotThrow(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, delta: 0.2 } }));
+    assert.doesNotThrow(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, alpha: 0.001 } }));
+    for (const delta of [NaN, Infinity, -0.1, 1.1]) {
       assert.throws(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, delta } }), EvalError);
     }
     for (const alpha of [NaN, 0, 1]) {
       assert.throws(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, alpha } }), EvalError);
     }
-    assert.throws(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, scorers: ["missing"] } }),
-      /Missing scorer/);
-    assert.throws(() => assertEvaluationThreshold({ ...candidate, datasetId: "other" }, { maximumRegression }),
-      /matching dataset ids/);
+    assert.throws(() => assertEvaluationThreshold(candidate, { maximumRegression: { baseline, scorers: ["missing"] } }), /Missing scorer/);
+    assert.throws(() => assertEvaluationThreshold({ ...candidate, datasetId: "other" }, { maximumRegression }), /matching dataset ids/);
     assert.throws(() => assertEvaluationThreshold({ wins: {}, failures: 0 } as never, { maximumRegression }));
 
     // Six discordances: raw p=.03125, but q=.0625 when the stable scorer is also compared.
     const marginal = await report(Array.from({ length: 40 }, (_, i) => [Number(i < 34)]));
-    const withStable = (r: typeof baseline) => ({ ...r, items: r.items.map(item => ({ ...item,
-      evaluations: [...item.evaluations, ...item.evaluations.map(row => ({ ...row, scorerId: "stable", score: 1 }))],
-    })) });
-    assert.doesNotThrow(() => assertEvaluationThreshold(withStable(marginal), {
-      maximumRegression: { baseline: withStable(baseline) },
-    }));
-    assert.throws(() => assertEvaluationThreshold(withStable(marginal), {
-      maximumRegression: { baseline: withStable(baseline), scorers: ["s"] },
-    }), /q=0\.03125/);
+    const withStable = (r: typeof baseline) => ({
+      ...r,
+      items: r.items.map((item) => ({
+        ...item,
+        evaluations: [...item.evaluations, ...item.evaluations.map((row) => ({ ...row, scorerId: "stable", score: 1 }))],
+      })),
+    });
+    assert.doesNotThrow(() =>
+      assertEvaluationThreshold(withStable(marginal), {
+        maximumRegression: { baseline: withStable(baseline) },
+      }),
+    );
+    assert.throws(
+      () =>
+        assertEvaluationThreshold(withStable(marginal), {
+          maximumRegression: { baseline: withStable(baseline), scorers: ["s"] },
+        }),
+      /q=0\.03125/,
+    );
   });
 
   it("macro_mean_ignores_record_counts and threshold_minimum_macro_mean", async () => {
     let calls = 0;
-    const r = await runExperiment({ agent: await mockAgent("ok"),
-      dataset: defineDataset({ id: "macro", items: [{ id: "a", input: "a" }, { id: "b", input: "b" }] }),
-      scorers: [defineScorer({ id: "many", score: () => ({ score: 1 }) }),
-        defineScorer({ id: "few", score: () => { if (calls++) throw new Error("unscored"); return { score: 0 }; } })],
+    const r = await runExperiment({
+      agent: await mockAgent("ok"),
+      dataset: defineDataset({
+        id: "macro",
+        items: [
+          { id: "a", input: "a" },
+          { id: "b", input: "b" },
+        ],
+      }),
+      scorers: [
+        defineScorer({ id: "many", score: () => ({ score: 1 }) }),
+        defineScorer({
+          id: "few",
+          score: () => {
+            if (calls++) throw new Error("unscored");
+            return { score: 0 };
+          },
+        }),
+      ],
     });
-    assert.equal(r.aggregate.macroMean, .5);
-    assert.doesNotThrow(() => assertEvaluationThreshold(r, { minimumMacroMean: .5, maximumFailures: 1 }));
-    assert.throws(() => assertEvaluationThreshold(r, { minimumMacroMean: .6, maximumFailures: 1 }));
+    assert.equal(r.aggregate.macroMean, 0.5);
+    assert.doesNotThrow(() => assertEvaluationThreshold(r, { minimumMacroMean: 0.5, maximumFailures: 1 }));
+    assert.throws(() => assertEvaluationThreshold(r, { minimumMacroMean: 0.6, maximumFailures: 1 }));
   });
 });
 
-
 describe("experiment usage, cost, latency and Pareto frontier", () => {
-  async function accountingReport(runs: { usage?: Usage; turns?: (Usage | undefined)[]; status?: RunResult["status"]; throws?: boolean; delayMs?: number; terminal?: boolean }[], itemCount = 1) {
+  async function accountingReport(
+    runs: {
+      usage?: Usage;
+      turns?: (Usage | undefined)[];
+      status?: RunResult["status"];
+      throws?: boolean;
+      delayMs?: number;
+      terminal?: boolean;
+    }[],
+    itemCount = 1,
+  ) {
     let index = 0;
-    const agent = { session: async () => {
-      const run = runs[index++]!;
-      return {
-        subscribe: async function* () {
-          for (const usage of run.turns ?? [run.usage]) {
-            yield { type: "turn.started" } as AgentEvent;
-            yield { type: "turn.completed", usage } as AgentEvent;
-          }
-          if (run.terminal !== false) yield { type: "run.completed", runId: "run_1" } as AgentEvent;
-        },
-        run: async () => {
-          await new Promise(resolve => setTimeout(resolve, run.delayMs ?? 1));
-          if (run.throws) throw new Error("run failed");
-          return sampleResult({ usage: run.usage, status: run.status ?? "completed" });
-        },
-      };
-    } } as unknown as Agent;
-    return await runExperiment({ agent, concurrency: 1, trials: runs.length / itemCount,
+    const agent = {
+      session: async () => {
+        const run = runs[index++];
+        assert.ok(run);
+        return {
+          subscribe: async function* () {
+            for (const usage of run.turns ?? [run.usage]) {
+              yield { type: "turn.started" } as AgentEvent;
+              yield { type: "turn.completed", usage } as AgentEvent;
+            }
+            if (run.terminal !== false) yield { type: "run.completed", runId: "run_1" } as AgentEvent;
+          },
+          run: async () => {
+            await new Promise((resolve) => setTimeout(resolve, run.delayMs ?? 1));
+            if (run.throws) throw new Error("run failed");
+            return sampleResult({ usage: run.usage, status: run.status ?? "completed" });
+          },
+        };
+      },
+    } as unknown as Agent;
+    return await runExperiment({
+      agent,
+      concurrency: 1,
+      trials: runs.length / itemCount,
       dataset: defineDataset({ id: "usage", items: Array.from({ length: itemCount }, (_, i) => ({ id: String(i), input: "hello" })) }),
       scorers: [defineScorer({ id: "pass", score: () => ({ score: 1 }) })],
     });
   }
 
   it("report_totals_usage_across_trials", async () => {
-    const usage = { inputTokens: 10, outputTokens: 2, cacheReadTokens: 3, cost: .25, currency: "USD" };
-    const report = await accountingReport(Array.from({ length: 4 }, (_, i) => ({ usage, delayMs: (i + 1) * 10 })), 2);
-    const cost = report.aggregate.cost!;
+    const usage = { inputTokens: 10, outputTokens: 2, cacheReadTokens: 3, cost: 0.25, currency: "USD" };
+    const report = await accountingReport(
+      Array.from({ length: 4 }, (_, i) => ({ usage, delayMs: (i + 1) * 10 })),
+      2,
+    );
+    const cost = report.aggregate.cost;
+    assert.ok(cost);
     assert.equal(cost.inputTokens, 40);
     assert.equal(cost.outputTokens, 8);
     assert.equal(cost.cacheReadTokens, 12);
@@ -953,13 +1081,26 @@ describe("experiment usage, cost, latency and Pareto frontier", () => {
     assert.equal(cost.currency, "USD");
     assert.equal(cost.costComplete, true);
     assert.equal(cost.meanPerItem.inputTokens, 20);
-    assert.equal(cost.meanPerItem.cost, .5);
-    const durations = report.items.flatMap(item => item.trials.map(trial => trial.durationMs!)).sort((a, b) => a - b);
+    assert.equal(cost.meanPerItem.cost, 0.5);
+    const durations = report.items
+      .flatMap((item) =>
+        item.trials.map((trial) => {
+          assert.ok(trial.durationMs !== undefined);
+          return trial.durationMs;
+        }),
+      )
+      .sort((a, b) => a - b);
     assert.equal(cost.meanPerItem.durationMs, durations.reduce((sum, value) => sum + value, 0) / 2);
     assert.deepEqual(cost.durationMs, { p50: durations[1], p95: durations[3] });
-    assert.deepEqual(report.items.map(item => item.trials.length), [2, 2]);
-    assert.equal(report.items[0]!.trials[0]!.status, "completed");
-    assert.deepEqual(report.items[0]!.trials[0]!.usage, usage);
+    assert.deepEqual(
+      report.items.map((item) => item.trials.length),
+      [2, 2],
+    );
+    assert.ok(report.items[0]);
+    const trial = report.items[0].trials[0];
+    assert.ok(trial);
+    assert.equal(trial.status, "completed");
+    assert.deepEqual(trial.usage, usage);
     assert.deepEqual(JSON.parse(serializeEvaluationReport(report)).aggregate.cost, cost);
   });
 
@@ -980,78 +1121,143 @@ describe("experiment usage, cost, latency and Pareto frontier", () => {
       { usage: priced, terminal: false },
     ]) {
       const report = await accountingReport([{ usage: priced }, run]);
-      assert.equal(report.aggregate.cost!.costComplete, false);
-      assert.equal(report.aggregate.cost!.cost, undefined);
-      assert.equal(report.aggregate.cost!.meanPerItem.cost, undefined);
+      assert.ok(report.aggregate.cost);
+      assert.equal(report.aggregate.cost.costComplete, false);
+      assert.equal(report.aggregate.cost.cost, undefined);
+      assert.equal(report.aggregate.cost.meanPerItem.cost, undefined);
     }
     const free = await accountingReport([{ usage: { cost: 0 } }]);
-    assert.equal(free.aggregate.cost!.costComplete, true);
-    assert.equal(free.aggregate.cost!.cost, 0);
+    assert.ok(free.aggregate.cost);
+    assert.equal(free.aggregate.cost.costComplete, true);
+    assert.equal(free.aggregate.cost.cost, 0);
   });
 
   it("retains_failed_and_aborted_trials_without_timeline", async () => {
     const report = await accountingReport([{ throws: true }, { status: "aborted" }, { status: "failed" }]);
-    assert.deepEqual(report.items[0]!.trials.map(trial => trial.status), ["failed", "aborted", "failed"]);
-    assert.ok(report.items[0]!.trials.every(trial => Number.isFinite(trial.durationMs) && trial.durationMs! >= 0));
-    assert.equal(report.aggregate.cost!.costComplete, false);
+    assert.ok(report.items[0]);
+    assert.deepEqual(
+      report.items[0].trials.map((trial) => trial.status),
+      ["failed", "aborted", "failed"],
+    );
+    assert.ok(
+      report.items[0].trials.every(
+        (trial) => Number.isFinite(trial.durationMs) && typeof trial.durationMs === "number" && trial.durationMs >= 0,
+      ),
+    );
+    assert.ok(report.aggregate.cost);
+    assert.equal(report.aggregate.cost.costComplete, false);
     const controller = new AbortController();
     controller.abort(new Error("stop"));
-    const aborted = await runExperiment({ agent: await mockAgent("ok"), signal: controller.signal,
+    const aborted = await runExperiment({
+      agent: await mockAgent("ok"),
+      signal: controller.signal,
       dataset: defineDataset({ id: "abort", items: [{ id: "a", input: "hi" }] }),
-      scorers: [defineScorer({ id: "pass", score: () => ({ score: 1 }) })], trials: 2 });
-    assert.deepEqual(aborted.items[0]!.trials.map(trial => trial.status), ["aborted", "aborted"]);
-    assert.equal(aborted.aggregate.cost!.costComplete, false);
-    assert.equal(aborted.aggregate.cost!.durationMs, undefined);
+      scorers: [defineScorer({ id: "pass", score: () => ({ score: 1 }) })],
+      trials: 2,
+    });
+    assert.ok(aborted.items[0]);
+    assert.deepEqual(
+      aborted.items[0].trials.map((trial) => trial.status),
+      ["aborted", "aborted"],
+    );
+    assert.ok(aborted.aggregate.cost);
+    assert.equal(aborted.aggregate.cost.costComplete, false);
+    assert.equal(aborted.aggregate.cost.durationMs, undefined);
   });
 
   it("collects_real_provider_usage_without_timeline", async () => {
     const report = await runExperiment({
-      agent: await createAgent({ model: { provider: "mock", model: "demo" },
-        packages: [mockProvider([[providerUsage({ inputTokens: 5, outputTokens: 1, cost: .5, currency: "USD" }), providerDone()]])] }),
+      agent: await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [mockProvider([[providerUsage({ inputTokens: 5, outputTokens: 1, cost: 0.5, currency: "USD" }), providerDone()]])],
+      }),
       dataset: defineDataset({ id: "real", items: [{ id: "a", input: "hi" }] }),
-      scorers: [defineScorer({ id: "pass", score: () => ({ score: 1 }) })], trials: 2,
+      scorers: [defineScorer({ id: "pass", score: () => ({ score: 1 }) })],
+      trials: 2,
     });
-    assert.equal(report.aggregate.cost!.costComplete, true);
-    assert.equal(report.aggregate.cost!.cost, 1);
-    assert.equal(report.aggregate.cost!.inputTokens, 10);
-    assert.ok(report.items.every(item => item.trials.every(trial => trial.durationMs! >= 0)));
+    assert.ok(report.aggregate.cost);
+    assert.equal(report.aggregate.cost.costComplete, true);
+    assert.equal(report.aggregate.cost.cost, 1);
+    assert.equal(report.aggregate.cost.inputTokens, 10);
+    assert.ok(report.items.every((item) => item.trials.every((trial) => typeof trial.durationMs === "number" && trial.durationMs >= 0)));
   });
 
   it("real_multi_turn_partial_cost_is_not_a_total", async () => {
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([
-        [providerToolCall({ type: "tool_call", id: "c1", name: "read", arguments: {} }),
-          providerUsage({ inputTokens: 5, outputTokens: 1, cost: .5, currency: "USD" }), providerDone()],
-        [providerTextDelta("done"), providerUsage({ inputTokens: 7, outputTokens: 2 }), providerDone()],
-      ])],
-      tools: { add: [{ name: "read", description: "read fixture", parameters: { type: "object", properties: {} },
-        async execute(_args, ctx) { return { toolCallId: ctx.toolCallId, name: "read", value: "ok" }; },
-      }] },
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [
+        mockProvider([
+          [
+            providerToolCall({ type: "tool_call", id: "c1", name: "read", arguments: {} }),
+            providerUsage({ inputTokens: 5, outputTokens: 1, cost: 0.5, currency: "USD" }),
+            providerDone(),
+          ],
+          [providerTextDelta("done"), providerUsage({ inputTokens: 7, outputTokens: 2 }), providerDone()],
+        ]),
+      ],
+      tools: {
+        add: [
+          {
+            name: "read",
+            description: "read fixture",
+            parameters: { type: "object", properties: {} },
+            async execute(_args, ctx) {
+              return { toolCallId: ctx.toolCallId, name: "read", value: "ok" };
+            },
+          },
+        ],
+      },
     });
-    const report = await runExperiment({ agent,
+    const report = await runExperiment({
+      agent,
       dataset: defineDataset({ id: "mixed", items: [{ id: "a", input: "read" }] }),
       scorers: [defineScorer({ id: "pass", score: () => ({ score: 1 }) })],
     });
-    assert.equal(report.items[0]!.result!.text, "done");
-    assert.equal(report.items[0]!.trials[0]!.usage!.cost, .5); // The kernel total alone is partial.
-    assert.equal(report.items[0]!.trials[0]!.costComplete, false);
-    assert.equal(report.aggregate.cost!.inputTokens, 12);
-    assert.equal(report.aggregate.cost!.cost, undefined);
-    assert.equal(report.aggregate.cost!.costComplete, false);
+    assert.ok(report.items[0]);
+    const result = report.items[0].result;
+    const trial = report.items[0].trials[0];
+    assert.ok(result);
+    assert.ok(trial);
+    assert.ok(trial.usage);
+    assert.equal(result.text, "done");
+    assert.equal(trial.usage.cost, 0.5); // The kernel total alone is partial.
+    assert.equal(trial.costComplete, false);
+    assert.ok(report.aggregate.cost);
+    assert.equal(report.aggregate.cost.inputTokens, 12);
+    assert.equal(report.aggregate.cost.cost, undefined);
+    assert.equal(report.aggregate.cost.costComplete, false);
   });
 
   it("pareto_excludes_dominated_report_and_preserves_ties", () => {
-    const points = [{ q: 1, c: 4 }, { q: .5, c: 1 }, { q: .5, c: 2 }, { q: .7, c: 3 }, { q: .6, c: 3 }, { q: 1, c: 4 }];
-    const axes = { quality: (r: typeof points[number]) => r.q, cost: (r: typeof points[number]) => r.c };
+    const points = [
+      { q: 1, c: 4 },
+      { q: 0.5, c: 1 },
+      { q: 0.5, c: 2 },
+      { q: 0.7, c: 3 },
+      { q: 0.6, c: 3 },
+      { q: 1, c: 4 },
+    ];
+    const axes = { quality: (r: (typeof points)[number]) => r.q, cost: (r: (typeof points)[number]) => r.c };
     assert.deepEqual(paretoFrontier(points, axes), [points[1], points[3], points[0], points[5]]);
-    assert.deepEqual(points.map(p => p.c), [4, 1, 2, 3, 3, 4]);
+    assert.deepEqual(
+      points.map((p) => p.c),
+      [4, 1, 2, 3, 3, 4],
+    );
     assert.deepEqual(paretoFrontier([], axes), []);
-    assert.deepEqual(paretoFrontier([{ q: 1, c: Infinity }, { q: .5, c: 1 }], axes).map(p => p.c), [1, Infinity]);
+    assert.deepEqual(
+      paretoFrontier(
+        [
+          { q: 1, c: Infinity },
+          { q: 0.5, c: 1 },
+        ],
+        axes,
+      ).map((p) => p.c),
+      [1, Infinity],
+    );
     for (const q of [NaN, Infinity, -Infinity]) assert.throws(() => paretoFrontier([{ q, c: 1 }], axes), { code: "ERR_PRISM_EVAL_STATS" });
     for (const c of [NaN, -Infinity]) assert.throws(() => paretoFrontier([{ q: 1, c }], axes), { code: "ERR_PRISM_EVAL_STATS" });
   });
 });
-
 
 describe("dataset hygiene", () => {
   it("content_hash_is_stable_across_key_order", () => {
@@ -1065,48 +1271,79 @@ describe("dataset hygiene", () => {
   it("content_hash_changes_with_any_item_change_and_snapshot_stays_pinned", () => {
     const row = { id: "i", input: { text: "before" }, split: "dev" as const, tags: ["a"], label: { source: "human" as const } };
     const a = defineDataset({ id: "d", items: [row] });
-    for (const changed of [{ ...row, input: { text: "after" } }, { ...row, split: "test" as const },
-      { ...row, tags: ["b"] }, { ...row, label: { source: "model" as const } }, { ...row, expected: "gold" },
-      { ...row, id: "j" }, { ...row, metadata: { note: "changed" } }, { ...row, expectedTrajectory: [{ name: "read" }] }]) {
+    for (const changed of [
+      { ...row, input: { text: "after" } },
+      { ...row, split: "test" as const },
+      { ...row, tags: ["b"] },
+      { ...row, label: { source: "model" as const } },
+      { ...row, expected: "gold" },
+      { ...row, id: "j" },
+      { ...row, metadata: { note: "changed" } },
+      { ...row, expectedTrajectory: [{ name: "read" }] },
+    ]) {
       assert.notEqual(defineDataset({ id: "d", items: [changed] }).contentHash, a.contentHash);
     }
-    assert.notEqual(defineDataset({ id: "d", items: [row, { id: "j", input: row.input }] }).contentHash,
-      defineDataset({ id: "d", items: [{ id: "j", input: row.input }, row] }).contentHash);
+    assert.notEqual(
+      defineDataset({ id: "d", items: [row, { id: "j", input: row.input }] }).contentHash,
+      defineDataset({ id: "d", items: [{ id: "j", input: row.input }, row] }).contentHash,
+    );
     row.input.text = "mutated";
     row.tags.push("b");
-    assert.equal(a.items[0]!.input.text, "before");
-    assert.deepEqual(a.items[0]!.tags, ["a"]);
-    assert.ok(Object.isFrozen(a.items[0]!.input));
+    assert.ok(a.items[0]);
+    assert.equal(a.items[0].input.text, "before");
+    assert.deepEqual(a.items[0].tags, ["a"]);
+    assert.ok(Object.isFrozen(a.items[0].input));
   });
 
   it("function_valued_item_throws_not_serializable", () => {
-    const cycle: Record<string, unknown> = {}; cycle.self = cycle;
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
     for (const input of [() => 1, { nested: () => 1 }, NaN, Infinity, 1n, Symbol("x"), new Date(), new Map(), cycle]) {
-      assert.throws(() => defineDataset({ id: "d", items: [{ id: "i", input }] }),
-        (e: unknown) => e instanceof EvalDatasetError && /not serializable/.test(e.message));
+      assert.throws(
+        () => defineDataset({ id: "d", items: [{ id: "i", input }] }),
+        (e: unknown) => e instanceof EvalDatasetError && /not serializable/.test(e.message),
+      );
     }
   });
 
   it("validates_hygiene_fields", () => {
-    for (const fields of [{ split: "train" }, { tags: Array(17).fill("a") }, { tags: ["a".repeat(65)] },
-      { tags: [1] }, { tags: "tag" }, { label: { source: "unknown" } }, { label: { source: "human", adjudicated: "yes" } },
-      { label: { source: "human", by: 1 } }]) {
+    for (const fields of [
+      { split: "train" },
+      { tags: Array(17).fill("a") },
+      { tags: ["a".repeat(65)] },
+      { tags: [1] },
+      { tags: "tag" },
+      { label: { source: "unknown" } },
+      { label: { source: "human", adjudicated: "yes" } },
+      { label: { source: "human", by: 1 } },
+    ]) {
       assert.throws(() => defineDataset({ id: "d", items: [{ id: "i", input: "x", ...fields } as never] }), EvalDatasetError);
     }
     assert.throws(() => defineDataset({ id: "d", items: [], canary: "x".repeat(129) }), EvalDatasetError);
   });
 
   it("heldout_requires_explicit_allow_and_filters_before_running", async () => {
-    const dataset = defineDataset({ id: "d", canary: "prism-canary-test", items: [
-      { id: "dev", input: "x", split: "dev", tags: ["shared", "dev", "dev"] },
-      { id: "held", input: "x", split: "heldout", tags: ["shared"] },
-      { id: "legacy", input: "x" },
-    ] });
-    const options = { agent: await mockAgent("ok"), dataset, scorers: [defineScorer({ id: "ok", score: ({ item }) => ({ score: item?.id === "dev" ? 1 : 0 }) })] };
+    const dataset = defineDataset({
+      id: "d",
+      canary: "prism-canary-test",
+      items: [
+        { id: "dev", input: "x", split: "dev", tags: ["shared", "dev", "dev"] },
+        { id: "held", input: "x", split: "heldout", tags: ["shared"] },
+        { id: "legacy", input: "x" },
+      ],
+    });
+    const options = {
+      agent: await mockAgent("ok"),
+      dataset,
+      scorers: [defineScorer({ id: "ok", score: ({ item }) => ({ score: item?.id === "dev" ? 1 : 0 }) })],
+    };
     await assert.rejects(runExperiment(options), (e: unknown) => e instanceof EvalDatasetError && e.code === "ERR_PRISM_EVAL_HELDOUT");
     await assert.rejects(runExperiment({ ...options, split: "invalid" as never }), EvalDatasetError);
     const dev = await runExperiment({ ...options, split: ["dev"] });
-    assert.deepEqual(dev.items.map(x => x.item.id), ["dev"]);
+    assert.deepEqual(
+      dev.items.map((x) => x.item.id),
+      ["dev"],
+    );
     assert.deepEqual(dev.split, ["dev"]);
     const report = await runExperiment({ ...options, allowHeldout: true });
     assert.equal(report.datasetContentHash, dataset.contentHash);
@@ -1114,7 +1351,7 @@ describe("dataset hygiene", () => {
     assert.match(serializeEvaluationReport(report), /prism-canary-test/);
     assert.equal(report.aggregate.byTag?.shared?.scorers.ok?.items, 2);
     assert.equal(report.aggregate.byTag?.dev?.scorers.ok?.records, 1);
-    assert.equal(report.aggregate.byTag?.shared?.scorers.ok?.mean, .5);
+    assert.equal(report.aggregate.byTag?.shared?.scorers.ok?.mean, 0.5);
     assert.equal((await runExperiment({ ...options, split: "heldout", allowHeldout: true })).items.length, 1);
   });
 });
@@ -1223,7 +1460,8 @@ describe("stratified weighted online sampling", () => {
       (err: unknown) => err instanceof EvalError && err.code === "ERR_PRISM_EVAL_STATS",
     );
 
-    const baseRecord = unweighted[0]!;
+    const baseRecord = unweighted[0];
+    assert.ok(baseRecord);
     for (const badSampling of [
       null,
       {},

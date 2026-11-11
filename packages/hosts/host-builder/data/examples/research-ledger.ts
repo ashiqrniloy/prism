@@ -4,7 +4,7 @@
  */
 import { createAgent, type ToolDefinition } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import toolsResearch from "@arnilo/prism-tools-research";
+import toolsResearch from "@arnilo/prism-tools/research";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`research_ledger_example: ${message}`);

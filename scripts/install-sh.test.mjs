@@ -91,8 +91,7 @@ function handleRequest(request, response) {
   }
   const [, version, name] = match;
   if (name === "SHA256SUMS") {
-    const body = RELEASE_TARGETS
-      .slice()
+    const body = RELEASE_TARGETS.slice()
       .sort()
       .map((target) => `${state.corruptChecksums ? "0".repeat(64) : sha256(archive(version))}  prism-code-${target}.tar.gz\n`)
       .join("");

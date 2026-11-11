@@ -5,7 +5,7 @@ import {
   protectedResourceMetadata,
   unauthorizedResponse,
   WELL_KNOWN_OAUTH_PROTECTED_RESOURCE,
-} from "@arnilo/prism-mcp";
+} from "@arnilo/prism-extensions/mcp";
 import type { McpServerFactory } from "@modelcontextprotocol/server";
 import {
   createMcpHandler,

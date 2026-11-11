@@ -40,7 +40,7 @@ registration: `inspect().hooks` lists it, and `disable.hooks: ["kernel:context.b
 
 The same rule covers all three registration paths (`skills.add`, `skills.dirs`, and a package's
 `skills.register`): discovering one `SKILL.md` twice — a host directory plus a discovery package such
-as `@arnilo/prism-context-files`, or a delegate child that inherits both — registers one skill, while
+as `@arnilo/prism-extensions/context-files`, or a delegate child that inherits both — registers one skill, while
 reusing a name with another body still fails closed.
 
 In progressive mode `load_skill` returns the header plus the full instructions as its tool result,
@@ -69,7 +69,7 @@ name `toolNames`).
 run.
 
 The kernel owns no context-engineering stage. Input budgeting, tool-result folding, tool search, and
-the attention compiler are one package, `@arnilo/prism-context-engineering`, which registers a single
+the attention compiler are one package, `@arnilo/prism-extensions/context-engineering`, which registers a single
 `context.build` handler; `AgentConfig.contextBudget`, `toolResultFold`, `toolsDisclosure`,
 `toolsSearch`, and `attentionCompiler` and their `RunOptions` overlays are gone, so a host enables
 them the way it enables any package:
@@ -445,12 +445,12 @@ Cost: a suspension is one extra entry write plus one bounded, redacted state val
 read. A run that never suspends writes nothing extra. The suspension is the durable unit: the
 `store` slot's entry carries the whole redacted state, so a durable session store is all a host needs
 across processes — the 0.12 per-run durable-run configuration and its `every-turn` crash-recovery cadence
-are gone, and `@arnilo/prism-workflows` owns the checkpoints service for the engine.
+are gone, and `@arnilo/prism-extensions/workflows` owns the checkpoints service for the engine.
 
 ## Errors and security
 
 An opaque principal is **not proof of identity**. The kernel names only `Principal`
-(`kind` / `id` / `displayName`) and never synthesizes or verifies one. `@arnilo/prism-governance`
+(`kind` / `id` / `displayName`) and never synthesizes or verifies one. `@arnilo/prism-extensions/governance`
 verifies the session principal before each run when `identity` is configured, and denies a tool call
 whose verified identity expired or lacks a required scope.
 
@@ -470,7 +470,7 @@ checks outside the kernel.
 ## Extension notes
 
 `Principal` is the only identity type the kernel exports. Verified-identity types and helpers live in
-`@arnilo/prism-governance`. No second principal type, identity alias, or automatic ownership projection
+`@arnilo/prism-extensions/governance`. No second principal type, identity alias, or automatic ownership projection
 is introduced.
 
 ## Frozen surface

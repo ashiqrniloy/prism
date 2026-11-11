@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-host-builder`: version-exact reference indexes for building a Prism host.
+ * `@arnilo/prism-hosts/host-builder`: version-exact reference indexes for building a Prism host.
  *
  * The indexes in `data/` are generated at release time from the same declaration model the compat gate uses
  * (`bun scripts/host-builder-index.mjs`), so they describe exactly the `@arnilo/prism` version this package

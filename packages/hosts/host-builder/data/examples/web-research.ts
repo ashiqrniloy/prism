@@ -6,7 +6,8 @@ const jsonSchemaValidator = {
     return result.ok ? { ok: true as const, value: result.value } : { ok: false as const, errors: result.errors };
   },
 };
-import { createBraveSearch, createFirecrawlExtractor, createFirecrawlFetch, createWebTools } from "@arnilo/prism-tools-web";
+
+import { createBraveSearch, createFirecrawlExtractor, createFirecrawlFetch, createWebTools } from "@arnilo/prism-tools/web";
 
 const reply = (value: unknown) => new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } });
 const fakeFetch: typeof fetch = async (input) => {

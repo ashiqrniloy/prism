@@ -166,14 +166,7 @@ interface DefaultInputMessageGroups {
 }
 
 function flattenInputGroups(groups: DefaultInputMessageGroups): Message[] {
-  return [
-    ...groups.instructions,
-    ...groups.attachments,
-    ...groups.summaries,
-    ...groups.history,
-    ...groups.toolResults,
-    ...groups.input,
-  ];
+  return [...groups.instructions, ...groups.attachments, ...groups.summaries, ...groups.history, ...groups.toolResults, ...groups.input];
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {

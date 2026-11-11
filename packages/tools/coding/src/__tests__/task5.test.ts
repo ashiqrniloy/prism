@@ -1,18 +1,14 @@
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "bun:test";
-import { createAgent, createMemorySessionStore, definePackage, type AgentEvent, type HostUi, type JsonValue } from "@arnilo/prism";
+import { type AgentEvent, createAgent, createMemorySessionStore, definePackage, type HostUi, type JsonValue } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import toolsCoding from "../index.js";
 import { ASK_USER_DECISION_CUSTOM_VALUE } from "../agent/ask-user-decision.js";
 import { createGitCommitTool, createGitStatusTool } from "../agent/git-tools.js";
-import {
-  ERR_PRISM_CODING_PRINCIPAL_MISMATCH,
-  ERR_PRISM_CODING_PRINCIPAL_REQUIRED,
-  withDurablePrincipal,
-} from "../principal-guard.js";
+import toolsCoding from "../index.js";
+import { ERR_PRISM_CODING_PRINCIPAL_MISMATCH, ERR_PRISM_CODING_PRINCIPAL_REQUIRED, withDurablePrincipal } from "../principal-guard.js";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -29,10 +25,7 @@ function todoStep(
   id: string,
   status: "pending" | "completed",
 ): readonly (ReturnType<typeof providerToolCall> | ReturnType<typeof providerDone>)[] {
-  return [
-    providerToolCall(toolCallContent(id, "todo_write", { todos: [{ id: "1", content: "step one", status }] })),
-    providerDone(),
-  ];
+  return [providerToolCall(toolCallContent(id, "todo_write", { todos: [{ id: "1", content: "step one", status }] })), providerDone()];
 }
 
 const context = { sessionId: "s", runId: "r", toolCallId: "call" };
@@ -66,7 +59,10 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
     const root = await tempRoot();
     const without = await createAgent({ model: { provider: "mock", model: "m" }, packages: [toolsCoding({ root })] });
     try {
-      assert.equal(without.tools.some((tool) => tool.name === "coding_check"), false);
+      assert.equal(
+        without.tools.some((tool) => tool.name === "coding_check"),
+        false,
+      );
     } finally {
       await without.dispose();
     }
@@ -75,7 +71,10 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
       packages: [toolsCoding({ root, checks: { test: { file: "/bin/true", args: [] } } })],
     });
     try {
-      assert.equal(withChecks.tools.some((tool) => tool.name === "coding_check"), true);
+      assert.equal(
+        withChecks.tools.some((tool) => tool.name === "coding_check"),
+        true,
+      );
     } finally {
       await withChecks.dispose();
     }
@@ -84,7 +83,12 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
   it("todo_continuation_continues_while_open", async () => {
     const root = await tempRoot();
     const provider = mockProvider(
-      [todoStep("c1", "pending"), [providerTextDelta("premature"), providerDone()], todoStep("c2", "completed"), [providerTextDelta("All done."), providerDone()]],
+      [
+        todoStep("c1", "pending"),
+        [providerTextDelta("premature"), providerDone()],
+        todoStep("c2", "completed"),
+        [providerTextDelta("All done."), providerDone()],
+      ],
       { id: "mock" },
     );
     const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [provider, toolsCoding({ root })] });
@@ -102,7 +106,12 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
   it("todo_continuation_capped_by_max_continuations", async () => {
     const root = await tempRoot();
     const provider = mockProvider(
-      [todoStep("c1", "pending"), [providerTextDelta("one"), providerDone()], [providerTextDelta("two"), providerDone()], [providerTextDelta("three"), providerDone()]],
+      [
+        todoStep("c1", "pending"),
+        [providerTextDelta("one"), providerDone()],
+        [providerTextDelta("two"), providerDone()],
+        [providerTextDelta("three"), providerDone()],
+      ],
       { id: "mock" },
     );
     const agent = await createAgent({
@@ -127,9 +136,15 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
       packages: [toolsCoding({ root, todo: { continueOnOpen: false } })],
     });
     try {
-      assert.equal(agent.tools.some((tool) => tool.name === "todo_write"), true);
+      assert.equal(
+        agent.tools.some((tool) => tool.name === "todo_write"),
+        true,
+      );
       const runEnd = agent.inspect().hooks["run.end"] ?? [];
-      assert.equal(runEnd.some((hook) => hook.id === "@arnilo/prism-tools-coding:run.end#todo"), false);
+      assert.equal(
+        runEnd.some((hook) => hook.id === "@arnilo/prism-tools/coding:run.end#todo"),
+        false,
+      );
     } finally {
       await agent.dispose();
     }

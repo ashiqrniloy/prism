@@ -1,12 +1,13 @@
 // Plan 023 Task 3 regression: release skip manifest (release-evidence.json).
 // Requires the real coverage artifact (scripts/coverage-summary.json) — runs
 // after test:coverage in sdk:ready, like scripts/phase23-coverage.test.mjs.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { checkReleaseEvidence } from "./release.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -208,4 +209,47 @@ test("wiring: release:evidence is emitted before release:gate and retained by CI
   assert.ok(workflow.includes("PRISM_TEST_POSTGRES_URL"), "verify job must declare the postgres release profile");
   assert.ok(workflow.includes("release-evidence.json"), "release.yml must retain the manifest");
   assert.ok(existsSync(join(ROOT, "scripts", "release-skip-manifest.mjs")), "emitter must exist");
+});
+
+test("bundle evidence names every public coverage unit and blocks a missing subpath row", () => {
+  const artifact = JSON.parse(readFileSync(join(ROOT, "scripts/coverage-summary.json"), "utf8"));
+  const env = { ...process.env, PRISM_TEST_POSTGRES_URL: DUMMY_POSTGRES_URL };
+  const good = runEmitter(env, matchingPostgresEvidence());
+  let missing;
+  try {
+    const expected = Object.keys(artifact.packages)
+      .filter((name) => name !== "@arnilo/prism-agent")
+      .map((name) => `${name} suite`)
+      .sort();
+    const actual = good.manifest.surfaces
+      .filter((surface) => surface.name.endsWith(" suite"))
+      .map((surface) => surface.name)
+      .sort();
+    assert.deepEqual(actual, expected);
+    const providers = JSON.parse(readFileSync(join(ROOT, "scripts/bundles.json"), "utf8")).bundles.find(
+      (bundle) => bundle.dir === "packages/providers",
+    );
+    const liveNames = providers.subpaths
+      .filter((row) => row.kind === "package")
+      .map((row) => `${providers.name}${row.path.slice(1)} live provider legs`)
+      .sort();
+    assert.deepEqual(
+      good.manifest.surfaces
+        .filter((surface) => surface.name.endsWith(" live provider legs"))
+        .map((surface) => surface.name)
+        .sort(),
+      liveNames,
+    );
+    delete artifact.packages["@arnilo/prism-ai/hyper"];
+    const incomplete = join(good.dir, "incomplete-coverage.json");
+    writeFileSync(incomplete, JSON.stringify(artifact));
+    missing = runEmitter({ ...env, PRISM_COVERAGE_ARTIFACT: incomplete }, matchingPostgresEvidence());
+    const hyper = missing.manifest.surfaces.find((surface) => surface.name === "@arnilo/prism-ai/hyper suite");
+    assert.equal(hyper.state, "blocked");
+    assert.equal(hyper.reason, "missing from coverage artifact");
+    assert.throws(() => checkReleaseEvidence({ manifestPath: missing.manifestPath }), /blocked/);
+  } finally {
+    rmSync(good.dir, { recursive: true, force: true });
+    if (missing) rmSync(missing.dir, { recursive: true, force: true });
+  }
 });

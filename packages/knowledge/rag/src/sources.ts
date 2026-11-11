@@ -1,6 +1,6 @@
 import { type JsonObject, resolveRedactor } from "@arnilo/prism";
-import type { DeletionPropagationHandler } from "@arnilo/prism-memory-core";
-import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import type { DeletionPropagationHandler } from "@arnilo/prism-memory-system/core";
+import type { MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import { chunkText } from "./chunk.js";
 import { RagScopeError, RagValidationError } from "./errors.js";
 import { isValidContentHash } from "./hash.js";

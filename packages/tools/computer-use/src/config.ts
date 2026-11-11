@@ -17,7 +17,7 @@ export interface ToolsComputerUseDeviceConfig {
   };
 }
 
-/** Validated `packageConfig` for `@arnilo/prism-tools-computer-use`. */
+/** Validated `packageConfig` for `@arnilo/prism-tools/computer-use`. */
 export interface ToolsComputerUseConfig {
   /** Host-owned executable. Default `"computer-use-linux"`. */
   readonly command?: string;

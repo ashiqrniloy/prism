@@ -73,11 +73,15 @@ describe("credentials slot", () => {
       resolve: () => undefined,
       store: (ref, secret) => void stored.push([ref, secret]),
     };
-    await sink.store?.("keyring:mock-oauth", {
-      type: "bearer",
-      value: "new-access",
-      metadata: { refresh: "refresh-token" },
-    }, {});
+    await sink.store?.(
+      "keyring:mock-oauth",
+      {
+        type: "bearer",
+        value: "new-access",
+        metadata: { refresh: "refresh-token" },
+      },
+      {},
+    );
     assert.equal(stored.length, 1);
     assert.equal(stored[0][0], "keyring:mock-oauth");
     assert.equal(stored[0][1].value, "new-access");

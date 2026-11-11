@@ -1,8 +1,8 @@
 # Prism Roadmap — SDK kernel and native packages
 
-Updated: **2026-11-08** (owner decisions 2026-11-08: **memory is rebuilt as one memory system modelled on human memory** — short-term memory (STM), working memory (WM) under a host-set episode scope, Rehearsal as the only door into long-term memory, long-term memory with episodic, semantic, procedural and conditioned kinds plus priming, and an offline Sleep pass — in one package a host can use partly or whole; **the ontology leaves memory and becomes the wiki**, a separate knowledge package; design record `docs/_evidence/memory-model/design.md`; plan 210 narrowed, plans 216–223, with 219.1 inserted on 2026-11-08 for a rebuilt lexical retrieval (one scorer across stores, bounded activation, query cues, recall modes, calibrated confidence), carry it). Previously **2026-11-05** (owner decision 2026-11-04: **the memory packages ship in 0.13.0 as an experimental prerelease line** — `@arnilo/prism-memory-{core,observational,fabric,wiki,rag}` at `0.13.0-experimental.N` under the npm dist-tag `experimental`, outside the stability promise; the rest of the release no longer waits for the memory audit, and graduation is the memory track, plans 209–210, after 0.13.0; plan 215 carries the release path). Previously **2026-10-31** (owner decisions: **LiteLLM Gateway ships in 0.13.0** — `@arnilo/prism-provider-litellm` adds the proxy Chat wire, per-call telemetry, spend-log reconciliation, and a free test pool, exempt from cache-parity cells for 0.13.0 with per-backend parity planned post-0.13.0, so Phase 5 ships nine provider packages (plan 214); **Kilo Gateway ships in 0.13.0** — `@arnilo/prism-provider-kilo` adds Chat, Responses, and Messages wires, API-key and device login, and three cache-parity cells (plan 213); host adoption ships in 0.13.0 — module skills shipped inside each package, listed only when their tools are available, and the `@arnilo/prism-host-builder` kit for agents that build hosts; Phase 11 scope, plans 211–212). Previously **2026-10-28** (plan 205 built `@arnilo/prism-provider-commandcode` in-tree — package, three-wire cache parity, and live row — ahead of the first release after 0.13.0; the 0.13.0 provider set stays at seven and the deferral is unchanged). Previously **2026-10-25** (scope change: **Command Code and Ollama Cloud do not ship in 0.13.0**. The owner deferred both to the first release after 0.13.0, so the 0.13.0 provider set stays the seven packages already in the tree. Plans 205 and 206 keep their research and task breakdown but leave the release path. Previously **2026-10-25** (adds `openrouter` and `openai-codex` to the Phase 5 provider set and the §2.9 catalog — owner decisions 2026-10-24, republishing `@arnilo/prism-provider-openrouter` at 0.13.0, and 2026-10-25, adding `@arnilo/prism-provider-openai-codex` on OpenAI's sanctioned Sign in with ChatGPT flow — adds `credentials:write` so a package can persist and rotate its own grant, and requires every provider package shipped from now on to carry a prompt-cache-parity cell (plan 184; `litellm` is exempt for 0.13.0 by owner decision 2026-10-31; per-backend parity is planned after 0.13.0))). Previously **2026-10-17** (adds Phase 18, decision models as first-class model calls: `capabilities.decisions`, `ModelProvider.decisions?()`, `PackageAPI.models.decisions`, System One image input and configurable path, and `@arnilo/prism-provider-liquid`; owner decision 2026-10-17 puts Jev, d1-ultra, Laya, and d1-3B in 0.13.0. Previously **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
+Updated: **2026-11-10** (owner decision 2026-11-10: the providers bundle is named **`@arnilo/prism-ai`**; owner decision 2026-11-09: **0.13.0 publishes seven npm packages instead of 52** — the kernel `@arnilo/prism` and six bundles whose exported subpaths are the former packages: four stable (`@arnilo/prism-ai`, `@arnilo/prism-extensions`, `@arnilo/prism-tools`, `@arnilo/prism-hosts`) and two experimental (`@arnilo/prism-memory-system`, `@arnilo/prism-knowledge`). A package is now a module specifier — an npm package, or one subpath its `exports` map lists — whose default export is `definePackage(...)`. Hosts still list, configure and load each package on its own, and a subpath the host does not list is never imported. Command Code and Ollama Cloud ship in 0.13.0 inside `@arnilo/prism-ai`; plan 224 carries the move and the publish, and plan 215 is closed at Task 38). Previously **2026-11-08** (owner decisions 2026-11-08: **memory is rebuilt as one memory system modelled on human memory** — short-term memory (STM), working memory (WM) under a host-set episode scope, Rehearsal as the only door into long-term memory, long-term memory with episodic, semantic, procedural and conditioned kinds plus priming, and an offline Sleep pass — in one package a host can use partly or whole; **the ontology leaves memory and becomes the wiki**, a separate knowledge package; design record `docs/_evidence/memory-model/design.md`; plan 210 narrowed, plans 216–223, with 219.1 inserted on 2026-11-08 for a rebuilt lexical retrieval (one scorer across stores, bounded activation, query cues, recall modes, calibrated confidence), carry it). Previously **2026-11-05** (owner decision 2026-11-04: **the memory packages ship in 0.13.0 as an experimental prerelease line** — `@arnilo/prism-memory-{core,observational,fabric,wiki,rag}` at `0.13.0-experimental.N` under the npm dist-tag `experimental`, outside the stability promise; the rest of the release no longer waits for the memory audit, and graduation is the memory track, plans 209–210, after 0.13.0; plan 215 carries the release path). Previously **2026-10-31** (owner decisions: **LiteLLM Gateway ships in 0.13.0** — `@arnilo/prism-provider-litellm` adds the proxy Chat wire, per-call telemetry, spend-log reconciliation, and a free test pool, exempt from cache-parity cells for 0.13.0 with per-backend parity planned post-0.13.0, so Phase 5 ships nine provider packages (plan 214); **Kilo Gateway ships in 0.13.0** — `@arnilo/prism-provider-kilo` adds Chat, Responses, and Messages wires, API-key and device login, and three cache-parity cells (plan 213); host adoption ships in 0.13.0 — module skills shipped inside each package, listed only when their tools are available, and the `@arnilo/prism-hosts/host-builder` kit for agents that build hosts; Phase 11 scope, plans 211–212). Previously **2026-10-28** (plan 205 built `@arnilo/prism-provider-commandcode` in-tree — package, three-wire cache parity, and live row — ahead of the first release after 0.13.0; the 0.13.0 provider set stays at seven and the deferral is unchanged). Previously **2026-10-25** (scope change: **Command Code and Ollama Cloud do not ship in 0.13.0**. The owner deferred both to the first release after 0.13.0, so the 0.13.0 provider set stays the seven packages already in the tree. Plans 205 and 206 keep their research and task breakdown but leave the release path. Previously **2026-10-25** (adds `openrouter` and `openai-codex` to the Phase 5 provider set and the §2.9 catalog — owner decisions 2026-10-24, republishing `@arnilo/prism-provider-openrouter` at 0.13.0, and 2026-10-25, adding `@arnilo/prism-provider-openai-codex` on OpenAI's sanctioned Sign in with ChatGPT flow — adds `credentials:write` so a package can persist and rotate its own grant, and requires every provider package shipped from now on to carry a prompt-cache-parity cell (plan 184; `litellm` is exempt for 0.13.0 by owner decision 2026-10-31; per-backend parity is planned after 0.13.0))). Previously **2026-10-17** (adds Phase 18, decision models as first-class model calls: `capabilities.decisions`, `ModelProvider.decisions?()`, `PackageAPI.models.decisions`, System One image input and configurable path, and `@arnilo/prism-provider-liquid`; owner decision 2026-10-17 puts Jev, d1-ultra, Laya, and d1-3B in 0.13.0. Previously **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
 
-Shipped baseline: `@arnilo/prism` **0.12.1** and the 0.12.1 family packages. `@arnilo/prism-agent-sdk` **0.1.0** is published. Its unreleased in-tree Phase 1 work (plan 142) is covered under [In-flight work](#in-flight-work). `@arnilo/prism-code` **0.4.1** is the terminal lab; it is deleted, and Prism Agent, an unpublished reference host, takes over its proving role (Phase 12). Memory: the 0.12.1 `@arnilo/prism-memory` is replaced by native packages that ship in 0.13.0 as an experimental prerelease line (Phase 11); `@arnilo/prism-memory-compaction` is stable.
+Shipped baseline: `@arnilo/prism` **0.12.1** and the 0.12.1 family packages. `@arnilo/prism-agent-sdk` **0.1.0** is published. Its unreleased in-tree Phase 1 work (plan 142) is covered under [In-flight work](#in-flight-work). `@arnilo/prism-code` **0.4.1** is the terminal lab; it is deleted, and Prism Agent, an unpublished reference host, takes over its proving role (Phase 12). Memory: the 0.12.1 `@arnilo/prism-memory` is replaced by native packages that ship in 0.13.0 as an experimental prerelease line (Phase 11); `@arnilo/prism-extensions/compaction` is stable.
 
 Target: `@arnilo/prism` **0.13.0**, an SDK kernel that everything else extends through packages.
 
@@ -433,7 +433,7 @@ Slots:
 | `store` | `SessionStore` | in-memory |
 | `credentials` | `CredentialResolver { resolve(ref, ctx) }` | `env:NAME` only |
 
-A loop that runs a custom agent on a vendor coding agent binary is still a `LoopStrategy`. It comes from a driver package built with `@arnilo/prism/driver-kit`, usually `@arnilo/prism-driver-process` with a host-written adapter. The driver adds a capability descriptor (`usesModel: false`, the controls it can enforce, what it can capture, which sign-in modes its auth policy permits) that `createAgent` checks against the host's requirements (§2.12.10).
+A loop that runs a custom agent on a vendor coding agent binary is still a `LoopStrategy`. It comes from a driver package built with `@arnilo/prism/driver-kit`, usually `@arnilo/prism-hosts/driver-process` with a host-written adapter. The driver adds a capability descriptor (`usesModel: false`, the controls it can enforce, what it can capture, which sign-in modes its auth policy permits) that `createAgent` checks against the host's requirements (§2.12.10).
 
 A package claims a slot with `prism.slots.<slot>.provide(impl)`. `prism.slots.<slot>.default` exposes the kernel default so a package can delegate to it.
 
@@ -441,11 +441,11 @@ If two packages claim the same slot, `createAgent` fails closed unless `AgentCon
 
 ### 2.6 Packages
 
-A package is an npm package whose default export is `definePackage(...)`. It publishes TypeScript source (`"exports": { ".": "./src/index.ts" }`), and Bun runs it as-is.
+A **package** is a module specifier — an npm package, or one subpath its `exports` map lists — whose default export is `definePackage(...)`. The specifier is the package's id everywhere: `requires.packages`, a manifest entry, `prism add`, slot ownership, `inspect()`, and the event namespace. It publishes TypeScript source and Bun runs it as-is: the bundle's root `package.json` carries one `exports` entry per package subpath (`"exports": { "./coding": "./coding/src/index.ts" }`), and npm installs that root once — every subpath listed from it is a separate package a host adds, configures and loads on its own.
 
 ```ts
 export function definePackage<C>(definition: {
-  readonly name: string;                            // npm name; the package id everywhere
+  readonly name: string;                            // module specifier (`@arnilo/prism-tools/coding`); the package id everywhere
   readonly version: string;
   readonly description?: string;
   readonly requires?: {
@@ -542,17 +542,17 @@ Prism maintains the manifest. Hosts choose whether to read it.
 {
   "version": 1,
   "packages": [
-    { "name": "@arnilo/prism-provider-hyper", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["models"] },
-    { "name": "@arnilo/prism-tools-coding", "version": "^0.13.0", "integrity": "sha512-…",
+    { "name": "@arnilo/prism-ai/hyper", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["models"] },
+    { "name": "@arnilo/prism-tools/coding", "version": "^0.13.0", "integrity": "sha512-…",
       "config": { "root": "." } },
-    { "name": "@arnilo/prism-approval", "version": "^0.13.0", "integrity": "sha512-…",
+    { "name": "@arnilo/prism-extensions/approval", "version": "^0.13.0", "integrity": "sha512-…",
       "config": { "mode": "ask" } },
-    { "name": "@arnilo/prism-tools-web", "version": "^0.13.0", "integrity": "sha512-…", "optional": true,
+    { "name": "@arnilo/prism-tools/web", "version": "^0.13.0", "integrity": "sha512-…", "optional": true,
       "config": { "backend": "brave", "apiKey": "env:BRAVE_API_KEY" } },
     { "name": "@arnilo/prism-memory-system", "version": "^0.13.0", "integrity": "sha512-…", "enabled": false,
       "config": { "observer": { "model": "hyper/claude-haiku-4-5" } } }
   ],
-  "slots": { "store": "@arnilo/prism-store-jsonl" }
+  "slots": { "store": "@arnilo/prism-extensions/store-jsonl" }
 }
 ```
 
@@ -579,64 +579,64 @@ ACP, AG-UI, MCP-server, and messaging channels drive an agent from outside. They
 - `createAgUiHandler(agent)`
 - `serveMcp(agent, …)`
 - `connectTelegram(agent, …)`
-- `serveAgent(agent, …)` and `connectAgent(endpoint)` (`@arnilo/prism-remote`, Phase 17): any `Agent` served out of process over a versioned JSON-RPC protocol that carries the full event catalog and `HostUi` requests, and a client that returns an `Agent` proxy whose events carry `origin.remote` (§2.13.4)
-- `routeHostUi(routes)` and `createScheduler(…)` (`@arnilo/prism-headless`, Phase 17): `HostUi` routing from an attached client to a channel to a policy default, with durable suspension when nobody answers, and scheduled or triggered runs
+- `serveAgent(agent, …)` and `connectAgent(endpoint)` (`@arnilo/prism-hosts/remote`, Phase 17): any `Agent` served out of process over a versioned JSON-RPC protocol that carries the full event catalog and `HostUi` requests, and a client that returns an `Agent` proxy whose events carry `origin.remote` (§2.13.4)
+- `routeHostUi(routes)` and `createScheduler(…)` (`@arnilo/prism-hosts/headless`, Phase 17): `HostUi` routing from an attached client to a channel to a policy default, with durable suspension when nobody answers, and scheduled or triggered runs
 
 Each surface implements `HostUi` for its protocol. For example, ACP maps `confirm` to a client permission request. Each surface uses only the public SDK API.
 
-`@arnilo/prism-mcp-server` serves in two ways:
+`@arnilo/prism-hosts/mcp-server` serves in two ways:
 
 - `serveMcp(agent, …)` serves a whole agent: a prompt goes in and an answer comes out.
 - `serveTools(run, …)` serves an allow-list of the running agent's tools, and optionally a permission-prompt tool, over MCP to an external agent for the length of one run (§2.12.12). It returns a neutral endpoint, which the driver's adapter maps into its binary's MCP configuration. An adapter whose binary has its own client-tool channel can route calls through `bridgeTools` instead. Every call goes through `run.executeTools`, so approval, governance, redaction, and persistence still apply.
 
 ### 2.9 Native package catalog
 
-Native packages are ordinary packages. None is installed by default.
+Native packages are ordinary packages. None is installed by default. Each row is one package specifier — `<bundle>/<subpath>` — and it lives in `packages/<bundle>/<subpath>`, with the bundle's directory from Part 3: `packages/providers`, `packages/extensions`, `packages/tools`, `packages/hosts`, `packages/memory`, `packages/knowledge`. Rows that share a bundle share one `package.json`, one version, and one install. The `memory-system` and `knowledge` bundles are experimental.
 
-| Package | What it does | Mechanisms | Built from (0.12.1) |
+| Package (bundle subpath) | What it does | Mechanisms | Built from (0.12.1) |
 | --- | --- | --- | --- |
-| `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid, openrouter, openai-codex, kilo, litellm, commandcode, ollama-cloud}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages). `kilo` ships at 0.13.0 with Chat, Responses, and Messages wires (plan 213). `litellm` ships at 0.13.0 as a gateway provider to a LiteLLM Proxy with telemetry and a free test pool (plan 214). `commandcode` and `ollama-cloud` land in the first release after 0.13.0 (plans 205, 206) | `providers.register`, credentials; `openai-codex` and `kilo` also `credentials:write` | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
-| `@arnilo/prism-credentials-keyring` | OS keyring and encrypted credential store | `credentials` slot | `prism-core/credentials`, `prism-code` `credentials.ts` |
-| `@arnilo/prism-tools-coding` | fs, edit, grep, shell, sandbox, execution policy, git, checks, todo with a continuation stop hook, `ask_user`; the `workspace` service (worktree create/dispose, bounded `diff`, merge with conflicts reported; §2.12.14) | tools, `tool.call` hard denies, `run.end`, `host.ui`, `services.provide("workspace")` | `prism-coding-tools/agent`, `/security`, `createCodingWorkspaceLifecycle` |
-| `@arnilo/prism-tools-web` | search and fetch: Brave, Exa, Firecrawl, Obscura, native (keyless), SearXNG, Tavily, Kagi | tools, `services.provide("web.fetch")` | `web-tools` |
-| `@arnilo/prism-tools-browser` | Playwright browser automation | tools | `web-tools/browser` |
-| `@arnilo/prism-tools-work` | Office documents, sheets, diagrams, document reader, M365/Google connectors | tools, skills | `prism-work` |
-| `@arnilo/prism-tools-computer-use` | Linux desktop control | tools, `tool.call` | `prism-coding-tools/computer-use-linux` |
-| `@arnilo/prism-tools-openapi` | Tools generated from OpenAPI specs | tools | `prism-coding-tools/openapi` |
-| `@arnilo/prism-tools-research` | Research skills (scoping, source triage, synthesis, reporting), a source ledger with citation ids, the `cite` tool, and a `run.end` check that every cited source was actually read (§2.13.5, Phase 12) | tools, skills, `run.end`, state | new |
-| `@arnilo/prism-approval` | Approval modes `deny` / `ask` / `edits` / `auto` over tool `effects` and roots; hard denies stay on | `tool.call` | `prism-code` `approval.ts`, the policy half of `PermissionPolicy` |
-| `@arnilo/prism-context-files` | AGENTS.md / SYSTEM.md layering with a trust policy | `context.build` | SDK instructions plane, `node/instruction-sources`, `node/system-prompts` |
-| `@arnilo/prism-context-engineering` | Context budget, tool-result fold, tool search, attention compiler | `context.build`, `compaction.when` | `src/context-budget.ts`, `tool-result-fold.ts`, `tool-search.ts`, `attention-compiler.ts` |
-| `@arnilo/prism-memory-compaction` | LLM summary compaction | `compaction` slot, `models` | `memory/compaction/llm` |
-| `@arnilo/prism-memory-system` (was `@arnilo/prism-memory-observational`, renamed by plan 216 Task 4; the fabric moved in as `ltm` by Task 5) | STM and WM workers (today's observer and reflector) on a separate model, observation-based compaction, `recall` tool, per-session toggle, `memory:session` commands; long-term memory (`ltm`): working, semantic, and scoped memory, the atomic-note tier and the single store of record (the `concept` notes, their deletion cascade and concept-first recall moved to `@arnilo/prism-wiki` in plan 216) | `compaction` slot, `context.build`, `turn.completed` + background, state, tools, commands, events, `services.provide("memory.ltm")` (read-only) | `memory/compaction/observational-memory`, `prism-code` `observational-memory.ts`, `memory/fabric`, `memory/scoped`, `memory` core |
-| `@arnilo/prism-rag` | Retrieval over indexed sources; owns memory's `Embedder` (batching, chunking, caps) and provides it as the `embeddings` service | tools, `context.build` | `memory/rag` (`packages/knowledge/rag` since plan 216) |
-| `@arnilo/prism-wiki` | The wiki, knowledge outside memory (plan 216 Task 3): concepts in its own store (one per subject, relations, itemized claims citing memory notes or ingested sources), a background curator pass with incremental cited edits, subject binding, claim lint, source ingest, `wiki.search`/`wiki.read` and a passive pointer; reads memory only through the read-only `memory.ltm` port | `models`, background work, commands, `wiki_ingest`/`wiki.search`/`wiki.read` tools, `context.build`, consumes `memory.ltm` and `web.fetch` | `memory/wiki` (`packages/knowledge/wiki` since plan 216), `prism-code` `wiki.ts` (the 0.12 compiler, `.wiki/` page store and `qmd` search are retired) |
-| `@arnilo/prism-memory-core` | Shared memory contracts, in-memory and Postgres vector stores, lineage, deletion propagation, source repointing, recall scoring, limits, and schema helpers used by the memory packages; a plain library with no slot and no capability (`pg` loads only under `./postgres`) | — | `memory` core |
-| `@arnilo/prism-store-{jsonl, sqlite, postgres}` | Durable session stores (Postgres loads `pg` only in its own package), with session links and list/search filters (K4). SQLite and Postgres also provide the `checkpoints` and `leases` services that workflows use (§2.12.13), and the `external_state` entries that drivers archive and resume from (K5) | `store` slot, services | `node/session-store-jsonl`, `prism-core/sessions`, `src/checkpoints.ts`, `src/leases.ts` |
-| `@arnilo/prism-store-codecs` | Row, cursor, and ownership-scope codecs plus dialect-local query semantics shared by the SQLite and Postgres stores; a plain library with no slot and no capability | — | `prism-core/sessions/codecs`, `prism-core/sessions/query-semantics.ts` |
-| `@arnilo/prism-mcp` | MCP client: servers, trust over `host.ui`, header refs, status/reconnect as commands and events | tools, commands, events | `mcp` client, SDK MCP plane, `prism-code` `mcp.ts` |
-| `@arnilo/prism-hooks-json` | Claude/Codex-compatible `hooks.json` mapped onto hooks | hooks | `hooks` |
-| `@arnilo/prism-governance` | Policy engine and OPA, identity verification and principal enforcement, audit | `tool.call`, `run.input`, `model.request`, observe | `prism-core/governance/policy`, `src/identity.ts`, `secure-agent.ts`, field policy and evidence modules |
-| `@arnilo/prism-guardrail-packs` | Versioned rule packs | `tool.call`, `tool.result` | `src/guardrail-packs` |
-| `@arnilo/prism-model-router` | Route turns across models | `model.call` | `prism-core/governance/model-router` |
-| `@arnilo/prism-observability` | OpenTelemetry export; spans carry `origin` attributes, and workflow spans parent their child sessions' spans | observe | `prism-core/governance/observability` |
-| `@arnilo/prism-workflows` | Typed graph workflows (DAG and cyclic) that orchestrate any set of `Agent`s, including driver agents, from outside their sessions: `agentNode`, `gateNode`, `humanGate`, routed `fanOut`, checkpoints, suspend/resume, a merged event stream, `workflowCommand`. Also a `workflowLoop` adapter for single-agent workflows in the `loop` slot (§2.12.13) | library over `Agent`/`Session`, `loop` slot, commands, consumes `checkpoints`/`leases`/`workspace` | `prism-core/runtime/workflows` |
-| `@arnilo/prism-delegate` | Sub-agents as a tool, inheriting a chosen package set; events carry `origin.kind: "prism"` | tools, `createAgent` | `src/delegated-agent-step.ts` |
-| `@arnilo/prism-driver-process` | Generic driver for external coding agents run as a local process. A host-written adapter (`AgentAdapter`) describes one binary: flags and files from `ExternalAgentSpec`, the `jsonl-stream` or `json-rpc` transport, event decoding into `observe`, the relay hook codec and fail-closed response, server-to-client request handlers, resume, abort, signal classification, and auth policy. `extendAdapter` customizes an existing adapter. Ships no vendor adapter; offline reference adapters live in `examples/adapters/` (Phase 15) | `slot:loop` via driver-kit | new |
+| `@arnilo/prism-ai/{hyper, opencode-go, typesafe, laya, liquid, openrouter, openai-codex, kilo, litellm, commandcode, ollama-cloud}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages). `kilo` ships at 0.13.0 with Chat, Responses, and Messages wires (plan 213). `litellm` ships at 0.13.0 as a gateway provider to a LiteLLM Proxy with telemetry and a free test pool (plan 214). `commandcode` and `ollama-cloud` ship at 0.13.0 too (plans 205, 206) | `providers.register`, credentials; `openai-codex` and `kilo` also `credentials:write` | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
+| `@arnilo/prism-extensions/keyring` | OS keyring and encrypted credential store | `credentials` slot | `prism-core/credentials`, `prism-code` `credentials.ts` |
+| `@arnilo/prism-tools/coding` | fs, edit, grep, shell, sandbox, execution policy, git, checks, todo with a continuation stop hook, `ask_user`; the `workspace` service (worktree create/dispose, bounded `diff`, merge with conflicts reported; §2.12.14) | tools, `tool.call` hard denies, `run.end`, `host.ui`, `services.provide("workspace")` | `prism-coding-tools/agent`, `/security`, `createCodingWorkspaceLifecycle` |
+| `@arnilo/prism-tools/web` | search and fetch: Brave, Exa, Firecrawl, Obscura, native (keyless), SearXNG, Tavily, Kagi | tools, `services.provide("web.fetch")` | `web-tools` |
+| `@arnilo/prism-tools/browser` | Playwright browser automation | tools | `web-tools/browser` |
+| `@arnilo/prism-tools/work` | Office documents, sheets, diagrams, document reader, M365/Google connectors | tools, skills | `prism-work` |
+| `@arnilo/prism-tools/computer-use` | Linux desktop control | tools, `tool.call` | `prism-coding-tools/computer-use-linux` |
+| `@arnilo/prism-tools/openapi` | Tools generated from OpenAPI specs | tools | `prism-coding-tools/openapi` |
+| `@arnilo/prism-tools/research` | Research skills (scoping, source triage, synthesis, reporting), a source ledger with citation ids, the `cite` tool, and a `run.end` check that every cited source was actually read (§2.13.5, Phase 12) | tools, skills, `run.end`, state | new |
+| `@arnilo/prism-extensions/approval` | Approval modes `deny` / `ask` / `edits` / `auto` over tool `effects` and roots; hard denies stay on | `tool.call` | `prism-code` `approval.ts`, the policy half of `PermissionPolicy` |
+| `@arnilo/prism-extensions/context-files` | AGENTS.md / SYSTEM.md layering with a trust policy | `context.build` | SDK instructions plane, `node/instruction-sources`, `node/system-prompts` |
+| `@arnilo/prism-extensions/context-engineering` | Context budget, tool-result fold, tool search, attention compiler | `context.build`, `compaction.when` | `src/context-budget.ts`, `tool-result-fold.ts`, `tool-search.ts`, `attention-compiler.ts` |
+| `@arnilo/prism-extensions/compaction` | LLM summary compaction | `compaction` slot, `models` | `memory/compaction/llm` |
+| `@arnilo/prism-memory-system` (the bundle root `.`; was `@arnilo/prism-memory-observational`, renamed by plan 216 Task 4; the fabric moved in as `ltm` by Task 5) | STM and WM workers (today's observer and reflector) on a separate model, observation-based compaction, `recall` tool, per-session toggle, `memory:session` commands; long-term memory (`ltm`): working, semantic, and scoped memory, the atomic-note tier and the single store of record (the `concept` notes, their deletion cascade and concept-first recall moved to `@arnilo/prism-knowledge/wiki` in plan 216) | `compaction` slot, `context.build`, `turn.completed` + background, state, tools, commands, events, `services.provide("memory.ltm")` (read-only) | `memory/compaction/observational-memory`, `prism-code` `observational-memory.ts`, `memory/fabric`, `memory/scoped`, `memory` core |
+| `@arnilo/prism-knowledge/rag` | Retrieval over indexed sources; owns memory's `Embedder` (batching, chunking, caps) and provides it as the `embeddings` service | tools, `context.build` | `memory/rag` (`packages/knowledge/rag` since plan 216) |
+| `@arnilo/prism-knowledge/wiki` | The wiki, knowledge outside memory (plan 216 Task 3): concepts in its own store (one per subject, relations, itemized claims citing memory notes or ingested sources), a background curator pass with incremental cited edits, subject binding, claim lint, source ingest, `wiki.search`/`wiki.read` and a passive pointer; reads memory only through the read-only `memory.ltm` port | `models`, background work, commands, `wiki_ingest`/`wiki.search`/`wiki.read` tools, `context.build`, consumes `memory.ltm` and `web.fetch` | `memory/wiki` (`packages/knowledge/wiki` since plan 216), `prism-code` `wiki.ts` (the 0.12 compiler, `.wiki/` page store and `qmd` search are retired) |
+| `@arnilo/prism-memory-system/core` | Shared memory contracts, in-memory and Postgres vector stores, lineage, deletion propagation, source repointing, recall scoring, limits, and schema helpers used by the memory packages; a plain library with no slot and no capability (`pg` loads only under `./postgres`) | — | `memory` core |
+| `@arnilo/prism-extensions/store-{jsonl, sqlite, postgres}` | Durable session stores (Postgres loads `pg` only in its own package), with session links and list/search filters (K4). SQLite and Postgres also provide the `checkpoints` and `leases` services that workflows use (§2.12.13), and the `external_state` entries that drivers archive and resume from (K5) | `store` slot, services | `node/session-store-jsonl`, `prism-core/sessions`, `src/checkpoints.ts`, `src/leases.ts` |
+| `@arnilo/prism-extensions/store-codecs` | Row, cursor, and ownership-scope codecs plus dialect-local query semantics shared by the SQLite and Postgres stores; a plain library with no slot and no capability | — | `prism-core/sessions/codecs`, `prism-core/sessions/query-semantics.ts` |
+| `@arnilo/prism-extensions/mcp` | MCP client: servers, trust over `host.ui`, header refs, status/reconnect as commands and events | tools, commands, events | `mcp` client, SDK MCP plane, `prism-code` `mcp.ts` |
+| `@arnilo/prism-extensions/hooks-json` | Claude/Codex-compatible `hooks.json` mapped onto hooks | hooks | `hooks` |
+| `@arnilo/prism-extensions/governance` | Policy engine and OPA, identity verification and principal enforcement, audit | `tool.call`, `run.input`, `model.request`, observe | `prism-core/governance/policy`, `src/identity.ts`, `secure-agent.ts`, field policy and evidence modules |
+| `@arnilo/prism-extensions/guardrail-packs` | Versioned rule packs | `tool.call`, `tool.result` | `src/guardrail-packs` |
+| `@arnilo/prism-extensions/model-router` | Route turns across models | `model.call` | `prism-core/governance/model-router` |
+| `@arnilo/prism-extensions/observability` | OpenTelemetry export; spans carry `origin` attributes, and workflow spans parent their child sessions' spans | observe | `prism-core/governance/observability` |
+| `@arnilo/prism-extensions/workflows` | Typed graph workflows (DAG and cyclic) that orchestrate any set of `Agent`s, including driver agents, from outside their sessions: `agentNode`, `gateNode`, `humanGate`, routed `fanOut`, checkpoints, suspend/resume, a merged event stream, `workflowCommand`. Also a `workflowLoop` adapter for single-agent workflows in the `loop` slot (§2.12.13) | library over `Agent`/`Session`, `loop` slot, commands, consumes `checkpoints`/`leases`/`workspace` | `prism-core/runtime/workflows` |
+| `@arnilo/prism-extensions/delegate` | Sub-agents as a tool, inheriting a chosen package set; events carry `origin.kind: "prism"` | tools, `createAgent` | `src/delegated-agent-step.ts` |
+| `@arnilo/prism-hosts/driver-process` | Generic driver for external coding agents run as a local process. A host-written adapter (`AgentAdapter`) describes one binary: flags and files from `ExternalAgentSpec`, the `jsonl-stream` or `json-rpc` transport, event decoding into `observe`, the relay hook codec and fail-closed response, server-to-client request handlers, resume, abort, signal classification, and auth policy. `extendAdapter` customizes an existing adapter. Ships no vendor adapter; offline reference adapters live in `examples/adapters/` (Phase 15) | `slot:loop` via driver-kit | new |
 
-Host libraries (not packages):
+Host libraries (subpaths of `@arnilo/prism-hosts`; they take an `Agent` and drive it, so they register nothing and a host does not list them in a manifest):
 
 | Library | Built from |
 | --- | --- |
-| `@arnilo/prism-acp` | `ag-ui/acp`, `acp-agent`, `prism-code` `acp.ts` |
-| `@arnilo/prism-ag-ui` | `ag-ui` |
-| `@arnilo/prism-mcp-server` (`serveMcp`, and `serveTools` for external agents, §2.12.12) | `mcp` server (`createPrismMcpServer`, `createPrismMcpWebHandler`, `servePrismMcpStdio`) |
-| `@arnilo/prism-channels` (Telegram, Signal) | `prism-channels` |
-| `@arnilo/prism-evals` | `prism-core/governance/evals` |
-| `@arnilo/prism-devtools` | `prism-coding-tools/dev` |
-| `@arnilo/prism-remote` (`serveAgent`, `connectAgent`; Phase 17) | `src/rpc.ts` (`prism --mode rpc`) |
-| `@arnilo/prism-headless` (`routeHostUi`, `createScheduler`; Phase 17) | new |
-| `@arnilo/prism-host-builder` (version-exact indexes, skill, MCP server and installer for coding agents that build hosts; Phase 11) | new |
+| `@arnilo/prism-hosts/acp` | `ag-ui/acp`, `acp-agent`, `prism-code` `acp.ts` |
+| `@arnilo/prism-hosts/ag-ui` | `ag-ui` |
+| `@arnilo/prism-hosts/mcp-server` (`serveMcp`, and `serveTools` for external agents, §2.12.12) | `mcp` server (`createPrismMcpServer`, `createPrismMcpWebHandler`, `servePrismMcpStdio`) |
+| `@arnilo/prism-hosts/channels` (Telegram, Signal) | `prism-channels` |
+| `@arnilo/prism-hosts/evals` | `prism-core/governance/evals` |
+| `@arnilo/prism-hosts/devtools` | `prism-coding-tools/dev` |
+| `@arnilo/prism-hosts/remote` (`serveAgent`, `connectAgent`; Phase 17) | `src/rpc.ts` (`prism --mode rpc`) |
+| `@arnilo/prism-hosts/headless` (`routeHostUi`, `createScheduler`; Phase 17) | new |
+| `@arnilo/prism-hosts/host-builder` (version-exact indexes, skill, MCP server and installer for coding agents that build hosts; Phase 11) | new |
 
 Retired:
 
@@ -651,9 +651,9 @@ Retired:
 
 The phase that moves each remaining 0.12.1 runtime module out of the kernel decides where it goes or whether it is deleted. This covers `artifacts`, `devices`, `feedback`, `run-bundle`, `run-ledger`, `conversations`, `use-case-model`, `cache-telemetry`, and the speech, transcription, video, moderation, batch, and realtime contracts.
 
-`rpc` (`src/rpc.ts`) already has a destination: `@arnilo/prism-remote` (Phase 17).
+`rpc` (`src/rpc.ts`) already has a destination: `@arnilo/prism-hosts/remote` (Phase 17).
 
-Two modules already have a destination, set by Phase 16 (§2.12.13). `checkpoints` (`src/checkpoints.ts`) and `leases` (`src/leases.ts`) move into `@arnilo/prism-workflows` as the `checkpoints` and `leases` service contracts, with in-memory defaults. Their SQLite and Postgres implementations go into the store packages. The execution-timeline projector (plan 072) moves to `@arnilo/prism-observability` and groups steps by `origin`.
+Two modules already have a destination, set by Phase 16 (§2.12.13). `checkpoints` (`src/checkpoints.ts`) and `leases` (`src/leases.ts`) move into `@arnilo/prism-extensions/workflows` as the `checkpoints` and `leases` service contracts, with in-memory defaults. Their SQLite and Postgres implementations go into the store packages. The execution-timeline projector (plan 072) moves to `@arnilo/prism-extensions/observability` and groups steps by `origin`.
 
 ### 2.10 Repository structure
 
@@ -661,27 +661,27 @@ Two modules already have a destination, set by Phase 16 (§2.12.13). `checkpoint
 prism/
 ├─ src/                              @arnilo/prism — the SDK kernel (layout in 2.2)
 ├─ packages/
-│  ├─ providers/<vendor>/            @arnilo/prism-provider-<vendor>
-│  ├─ credentials/keyring/           @arnilo/prism-credentials-keyring
-│  ├─ tools/{coding,web,browser,work,computer-use,openapi,research}/
-│  ├─ context/{files,engineering}/
-│  ├─ memory/{core,compaction,system}/
-│  ├─ stores/{jsonl,sqlite,postgres}/
-│  ├─ policy/{approval,governance,guardrail-packs,model-router}/
-│  ├─ integrations/{mcp,hooks-json,observability,workflows,delegate}/
-│  ├─ drivers/process/               @arnilo/prism-driver-process (vendor adapters are host code)
-│  └─ hosts/{acp,ag-ui,mcp-server,channels,evals,devtools,remote,headless,host-builder}/   host libraries
+│  ├─ providers/                     @arnilo/prism-ai — <vendor>/ subpaths
+│  ├─ extensions/                    @arnilo/prism-extensions — approval/, compaction/, context-*/, delegate/,
+│  │                                  governance/, guardrail-packs/, hooks-json/, keyring/, mcp/, model-router/,
+│  │                                  observability/, store-*/, workflows/
+│  ├─ tools/                         @arnilo/prism-tools — coding/, web/, browser/, work/, computer-use/,
+│  │                                  openapi/, research/
+│  ├─ hosts/                         @arnilo/prism-hosts — acp/, ag-ui/, channels/, devtools/, evals/,
+│  │                                  driver-process/, headless/, host-builder/, mcp-server/, remote/
+│  ├─ memory/                        @arnilo/prism-memory-system — experimental; the bundle root `.` (system/)
+│  │                                  and core/ (library, with core/{fabric,postgres,sqlite})
+│  └─ knowledge/                     @arnilo/prism-knowledge — experimental; wiki/ and rag/
 ├─ apps/prism-agent/                 Prism Agent, the reference host (private, never published; §2.13.3)
 ├─ examples/                         host and package examples, execution-gated
 └─ docs/
 ```
 
-Every package directory has the same shape:
+A bundle directory looks like this:
 
-- `package.json` with `"exports": { ".": "./src/index.ts" }` and a `requires` range in the definition
-- `src/index.ts` whose default export is `definePackage`
-- `src/__tests__/`, which runs the package conformance suite
-- `README.md`
+- one `package.json` at the bundle root, with an `exports` entry per package subpath (`"./coding": "./coding/src/index.ts"`) and a `files` list that ships the subpath's `src` and `README.md`
+- one folder per package: `src/index.ts` whose default export is `definePackage` (or a library entry that exports functions instead), `src/__tests__/` with the package conformance suite, `README.md`
+- `scripts/bundles.json` holds the row: npm name, directory, line, and subpaths
 
 ### 2.11 Worked examples
 
@@ -701,11 +701,11 @@ const result = await (await agent.session()).run("Weather in Oslo?");
 **Prism Agent, the reference host.** Unpublished; it proves the SDK and is not an API (§2.13.3). Its shape, in brief:
 
 ```ts
-const host = { ui: routeHostUi([attachedClient, telegramRoute, policyDefault]) };   // @arnilo/prism-headless
+const host = { ui: routeHostUi([attachedClient, telegramRoute, policyDefault]) };   // @arnilo/prism-hosts/headless
 const lead = await createAgent({ model, packages: [store, delegate, workflows], host });
 const coder = await createAgent({ model, packages: [store, toolsCoding({ root }), approval({ mode: "ask" }), contextFiles], host });
 const researcher = await createAgent({ model, packages: [store, toolsWeb, toolsBrowser, memoryRag, toolsResearch], host });
-const remote = await connectAgent(endpoint, { mirror: store });                       // @arnilo/prism-remote
+const remote = await connectAgent(endpoint, { mirror: store });                       // @arnilo/prism-hosts/remote
 createScheduler({ store, targets: { nightly: buildWorkflow } }).every("0 2 * * *", "nightly");
 // Everything comes from published packages and public APIs; a missing seam is fixed in the SDK, never worked around here.
 ```
@@ -735,7 +735,7 @@ export default definePackage({
 });
 ```
 
-If `@arnilo/prism-memory-compaction` is also installed, both packages claim the compaction slot. `createAgent` fails closed until the host or manifest assigns the owner.
+If `@arnilo/prism-extensions/compaction` is also installed, both packages claim the compaction slot. `createAgent` fails closed until the host or manifest assigns the owner.
 
 **A package that owns the loop.**
 
@@ -775,27 +775,27 @@ await createAgent({
     hooks.on("tool.call", (call) => (call.effects.includes("network") && !allowNetwork ? { deny: "network disabled" } : undefined));
     hooks.on("turn.before", (t) => (t.usage && costOf(t.usage) > budget ? { stop: "budget" } : undefined));
   },
-  disable: { tools: ["shell"], hooks: ["@arnilo/prism-context-files:context.build"] },
+  disable: { tools: ["shell"], hooks: ["@arnilo/prism-extensions/context-files:context.build"] },
 });
 ```
 
-**A host orchestrating Prism agents and custom agents on vendor coding agents in one workflow** (the full design is in §2.12). The host wrote the two adapters itself on `@arnilo/prism-driver-process`:
+**A host orchestrating Prism agents and custom agents on vendor coding agents in one workflow** (the full design is in §2.12). The host wrote the two adapters itself on `@arnilo/prism-hosts/driver-process`:
 
 ```ts
 import { createAgent, definePackage } from "@arnilo/prism";
 import { profiles } from "@arnilo/prism/driver-kit";
-import { defineWorkflow, agentNode, gateNode, humanGate, fanOut, workflowCommand } from "@arnilo/prism-workflows";
-import sqlite from "@arnilo/prism-store-sqlite";
-import toolsCoding from "@arnilo/prism-tools-coding";
-import approval from "@arnilo/prism-approval";
-import { processDriver } from "@arnilo/prism-driver-process";
+import { defineWorkflow, agentNode, gateNode, humanGate, fanOut, workflowCommand } from "@arnilo/prism-extensions/workflows";
+import sqlite from "@arnilo/prism-extensions/store-sqlite";
+import toolsCoding from "@arnilo/prism-tools/coding";
+import approval from "@arnilo/prism-extensions/approval";
+import { processDriver } from "@arnilo/prism-hosts/driver-process";
 import { claudeCodeAdapter, codexAdapter } from "./adapters";   // host-written adapters (Phase 15); Prism ships none
-import workflows from "@arnilo/prism-workflows";
+import workflows from "@arnilo/prism-extensions/workflows";
 
 const store = sqlite({ path: ".build/prism.db" });   // one file holds every agent's sessions and vendor state
 const claudeCode = processDriver(claudeCodeAdapter); // the adapter declares Claude Code's flags, events, hook codec, and auth policy
 const codex = processDriver(codexAdapter);
-const shared = { slots: { store: "@arnilo/prism-store-sqlite" }, host: { ui }, principal: user };
+const shared = { slots: { store: "@arnilo/prism-extensions/store-sqlite" }, host: { ui }, principal: user };
 const skills = { dirs: ["./skills"] };               // one skill library; drivers materialize what each spec selects
 
 // One-time sign-in per person and vendor, through each vendor's own flow in a host terminal (K6).
@@ -869,7 +869,7 @@ This section is the design input for Phases 13–16. Each phase plan should star
 > - the kernel additions (§2.12.9)
 > - a vendor-neutral driver kit (§2.12.10)
 > - `serveTools` and the `workspace` service (§2.12.12, §2.12.14)
-> - the generic `@arnilo/prism-driver-process` with its adapter contract (Phase 15)
+> - the generic `@arnilo/prism-hosts/driver-process` with its adapter contract (Phase 15)
 > - workflows (§2.12.13)
 >
 > Hosts write or install an adapter for each vendor binary. Read the vendor-specific parts of this section with that in mind:
@@ -942,7 +942,7 @@ The SDK route is recorded in §2.12.17 as an API-key-only option and is not in 0
 | Serving Prism tools over MCP | `createPrismMcpServer`, `createPrismMcpWebHandler` (Host/Origin allow-lists, per-request auth), `servePrismMcpStdio` | `packages/mcp/src/server.ts:52` |
 | Attributing sub-agent events | Events carry `child: { childId, delegationId, depth }` for in-process delegated Prism children | `src/contracts-protocol.ts:205`; `docs/next/events.md` |
 | Worktree isolation | `createCodingWorkspaceLifecycle` | `packages/prism-coding-tools/src/agent/workspace-lifecycle.ts:243` |
-| A `hooks.json` command-hook model | `@arnilo/prism-hooks-json` (Claude/Codex-compatible) | §2.9 |
+| A `hooks.json` command-hook model | `@arnilo/prism-extensions/hooks-json` (Claude/Codex-compatible) | §2.9 |
 
 #### 2.12.4 The three binaries (research, 2026-10-04)
 
@@ -1449,7 +1449,7 @@ Driver-specific requirements:
 
 #### 2.12.12 Tool and approval bridge (Phase 14)
 
-`@arnilo/prism-mcp-server` gains:
+`@arnilo/prism-hosts/mcp-server` gains:
 
 ```ts
 serveTools(run: RunController, options: {
@@ -1471,7 +1471,7 @@ serveTools(run: RunController, options: {
 
 #### 2.12.13 Graph workflows across agents (Phase 16)
 
-`@arnilo/prism-workflows` is re-scoped from a `loop` slot package to **a library that orchestrates any `Agent`s from outside their sessions**, with a loop adapter as a secondary face.
+`@arnilo/prism-extensions/workflows` is re-scoped from a `loop` slot package to **a library that orchestrates any `Agent`s from outside their sessions**, with a loop adapter as a secondary face.
 
 - **Port the 0.12 engine** (`packages/prism-core/src/runtime/workflows/`): definitions, revision hash, limits, Kahn and superstep scheduling, node kinds, checkpoints, suspend/resume, replay, graph export, run overlay. The phase review decides whether sagas, schedules, and the coordinator move (with a test consumer) or are deleted.
 - **Node kinds:**
@@ -1487,7 +1487,7 @@ serveTools(run: RunController, options: {
 
 #### 2.12.14 Coding workspace service (Phase 14)
 
-`@arnilo/prism-tools-coding` provides the `workspace` service, ported from `createCodingWorkspaceLifecycle`:
+`@arnilo/prism-tools/coding` provides the `workspace` service, ported from `createCodingWorkspaceLifecycle`:
 
 - `worktree.create` returns `{ path, branch, dispose }`.
 - `diff` returns a bounded `FileChange[]`.
@@ -1563,14 +1563,14 @@ Rules:
 - It imports only `@arnilo/prism`, its public subpaths, and published packages.
 - When it needs a seam the SDK lacks, the seam is added to the SDK, or recorded in the backlog with a reason. The host never carries a workaround. This prevents a repeat of Prism Code, which grew its own memory coordinator, approval engine, and MCP trust logic (§1.2).
 - It runs offline in CI on the mock provider and scripted CLIs, as part of `release:gate`.
-- It has **no TUI** and depends on no terminal UI library. For manual interactive testing it serves ACP (`serveAcp`) to an ACP-capable editor, and its one-shot mode writes JSONL events. A terminal client, if one is built later, is a separate `@arnilo/prism-devtools` client of `serveAgent` that attaches to any served agent. It would use `@mariozechner/pi-tui` (pure TypeScript, no native binaries) rather than `@opentui/core` (eight platform-native binaries), after a spike confirms pi-tui under Bun: it declares `engines: node >=20`.
+- It has **no TUI** and depends on no terminal UI library. For manual interactive testing it serves ACP (`serveAcp`) to an ACP-capable editor, and its one-shot mode writes JSONL events. A terminal client, if one is built later, is a separate `@arnilo/prism-hosts/devtools` client of `serveAgent` that attaches to any served agent. It would use `@mariozechner/pi-tui` (pure TypeScript, no native binaries) rather than `@opentui/core` (eight platform-native binaries), after a spike confirms pi-tui under Bun: it declares `engines: node >=20`.
 
 #### 2.13.4 Headless pieces are host libraries
 
 What a headless host needs, apart from its own opinions, ships as SDK-side host libraries (Phase 17), so every host gets it:
 
-- **`@arnilo/prism-remote`:** `serveAgent` and `connectAgent`. Any `Agent` can be served out of process, and used remotely as an `Agent`, with the full event catalog. Tools that run in the remote process are gated by the remote's policy, so their events carry `origin.remote` and `executedBy: "external"` and never claim the host's gate (§1.4). A host that wants its own gates lends its tools over `serveTools`.
-- **`@arnilo/prism-headless`:**
+- **`@arnilo/prism-hosts/remote`:** `serveAgent` and `connectAgent`. Any `Agent` can be served out of process, and used remotely as an `Agent`, with the full event catalog. Tools that run in the remote process are gated by the remote's policy, so their events carry `origin.remote` and `executedBy: "external"` and never claim the host's gate (§1.4). A host that wants its own gates lends its tools over `serveTools`.
+- **`@arnilo/prism-hosts/headless`:**
   - `routeHostUi` sends each `HostUi` request to the attached client, then a channel (`prism-channels`), then a policy default. A request that no route answers suspends the run durably, and an answer from any route resumes it. Headless means the person is remote and asynchronous, not absent.
   - `createScheduler` handles scheduled and triggered runs over durable sessions and workflows.
 
@@ -1580,7 +1580,7 @@ What a headless host needs, apart from its own opinions, ships as SDK-side host 
 
 0.13.0 ships two domain packs: coding (`tools-coding`) and research (`tools-research`, new in Phase 12).
 
-`@arnilo/prism-tools-research` provides:
+`@arnilo/prism-tools/research` provides:
 
 - research skills: scoping, source triage, synthesis, reporting
 - a **source ledger** that records every fetched source with a citation id
@@ -1598,13 +1598,17 @@ It works alongside `tools-web`, `tools-browser`, and `memory-rag`. Further domai
 | Package | Target | When |
 | --- | --- | --- |
 | `@arnilo/prism` | **0.13.0**, the kernel | Phase 11, once. No publish per phase. `next` pre-release tags are optional for lab testing. |
-| Native packages and host libraries | **0.13.0** each, `requires.api: 1` | Alongside the kernel in Phase 11, in lockstep. After that, each is versioned independently. A package names the kernel **API level** it was written against (`requires.api: 1`), so it loads on every kernel that supports level 1 — a kernel 0.14 or 0.15 needs no package change. A breaking kernel change introduces API level 2 instead of bumping the floor. `requires.prism` stays optional, for a package that needs a fix from one release. |
-| External-agent orchestration: the kernel additions and `driver-kit` (Phase 13), `serveTools` and the `workspace` service (Phase 14), `prism-driver-process` (Phase 15), re-scoped `prism-workflows` (Phase 16) | Same as the kernel and native packages | In the same Phase 11 publish. Phase 11 does not start until Phases 12–18 are done. |
-| Decision models as first-class model calls (Phase 18) | Same as the kernel and native packages | In the same Phase 11 publish, after Phase 17 and before Phase 12. |
+| Native packages | One specifier each: a bundle subpath such as `@arnilo/prism-tools/coding`, with `requires.api: 1` | Inside its bundle in the same Phase 11 publish. A package names the kernel **API level** it was written against (`requires.api: 1`), so it loads on every kernel that supports level 1 — a kernel 0.14 or 0.15 needs no package change. A breaking kernel change introduces API level 2 instead of bumping the floor. `requires.prism` stays optional, for a package that needs a fix from one release. |
+| `@arnilo/prism-ai` (`packages/providers`, 11 vendor subpaths) | **0.13.0** with the kernel, then its own line | Phase 11. Eleven providers, including `commandcode` and `ollama-cloud` (plans 205, 206). |
+| `@arnilo/prism-extensions` (`packages/extensions`, 17 subpaths) | **0.13.0** with the kernel, then its own line | Phase 11 |
+| `@arnilo/prism-tools` (`packages/tools`, 8 subpaths) | **0.13.0** with the kernel, then its own line | Phase 11 |
+| `@arnilo/prism-hosts` (`packages/hosts`, 10 subpaths) | **0.13.0**, and on the kernel's line for good | Phase 11. `prism-host-builder`'s indexes describe exactly one kernel version, so the bundle that carries it versions with the kernel: a kernel release bumps `prism-hosts` in the same tag. |
+| `@arnilo/prism-memory-system` (`packages/memory`: the bundle root `.` and `core`) | **`0.13.0-experimental.N`** on the npm dist-tag `experimental`, never `latest` | Phase 11, on the prerelease line. Outside the stability promise: API, config, preset contents and defaults may change or be removed in any release. Graduates to a stable version as the last step of the memory track (plan 223). |
+| `@arnilo/prism-knowledge` (`packages/knowledge`: `wiki` and `rag`) | **`0.13.0-experimental.N`** on the npm dist-tag `experimental`, never `latest` | Phase 11, on the prerelease line, with the same rules and the same graduation. |
+| External-agent orchestration: the kernel additions and `driver-kit` (Phase 13), `serveTools` and the `workspace` service (Phase 14), `@arnilo/prism-hosts/driver-process` (Phase 15), re-scoped `@arnilo/prism-extensions/workflows` (Phase 16) | Inside the bundles that carry them, `prism-hosts` and `prism-extensions` | In the same Phase 11 publish. Phase 11 does not start until Phases 12–18 are done. |
+| Decision models as first-class model calls (Phase 18) | Kernel and packages, as above | In the same Phase 11 publish, after Phase 17 and before Phase 12. |
 | `@arnilo/prism-agent-sdk` | Deprecated on npm, pointing to `@arnilo/prism` | Phase 11 |
 | 0.12 family packages | Deprecated on npm, pointing to their replacements | Phase 11 |
-| `@arnilo/prism-memory-{core,observational,fabric,wiki,rag}` | **`0.13.0-experimental.N`** on the npm dist-tag `experimental`, never `latest`; outside the stability promise of the stable packages. They graduate to stable versions as the last step of the memory track (plans 209–210), after 0.13.0 | Phase 11 (the experimental line is published with the release; plan 215) |
-| `@arnilo/prism-remote`, `@arnilo/prism-headless` (Phase 17), `@arnilo/prism-tools-research` (Phase 12) | **0.13.0**, with the native packages and host libraries | Phase 11 |
 | Prism Agent (`apps/prism-agent`) | Never published: a private reference host | Phase 12 |
 | `@arnilo/prism-code` | Deprecated on npm, pointing to `@arnilo/prism` and the reference host | Phase 11 |
 
@@ -1718,7 +1722,7 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
 - **`agent.inspect()`:** packages, versions, config sources (with secret values never shown), tools, skills, hooks in execution order, slot owners, and status notes.
 - **Remove** `Extension`, `ExtensionAPI`, `ExtensionKernel`, `activateKernel`, `forwardAgentEvents`, `ContributionRegistries`, `PrismManifest` (the old contribution manifest), `ProviderPackage`, and discovered-contribution descriptors.
 - **Package conformance suite** in `@arnilo/prism/testing`: setup/dispose idempotence, no contribution leaks after dispose, valid config schema, declared capabilities cover the APIs used, no secret in `inspect()`.
-- **First native package:** `@arnilo/prism-hooks-json`, a pure hook mapping from the 0.12 `hooks` package.
+- **First native package:** `@arnilo/prism-extensions/hooks-json`, a pure hook mapping from the 0.12 `hooks` package.
 
 **Done.**
 
@@ -1792,8 +1796,8 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
   - the built-in `openai-compatible` provider
 - **Subpaths:** `@arnilo/prism/provider-kit` (SSE, HTTP transport, OpenAI-compatible wire mapping, provider conformance) and the mock provider in `/testing`.
 - **Credentials slot:** `env:` default resolver; OAuth token persistence through the slot; `credentials:write` lets a package store and delete through a writable slot, which is how the OpenAI Codex provider keeps its rotating Sign in with ChatGPT grant (`keyring:openai-codex`) without a host-managed token file.
-- **Provider packages:** ship `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid, openrouter, openai-codex, kilo, litellm}` (owner decisions 2026-10-17, adding `liquid` to the 2026-10-16 list; 2026-10-24, adding `openrouter`; 2026-10-25, adding `openai-codex`, which signs a ChatGPT plan in through OpenAI's sanctioned dynamic-registration flow and uses the public `api.openai.com/v1/responses` route, not the Codex CLI's private backend; 2026-10-31, adding `kilo`, which routes by the catalog's `opencode.ai_sdk_provider` across Chat, Responses, and Messages and supports Kilo's device login; and 2026-10-31, adding `litellm`, which fronts a LiteLLM Proxy on OpenAI-compatible Chat with telemetry and spend logs, exempt from a cache-parity cell for 0.13.0; others build on `@arnilo/prism/provider-kit`). **Command Code and Ollama Cloud are not in this set:** on 2026-10-25 the owner moved both to the release after 0.13.0, so plans 205 and 206 are off the 0.13.0 release path. Plan 205 built `@arnilo/prism-provider-commandcode` (Chat, Responses, Messages) in-tree ahead of that release — package, cache baseline, and live row landed 2026-10-28 — and plan 206 built `@arnilo/prism-provider-ollama-cloud` (native `/api/chat` default, OpenAI-compatible route, cache parity measured against pi and live acceptance on both routes) in-tree on 2026-11-01; its publication stays post-0.13.0. OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
-- **`@arnilo/prism-credentials-keyring`.**
+- **Provider packages:** ship `@arnilo/prism-ai/{hyper, opencode-go, typesafe, laya, liquid, openrouter, openai-codex, kilo, litellm, commandcode, ollama-cloud}` (owner decisions 2026-10-17, adding `liquid` to the 2026-10-16 list; 2026-10-24, adding `openrouter`; 2026-10-25, adding `openai-codex`, which signs a ChatGPT plan in through OpenAI's sanctioned dynamic-registration flow and uses the public `api.openai.com/v1/responses` route, not the Codex CLI's private backend; 2026-10-31, adding `kilo`, which routes by the catalog's `opencode.ai_sdk_provider` across Chat, Responses, and Messages and supports Kilo's device login; and 2026-10-31, adding `litellm`, which fronts a LiteLLM Proxy on OpenAI-compatible Chat with telemetry and spend logs, exempt from a cache-parity cell for 0.13.0; others build on `@arnilo/prism/provider-kit`). **Command Code and Ollama Cloud ship in 0.13.0 too**, on the owner decision of 2026-11-09 that put them back on the release path inside the bundle. Plan 205 built `@arnilo/prism-ai/commandcode` (Chat, Responses, Messages) — package, cache baseline, and live row landed 2026-10-28 — and plan 206 built `@arnilo/prism-ai/ollama-cloud` (native `/api/chat` default, OpenAI-compatible route, cache parity measured against pi and live acceptance on both routes) in-tree on 2026-11-01. OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
+- **`@arnilo/prism-extensions/keyring`.**
 - **Examples:**
   - an OpenAI-compatible endpoint with no packages
   - the Hyper package with a per-run model switch
@@ -1814,7 +1818,7 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
 
 **Scope.**
 
-- `@arnilo/prism-store-jsonl`, `-sqlite`, `-postgres`, and the shared `@arnilo/prism-store-codecs` library.
+- `@arnilo/prism-extensions/store-{jsonl, sqlite, postgres}`, and the shared `@arnilo/prism-extensions/store-codecs` library.
 - A store conformance suite covering append, branch/fork, package-state entries, suspended-run records, search, title, and delete.
 - `agent.sessions` features light up according to store capabilities.
 - The kernel keeps only the contract and the in-memory store.
@@ -1921,7 +1925,7 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
 
 **Scope.**
 
-- `@arnilo/prism-acp` (`serveAcp`; `HostUi` mapped to ACP permission and elicitation), `-ag-ui`, `-mcp-server`, `-channels` (Telegram, Signal), `-evals`, `-devtools`.
+- `@arnilo/prism-hosts/acp` (`serveAcp`; `HostUi` mapped to ACP permission and elicitation), `@arnilo/prism-hosts/{ag-ui, mcp-server, channels (Telegram, Signal), evals, devtools}`.
 - `packages/acp-agent` becomes a thin binary over `serveAcp` and a manifest.
 - No surface imports kernel internals.
 
@@ -1947,7 +1951,7 @@ What moved, and where:
 
 | Was in Prism (2026-10-04) | Now |
 | --- | --- |
-| `prism-driver-{claude-code, codex, antigravity}` packages | Host-side adapters on `@arnilo/prism-driver-process` (Phase 15). Three offline reference adapters in `examples/adapters/` show the three integration shapes from §2.12.4. |
+| `prism-driver-{claude-code, codex, antigravity}` packages | Host-side adapters on `@arnilo/prism-hosts/driver-process` (Phase 15). Three offline reference adapters in `examples/adapters/` show the three integration shapes from §2.12.4. |
 | A vendor-terms guard with per-vendor rules (§2.12.5 rules 5–6) | A generic policy guard that enforces the auth policy each adapter declares (Phase 13). The adapter's author owns the vendor's terms. |
 | Vendor dialects in `prism relay`, `materializeSkills`, `createScriptedCli`, and the `serveTools` MCP config | Adapter-supplied codecs and layouts over neutral defaults (Phases 13–14) |
 | Per-vendor research and the control matrix (§2.12.4, §2.12.5, §2.12.11) | Dated, non-normative worked mappings in the adapter authoring guide (Phase 15) |
@@ -2074,7 +2078,7 @@ The kernel and the driver kit name no vendor.
 
 **Why.** Gaps G3 and G11 for the MCP path. MCP is the tool channel that most coding-agent binaries accept, so serving tools over it once covers any adapter that can point its binary at an MCP server. Worktrees make parallel delegations safe to merge, and give agents configured through workspace files a place for that configuration.
 
-**Depends on.** Phase 13; Phase 7 (`tools-coding`, `approval`); Phase 10 (`@arnilo/prism-mcp-server`).
+**Depends on.** Phase 13; Phase 7 (`tools-coding`, `approval`); Phase 10 (`@arnilo/prism-hosts/mcp-server`).
 
 **Scope.**
 
@@ -2132,7 +2136,7 @@ That work belongs in Prism, once. What differs per vendor (flags, file layouts, 
   - a stream CLI configured through workspace files
 
   Confirm that each can be expressed without a contract change, and record any change in the plan before code starts. Re-verify and date the §2.12.4 facts that the authoring guide's worked mappings cite.
-- **`@arnilo/prism-driver-process`** (`packages/drivers/process/`):
+- **`@arnilo/prism-hosts/driver-process`** (`packages/hosts/driver-process/`):
   - `processDriver(adapter)` returns a driver package factory. `processDriver(adapter)(spec)` is a package that claims `slot:loop`.
   - Transports:
     - `jsonl-stream`: one process per conversation, input written to stdin, a turn ended by a frame the adapter recognizes
@@ -2185,7 +2189,7 @@ That work belongs in Prism, once. What differs per vendor (flags, file layouts, 
 **Done.**
 
 - The three reference adapters pass `adapterConformance` offline.
-- An adapter in a temporary workspace passes `adapterConformance` while importing only `@arnilo/prism`, `@arnilo/prism/driver-kit`, `@arnilo/prism/testing`, and `@arnilo/prism-driver-process`. This proves a host needs no internal import.
+- An adapter in a temporary workspace passes `adapterConformance` while importing only `@arnilo/prism`, `@arnilo/prism/driver-kit`, `@arnilo/prism/testing`, and `@arnilo/prism-hosts/driver-process`. This proves a host needs no internal import.
 - `extendAdapter` replaces a decoder and narrows a policy, and `inspect()` shows both.
 - The policy guard holds against policies that adapters declare:
   - an account mode limited to `local` fails on `deployment: "hosted"` with `plan_login_not_permitted`
@@ -2198,7 +2202,7 @@ That work belongs in Prism, once. What differs per vendor (flags, file layouts, 
 - Abort stops the scripted binary within the grace timeout on both transports.
 - A conversation that uses `store` resume resumes in a new process from Prism's store.
 - Unmapped frames reach `agent.raw` under `capture: "all"`.
-- No vendor or binary name appears in `packages/drivers/process/src/` (the same check as Phase 13). The authoring guide is exempt.
+- No vendor or binary name appears in `packages/hosts/driver-process/src/` (the same check as Phase 13). The authoring guide is exempt.
 
 ### Phase 16 — Graph workflows across agents
 
@@ -2210,7 +2214,7 @@ That work belongs in Prism, once. What differs per vendor (flags, file layouts, 
 
 **Scope.**
 
-- **`@arnilo/prism-workflows` re-scoped** (§2.12.13):
+- **`@arnilo/prism-extensions/workflows` re-scoped** (§2.12.13):
   - the 0.12 engine ported (the review decides on sagas, schedules, and the coordinator)
   - `agentNode` with `parent` links and `worktree`
   - `gateNode`, `humanGate`
@@ -2265,7 +2269,7 @@ It is a separate phase because Phase 10 was already underway when this was added
 
 **Scope.**
 
-- **`@arnilo/prism-remote`** (`packages/hosts/remote/`), a host library built from `src/rpc.ts` (the 0.12 `prism --mode rpc`):
+- **`@arnilo/prism-hosts/remote`** (`packages/hosts/remote/`), a host library built from `src/rpc.ts` (the 0.12 `prism --mode rpc`):
   - A versioned JSON-RPC 2.0 protocol (`prism.remote/1`) with capability negotiation:
     - sessions: open, list, resume
     - `run`, with events streamed as notifications that carry `AgentEvent`s unchanged
@@ -2281,7 +2285,7 @@ It is a separate phase because Phase 10 was already underway when this was added
     - tool events gated by the remote's policy carry `executedBy: "external"`
     - the remote's `HostUi` requests go to the local `host.ui`
     - `mirror: store` archives the remote session into the local store with `parent` links (K4), so `createSessionIndex` finds it
-- **`@arnilo/prism-headless`** (`packages/hosts/headless/`), a host library:
+- **`@arnilo/prism-hosts/headless`** (`packages/hosts/headless/`), a host library:
   - **`routeHostUi(routes)`** returns a `HostUi` that tries its routes in order: an attached client, then a channel (`prism-channels`), then a policy default.
     - Routes can be limited by request kind; for example, `terminal` goes only to an attached client.
     - A request that no route answers suspends the run durably. An answer from any route later resumes it.
@@ -2320,7 +2324,7 @@ It is a separate phase because Phase 10 was already underway when this was added
   - `src/contracts-core/decisions.ts`: `DecisionQuestion` (`noul` | `choice` | `score`), `DecisionRequest` (`state?`, `images?` as `data:` URLs, `questions`, `signal?`), `DecisionResult` (`model`, `answers`, `usage?`, `timingMs`), `DecisionsProvider`, `DecisionsError` (`unsupported_model`, `invalid_request`, `state_too_large`).
   - Validation in the kernel before any adapter runs: question shapes and counts, state byte cap, image MIME and total byte cap, and an image request to a text-only model fails closed.
 - **System One codec:** `decisions()` on the provided client, `images` on the request body (omitted when empty), image parts forwarded on both the decide and `generate()` + `structuredOutput` paths, and a configurable `path` so every System One endpoint is reachable by configuration.
-- **Provider packages on the capability:** `typesafe` (hosted Jev) and `laya` (local Laya) in Part A; `@arnilo/prism-provider-liquid` (hosted `liquid` with `d1`/`d1-ultra`, and local `liquid-local` with `d1-3B`) in Part B.
+- **Provider packages on the capability:** `typesafe` (hosted Jev) and `laya` (local Laya) in Part A; `@arnilo/prism-ai/liquid` (hosted `liquid` with `d1`/`d1-ultra`, and local `liquid-local` with `d1-3B`) in Part B.
 - **Docs and example:** `docs/decisions.md` with the contract, System One endpoint recipes, and operating rules; an offline `examples/decision-models.ts` on the mock provider's `decisions` handler.
 
 **Depends on.** Phase 5; plans 182 (codec location) and 183 (`systemOneProviderPackage`, `systemOneConformance`, keyless Laya).
@@ -2359,7 +2363,7 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
   - `HostUi` through `routeHostUi`: a scripted client, then a scripted channel, then the policy default, then suspension
   - a scheduled run through the Phase 17 scheduler
   - headless entry points: a one-shot run with JSONL output and documented exit codes, resume, and `serveAcp` for manual interactive testing
-- **`@arnilo/prism-tools-research`** (`packages/tools/research/`), a new native package (§2.13.5).
+- **`@arnilo/prism-tools/research`** (`packages/tools/research/`), a new native package (§2.13.5).
 - **Gap log.** Every seam the host needed and the SDK lacked is recorded in the plan. Each gap is fixed in the SDK before Phase 11, or moved to `plans/backlog.md` with a reason. The host contains no workaround for a missing seam.
 - **No TUI** (§2.13.3).
 - **Docs:**
@@ -2384,7 +2388,7 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
 
 ### Phase 11 — Kernel freeze and 0.13.0
 
-**Goal.** Ship `@arnilo/prism` 0.13.0 as a minimal, dependency-free kernel with its native packages, and make the docs describe it.
+**Goal.** Ship `@arnilo/prism` 0.13.0 as a minimal, dependency-free kernel with its six bundles (owner decision 2026-11-09), and make the docs describe it.
 
 **Why.** Earlier phases move modules out as their packages land. This phase sweeps what remains, freezes the public surface, and publishes once.
 
@@ -2409,12 +2413,13 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
   - no new pages are written in this phase: every page already exists from the phase that shipped its API
 - **README and PRODUCT:** `README.md` cuts over to the SDK; `PRODUCT.md` drops its not-shipped banner; the examples gallery leads with host and package examples.
 - **Release:**
-  - compat baseline regenerated
-  - `release:gate` covers every package
+  - **seven npm packages published, not 52 (owner decision 2026-11-09):** `@arnilo/prism` and the six bundles in Part 3. Every former package is a subpath of a bundle, and no former name is published at all, so none of them needs a deprecation; plan 224 carries the move, the release tooling and the publish.
+  - compat baseline regenerated, one file per bundle plus the kernel
+  - `release:gate` covers every bundle and every subpath's package conformance
   - changelog and migration note from 0.12 `createAgent` / `defineAgent`
   - `prism-agent-sdk`, `prism-code`, and the 0.12 family packages deprecated on npm
   - a grep over `scripts/`, `examples/`, and every workspace for retired names and error strings
-- **Evaluation rigor (owner decision 2026-10-19):** `@arnilo/prism-evals` ships with:
+- **Evaluation rigor (owner decision 2026-10-19):** `@arnilo/prism-hosts/evals` ships with:
   - correct, fail-closed scorers: approvals correlated per tool call, declared requirements and invariants
   - item-level statistics with confidence intervals, pass^k, and paired regression gates
   - calibrated judges: rubric, position-swapped pairwise, and panel judges
@@ -2451,8 +2456,8 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
   - otherwise it is removed before plan 185 freezes the surface; an owner-held feature without evidence ships only in an experimental tier outside the API-level-1 promise
   - Plan 210 carries this, after plans 202, 207, 208 and 209 and before plan 184. It also runs the one held-out acceptance of every memory claim on the slimmed product and sets the preset revision, defaults and claims (moved there from plans 202, 208 and 209 on 2026-10-31). The memory train is strictly sequential: 202 → 207 → 208 → 209 → 210 → 184 → 185.
 - **Experimental memory line (owner decision 2026-11-04, supersedes the ordering above):** the memory audit no longer gates the release.
-  - `@arnilo/prism-memory-{core,observational,fabric,wiki,rag}` ship in 0.13.0 as an experimental prerelease line (`0.13.0-experimental.N`, npm dist-tag `experimental`). Their API, config, preset contents and defaults may change or be removed in any release until they graduate, and the compat gate reports their changes without failing.
-  - Stable packages and the reference host's default agents depend on no experimental package; a gate enforces it. `@arnilo/prism-memory-compaction` is stable.
+  - `@arnilo/prism-memory-system` and `@arnilo/prism-knowledge` ship in 0.13.0 as an experimental prerelease line (`0.13.0-experimental.N`, npm dist-tag `experimental`). Their API, config, preset contents and defaults may change or be removed in any release until they graduate, and the compat gate reports their changes without failing.
+  - Stable packages and the reference host's default agents depend on no experimental package; a gate enforces it. `@arnilo/prism-extensions/compaction` is stable.
   - The memory track (plans 209–210: working-agent memory, the feature audit, the one held-out acceptance, the defaults and claims) runs after 0.13.0 and ends in graduation. Where the two bullets above say the audit runs before plans 184–185, plan 215 replaces that order.
   - Plan 215 carries the release path (surface freeze, host adoption, cache parity, live acceptance, publish), alongside plan 208.
 - **Memory model (owner decision 2026-11-08, supersedes the three-tier framing and the "episodic memory" redesign of plan 210 Tasks 7.1–7.6):** memory is one system modelled on human memory, usable partly or whole. The design record is `docs/_evidence/memory-model/design.md`.
@@ -2474,8 +2479,8 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
     - candidates earn trust by use.
   - **Sleep:** offline consolidation, on demand or host-scheduled. It covers semanticization, procedure extraction, trigger acquisition and extinction, conflict resolution and forgetting, and runs incrementally under leases.
   - **Deletion:** every tier separates surface, index and verbatim backing. Surface is tombstoned; chunks are deleted when nothing references them; the transcript is never deleted by memory.
-  - **The ontology is not memory:** concepts, subject binding, concept-first recall and source ingest move out of the fabric into the wiki (`@arnilo/prism-wiki`), a separate knowledge package. It reads LTM through a read-only port, may cite LTM notes, and follows LTM deletions deterministically.
-  - **Packaging:** `@arnilo/prism-memory-system` absorbs `memory-observational` and `memory-fabric` (no aliases). `memory-core` (library), `memory-rag` and `memory-compaction` stay outside.
+  - **The ontology is not memory:** concepts, subject binding, concept-first recall and source ingest move out of the fabric into the wiki (`@arnilo/prism-knowledge/wiki`), a separate knowledge package. It reads LTM through a read-only port, may cite LTM notes, and follows LTM deletions deterministically.
+  - **Packaging:** `@arnilo/prism-memory-system` absorbs `memory-observational` and `memory-fabric` (no aliases), and its `core` subpath is the former `memory-core`; `memory-rag` and the wiki become `@arnilo/prism-knowledge/rag` and `/wiki`, and `memory-compaction` is `@arnilo/prism-extensions/compaction` (owner decision 2026-11-09).
   - **Measurement:** every tier is measured on pre-registered rows (`scripts/memory-bench/memory-model-criteria.json`) in its own paid development screen, and all claims are accepted once on held-out partitions before graduation.
   - **Plans:**
     - plan 210 is narrowed to the decisions on what its finished first wave measured, plus offline inert removals; it has no further paid runs;
@@ -2483,12 +2488,12 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
     - graduation from the experimental line moves from plan 210 to plan 223.
 - **Host adoption kit (owner decision 2026-10-31):** an agent that runs on Prism, and an agent that builds or changes a Prism host, each get the procedural knowledge they need from what the host installs, not from documents the host writes:
   - **module skills:** every package with model-visible tools ships its procedural knowledge as bundled skills (`PackageAPI.skills.addDir`), versioned with the tools. `Skill.requiresTools` lists a skill only when every tool it teaches is advertised to the run, the skills counterpart of `PackageToolOptions.when`. A conformance gate holds every package skill to its registered tools, a description and body budget, and a reference-host catalog budget. Each skill ships only if a pre-registered paired skill-on/skill-off evaluation shows it does not regress task success; `serveTools` can lend the skills of the tools it lends. Plan 211 carries this, after plan 210, so the memory skills describe the audited surface.
-  - **host builder kit:** `@arnilo/prism-host-builder`, a lockstep host library, ships the `prism-host-builder` skill (Agent Skills format, readable by Claude Code, Codex, Cursor and Prism), a read-only, network-free, model-free stdio MCP server (version-exact API, error-code, example and docs lookup; building the host's agent in a bounded child process to return `inspect()`; manifest and package conformance checks), and a project-scoped installer. A drift gate typechecks the skill's code and resolves every symbol, path, example and error code it names, so a later rename updates the kit in the same task. Claims are limited to a pre-registered builder evaluation. Plan 212 carries this, after plan 211.
+  - **host builder kit:** `@arnilo/prism-hosts/host-builder`, a lockstep host library, ships the `prism-host-builder` skill (Agent Skills format, readable by Claude Code, Codex, Cursor and Prism), a read-only, network-free, model-free stdio MCP server (version-exact API, error-code, example and docs lookup; building the host's agent in a bounded child process to return `inspect()`; manifest and package conformance checks), and a project-scoped installer. A drift gate typechecks the skill's code and resolves every symbol, path, example and error code it names, so a later rename updates the kit in the same task. Claims are limited to a pre-registered builder evaluation. Plan 212 carries this, after plan 211.
   - both run before plan 184, because package skills enter the cached catalog prefix, and before plan 185, so the new field and package are frozen with the rest: 210 → 211 → 212 → 184 → 185.
 
 **Done.**
 
-- `@arnilo/prism` 0.13.0 and the native packages are published, including `driver-kit`, `prism-driver-process`, the re-scoped `prism-workflows`, `serveTools`, `prism-remote`, `prism-headless`, and `prism-tools-research`.
+- `@arnilo/prism` 0.13.0 and the six bundles are published, so `driver-kit`, `@arnilo/prism-hosts/driver-process`, the re-scoped `@arnilo/prism-extensions/workflows`, `serveTools`, `@arnilo/prism-hosts/remote`, `@arnilo/prism-hosts/headless` and `@arnilo/prism-tools/research` are all reachable as documented.
 - A new reader builds an agent from `README.md` alone.
 - `release:gate` is green.
 
@@ -2538,9 +2543,8 @@ These five acceptance criteria stay in force for the truth suite (`scripts/phase
 - Node.js as a supported runtime.
 - A TUI, GUI, or slash-palette rendering in the kernel.
 - A first-party agent product or standalone agent binary. Prism is always embedded by a host. Prism Agent is a private reference host for testing and proof, never published and not an API (§2.13).
-- A TUI in the reference host. Manual interactive testing goes through ACP clients. A terminal client, if one is built, is a separate `@arnilo/prism-devtools` client of `serveAgent` (§2.13.3).
+- A TUI in the reference host. Manual interactive testing goes through ACP clients. A terminal client, if one is built, is a separate `@arnilo/prism-hosts/devtools` client of `serveAgent` (§2.13.3).
 - Domain packs beyond coding and research in 0.13.0. `tools-media` is a candidate after 0.13.0 (§2.13.5).
-- The Command Code and Ollama Cloud provider packages in 0.13.0. The owner deferred both to the first release after 0.13.0 on 2026-10-25; plans 205 and 206 stay `planned` off the release path.
 - A god config that names every package's options. Package config belongs to packages.
 - Compatibility aliases for 0.12 configuration.
 - Vendor adapters for specific coding agents (Claude Code, Codex, the Antigravity CLI, or any other). Hosts write or install them on `prism-driver-process`. Prism ships the adapter contract, the generic driver, conformance, an authoring guide, and offline reference adapters as examples (Phase 15).

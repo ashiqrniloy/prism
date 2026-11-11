@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-core";
+import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-system/core";
 import { gatherConsolidationCandidates } from "../../../packages/memory/system/src/ltm/consolidation/gather.ts";
 import { scanSecrets } from "../../scan-secrets.mjs";
 import { judgeLifecycle } from "../judge.mjs";

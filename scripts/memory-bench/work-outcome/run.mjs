@@ -27,10 +27,10 @@ import {
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createScriptedHostUi } from "@arnilo/prism/testing";
-import { createStateMatchScorer, createUserSimulator, runScenario } from "@arnilo/prism-evals";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { createStateMatchScorer, createUserSimulator, runScenario } from "@arnilo/prism-hosts/evals";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import memorySystem, { parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
-import { wiki } from "@arnilo/prism-wiki";
+import { wiki } from "@arnilo/prism-knowledge/wiki";
 import { tokens } from "../injection-log.mjs";
 import { curatorStats, isCuratorRequest } from "../ontology-arm.mjs";
 import { createClaimPanel, judgeClaims, scriptedJudges, summarizeGroup } from "../ontology-audit.mjs";

@@ -8,7 +8,7 @@ gold, note, chunk, claim or corpus text.
 
 | File | What it is |
 | --- | --- |
-| `criteria.json` | Plan 216 Task 2. The frozen criteria hash, the three criteria hashes it pins, and the amendment log. `frozenMemoryModelHash()` refuses a criteria file that does not hash to it. Amendment 1 (plan 217 Task 6, 2026-11-09) adds the hashes of the two fixtures gate M-1 reads (`long-session-replay`, `long-session`) and changes no row: `2b50880b…` → `f99907bd…`. |
+| `criteria.json` | Plan 216 Task 2. The frozen criteria hash, the three criteria hashes it pins, and the amendment log. `frozenMemoryModelHash()` refuses a criteria file that does not hash to it. Amendment 1 (plan 217 Task 6, 2026-11-09) adds the hashes of the two fixtures gate M-1 reads (`long-session-replay`, `long-session`) and changes no row: `2b50880b…` → `f99907bd…`. Amendment 2 (2026-11-10) records the owner decision `m1S3Deferred`: gate M-1 lists S3 under `deferred` (to gate A, which reads it on held-out data), and `memoryModelGateVerdict` reports it `deferred` and decides M-1 by S1, S2 and S4: `f99907bd…` → `9ed0adf0…`. |
 | `baselines.json` | Plan 216 Task 2. The "before" baselines: `P` (plan 210's slimmed product hash) and `OM-before` (the pre-redesign observational revision, pinned at the first step of plan 216 Task 4). |
 | `gates/README.md` | The gate record template for M-1 … M-5, M-T, K-1 and A. |
 | `../<plan>/gates/owner-gate-<gate>.json` | One per gate, in the gate's plan directory, written when the owner approves it (none yet). |

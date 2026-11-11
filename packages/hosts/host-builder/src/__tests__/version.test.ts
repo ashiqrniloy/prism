@@ -24,7 +24,7 @@ describe("version check", () => {
         assert.equal(error.code, "ERR_PRISM_HOST_BUILDER_VERSION");
         assert.match(error.message, /0\.12\.1 is installed/);
         assert.ok(error.message.includes(`describe ${version}`));
-        assert.match(error.message, /bun add -d @arnilo\/prism-host-builder@0\.12\.1/);
+        assert.match(error.message, /bun add -d @arnilo\/prism-hosts@0\.12\.1/);
         return true;
       },
     );

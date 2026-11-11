@@ -167,7 +167,6 @@ export async function dispatchAndCollect(probe: ToolDispatchProbeOptions): Promi
   return { result, events };
 }
 
-
 function pickPolicy(options: ToolConformanceOptions): {
   beforeExecute?: (call: ToolCallContent, tool: ToolDefinition, context: ToolExecutionContext) => void | Promise<void>;
   validate?: ToolValidator;
@@ -314,7 +313,8 @@ async function askKeepsRewrite(create: GateIntegrityOptions["createAgent"]): Pro
     async (session) => {
       await session.run("go");
       if (executed.length !== 1) throw new Error(`an approved call executed ${executed.length} times, expected once`);
-      if (executed[0]?.path !== "/tmp/sanitized") throw new Error(`the sanitizing rewrite was dropped: executed ${JSON.stringify(executed[0])}`);
+      if (executed[0]?.path !== "/tmp/sanitized")
+        throw new Error(`the sanitizing rewrite was dropped: executed ${JSON.stringify(executed[0])}`);
     },
   );
 }

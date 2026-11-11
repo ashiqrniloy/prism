@@ -1,4 +1,4 @@
-import { McpBridgeError } from "@arnilo/prism-mcp";
+import { McpBridgeError } from "@arnilo/prism-extensions/mcp";
 
 /** Resolves a bounded positive integer option, or throws naming the rule. Shared by `serve`, `server`, and `serve-tools`. */
 export function bounded(value: number | undefined, fallback: number, cap: number, name: string): number {

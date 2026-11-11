@@ -20,11 +20,11 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism/testing";
-import { createHashEmbedder } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
+import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
+import memorySystem, { createLongTermMemory, createMemory } from "../../index.js";
 import { type MemoryFabricConfig, memoryFabricConfigSchema, resolveMemoryFabricConfig } from "../config.js";
 import { createExchangeArchive, exchangeDialogue, exchangeNoteId, exchangePairs } from "../exchanges.js";
-import memorySystem, { createMemory, createLongTermMemory } from "../../index.js";
 import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 import { parseMemoryNoteMetadata } from "../types.js";
 
@@ -101,7 +101,8 @@ describe("exchange archive module", () => {
     };
     const pairs = exchangePairs([entry("u1", "user", "hello"), toolRound, entry("a2", "assistant", "done")]);
     assert.equal(pairs.length, 1, "only the final reply pairs with the user turn");
-    assert.equal(pairs[0]!.assistant.id, "a2");
+    assert.ok(pairs[0]);
+    assert.equal(pairs[0].assistant.id, "a2");
   });
 
   it("exchange_excludes_tool_payloads", async () => {
@@ -117,8 +118,9 @@ describe("exchange archive module", () => {
     assert.equal(report.archived, 1);
     const hits = await h.fabric.recall("config value", { kinds: ["exchange"] });
     assert.equal(hits.hits.length, 1);
-    assert.equal(hits.hits[0]!.content, "user: read the config please\n\nassistant: the value is 7");
-    assert.doesNotMatch(hits.hits[0]!.content, /tool_call|tool_result|"path"/);
+    assert.ok(hits.hits[0]);
+    assert.equal(hits.hits[0].content, "user: read the config please\n\nassistant: the value is 7");
+    assert.doesNotMatch(hits.hits[0].content, /tool_call|tool_result|"path"/);
   });
 
   it("archive_command_backfills_appended_history_idempotently", async () => {
@@ -241,7 +243,10 @@ describe("exchange archive module", () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "main" },
       host: { ui: scripted.ui },
-      packages: [mockProvider([[providerTextDelta("Understood."), providerDone()]]), memorySystem({ ltm: { preset: "coding", tools: { root } } })],
+      packages: [
+        mockProvider([[providerTextDelta("Understood."), providerDone()]]),
+        memorySystem({ ltm: { preset: "coding", tools: { root } } }),
+      ],
       slots: { store: createMemorySessionStore() },
     });
     const session = await agent.session({ id: "coding-decision", create: true });
@@ -251,9 +256,10 @@ describe("exchange archive module", () => {
 
     const files = await decisionFiles(root);
     assert.equal(files.length, 1, "one cue writes one decision note");
-    assert.match(files[0]!.body, /pnpm instead of npm/);
-    assert.match(files[0]!.body, /"decisionStatus":"active"/, "the person confirmed the proposed rule once");
-    assert.match(files[0]!.body, /"sourceEntryIds":/);
+    assert.ok(files[0]);
+    assert.match(files[0].body, /pnpm instead of npm/);
+    assert.match(files[0].body, /"decisionStatus":"active"/, "the person confirmed the proposed rule once");
+    assert.match(files[0].body, /"sourceEntryIds":/);
     assert.equal(scripted.requestsOf("confirm").length, 1, "confirmation is one batched host.ui call");
 
     const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
@@ -318,7 +324,8 @@ describe("exchange archive module", () => {
     await session.close();
     await agent.dispose();
     const [file] = await procedureFiles(root);
-    assert.match(file!.body, /"pinned":true/, "a confirmed rule is pinned");
+    assert.ok(file);
+    assert.match(file.body, /"pinned":true/, "a confirmed rule is pinned");
     assert.equal(ui.requestsOf("confirm").length, 1);
   });
 
@@ -370,21 +377,28 @@ describe("exchange archive through the package", () => {
     const root = await tempRoot();
     const agent = await createAgent({
       model: { provider: "mock", model: "main" },
-      packages: [mockProvider([[providerTextDelta("Monday it is."), providerDone()]]), memorySystem({ ltm: { tools: { root }, exchanges: {} } })],
+      packages: [
+        mockProvider([[providerTextDelta("Monday it is."), providerDone()]]),
+        memorySystem({ ltm: { tools: { root }, exchanges: {} } }),
+      ],
       slots: { store: createMemorySessionStore() },
     });
     const session = await agent.session({ id: "archive-one", create: true });
     await session.run("Remember the launch is on Monday.");
     const entries = await session.entries();
-    const user = entries.find((item) => item.message?.role === "user")!;
+    const user = entries.find((item) => item.message?.role === "user");
+    assert.ok(user);
+    const lastEntry = entries.at(-1);
+    assert.ok(lastEntry);
     await waitFor(async () => (await exchangeFiles(root)).length > 0);
     await session.close();
 
     const files = await exchangeFiles(root);
     assert.equal(files.length, 1, "one completed turn, one exchange note");
-    assert.equal(files[0]!.path.includes("/exchanges/"), true);
-    assert.match(files[0]!.body, /user: Remember the launch is on Monday\./);
-    assert.match(files[0]!.body, /assistant: Monday it is\./);
+    assert.ok(files[0]);
+    assert.equal(files[0].path.includes("/exchanges/"), true);
+    assert.match(files[0].body, /user: Remember the launch is on Monday\./);
+    assert.match(files[0].body, /assistant: Monday it is\./);
 
     // A fresh store over the same files, the shape a later session sees: the note is source-backed and dated.
     const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
@@ -397,10 +411,11 @@ describe("exchange archive through the package", () => {
     const fabric = createLongTermMemory({ memory, consolidate: false });
     const hits = await fabric.recall("launch Monday", { kinds: ["exchange"] });
     assert.equal(hits.hits.length, 1);
-    assert.equal(hits.hits[0]!.tRef, user.timestamp);
-    assert.deepEqual(hits.hits[0]!.sourceEntryIds, [user.id, entries[entries.length - 1]!.id]);
-    assert.equal(hits.hits[0]!.level, "project");
-    assert.equal(hits.hits[0]!.id, exchangeNoteId(session.id, user.id, entries[entries.length - 1]!.id, 0));
+    assert.ok(hits.hits[0]);
+    assert.equal(hits.hits[0].tRef, user.timestamp);
+    assert.deepEqual(hits.hits[0].sourceEntryIds, [user.id, lastEntry.id]);
+    assert.equal(hits.hits[0].level, "project");
+    assert.equal(hits.hits[0].id, exchangeNoteId(session.id, user.id, lastEntry.id, 0));
     await stores.close();
     await agent.dispose();
   });
@@ -467,8 +482,9 @@ describe("exchange archive through the package", () => {
 
     const files = await exchangeFiles(root);
     assert.equal(files.length, 1);
-    assert.match(files[0]!.body, /\[REDACTED\]/, "the persisted entry is redacted before the archive reads it");
-    assert.doesNotMatch(files[0]!.body, /sk-live-9f8e7d6c5b4a3210/);
+    assert.ok(files[0]);
+    assert.match(files[0].body, /\[REDACTED\]/, "the persisted entry is redacted before the archive reads it");
+    assert.doesNotMatch(files[0].body, /sk-live-9f8e7d6c5b4a3210/);
     assert.doesNotMatch(JSON.stringify(events), /sk-live-9f8e7d6c5b4a3210/);
     assert.doesNotMatch(JSON.stringify(agent.inspect()), /sk-live-9f8e7d6c5b4a3210/);
     await agent.dispose();
@@ -518,7 +534,8 @@ describe("exchange delivery", () => {
       async () => ({ hits: [visible, hidden].map((note) => ({ ...note, score: 1 })), explain: [] }),
       { kinds: ["exchange"], topK: 2 },
     );
-    const draft = await projection.build({ messages: [userEntry.message!] }, context);
+    assert.ok(userEntry.message);
+    const draft = await projection.build({ messages: [userEntry.message] }, context);
     const tail = draft.messages.find((item) => item.metadata?.contextBlocks);
     const injectedIds = ((tail?.metadata?.contextBlocks ?? []) as { itemIds?: string[] }[]).flatMap((item) => item.itemIds ?? []);
     assert.deepEqual(injectedIds, [hidden.id], "the exchange live in the prompt is not injected again");
@@ -603,7 +620,8 @@ describe("exchange steps (plan 209 Task 2)", () => {
     const h = fabricHarness();
     const archive = createExchangeArchive({ remember: h.fabric.remember, maxTextChars: 16_384, scope: "project" });
     const [pair] = exchangePairs(turn(toolRound(1, "bash", { command: "bun test" })));
-    await archive.pair(pair!, { sessionId: "s" });
+    assert.ok(pair);
+    await archive.pair(pair, { sessionId: "s" });
     assert.equal(await noteText(h, "migration"), "user: Run the migration please\n\nassistant: The migration is fixed.");
   });
 
@@ -615,8 +633,9 @@ describe("exchange steps (plan 209 Task 2)", () => {
       ...toolRound(3, "think", { depth: 3 }),
     ];
     const [pair] = exchangePairs(turn(rounds));
-    assert.deepEqual(pair!.between?.length, 6);
-    const report = await withSteps(h).pair(pair!, { sessionId: "s" });
+    assert.ok(pair);
+    assert.deepEqual(pair.between?.length, 6);
+    const report = await withSteps(h).pair(pair, { sessionId: "s" });
     assert.equal(report.archived, 1);
     assert.equal(report.stepsDropped, 0);
     const text = await noteText(h, "migration");
@@ -635,14 +654,16 @@ describe("exchange steps (plan 209 Task 2)", () => {
       toolRound(i + 1, "bash", { command: `echo ${i} ${long}` }, i === 0 ? { error: `boom ${long}\nsecond line` } : {}),
     ).flat();
     const [pair] = exchangePairs(turn(rounds));
-    await withSteps(h, { steps: { maxSteps: 3 } }).pair(pair!, { sessionId: "s" });
+    assert.ok(pair);
+    await withSteps(h, { steps: { maxSteps: 3 } }).pair(pair, { sessionId: "s" });
     const text = await noteText(h, "migration");
     const lines = text.slice(text.indexOf("## Steps")).split("\n").slice(1);
     assert.equal(lines.length, 4, "three steps and one collapsed line");
     assert.equal(lines.at(-1), "- … 27 more step(s)");
     assert.doesNotMatch(text, /second line/, "only the first error line");
-    assert.ok(lines[0]!.length < 120 + 200 + 80, "argument and error lines are clipped");
-    assert.match(lines[0]!, /→ error: boom x+… \(entry tr1\)/);
+    assert.ok(lines[0]);
+    assert.ok(lines[0].length < 120 + 200 + 80, "argument and error lines are clipped");
+    assert.match(lines[0], /→ error: boom x+… \(entry tr1\)/);
   });
 
   it("step_error_line_redacted_and_trust_scanned", async () => {
@@ -658,7 +679,8 @@ describe("exchange steps (plan 209 Task 2)", () => {
       },
     });
     const [pair] = exchangePairs(turn(rounds));
-    const report = await guarded.pair(pair!, { sessionId: "s" });
+    assert.ok(pair);
+    const report = await guarded.pair(pair, { sessionId: "s" });
     assert.equal(report.archived, 1, "an unsafe step never refuses the dialogue");
     assert.equal(report.stepsDropped, 2);
     const text = await noteText(h, "migration");
@@ -677,18 +699,21 @@ describe("exchange steps (plan 209 Task 2)", () => {
       ...toolRound(2, "edit", { path: "packages/memory/fabric/src/config.ts" }),
       ...toolRound(3, "bash", { command: "bun test packages/memory" }),
       entry("a1", "assistant", "Fixed: the parent directory is now created."),
-    ])[0]!;
+    ])[0];
+    assert.ok(fixedPair);
     const otherPair = exchangePairs([
       entry("u2", "user", "list the files"),
       ...toolRound(4, "bash", { command: "ls missing" }, { error: "ENOENT" }),
       ...toolRound(5, "bash", { command: "ls missing" }),
       entry("a2", "assistant", "Listed."),
-    ])[0]!;
+    ])[0];
+    assert.ok(otherPair);
     await archive.pair(fixedPair, { sessionId: "s" });
     await archive.pair(otherPair, { sessionId: "s" });
     const tags = async (id: string) => {
       const [record] = await h.memory.get([id]);
-      return parseMemoryNoteMetadata(record!.metadata)?.tags;
+      assert.ok(record);
+      return parseMemoryNoteMetadata(record.metadata)?.tags;
     };
     assert.deepEqual(await tags(exchangeNoteId("s", "u1", "a1", 0)), ["outcome:fixed"]);
     assert.equal(await tags(exchangeNoteId("s", "u2", "a2", 0)), undefined, "a command no outcome pattern matches is not tagged");
@@ -707,10 +732,12 @@ describe("exchange steps (plan 209 Task 2)", () => {
     const [pair] = exchangePairs(
       turn(toolRound(1, "bash", { command: "bun run migrate" }, { error: "ENOENT: no such file or directory, open 'schema.sql'" })),
     );
-    await withSteps(h).pair(pair!, { sessionId: "s" });
+    assert.ok(pair);
+    await withSteps(h).pair(pair, { sessionId: "s" });
     const hits = await h.fabric.recall("migrate failed ENOENT schema.sql", { kinds: ["exchange"], minSimilarity: 0 });
     assert.equal(hits.hits.length, 1);
-    assert.match(hits.hits[0]!.content, /ENOENT: no such file or directory, open 'schema\.sql'/);
+    assert.ok(hits.hits[0]);
+    assert.match(hits.hits[0].content, /ENOENT: no such file or directory, open 'schema\.sql'/);
   });
 
   it("steps_stay_inside_the_entry_limit_and_the_dialogue_stays_verbatim", async () => {
@@ -723,7 +750,8 @@ describe("exchange steps (plan 209 Task 2)", () => {
     });
     const reply = Array.from({ length: 120 }, (_, i) => `word${i}`).join("\n");
     const [pair] = exchangePairs(turn(toolRound(1, "bash", { command: "bun test" }, { error: "failed" }), reply));
-    const report = await archive.pair(pair!, { sessionId: "s" });
+    assert.ok(pair);
+    const report = await archive.pair(pair, { sessionId: "s" });
     assert.ok(report.parts >= 2, "a long reply still splits into linked parts");
     const hits = (await h.fabric.recall("word", { kinds: ["exchange"], topK: 8, minSimilarity: 0 })).hits;
     for (const hit of hits) assert.ok(hit.content.length <= 400, "every part fits the core limit");
@@ -755,8 +783,9 @@ describe("exchange steps (plan 209 Task 2)", () => {
     await session.run("Run the memory tests.");
     await waitFor(async () => (await exchangeFiles(root)).length > 0);
     const [file] = await exchangeFiles(root);
-    assert.match(file!.body, /## Steps\n- probe `bun test packages\/memory` → ok \(entry [\w-]+\)/);
-    assert.doesNotMatch(file!.body, /RESULT-BODY-NEVER-STORED/);
+    assert.ok(file);
+    assert.match(file.body, /## Steps\n- probe `bun test packages\/memory` → ok \(entry [\w-]+\)/);
+    assert.doesNotMatch(file.body, /RESULT-BODY-NEVER-STORED/);
     await session.close();
     await agent.dispose();
   });

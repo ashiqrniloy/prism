@@ -4,13 +4,8 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-core";
-import {
-  type CreateMemoryFabricOptions,
-  createMemory,
-  createLongTermMemory,
-  type MemoryFabricToolsOptions,
-} from "../../index.js";
+import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { type CreateMemoryFabricOptions, createMemory, createLongTermMemory, type MemoryFabricToolsOptions } from "../../index.js";
 import { createLongTermMemoryTools } from "../tools.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
@@ -86,7 +81,6 @@ describe("memory fabric tools", () => {
     assert.match(text(hit), /Cite \[id\] for notes you use\./);
     assert.equal((await memory.getEntry(note.id))?.lastAccessedAt, undefined);
   });
-
 
   it("recall_tool_has_no_time_window_or_order_parameters", () => {
     // Plan 210 Task 7 removed the timeline (resolved event dates, `from`/`to` windows and `order: "time"`) from the tool.
@@ -337,11 +331,7 @@ describe("memory fabric tools", () => {
 
     const defaults = await recall.execute({ query: "canary rollout" }, context());
     const defaultHits = (defaults.value as { hits: Array<{ id: string }> }).hits;
-    assert.deepEqual(
-      defaultHits.map((hit) => hit.id).sort(),
-      [fact.id, procedure.id].sort(),
-      "the tool default is every stored kind",
-    );
+    assert.deepEqual(defaultHits.map((hit) => hit.id).sort(), [fact.id, procedure.id].sort(), "the tool default is every stored kind");
     assert.equal(text(defaults).includes(fact.id), true);
     assert.equal(text(defaults).includes("[fact]"), true);
 

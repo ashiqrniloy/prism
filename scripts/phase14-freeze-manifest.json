@@ -20,7 +20,7 @@
       "new runtime dependencies",
       "native DashScope endpoints (X-DashScope-Async task submission/polling, /api/v1/services/* rerank/embedding services, file-extract uploads outside the OpenAI shape)",
       "async task polling for long-running generation",
-      "0.2.0 platform adapters: Bailian rerank/embeddings wired into @arnilo/prism-rag, OSS ArtifactBodyStore",
+      "0.2.0 platform adapters: Bailian rerank/embeddings wired into @arnilo/prism-knowledge/rag, OSS ArtifactBodyStore",
       "0.1.3 items: dead-code and deprecation hygiene (benchmark-runner prune, review-doc archive, unused-export sweep, checkpoint persistence)",
       "0.1.4 items: god-module split (agents.ts, contracts.ts)",
       "0.1.5 items: deprecated-option removal (breaking cut)",

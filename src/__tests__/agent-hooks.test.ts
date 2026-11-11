@@ -208,9 +208,11 @@ describe("agent hooks (4b wiring)", () => {
     // Plan 191 follow-up: a transform payload is often a bare value (messages, a request), so the
     // dispatch supplies the run identity; a handler can then key per-run state.
     const seen: { hook: string; sessionId: string; runId: string }[] = [];
-    const record = (hook: string) => (_value: unknown, context: { sessionId: string; runId: string }): void => {
-      seen.push({ hook, sessionId: context.sessionId, runId: context.runId });
-    };
+    const record =
+      (hook: string) =>
+      (_value: unknown, context: { sessionId: string; runId: string }): void => {
+        seen.push({ hook, sessionId: context.sessionId, runId: context.runId });
+      };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       packages: [providerPackage("test-provider", [textProvider()])],
@@ -240,10 +242,13 @@ describe("agent hooks (4b wiring)", () => {
     const session = await agent.session();
     const first = await session.run("Hi");
     const second = await session.run("Again");
-    assert.deepEqual(
-      [...new Set(seen.map((entry) => entry.hook))].sort(),
-      ["context.build", "message.append", "model.request", "model.response", "run.input"],
-    );
+    assert.deepEqual([...new Set(seen.map((entry) => entry.hook))].sort(), [
+      "context.build",
+      "message.append",
+      "model.request",
+      "model.response",
+      "run.input",
+    ]);
     for (const entry of seen) assert.equal(entry.sessionId, session.id, `${entry.hook} carries the session id`);
     assert.deepEqual(
       [...new Set(seen.map((entry) => entry.runId))].sort(),

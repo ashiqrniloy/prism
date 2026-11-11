@@ -1,17 +1,7 @@
-import {
-  type ModelProvider,
-  assembleProviderInput,
-  type ModelConfig,
-  type ProviderRequest,
-  type Usage,
-} from "@arnilo/prism";
-import {
-  cacheHitRate,
-  cacheSavings,
-  cacheUsageReport,
-} from "@arnilo/prism/provider-kit";
-import { createHyperProvider, defineHyperModel } from "@arnilo/prism-provider-hyper";
-import { createOpenCodeGoProvider, defineOpenCodeGoModel } from "@arnilo/prism-provider-opencode-go";
+import { type ModelProvider, assembleProviderInput, type ModelConfig, type ProviderRequest, type Usage } from "@arnilo/prism";
+import { cacheHitRate, cacheSavings, cacheUsageReport } from "@arnilo/prism/provider-kit";
+import { createHyperProvider, defineHyperModel } from "@arnilo/prism-ai/hyper";
+import { createOpenCodeGoProvider, defineOpenCodeGoModel } from "@arnilo/prism-ai/opencode-go";
 
 const explicitCacheModel = defineHyperModel({
   model: "claude-sonnet-4",

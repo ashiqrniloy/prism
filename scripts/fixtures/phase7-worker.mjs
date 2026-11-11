@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Pool } from "pg";
-import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
+import { createPostgresPersistence } from "@arnilo/prism-extensions/store-postgres";
 
 const command = process.argv[2];
 const encoded = process.env.PRISM_PHASE7_WORKER_INPUT;

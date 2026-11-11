@@ -18,7 +18,7 @@ export interface ToolsOpenapiSpecConfig {
   readonly exclude?: readonly string[];
 }
 
-/** Validated `packageConfig` for `@arnilo/prism-tools-openapi`. */
+/** Validated `packageConfig` for `@arnilo/prism-tools/openapi`. */
 export interface ToolsOpenapiConfig {
   /** Required; an empty list registers nothing and notes why. */
   readonly specs?: readonly ToolsOpenapiSpecConfig[];

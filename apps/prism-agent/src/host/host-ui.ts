@@ -1,6 +1,6 @@
 import type { HostUi, HostUiRequestKind, OwnershipScope } from "@arnilo/prism";
-import { policyDefault, type ResumeAuthority, type RoutedHostUi, routeHostUi } from "@arnilo/prism-headless";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
+import { policyDefault, type ResumeAuthority, type RoutedHostUi, routeHostUi } from "@arnilo/prism-hosts/headless";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
 
 /**
  * The attached client answers every human request the kernel can raise. `secret` is not here:

@@ -14,7 +14,10 @@ describe("research citation check", () => {
       await run.session.run("report");
       assert.equal(run.turns(), 2);
       assert.deepEqual(await verify(run), { verdict: "passed", unresolved: [], ledgerSize: 1 });
-      assert.equal(run.events.some((event) => event.type === "package.event" && event.name === "research.citations.unresolved"), false);
+      assert.equal(
+        run.events.some((event) => event.type === "package.event" && event.name === "research.citations.unresolved"),
+        false,
+      );
     } finally {
       await run.dispose();
     }

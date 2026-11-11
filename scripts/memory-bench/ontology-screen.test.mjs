@@ -58,10 +58,15 @@ test("screen_jobs_pair_every_ontology_arm_with_its_base_on_the_same_cohort", () 
   assert.equal(of("beamfree").length, 6, "the third model reads P against P+O on three suites");
   assert.equal(of("large").length, 6, "the large model reads P against P+O only; its trigger-policy arms moved to the series model");
   // The series model (Muse 1.2 Contributor, paid, gate amendment 11) runs the six trigger-policy arms and nothing else.
-  assert.ok(of("muse").every((job) => job.provider === "commandcode" && job.model === SCREEN208_SERIES_MODEL.model && !job.freeOnly && job.warmup));
+  assert.ok(
+    of("muse").every((job) => job.provider === "commandcode" && job.model === SCREEN208_SERIES_MODEL.model && !job.freeOnly && job.warmup),
+  );
   assert.equal(of("muse").length, 6);
   assert.equal(jobs.length, 24);
-  assert.ok(jobs.filter((job) => !job.warmup).every((job) => job.interleaveAbilities), "any prefix is a balanced slice");
+  assert.ok(
+    jobs.filter((job) => !job.warmup).every((job) => job.interleaveAbilities),
+    "any prefix is a balanced slice",
+  );
   for (const model of SCREEN208_PAIRED_MODELS)
     for (const suite of SCREEN208_SUITES) {
       const base = jobs.find((job) => job.id === `208-screen.${model.key}.P.${suite}`);
@@ -120,7 +125,10 @@ test("gate_is_bound_to_the_manifest_hash_and_free_kilo_or_an_owner_capped_paid_m
   assert.equal(assertScreen208Gate(gate, manifest), gate);
   // The paid model runs only under an owner amendment with a positive USD cap; a non-Kilo free model only when named.
   assert.throws(() => assertScreen208Gate({ ...gate, amendments: [gate.amendments[1]] }, manifest), /owner-capped paid model/);
-  assert.throws(() => assertScreen208Gate({ ...gate, amendments: [gate.amendments[0], gate.amendments[2]] }, manifest), /beamfree.*owner-named free model/);
+  assert.throws(
+    () => assertScreen208Gate({ ...gate, amendments: [gate.amendments[0], gate.amendments[2]] }, manifest),
+    /beamfree.*owner-named free model/,
+  );
   assert.throws(
     () =>
       assertScreen208Gate(
@@ -131,10 +139,24 @@ test("gate_is_bound_to_the_manifest_hash_and_free_kilo_or_an_owner_capped_paid_m
   );
   // "No cap" must be stated outright: a Muse amendment with neither a USD cap nor `uncapped: true` refuses.
   assert.throws(
-    () => assertScreen208Gate({ ...gate, amendments: [gate.amendments[0], gate.amendments[1], { by: "owner", paidAnswer: { ref: "commandcode/meta/muse-spark-1.2-contributor" } }] }, manifest),
+    () =>
+      assertScreen208Gate(
+        {
+          ...gate,
+          amendments: [
+            gate.amendments[0],
+            gate.amendments[1],
+            { by: "owner", paidAnswer: { ref: "commandcode/meta/muse-spark-1.2-contributor" } },
+          ],
+        },
+        manifest,
+      ),
     /(small|muse)\..*owner-capped paid model/,
   );
-  assert.throws(() => assertScreen208Gate({ ...gate, amendments: [gate.amendments[0], gate.amendments[1]] }, manifest), /(small|muse)\..*owner-capped paid model/);
+  assert.throws(
+    () => assertScreen208Gate({ ...gate, amendments: [gate.amendments[0], gate.amendments[1]] }, manifest),
+    /(small|muse)\..*owner-capped paid model/,
+  );
   assert.throws(() => assertScreen208Gate(undefined, manifest), /no gate record/);
   assert.throws(() => assertScreen208Gate({ ...gate, approved: false }, manifest), /not approved/);
   assert.throws(() => assertScreen208Gate({ ...gate, approvedBy: "agent" }, manifest), /not approved by the owner/);
@@ -145,7 +167,11 @@ test("gate_is_bound_to_the_manifest_hash_and_free_kilo_or_an_owner_capped_paid_m
     /not a free Kilo job/,
   );
   assert.throws(
-    () => assertScreen208Gate(gate, { ...manifest, jobs: [{ ...manifest.jobs[0], provider: "commandcode", model: "Qwen/Qwen3.8-Max", freeOnly: false }] }),
+    () =>
+      assertScreen208Gate(gate, {
+        ...manifest,
+        jobs: [{ ...manifest.jobs[0], provider: "commandcode", model: "Qwen/Qwen3.8-Max", freeOnly: false }],
+      }),
     /owner-capped paid model/,
     "only the named paid model may run paid",
   );
@@ -185,7 +211,10 @@ test("preflight_checks_each_provider_catalog_for_the_models_a_worker_runs", asyn
   const large = manifest.jobs.filter((job) => job.model === SCREEN208_MODELS[0].model);
   const free = (id) => ({ id, pricing: { prompt: "0", completion: "0" }, supported_parameters: ["tools"] });
   const commandcode = {
-    catalog: ["stealth/glyph-cluster:free", "stealth/crouton-alpha", "Qwen/Qwen3.7-Flash", "meta/muse-spark-1.2-contributor"].map((id) => ({ id, supported_endpoints: ["/chat/completions"] })),
+    catalog: ["stealth/glyph-cluster:free", "stealth/crouton-alpha", "Qwen/Qwen3.7-Flash", "meta/muse-spark-1.2-contributor"].map((id) => ({
+      id,
+      supported_endpoints: ["/chat/completions"],
+    })),
   };
   // A worker is checked for its own models only: a large-only worker never reads the other catalogs.
   const ok = await preflightScreen208({ ...manifest, jobs: large }, { catalog: [free(SCREEN208_MODELS[0].model)], commandcode });
@@ -198,10 +227,7 @@ test("preflight_checks_each_provider_catalog_for_the_models_a_worker_runs", asyn
     manifest.models.judges,
     "the judges are checked in Command Code's catalog",
   );
-  await assert.rejects(
-    preflightScreen208({ ...manifest, jobs: large }, { catalog: [], commandcode }),
-    /not in the Kilo catalog/,
-  );
+  await assert.rejects(preflightScreen208({ ...manifest, jobs: large }, { catalog: [], commandcode }), /not in the Kilo catalog/);
   await assert.rejects(
     preflightScreen208(manifest, { catalog: [free(SCREEN208_MODELS[0].model)], commandcode, opencodeGo: { catalog: [] } }),
     /not in the OpenCode Go catalog/,
@@ -215,7 +241,10 @@ test("preflight_checks_each_provider_catalog_for_the_models_a_worker_runs", asyn
     /neither free nor a named paid answer model/,
   );
   await assert.rejects(
-    preflightScreen208({ ...manifest, jobs: large }, { catalog: [free(SCREEN208_MODELS[0].model)], commandcode: { catalog: commandcode.catalog.slice(1) } }),
+    preflightScreen208(
+      { ...manifest, jobs: large },
+      { catalog: [free(SCREEN208_MODELS[0].model)], commandcode: { catalog: commandcode.catalog.slice(1) } },
+    ),
     /glyph-cluster:free is not in the Command Code catalog/,
   );
   // OpenCode Go: the row must exist, be priced at zero and take tools.
@@ -229,9 +258,18 @@ test("preflight_checks_each_provider_catalog_for_the_models_a_worker_runs", asyn
   const go = manifest.jobs.filter((job) => job.provider === "opencode-go");
   const goOk = await preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [goRow(0)] } });
   assert.deepEqual(goOk.opencodeGo, [{ ref: "opencode-go/beam-free", contextWindow: 1048576, canonical: "reflection/beam-1.0-501b-a23b" }]);
-  await assert.rejects(preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [goRow(0.2)] } }), /not priced at zero/);
-  await assert.rejects(preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [goRow(0, false)] } }), /takes no tools/);
-  await assert.rejects(preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [] } }), /not in the OpenCode Go catalog/);
+  await assert.rejects(
+    preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [goRow(0.2)] } }),
+    /not priced at zero/,
+  );
+  await assert.rejects(
+    preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [goRow(0, false)] } }),
+    /takes no tools/,
+  );
+  await assert.rejects(
+    preflightScreen208({ ...manifest, jobs: go }, { commandcode, opencodeGo: { catalog: [] } }),
+    /not in the OpenCode Go catalog/,
+  );
 });
 
 test("route_override_moves_only_the_jobs_an_owner_amendment_names", async () => {
@@ -285,14 +323,19 @@ test("quick_read_runs_a_balanced_prefix_of_each_job_in_its_own_journal", async (
 test("the command_code_judge_panel_passes_the_family_rule_for_every_answer_model", () => {
   assert.deepEqual([...SCREEN208_JUDGES].map(judgeFamily), ["glyph", "crouton"]);
   for (const model of SCREEN208_MODELS)
-    assert.deepEqual(resolveJudgePanel({ judges: [...SCREEN208_JUDGES], answerModel: `${model.provider}/${model.model}` }).refs, [...SCREEN208_JUDGES]);
+    assert.deepEqual(resolveJudgePanel({ judges: [...SCREEN208_JUDGES], answerModel: `${model.provider}/${model.model}` }).refs, [
+      ...SCREEN208_JUDGES,
+    ]);
 });
 
 test("a_slow_model_gets_its_own_ontology_settle_bound_on_its_p_plus_o_jobs_only", () => {
   const jobs = screen208Jobs();
   const bound = (job) => job.ontologySettleMs;
   assert.ok(jobs.filter((job) => job.id.startsWith("208-screen.beamfree.") && job.ontology).every((job) => bound(job) === 600_000));
-  assert.ok(jobs.filter((job) => !(job.id.startsWith("208-screen.beamfree.") && job.ontology)).every((job) => bound(job) === undefined), "every other job keeps the default");
+  assert.ok(
+    jobs.filter((job) => !(job.id.startsWith("208-screen.beamfree.") && job.ontology)).every((job) => bound(job) === undefined),
+    "every other job keeps the default",
+  );
   const job = jobs.find((item) => item.id === "208-screen.beamfree.P+O.locomo");
   const options = parseArgs(ontologyJobArgs(job));
   assert.equal(options.ontologySettleMs, 600_000);
@@ -301,7 +344,10 @@ test("a_slow_model_gets_its_own_ontology_settle_bound_on_its_p_plus_o_jobs_only"
 
 test("a_slot_can_run_one_suite_on_another_model_without_changing_its_ids_or_pairing", () => {
   const jobs = screen208Jobs().filter((job) => job.id.startsWith("208-screen.small.") && job.suite === "memoryagentbench-cr");
-  assert.deepEqual(jobs.map((job) => job.id).sort(), ["208-screen.small.P+O.memoryagentbench-cr", "208-screen.small.P.memoryagentbench-cr"]);
+  assert.deepEqual(jobs.map((job) => job.id).sort(), [
+    "208-screen.small.P+O.memoryagentbench-cr",
+    "208-screen.small.P.memoryagentbench-cr",
+  ]);
   assert.ok(jobs.every((job) => job.model === "meta/muse-spark-1.2-contributor" && job.provider === "commandcode" && !job.freeOnly));
   assert.equal(jobs[0].answersDir.includes("/small/"), true, "caches stay the slot's");
   assert.equal(new Set(jobs.map((job) => `${job.provider}/${job.model}`)).size, 1, "both arms of the pair share the model");

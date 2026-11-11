@@ -17,14 +17,15 @@
 //     generates identifiers from node:crypto, not Math.random.
 //   F (alert 56, clear-text-logging): the DR drill never prints raw
 //     error.message/stack on a password-handling path.
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
-import { describe, it } from "bun:test";
 import { trimTrailingSlashes } from "@arnilo/prism";
 import { sanitizeCacheKey } from "@arnilo/prism/provider-kit";
-import { htmlParser, pdfParser } from "@arnilo/prism-rag";
-import { parseCodingPlanTodos } from "@arnilo/prism-tools-coding";
+import { htmlParser, pdfParser } from "@arnilo/prism-knowledge/rag";
+import { parseCodingPlanTodos } from "@arnilo/prism-tools/coding";
 
 describe("phase38 codeql regressions", () => {
   it("trimTrailingSlashes matches replace semantics and is linear on hostile input", () => {
@@ -41,11 +42,11 @@ describe("phase38 codeql regressions", () => {
     assert.equal(trimTrailingSlashes(hostile), "");
     assert.ok(performance.now() - started < 250, `trim must be linear, took ${performance.now() - started}ms`);
     // No regex evaluation path exists in the implementation.
-    const compiled = readFileSync("dist/trim-trailing-slashes.js", "utf8")
+    const source = readFileSync("src/trim-trailing-slashes.ts", "utf8")
       .split("\n")
       .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*") && !l.trim().startsWith("/*"))
       .join("\n");
-    assert.ok(!compiled.includes("replace("), "compiled primitive must not call String.replace");
+    assert.ok(!source.includes("replace("), "published primitive must not call String.replace");
   });
 
   it("sanitizeCacheKey keeps allowlist + bound semantics with index/slice edge trim", () => {

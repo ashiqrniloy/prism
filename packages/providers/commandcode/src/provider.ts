@@ -5,7 +5,6 @@ import {
   providerHttpError,
   type RoutedProviderRoute,
   readRetryAfterMs,
-  resolveThinkingObject,
   sanitizeCacheKey,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";

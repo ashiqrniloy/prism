@@ -22,10 +22,10 @@ import {
   type MemoryVectorMetadataRow,
   redactJson,
   type VectorScanMetadataQuery,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { memoryWriteVersion } from "../directory.js";
 import { isActiveNote, normalizeNoteStatus, type StorageWeights, storageStrength } from "../lifecycle/index.js";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import {
   isMemoryNoteValidAt,
   type MemoryFabricRememberInput,

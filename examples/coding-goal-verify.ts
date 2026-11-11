@@ -2,14 +2,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSecretRedactor, type JsonObject } from "@arnilo/prism";
-import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
+import { createMemoryCheckpointStore, createWorkflowCheckpoints } from "@arnilo/prism-extensions/workflows";
 import {
   CODING_GOAL_VERIFY_SUSPEND_REASON,
   type CodingCheckSummary,
   type CodingHandoffSummary,
   runCodingGoalVerify,
-} from "@arnilo/prism-tools-coding";
-import { createWorkflowCheckpoints } from "@arnilo/prism-workflows";
+} from "@arnilo/prism-tools/coding";
 
 /**
  * Network-free goal→verify composition.

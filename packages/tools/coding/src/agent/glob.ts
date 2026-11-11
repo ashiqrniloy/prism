@@ -1,12 +1,7 @@
 /**
  * `glob` tool: bounded native pattern file finder.
  */
-import type {
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { HARD_MAX_REPO_DEPTH, HARD_MAX_REPO_RESULTS, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";

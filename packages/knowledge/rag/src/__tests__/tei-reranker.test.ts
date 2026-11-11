@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { chunkText, createTeiReranker, RagLimitError, RagValidationError, replaceSource, retrieveContext } from "../index.js";
 import { readBody, reliefHit, withRerankServer } from "./rerank-fixtures.js";
 

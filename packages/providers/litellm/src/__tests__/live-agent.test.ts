@@ -24,7 +24,7 @@ const skip = await unreachableReason();
 const PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAS0lEQVR42u3PQQkAAAgAsetfWiP4FgYrsKZeS0BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEDgsqnc8OJg6Ln3AAAAAElFTkSuQmCC";
 
-describe("@arnilo/prism-provider-litellm live agent kernel smoke", () => {
+describe("@arnilo/prism-ai/litellm live agent kernel smoke", () => {
   it.skipIf(skip !== false)(
     "live_agent_multi_turn_tool_session_and_telemetry",
     async () => {
@@ -85,9 +85,7 @@ describe("@arnilo/prism-provider-litellm live agent kernel smoke", () => {
       await pump;
 
       // Filter turn.completed events that carry usage
-      const turnCompletedEvents = collectedEvents.filter(
-        (event) => event.type === "turn.completed" && event.usage !== undefined,
-      );
+      const turnCompletedEvents = collectedEvents.filter((event) => event.type === "turn.completed" && event.usage !== undefined);
       assert.ok(turnCompletedEvents.length >= 2, `expected at least 2 turn.completed events, got ${turnCompletedEvents.length}`);
 
       for (const event of turnCompletedEvents) {

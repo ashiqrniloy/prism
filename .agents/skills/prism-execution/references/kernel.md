@@ -22,7 +22,7 @@ The core of `@arnilo/prism`: `createAgent`, `Agent`, `Session`, the loop slot, `
 - Hooks: `src/hooks/catalog.ts` (the frozen catalog), `src/hooks/bus.ts` (`createHookBus`), `src/hooks/{types,emit,errors,ask}.ts`.
 - Slots: `src/slots/{registry,defaults,types}.ts` (`loop`, `compaction`, `store`, `credentials`).
 - Host port: `src/host/types.ts` (`HostPort`, `HostUi`).
-- Limits and durability: `src/run-limits.ts`, `src/agent-run-state.ts`, `src/agent-run-restore.ts`, `src/suspended-run.ts`, `src/agent-approval.ts`. The guardrail stage runner stays in the kernel (`src/guardrails.ts`); packs live in `@arnilo/prism-guardrail-packs`.
+- Limits and durability: `src/run-limits.ts`, `src/agent-run-state.ts`, `src/agent-run-restore.ts`, `src/suspended-run.ts`, `src/agent-approval.ts`. The guardrail stage runner stays in the kernel (`src/guardrails.ts`); packs live in `@arnilo/prism-extensions/guardrail-packs`.
 - Current docs: [agent.md](../../../../docs/agent.md), [loop.md](../../../../docs/loop.md), [hooks.md](../../../../docs/hooks.md), [events.md](../../../../docs/events.md), [slots.md](../../../../docs/slots.md), [host.md](../../../../docs/host.md).
 
 ## Graft queries

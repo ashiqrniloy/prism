@@ -23,7 +23,7 @@
 
 ### Security
 
-- **Obscura fetches are gated on a binary that guards its own redirects (plan 193 Task 4).** Setup probes `obscura --version` once (one bounded child process, 5 s wall clock) and parses the leading semver. Versions below **0.1.8** — the first release whose HTTP client re-validates each `Location` and resolves through `SsrfGuardResolver` — plus source builds (`0.2.5-dev+<sha>`), unparseable output, and probe failures all fail closed: the package registers `web_search` only, provides `web_fetch` and the `web.fetch` service from the keyless native backend (which re-checks every hop), and writes one `warn` status note naming the probed version. A blocked or hanging `--version` is a fallback, not a package failure. No new config field, no new dependency, and no `@arnilo/prism-tools-browser` attestation type. Tests also pin that the runner never passes `--allow-private-network` and never inherits `OBSCURA_ALLOW_PRIVATE_NETWORK`/`OBSCURA_PROXY` from the host env.
+- **Obscura fetches are gated on a binary that guards its own redirects (plan 193 Task 4).** Setup probes `obscura --version` once (one bounded child process, 5 s wall clock) and parses the leading semver. Versions below **0.1.8** — the first release whose HTTP client re-validates each `Location` and resolves through `SsrfGuardResolver` — plus source builds (`0.2.5-dev+<sha>`), unparseable output, and probe failures all fail closed: the package registers `web_search` only, provides `web_fetch` and the `web.fetch` service from the keyless native backend (which re-checks every hop), and writes one `warn` status note naming the probed version. A blocked or hanging `--version` is a fallback, not a package failure. No new config field, no new dependency, and no `@arnilo/prism-tools/browser` attestation type. Tests also pin that the runner never passes `--allow-private-network` and never inherits `OBSCURA_ALLOW_PRIVATE_NETWORK`/`OBSCURA_PROXY` from the host env.
 
 ### Changed
 
@@ -45,7 +45,7 @@
 
 ### Added
 
-- `@arnilo/prism-tools-web` (plan 155 Task 2): the web search and fetch code moved out of
+- `@arnilo/prism-tools/web` (plan 155 Task 2): the web search and fetch code moved out of
   `@arnilo/prism-web-tools` (root, `./brave`, `./exa`, `./firecrawl`, `./obscura`) into a
   source-exported package on the lockstep line. The default export is a `definePackage` definition
   whose `setup` registers `web_search` and `web_fetch` (plus the native Obscura tools when
@@ -74,14 +74,14 @@
 
 ### Security
 
-- **Obscura fetches are gated on a binary that guards its own redirects (plan 193 Task 4).** Setup probes `obscura --version` once (one bounded child process, 5 s wall clock) and parses the leading semver. Versions below **0.1.8** — the first release whose HTTP client re-validates each `Location` and resolves through `SsrfGuardResolver` — plus source builds (`0.2.5-dev+<sha>`), unparseable output, and probe failures all fail closed: the package registers `web_search` only, provides `web_fetch` and the `web.fetch` service from the keyless native backend (which re-checks every hop), and writes one `warn` status note naming the probed version. A blocked or hanging `--version` is a fallback, not a package failure. No new config field, no new dependency, and no `@arnilo/prism-tools-browser` attestation type. Tests also pin that the runner never passes `--allow-private-network` and never inherits `OBSCURA_ALLOW_PRIVATE_NETWORK`/`OBSCURA_PROXY` from the host env.
+- **Obscura fetches are gated on a binary that guards its own redirects (plan 193 Task 4).** Setup probes `obscura --version` once (one bounded child process, 5 s wall clock) and parses the leading semver. Versions below **0.1.8** — the first release whose HTTP client re-validates each `Location` and resolves through `SsrfGuardResolver` — plus source builds (`0.2.5-dev+<sha>`), unparseable output, and probe failures all fail closed: the package registers `web_search` only, provides `web_fetch` and the `web.fetch` service from the keyless native backend (which re-checks every hop), and writes one `warn` status note naming the probed version. A blocked or hanging `--version` is a fallback, not a package failure. No new config field, no new dependency, and no `@arnilo/prism-tools/browser` attestation type. Tests also pin that the runner never passes `--allow-private-network` and never inherits `OBSCURA_ALLOW_PRIVATE_NETWORK`/`OBSCURA_PROXY` from the host env.
 
 ### Changed
 
 - **`toolsWeb({ backend: "brave", apiKey })` now registers `web_fetch`.** `fetch.backend` defaults to `"native"` (keyless) instead of `"firecrawl"`, so a search-only key no longer leaves the agent unable to read its results; `fetch: { backend: "firecrawl", apiKey }` keeps the previous behavior. `backend` also accepts `"native"` for a fetch-only package with no key at all. `WebProvider` gains `"native"`, `WebFetchAdapter.provider` is `"firecrawl" | "native"`, and `WebDocument` gains `redirects`.
 
-- The `@arnilo/prism-mcp` import in the Obscura MCP bridge is now dynamic, so importing the package
-  loads neither `playwright-core` nor `@arnilo/prism-mcp`. The Obscura CDP composition uses a local
+- The `@arnilo/prism-extensions/mcp` import in the Obscura MCP bridge is now dynamic, so importing the package
+  loads neither `playwright-core` nor `@arnilo/prism-extensions/mcp`. The Obscura CDP composition uses a local
   structural Playwright type instead of the browser package's types.
 
 ## [0.1.0] - 2026-08-09

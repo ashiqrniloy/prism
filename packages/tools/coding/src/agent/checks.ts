@@ -6,12 +6,7 @@ import { type ChildProcessByStdio, spawn } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { Readable } from "node:stream";
-import type {
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { Semaphore } from "../security/semaphore.js";
 import { CODING_UNSUPPORTED_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";

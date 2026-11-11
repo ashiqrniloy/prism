@@ -122,7 +122,9 @@ it("cache_levers_match_pi_commandcode: chat", async () => {
   assert.equal(fixture.turnMessageCounts.length, pi.length);
 
   for (const [index, body] of bodies.entries()) {
-    const expected = pi[index]!.body;
+    const referenceRequest = pi[index];
+    assert.ok(referenceRequest);
+    const expected = referenceRequest.body;
     // The Chat wire has no cache lever: neither harness sends a cache field or marker.
     for (const name of ["prompt_cache_key", "prompt_cache_retention", "store"]) {
       assert.equal(body[name], undefined, `turn ${index + 1}: Prism sent ${name}`);
@@ -134,7 +136,8 @@ it("cache_levers_match_pi_commandcode: chat", async () => {
   // The cached prefix cannot move: system, tools and every earlier message stay byte-identical.
   for (const [index, body] of bodies.entries()) {
     if (index === 0) continue;
-    const previous = bodies[index - 1]!;
+    const previous = bodies[index - 1];
+    assert.ok(previous);
     assert.equal(
       stableJson((body.messages as JsonObject[])[0]),
       stableJson((previous.messages as JsonObject[])[0]),
@@ -150,11 +153,27 @@ it("cache_levers_match_pi_commandcode: chat", async () => {
   }
 
   // Cross-harness: the shared prompt text and tool definitions are the same bytes.
-  assert.equal((bodies[0]!.messages as JsonObject[])[0]!.content, (pi[0]!.body.messages as JsonObject[])[0]!.content);
-  const prompt = (bodies[2]!.messages as JsonObject[])[1]!.content;
+  const [firstBody, , thirdBody] = bodies;
+  const [firstReference, , thirdReference] = pi;
+  assert.ok(firstBody);
+  assert.ok(thirdBody);
+  assert.ok(firstReference);
+  assert.ok(thirdReference);
+  const [system] = firstBody.messages as JsonObject[];
+  const [referenceSystem] = firstReference.body.messages as JsonObject[];
+  assert.ok(system);
+  assert.ok(referenceSystem);
+  assert.equal(system.content, referenceSystem.content);
+  const [, userMessage] = thirdBody.messages as JsonObject[];
+  const [, referenceUser] = thirdReference.body.messages as JsonObject[];
+  assert.ok(userMessage);
+  assert.ok(referenceUser);
+  const prompt = userMessage.content;
   assert.equal(typeof prompt, "string");
-  assert.equal(prompt, ((pi[2]!.body.messages as JsonObject[])[1]!.content as JsonObject[])[0]!.text);
-  assert.deepEqual(normalizedTools(bodies[2]!.tools), normalizedTools(pi[2]!.body.tools));
+  const [referencePrompt] = referenceUser.content as JsonObject[];
+  assert.ok(referencePrompt);
+  assert.equal(prompt, referencePrompt.text);
+  assert.deepEqual(normalizedTools(thirdBody.tools), normalizedTools(thirdReference.body.tools));
 });
 
 it("cache_levers_match_pi_commandcode: responses", async () => {
@@ -163,26 +182,33 @@ it("cache_levers_match_pi_commandcode: responses", async () => {
   assert.equal(bodies.length, pi.length);
 
   for (const [index, body] of bodies.entries()) {
-    const expected = pi[index]!.body;
+    const referenceRequest = pi[index];
+    assert.ok(referenceRequest);
+    const expected = referenceRequest.body;
     // Explicit-cache pricing: same key, same store flag, same include list, same affinity header.
     assert.equal(body.prompt_cache_key, SESSION, `turn ${index + 1}: prompt_cache_key`);
     assert.equal(body.prompt_cache_key, expected.prompt_cache_key, `turn ${index + 1}: prompt_cache_key vs reference`);
     assert.equal(body.store, false, `turn ${index + 1}: store`);
     assert.equal(body.store, expected.store, `turn ${index + 1}: store vs reference`);
     assert.deepEqual(body.include, expected.include, `turn ${index + 1}: include`);
-    assert.equal(headers[index]!.get("x-client-request-id") ?? undefined, SESSION, `turn ${index + 1}: affinity header`);
+    const requestHeaders = headers[index];
+    assert.ok(requestHeaders);
+    assert.equal(requestHeaders.get("x-client-request-id") ?? undefined, SESSION, `turn ${index + 1}: affinity header`);
     assert.equal(
-      headers[index]!.get("x-client-request-id") ?? undefined,
-      pi[index]!.headers["x-client-request-id"],
+      requestHeaders.get("x-client-request-id") ?? undefined,
+      referenceRequest.headers["x-client-request-id"],
       `turn ${index + 1}: affinity header vs reference`,
     );
     // The prompt sits in `instructions` on both wires (the reference fixture keeps it as input[0]).
-    assert.equal(body.instructions, (expected.input as JsonObject[])[0]!.content, `turn ${index + 1}: instructions text`);
+    const [referenceInstructions] = expected.input as JsonObject[];
+    assert.ok(referenceInstructions);
+    assert.equal(body.instructions, referenceInstructions.content, `turn ${index + 1}: instructions text`);
   }
 
   for (const [index, body] of bodies.entries()) {
     if (index === 0) continue;
-    const previous = bodies[index - 1]!;
+    const previous = bodies[index - 1];
+    assert.ok(previous);
     assert.equal(body.instructions, previous.instructions, `instructions changed on turn ${index + 1}`);
     assert.equal(stableJson(body.tools), stableJson(previous.tools), `tools changed on turn ${index + 1}`);
     const prior = previous.input as JsonObject[];
@@ -194,11 +220,17 @@ it("cache_levers_match_pi_commandcode: responses", async () => {
   }
 
   // The 104-character session id keeps the 64-character key and the full affinity header, as the reference does.
-  const long = "cache-parity-".padEnd(103, "x") + "-long";
+  const long = `${"cache-parity-".padEnd(103, "x")}-long`;
   const clamped = await capture("responses", long);
-  assert.equal((clamped.bodies[0]!.prompt_cache_key as string).length, 64);
-  assert.equal(clamped.headers[0]!.get("x-client-request-id"), long);
-  assert.deepEqual(clamped.bodies[0]!.include, ["reasoning.encrypted_content"]);
+  const [clampedBody] = clamped.bodies;
+  const [clampedHeaders] = clamped.headers;
+  assert.ok(clampedBody);
+  assert.ok(clampedHeaders);
+  const cacheKey = clampedBody.prompt_cache_key;
+  assert.ok(typeof cacheKey === "string");
+  assert.equal(cacheKey.length, 64);
+  assert.equal(clampedHeaders.get("x-client-request-id"), long);
+  assert.deepEqual(clampedBody.include, ["reasoning.encrypted_content"]);
 });
 
 it("cache_levers_match_pi_commandcode: messages", async () => {
@@ -216,12 +248,16 @@ it("cache_levers_match_pi_commandcode: messages", async () => {
   };
 
   for (const [index, body] of bodies.entries()) {
-    const expected = pi[index]!.body;
+    const referenceRequest = pi[index];
+    assert.ok(referenceRequest);
+    const expected = referenceRequest.body;
     // Explicit cache: the system prompt and the last message carry one ephemeral marker each,
     // earlier messages and tool definitions carry none, and no TTL is requested.
     assert.deepEqual(markers(body), markers(expected), `turn ${index + 1}: cache_control placement`);
-    const last = (body.messages as JsonObject[]).at(-1)!;
-    const lastBlock = (last.content as JsonObject[]).at(-1)!;
+    const last = (body.messages as JsonObject[]).at(-1);
+    assert.ok(last);
+    const lastBlock = (last.content as JsonObject[]).at(-1);
+    assert.ok(lastBlock);
     assert.deepEqual(markers(body), ["system:text", `message:${(body.messages as JsonObject[]).length - 1}:${String(lastBlock.type)}`]);
     assert.equal(stableJson(body).includes('"ttl"'), false, `turn ${index + 1}: ttl`);
     for (const name of ["prompt_cache_key", "store"]) assert.equal(body[name], undefined, `turn ${index + 1}: ${name}`);
@@ -232,7 +268,8 @@ it("cache_levers_match_pi_commandcode: messages", async () => {
 
   for (const [index, body] of bodies.entries()) {
     if (index === 0) continue;
-    const previous = bodies[index - 1]!;
+    const previous = bodies[index - 1];
+    assert.ok(previous);
     assert.equal(stableJson(body.system), stableJson(previous.system), `system changed on turn ${index + 1}`);
     assert.equal(stableJson(body.tools), stableJson(previous.tools), `tools changed on turn ${index + 1}`);
     const prior = previous.messages as JsonObject[];
@@ -244,6 +281,14 @@ it("cache_levers_match_pi_commandcode: messages", async () => {
   }
 
   // Cross-harness: the stable system prompt and tools are the same content.
-  assert.equal(((bodies[0]!.system as JsonObject[])[0]! as JsonObject).text, ((pi[0]!.body.system as JsonObject[])[0]! as JsonObject).text);
-  assert.deepEqual(normalizedTools(bodies[0]!.tools), normalizedTools(pi[0]!.body.tools));
+  const [firstBody] = bodies;
+  const [firstReference] = pi;
+  assert.ok(firstBody);
+  assert.ok(firstReference);
+  const [system] = firstBody.system as JsonObject[];
+  const [referenceSystem] = firstReference.body.system as JsonObject[];
+  assert.ok(system);
+  assert.ok(referenceSystem);
+  assert.equal(system.text, referenceSystem.text);
+  assert.deepEqual(normalizedTools(firstBody.tools), normalizedTools(firstReference.body.tools));
 });

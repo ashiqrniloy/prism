@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Agent, OwnershipScope } from "@arnilo/prism";
-import { createScheduler, HeadlessError, type Scheduler, type SchedulerClock, type SchedulerTarget } from "@arnilo/prism-headless";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createScheduler, HeadlessError, type Scheduler, type SchedulerClock, type SchedulerTarget } from "@arnilo/prism-hosts/headless";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import type { HostConfig } from "./config.js";
 
 /** Scheduler and target agents share one scope; the scheduler refuses a target in another. */

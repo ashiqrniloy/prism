@@ -11,7 +11,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { RuntimeAgentSession } from "../agent-session/session.js";
-import { type AgentEvent, type ModelProvider, createAgent, providerDone, providerTextDelta, createMemorySessionStore, SubscriberOverflowError } from "../index.js";
+import {
+  type AgentEvent,
+  type ModelProvider,
+  createAgent,
+  providerDone,
+  providerTextDelta,
+  createMemorySessionStore,
+  SubscriberOverflowError,
+} from "../index.js";
 import { mockProvider, createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -162,7 +170,9 @@ describe("session subscriber ownership (plan 104 Task 5)", () => {
         yield providerDone();
       },
     };
-    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [aborted])] })).session({
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [aborted])] })
+    ).session({
       id: "stream-abort",
       create: true,
     });
@@ -191,7 +201,9 @@ describe("session subscriber ownership (plan 104 Task 5)", () => {
     await hostOwned.return?.();
 
     const success = createMockProvider([providerTextDelta("done"), providerDone()]);
-    const reused = await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [success])] })).session({
+    const reused = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [success])] })
+    ).session({
       id: "stream-success",
       create: true,
     });

@@ -584,7 +584,7 @@ export function createApprovalBeforeEffectScorer<TInput = unknown, TExpected = u
       }
 
       for (const effect of timeline.steps) {
-        if (effect.kind !== "tool" || !needsApproval(effect)) continue;
+        if (effect.kind !== "tool" || effect.status === "blocked" || !needsApproval(effect)) continue;
 
         if (options.matchApproval) {
           const approved = timeline.steps.some(

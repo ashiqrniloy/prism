@@ -19,7 +19,7 @@ import {
 } from "../prompt-fetch.js";
 import { createWebTools } from "../tools.js";
 import { WebToolError } from "../transport.js";
-import type { WebDocument, WebFetchAdapter } from "../types.js";
+import type { WebFetchAdapter } from "../types.js";
 
 /** A ModelClient over a scripted turn, recording every request it is given. */
 function mockModel(script: { readonly text?: string; readonly usage?: Usage; readonly fail?: boolean } = {}) {

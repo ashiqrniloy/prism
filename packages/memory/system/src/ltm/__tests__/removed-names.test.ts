@@ -14,7 +14,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../../..");
 const SCAN = ["src", "packages", "apps", "scripts", "examples", "docs", "README.md", "PRODUCT.md"];
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "history", "_evidence", "graft", "coverage", "memory-bench"]);
 // `budgets.json` rows keep the history of why a budget moved; they name features that existed then.
-const SKIP_FILES = /(^|\/)(CHANGELOG\.md|migrate-to-[0-9.]+\.md|api\.json|examples\.json|budgets\.json)$/;
+const SKIP_FILES = /(^|\/)(CHANGELOG\.md|migrate-to-[0-9.]+\.md|api\.json|examples\.json|budgets\.json|retired-names\.json)$/;
 const RETIRED: readonly [string, RegExp][] = [
   [
     "scoped policy layer",

@@ -75,7 +75,11 @@ describe("LiteLLM Chat route", () => {
     const again = createLiteLLMProvider({ apiKey: async () => secret, fetch: second.fetch });
     await collectProviderEvents(again, request());
     await collectProviderEvents(again, request());
-    assert.notEqual(second.seen[0]?.headers.get(LITELLM_CALL_ID_HEADER), second.seen[1]?.headers.get(LITELLM_CALL_ID_HEADER), "fresh per call");
+    assert.notEqual(
+      second.seen[0]?.headers.get(LITELLM_CALL_ID_HEADER),
+      second.seen[1]?.headers.get(LITELLM_CALL_ID_HEADER),
+      "fresh per call",
+    );
   });
 
   it("litellm_headers_into_usage_metadata", async () => {
@@ -120,10 +124,7 @@ describe("LiteLLM Chat route", () => {
       return new Response(sse, { headers: { "content-type": "text/event-stream", "x-litellm-model-id": id } });
     }) as typeof fetch;
     const provider = createLiteLLMProvider({ apiKey: async () => secret, fetch: fetchImpl });
-    const [first, second] = await Promise.all([
-      collectProviderEvents(provider, request()),
-      collectProviderEvents(provider, request()),
-    ]);
+    const [first, second] = await Promise.all([collectProviderEvents(provider, request()), collectProviderEvents(provider, request())]);
     const idOf = (events: readonly ProviderEvent[]) => {
       const usage = events.find((event) => event.type === "usage");
       return usage?.type === "usage" ? (usage.usage.metadata?.litellm as JsonObject) : undefined;
@@ -325,9 +326,7 @@ describe("LiteLLM catalog", () => {
 
   it("list_litellm_models_reads_model_info", async () => {
     const urls: string[] = [];
-    const discovered = await (
-      await import("../models.js")
-    ).listLiteLLMModels({
+    const discovered = await (await import("../models.js")).listLiteLLMModels({
       apiKey: async () => secret,
       fetch: (async (input, init) => {
         urls.push(String(input));
@@ -345,9 +344,7 @@ describe("LiteLLM catalog", () => {
 
   it("list_litellm_models_falls_back_to_ids_only", async () => {
     const urls: string[] = [];
-    const discovered = await (
-      await import("../models.js")
-    ).listLiteLLMModels({
+    const discovered = await (await import("../models.js")).listLiteLLMModels({
       fetch: (async (input) => {
         urls.push(String(input));
         if (String(input).endsWith("/model/info")) return Response.json({ error: "forbidden" }, { status: 403 });

@@ -237,7 +237,10 @@ describe("loadManifest", () => {
     await install(`file:${await makePackage("@acme/c2", { capabilities: ["slot:compaction"], setup: provide })}`, { scope: "user", home });
     const root = await tmp("slots-root");
     const noAssignment = await loadManifest({ home, root });
-    await assert.rejects(createAgent({ model: MODEL, packages: [...noAssignment, providerPackage("test-provider", [provider])] }), /conflict/i);
+    await assert.rejects(
+      createAgent({ model: MODEL, packages: [...noAssignment, providerPackage("test-provider", [provider])] }),
+      /conflict/i,
+    );
 
     const dirs = scopeDirs({ scope: "user", home });
     const manifest = JSON.parse(await readFile(dirs.manifestPath, "utf8"));
@@ -247,7 +250,11 @@ describe("loadManifest", () => {
     assert.equal(agent.inspect().slots.compaction, "@acme/c2");
     await agent.dispose();
 
-    const hostWins = await createAgent({ model: MODEL, packages: [...assigned, providerPackage("test-provider", [provider])], slots: { compaction: "@acme/c1" } });
+    const hostWins = await createAgent({
+      model: MODEL,
+      packages: [...assigned, providerPackage("test-provider", [provider])],
+      slots: { compaction: "@acme/c1" },
+    });
     assert.equal(hostWins.inspect().slots.compaction, "@acme/c1");
     await hostWins.dispose();
   });
@@ -301,7 +308,11 @@ describe("loadManifest", () => {
         entries[0].config = { apiKey: "env:PRISM_TEST_MANIFEST_KEY", greeting: "hi" };
       });
       const inputs = await loadManifest({ home, root, trustProject: () => true });
-      const agent = await createAgent({ model: MODEL, packages: [...inputs, providerPackage("test-provider", [provider])], packageConfig: { "@acme/proj": { greeting: "host" } } });
+      const agent = await createAgent({
+        model: MODEL,
+        packages: [...inputs, providerPackage("test-provider", [provider])],
+        packageConfig: { "@acme/proj": { greeting: "host" } },
+      });
       const packages = agent.inspect().packages.filter((p) => p.name !== "test-provider");
       assert.deepEqual(
         packages.map((p) => [p.name, p.source]),

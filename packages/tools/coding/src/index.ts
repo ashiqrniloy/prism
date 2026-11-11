@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-tools-coding` — the first-party coding tools as a package.
+ * `@arnilo/prism-tools/coding` — the first-party coding tools as a package.
  *
  * The default export registers the file, search, and shell tools (`read`, `write`, `edit`, `grep`,
  * `glob`, `shell` with `shell_output`, plus `delete`/`move` when the shell is unavailable, or the
@@ -13,7 +13,7 @@
  * paths and roots of each own-tool call for approval.
  *
  * ```ts
- * import toolsCoding from "@arnilo/prism-tools-coding";
+ * import toolsCoding from "@arnilo/prism-tools/coding";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({ model, packages: [toolsCoding({ root: process.cwd() })] });
@@ -22,7 +22,7 @@
 
 import { resolve } from "node:path";
 import { definePackage, type PackageInstance, type ToolDefinition } from "@arnilo/prism";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 import { createAskUserDecisionTool } from "./agent/ask-user-decision.js";
 import { createCodingCheckTool } from "./agent/checks.js";
 import { createDiagnosticsTool, type DiagnosticsToolHandle } from "./agent/diagnostics-tool.js";
@@ -93,7 +93,7 @@ export interface CodingForgeService {
 }
 
 const definition = definePackage<ToolsCodingConfig>({
-  name: "@arnilo/prism-tools-coding",
+  name: "@arnilo/prism-tools/coding",
   version: manifest.version,
   description:
     "File, search, shell, git, check, todo, and ask-user coding tools with declared effects, in-tool containment, and tool.call hard denies.",
@@ -304,7 +304,7 @@ const definition = definePackage<ToolsCodingConfig>({
       prism.hooks.on("session.closed", (event) => background.killSession(event.sessionId), { id: "shell-background" });
     }
     if (sandbox === "none" && shellRegistered) {
-      prism.status.note("warn", "shell runs on the host without a sandbox; pair it with @arnilo/prism-approval or set sandbox");
+      prism.status.note("warn", "shell runs on the host without a sandbox; pair it with @arnilo/prism-extensions/approval or set sandbox");
     }
   },
 });

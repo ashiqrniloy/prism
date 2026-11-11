@@ -9,7 +9,7 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism/testing";
-import { approvalPackage } from "@arnilo/prism-approval";
+import { approvalPackage } from "@arnilo/prism-extensions/approval";
 import toolsBrowser from "../index.js";
 import { FakeBrowser } from "./fake-playwright.js";
 
@@ -50,7 +50,7 @@ function toolResults(entries: readonly { kind: string; message?: { content: read
   );
 }
 
-describe("@arnilo/prism-tools-browser package", () => {
+describe("@arnilo/prism-tools/browser package", () => {
   it("tools_browser_package_conformance", async () => {
     const result = await packageConformance(toolsBrowser({ headless: true }));
     assert.deepEqual(
@@ -66,7 +66,7 @@ describe("@arnilo/prism-tools-browser package", () => {
       assert.deepEqual(agent.tools.map((tool) => tool.name).sort(), Object.keys(EXPECTED_EFFECTS).sort());
       for (const tool of agent.tools) {
         assert.deepEqual(tool.effects, EXPECTED_EFFECTS[tool.name], `${tool.name} must declare its effects`);
-        assert.equal(tool.package, "@arnilo/prism-tools-browser");
+        assert.equal(tool.package, "@arnilo/prism-tools/browser");
       }
     } finally {
       await agent.dispose();

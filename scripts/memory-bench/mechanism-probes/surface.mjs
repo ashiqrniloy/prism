@@ -5,7 +5,7 @@ import { digest, fabricAgent, lastValue, packages, resultText, scripted } from "
 
 async function embeddings() {
   const { prism } = await packages();
-  const core = await import("@arnilo/prism-memory-core");
+  const core = await import("@arnilo/prism-memory-system/core");
   const embedder = core.createHashEmbedder({ dimensions: 8, id: "probe-embeddings" });
   return prism.definePackage({
     name: "@probe/embeddings",

@@ -43,7 +43,7 @@ export const SKILL_NAME = "prism-host-builder";
 export const SERVER_NAME = "prism";
 
 /** The entry written under the server key. `command` and `args` only: no env, no token. */
-export const SERVER_ENTRY = { command: "bunx", args: ["prism-host-builder", "mcp"] } as const;
+export const SERVER_ENTRY = { command: "bunx", args: ["--package", "@arnilo/prism-hosts", "prism-host-builder", "mcp"] } as const;
 
 export function isInstallTargetName(value: string): value is InstallTargetName {
   return Object.hasOwn(INSTALL_TARGETS, value);

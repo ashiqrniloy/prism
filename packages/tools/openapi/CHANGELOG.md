@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `@arnilo/prism-tools-openapi` will be documented in this file.
+All notable changes to `@arnilo/prism-tools/openapi` will be documented in this file.
 
 ## [Unreleased]
 

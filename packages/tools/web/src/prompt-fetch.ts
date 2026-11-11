@@ -43,10 +43,7 @@ export function withOutputBudget(model: ModelConfig, maxTokens: number): ModelCo
 }
 
 /** Builds the answerer once per package; the model and its budget are host config, not model input. */
-export function createPromptFetch(
-  client: ModelClient,
-  options: { readonly maxInputChars: number },
-): PromptFetch {
+export function createPromptFetch(client: ModelClient, options: { readonly maxInputChars: number }): PromptFetch {
   return {
     async answer(page: WebDocument, question: string, request?: { readonly signal?: AbortSignal }) {
       const markdown = page.markdown;
@@ -78,10 +75,7 @@ export function createPromptFetch(
       } catch (error) {
         if (error instanceof WebToolError) throw error;
         if (request?.signal?.aborted === true) throw new WebToolError("ERR_PRISM_WEB_ABORTED", "web fetch prompt aborted");
-        throw new WebToolError(
-          "ERR_PRISM_WEB_RESPONSE",
-          `page model failed: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        throw new WebToolError("ERR_PRISM_WEB_RESPONSE", `page model failed: ${error instanceof Error ? error.message : String(error)}`);
       }
       return {
         answer: parts.join("").trim(),

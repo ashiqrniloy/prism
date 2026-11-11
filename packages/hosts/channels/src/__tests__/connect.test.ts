@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import { Duplex } from "node:stream";
 import { describe, it } from "bun:test";
-import { askEveryTool, createAgent, createMemorySessionStore, type ModelProvider, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
+import {
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  type ModelProvider,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  type SessionStore,
+  toolCallContent,
+} from "@arnilo/prism";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "../memory-stores.js";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import {
@@ -223,7 +233,9 @@ describe("connectTelegram and connectSignal host bindings", () => {
     assert.equal(sent.length, 1);
 
     // Verify approval controls were delivered in inline keyboard
-    const replyMarkup = sent[0]?.body.reply_markup as { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> } | undefined;
+    const replyMarkup = sent[0]?.body.reply_markup as
+      | { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> }
+      | undefined;
     assert.ok(replyMarkup?.inline_keyboard);
     const allowBtn = replyMarkup.inline_keyboard.flat().find((btn) => btn.text === "Allow once");
     assert.ok(allowBtn);
@@ -299,7 +311,9 @@ describe("connectTelegram and connectSignal host bindings", () => {
 
     await handle1.handle(telegramMessage(1, "trigger tool"));
     await handle1.drain();
-    const replyMarkup = sent1[0]?.body.reply_markup as { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> } | undefined;
+    const replyMarkup = sent1[0]?.body.reply_markup as
+      | { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> }
+      | undefined;
     assert.ok(replyMarkup?.inline_keyboard);
     const allowBtn = replyMarkup.inline_keyboard.flat().find((btn) => btn.text === "Allow once");
     assert.ok(allowBtn);
@@ -380,7 +394,9 @@ describe("connectTelegram and connectSignal host bindings", () => {
 
     await handle.handle(telegramMessage(1, "trigger tool"));
     await handle.drain();
-    const replyMarkup = sent[0]?.body.reply_markup as { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> } | undefined;
+    const replyMarkup = sent[0]?.body.reply_markup as
+      | { inline_keyboard?: Array<Array<{ text: string; callback_data: string }>> }
+      | undefined;
     assert.ok(replyMarkup?.inline_keyboard);
     const allowBtn = replyMarkup.inline_keyboard.flat().find((btn) => btn.text === "Allow once");
     assert.ok(allowBtn);
@@ -441,7 +457,12 @@ describe("connectTelegram and connectSignal host bindings", () => {
       model: { provider: "mock", model: "demo" },
       slots: {
         store: createMemorySessionStore(),
-        credentials: { resolve: (ref) => (keyring.has(ref) ? { type: "api_key", value: keyring.get(ref)! } : undefined) },
+        credentials: {
+          resolve: (ref) => {
+            const value = keyring.get(ref);
+            return value === undefined ? undefined : { type: "api_key", value };
+          },
+        },
       },
       packages: [providerPackage("test-provider", [textProvider({ count: 0 })])],
     });
@@ -601,48 +622,98 @@ describe("connectTelegram and connectSignal host bindings", () => {
   });
 });
 
-
 it("signal_host_ui_confirm_select_input_notify_use_paired_replies_without_model_turns", async () => {
   process.env.TEST_SIGNAL_UI_ACCOUNT = SIGNAL_ACCOUNT;
   const socket = new FakeSignalSocket();
   const calls = { count: 0 };
-  const agent = await createAgent({ id: "signal-ui", model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [textProvider(calls)])] });
+  const agent = await createAgent({
+    id: "signal-ui",
+    model: { provider: "mock", model: "demo" },
+    packages: [providerPackage("test-provider", [textProvider(calls)])],
+  });
   const checkpoints = createMemoryCheckpointStore();
   const ownership = { tenantId: "ops", userId: "operator" };
-  const identity = { ...ownership, principal: { kind: "user" as const, id: "operator" }, scopes: ["chat"], verified: true as const, issuedAt: new Date(0).toISOString() };
+  const identity = {
+    ...ownership,
+    principal: { kind: "user" as const, id: "operator" },
+    scopes: ["chat"],
+    verified: true as const,
+    issuedAt: new Date(0).toISOString(),
+  };
   const pairs = createChannelPairingStore({ checkpoints });
-  const pair = await pairs.create({ ...ownership, connectionId: "signal-default", externalConversationId: SIGNAL_SENDER_UUID, externalActorId: SIGNAL_SENDER_UUID, grantRevision: "1" });
+  const pair = await pairs.create({
+    ...ownership,
+    connectionId: "signal-default",
+    externalConversationId: SIGNAL_SENDER_UUID,
+    externalActorId: SIGNAL_SENDER_UUID,
+    grantRevision: "1",
+  });
   await pairs.consume({ ...ownership, connectionId: "signal-default", token: pair.token });
-  const connection = await connectSignal(agent, { account: "env:TEST_SIGNAL_UI_ACCOUNT", socketPath: "/run/prism/signal.sock", checkpoints,
-    authorize: input => input.externalActorId === SIGNAL_SENDER_UUID && input.externalConversationId === SIGNAL_SENDER_UUID ? { identity, grantRevision: "1" } : false,
-    connect: () => { socket.connect(); return socket as never; },
+  const connection = await connectSignal(agent, {
+    account: "env:TEST_SIGNAL_UI_ACCOUNT",
+    socketPath: "/run/prism/signal.sock",
+    checkpoints,
+    authorize: (input) =>
+      input.externalActorId === SIGNAL_SENDER_UUID && input.externalConversationId === SIGNAL_SENDER_UUID
+        ? { identity, grantRevision: "1" }
+        : false,
+    connect: () => {
+      socket.connect();
+      return socket as never;
+    },
   });
   try {
     await connection.start();
     const ui = channelHostUi({ connection, chat: `pair:${pair.token}`, ownership });
-    const latest = () => String(socket.requests.filter(r => r.method === "send").at(-1)?.params?.message);
-    const ready = async (count: number) => { for (let n = 0; socket.requests.filter(r => r.method === "send").length < count && n < 100; n++) await new Promise(r => setTimeout(r, 1)); assert.equal(socket.requests.filter(r => r.method === "send").length, count); };
-    const confirm = ui.request({ kind: "confirm", title: "Deploy?" }); await ready(1);
+    const latest = () => String(socket.requests.filter((r) => r.method === "send").at(-1)?.params?.message);
+    const ready = async (count: number) => {
+      for (let n = 0; socket.requests.filter((r) => r.method === "send").length < count && n < 100; n++)
+        await new Promise((r) => setTimeout(r, 1));
+      assert.equal(socket.requests.filter((r) => r.method === "send").length, count);
+    };
+    const confirm = ui.request({ kind: "confirm", title: "Deploy?" });
+    await ready(1);
     const command = /Reply (\/answer [A-Za-z0-9_-]{43} 0)/.exec(latest())?.[1];
     assert.ok(command);
     assert.deepEqual(await connection.handle(signalDirectMessage(command)), { status: "accepted" });
     assert.deepEqual(await confirm, { status: "answered", value: true });
-    const select = ui.request({ kind: "select", title: "Choose", options: [{ value: "a", label: "<A>" }, { value: "b", label: "B" }] }); await ready(2);
+    const select = ui.request({
+      kind: "select",
+      title: "Choose",
+      options: [
+        { value: "a", label: "<A>" },
+        { value: "b", label: "B" },
+      ],
+    });
+    await ready(2);
     const selectToken = /\/answer ([A-Za-z0-9_-]{43})/.exec(latest())?.[1];
-    await connection.handle(signalDirectMessage(`/answer ${selectToken} 1`)); assert.deepEqual(await select, { status: "answered", value: "b" });
-    const input = ui.request({ kind: "input", title: "Enter text" }); await ready(3);
+    await connection.handle(signalDirectMessage(`/answer ${selectToken} 1`));
+    assert.deepEqual(await select, { status: "answered", value: "b" });
+    const input = ui.request({ kind: "input", title: "Enter text" });
+    await ready(3);
     const inputToken = /\/answer ([A-Za-z0-9_-]{43})/.exec(latest())?.[1];
-    await connection.handle(signalDirectMessage(`/answer ${inputToken} private signal answer`)); assert.deepEqual(await input, { status: "answered", value: "private signal answer" });
-    assert.deepEqual(await ui.request({ kind: "notify", level: "info", message: "<b>plain</b>" }), { status: "answered", value: undefined }); await ready(4);
+    await connection.handle(signalDirectMessage(`/answer ${inputToken} private signal answer`));
+    assert.deepEqual(await input, { status: "answered", value: "private signal answer" });
+    assert.deepEqual(await ui.request({ kind: "notify", level: "info", message: "<b>plain</b>" }), {
+      status: "answered",
+      value: undefined,
+    });
+    await ready(4);
     assert.equal(latest(), "<b>plain</b>");
     const commands = `Reply /answer ${"x".repeat(43)} 0 (Yes)\nReply /answer ${"x".repeat(43)} 1 (No)`;
     const title = "x".repeat(2000 - 2 - commands.length);
-    const boundary = ui.request({ kind: "confirm", title }); await ready(5);
+    const boundary = ui.request({ kind: "confirm", title });
+    await ready(5);
     assert.equal(latest().length, 2000, "a full-sized request is one Signal message");
-    const boundaryToken = /\/answer ([A-Za-z0-9_-]{43})/.exec(latest())?.[1]; assert.ok(boundaryToken);
-    await connection.handle(signalDirectMessage(`/answer ${boundaryToken} 0`)); assert.equal((await boundary).status, "answered");
-    assert.deepEqual(await ui.request({ kind: "confirm", title: `${title}x` }), { status: "unavailable" }); await ready(5);
+    const boundaryToken = /\/answer ([A-Za-z0-9_-]{43})/.exec(latest())?.[1];
+    assert.ok(boundaryToken);
+    await connection.handle(signalDirectMessage(`/answer ${boundaryToken} 0`));
+    assert.equal((await boundary).status, "answered");
+    assert.deepEqual(await ui.request({ kind: "confirm", title: `${title}x` }), { status: "unavailable" });
+    await ready(5);
     assert.equal(JSON.stringify((await checkpoints.listCheckpoints()).items).includes("private signal answer"), false);
     assert.equal(calls.count, 0);
-  } finally { await connection.close(); }
+  } finally {
+    await connection.close();
+  }
 });

@@ -114,7 +114,10 @@ export interface MaterializedSkills {
   readonly extra: readonly string[];
 }
 
-export type SkillLayout = (out: { root: string; pathToSkill: ReadonlyMap<string, string> }) => readonly MaterializedFile[] | Promise<readonly MaterializedFile[]>;
+export type SkillLayout = (out: {
+  root: string;
+  pathToSkill: ReadonlyMap<string, string>;
+}) => readonly MaterializedFile[] | Promise<readonly MaterializedFile[]>;
 
 const SKILL_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const MAX_FILES = 256;

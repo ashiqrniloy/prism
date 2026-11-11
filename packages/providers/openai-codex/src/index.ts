@@ -1,10 +1,10 @@
 /**
- * `@arnilo/prism-provider-openai-codex` — OpenAI models on a ChatGPT plan via Sign in with ChatGPT:
+ * `@arnilo/prism-ai/openai-codex` — OpenAI models on a ChatGPT plan via Sign in with ChatGPT:
  * registers the `openai-codex` provider, keeps an OAuth grant in a `keyring:` ref, refreshes it per
  * request, and ships the stateless Responses wire plus the model catalog.
  *
  * ```ts
- * import openaiCodex from "@arnilo/prism-provider-openai-codex";
+ * import openaiCodex from "@arnilo/prism-ai/openai-codex";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -80,7 +80,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: OpenAICodexProviderPackageOptions) {
   return defineProviderPackage<OpenAICodexProviderConfig>({
-    name: "@arnilo/prism-provider-openai-codex",
+    name: "@arnilo/prism-ai/openai-codex",
     description: "OpenAI Codex provider package for Prism: ChatGPT plan models via Sign in with ChatGPT.",
     capabilities: ["credentials", "credentials:write"],
     config: configSchema,

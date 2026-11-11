@@ -3,11 +3,11 @@
   "kind": "memory-model-owner-gate",
   "gate": "M-1",
   "plan": 217,
-  "approved": false,
-  "approvedAt": "2026-11-09",
+  "approved": true,
+  "approvedAt": "2026-11-10",
   "approvedBy": "owner",
-  "status": "paused: the owner asked to assess after the smoke, before the full run",
-  "text": "Gate M-1 budget question (2026-11-09; $37.03 of the $60 allowance left until 2026-12-07, full dev cohort estimated at about $90-110): \"Build now, run full later\" (build and test all the machinery and the manifest now, write the gate record with the full dev cohort, start the paid run only on the owner later word). Models: \"C-1 roles (Recommended)\". Start word: \"Go ahead and do the live run. You can use ollama cloud for testing with gemma4:31b, GPT-OSS-120B, Mimo-2.6-flash, deepseek-v4.1-flash\" (owner start word, 2026-11-09).",
+  "status": "approved: sittings 1-4 (family on 16 dev personas; S4 suite sample)",
+  "text": "Gate M-1 budget question (2026-11-09; $37.03 of the $60 allowance left until 2026-12-07, full dev cohort estimated at about $90-110): \"Build now, run full later\" (build and test all the machinery and the manifest now, write the gate record with the full dev cohort, start the paid run only on the owner later word). Models: \"C-1 roles (Recommended)\". Start word: \"Go ahead and do the live run. You can use ollama cloud for testing with gemma4:31b, GPT-OSS-120B, Mimo-2.6-flash, deepseek-v4.1-flash\" (owner start word, 2026-11-09). Scope: \"Let us do run 1-4 and go with option B\" (owner, 2026-11-10).",
   "startRule": "the campaign refuses to start while approved is false; the owner start word sets approved, approvedAt and appends it to text, and a changed manifest is a refusal, not a re-approval",
   "budget": {
     "billing": "paid-allowance",
@@ -15,21 +15,24 @@
     "capUsd": null,
     "allowance": "Ollama Cloud Pro: $60 included a month (period resets 2026-12-07T20:57:27Z); $37.03 left at 2026-11-09T10:14Z; the guard halts below $1.50 and the campaign resumes from its journal next period; the estimate uses the past week blended rate, and the flash answer models may bill differently",
     "estimate": {
-      "questions": {
-        "longmemeval-m": 50,
-        "beam-1m": 40
+      "sample": {
+        "questionsPerSuiteAndArm": 2,
+        "historyTokensPerQuestion": {
+          "longmemeval-m": 1212826,
+          "beam-1m": 1000000
+        }
       },
-      "tokensPerWorkerArmAndModel": 650000000,
-      "inputTokens": 2632000000,
-      "usd": 116,
+      "inputTokens": 102283301,
+      "usd": 6,
+      "wall": "run 1 about 1.5 h; runs 2-4 about 2.5 h each (16k history tokens a minute per stream, three streams)",
       "basis": {
         "tokensPerQuestion": {
           "beam-1m": 10000000,
           "longmemeval-m": 5000000
         },
         "longSessionTokensPerJob": 2000000,
-        "usdPerMillion": 0.044,
-        "rateSource": "Ollama /api/usage, 2026-11-02 to 2026-11-09: $22.97 for 520.9M input tokens (83.6% cached)"
+        "usdPerMillion": 0.0585,
+        "rateSource": "Ollama /api/usage, 2026-11-09 (the smoke and the diagnostics): $1.57 for 26.8M input tokens, output included"
       }
     }
   },
@@ -72,11 +75,12 @@
       "long-session": 24
     },
     "concurrency": 2,
-    "maxOutputTokens": 8192
+    "maxOutputTokens": 8192,
+    "journalCeiling": 1000000000000
   },
   "manifest": "docs/_evidence/memory-bench/memory-model/M-1/manifest.json",
-  "manifestHash": "185793e1aa1e8e05e02dbd1995f5763b1d44b5462b26aef38f02f96c00878f13",
-  "memoryModelCriteriaHash": "f99907bd939cade310204dcca5e9adefeec2ee442a2f89205a31ecc53205479e",
+  "manifestHash": "7d225777fe138bf444b00db3bca5e8b88e8df8cd269fc73e49c0e633bc43982b",
+  "memoryModelCriteriaHash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
   "omBefore": {
     "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
@@ -98,6 +102,36 @@
       "text": "\"Let us finish the smoke and then stop and assess before the full run\"; \"Yes stop the smoke. Diagnose the problem then\"; \"okay. do option 1\" (owner)",
       "change": "smoke stopped after 5 of 9 small-model jobs (STM worker passes failing on the 32-calls-per-turn limit and re-sending larger batches); option 1 fix landed in the product (STM refuses calls past the tool-call limits instead of failing the pass; a backlog splits at about twice stm.triggerTokens), so the product hash and manifest changed; the full run waits for the owner start word on the new manifest",
       "manifestHash": "185793e1aa1e8e05e02dbd1995f5763b1d44b5462b26aef38f02f96c00878f13"
+    },
+    {
+      "date": "2026-11-10",
+      "text": "\"Let us first do the coarser STM events first. Just to make sure, the instruction/prompt for STM in general should be made such that it follows the suggestion Change the instruction so routine conversation becomes one event per exchange or topic, while actions, results, decisions and outcomes stay separate.\" (owner)",
+      "change": "the default STM instruction records routine conversation per exchange or topic; product hash and manifest changed; still paused for the owner start word",
+      "manifestHash": "ba8cc075267685f400dfba4b60bbbb34440d7cac0a66a5346039cf826eedcebe"
+    },
+    {
+      "date": "2026-11-10",
+      "text": "\"Let us do run 1-4 and go with option B\" (owner, 2026-11-10)",
+      "change": "owner decision m1S3Deferred (criteria amendment 2, hash 9ed0adf0...): S3 deferred to gate A; the suites become the S4 sample (STM and OM-before, the first 2 dev questions per model and suite, concurrency 1); memory-off runs on the family only; four sittings; approved",
+      "manifestHash": "f0316f7eeb635b2d1c2dd984754bc3ba40aa5e55a5950f4b1a21a93924153081"
+    },
+    {
+      "date": "2026-11-10",
+      "text": "\"I agree. Let us do A and C and then re-run\" (owner, 2026-11-10)",
+      "change": "run 1 results invalidated by the family grep bug; family prompts and the S1 counter redesigned (searches and guesses in the dependent task); STM folds in-flight requests into follow-up passes and ends a pass after a clean turn; run 1 re-runs on the new manifest (its old reports move to runs/superseded-run1/)",
+      "manifestHash": "6f6b983da58d4ea77bcd1b328b1d98d52387121accb64efb172cc7df011d5282"
+    },
+    {
+      "date": "2026-11-10",
+      "text": "\"Let us do 3 first and see if there are any issues. Once 3 is done, I would do 1 and 2 together\" (owner, 2026-11-10)",
+      "change": "criteria amendment 3 (m1DevPersonas, hash 57feb5ed...): the family dev partition grows to 16 personas (ls12-ls23 added, held-out unchanged); sitting 1 re-runs the family on 16 personas (the 4 earlier personas resume from their checkpoints), then sittings 2-4 run the S4 suite sample",
+      "manifestHash": "7d225777fe138bf444b00db3bca5e8b88e8df8cd269fc73e49c0e633bc43982b"
     }
-  ]
+  ],
+  "sittings": {
+    "1": "long-session family, both models, three arms (S1, the family S4 cells), about 1.5 h",
+    "2": "S4 suite sample: small LME STM and OM-before, small BEAM STM (--parallel-arms 3), about 2.5 h",
+    "3": "small BEAM OM-before, large LME STM and OM-before, about 2.5 h",
+    "4": "large BEAM STM and OM-before, about 2.5 h"
+  }
 }

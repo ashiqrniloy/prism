@@ -1,4 +1,4 @@
-# @arnilo/prism-evals
+# @arnilo/prism-hosts/evals
 
 Host library providing evaluation, datasets, scorers, judges, experiments, and multi-turn scenarios for Prism agents. It operates over public `Agent` and `Session` surfaces and does not construct an agent directly.
 
@@ -8,12 +8,12 @@ Imports into host libraries are strictly governed by [`scripts/host-surface-allo
 
 Import `EvaluationRecord`, `EvaluationStatus`, `EvaluationQuery`, `EvaluationStore`,
 `ExperimentReportRecord`, `ExperimentReportQuery`, and `ExperimentReportStore` from `@arnilo/prism`.
-The memory implementations live in `@arnilo/prism-store-codecs`; evals no longer exports the
+The memory implementations live in `@arnilo/prism-extensions/store-codecs`; evals no longer exports the
 moved types or `createMemoryEvaluationStore`.
 
 ```ts
-import { createMemoryEvaluationStore, createMemoryExperimentReportStore } from "@arnilo/prism-store-codecs";
-import { runExperiment } from "@arnilo/prism-evals";
+import { createMemoryEvaluationStore, createMemoryExperimentReportStore } from "@arnilo/prism-extensions/store-codecs";
+import { runExperiment } from "@arnilo/prism-hosts/evals";
 
 const ownership = { tenantId: "tenant", userId: "user" };
 const store = createMemoryEvaluationStore();
@@ -41,13 +41,13 @@ or tags: reconstructing a full report for `compareExperiments` needs host-suppli
 ## Install
 
 ```bash
-bun add @arnilo/prism-evals
+bun add @arnilo/prism-hosts
 ```
 
-`@arnilo/prism` is a required peer. `@arnilo/prism-observability` is an **optional** peer: it is needed only to project timelines (`timeline: "metadata" | "redacted_io"`). Text-only scoring and experiments never load it, and asking for a timeline without installing it throws `EvalError` `ERR_PRISM_EVAL_TIMELINE_UNAVAILABLE` naming the package.
+`@arnilo/prism` is a required peer. `@arnilo/prism-extensions/observability` is an **optional** peer: it is needed only to project timelines (`timeline: "metadata" | "redacted_io"`). Text-only scoring and experiments never load it, and asking for a timeline without installing it throws `EvalError` `ERR_PRISM_EVAL_TIMELINE_UNAVAILABLE` naming the package.
 
 ```jsonc
-{ "@arnilo/prism-evals": "^0.13.0", "@arnilo/prism-observability": "^0.13.0" }
+{ "@arnilo/prism-hosts": "^0.13.0", "@arnilo/prism-extensions": "^0.13.0" }
 ```
 
 ## Evaluation telemetry
@@ -58,7 +58,7 @@ redaction, including scored, failed, sampled-out, per-step, and simulator-failur
 No model calls are added. With a store, a failed append propagates before telemetry is called.
 
 ```ts
-import type { EvaluationTelemetry } from "@arnilo/prism-observability";
+import type { EvaluationTelemetry } from "@arnilo/prism-extensions/observability";
 
 // instrumentation is a host-held createOpenTelemetryInstrumentation() instance.
 const telemetry = { handleEvaluation: (e: EvaluationTelemetry) => instrumentation.handleEvaluation(e) };
@@ -79,7 +79,7 @@ The package definition does not expose its internal instrumentation instance.
 `scoreRunLive`, `scoreRun`, and `runExperiment` accept `sampling: EvaluationSampling` (replacing the retired `sampleRate` option) to stratify and weight online or sampled evaluations:
 
 ```ts
-import { estimateOnline, scoreRunLive } from "@arnilo/prism-evals";
+import { estimateOnline, scoreRunLive } from "@arnilo/prism-hosts/evals";
 
 const records = await scoreRunLive(result, {
   scorers: [citationScorer],
@@ -112,7 +112,7 @@ const estimate = estimateOnline(records, { scorerId: "contains-citation", seed: 
 The statistics helpers are standalone pure TypeScript utilities with no runtime dependency.
 
 ```ts
-import { bootstrapInterval, passAtK, wilsonInterval } from "@arnilo/prism-evals";
+import { bootstrapInterval, passAtK, wilsonInterval } from "@arnilo/prism-hosts/evals";
 
 wilsonInterval(18, 20); // { low: 0.698966…, high: 0.972134… }
 passAtK(10, 3, 5); // 0.916666…
@@ -268,7 +268,7 @@ Every `runExperiment` item has `trials: [{ usage?, durationMs?, status, costComp
 Billing is stricter: `cost` (and its per-item mean) is present only when **every** trial has finite, nonnegative, non-estimated cost, every provider attempt has complete pricing evidence, and all currencies match. Missing currency matches only another missing currency; no conversion or currency assumption is made. The collector observes turn and terminal run events even with timeline off, using constant accounting state and making no extra provider calls. Unpriced turns, missing/truncated evidence, mixed currencies, unstarted trials, and empty runs leave the total absent and `costComplete: false`. A trial's raw `usage.cost` can be partial; inspect its `costComplete` before treating it as a bill. Scorer/judge calls and agent setup costs are outside agent-run accounting.
 
 ```ts
-import { paretoFrontier } from "@arnilo/prism-evals";
+import { paretoFrontier } from "@arnilo/prism-hosts/evals";
 
 const frontier = paretoFrontier(reports, {
   quality: r => r.aggregate.macroMean ?? 0,
@@ -392,7 +392,7 @@ All failures are `EvalError` subclasses carrying a stable `code`:
 | `ERR_PRISM_EVAL_HELDOUT` | heldout items selected without `allowHeldout: true` |
 | `ERR_PRISM_EVAL_DATASET` | a dataset manifest, item, or revision pin is invalid |
 | `ERR_PRISM_EVAL_TRACE_REQUIRED` / `_TIMELINE_REQUIRED` / `_ENVIRONMENT_REQUIRED` | a scorer's declared requirement is not available |
-| `ERR_PRISM_EVAL_TIMELINE_UNAVAILABLE` | a timeline was requested but `@arnilo/prism-observability` is not installed |
+| `ERR_PRISM_EVAL_TIMELINE_UNAVAILABLE` | a timeline was requested but `@arnilo/prism-extensions/observability` is not installed |
 | `ERR_PRISM_EVAL_SCENARIO_BOUNDS` | `maxTurns`/`turns` exceed the bounded scenario contract |
 | `ERR_PRISM_EVAL_SCENARIO_ASSERTION` | a turn's `assertReply` threw |
 | `ERR_PRISM_EVAL_EXPERIMENT` | experiment options cannot work (e.g. `hooks` with an `Agent` instance) |
@@ -411,12 +411,12 @@ All failures are `EvalError` subclasses carrying a stable `code`:
 - **Judge cost.** Model judges (`createModelJudge`) invoke an LLM once per evaluation item, so cost scales as `O(items × trials)`, and `scoreTurns: "each"` multiplies it by the turn count. Prefer deterministic rule, schema, and trajectory scorers for continuous CI; reserve judges for semantic quality gates.
 - **Redaction.** Curation redacts before an item is built; a redactor that throws skips the run (`redaction failed`) rather than storing raw data. Records are redacted on the way out (`reason`, `error`, `metadata`), but a scorer's *input* is raw: `result`, `item`, and an untimelined run carry the text as recorded. The entry point resolves `redactor`/`secrets` once and hands the result to every scorer as `ScorerInput.redactor`, so a scorer or judge that embeds text in a prompt redacts with `input.redactor?.redact(value)` first. `createModelJudge` already does this for the target and the item before the prompt; a host that configures neither option has declared no secrets, and the seam is `undefined`.
 - **Fail closed.** A missing timeline is a requirement error, not a zero (except where a scorer explicitly reports `0` with `metadata.invariant`); a missing decision is never inferred from a guardrail pass; an unstarted item is never counted as a pass.
-- **No timeline, no peer.** Timeline projection is the only reason this package needs `@arnilo/prism-observability`; text-only hosts do not install it.
+- **No timeline, no peer.** Timeline projection is the only reason this package needs `@arnilo/prism-extensions/observability`; text-only hosts do not install it.
 
 ## Comparing two runs
 
 ```ts
-import { compareExperiments } from "@arnilo/prism-evals";
+import { compareExperiments } from "@arnilo/prism-hosts/evals";
 const comparison = compareExperiments(baseline, candidate, { seed: 1 });
 const success = comparison.scorers.task_success;
 // difference = candidateMean - baselineMean; negative means regression.
@@ -478,7 +478,7 @@ gate. The comparison adds resampling work, with no extra agent or judge calls.
 Size the paired dataset before running it:
 
 ```ts
-import { powerAnalysis, minimumDetectableEffect } from "@arnilo/prism-evals";
+import { powerAnalysis, minimumDetectableEffect } from "@arnilo/prism-hosts/evals";
 powerAnalysis({ baselinePassRate: .85, minimumDetectableDrop: .05 }); // { items: 909 }
 powerAnalysis({ baselinePassRate: .85, minimumDetectableDrop: .05,
   expectedDiscordance: .1 }); // { items: 312 }
@@ -713,7 +713,7 @@ three calls per item without retries, up to six with their default attempts.
 ### Calibrating a judge
 
 ```ts
-import { calibrateJudge, labeledItemsFromFeedback, assertEvaluationThreshold } from "@arnilo/prism-evals";
+import { calibrateJudge, labeledItemsFromFeedback, assertEvaluationThreshold } from "@arnilo/prism-hosts/evals";
 const items = await labeledItemsFromFeedback({
   feedbackStore, persistence, ownership: { tenantId, userId }, query: { tag: "graded" },
   secrets,

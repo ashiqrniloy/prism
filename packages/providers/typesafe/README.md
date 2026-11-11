@@ -1,17 +1,17 @@
-# `@arnilo/prism-provider-typesafe`
+# `@arnilo/prism-ai/typesafe`
 
 TypeSafe Jev provider package for [Prism](https://github.com/ashiqrniloy/prism). Registers the hosted `typesafe` decision model, resolves its key through the credentials slot on every request, and ships the System One wire (shared with `@arnilo/prism/provider-kit`) and the Jev catalog.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-typesafe
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import typesafe from "@arnilo/prism-provider-typesafe";
+import typesafe from "@arnilo/prism-ai/typesafe";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

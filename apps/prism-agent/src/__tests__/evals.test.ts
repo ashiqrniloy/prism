@@ -2,7 +2,13 @@ import { beforeAll, test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { ExperimentReportRecord } from "@arnilo/prism";
-import { assertEvaluationThreshold, defineDataset, EvalDatasetError, EvalThresholdError, type ExperimentReport } from "@arnilo/prism-evals";
+import {
+  assertEvaluationThreshold,
+  defineDataset,
+  EvalDatasetError,
+  EvalThresholdError,
+  type ExperimentReport,
+} from "@arnilo/prism-hosts/evals";
 import { HOST_EVAL_DATASET, HOST_EVAL_ITEMS, type HostEvalItemExpected, type HostEvalItemInput } from "../../evals/dataset.js";
 import {
   assertHostEvalDatasetMatchesBaseline,

@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createHashEmbedder, createMemoryVectorStore, MemoryScopeError } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore, MemoryScopeError } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory, createMemoryLtmPort, type LtmScope } from "@arnilo/prism-memory-system";
 import { parseConceptBody } from "../ontology/codec.js";
 import type { LtmPort } from "../ontology/ltm.js";

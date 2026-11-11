@@ -11,7 +11,7 @@ import {
   type SecretRedactor,
   type Session,
 } from "@arnilo/prism";
-import type { McpToolBridge } from "@arnilo/prism-mcp";
+import type { McpToolBridge } from "@arnilo/prism-extensions/mcp";
 import type { AgUiA2UiOptions } from "./a2ui.js";
 import { type AgUiEventMapperOptions, createAgUiEventMapper } from "./ag-ui-mapper.js";
 import { AgUiError } from "./errors.js";
@@ -314,12 +314,7 @@ function readResumeDecisions(
       throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume status is invalid");
     }
     const record = pending.get(entry.interruptId);
-    if (
-      !record ||
-      record.threadId !== input.threadId ||
-      !sameOwnership(record.ownership, ownership) ||
-      seen.has(entry.interruptId)
-    ) {
+    if (!record || record.threadId !== input.threadId || !sameOwnership(record.ownership, ownership) || seen.has(entry.interruptId)) {
       throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume does not match the pending interrupt");
     }
     seen.add(entry.interruptId);

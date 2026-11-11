@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { passAtK } from "@arnilo/prism-evals";
+import { passAtK } from "@arnilo/prism-hosts/evals";
 import { judgeAgreement } from "./judge.mjs";
 import { METRIC_DEFINITIONS, METRIC_VERSION, metricDefinition } from "./metrics.mjs";
 import { summarizeOntology } from "./ontology-arm.mjs";

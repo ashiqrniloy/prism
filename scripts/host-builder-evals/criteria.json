@@ -8,7 +8,7 @@
   "arms": {
     "none": "A Prism builder agent with tools-coding (shell enabled inside the project), contextFiles, and the installed Prism docs under node_modules/@arnilo. The host-builder package is not installed and no skill is present.",
     "skill": "The same agent. The host-builder package is installed under node_modules/@arnilo (its indexes and example sources), and `prism-host-builder install --target agents` copied the skill into .agents/skills, where contextFiles lists it. No MCP server.",
-    "skill+mcp": "The skill arm plus @arnilo/prism-mcp connected over stdio to `prism-host-builder mcp --root <project>` (server id prism-host-builder). The lookup tools and docs resources are offered; no --entry or --package flag is passed, so the check tools list but are unconfigured (a factory that needs arguments cannot be a fixed target)."
+    "skill+mcp": "The skill arm plus @arnilo/prism-extensions/mcp connected over stdio to `prism-host-builder mcp --root <project>` (server id prism-host-builder). The lookup tools and docs resources are offered; no --entry or --package flag is passed, so the check tools list but are unconfigured (a factory that needs arguments cannot be a fixed target)."
   },
   "builder": {
     "packages": [

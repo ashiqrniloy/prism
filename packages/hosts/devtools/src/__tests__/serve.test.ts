@@ -304,10 +304,7 @@ describe("serveDevtools Host and Origin gates", () => {
         headers: { origin: "https://attacker.site" },
       });
       assert.equal(sessionsResponse.status, 403);
-      assert.equal(
-        ((await sessionsResponse.json()) as { error: { code: string } }).error.code,
-        "ERR_PRISM_DEVTOOLS_FORBIDDEN_ORIGIN",
-      );
+      assert.equal(((await sessionsResponse.json()) as { error: { code: string } }).error.code, "ERR_PRISM_DEVTOOLS_FORBIDDEN_ORIGIN");
     } finally {
       await devtools.close();
       await agent.dispose();
@@ -318,18 +315,19 @@ describe("serveDevtools Host and Origin gates", () => {
     const agent = await agentReplying("ok");
     const devtools = serveDevtools(agent, { port: 0 });
     try {
-      for (const host of [`127.0.0.1:${devtools.port}`, `localhost:${devtools.port}`, `[::1]:${devtools.port}`, `LOCALHOST:${devtools.port}`]) {
+      for (const host of [
+        `127.0.0.1:${devtools.port}`,
+        `localhost:${devtools.port}`,
+        `[::1]:${devtools.port}`,
+        `LOCALHOST:${devtools.port}`,
+      ]) {
         const response = await fetch(`${devtools.url}/api/inspect`, {
           headers: { host },
         });
         assert.equal(response.status, 200, `host ${host} must be allowed`);
       }
 
-      for (const origin of [
-        `http://127.0.0.1:${devtools.port}`,
-        `http://localhost:${devtools.port}`,
-        `http://[::1]:${devtools.port}`,
-      ]) {
+      for (const origin of [`http://127.0.0.1:${devtools.port}`, `http://localhost:${devtools.port}`, `http://[::1]:${devtools.port}`]) {
         const response = await fetch(`${devtools.url}/api/inspect`, {
           headers: { origin },
         });
@@ -369,10 +367,7 @@ describe("serveDevtools Host and Origin gates", () => {
         },
       });
       assert.equal(defaultHostRejected.status, 403);
-      assert.equal(
-        ((await defaultHostRejected.json()) as { error: { code: string } }).error.code,
-        "ERR_PRISM_DEVTOOLS_FORBIDDEN_HOST",
-      );
+      assert.equal(((await defaultHostRejected.json()) as { error: { code: string } }).error.code, "ERR_PRISM_DEVTOOLS_FORBIDDEN_HOST");
 
       // Default loopback origin is now rejected because allowedOrigins overrode it
       const defaultOriginRejected = await fetch(`${devtools.url}/api/inspect`, {
@@ -382,17 +377,14 @@ describe("serveDevtools Host and Origin gates", () => {
         },
       });
       assert.equal(defaultOriginRejected.status, 403);
-      assert.equal(
-        ((await defaultOriginRejected.json()) as { error: { code: string } }).error.code,
-        "ERR_PRISM_DEVTOOLS_FORBIDDEN_ORIGIN",
-      );
+      assert.equal(((await defaultOriginRejected.json()) as { error: { code: string } }).error.code, "ERR_PRISM_DEVTOOLS_FORBIDDEN_ORIGIN");
     } finally {
       await devtools.close();
       await agent.dispose();
     }
   });
 
-  it("hostOriginRejection matches @arnilo/prism-remote http-gate behavior (parity check)", async () => {
+  it("hostOriginRejection matches @arnilo/prism-hosts/remote http-gate behavior (parity check)", async () => {
     const options = {
       allowedHosts: ["127.0.0.1:4311", "localhost:4311"],
       allowedOrigins: ["http://127.0.0.1:4311", "http://localhost:4311"],

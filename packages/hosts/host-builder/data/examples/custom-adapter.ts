@@ -5,15 +5,15 @@
  *  - `configure` wraps the base plan, appending one extra flag and one bound-worktree overlay;
  *  - `decode` turns the base's `agent.raw` frame for a `custom-file` notification into `agent.file`;
  *  - `descriptor.auth.modes` narrows the policy to the base's api-key modes, dropping the account mode.
- * The derived adapter runs through `processDriver` with `@arnilo/prism-tools-coding` (which owns the
- * `workspace` service and routes `edit` into the session's worktree) and `@arnilo/prism-approval` in
+ * The derived adapter runs through `processDriver` with `@arnilo/prism-tools/coding` (which owns the
+ * `workspace` service and routes `edit` into the session's worktree) and `@arnilo/prism-extensions/approval` in
  * `ask` mode. The scripted binary is the rpc-server dialect: it calls the served `edit` twice, once
  * allowed and once declined by a scripted `HostUi`, then emits a `custom-file` frame the extension
  * decodes. The example prints the captured activity with its `origin`, both decisions, the worktree
  * diff with the overlay excluded, the materialized skill, the extra flag, and `agent.inspect()` notes
  * naming the base and the extension.
- * Imports only `@arnilo/prism`, `/driver-kit`, `/testing`, `@arnilo/prism-driver-process`,
- * `@arnilo/prism-tools-coding`, `@arnilo/prism-approval`, the reference adapter and its dialect, and
+ * Imports only `@arnilo/prism`, `/driver-kit`, `/testing`, `@arnilo/prism-hosts/driver-process`,
+ * `@arnilo/prism-tools/coding`, `@arnilo/prism-extensions/approval`, the reference adapter and its dialect, and
  * Node built-ins. No vendor name. Run: npm run build:core && bun examples/custom-adapter.ts
  */
 import { spawnSync } from "node:child_process";
@@ -21,24 +21,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-  type AgentEvent,
-  createAgent,
-  createMemorySessionStore,
-  definePackage,
-  type PackageInstance,
-  type Skill,
-} from "@arnilo/prism";
+import { type AgentEvent, createAgent, createMemorySessionStore, definePackage, type PackageInstance, type Skill } from "@arnilo/prism";
 import { createProfiles } from "@arnilo/prism/driver-kit";
-import {
-  createScriptedCli,
-  createScriptedHostUi,
-  type ScriptedRecordEntry,
-  type ScriptStep,
-} from "@arnilo/prism/testing";
-import approval from "@arnilo/prism-approval";
-import { type AgentAdapter, adapterDriver, extendAdapter, processDriver } from "@arnilo/prism-driver-process";
-import toolsCoding, { type WorkspaceService } from "@arnilo/prism-tools-coding";
+import { createScriptedCli, createScriptedHostUi, type ScriptedRecordEntry, type ScriptStep } from "@arnilo/prism/testing";
+import { type AgentAdapter, adapterDriver, extendAdapter, processDriver } from "@arnilo/prism-hosts/driver-process";
+import approval from "@arnilo/prism-extensions/approval";
+import toolsCoding, { type WorkspaceService } from "@arnilo/prism-tools/coding";
 import { rpcServerDialect } from "./adapters/rpc-server.dialect.js";
 import { rpcServer } from "./adapters/rpc-server.js";
 

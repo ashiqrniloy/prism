@@ -1,7 +1,8 @@
 import { it } from "bun:test";
 import assert from "node:assert/strict";
 import type { ContextDraft, HookContext, JsonObject, SessionContext, SessionEntry } from "@arnilo/prism";
-import { createHashEmbedder } from "@arnilo/prism-memory-core";
+import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory } from "../../index.js";
 import {
   createFabricContext,
   noteFabricDeliveryTurn,
@@ -9,7 +10,6 @@ import {
   recallPeriod,
   resetFabricDeliveryState,
 } from "../context.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 
 const user = (id: string): SessionEntry => ({
   id,
@@ -45,7 +45,9 @@ function harness() {
   } as unknown as HookContext;
   const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s", embedder: createHashEmbedder() });
   const fabric = createLongTermMemory({ memory, consolidate: false });
-  const draft: ContextDraft = { messages: [user("u1").message!] };
+  const firstMessage = user("u1").message;
+  assert.ok(firstMessage);
+  const draft: ContextDraft = { messages: [firstMessage] };
   return {
     context,
     memory,
@@ -117,7 +119,10 @@ it("task query includes OM state and persisted todo metadata after folding", asy
     sessionId: "s",
     timestamp: "2026-10-17T12:00:00Z",
     kind: "custom",
-    data: { type: "memory.session.task_state.recorded", taskState: { id: "aaaaaaaaaaaa", goal: "fix retry budget", sourceEntryIds: ["u1"] } },
+    data: {
+      type: "memory.session.task_state.recorded",
+      taskState: { id: "aaaaaaaaaaaa", goal: "fix retry budget", sourceEntryIds: ["u1"] },
+    },
   });
   h.entries.push({ ...user("plan"), message: { role: "tool", content: [], metadata: { todos: [{ content: "ship patch" }] } } });
   let query = "";
@@ -205,8 +210,11 @@ it("below_floor_injects_only_cue_and_directory", async () => {
   const { lines, metadata } = semanticBlock(await projection.build(h.draft, h.context));
   const delivered = lines.flatMap((line) => line.split("\n"));
   assert.equal(delivered.length, 2, "the citation preamble and the cue, no note");
-  assert.match(delivered[0]!, /Cite the memory ids you use/);
-  assert.match(delivered[1]!, /^Showing 0 of 1 matching notes\./);
+  const [preamble, cue] = delivered;
+  assert.ok(preamble);
+  assert.ok(cue);
+  assert.match(preamble, /Cite the memory ids you use/);
+  assert.match(cue, /^Showing 0 of 1 matching notes\./);
   assert.doesNotMatch(JSON.stringify(delivered), new RegExp(note.id));
   assert.deepEqual(metadata.itemIds, []);
 });
@@ -223,8 +231,10 @@ it("over_budget_best_hit_is_excerpted_within_budget", async () => {
   const result = await projection.build(h.draft, h.context);
   const { lines } = semanticBlock(result);
   assert.equal(lines.length, 2, "the best hit is shown, alone");
-  assert.match(lines[1]!, new RegExp(note.id));
-  assert.match(lines[1]!, /memory\.read /, "the excerpt names the read call");
+  const [, excerpt] = lines;
+  assert.ok(excerpt);
+  assert.match(excerpt, new RegExp(note.id));
+  assert.match(excerpt, /memory\.read /, "the excerpt names the read call");
   assert.ok(Math.ceil(lines.join("\n").length / 4) <= 600, "the best hit is cut down to the budget, not past it");
   // Plan 188.9 Task 6: the id the marker names is a real `memory.read` argument, and it returns the note whole.
   const read = h.fabric.tools().find((tool) => tool.name === "memory.read");
@@ -245,33 +255,39 @@ it("dedup refills topK and citations touch only injected used ids", async () => 
       }),
     ),
   );
+  const [omNote, , , citedNote, uncitedNote] = notes;
+  assert.ok(omNote);
+  assert.ok(citedNote);
+  assert.ok(uncitedNote);
+  const [firstMessage] = h.draft.messages;
+  assert.ok(firstMessage);
   const projection = createFabricContext(h.memory, async () => ({ hits: notes.map((note) => ({ ...note, score: 1 })), explain: [] }), {
     topK: 2,
   });
   const result = await projection.build(
     {
-      context: [{ content: "om", metadata: { source: "memory.session", itemIds: [notes[0]!.id] } }],
+      context: [{ content: "om", metadata: { source: "memory.session", itemIds: [omNote.id] } }],
       messages: [
-        { ...h.draft.messages[0]!, id: "u1" },
+        { ...firstMessage, id: "u1" },
         { role: "tool", content: [{ type: "tool_result", toolCallId: "r1", name: "read", result: { path: "doc.md", text: "file" } }] },
       ],
     },
     h.context,
   );
   const tail = result.messages.find((message) => message.metadata?.contextBlocks);
-  assert.match(JSON.stringify(tail), new RegExp(notes[3]!.id));
-  assert.match(JSON.stringify(tail), new RegExp(notes[4]!.id));
+  assert.match(JSON.stringify(tail), new RegExp(citedNote.id));
+  assert.match(JSON.stringify(tail), new RegExp(uncitedNote.id));
   for (const note of notes.slice(0, 3)) assert.doesNotMatch(JSON.stringify(tail), new RegExp(note.id));
   h.entries.push({
     ...user("answer"),
-    message: { role: "assistant", content: [{ type: "text", text: `Used [${notes[3]!.id}] and [${notes[0]!.id}]` }] },
+    message: { role: "assistant", content: [{ type: "text", text: `Used [${citedNote.id}] and [${omNote.id}]` }] },
   });
-  projection.observe({ type: "text", text: `Used [${notes[3]!.id.slice(0, 5)}` }, h.context);
-  projection.observe({ type: "text", text: `${notes[3]!.id.slice(5)}] and [${notes[0]!.id}]` }, h.context);
+  projection.observe({ type: "text", text: `Used [${citedNote.id.slice(0, 5)}` }, h.context);
+  projection.observe({ type: "text", text: `${citedNote.id.slice(5)}] and [${omNote.id}]` }, h.context);
   await h.memory.touch(projection.cited(h.context));
-  assert.ok((await h.memory.getEntry(notes[3]!.id))?.lastAccessedAt);
-  assert.equal((await h.memory.getEntry(notes[4]!.id))?.lastAccessedAt, undefined);
-  assert.equal((await h.memory.getEntry(notes[0]!.id))?.lastAccessedAt, undefined);
+  assert.ok((await h.memory.getEntry(citedNote.id))?.lastAccessedAt);
+  assert.equal((await h.memory.getEntry(uncitedNote.id))?.lastAccessedAt, undefined);
+  assert.equal((await h.memory.getEntry(omNote.id))?.lastAccessedAt, undefined);
 });
 
 it("passive injection excludes procedures, superseded rows, and low cosines", async () => {
@@ -333,11 +349,9 @@ it("later_hits_fill_whole_until_budget_and_skip_without_truncating", async () =>
   assert.equal(rendered, undefined, "an over-budget later hit is skipped");
   assert.ok(!lines.some((line) => line.includes(`memory.read ${huge.id}`)), "and it is not excerpted either");
   // The partial-selection cue lands after the last note; the note itself is whole, not truncated.
-  assert.match(
-    lines.find((line) => line.startsWith(`- [${small.id}]`))!,
-    /small harbour follow-up(\nShowing \d+ of 3 matching notes\.|$)/,
-    "whole, not truncated",
-  );
+  const smallLine = lines.find((line) => line.startsWith(`- [${small.id}]`));
+  assert.ok(smallLine);
+  assert.match(smallLine, /small harbour follow-up(\nShowing \d+ of 3 matching notes\.|$)/, "whole, not truncated");
   assert.ok(Math.ceil(lines.join("\n").length / 4) <= 600, "the block fits the budget");
   assert.equal(metadata.untrusted, true);
 });
@@ -360,11 +374,20 @@ it("shown_hits_render_chronologically_selection_unchanged", async () => {
     { query: "harbour" },
   );
   const { lines, metadata } = semanticBlock(await projection.build(h.draft, h.context));
-  const delivered = lines.slice(1).map((line) => /^- \[([^\]]+)\]/.exec(line)![1]!);
+  const delivered = lines.slice(1).map((line) => {
+    const match = /^- \[([^\]]+)\]/.exec(line);
+    assert.ok(match);
+    const [, id] = match;
+    assert.ok(id);
+    return id;
+  });
   assert.deepEqual(delivered, [second.id, third.id, first.id], "oldest first, so the newest value is read last");
   assert.deepEqual(metadata.itemIds, delivered, "selection is reported in delivery order");
-  assert.match(lines[1]!, /2026-01-01/, "each hit keeps its date header");
-  assert.match(lines[2]!, /2026-05-01/);
+  const [, oldest, middle] = lines;
+  assert.ok(oldest);
+  assert.ok(middle);
+  assert.match(oldest, /2026-01-01/, "each hit keeps its date header");
+  assert.match(middle, /2026-05-01/);
   assert.equal(delivered.length, 3, "all selected hits survive");
   // Selection is still by rank; skipping and back-filling are covered by the whole-fill test above.
 });
@@ -431,8 +454,11 @@ it("excerpt_never_crosses_notes_or_drops_the_untrusted_envelope", async () => {
   for (const [index, note] of notes.entries()) {
     const line = lines.find((candidate) => candidate.startsWith(`- [${note.id}]`));
     if (!line) continue;
-    for (const other of notes.filter((_, j) => j !== index))
-      assert.doesNotMatch(line, new RegExp(["red", "green", "blue"][notes.indexOf(other)]!));
+    for (const other of notes.filter((_, j) => j !== index)) {
+      const color = ["red", "green", "blue"][notes.indexOf(other)];
+      assert.ok(color);
+      assert.doesNotMatch(line, new RegExp(color));
+    }
   }
 });
 
@@ -484,7 +510,9 @@ it("injection_never_exceeds_budget", async () => {
   );
   const { lines } = semanticBlock(await projection.build(h.draft, h.context));
   assert.equal(lines.length, 2, "the best hit is shown, alone");
-  assert.match(lines[1]!, /memory\.read /, "the over-budget best hit is excerpted");
+  const [, excerpt] = lines;
+  assert.ok(excerpt);
+  assert.match(excerpt, /memory\.read /, "the over-budget best hit is excerpted");
   assert.ok(Math.ceil(lines.join("\n").length / 4) <= 600, "and stays inside the budget");
 });
 
@@ -513,7 +541,9 @@ it("partial_selection_cue_states_shown_of_eligible", async () => {
   assert.equal(lines.filter((line) => line.startsWith("- [")).length, 2);
   assert.equal(lines.at(-1), `Showing 2 of 4 matching notes. ${TOOL_CUE}`);
   // A host without tools still reads a coherent line, and no benchmark term leaks into the product.
-  assert.doesNotMatch(lines.at(-1)!, /longmemeval|haystack|benchmark|screen|gold/i);
+  const cue = lines.at(-1);
+  assert.ok(cue);
+  assert.doesNotMatch(cue, /longmemeval|haystack|benchmark|screen|gold/i);
 });
 
 it("cue_states_shown_of_eligible_and_names_the_tools", async () => {
@@ -529,7 +559,8 @@ it("cue_states_shown_of_eligible_and_names_the_tools", async () => {
   );
   const cue = tailText(await projection.build(h.draft, h.context))
     .split("\n")
-    .at(-1)!;
+    .at(-1);
+  assert.ok(cue);
   assert.match(cue, /^Showing 3 of 5 matching notes\./);
   // The sentence is unconditional: per-run tool visibility is not visible to the package.
   assert.match(cue, /memory\.recall with several phrasings \(queries\)/);
@@ -615,15 +646,18 @@ it("delivery_switches_to_excerpts_without_tool_use", async () => {
     store,
   );
   const first = userSaying("u1", "list all needle decisions");
+  assert.ok(first.message);
   h.setEntries([first]);
-  const firstText = tailText(await projection.build({ messages: [first.message!] }, h.context));
+  const firstText = tailText(await projection.build({ messages: [first.message] }, h.context));
   assert.doesNotMatch(firstText, /tail-marker/, "the first cued turn still uses a pointer card");
   assert.equal(store.values.get("s")?.mode, "pointers");
   assert.equal(store.values.get("s")?.cueTurns, 1);
 
   const second = userSaying("u2", "count every needle decision");
+
+  assert.ok(second.message);
   h.setEntries([second]);
-  const secondText = tailText(await projection.build({ messages: [second.message!] }, h.context));
+  const secondText = tailText(await projection.build({ messages: [second.message] }, h.context));
   assert.match(secondText, /tail-marker/, "the second cued turn without tool use shows the full note");
   assert.equal(store.values.get("s")?.mode, "excerpts");
   assert.equal(store.values.get("s")?.cueTurns, 2);
@@ -652,19 +686,23 @@ it("delivery_switches_back_on_tool_use", async () => {
     ["u2", "count every needle decision"],
   ] as const) {
     const entry = userSaying(id, text);
+    assert.ok(entry.message);
     h.setEntries([entry]);
-    await projection.build({ messages: [entry.message!] }, h.context);
+    await projection.build({ messages: [entry.message] }, h.context);
   }
   assert.equal(store.values.get("s")?.mode, "excerpts");
 
   // This is the state transition the `tool.started` hook applies for any memory.* call.
-  await resetFabricDeliveryState(store, h.context.session!);
+  assert.ok(h.context.session);
+  await resetFabricDeliveryState(store, h.context.session);
   assert.equal(readFabricDeliveryState(store.values.get("s")).mode, "pointers");
   assert.equal(store.values.get("s")?.reason, "memory tool used");
 
   const third = userSaying("u3", "list all needle decisions");
+
+  assert.ok(third.message);
   h.setEntries([third]);
-  const text = tailText(await projection.build({ messages: [third.message!] }, h.context));
+  const text = tailText(await projection.build({ messages: [third.message] }, h.context));
   assert.doesNotMatch(text, /tail-marker/, "tool use returns the next turn to pointer cards");
   assert.equal(store.values.get("s")?.cueTurns, 1);
 });

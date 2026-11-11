@@ -3,7 +3,7 @@
  * request is under the ratio, the next one is over it, so the oldest tool bodies become
  * deterministic stubs and the caller gets one report.
  *
- * The compiler lives in `@arnilo/prism-context-engineering` (plan 158): a session gets it by
+ * The compiler lives in `@arnilo/prism-extensions/context-engineering` (plan 158): a session gets it by
  * installing the package — `contextEngineering({ attention: { maxInputTokens: 2_000 } })` runs
  * this same pass inside a `context.build` handler and emits `attention.compiled` as a package
  * event. This file calls the library directly so the pass is visible on its own.
@@ -11,7 +11,7 @@
  * Run: npm run build:core && node examples/attention-compiler.ts
  */
 import type { Message, ModelConfig } from "@arnilo/prism";
-import { type AttentionReport, compileAttention, createAttentionCompiler } from "@arnilo/prism-context-engineering";
+import { type AttentionReport, compileAttention, createAttentionCompiler } from "@arnilo/prism-extensions/context-engineering";
 
 /** Cap 2,000 tokens, default reserve 1,024: the ratio is compared against 976 input tokens. */
 const model: ModelConfig = { provider: "mock", model: "demo" };

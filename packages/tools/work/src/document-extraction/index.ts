@@ -27,7 +27,7 @@ type ImageFormat = (typeof IMAGE_FORMATS)[number];
 type OcrFormat = "pdf" | ImageFormat;
 
 const MISSING_PEER =
-  'optional peer "@firecrawl/anydoc" is not installed. Install it (bun add @firecrawl/anydoc) to use @arnilo/prism-tools-work';
+  'optional peer "@firecrawl/anydoc" is not installed. Install it (bun add @firecrawl/anydoc) to use @arnilo/prism-tools/work';
 
 const REASON_MESSAGE = {
   needsOcr: "document needs OCR",

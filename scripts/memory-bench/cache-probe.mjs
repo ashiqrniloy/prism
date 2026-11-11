@@ -127,7 +127,7 @@ export async function runCacheProbe({ ref, turns = PROBE_TURNS, maxRequests = PR
   const { createAgent } = await import("@arnilo/prism");
   const { providerPackage } = await import("@arnilo/prism/provider-kit");
   const { default: memorySystem, createMemory, createLongTermMemory } = await import("@arnilo/prism-memory-system");
-  const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
+  const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-system/core/sqlite");
   const dir = await mkdtemp(join(tmpdir(), "prism-cache-probe-"));
   const bodies = [];
   const beforeAttempt = async (_input, init) => {
@@ -150,12 +150,14 @@ export async function runCacheProbe({ ref, turns = PROBE_TURNS, maxRequests = PR
       retry: false,
       packages: [
         providerPackage("cache-probe-providers", route.providers),
-        memorySystem({ ltm: {
-          preset: "conversational",
-          tools: { root: dir },
-          store: { sqlite: { path } },
-          scopes: { tenantId: scope.tenantId, project: { id: "probe--01234567", root: dir }, agent: false, user: false },
-        } }),
+        memorySystem({
+          ltm: {
+            preset: "conversational",
+            tools: { root: dir },
+            store: { sqlite: { path } },
+            scopes: { tenantId: scope.tenantId, project: { id: "probe--01234567", root: dir }, agent: false, user: false },
+          },
+        }),
       ],
     });
     const session = await agent.session({ id: "cache-probe", create: true });

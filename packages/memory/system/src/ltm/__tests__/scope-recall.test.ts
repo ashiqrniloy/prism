@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "bun:test";
 import type { ContextDraft, HookContext, SessionEntry } from "@arnilo/prism";
-import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "../context.js";
 import { createFabricDirectory, renderFabricDirectory } from "../directory.js";
 import { createMemory, createLongTermMemory, type MemoryFabricScopeBinding } from "../../index.js";
@@ -68,10 +68,18 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
   it("narrower_scope_shadows_same_key", async () => {
     const { fabric } = fabricOver(["project", "agent", "user"]);
     const project = await fabric.remember({ kind: "fact", content: "Deploy gate runs in CI", scope: "project", key: "deploy.gate" });
-    const user = await fabric.remember({ kind: "preference", content: "Deploy gate should run locally too", scope: "user", key: "deploy.gate" });
+    const user = await fabric.remember({
+      kind: "preference",
+      content: "Deploy gate should run locally too",
+      scope: "user",
+      key: "deploy.gate",
+    });
 
     const result = await fabric.recall("deploy gate", { topK: 5 });
-    assert.deepEqual(result.hits.map((hit) => hit.id), [project.id]);
+    assert.deepEqual(
+      result.hits.map((hit) => hit.id),
+      [project.id],
+    );
     assert.equal(result.explain.find((entry) => entry.id === user.id)?.shadowedBy, project.id);
     assert.equal((await fabric.recall("deploy gate", { topK: 5 })).explain.length, 2);
   });
@@ -128,7 +136,10 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
     await lifecycle.recordEvidence({ helpful: ["bbbbbbbbbbbb"] });
 
     const ranked = await fabric.recall("deploy gate", { topK: 2 });
-    assert.deepEqual(ranked.hits.map((hit) => hit.id), ["bbbbbbbbbbbb", "aaaaaaaaaaaa"]);
+    assert.deepEqual(
+      ranked.hits.map((hit) => hit.id),
+      ["bbbbbbbbbbbb", "aaaaaaaaaaaa"],
+    );
 
     // The prior is bounded: the rank flip costs a fraction of the fused score, and the scope prior
     // (0.1 project) plus both strengths (0.1) still sit far below a 0.15 relevance gap.
@@ -139,7 +150,11 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
 
     const plain = createLongTermMemory({ memory: project, scopes: bindings, consolidate: false });
     const unprioritised = await plain.recall("deploy gate", { topK: 2 });
-    assert.deepEqual(unprioritised.hits.map((hit) => hit.id), ["aaaaaaaaaaaa", "bbbbbbbbbbbb"], "equal relevance ties break on id");
+    assert.deepEqual(
+      unprioritised.hits.map((hit) => hit.id),
+      ["aaaaaaaaaaaa", "bbbbbbbbbbbb"],
+      "equal relevance ties break on id",
+    );
   });
 
   it("per_scope_budget_reserves_a_slot_per_scope_with_hits", async () => {
@@ -164,7 +179,10 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
 
     const projection = createFabricContext(bindings[0]!.memory, fabric.recall, { topK: 3, budgetTokens: 200 }, {});
     const entries = [userEntry("how do deploys happen fridays")];
-    const built = await projection.build({ messages: [{ role: "user", content: [{ type: "text", text: "how do deploys happen fridays" }] }] } as ContextDraft, hookContext(entries));
+    const built = await projection.build(
+      { messages: [{ role: "user", content: [{ type: "text", text: "how do deploys happen fridays" }] }] } as ContextDraft,
+      hookContext(entries),
+    );
     const injected = JSON.stringify(built.messages);
     assert.match(injected, /fabric-semantic/);
     assert.match(injected, /user preference/);

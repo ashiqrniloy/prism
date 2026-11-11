@@ -10,7 +10,7 @@ const fixturesDir = fs.existsSync(path.resolve(__dirname, "../../../fixtures"))
   ? path.resolve(__dirname, "../../../fixtures")
   : path.resolve(__dirname, "../../fixtures");
 
-describe("@arnilo/prism-tools-work — Golden Fixture Corpus & Adversarial Ingestion", () => {
+describe("@arnilo/prism-tools/work — Golden Fixture Corpus & Adversarial Ingestion", () => {
   it("parses money.csv and verifies decimal safety on all financial columns", async () => {
     const filePath = path.join(fixturesDir, "money.csv");
     const content = fs.readFileSync(filePath, "utf-8");

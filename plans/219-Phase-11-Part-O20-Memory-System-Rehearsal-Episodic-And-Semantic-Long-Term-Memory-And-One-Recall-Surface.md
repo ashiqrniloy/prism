@@ -1,5 +1,7 @@
 # Phase 11 Part O20 — Memory system: Rehearsal, episodic and semantic long-term memory, one recall surface
 
+> **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
+
 ## Objectives
 
 - Turn today's dropper into **Rehearsal**, the only door into long-term memory (design §5.5):

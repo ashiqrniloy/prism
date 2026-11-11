@@ -1,7 +1,7 @@
 /**
  * Read tool: read a file from the host filesystem.
  *
- * Behavioral port of pi's core/tools/read for @arnilo/prism-tools-coding, adapted to Prism's
+ * Behavioral port of pi's core/tools/read for @arnilo/prism-tools/coding, adapted to Prism's
  * `ToolDefinition` contract. Keeps pi's offset/limit continuation behavior while streaming one
  * bounded text page; image path remains magic-byte MIME → bounded `ImageContent`. Drops pi's
  * TUI (`renderCall`/`renderResult`, theme/syntax-highlight, compact classifications, key hints) and
@@ -21,14 +21,10 @@
 import { Buffer } from "node:buffer";
 import { constants } from "node:fs";
 import { access as fsAccess, stat as fsStat, open } from "node:fs/promises";
-import type {
-  JsonObject,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { readFileBounded } from "./bounded-file.js";
 import { CODING_OBSERVATION_EFFECT } from "./effects.js";
+import type { ExecutionPolicy } from "./execution-policy.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
   DEFAULT_MAX_BYTES,
@@ -44,7 +40,6 @@ import {
 import { resolveReadPathAsync, resolveToCwd } from "./path-utils.js";
 import type { ReadPathSet } from "./read-path-set.js";
 import { formatSize, type TruncationResult } from "./truncate.js";
-import type { ExecutionPolicy } from "./execution-policy.js";
 
 // --- magic-byte image MIME detection (faithful port of pi utils/mime.js, pure JS, no deps) ---
 
@@ -659,7 +654,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
         const numbered =
           page.firstLineExceedsLimit || page.content.length === 0 ? undefined : numberLines(page.content, page.startLine, maxBytes);
         // A lone line that only overflows once its prefix is added gets the shell-fallback notice.
-        const prefixedLineOverflows = numbered !== undefined && numbered.clipped && numbered.lines === 0;
+        const prefixedLineOverflows = numbered?.clipped === true && numbered.lines === 0;
         const firstLineExceedsLimit = page.firstLineExceedsLimit || prefixedLineOverflows;
         const content = numbered?.text ?? page.content;
         const seenLines = numbered?.lines ?? page.outputLines;

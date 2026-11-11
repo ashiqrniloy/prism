@@ -7,7 +7,7 @@
  * a tool write does not: where the note came from, what it contradicts, and whether it replaces an
  * existing note in place.
  */
-import type { Memory } from "@arnilo/prism-memory-core";
+import type { Memory } from "@arnilo/prism-memory-system/core";
 import type { MemoryNoteStatus } from "../lifecycle/index.js";
 import { createFabricLifecycle } from "../lifecycle/index.js";
 import { SCOPE_DEPTH } from "../scope/recall.js";

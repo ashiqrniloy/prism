@@ -481,7 +481,7 @@ live web. Evidence passes `redactSecrets` and a no-secret assertion.
 
 ## Host-builder evaluation
 
-The `@arnilo/prism-host-builder` kit (skill, indexes, MCP server) is measured by giving a Prism builder agent seven
+The `@arnilo/prism-hosts/host-builder` kit (skill, indexes, MCP server) is measured by giving a Prism builder agent seven
 fixture tasks in three arms (`none`, `skill`, `skill+mcp`) and grading its project with hidden tests. Claims are
 published only under the pre-registered rule in `scripts/host-builder-evals/criteria.json`. Details, the tasks and the
 claim rules: [README](../scripts/host-builder-evals/README.md).

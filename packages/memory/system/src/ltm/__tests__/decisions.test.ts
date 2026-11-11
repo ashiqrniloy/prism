@@ -1,6 +1,6 @@
 /** Plan 202 Task 12: decision-model gates are opt-in, batched, calibrated, and abstain safely. */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "bun:test";
 import type { DecisionAnswer, DecisionInput, DecisionRequest, DecisionResult, DecisionsClient } from "@arnilo/prism";
 import { resolveMemoryFabricConfig } from "../config.js";
 import {
@@ -124,6 +124,4 @@ describe("decision-model gates (plan 202 Task 12)", () => {
     const band = runtime(["P5"], () => ({ P5: noul(DECISION_POINT_SPECS.P5.threshold) }));
     assert.equal(await band.decisions.sufficient(input), undefined);
   });
-
-
 });

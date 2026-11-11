@@ -1,7 +1,7 @@
 import type { JsonObject, Message, SecretRedactor } from "@arnilo/prism";
-import type { Embedder, MemoryVectorRecord, RagAccessConstraint, VectorStore } from "@arnilo/prism-memory-core";
+import type { Embedder, MemoryVectorRecord, RagAccessConstraint, VectorStore } from "@arnilo/prism-memory-system/core";
 
-export type { RagAccessConstraint, SourceAccessGrant } from "@arnilo/prism-memory-core";
+export type { RagAccessConstraint, SourceAccessGrant } from "@arnilo/prism-memory-system/core";
 
 import type { RagTelemetry, RagTelemetrySpan } from "./telemetry.js";
 

@@ -1,10 +1,17 @@
-import { type Agent, type RunResult, type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
 import {
-  ASK_USER_DECISION_SUSPEND_REASON,
-  askUserDecisionResumeSchema,
-  resolveAskUserDecisionAnswer,
-  toAskUserDecisionSuspendData,
-} from "@arnilo/prism-tools-coding";
+  type Agent,
+  createAgent,
+  createMemorySessionStore,
+  type ModelProvider,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  type RunResult,
+  type SessionStore,
+  toolCallContent,
+} from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { mockProvider } from "@arnilo/prism/testing";
 import {
   createMemoryWorkflowCheckpoints,
   defineWorkflow,
@@ -12,10 +19,14 @@ import {
   resumeWorkflow,
   runWorkflow,
   suspend,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
 import memorySystem from "@arnilo/prism-memory-system";
-import { providerPackage } from "@arnilo/prism/provider-kit";
-import { mockProvider } from "@arnilo/prism/testing";
+import {
+  ASK_USER_DECISION_SUSPEND_REASON,
+  askUserDecisionResumeSchema,
+  resolveAskUserDecisionAnswer,
+  toAskUserDecisionSuspendData,
+} from "@arnilo/prism-tools/coding";
 
 /**
  * Conformance reference: goal → roadmap → per-task execute/validate with
@@ -112,7 +123,7 @@ function requireSucceeded(result: RunResult, childId: string): string {
 }
 
 async function buildRuntime(store: SessionStore) {
-  // Each child is a bounded one-shot agent (limits only narrow); `@arnilo/prism-delegate` is the model-facing form.
+  // Each child is a bounded one-shot agent (limits only narrow); `@arnilo/prism-extensions/delegate` is the model-facing form.
   const children: Record<string, () => Promise<Agent>> = {
     implementer: async () => await childAgent("implementer", "patched parser.ts", store),
     validator: async () => await childAgent("validator", "named checks ran", store),
@@ -122,7 +133,9 @@ async function buildRuntime(store: SessionStore) {
       const agent = await children[request.childId]!();
       const childSession = await agent.session();
       try {
-        return await childSession.run(request.input, { limits: { maxTotalTokens: MAX_TOKENS, maxToolCalls: MAX_TOOL_CALLS, maxWallTimeMs: 15_000 } });
+        return await childSession.run(request.input, {
+          limits: { maxTotalTokens: MAX_TOKENS, maxToolCalls: MAX_TOOL_CALLS, maxWallTimeMs: 15_000 },
+        });
       } finally {
         await childSession.close();
         await agent.dispose();
@@ -139,10 +152,9 @@ async function buildRuntime(store: SessionStore) {
       // the om* commands, and the `compaction` slot. It is off until `om` turns it on for a session.
       memorySystem({
         stm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
-        // One observation pass per message, then a high reflector gate so reflection and dropping stay
-        // out of the demo; the dropper's budget must be at least the reflector's gate.
-        wm: { model: { provider: "memory", model: "worker" }, observationTokens: 999_999 },
-        rehearsal: { targetTokens: 999_999 },
+        // This demo records session events only; WM and rehearsal need no work here.
+        wm: false,
+        rehearsal: false,
         context: { recentMessages: 4, compactAt: { maxTokens: 999_999 } },
         worker: { maxTurns: 1 },
       }),

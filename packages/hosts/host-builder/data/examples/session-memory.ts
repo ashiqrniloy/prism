@@ -18,9 +18,9 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism";
-import memoryCompaction from "@arnilo/prism-memory-compaction";
+import memoryCompaction from "@arnilo/prism-extensions/compaction";
 import memorySystem from "@arnilo/prism-memory-system";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 
 /**
  * Session memory (`@arnilo/prism-memory-system`'s session tiers), proved end to end over a durable
@@ -40,7 +40,7 @@ import { sqliteStore } from "@arnilo/prism-store-sqlite";
  * 6. **The slot conflict fails closed.** Listing both memory packages without an assignment rejects
  *    with `SlotConflictError`; assigning `slots.compaction` resolves it and `inspect()` names the owner.
  *
- * Imports only `@arnilo/prism`, the two memory packages, and `@arnilo/prism-store-sqlite`; the mock
+ * Imports only `@arnilo/prism`, the two memory packages, and `@arnilo/prism-extensions/store-sqlite`; the mock
  * provider is inline, so there is no credential and no network. The first turn carries a sentinel
  * secret and the demo asserts the ledger and the events never render it. Run: `bun examples/session-memory.ts`
  */
@@ -51,7 +51,7 @@ const OBSERVATION = "OBSERVED-FACT: the retry budget is capped at three attempts
 /** A secret-shaped sentinel: the ledger and the events must never render it. */
 const SENTINEL_SECRET = "sk-observational-memory-demo-sentinel";
 const OM_PACKAGE = "@arnilo/prism-memory-system";
-const COMPACTION_PACKAGE = "@arnilo/prism-memory-compaction";
+const COMPACTION_PACKAGE = "@arnilo/prism-extensions/compaction";
 
 interface Recorder {
   readonly requests: ProviderRequest[];
@@ -79,7 +79,8 @@ function demoProvider(recorder: Recorder): ModelProvider {
         yield providerToolCall(
           toolCallContent("observe-1", "record_event", {
             kind: "statement",
-            description: OBSERVATION,
+            // Names its source entry, so each turn's pass records its own event (an identical one would habituate).
+            description: `${OBSERVATION} (entry ${sourceId})`,
             relevance: "high",
             sourceEntryIds: [sourceId],
           }),

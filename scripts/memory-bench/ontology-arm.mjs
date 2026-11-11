@@ -1,5 +1,5 @@
 /**
- * Plan 208 Task 3: the ontology arm (`--ontology`). `@arnilo/prism-wiki` is installed next to the arm's
+ * Plan 208 Task 3: the ontology arm (`--ontology`). `@arnilo/prism-knowledge/wiki` is installed next to the arm's
  * fabric and runs as it would for a user: since plan 216 Task 3 the wiki keeps concepts in its own store (a temp root
  * per arm), reads the fabric through the read-only `memory.ltm` port and binds notes on its own pass; the concept pass
  * is a background job that a session opening schedules. This module owns what the bench adds around that:
@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { definePackage } from "@arnilo/prism";
 import { MEMORY_LTM_SERVICE } from "@arnilo/prism-memory-system";
-import { createMarkdownWikiStore, createWikiOntology, parseConceptBody, wiki } from "@arnilo/prism-wiki";
+import { createMarkdownWikiStore, createWikiOntology, parseConceptBody, wiki } from "@arnilo/prism-knowledge/wiki";
 import { bundleFromConcepts } from "./ontology-audit.mjs";
 
 /** Bounded wait per history for background concept passes (plan 208 Task 3). */

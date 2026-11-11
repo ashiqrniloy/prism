@@ -1,0 +1,173 @@
+{
+  "name": "@arnilo/prism-tools",
+  "version": "0.13.0",
+  "description": "Prism coding, web, browser, research, OpenAPI, computer-use and work tools. Import each package through its subpath.",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/tools"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/tools#readme",
+  "keywords": [
+    "prism",
+    "work",
+    "connectors",
+    "office",
+    "documents",
+    "document-reader",
+    "sheets",
+    "diagrams",
+    "docx",
+    "xlsx",
+    "pptx",
+    "drawio"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    "./coding": "./coding/src/index.ts",
+    "./web": "./web/src/index.ts",
+    "./browser": "./browser/src/index.ts",
+    "./research": "./research/src/index.ts",
+    "./openapi": "./openapi/src/index.ts",
+    "./computer-use": "./computer-use/src/index.ts",
+    "./work": "./work/src/index.ts",
+    "./work/connectors": "./work/src/connectors/index.ts",
+    "./work/connectors/drafts": "./work/src/connectors/drafts.ts",
+    "./work/connectors/google-workspace": "./work/src/connectors/google-workspace.ts",
+    "./work/connectors/microsoft365": "./work/src/connectors/microsoft365.ts",
+    "./work/diagrams": "./work/src/diagrams/index.ts",
+    "./work/document-extraction": "./work/src/document-extraction/index.ts",
+    "./work/document-reader": "./work/src/document-reader/index.ts",
+    "./work/documents": "./work/src/documents/index.ts",
+    "./work/sandbox": "./work/src/sandbox/index.ts",
+    "./work/sheets": "./work/src/sheets/index.ts",
+    "./work/skills": "./work/src/skills/index.ts",
+    "./work/tools": "./work/src/tools/index.ts"
+  },
+  "files": [
+    "coding/src",
+    "!coding/src/**/__tests__",
+    "coding/README.md",
+    "web/src",
+    "!web/src/**/__tests__",
+    "web/skills",
+    "web/README.md",
+    "browser/src",
+    "!browser/src/**/__tests__",
+    "browser/skills",
+    "browser/README.md",
+    "research/src",
+    "!research/src/**/__tests__",
+    "research/skills",
+    "research/README.md",
+    "openapi/src",
+    "!openapi/src/**/__tests__",
+    "openapi/README.md",
+    "computer-use/src",
+    "!computer-use/src/**/__tests__",
+    "computer-use/skills",
+    "computer-use/README.md",
+    "work/src",
+    "!work/src/**/__tests__",
+    "work/docling",
+    "work/sandbox",
+    "work/vendor",
+    "work/vendor-lock.json",
+    "work/THIRD_PARTY_NOTICES",
+    "work/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 coding/src web/src browser/src research/src openapi/src computer-use/src work/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:office": "PRISM_TEST_LIBREOFFICE=1 bun ../../scripts/with-build-lock.mjs --shared bun test --timeout=0 work/src/documents/__tests__/golden.test.ts",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "dependencies": {
+    "diff": "^9.0.0",
+    "@mozilla/readability": "0.6.0",
+    "linkedom": "0.18.14",
+    "turndown": "7.2.4"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism-extensions": "^0.13.0",
+    "@office-open/docx": "0.14.5",
+    "@office-open/pptx": "0.14.5",
+    "@office-open/xlsx": "0.14.5",
+    "@office-open/xml": "0.14.5",
+    "ajv": "^8.17.1",
+    "fast-xml-parser": "5.11.1",
+    "e2b": "2.49.1",
+    "playwright-core": "1.63.0",
+    "@firecrawl/anydoc": "0.2.4",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^2.4.5"
+  },
+  "peerDependenciesMeta": {
+    "@office-open/docx": {
+      "optional": true
+    },
+    "@office-open/pptx": {
+      "optional": true
+    },
+    "@office-open/xlsx": {
+      "optional": true
+    },
+    "@office-open/xml": {
+      "optional": true
+    },
+    "ajv": {
+      "optional": true
+    },
+    "fast-xml-parser": {
+      "optional": true
+    },
+    "e2b": {
+      "optional": true
+    },
+    "playwright-core": {
+      "optional": true
+    },
+    "@firecrawl/anydoc": {
+      "optional": true
+    },
+    "mammoth": {
+      "optional": true
+    },
+    "pdf-parse": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2",
+    "@arnilo/prism-extensions": "workspace:*",
+    "@types/turndown": "5.0.6",
+    "playwright-core": "1.63.0",
+    "@firecrawl/anydoc": "0.2.4",
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^2.4.5",
+    "@office-open/docx": "0.14.5",
+    "@office-open/pptx": "0.14.5",
+    "@office-open/xlsx": "0.14.5",
+    "@office-open/xml": "0.14.5",
+    "ajv": "^8.17.1",
+    "fast-xml-parser": "5.11.1",
+    "@arnilo/prism-hosts": "workspace:*"
+  }
+}

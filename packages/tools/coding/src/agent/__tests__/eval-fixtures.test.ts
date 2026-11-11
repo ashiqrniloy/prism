@@ -20,7 +20,7 @@ import {
   type ExperimentReport,
   scoreRun,
   serializeEvaluationReport,
-} from "@arnilo/prism-evals";
+} from "@arnilo/prism-hosts/evals";
 import {
   createCodingCheckTool,
   createGitCommitTool,
@@ -117,7 +117,14 @@ function toReport(evaluations: ExperimentReport["evaluations"]): ExperimentRepor
       failedCount: evaluations.filter((e) => e.status === "failed").length,
       macroMean: mean,
       scorers: {
-        "coding-adversarial-outcome": { items: scored.length, records: scored.length, mean: mean ?? 0, passRate: scored.filter(e => e.score === 1).length / scored.length, method: "wilson" as const, ci95: wilsonInterval(scored.filter(e => e.score === 1).length, scored.length) },
+        "coding-adversarial-outcome": {
+          items: scored.length,
+          records: scored.length,
+          mean: mean ?? 0,
+          passRate: scored.filter((e) => e.score === 1).length / scored.length,
+          method: "wilson" as const,
+          ci95: wilsonInterval(scored.filter((e) => e.score === 1).length, scored.length),
+        },
       },
     },
   };

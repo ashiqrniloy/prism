@@ -1,5 +1,7 @@
 # Phase 11 Part O18 — Memory system: short-term memory (scope-blind events, verbatim chunks, habituation)
 
+> **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
+
 ## Objectives
 
 - Turn the session tier's encoder into **STM**: it passively records what happens (requests, actions, results, changes, decisions, outcomes, errors, statements), each event with an id and a description detailed enough for a later model to judge usefulness from the description alone (design §5.2).
@@ -449,6 +451,7 @@ This implements roadmap Phase 11 "Memory model", part STM, after plan 216. It ca
 
       They run on `beam-1m`, `longmemeval-m` and the `long-session` family.
     - Functional: **Fixture hashes (added 2026-11-09).** Before the gate reads them, a criteria amendment adds the hashes of the `long-session-replay` and `long-session` fixtures, as the criteria's `fixtures.rule` requires. It changes no row, and `assertMemoryModelFixture` refuses an unhashed or drifted fixture.
+    - Functional: **S3 deferred to gate A (owner decision, 2026-11-10).** M-1 is decided by S1, S2 and S4; S3 is reported `deferred` and gate A reads it on the held-out partition under the same row (criteria amendment 2, `m1S3Deferred`). The suites run as S4's sample: STM and OM-before, the first 2 dev questions per model and suite. The long-session family runs in full.
     - Functional: **Verdicts.** `acceptance-report.mjs --plan memory-model --gate M-1 --build` computes S1–S4 from the run reports and the frozen criteria, with no hand-set value. A miss is reported as a miss and goes to the owner with per-row evidence before plan 218 starts. One fix round is allowed, on development partitions, with its own amended gate.
     - Functional: **Plan 210 transfer.** `docs/_evidence/memory-bench/210/decisions.md`'s `om.observer` and `om.task-state` rows get their final disposition from this verdict.
     - Functional: **Plan end.** Compromises, Further Actions, and the backlog hand-off.
@@ -543,6 +546,64 @@ This implements roadmap Phase 11 "Memory model", part STM, after plan 216. It ca
         - Billed rate: $0.0585 per million input tokens, output included, against the earlier $0.044 estimate.
         - Projection for the full gate: about $145 for both models (DeepSeek's rate unmeasured) and about 8 days of serial wall time, against $35.65 left until 2026-12-07.
         - The gate record is paused (`approved: false`) and rebound to manifest `185793e1…`. It waits for the owner's choice: coarser STM events first, a reduced run, or the full gate after the reset.
+    - **Coarser STM events (2026-11-10, owner: "first do the coarser STM events … the instruction/prompt for STM in general should be made such that … routine conversation becomes one event per exchange or topic, while actions, results, decisions and outcomes stay separate").**
+      - `DEFAULT_STM_INSTRUCTION` gains two sentences. Routine conversation is one `request`/`statement` per exchange or topic (what the user asked or said and the gist of the reply, keeping every preference, constraint, name, date and number the user gave), and actions, results, changes, decisions, errors and outcomes stay one event each. The instruction is now about 1,720 bytes (was 1,380). `stm_prompt_records_events_not_facts` asserts both rules.
+      - Three flush tests used an artificial 4 KB `worker.maxMessageBytes` that the longer instruction no longer fits beside a batch. They now use 8 KB, with the entries doubled so they still span batches and truncate.
+      - **Live diagnostic** (same 120k tokens of the first LongMemEval-M smoke question, MiMo):
+
+        | Arm | Records | Worker tokens | vs OM-before |
+        |---|---|---|---|
+        | per-message STM | 458 | 890k | 1.49× |
+        | per-exchange STM | 161 | 625k | 1.04× |
+        | OM-before | 63 | 599k | 1.00× |
+
+        No pass aborted and no call hit the output cap. A 30k-token text sample shows one event per exchange, with the user's details kept (for example "applewood on asparagus a week ago", "after watching the 2020 Tony Awards"). Descriptions stay in the local diagnostic log, not in evidence.
+      - `stm-probes.json` was regenerated: all 8 `works`, STM input per 10k eligible tokens 48,276. The scripted worker cannot show the granularity effect.
+      - The gate record stays paused and is rebound to manifest `ba8cc075…`.
+      - **Projection.** About 5.2 worker tokens per history token for STM and 5.0 for OM-before, so the full gate is about $120 for both models (DeepSeek's rate unmeasured) and about 6–7 days of serial wall time, against the allowance left (see the record).
+      - **Finding (not this plan's).** After the owner's commit `c8d97b33`, plan 202's `task5-comparison.test.mjs` fails. It archives `packages/memory/fabric/src` from HEAD, which plan 216 moved. This goes to the backlog hand-off.
+    - **Small runs and the S3 deferral (2026-11-10).**
+      - The owner asked for runs of at most 2–3 hours. A full S3 was out of reach either way: about 140 hours of worker time at the account's three concurrent requests, and gate C-1's paired intervals on these dev cohorts spanned about ±7 to ±13 points, against S3's −2 bound. The owner chose runs 1–4 and option B: "Let's do run 1-4 and go with option B".
+      - Criteria amendment 2: `ownerDecisions.m1S3Deferred`; `gates["M-1"].deferred.S3 → A`. `verifyMemoryModelCriteria` checks that a deferral's row is in the gate, that the target gate reads it, and that an owner decision backs it. `memoryModelGateVerdict` reports it `deferred` and decides the gate by the other rows. Hash `f99907bd…` → `9ed0adf0…`, and removing the deferral rebuilds the previous hash.
+      - `stm-gate.mjs`: 14 jobs. The family has 3 arms × 2 models. The suites form the S4 sample: STM and OM-before × 2 models × 2 suites, `maxQuestions` 2, concurrency 1, with memory-off dropped on the suites.
+      - The jobs run in four sittings (`M1_SITTINGS`). `m1SuiteDone` counts a capped job that answered exactly its sample, and the S4 suite cell needs identical answered ids in both arms. The evidence keeps the sample's paired accuracy as an S3 diagnostic only. Estimate: about $6.
+      - Gate record approved for runs 1–4, manifest `f0316f7e…`. The smoke's family checkpoints were cleared, because they were metered before the main-token fix.
+    - **Run 1 (2026-11-10).** 6 family jobs in about 75 minutes, $0.70.
+      - S1: MiMo +0.125 [−0.50, 0.75], DeepSeek −0.50 [−1.63, 0.63], so a miss.
+      - S4 family cells: MiMo 1.29×, DeepSeek 1.50×.
+      - Task success (OM-before / STM / memory-off): MiMo 1.0 / 1.0 / 0.5; DeepSeek 0.625 / 0.75 / 0.375.
+      - The owner paused runs 2–4 for an STM investigation ("Let's investigate and fix STM first").
+    - **Investigation (live diagnostics on persona `ls10`, local logs in `.cache/memory-bench/217/diag/`).**
+      1. **Harness bug: the family's `grep` ignored `path: "."`.** `safe(".")` stayed `"."`, which prefixes no file, so every directory-wide grep answered "(no matches)". DeepSeek could not find the module in task 1, spent the task probing guessed paths, and hit the turn limit. STM recorded "grep does not search directories". Run 1's S1 and task-success numbers are therefore invalid. Fixed: a root path searches everything and a directory searches its files. Test: `project_grep_searches_the_root_and_directories`. With the fix, all six tasks complete in every arm.
+      2. **Product: STM fell behind.** A flush requested while a pass was in flight was dropped (`skipped: "in_flight"`), so the tail written during a long pass waited for the next turn. With DeepSeek, STM was two tasks behind at task 5, and the task-state block still named task 1 at task 3. Fixed: the request is folded into the running flush as up to `MAX_FOLLOW_UP_PASSES` (4) follow-up passes. `om_flush_in_flight_skipped` became `om_flush_in_flight_request_runs_one_follow_up_pass`.
+      3. **Measurement: the rename pair's re-derivation count measures verification.** With grep fixed, all three arms make 2 re-derivations on the rename pair. In task 3 the agent opens the module it renamed, and its test, before importing from it, even with memory naming the function. The config pair is 0 in every arm, because task 4 is still in the provider view at task 6. So the family cannot separate memory arms on S1 as built.
+      4. **Kernel: `stm.thinkingLevel` never reaches the wire.** `prism.models.client("<provider>/<model>")` (`src/packages/loader.ts:806`) builds a bare `{provider, model}` with no `compat` or `capabilities`, so `applyThinkingLevelForModel` cannot map the level. Ollama honours `think: false` when sent (thinking dropped from 249 characters to 0). Every memory worker's `thinkingLevel` is a silent no-op for catalog-described models. This is a kernel contract, outside plan 217's scope, and is not fixed here.
+      5. **Cost structure on coding (DeepSeek, `ls10`, fixed harness).** STM: 6 passes, 18 calls (5 closing-only calls carrying a third of the input), 34 events (16 `result`, 6 `action`), 117k worker tokens per 10k eligible tokens. OM-before: 4 passes, 7 calls, 17 observations, 51k, which is 2.3×. The follow-up passes (fix 2) add passes, so they raise the ratio as well as freshness.
+    - **Fixes A and C (owner: "I agree. Let's do A and C and then re-run", 2026-11-10).**
+      - **A: the family's S1 design.**
+        - A view check found that every arm's compaction summary kept the task-1 and task-4 prompts. Those prompts named the function, its new name, the config file, the key and both values, so the dependent tasks could be done from the user's own words.
+        - Task 1 now asks to rename "the function that formats cents (src/cli.ts uses it)" to a given name, and task 4 to "raise its retry limit in the project config from N to M". Neither names the file or the symbol, so tasks 3 and 6 depend on what the agent found.
+        - The S1 counter (`searchRederivationCalls` in `long-session.mjs`) counts the searches and guesses in the dependent task: every `grep`, and every `read_file` of a missing path (the project tools mark it `missing`). Reading an existing file is verification. The offline fixture keeps `rederivationCalls` and its labelled re-derivations.
+        - The offline mock discovers the way a real agent would (reads `src/cli.ts`, greps `retry`). Offline, memory-off re-derives 1 per related task and STM 0; before the redesign both were 0.
+      - **C: clean-turn ending.** `runMemoryWorkerLoop` gains `endAfterCleanTurn`. After a turn whose calls all ran with no error result, `{ ok: false }` value or `warning`, none refused, and no output-limit stop, the loop ends. STM uses it; an internal `runStm` option turns it off for tests that read the second request.
+        - Tests: `stm_pass_ends_after_a_clean_turn_and_continues_after_a_rejection`. Five call-count assertions halved, `failed_batch` moved to `failOnCall: 2`, and two transcript-reading tests pass `endAfterCleanTurn: false`.
+        - memory-core export test: `MEMORY_WORKER_TOOL_CALL_LIMIT` added. Baseline compatible.
+        - Probe evidence regenerated: all `works`, 103 passes, STM input 48,734 per 10k.
+      - **Checks.** `packages/memory/system` 681 pass (2 known `retired-names.json` failures); `packages/memory/core` 75 pass. Memory-bench and docs: the known `feature-ledger` and `task5-comparison` failures only. Typecheck and the release gate also report a +1-byte kernel `packedBytes` and errors in `src/__tests__/module-specifier.test.ts`. Both come from uncommitted kernel manifest edits (`src/manifest/*`, `src/packages/define.ts`) that this task did not make, and they were left alone.
+      - **Re-run of run 1.** Manifest `6f6b983d…`, with a gate amendment. The first run 1's reports moved to `runs/superseded-run1/` and its journal to `.cache/memory-bench/217/superseded/`.
+    - **Run 1 re-run (after A and C).** Six family jobs, $0.54, 4 dev personas.
+      - S1: MiMo 0 vs 0 (tie, [0, 0]); DeepSeek OM-before 1.375 vs STM 1.0, +0.375 [−1.25, 2.0]. Still a miss, from power.
+      - S4 family cells: MiMo 0.74×, DeepSeek 0.63×. STM is now cheaper than OM-before.
+      - Memory-off re-derives (MiMo 1.25, DeepSeek 0.75) while the memory arms complete every task, so the redesign separates the arms.
+      - **Check 3** (DeepSeek STM, persona `ls7`): 0 re-derivations this time, against 5 in the campaign run of the same persona. STM recorded the task-1 outcome (function, module, callers), and task 3 wrote the import directly. There is no STM correctness bug. The variance comes from lag: one STM pass ran from task 2 to task 4, and a worker call started in task 5 finished after task 6, past session close. DeepSeek's slow worker calls are what kernel fix B (thinking level) would address.
+    - **Option 2: more dev personas** (owner: "Once 3 is done, I would do 1 and 2 together").
+      - The family has 24 personas. `ls12`–`ls23` all join dev in seed order (`LONG_SESSION_DEV_EXTENSION`), so dev has 16 personas and 32 related tasks per model. The base three-way draw is unchanged (`extension.baseIdsHash` `db5632ff…`, held-out ids the same), and the tests check this.
+      - Criteria amendment 3: `ownerDecisions.m1DevPersonas`, and the `long-session` fixture hash becomes `7bf23b02…`. The criteria hash moved `9ed0adf0…` → `57feb5ed…`, and each amendment rebuilds the previous hash.
+      - The gate record is approved for sittings 1–4 on manifest `7d225777…`. Run1b's reports are in `runs/superseded-run1b/` and its journal in `.cache/memory-bench/217/superseded/`. The four earlier personas' checkpoints are kept: their content and protocol are unchanged.
+    - **Blocked (2026-11-10).** `.cache/memory-bench/217/sittings.sh`, run as unit `m1-sittings`, failed at import before any call. A package restructure in progress in the working tree (moves into `packages/extensions/`) leaves `@arnilo/prism-extensions/store-codecs` missing, so `campaign.mjs` cannot load. Nothing was spent; the balance stayed at $33.02. Owner: wait until the restructure lands. **To resume:**
+      1. Regenerate the manifest (the moved paths change its hash), rebind the gate record with an amendment, and re-run the checks.
+      2. Archive `.cache/memory-bench/217/journal-worker-*.json` from the failed attempt.
+      3. Start `sittings.sh` as `m1-sittings` again.
     - **Remaining (after the owner's start word):**
       - set `approved`, `approvedAt` and the owner's words in the record, after checking `manifestHash` (regenerate the manifest if the harness changed);
       - run the campaign as a `systemd-run --user` unit and watch the allowance; it halts below $1.50 and resumes next period;

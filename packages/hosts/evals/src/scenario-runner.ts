@@ -1,10 +1,28 @@
 import type { EvaluationRecord } from "@arnilo/prism";
 import { resolveRedactor } from "@arnilo/prism";
-import type { AgentEvent, Agent, AgentConfig, Message, OwnershipScope, RunResult, SecretRedactor, Session, SessionOptions } from "@arnilo/prism";
+import type {
+  AgentEvent,
+  Agent,
+  AgentConfig,
+  Message,
+  OwnershipScope,
+  RunResult,
+  SecretRedactor,
+  Session,
+  SessionOptions,
+} from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 import { loadTimeline } from "./timeline.js";
 import { checkRequirements, scoreRun, skipScorers } from "./score.js";
-import type { EvaluationTelemetrySink, ExecutionTimeline, Scorer, TimelineFolder, ScenarioInput, UserSimulatorSpec, UserSimulation } from "./types.js";
+import type {
+  EvaluationTelemetrySink,
+  ExecutionTimeline,
+  Scorer,
+  TimelineFolder,
+  ScenarioInput,
+  UserSimulatorSpec,
+  UserSimulation,
+} from "./types.js";
 import { requireSimulator, nextSimulatedUser } from "./user-simulator.js";
 import { toErrorInfo } from "./util.js";
 
@@ -149,33 +167,52 @@ export async function runScenario(
     // One subscription per turn: by default a subscriber is run-scoped and closes when the run settles
     // (`SubscribeOptions.acrossRuns` opts out of that close), so a single default subscription around
     // several runs would silently score a timeline missing every later turn.
-    simulation = await executeScenario(options, async input => {
-      const result = await collectWhileRunning(session, folder, () =>
-        session.run(input, { signal: options.signal, ownership: options.ownership, redactor: options.redactor }));
-      lastResult = result;
-      turnsCompleted++;
-      return result;
-    }, async (result, turnIndex) => {
-      if (options.scoreTurns === "each") {
-        // The folder snapshots cumulatively; score only the steps this turn added.
-        const snapshot = folder?.snapshot();
-        const stepCount = snapshot?.steps.length ?? 0;
-        const slice = snapshot === undefined ? undefined : { ...snapshot, steps: snapshot.steps.slice(scoredSteps) };
-        scoredSteps = stepCount;
-        if (options.user) deferredTurns.push({ result, timeline: slice, turnIndex });
-        else perTurn.push(...(await score(result, slice, turnIndex)));
-      }
-    });
+    simulation = await executeScenario(
+      options,
+      async (input) => {
+        const result = await collectWhileRunning(session, folder, () =>
+          session.run(input, { signal: options.signal, ownership: options.ownership, redactor: options.redactor }),
+        );
+        lastResult = result;
+        turnsCompleted++;
+        return result;
+      },
+      async (result, turnIndex) => {
+        if (options.scoreTurns === "each") {
+          // The folder snapshots cumulatively; score only the steps this turn added.
+          const snapshot = folder?.snapshot();
+          const stepCount = snapshot?.steps.length ?? 0;
+          const slice = snapshot === undefined ? undefined : { ...snapshot, steps: snapshot.steps.slice(scoredSteps) };
+          scoredSteps = stepCount;
+          if (options.user) deferredTurns.push({ result, timeline: slice, turnIndex });
+          else perTurn.push(...(await score(result, slice, turnIndex)));
+        }
+      },
+    );
   } catch (err) {
     scenarioError = toErrorInfo(err);
   }
 
   const timeline = folder?.snapshot();
   const simulatorFailed = scenarioError?.code === "ERR_PRISM_EVAL_USER_SIMULATOR";
-  if (!simulatorFailed) for (const turn of deferredTurns) perTurn.push(...await score(turn.result, turn.timeline, turn.turnIndex));
-  const evaluations = simulatorFailed ? await skipScorers({ result: lastResult, scorers: options.scorers ?? [],
-    ownership: options.ownership, redactor: options.redactor, secrets: options.secrets, telemetry: options.telemetry }, "ERR_PRISM_EVAL_USER_SIMULATOR") :
-    options.scoreTurns === "each" ? perTurn : lastResult && options.scorers?.length ? await score(lastResult, timeline) : [];
+  if (!simulatorFailed) for (const turn of deferredTurns) perTurn.push(...(await score(turn.result, turn.timeline, turn.turnIndex)));
+  const evaluations = simulatorFailed
+    ? await skipScorers(
+        {
+          result: lastResult,
+          scorers: options.scorers ?? [],
+          ownership: options.ownership,
+          redactor: options.redactor,
+          secrets: options.secrets,
+          telemetry: options.telemetry,
+        },
+        "ERR_PRISM_EVAL_USER_SIMULATOR",
+      )
+    : options.scoreTurns === "each"
+      ? perTurn
+      : lastResult && options.scorers?.length
+        ? await score(lastResult, timeline)
+        : [];
 
   const status =
     options.signal?.aborted || lastResult?.status === "aborted"
@@ -196,15 +233,29 @@ export async function runScenario(
 }
 
 /** Validate configuration before constructing an agent or opening a session. */
-export function validateScenario(options: { turns?: readonly (string | ScenarioTurn)[]; user?: unknown; maxTurns?: number; scoreTurns?: string }): void {
+export function validateScenario(options: {
+  turns?: readonly (string | ScenarioTurn)[];
+  user?: unknown;
+  maxTurns?: number;
+  scoreTurns?: string;
+}): void {
   if ((options.turns !== undefined) === (options.user !== undefined)) {
     throw new EvalError("scenario requires exactly one of turns or user", "ERR_PRISM_EVAL_SCENARIO_BOUNDS");
   }
   if (options.user !== undefined) {
     requireSimulator(options.user as UserSimulatorSpec);
   }
-  if (options.user === undefined && (!Array.isArray(options.turns) || options.turns.some(turn => typeof turn !== "string" &&
-    (!turn || typeof turn !== "object" || !(typeof turn.user === "string" || (turn.user && typeof turn.user === "object" && "role" in turn.user)))))) {
+  if (
+    options.user === undefined &&
+    (!Array.isArray(options.turns) ||
+      options.turns.some(
+        (turn) =>
+          typeof turn !== "string" &&
+          (!turn ||
+            typeof turn !== "object" ||
+            !(typeof turn.user === "string" || (turn.user && typeof turn.user === "object" && "role" in turn.user))),
+      ))
+  ) {
     throw new EvalError("scenario turns must contain strings or ScenarioTurn objects", "ERR_PRISM_EVAL_SCENARIO_BOUNDS");
   }
   if (options.scoreTurns !== undefined && options.scoreTurns !== "last" && options.scoreTurns !== "each") {
@@ -233,7 +284,11 @@ export async function executeScenario(
   const user = options.user ? requireSimulator(options.user) : undefined;
   const turns: { user: string; assistant: string }[] = [];
   const redactor = resolveRedactor(options.redactor, options.secrets);
-  const simulation = (stopReason: UserSimulation["stopReason"]): UserSimulation => ({ turns, stopReason, simulatorModel: user!.simulatorModel });
+  const simulation = (stopReason: UserSimulation["stopReason"]): UserSimulation => ({
+    turns,
+    stopReason,
+    simulatorModel: user!.simulatorModel,
+  });
   const maxTurns = user ? Math.min(user.maxTurns ?? 8, options.maxTurns ?? 32) : options.turns!.length;
   for (let turnIndex = 0; turnIndex < maxTurns; turnIndex++) {
     const turn = user ? await nextSimulatedUser(user, turns, redactor, options.signal) : options.turns![turnIndex]!;
@@ -241,10 +296,14 @@ export async function executeScenario(
     options.signal?.throwIfAborted();
     const result = await run(typeof turn === "string" ? turn : turn.user);
     if (typeof turn === "object" && turn.assertReply) {
-      try { turn.assertReply(result.text, result); }
-      catch (cause) {
-        throw new EvalError(`turn ${turnIndex + 1} assertReply failed: ${cause instanceof Error ? cause.message : String(cause)}`,
-          "ERR_PRISM_EVAL_SCENARIO_ASSERTION", { cause });
+      try {
+        turn.assertReply(result.text, result);
+      } catch (cause) {
+        throw new EvalError(
+          `turn ${turnIndex + 1} assertReply failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+          "ERR_PRISM_EVAL_SCENARIO_ASSERTION",
+          { cause },
+        );
       }
     }
     if (user) {

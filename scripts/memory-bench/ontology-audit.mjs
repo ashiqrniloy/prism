@@ -15,8 +15,8 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
-import { calibrateJudge, cohensKappa, createJudgePanel } from "@arnilo/prism-evals";
-import { parseConceptBody } from "@arnilo/prism-wiki";
+import { calibrateJudge, cohensKappa, createJudgePanel } from "@arnilo/prism-hosts/evals";
+import { parseConceptBody } from "@arnilo/prism-knowledge/wiki";
 import {
   CLAIM_LABELS,
   drawStratified,

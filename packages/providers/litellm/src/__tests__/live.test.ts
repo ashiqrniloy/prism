@@ -30,6 +30,6 @@ runProviderLiveScenarios({
   // capability stays unclaimed instead of being asserted on an unmeasured backend.
   scenarios: ["text", "tool-loop", "abort", "error"],
   secretEnv: ["LITELLM_API_KEY"],
-  title: "@arnilo/prism-provider-litellm live",
+  title: "@arnilo/prism-ai/litellm live",
   skipUnless: () => skip,
 });

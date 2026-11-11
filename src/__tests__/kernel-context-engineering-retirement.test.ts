@@ -21,15 +21,15 @@ const repoRoot = join(import.meta.dirname, "..", "..");
 function assertNoRemovedFields(): void {
   const config: AgentConfig = { model: { provider: "mock", model: "demo" } };
   const run: RunOptions = {};
-  // @ts-expect-error contextBudget moved to @arnilo/prism-context-engineering
+  // @ts-expect-error contextBudget moved to @arnilo/prism-extensions/context-engineering
   const withBudget: AgentConfig = { ...config, contextBudget: { maxInputTokens: 1 } };
-  // @ts-expect-error toolResultFold moved to @arnilo/prism-context-engineering
+  // @ts-expect-error toolResultFold moved to @arnilo/prism-extensions/context-engineering
   const withFold: AgentConfig = { ...config, toolResultFold: { minBytes: 1 } };
-  // @ts-expect-error toolsDisclosure moved to @arnilo/prism-context-engineering
+  // @ts-expect-error toolsDisclosure moved to @arnilo/prism-extensions/context-engineering
   const withDisclosure: AgentConfig = { ...config, toolsDisclosure: "search" };
-  // @ts-expect-error toolsSearch moved to @arnilo/prism-context-engineering
+  // @ts-expect-error toolsSearch moved to @arnilo/prism-extensions/context-engineering
   const withSearch: AgentConfig = { ...config, toolsSearch: { topK: 2 } };
-  // @ts-expect-error attentionCompiler moved to @arnilo/prism-context-engineering
+  // @ts-expect-error attentionCompiler moved to @arnilo/prism-extensions/context-engineering
   const withAttention: AgentConfig = { ...config, attentionCompiler: true };
   // @ts-expect-error the run overlay went with the agent field
   const withRunOverlay: RunOptions = { attentionCompiler: { triggerRatio: 0.5 } };
@@ -68,8 +68,18 @@ describe("kernel context-engineering retirement (plan 158 Task 8)", () => {
     for (const file of tsFiles(join(repoRoot, "src"))) {
       if (file.includes("__tests__")) continue;
       const text = readFileSync(file, "utf8");
-      for (const name of ["attention-compiler.js", "context-budget.js", "tool-result-fold.js", "tool-search.js", "contracts-core/attention.js"]) {
-        if (text.includes(`from "${name.startsWith("contracts-core") ? "./" : ""}${name}"`) || text.includes(`from "./${name}"`) || text.includes(`from "../${name}"`)) {
+      for (const name of [
+        "attention-compiler.js",
+        "context-budget.js",
+        "tool-result-fold.js",
+        "tool-search.js",
+        "contracts-core/attention.js",
+      ]) {
+        if (
+          text.includes(`from "${name.startsWith("contracts-core") ? "./" : ""}${name}"`) ||
+          text.includes(`from "./${name}"`) ||
+          text.includes(`from "../${name}"`)
+        ) {
           offenders.push(`${file}: ${name}`);
         }
       }

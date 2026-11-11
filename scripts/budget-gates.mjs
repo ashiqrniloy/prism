@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } 
 import { cpus, loadavg, tmpdir } from "node:os";
 import { basename, dirname, join, sep } from "node:path";
 
+import { activeBundles } from "./bundles.mjs";
 import { publishableWorkspaceDirs } from "./package-truth.mjs";
 
 // Shared performance-budget helpers (plan 079, Task 8). Used by
@@ -195,11 +196,14 @@ export function measureExportCounts(cwd = process.cwd()) {
   const rootManifest = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8"));
   counts[rootManifest.name] = countDirExports(join(cwd, "src"));
   // The root `workspaces` globs are the authority, so a package nested inside a family directory
-  // (`packages/memory/compaction`) is measured like any other. A glob matching nothing throws.
+  // (`packages/extensions/compaction`) is measured like any other. A glob matching nothing throws.
   // Private apps have no export ceiling (plan 172 Task 3).
   for (const dir of publishableWorkspaceDirs(cwd, rootManifest.workspaces ?? [])) {
     const name = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name;
-    counts[name] = countDirExports(join(dir, "src"));
+    const bundle = activeBundles(cwd).find((bundle) => join(cwd, bundle.dir) === dir);
+    counts[name] = bundle
+      ? [...new Set(bundle.subpaths.map((row) => row.dir))].reduce((sum, child) => sum + countDirExports(join(dir, child, "src")), 0)
+      : countDirExports(join(dir, "src"));
   }
   return counts;
 }
@@ -398,7 +402,7 @@ export function checkKernelBudget(budget, measured) {
 
 // --- host-builder size budget (plan 215 Task 14) ------------------------------
 //
-// `@arnilo/prism-host-builder` ships generated indexes and example sources, so its tarball grows with the
+// `@arnilo/prism-hosts/host-builder` ships generated indexes and example sources, so the hosts tarball grows with the
 // public surface. The baseline is measured from the same pack the deny list inspects.
 
 /** Pure comparison so a breach is unit-testable without packing a tarball. */
@@ -408,14 +412,12 @@ export function checkHostBuilderBudget(budget, measured) {
     const baseline = budget?.[metric]?.baseline;
     const tolerance = budget?.[metric]?.tolerance;
     if (typeof baseline !== "number" || typeof tolerance !== "number") {
-      checks.push({ ok: false, message: `host-builder ${metric}: budgets.json hostBuilder.${metric} needs a baseline and a tolerance` });
+      checks.push({ ok: false, message: `host-builder ${metric}: budgets.json hosts.${metric} needs a baseline and a tolerance` });
       continue;
     }
     const check = checkUpperBound(`host-builder ${metric}`, measured[metric], baseline, tolerance);
     checks.push(
-      check.ok
-        ? check
-        : { ok: false, message: `${check.message} — regenerate or rebaseline budgets.json hostBuilder.${metric} with a reason` },
+      check.ok ? check : { ok: false, message: `${check.message} — regenerate or rebaseline budgets.json hosts.${metric} with a reason` },
     );
   }
   return checks;

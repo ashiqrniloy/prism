@@ -40,7 +40,12 @@ export interface ChannelBindingRecord {
   readonly generation: number;
   readonly suspended: boolean;
   /** Durable core correlation for a binding blocked on an approval. */
-  readonly suspendedRun?: { readonly operationId: string; readonly runId: string; readonly sessionId: string; readonly approvalId?: string };
+  readonly suspendedRun?: {
+    readonly operationId: string;
+    readonly runId: string;
+    readonly sessionId: string;
+    readonly approvalId?: string;
+  };
   readonly updatedAt: string;
 }
 

@@ -5,7 +5,7 @@ import {
   resolveMemoryWorkerLimits,
   runMemoryWorkerLoop,
   truncateWorkerText,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { DEFAULT_MAX_CHUNK_BYTES, DEFAULT_MAX_CHUNKS_PER_EVENT, MAX_CHUNK_SHARE, type PreparedChunk, prepareChunks } from "../../chunks.js";
 import { DEFAULT_STM_CONTEXT_TOKENS, DEFAULT_STM_HABITUATION_WINDOW } from "../config.js";
 import { createMemoryId } from "../ids.js";
@@ -71,6 +71,8 @@ export interface RunStmOptions extends MemoryWorkerLimitOptions {
   readonly client: ModelClient;
   readonly maxTurns: number;
   readonly instruction?: string;
+  /** Tests only: `false` asks the model again after a clean turn, so a test can read the tool results it was sent. */
+  readonly endAfterCleanTurn?: boolean;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;
   readonly sessionId?: string;
@@ -373,6 +375,8 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
     // refused (the model repeats them next turn) instead of failing the pass, which discarded every event of it and
     // re-sent a larger batch next time.
     onToolCallLimit: "refuse",
+    // A clean recording turn ends the pass: the model's next turn would be a closing reply that records nothing.
+    endAfterCleanTurn: options.endAfterCleanTurn ?? true,
   });
   return events;
 }

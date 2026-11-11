@@ -14,7 +14,7 @@ mock.module("playwright-core", () => ({
   },
 }));
 
-describe("@arnilo/prism-tools-browser without playwright-core", () => {
+describe("@arnilo/prism-tools/browser without playwright-core", () => {
   it("tools_browser_missing_playwright_notes", async () => {
     const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [toolsBrowser({ headless: true })] });
     try {

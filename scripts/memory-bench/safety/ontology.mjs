@@ -1,7 +1,7 @@
 /**
  * Plan 208 Task 4: ontology probes for plan 202 Task 14's safety suite, re-homed onto the wiki by plan 216 Task 3.
  *
- * The ontology left memory: concepts live in `@arnilo/prism-wiki`'s own store and read long-term memory only through the
+ * The ontology left memory: concepts live in `@arnilo/prism-knowledge/wiki`'s own store and read long-term memory only through the
  * read-only `memory.ltm` port. Every probe drives that shipped path (the wiki's ontology port, its markdown store and
  * edit reviewer, `wiki.search`, `wiki.read`, the passive pointer, the deletion feed and liveness reconcile, and, for
  * poisoning, the real `runWikiPass`) over a real fabric. No model call is made: the curator is a deterministic client
@@ -13,7 +13,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { createMemoryVectorStore, MemoryScopeError, scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, MemoryScopeError, scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import {
   createMemory,
   createLongTermMemory,

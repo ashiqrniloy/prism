@@ -68,7 +68,13 @@ function suspendingAgent(ownership?: { tenantId?: string; accountId?: string; us
     hooks: askEveryTool(),
     packages: [providerPackageForAgent],
     tools: {
-      add: [{ name: "write", parameters: { type: "object", properties: { path: { type: "string" } } }, execute: (args, context) => ({ toolCallId: context.toolCallId, name: "write", value: args }) }],
+      add: [
+        {
+          name: "write",
+          parameters: { type: "object", properties: { path: { type: "string" } } },
+          execute: (args, context) => ({ toolCallId: context.toolCallId, name: "write", value: args }),
+        },
+      ],
     },
   });
 }
@@ -76,7 +82,12 @@ function suspendingAgent(ownership?: { tenantId?: string; accountId?: string; us
 describe("narrow-only ownership (plan 177 Task 4)", () => {
   it("run_ownership_cannot_widen", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "a" } });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: { store },
+      ownership: { tenantId: "a" },
+    });
     const session = await agent.session({ id: "s", create: true });
     const before = (await store.list("s")).length;
     await assert.rejects(
@@ -100,7 +111,12 @@ describe("narrow-only ownership (plan 177 Task 4)", () => {
 
   it("session_ownership_narrows_and_stamps", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "t" } });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: { store },
+      ownership: { tenantId: "t" },
+    });
     const session = await agent.session({ id: "s", create: true, ownership: { accountId: "acct" } });
     await session.run("hi");
     const entries = await store.list("s");
@@ -121,12 +137,21 @@ describe("narrow-only ownership (plan 177 Task 4)", () => {
     await assert.rejects(async () => {
       for await (const event of session.resume(decisions, { ownership: { tenantId: "other" } })) events.push(event);
     }, OwnershipScopeError);
-    assert.equal(events.some((event) => event.type === "decision.resolved"), false, "the scope check precedes decision.resolved");
+    assert.equal(
+      events.some((event) => event.type === "decision.resolved"),
+      false,
+      "the scope check precedes decision.resolved",
+    );
   });
 
   it("warm_snapshot_no_extra_read", async () => {
     const { store, calls } = countingStore();
-    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "t" } });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: { store },
+      ownership: { tenantId: "t" },
+    });
     const session = await agent.session({ id: "s", create: true });
     await session.run("hi");
     await session.messages(); // warm the branch cache
@@ -134,6 +159,10 @@ describe("narrow-only ownership (plan 177 Task 4)", () => {
     // The branch carries only `tenantId`, so this run's added `userId` puts it out of scope and the
     // check fails closed — before any read or write.
     await assert.rejects(session.run("hi", { ownership: { userId: "u" } }), SessionNotFoundError);
-    assert.deepEqual(calls.filter((call) => READS.includes(call)), [], "a warm snapshot means the scope check reads nothing");
+    assert.deepEqual(
+      calls.filter((call) => READS.includes(call)),
+      [],
+      "a warm snapshot means the scope check reads nothing",
+    );
   });
 });

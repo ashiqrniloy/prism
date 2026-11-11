@@ -1,7 +1,7 @@
 /** Offline JSON-RPC app-server reference adapter. See docs/agent-adapters.md, worked mapping B. */
 import { join } from "node:path";
 import type { AgentInput, JsonObject, JsonValue, Message, Usage } from "@arnilo/prism";
-import type { AgentAdapter, Decoded, OutboundFrame, RequestContext } from "@arnilo/prism-driver-process";
+import type { AgentAdapter, Decoded, OutboundFrame, RequestContext } from "@arnilo/prism-hosts/driver-process";
 
 function text(input: string | Message | readonly Message[]): string {
   if (typeof input === "string") return input;

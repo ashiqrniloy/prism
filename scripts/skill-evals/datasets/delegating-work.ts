@@ -2,7 +2,7 @@
 import { gradeAnswer } from "../lib.mjs";
 
 export const skill = "delegating-work";
-export const packageName = "@arnilo/prism-delegate";
+export const packageName = "@arnilo/prism-extensions/delegate";
 export const version = "2";
 
 const ANALYST = {
@@ -14,20 +14,41 @@ const ANALYST = {
 
 const ask = (task: string, data: string) => `Use the analyst child for this job; I want its answer. Task: ${task}\n\nData:\n${data}`;
 
-const T = (id, task, data, mustContain, childAnswer, brief, extra = {}) => ({
+const T = (id, task, data, mustContain, childAnswer, _brief, extra = {}) => ({
   id,
   input: ask(task, data),
   kind: "trigger",
-  grade: { answer: { mustContain, ...(extra.answer ?? {}) }, childOutput: { mustContain }, ...(extra.noInBrief ? { noInBrief: extra.noInBrief } : {}) },
+  grade: {
+    answer: { mustContain, ...(extra.answer ?? {}) },
+    childOutput: { mustContain },
+    ...(extra.noInBrief ? { noInBrief: extra.noInBrief } : {}),
+  },
   offline: { brief: `${task}\n\nData:\n${extra.briefData ?? data}`, childAnswer, answer: childAnswer },
 });
 const N = (id, input, grade, answer) => ({ id, input, kind: "non_trigger", grade: { answer: grade }, offline: { answer } });
 
-const LOG = ["10:01 INFO start", "10:02 ERROR disk full", "10:03 INFO retry", "10:04 ERROR timeout", "10:05 WARN slow", "10:06 ERROR timeout", "10:07 INFO ok", "10:08 ERROR auth failed", "10:09 INFO ok", "10:10 ERROR disk full"].join("\n");
+const LOG = [
+  "10:01 INFO start",
+  "10:02 ERROR disk full",
+  "10:03 INFO retry",
+  "10:04 ERROR timeout",
+  "10:05 WARN slow",
+  "10:06 ERROR timeout",
+  "10:07 INFO ok",
+  "10:08 ERROR auth failed",
+  "10:09 INFO ok",
+  "10:10 ERROR disk full",
+].join("\n");
 
 export const items = [
   T("delegate-count-errors", "Count the ERROR lines in this log and reply with the number.", LOG, ["5"], "5"),
-  T("delegate-sum-invoice", "Add up these invoice line amounts and reply with the total.", "120, 45, 310, 78, 22, 205, 64, 19", ["863"], "863"),
+  T(
+    "delegate-sum-invoice",
+    "Add up these invoice line amounts and reply with the total.",
+    "120, 45, 310, 78, 22, 205, 64, 19",
+    ["863"],
+    "863",
+  ),
   T(
     "delegate-extract-emails",
     "List every email address in this text.",
@@ -42,7 +63,13 @@ export const items = [
     ["retries", "region"],
     "retries and region",
   ),
-  T("delegate-longest-word", "Which is the longest word in this sentence?", "The photosynthesizing botanist quietly catalogued unremarkable ferns", ["photosynthesizing"], "photosynthesizing"),
+  T(
+    "delegate-longest-word",
+    "Which is the longest word in this sentence?",
+    "The photosynthesizing botanist quietly catalogued unremarkable ferns",
+    ["photosynthesizing"],
+    "photosynthesizing",
+  ),
   T(
     "delegate-iso-dates",
     "Rewrite these dates in ISO 8601 (YYYY-MM-DD).",
@@ -89,24 +116,33 @@ export const items = [
   },
   N("delegate-none-capital", "What is the capital of Japan?", { mustContain: ["Tokyo"] }, "Tokyo."),
   N("delegate-none-leap", "How many days does a leap year have?", { mustContain: ["366"] }, "366."),
-  N("delegate-none-synonym", "Give me one synonym for the word quick.", { anyOf: ["fast", "rapid", "swift", "speedy", "brisk", "prompt"] }, "Fast."),
+  N(
+    "delegate-none-synonym",
+    "Give me one synonym for the word quick.",
+    { anyOf: ["fast", "rapid", "swift", "speedy", "brisk", "prompt"] },
+    "Fast.",
+  ),
 ].map(({ id, input, kind, grade, offline }) => ({ id, input, tags: [kind], expected: { kind, grade, offline } }));
 
 export function grade(expectedGrade, snapshot) {
   const checks = [];
   if (expectedGrade.answer) checks.push(...gradeAnswer(snapshot.answer, expectedGrade.answer).checks.map((check) => `answer: ${check}`));
-  if (expectedGrade.noDelegation && (snapshot.delegateInputs ?? []).length > 0) checks.push("delegated a job the skill says to do yourself");
-  for (const secret of expectedGrade.noInBrief ?? []) if ((snapshot.delegateInputs ?? []).some((input) => input.includes(secret))) checks.push("the brief carried a secret the child did not need");
+  if (expectedGrade.noDelegation && (snapshot.delegateInputs ?? []).length > 0)
+    checks.push("delegated a job the skill says to do yourself");
+  for (const secret of expectedGrade.noInBrief ?? [])
+    if ((snapshot.delegateInputs ?? []).some((input) => input.includes(secret)))
+      checks.push("the brief carried a secret the child did not need");
   if (expectedGrade.childOutput) {
     const outputs = snapshot.delegateOutputs ?? [];
     if (outputs.length === 0) checks.push("the analyst child was never used");
-    else if (!outputs.some((output) => gradeAnswer(output, expectedGrade.childOutput).pass)) checks.push("no child answer carried the result (the brief probably lacked the data)");
+    else if (!outputs.some((output) => gradeAnswer(output, expectedGrade.childOutput).pass))
+      checks.push("no child answer carried the result (the brief probably lacked the data)");
   }
   return { pass: checks.length === 0, reason: checks.length === 0 ? "state matches" : checks.join("; "), checks };
 }
 
 export async function createEnvironment({ item }) {
-  const { default: delegate } = await import("@arnilo/prism-delegate");
+  const { default: delegate } = await import("@arnilo/prism-extensions/delegate");
   const { offline, kind } = item.expected;
   return {
     packages: [delegate({ children: { analyst: ANALYST } })],
@@ -120,7 +156,9 @@ export async function createEnvironment({ item }) {
         .filter((step) => step.kind === "tool" && step.name === "delegate")
         .map((step) => (typeof step.input === "string" ? step.input : JSON.stringify(step.input ?? ""))),
       delegateOutputs: (timeline?.steps ?? [])
-        .filter((step) => step.kind === "tool" && (step.name === "delegate" || step.name === "delegate_wait") && step.status === "succeeded")
+        .filter(
+          (step) => step.kind === "tool" && (step.name === "delegate" || step.name === "delegate_wait") && step.status === "succeeded",
+        )
         .map((step) => (typeof step.output === "string" ? step.output : JSON.stringify(step.output ?? ""))),
     }),
     applyOffline: async () => offline.answer,

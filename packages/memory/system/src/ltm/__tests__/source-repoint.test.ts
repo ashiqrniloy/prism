@@ -28,9 +28,9 @@ import {
   type SourceRename,
   type SourceRenameEvent,
   type VectorStore,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { OBSERVATIONS_RECORDED } from "@arnilo/prism-memory-system";
-import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-rag";
+import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-knowledge/rag";
 import { HARD_REPOINT_RECORDS } from "../../../../core/src/repoint.js";
 import { buildObservationalMemoryProjection } from "../../session/projection.js";
 

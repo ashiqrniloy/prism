@@ -3,7 +3,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { type ContextDraft, type HookContext, type SessionEntry } from "@arnilo/prism";
-import { createHashEmbedder } from "@arnilo/prism-memory-core";
+import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "../context.js";
 import { createMemory, createLongTermMemory } from "../../index.js";
 import { createFabricLifecycle } from "../lifecycle/index.js";
@@ -168,5 +168,4 @@ describe("candidate lifecycle", () => {
     );
     assert.equal(parseMemoryNoteMetadata((await memory.getEntry("b".repeat(12)))?.metadata), undefined);
   });
-
 });

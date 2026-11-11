@@ -13,9 +13,14 @@
  * with `sleep`, `cat`, `echo`, and a writable `/workspace`.
  */
 
-import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism-workflows";
-import { createProcessSessions, type ProcessSessions } from "@arnilo/prism-tools-coding";
-import { createDockerProcessRecoveryBackend, createDockerSandbox, type DisposableSandbox } from "@arnilo/prism-tools-coding";
+import { createMemoryCheckpointStore, createMemoryLeaseStore } from "@arnilo/prism-extensions/workflows";
+import {
+  createDockerProcessRecoveryBackend,
+  createDockerSandbox,
+  createProcessSessions,
+  type DisposableSandbox,
+  type ProcessSessions,
+} from "@arnilo/prism-tools/coding";
 
 // ──── Configuration ────────────────────────────────────────────────────────
 // Replace with a real digest-pinned image that has basic shell tools.

@@ -29,12 +29,7 @@ import {
   type SessionEntry,
   type SessionState,
 } from "@arnilo/prism";
-import {
-  createMemoryVectorStore,
-  type Memory,
-  type MemoryVectorRecord,
-  type VectorStore,
-} from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore, type Memory, type MemoryVectorRecord, type VectorStore } from "@arnilo/prism-memory-system/core";
 import {
   type MemoryFabricConfig,
   type ResolvedLifecycleConfig,
@@ -526,7 +521,8 @@ export async function setupLongTermMemory(prism: PackageAPI<unknown>, input: Mem
       for (const binding of memories) {
         if (binding.level !== "user" && binding.level !== "project") continue;
         const level = binding.level;
-        if (!config.rules || !config.rules.scopes.includes(level)) continue;
+        if (!config.rules) continue;
+        if (!config.rules.scopes.includes(level)) continue;
         const lifecycleForScope = createFabricLifecycle(binding.memory);
         const report = await reconcileRulesFile({
           binding: { level, memory: binding.memory },
@@ -827,7 +823,7 @@ async function resolveStore(prism: PackageAPI<unknown>, config: ResolvedMemoryFa
     const dir = config.store.markdown.dir;
     await mkdir(dir, { recursive: true, mode: 0o700 });
     await jail.resolve(dir);
-    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
     const stores = await createMarkdownMemoryStores({
       root: dir,
       ...(config.limits === undefined ? {} : { limits: config.limits }),
@@ -849,7 +845,7 @@ async function resolveStore(prism: PackageAPI<unknown>, config: ResolvedMemoryFa
     const path = await jail.resolve(config.store.sqlite.path);
     await mkdir(dirname(path), { recursive: true });
     await jail.resolve(path);
-    const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
+    const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-system/core/sqlite");
     return createSqliteMemoryStores({ path });
   }
   const postgres = config.store.postgres;
@@ -862,7 +858,7 @@ async function resolveStore(prism: PackageAPI<unknown>, config: ResolvedMemoryFa
     prism.status.note("warn", `memory-fabric: connection ref ${JSON.stringify(postgres.connection)} did not resolve`);
     return undefined;
   }
-  const { createPostgresMemoryStores, createPostgresVectorStore } = await import("@arnilo/prism-memory-core/postgres");
+  const { createPostgresMemoryStores, createPostgresVectorStore } = await import("@arnilo/prism-memory-system/core/postgres");
   const stores = await createPostgresMemoryStores({
     connectionString: secret.value,
     ...(postgres.schema === undefined ? {} : { schema: postgres.schema }),
@@ -964,8 +960,7 @@ function createMemoryExportCommand(deps: OkfBundleDeps): PackageCommand {
   const args: JsonSchema = { type: "object", additionalProperties: false, required: ["dir"], properties: { dir: { type: "string" } } };
   return {
     name: "memory:export",
-    description:
-      "Export this memory's notes and tombstones to an OKF markdown bundle inside tools.root. Embeddings are not written.",
+    description: "Export this memory's notes and tombstones to an OKF markdown bundle inside tools.root. Embeddings are not written.",
     args,
     async run(rawArgs: JsonObject): Promise<JsonObject> {
       const target = await resolveBundleDir(deps, rawArgs.dir);

@@ -13,7 +13,7 @@ import {
   type ToolResult,
 } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import { createHashEmbedder, createMemoryVectorStore, type Memory, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore, type Memory, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { resolveMemoryFabricConfig } from "../config.js";
 import { exchangePairs } from "../exchanges.js";
 import memorySystem, { createMemory, createLongTermMemory } from "../../index.js";

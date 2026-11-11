@@ -66,21 +66,25 @@ async function turnGateAgent(options: {
     id: "turn-before",
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate(request) {
-        options.requests.push(request);
-        turn += 1;
-        options.onGenerate?.(turn);
-        if (turn === 1) {
-          yield { type: "tool_call" as const, call: toolCallContent("call-1", "digest", { value: "dossier" }) };
-          yield providerDone();
-          return;
-        }
-        yield providerTextDelta(`turn ${turn} complete`);
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate(request) {
+            options.requests.push(request);
+            turn += 1;
+            options.onGenerate?.(turn);
+            if (turn === 1) {
+              yield { type: "tool_call" as const, call: toolCallContent("call-1", "digest", { value: "dossier" }) };
+              yield providerDone();
+              return;
+            }
+            yield providerTextDelta(`turn ${turn} complete`);
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     tools: {
       add: [
         {

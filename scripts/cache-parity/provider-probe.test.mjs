@@ -204,7 +204,7 @@ test("provider_probe_imports_only_named_provider", async () => {
     imports.push(name);
     return { createOpenRouterProvider: create, listOpenRouterModels: list };
   });
-  assert.deepEqual(imports, ["@arnilo/prism-provider-openrouter"]);
+  assert.deepEqual(imports, ["@arnilo/prism-ai/openrouter"]);
   assert.equal(result.create, create);
   assert.equal(result.list, list);
   await assert.rejects(() => importProvider("../secret", () => assert.fail("must not import")), /provider id/);
@@ -227,7 +227,7 @@ test("provider_probe_accepts_a_credential_ref", async () => {
   };
   const created = [];
   const resolver = await credentialSlot(async (name) => {
-    assert.equal(name, "@arnilo/prism-credentials-keyring");
+    assert.equal(name, "@arnilo/prism-extensions/keyring");
     return {
       KEYRING_DEFAULT_SERVICE: "prism",
       createKeychainCredentialStore: ({ service }) => {

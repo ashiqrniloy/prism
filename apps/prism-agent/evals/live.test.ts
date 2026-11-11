@@ -3,12 +3,9 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import {
-  assertEvaluationThreshold,
-  toExperimentReportRecord,
-} from "@arnilo/prism-evals";
-import { hyper } from "@arnilo/prism-provider-hyper";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { assertEvaluationThreshold, toExperimentReportRecord } from "@arnilo/prism-hosts/evals";
+import { hyper } from "@arnilo/prism-ai/hyper";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import {
   enforceLiveEvalTokenCeiling,
   HOST_EVAL_TRIALS,
@@ -25,13 +22,10 @@ function parseLiveEnvFile(path: string): Record<string, string> {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
     const match = /^(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    if (!match) continue;
-    const key = match[1]!;
-    let value = match[2]!.trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
+    if (!match || match[1] === undefined || match[2] === undefined) continue;
+    const key = match[1];
+    let value = match[2].trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1);
     }
     out[key] = value;
@@ -61,9 +55,7 @@ runOrSkip(
   "live_eval_gate_row_enforces_token_ceiling",
   async () => {
     const modelId = process.env.PRISM_LIVE_EVAL_GATE_MODEL?.trim() || "deepseek-v4-pro-0813";
-    const storePath =
-      process.env.PRISM_LIVE_EVAL_GATE_STORE?.trim() ||
-      join(homedir(), ".cache/prism/live-eval-gate.db");
+    const storePath = process.env.PRISM_LIVE_EVAL_GATE_STORE?.trim() || join(homedir(), ".cache/prism/live-eval-gate.db");
     mkdirSync(dirname(storePath), { recursive: true });
 
     const persistence = createSqlitePersistence({ filename: storePath });

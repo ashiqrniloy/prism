@@ -1,5 +1,5 @@
 import type { HostUiRequestKind, OwnershipScope } from "@arnilo/prism";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { answerLimit } from "./limits.js";
 
 export interface RoutedAnswer {

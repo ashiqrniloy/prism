@@ -197,7 +197,7 @@ function normalizeCitationHash(value: string): string {
   return raw.trim().toLowerCase();
 }
 
-/** Stable digest of citation identity tuples. Live source checks live in `@arnilo/prism-evals`. */
+/** Stable digest of citation identity tuples. Live source checks live in `@arnilo/prism-hosts/evals`. */
 export function citationBindingDigest(citations: readonly ArtifactCitation[] | undefined): string {
   const rows = (citations ?? [])
     .map(

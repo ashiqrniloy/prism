@@ -7,8 +7,8 @@
 // Task 8, so it moved here.
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { hyperModels } from "@arnilo/prism-provider-hyper";
-import { openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
+import { hyperModels } from "@arnilo/prism-ai/hyper";
+import { openCodeGoModels } from "@arnilo/prism-ai/opencode-go";
 
 const CATALOGS = [
   { id: "hyper", models: hyperModels },
@@ -39,11 +39,7 @@ describe("tool-call conformance: catalog declarations", () => {
   });
 
   it("accepts advisory values and treats absence as forward-compatible unknown", () => {
-    const capabilities = [
-      { tools: true, toolCallStrictness: "strict" },
-      { tools: true, toolCallStrictness: "lenient" },
-      { tools: true },
-    ];
+    const capabilities = [{ tools: true, toolCallStrictness: "strict" }, { tools: true, toolCallStrictness: "lenient" }, { tools: true }];
     assert.equal(capabilities[2]?.toolCallStrictness, undefined);
   });
 });

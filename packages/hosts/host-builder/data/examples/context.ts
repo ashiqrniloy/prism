@@ -8,11 +8,13 @@ export async function demo() {
   let seen: readonly ContextBlock[] = [];
   const agent = await createAgent({
     model: { provider: "mock", model: "context-demo" },
-    packages: [mockProvider([[providerTextDelta("ok"), providerDone()]], {
-      onRequest: (request) => {
-        seen = request.context ?? [];
-      },
-    })],
+    packages: [
+      mockProvider([[providerTextDelta("ok"), providerDone()]], {
+        onRequest: (request) => {
+          seen = request.context ?? [];
+        },
+      }),
+    ],
     hooks: (hooks) =>
       hooks.on(
         "context.build",

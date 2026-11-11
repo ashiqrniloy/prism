@@ -481,7 +481,7 @@
       "packages": 50,
       "errors": 0,
       "breakingDeltas": 0,
-      "notes": "plain reviewed gate at 0.2.1 after --update-baseline refresh: deltas reviewed were the version literal and @arnilo/prism-mcp transport helpers (boundResponse/defaultResolver/isLoopbackAddress/isLoopbackHostname/normalizeHostname/raceAbort/requestPinned/resolvePinnedAddress) becoming re-exports of the lifted core primitives - same names and signatures, no declaration removed; no --allow-break"
+      "notes": "plain reviewed gate at 0.2.1 after --update-baseline refresh: deltas reviewed were the version literal and @arnilo/prism-extensions/mcp transport helpers (boundResponse/defaultResolver/isLoopbackAddress/isLoopbackHostname/normalizeHostname/raceAbort/requestPinned/resolvePinnedAddress) becoming re-exports of the lifted core primitives - same names and signatures, no declaration removed; no --allow-break"
     },
     "protectedEvidence": {
       "oidcOpa": true,

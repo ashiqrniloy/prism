@@ -5,7 +5,7 @@
  * model call, no embeddings, and a query with no table term is returned unchanged. The original query is kept whole and
  * the missing alternates are appended, so a note that matches either form is reached.
  */
-import { stemLexical } from "@arnilo/prism-memory-core";
+import { stemLexical } from "@arnilo/prism-memory-system/core";
 
 /** Each row is one meaning; every member stands for every other. Add a row only for a pair a user plausibly swaps. */
 const SYNONYM_SETS: readonly (readonly string[])[] = [

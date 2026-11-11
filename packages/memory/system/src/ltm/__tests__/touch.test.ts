@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import { createMemory } from "../../index.js";
 
 for (const adapter of ["memory", "sqlite"] as const) {

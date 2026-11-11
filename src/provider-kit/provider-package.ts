@@ -93,7 +93,7 @@ export function optionalRefSource(resolve: (ref: string) => Promise<Secret | und
 }
 
 export interface ProviderPackageDefinitionSpec<Config> {
-  /** npm name, e.g. `@arnilo/prism-provider-hyper`. */
+  /** npm name, e.g. `@arnilo/prism-ai/hyper`. */
   readonly name: string;
   /** One line, shown in `agent.inspect()`. */
   readonly description: string;

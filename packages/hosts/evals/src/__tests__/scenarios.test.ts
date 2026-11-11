@@ -202,7 +202,7 @@ test("eval manifest: two-field still works; release manifest requires binding fi
       toolFingerprint: "tf",
       model: "m",
       policyRevision: "pol",
-      datasetContentHash: "sha256:" + "a".repeat(64),
+      datasetContentHash: `sha256:${"a".repeat(64)}`,
     }),
   );
 });
@@ -783,45 +783,105 @@ test("scenario_runner_builds_agent_through_factory: factory is called once per s
   assert.equal(result.turnsCompleted, 1);
 });
 
-
 test("release_manifest_requires_content_hash_and_must_match_report", () => {
-  const manifest = { runtimeRevision: "r", datasetVersion: "1", promptVersion: "p", toolFingerprint: "t", model: "m", policyRevision: "pol" };
+  const manifest = {
+    runtimeRevision: "r",
+    datasetVersion: "1",
+    promptVersion: "p",
+    toolFingerprint: "t",
+    model: "m",
+    policyRevision: "pol",
+  };
   assert.throws(() => validateReleaseEvalManifest(manifest), /datasetContentHash/);
   const hash = defineDataset({ id: "d", items: [] }).contentHash;
   const bound = { ...manifest, datasetContentHash: hash };
   assert.doesNotThrow(() => validateReleaseEvalManifest(bound, { datasetContentHash: hash } as never));
-  assert.throws(() => validateReleaseEvalManifest(bound, { datasetContentHash: "sha256:" + "b".repeat(64) } as never), /datasetContentHash/);
+  assert.throws(
+    () => validateReleaseEvalManifest(bound, { datasetContentHash: `sha256:${"b".repeat(64)}` } as never),
+    /datasetContentHash/,
+  );
   assert.throws(() => validateReleaseEvalManifest(bound, {} as never), /datasetContentHash/);
 });
 
 test("scenario_item_runs_with_trials and records carry item, trial, and turn", async () => {
   let sessions = 0;
   const agent = makeMockAgent(["a", "b", "c", "d"]);
-  const factory = async () => { sessions++; return agent; };
-  const dataset = defineDataset({ id: "conversations", items: [{ id: "chat", input: {
-    kind: "scenario", turns: ["hello", "again"], scoreTurns: "each",
-  } }] });
+  const factory = async () => {
+    sessions++;
+    return agent;
+  };
+  const dataset = defineDataset({
+    id: "conversations",
+    items: [
+      {
+        id: "chat",
+        input: {
+          kind: "scenario",
+          turns: ["hello", "again"],
+          scoreTurns: "each",
+        },
+      },
+    ],
+  });
   const environments: string[] = [];
-  const report = await runExperiment({ agent: factory, dataset, trials: 2, timeline: "metadata",
-    toEnvironment: (_item, result) => { environments.push(result!.text); return result!.text; },
-    scorers: [defineScorer({ id: "reply", requires: ["environment"], score: input => ({ score: input.environment === input.result.text ? 1 : 0 }) })],
+  const report = await runExperiment({
+    agent: factory,
+    dataset,
+    trials: 2,
+    timeline: "metadata",
+    toEnvironment: (_item, result) => {
+      environments.push(result!.text);
+      return result!.text;
+    },
+    scorers: [
+      defineScorer({
+        id: "reply",
+        requires: ["environment"],
+        score: (input) => ({ score: input.environment === input.result.text ? 1 : 0 }),
+      }),
+    ],
   });
   assert.equal(sessions, 2);
   assert.deepEqual(environments, ["a", "b", "c", "d"]);
   assert.equal(report.evaluations.length, 4);
-  assert.deepEqual(report.evaluations.map(r => [r.itemId, r.metadata?.trialIndex, r.metadata?.turnIndex]),
-    [["chat", 0, 0], ["chat", 0, 1], ["chat", 1, 0], ["chat", 1, 1]]);
+  assert.deepEqual(
+    report.evaluations.map((r) => [r.itemId, r.metadata?.trialIndex, r.metadata?.turnIndex]),
+    [
+      ["chat", 0, 0],
+      ["chat", 0, 1],
+      ["chat", 1, 0],
+      ["chat", 1, 1],
+    ],
+  );
   assert.equal(report.aggregate.scorers.reply?.mean, 1);
 });
 
 test("scenario_item_with_both_turns_and_user_throws before creating agent", async () => {
   let built = false;
-  const dataset = defineDataset({ id: "invalid", items: [{ id: "chat", input: {
-    kind: "scenario", turns: ["hello"], user: { persona: "customer", goal: "refund" },
-  } }] });
-  await assert.rejects(runExperiment({ agent: async () => { built = true; return makeMockAgent([]); }, dataset,
-    scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
-  }), /exactly one/);
+  const dataset = defineDataset({
+    id: "invalid",
+    items: [
+      {
+        id: "chat",
+        input: {
+          kind: "scenario",
+          turns: ["hello"],
+          user: { persona: "customer", goal: "refund" },
+        },
+      },
+    ],
+  });
+  await assert.rejects(
+    runExperiment({
+      agent: async () => {
+        built = true;
+        return makeMockAgent([]);
+      },
+      dataset,
+      scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
+    }),
+    /exactly one/,
+  );
   assert.equal(built, false);
 });
 
@@ -829,10 +889,15 @@ test("scenario item on agent instance uses fresh sessions and scores last turn",
   const agent = makeMockAgent(["a", "b", "c", "d"]);
   const original = agent.session.bind(agent);
   let sessions = 0;
-  agent.session = async (...args) => { sessions++; return original(...args); };
-  const report = await runExperiment({ agent, trials: 2,
+  agent.session = async (...args) => {
+    sessions++;
+    return original(...args);
+  };
+  const report = await runExperiment({
+    agent,
+    trials: 2,
     dataset: defineDataset({ id: "last", items: [{ id: "chat", input: { kind: "scenario", turns: ["one", "two"] } }] }),
-    scorers: [defineScorer({ id: "ok", score: input => ({ score: ["b", "d"].includes(input.result.text) ? 1 : 0 }) })],
+    scorers: [defineScorer({ id: "ok", score: (input) => ({ score: ["b", "d"].includes(input.result.text) ? 1 : 0 }) })],
   });
   assert.equal(sessions, 2);
   assert.equal(report.evaluations.length, 2);
@@ -841,28 +906,55 @@ test("scenario item on agent instance uses fresh sessions and scores last turn",
 
 test("scenario items forward factory options and slice timelines without losing trial usage", async () => {
   let calls = 0;
-  const provider: ModelProvider = { id: "mock", async *generate() {
-    calls++;
-    yield providerTextDelta("reply");
-    yield providerDone({ inputTokens: 2, outputTokens: 3, totalTokens: 5, cost: 0.01, currency: "USD" });
-  } };
+  const provider: ModelProvider = {
+    id: "mock",
+    async *generate() {
+      calls++;
+      yield providerTextDelta("reply");
+      yield providerDone({ inputTokens: 2, outputTokens: 3, totalTokens: 5, cost: 0.01, currency: "USD" });
+    },
+  };
   const hooks: AgentConfig["hooks"] = () => {};
   const slots: AgentConfig["slots"] = {};
   let seenTurns = 0;
   const report = await runExperiment({
-    agent: async extra => {
+    agent: async (extra) => {
       assert.equal(extra.hooks, hooks);
       assert.equal(extra.slots, slots);
-      return createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], ...extra });
-    }, hooks, slots, timeline: "metadata", trials: 2,
-    dataset: defineDataset({ id: "timeline", items: [{ id: "chat", input: {
-      kind: "scenario", turns: ["one", "two"], scoreTurns: "each",
-    } }] }),
-    scorers: [defineScorer({ id: "turn", requires: ["timeline"], score: input => {
-      seenTurns++;
-      assert.equal(input.timeline!.steps.filter(step => step.kind === "turn").length, 1);
-      return { score: 1 };
-    } })],
+      return createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [providerPackage("test-provider", [provider])],
+        ...extra,
+      });
+    },
+    hooks,
+    slots,
+    timeline: "metadata",
+    trials: 2,
+    dataset: defineDataset({
+      id: "timeline",
+      items: [
+        {
+          id: "chat",
+          input: {
+            kind: "scenario",
+            turns: ["one", "two"],
+            scoreTurns: "each",
+          },
+        },
+      ],
+    }),
+    scorers: [
+      defineScorer({
+        id: "turn",
+        requires: ["timeline"],
+        score: (input) => {
+          seenTurns++;
+          assert.equal(input.timeline!.steps.filter((step) => step.kind === "turn").length, 1);
+          return { score: 1 };
+        },
+      }),
+    ],
   });
   assert.equal(report.items[0]?.error, undefined);
   assert.equal(calls, 4);
@@ -879,10 +971,14 @@ test("scenario bounds and invalid scoring mode fail before running", async () =>
     { kind: "scenario", turns: ["one"], scoreTurns: "sometimes" },
     { kind: "scenario" },
   ]) {
-    await assert.rejects(runExperiment({ agent: makeMockAgent([]),
-      dataset: defineDataset({ id: "bad", items: [{ id: "bad", input }] }),
-      scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
-    }), error => error instanceof EvalError && error.code === "ERR_PRISM_EVAL_SCENARIO_BOUNDS");
+    await assert.rejects(
+      runExperiment({
+        agent: makeMockAgent([]),
+        dataset: defineDataset({ id: "bad", items: [{ id: "bad", input }] }),
+        scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
+      }),
+      (error) => error instanceof EvalError && error.code === "ERR_PRISM_EVAL_SCENARIO_BOUNDS",
+    );
   }
 });
 
@@ -890,22 +986,41 @@ test("scenario stops on failed run and forwards ownership, redaction, and run op
   const agent = makeMockAgent([]);
   let calls = 0;
   const ownership = { tenantId: "owner" };
-  agent.session = async () => ({
-    async run(_input: unknown, options: Record<string, unknown>) {
-      calls++;
-      assert.equal(options.ownership, ownership);
-      assert.equal(options.thinkingLevel, "low");
-      return { sessionId: "session", runId: "run", status: "failed", text: "private-token", content: [], messages: [] } as unknown as RunResult;
-    },
-    subscribe() { return { async *[Symbol.asyncIterator]() {} }; },
-  }) as never;
-  const report = await runExperiment({ agent, ownership, secrets: ["private-token"], runOptions: { thinkingLevel: "low" },
+  agent.session = async () =>
+    ({
+      async run(_input: unknown, options: Record<string, unknown>) {
+        calls++;
+        assert.equal(options.ownership, ownership);
+        assert.equal(options.thinkingLevel, "low");
+        return {
+          sessionId: "session",
+          runId: "run",
+          status: "failed",
+          text: "private-token",
+          content: [],
+          messages: [],
+        } as unknown as RunResult;
+      },
+      subscribe() {
+        return { async *[Symbol.asyncIterator]() {} };
+      },
+    }) as never;
+  const report = await runExperiment({
+    agent,
+    ownership,
+    secrets: ["private-token"],
+    runOptions: { thinkingLevel: "low" },
     dataset: defineDataset({ id: "failure", items: [{ id: "chat", input: { kind: "scenario", turns: ["first", "must not run"] } }] }),
-    scorers: [defineScorer({ id: "redactor", score: input => {
-      assert.ok(input.redactor);
-      assert.ok(!input.redactor.redact(input.result.text).includes("private-token"));
-      return { score: 1 };
-    } })],
+    scorers: [
+      defineScorer({
+        id: "redactor",
+        score: (input) => {
+          assert.ok(input.redactor);
+          assert.ok(!input.redactor.redact(input.result.text).includes("private-token"));
+          return { score: 1 };
+        },
+      }),
+    ],
   });
   assert.equal(calls, 1);
   assert.equal(report.status, "failed");

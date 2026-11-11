@@ -78,12 +78,36 @@ describe("default input builder", () => {
       messages.map((message) => message.role),
       ["system", "system", "user", "user", "system", "user"],
     );
-    assert.match(text(messages[0]!)!, /System instruction:\nBe accurate\./);
-    assert.match(text(messages[1]!)!, /Developer instruction:\nCite sources\./);
-    assert.match(text(messages[2]!)!, /Attachment notes\.md:\n# Notes/);
-    assert.match(text(messages[3]!)!, /Resource file\.md:\nloaded text/);
-    assert.match(text(messages[4]!)!, /Summary:\nEarlier summary\./);
-    assert.equal(text(messages[5]!)!, "Summarize");
+    const message0 = messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.match(messageText0, /System instruction:\nBe accurate\./);
+    const message1 = messages[1];
+    assert.ok(message1);
+    const messageText1 = text(message1);
+    assert.ok(messageText1 !== undefined);
+    assert.match(messageText1, /Developer instruction:\nCite sources\./);
+    const message2 = messages[2];
+    assert.ok(message2);
+    const messageText2 = text(message2);
+    assert.ok(messageText2 !== undefined);
+    assert.match(messageText2, /Attachment notes\.md:\n# Notes/);
+    const message3 = messages[3];
+    assert.ok(message3);
+    const messageText3 = text(message3);
+    assert.ok(messageText3 !== undefined);
+    assert.match(messageText3, /Resource file\.md:\nloaded text/);
+    const message4 = messages[4];
+    assert.ok(message4);
+    const messageText4 = text(message4);
+    assert.ok(messageText4 !== undefined);
+    assert.match(messageText4, /Summary:\nEarlier summary\./);
+    const message5 = messages[5];
+    assert.ok(message5);
+    const messageText5 = text(message5);
+    assert.ok(messageText5 !== undefined);
+    assert.equal(messageText5, "Summarize");
   });
 
   it("adds tool result messages without executing tools", async () => {
@@ -129,10 +153,26 @@ describe("default input builder", () => {
       messages.map((message) => message.role),
       ["user", "system", "assistant", "user"],
     );
-    assert.match(text(messages[0]!)!, /Attachment notes\.md:\nnotes/);
-    assert.match(text(messages[1]!)!, /Summary:\nEarlier/);
-    assert.equal(text(messages[2]!)!, "old");
-    assert.equal(text(messages[3]!)!, "Now");
+    const message0 = messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.match(messageText0, /Attachment notes\.md:\nnotes/);
+    const message1 = messages[1];
+    assert.ok(message1);
+    const messageText1 = text(message1);
+    assert.ok(messageText1 !== undefined);
+    assert.match(messageText1, /Summary:\nEarlier/);
+    const message2 = messages[2];
+    assert.ok(message2);
+    const messageText2 = text(message2);
+    assert.ok(messageText2 !== undefined);
+    assert.equal(messageText2, "old");
+    const message3 = messages[3];
+    assert.ok(message3);
+    const messageText3 = text(message3);
+    assert.ok(messageText3 !== undefined);
+    assert.equal(messageText3, "Now");
   });
 
   it("cache-aware layout puts stable attachments resources summaries and history before current input", async () => {
@@ -157,11 +197,31 @@ describe("default input builder", () => {
       messages.map((message) => message.role),
       ["user", "user", "system", "assistant", "user"],
     );
-    assert.match(text(messages[0]!)!, /Attachment notes\.md:\nnotes/);
-    assert.match(text(messages[1]!)!, /Resource package:\/\/demo\/context\.md:\nresource/);
-    assert.match(text(messages[2]!)!, /Summary:\nEarlier/);
-    assert.equal(text(messages[3]!), "old");
-    assert.equal(text(messages[4]!), "Now");
+    const message0 = messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.match(messageText0, /Attachment notes\.md:\nnotes/);
+    const message1 = messages[1];
+    assert.ok(message1);
+    const messageText1 = text(message1);
+    assert.ok(messageText1 !== undefined);
+    assert.match(messageText1, /Resource package:\/\/demo\/context\.md:\nresource/);
+    const message2 = messages[2];
+    assert.ok(message2);
+    const messageText2 = text(message2);
+    assert.ok(messageText2 !== undefined);
+    assert.match(messageText2, /Summary:\nEarlier/);
+    const message3 = messages[3];
+    assert.ok(message3);
+    const messageText3 = text(message3);
+    assert.ok(messageText3 !== undefined);
+    assert.equal(messageText3, "old");
+    const message4 = messages[4];
+    assert.ok(message4);
+    const messageText4 = text(message4);
+    assert.ok(messageText4 !== undefined);
+    assert.equal(messageText4, "Now");
   });
 
   it("cache-aware layout keeps tool results adjacent to prior tool calls before current input", async () => {
@@ -178,7 +238,11 @@ describe("default input builder", () => {
     );
     assert.equal(messages[0]?.content[0]?.type, "tool_call");
     assert.equal(messages[1]?.content[0]?.type, "tool_result");
-    assert.equal(text(messages[2]!), "Follow up");
+    const message0 = messages[2];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.equal(messageText0, "Follow up");
   });
 });
 
@@ -240,7 +304,11 @@ describe("prompt template rendering", () => {
     const prompt = renderPromptTemplate("Explain {{file}}", { file: "src/input.ts" });
     const messages = await createDefaultInputBuilder().build(prompt);
 
-    assert.equal(text(messages[0]!), "Explain src/input.ts");
+    const message0 = messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.equal(messageText0, "Explain src/input.ts");
   });
 });
 
@@ -277,8 +345,16 @@ describe("prompt composition", () => {
       request.messages.map((message) => message.role),
       ["system", "system", "user"],
     );
-    assert.match(text(request.messages[0]!)!, /Skill brief:\nBe brief\./);
-    assert.match(text(request.messages[1]!)!, /Available tools:\n- echo: Echo input/);
+    const message0 = request.messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.match(messageText0, /Skill brief:\nBe brief\./);
+    const message1 = request.messages[1];
+    assert.ok(message1);
+    const messageText1 = text(message1);
+    assert.ok(messageText1 !== undefined);
+    assert.match(messageText1, /Available tools:\n- echo: Echo input/);
   });
 
   it("progressive disclosure shows the skill catalog only", async () => {
@@ -288,8 +364,12 @@ describe("prompt composition", () => {
       skills: [{ name: "brief", description: "Be brief.", instructions: "Full instructions." }],
       skillsDisclosure: "progressive",
     });
-    assert.match(text(request.messages[0]!)!, /- brief: Be brief\./);
-    assert.doesNotMatch(text(request.messages[0]!)!, /Full instructions/);
+    const message0 = request.messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.match(messageText0, /- brief: Be brief\./);
+    assert.doesNotMatch(messageText0, /Full instructions/);
   });
 
   it("the tool text list is omitted for tool-capable models only", async () => {
@@ -334,13 +414,25 @@ describe("prompt composition", () => {
         messages.findIndex((message) => text(message) === current),
       );
 
-    assert.equal(text(first.messages[0]!), "System instruction:\nRules");
+    const message0 = first.messages[0];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.equal(messageText0, "System instruction:\nRules");
     assert.deepEqual(
       JSON.parse(JSON.stringify(prefix(first.messages, "Ask A"))),
       JSON.parse(JSON.stringify(prefix(second.messages, "Ask B"))),
     );
-    assert.equal(first.messages.at(-1) ? text(first.messages.at(-1)!) : undefined, "Ask A");
-    assert.equal(second.messages.at(-1) ? text(second.messages.at(-1)!) : undefined, "Ask B");
+    const message1 = first.messages.at(-1);
+    assert.ok(message1);
+    const messageText1 = text(message1);
+    assert.ok(messageText1 !== undefined);
+    assert.equal(messageText1, "Ask A");
+    const message2 = second.messages.at(-1);
+    assert.ok(message2);
+    const messageText2 = text(message2);
+    assert.ok(messageText2 !== undefined);
+    assert.equal(messageText2, "Ask B");
 
     // Only the trailing input differs, so everything ahead of it is byte-identical.
     assert.deepEqual(
@@ -374,10 +466,26 @@ describe("prompt composition", () => {
       JSON.parse(JSON.stringify(catalog.messages.slice(0, skillIndex(catalog.messages)))),
       JSON.parse(JSON.stringify(full.messages.slice(0, skillIndex(full.messages)))),
     );
-    assert.match(text(catalog.messages[skillIndex(catalog.messages)]!)!, /- brief: Be brief/);
-    assert.match(text(full.messages[skillIndex(full.messages)]!)!, /Skill brief:\nFull skill body/);
-    assert.equal(text(catalog.messages.at(-1)!)!, "Ask");
-    assert.equal(text(full.messages.at(-1)!)!, "Ask");
+    const message0 = catalog.messages[skillIndex(catalog.messages)];
+    assert.ok(message0);
+    const messageText0 = text(message0);
+    assert.ok(messageText0 !== undefined);
+    assert.match(messageText0, /- brief: Be brief/);
+    const message1 = full.messages[skillIndex(full.messages)];
+    assert.ok(message1);
+    const messageText1 = text(message1);
+    assert.ok(messageText1 !== undefined);
+    assert.match(messageText1, /Skill brief:\nFull skill body/);
+    const message2 = catalog.messages.at(-1);
+    assert.ok(message2);
+    const messageText2 = text(message2);
+    assert.ok(messageText2 !== undefined);
+    assert.equal(messageText2, "Ask");
+    const message3 = full.messages.at(-1);
+    assert.ok(message3);
+    const messageText3 = text(message3);
+    assert.ok(messageText3 !== undefined);
+    assert.equal(messageText3, "Ask");
   });
 
   it("keeps late skill bodies append-only and reuses their segment positions", async () => {

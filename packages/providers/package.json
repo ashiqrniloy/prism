@@ -1,0 +1,90 @@
+{
+  "name": "@arnilo/prism-ai",
+  "version": "0.13.0",
+  "description": "Prism provider packages. Import each provider through its subpath.",
+  "type": "module",
+  "exports": {
+    "./commandcode": "./commandcode/src/index.ts",
+    "./hyper": "./hyper/src/index.ts",
+    "./kilo": "./kilo/src/index.ts",
+    "./laya": "./laya/src/index.ts",
+    "./liquid": "./liquid/src/index.ts",
+    "./litellm": "./litellm/src/index.ts",
+    "./ollama-cloud": "./ollama-cloud/src/index.ts",
+    "./openai-codex": "./openai-codex/src/index.ts",
+    "./opencode-go": "./opencode-go/src/index.ts",
+    "./openrouter": "./openrouter/src/index.ts",
+    "./typesafe": "./typesafe/src/index.ts"
+  },
+  "files": [
+    "commandcode/src",
+    "!commandcode/src/**/__tests__",
+    "commandcode/README.md",
+    "hyper/src",
+    "!hyper/src/**/__tests__",
+    "hyper/README.md",
+    "kilo/src",
+    "!kilo/src/**/__tests__",
+    "kilo/README.md",
+    "laya/src",
+    "!laya/src/**/__tests__",
+    "laya/README.md",
+    "liquid/src",
+    "!liquid/src/**/__tests__",
+    "liquid/README.md",
+    "litellm/src",
+    "!litellm/src/**/__tests__",
+    "litellm/README.md",
+    "ollama-cloud/src",
+    "!ollama-cloud/src/**/__tests__",
+    "ollama-cloud/README.md",
+    "openai-codex/src",
+    "!openai-codex/src/**/__tests__",
+    "openai-codex/README.md",
+    "opencode-go/src",
+    "!opencode-go/src/**/__tests__",
+    "opencode-go/README.md",
+    "openrouter/src",
+    "!openrouter/src/**/__tests__",
+    "openrouter/README.md",
+    "typesafe/src",
+    "!typesafe/src/**/__tests__",
+    "typesafe/README.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 commandcode/src hyper/src kilo/src laya/src liquid/src litellm/src ollama-cloud/src openai-codex/src opencode-go/src openrouter/src typesafe/src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/providers"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/providers#readme",
+  "keywords": [
+    "prism",
+    "provider",
+    "ai"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

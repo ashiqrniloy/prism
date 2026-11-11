@@ -8,7 +8,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 export interface ProjectIdentity {
   /** First 8 hex characters of SHA-256 over the identity source string. */
@@ -58,11 +58,19 @@ export function normalizeRemote(raw: string): string {
 }
 
 function stripGit(value: string): string {
-  return value.replace(/\/+$/, "").replace(/\.git$/i, "").replace(/^\/+/, "");
+  return value
+    .replace(/\/+$/, "")
+    .replace(/\.git$/i, "")
+    .replace(/^\/+/, "");
 }
 
 function remoteName(normalized: string): string {
-  return normalized.split("/").filter((part) => part.length > 0).at(-1) ?? normalized;
+  return (
+    normalized
+      .split("/")
+      .filter((part) => part.length > 0)
+      .at(-1) ?? normalized
+  );
 }
 
 function hashId(source: string): string {

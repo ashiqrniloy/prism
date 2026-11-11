@@ -1,4 +1,4 @@
-# @arnilo/prism-channels
+# @arnilo/prism-hosts/channels
 
 Host library connecting one Prism `Agent` to Telegram and Signal messaging channels without building another agent runtime, conversation store, or turn queue.
 
@@ -17,7 +17,7 @@ Host library connecting one Prism `Agent` to Telegram and Signal messaging chann
 `channelHostUi({ connection, chat, ownership, kinds? })` lets a paired Telegram or Signal chat answer questions from another agent. Replies pass through the connection's existing `authorize` callback and never start a channel agent turn.
 
 ```ts
-import { channelHostUi, connectTelegram, createChannelPairingStore } from "@arnilo/prism-channels";
+import { channelHostUi, connectTelegram, createChannelPairingStore } from "@arnilo/prism-hosts/channels";
 
 // checkpoints, ownership, channelAgent and authorizePairedSender belong to the host.
 // The authorizer verifies the exact sender/chat/thread and returns an active identity
@@ -63,7 +63,7 @@ Waiters expire within `approvalTtlMs` (default and hard maximum five minutes) an
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { connectTelegram } from "@arnilo/prism-channels/telegram";
+import { connectTelegram } from "@arnilo/prism-hosts/channels/telegram";
 
 const agent = await createAgent({
   id: "support-agent",
@@ -90,7 +90,7 @@ export default {
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { connectSignal } from "@arnilo/prism-channels/signal";
+import { connectSignal } from "@arnilo/prism-hosts/channels/signal";
 
 const agent = await createAgent({
   id: "signal-bot",

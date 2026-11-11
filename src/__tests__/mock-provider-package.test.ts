@@ -111,11 +111,11 @@ function agentLiterals(source: string): { keys: string[]; text: string }[] {
 }
 
 /** Files whose agent literals sit inside template strings (docs assertions, packed-install scripts). */
-const EMBEDDED_CODE = ["mock-provider-package.test.ts", "docs.test.ts", "install-smoke.test.ts"];
+const EMBEDDED_CODE = ["mock-provider-package.test.ts", "docs.test.ts", "install-smoke.test.ts", "bundles-packed.test.mjs"];
 
 function walk(dir: string, found: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
-    if (name === "node_modules" || name === "dist") continue;
+    if (name.startsWith(".") || name === "node_modules" || name === "dist") continue;
     const path = join(dir, name);
     if (statSync(path).isDirectory()) walk(path, found);
     else if (/\.(ts|mjs)$/.test(name) && !EMBEDDED_CODE.some((name) => path.endsWith(name))) found.push(path);
@@ -128,13 +128,15 @@ describe("Task 5 codemod output", () => {
     const offenders: string[] = [];
     let literals = 0;
     for (const file of [...walk("src"), ...walk("packages"), ...walk("examples"), ...walk("scripts")]) {
+      if (file.startsWith("scripts/host-builder-evals/workspaces/upgrade-0-12/")) continue; // Deliberately unported input for the migration eval.
       const source = readFileSync(file, "utf8");
       for (const literal of agentLiterals(source)) {
         literals++;
         if (literal.keys.includes("provider") || literal.keys.includes("providerSource")) offenders.push(`${file}: removed provider field`);
         const usesPackage = /\b(mockProvider|providerPackage)\(/.test(literal.text);
         if (usesPackage) {
-          const hasModel = literal.keys.includes("model") || literal.keys.includes("...");
+          const hasModel =
+            literal.keys.includes("model") || literal.keys.includes("...") || /slots:\s*\{\s*loop:\s*modelLessLoop/.test(literal.text);
           const packageKeys = literal.keys.filter((key) => key === "packages").length;
           if (!hasModel) offenders.push(`${file}: model key lost`);
           if (packageKeys !== 1) offenders.push(`${file}: ${packageKeys} packages keys`);

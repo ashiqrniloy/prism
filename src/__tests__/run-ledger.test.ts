@@ -546,7 +546,7 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
 
   it("ledger export redacts secret material inside refs", () => {
     // Plan 159 Task 7: the field-policy parameter left `redactRunLedgerRecord` with the module move
-    // to `@arnilo/prism-governance`; secret redaction stays here.
+    // to `@arnilo/prism-extensions/governance`; secret redaction stays here.
     const redacted = redactRunLedgerRecord(
       {
         id: "run_2",

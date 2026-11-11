@@ -7,7 +7,13 @@
  * to `memory.read`. The deletion feed carries ids, reasons and timestamps only. Nothing here calls a model.
  */
 import { createHash } from "node:crypto";
-import { type Memory, MemoryScopeError, MemoryValidationError, type MemoryVectorRecord, type VectorStore } from "@arnilo/prism-memory-core";
+import {
+  type Memory,
+  MemoryScopeError,
+  MemoryValidationError,
+  type MemoryVectorRecord,
+  type VectorStore,
+} from "@arnilo/prism-memory-system/core";
 import { memoryRetractionVersion } from "./directory.js";
 import { exchangeKeywords } from "./exchanges.js";
 import { type FabricScopeLevel, type MemoryNoteKind, parseMemoryNoteMetadata } from "./types.js";

@@ -39,7 +39,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: LiteLLMProviderPackageOptions) {
   return defineProviderPackage<LiteLLMProviderConfig>({
-    name: "@arnilo/prism-provider-litellm",
+    name: "@arnilo/prism-ai/litellm",
     description: "LiteLLM Proxy provider package for Prism: one Chat route with per-call proxy telemetry.",
     config: configSchema,
     setup: async (prism) => {

@@ -1,5 +1,6 @@
 import type { JsonObject } from "../contracts.js";
 import type { Capability } from "../packages/capabilities.js";
+import { splitSpecifier } from "../packages/define.js";
 import { validateJsonSchema } from "../packages/schema.js";
 import { parseRange } from "../packages/semver.js";
 import type { SlotName } from "../slots/index.js";
@@ -97,6 +98,7 @@ export function parseManifest(json: unknown, options: ParseManifestOptions): Pri
   const manifest = result.value as unknown as PrismManifestV1;
 
   const seen = new Set<string>();
+  const rootVersions = new Map<string, string>();
   manifest.packages.forEach((record, index) => {
     const field = `/packages/${index}`;
     if (seen.has(record.name))
@@ -116,6 +118,12 @@ export function parseManifest(json: unknown, options: ParseManifestOptions): Pri
       fail("manifest_invalid", options, field, `needs version, integrity, and capabilities (${safe(record.name)})`, record.name);
     }
     if (record.version !== undefined) {
+      const { root } = splitSpecifier(record.name);
+      const version = rootVersions.get(root);
+      if (version !== undefined && version !== record.version) {
+        fail("manifest_invalid", options, `${field}/version`, "must match the other entries with the same npm root", record.name);
+      }
+      rootVersions.set(root, record.version);
       try {
         parseRange(record.version);
       } catch {

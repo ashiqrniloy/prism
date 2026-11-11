@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { MODULE_SPECIFIER, splitSpecifier } from "../packages/define.js";
 import { redactSecrets } from "../redaction.js";
 import { importDefinition } from "./definition.js";
 import { ManifestError } from "./errors.js";
@@ -25,6 +26,8 @@ export interface InstallLocation {
 export interface InstallOptions extends InstallLocation {
   /** The semver range to record and to ask for. Default: `^<installed version>`. */
   readonly version?: string;
+  /** Local tarball or directory supplying the requested npm root. A test seam. */
+  readonly packFrom?: string;
   /** Resolves a relative `file:` spec. Default: the current directory. */
   readonly cwd?: string;
   /**
@@ -34,8 +37,7 @@ export interface InstallOptions extends InstallLocation {
   readonly review?: (entry: ManifestEntry) => void | Promise<void>;
 }
 
-const NAME = /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/;
-const REGISTRY_SPEC = /^((?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*)(?:@([A-Za-z0-9^~<>=*.|+_-][A-Za-z0-9^~<>=*.|+_ -]{0,127}))?$/;
+const VERSION_RANGE = /^[A-Za-z0-9^~<>=*.|+_-][A-Za-z0-9^~<>=*.|+_ -]{0,127}$(?![\s\S])/;
 const MAX_OUTPUT = 64 * 1024;
 const SECRET_ENV = /TOKEN|SECRET|PASSWORD|PASSWD|AUTH|API_?KEY|CREDENTIAL/i;
 
@@ -154,6 +156,7 @@ async function resolveSpec(
     return fail("install_failed", scope, "The install spec is empty, too long, or looks like a command-line flag.");
   }
   if (spec.startsWith("file:")) {
+    if (options.packFrom !== undefined) return fail("install_failed", scope, "packFrom requires a module specifier.");
     const target = resolve(options.cwd ?? process.cwd(), spec.slice("file:".length));
     let info: Awaited<ReturnType<typeof stat>>;
     try {
@@ -174,11 +177,23 @@ async function resolveSpec(
     );
     return { add: `file:${join(tarballs, filename)}` };
   }
-  const match = REGISTRY_SPEC.exec(spec);
-  if (!match) return fail("install_failed", scope, "Only registry names and file: paths can be installed (no URLs, git, or aliases).");
-  const [, name, range] = match as unknown as [string, string, string | undefined];
+  const rangeAt = spec.indexOf("@", 1);
+  const name = rangeAt < 0 ? spec : spec.slice(0, rangeAt);
+  const range = rangeAt < 0 ? undefined : spec.slice(rangeAt + 1);
   const version = options.version ?? range;
-  return { add: version !== undefined ? `${name}@${version}` : name, name };
+  if (
+    !MODULE_SPECIFIER.test(name) ||
+    (range !== undefined && !VERSION_RANGE.test(range)) ||
+    (version !== undefined && !VERSION_RANGE.test(version))
+  ) {
+    return fail("install_failed", scope, "Only module specifiers and file: paths can be installed (no URLs, git, or aliases).");
+  }
+  const { root } = splitSpecifier(name);
+  if (options.packFrom !== undefined) {
+    const local = await resolveSpec(`file:${options.packFrom}`, { ...options, packFrom: undefined }, dirs);
+    return { ...local, name };
+  }
+  return { add: version !== undefined ? `${root}@${version}` : root, name };
 }
 
 function changedDependency(before: Record<string, string>, after: Record<string, string>): string | undefined {
@@ -197,18 +212,36 @@ export async function install(spec: string, options: InstallOptions): Promise<Ma
   const resolved = await resolveSpec(spec, options, dirs);
   await ensureManaged(dirs);
   const before = { ...(await readManaged(dirs)).dependencies };
-
-  await bunStep(options, ["add", "--ignore-scripts", resolved.add], dirs.packagesDir, scope, "bun add");
-  const after = { ...(await readManaged(dirs)).dependencies };
-  const name = changedDependency(before, after) ?? resolved.name;
-  if (name === undefined || !NAME.test(name))
-    return fail("install_failed", scope, "bun add finished but no installed package could be identified.");
-  const added = before[name] === undefined;
-
+  const snapshots = await Promise.all(
+    ["package.json", "bun.lock", "bun.lockb"].map(async (file) => {
+      const path = join(dirs.packagesDir, file);
+      try {
+        return { path, bytes: await readFile(path) };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        return { path, bytes: undefined };
+      }
+    }),
+  );
   const rollback = async (): Promise<void> => {
-    if (added) await runBun(options, ["remove", "--ignore-scripts", name], dirs.packagesDir).catch(() => undefined);
+    const current = (await readManaged(dirs)).dependencies ?? {};
+    const changed = Object.keys(current).filter((name) => current[name] !== before[name]);
+    if (changed.length) await bunStep(options, ["remove", "--ignore-scripts", ...changed], dirs.packagesDir, scope, "bun remove rollback");
+    for (const { path, bytes } of snapshots) {
+      if (bytes === undefined) await rm(path, { force: true });
+      else await writeFile(path, bytes, { mode: 0o600 });
+    }
+    await bunStep(options, ["install", "--ignore-scripts"], dirs.packagesDir, scope, "bun install rollback");
   };
   try {
+    await bunStep(options, ["add", "--ignore-scripts", resolved.add], dirs.packagesDir, scope, "bun add");
+    const after = { ...(await readManaged(dirs)).dependencies };
+    const dependency = changedDependency(before, after) ?? (resolved.name ? splitSpecifier(resolved.name).root : undefined);
+    if (dependency === undefined || !MODULE_SPECIFIER.test(dependency) || splitSpecifier(dependency).subpath !== undefined)
+      return fail("install_failed", scope, "bun add finished but no installed npm root could be identified.");
+    const name = resolved.name ?? dependency;
+    const { root } = splitSpecifier(name);
+    if (dependency !== root) return fail("install_failed", scope, "The installed npm root differs from the requested specifier.", name);
     const dir = installedPackageDir(dirs.packagesDir, name);
     const integrity = await hashPackageClosure(dirs.packagesDir, name, scope);
     const installed = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as { version?: unknown };
@@ -224,9 +257,12 @@ export async function install(spec: string, options: InstallOptions): Promise<Ma
       capabilities: [...(definition.capabilities ?? [])],
     };
     await options.review?.(entry);
-    const packages: ManifestRecord[] = manifest.packages.some((record) => record.name === name)
-      ? manifest.packages.map((record) => (record.name === name ? entry : record))
-      : [...manifest.packages, entry];
+    const refreshed: ManifestRecord[] = manifest.packages.map((record) => {
+      if (record.name === name) return entry;
+      if (record.version !== undefined && splitSpecifier(record.name).root === root) return { ...record, version: range, integrity };
+      return record;
+    });
+    const packages = manifest.packages.some((record) => record.name === name) ? refreshed : [...refreshed, entry];
     const next: PrismManifestV1 = { ...manifest, packages };
     await writeManifest(dirs, next);
     return entry;
@@ -243,13 +279,16 @@ export async function install(spec: string, options: InstallOptions): Promise<Ma
 export async function remove(name: string, options: InstallLocation): Promise<void> {
   const dirs = scopeDirs(options);
   const { scope } = dirs;
-  if (typeof name !== "string" || !NAME.test(name)) return fail("install_failed", scope, "The package name is not a valid npm name.");
+  if (typeof name !== "string" || !MODULE_SPECIFIER.test(name))
+    return fail("install_failed", scope, "The package name is not a valid module specifier.");
   const manifest = await readManifest(dirs);
   if (!manifest?.packages.some((record) => record.name === name)) {
     return fail("package_missing", scope, `Package ${name.slice(0, 64)} is not listed in the ${scope} manifest.`, name);
   }
-  if ((await readManaged(dirs)).dependencies?.[name] !== undefined) {
-    await bunStep(options, ["remove", "--ignore-scripts", name], dirs.packagesDir, scope, "bun remove");
+  const { root } = splitSpecifier(name);
+  const siblings = manifest.packages.some((record) => record.name !== name && splitSpecifier(record.name).root === root);
+  if (!siblings && (await readManaged(dirs)).dependencies?.[root] !== undefined) {
+    await bunStep(options, ["remove", "--ignore-scripts", root], dirs.packagesDir, scope, "bun remove");
   }
   const slots = Object.fromEntries(Object.entries(manifest.slots ?? {}).filter(([, owner]) => owner !== name));
   const { slots: _drop, ...rest } = manifest;

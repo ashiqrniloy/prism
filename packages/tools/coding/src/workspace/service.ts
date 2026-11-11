@@ -2,7 +2,7 @@
  * The `workspace` service: disposable git worktrees for delegated coding work.
  *
  * It is the in-process replacement for the retired 0.12 workspace lifecycle (plan 026 Task 3). Durable records, leases, checkpoints, and multi-repository identity are gone: Phase 16
- * moves those into `@arnilo/prism-workflows`. What remains is one bounded, host-owned service over
+ * moves those into `@arnilo/prism-extensions/workflows`. What remains is one bounded, host-owned service over
  * the existing `GitOperations` runner, with the exclude writer shared with the driver kit.
  *
  * Git is spawned only on service calls: package setup costs one `git rev-parse` probe, the runner

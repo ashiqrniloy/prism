@@ -4,7 +4,7 @@
 
 Prism resolves credentials from refs, never from literals, and redacts the values it resolves:
 
-- The **credentials slot** (`AgentConfig.slots.credentials`, a `CredentialResolver`) resolves `env:` and `keyring:` refs. The kernel default is `createEnvRefCredentialResolver()`, which answers `env:NAME` refs from `process.env` (or an env-like object you pass); `@arnilo/prism-credentials-keyring` answers `keyring:` refs.
+- The **credentials slot** (`AgentConfig.slots.credentials`, a `CredentialResolver`) resolves `env:` and `keyring:` refs. The kernel default is `createEnvRefCredentialResolver()`, which answers `env:NAME` refs from `process.env` (or an env-like object you pass); `@arnilo/prism-extensions/keyring` answers `keyring:` refs.
 - Packages resolve through `PackageAPI.credentials.resolve(ref)`. Every secret-bearing package config field is an `x-prism-secret` property, so a literal fails with `literal_secret` at load time.
 - `SecretSource` (`@arnilo/prism/provider-kit`): `() => Promise<string | undefined>`, the only credential shape a low-level provider factory, discovery helper, or kit client accepts. `refSource(resolve, ref)` and `optionalRefSource(resolve, ref)` build one from a ref; a literal string does not type-check.
 - `redactSecrets()`: replaces known secret string values inside strings, arrays, and plain objects.
@@ -74,7 +74,7 @@ console.log(error.message);
 
 ## Extension and configuration notes
 
-- Assign `AgentConfig.slots.credentials` to replace the default resolver, or install `@arnilo/prism-credentials-keyring`, which provides the slot.
+- Assign `AgentConfig.slots.credentials` to replace the default resolver, or install `@arnilo/prism-extensions/keyring`, which provides the slot.
 - `createAgent()` / `session.run()` never resolve credentials eagerly. Packages resolve at the provider edge, per request, through `PackageAPI.credentials.resolve(ref)`.
 - Package config holds refs only: build secret properties with `secretRefProperty()` from `@arnilo/prism/provider-kit`. `refSource()` bridges the ref to the low-level factory's `SecretSource`.
 - Keep resolved credential values local to the request path. Do not put them in registries, model configs, messages, provider events, agent events, session entries, compaction summaries, or logs.
@@ -88,7 +88,7 @@ A package that refreshes tokens at request time persists the rotated record thro
 (`CredentialStoreUnavailableError`, `credential_store_unavailable`), and adds every written value to the
 agent's secret set. See [Packages](packages.md).
 
-First-party subscription OAuth is explicit and host-invoked: OpenAI Codex (`openAICodexAuth`, Sign in with ChatGPT, in [`@arnilo/prism-provider-openai-codex`](../packages/providers/openai-codex/README.md)) keeps the grant in a `keyring:` ref. Hosts own login UI and may use `createOAuthCredentialStoreAdapter()` from `@arnilo/prism-credentials-keyring` for deliberately selected durable storage.
+First-party subscription OAuth is explicit and host-invoked: OpenAI Codex (`openAICodexAuth`, Sign in with ChatGPT, in [`@arnilo/prism-ai/openai-codex`](../packages/providers/openai-codex/README.md)) keeps the grant in a `keyring:` ref. Hosts own login UI and may use `createOAuthCredentialStoreAdapter()` from `@arnilo/prism-extensions/keyring` for deliberately selected durable storage.
 
 Anthropic and Google provider packages are API-key-only. Do not scrape or import Claude Code/Gemini CLI credential files, setup tokens, environment values, or browser sessions, and do not route a user's Claude.ai/Gemini subscription through Prism. Anthropic states that developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Gemini CLI states that third-party software using its OAuth to access backend services violates applicable terms; its FAQ names Vertex AI or Google AI Studio API keys as the supported third-party path ([terms](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md), [FAQ](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md)).
 
@@ -110,7 +110,7 @@ A future provider-local OAuth adapter needs published permission for third-party
 
 - [Packages](packages.md): `CredentialResolver`, `CredentialContext`, `Secret`, `OAuthCredentials`, `PackageAPI.credentials`, and `ErrorInfo`.
 - [Provider layer](provider-kit.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
-- [LLM compaction package](../packages/memory/compaction/README.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
+- [LLM compaction package](../packages/extensions/compaction/README.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
 - OpenAI-compatible provider: resolves API keys per request and redacts known values from adapter errors.
 
-`createSecretRedactor()` builds a runtime redactor over known values. Core has no persistent secret store and reads environment variables only through the `env:` resolver the credentials slot defaults to. For durable storage, use [`@arnilo/prism-credentials-keyring`](../packages/credentials/keyring/README.md) encrypted-file or keychain backends. See [Security/auth/trust](settings-auth-trust-security.md).
+`createSecretRedactor()` builds a runtime redactor over known values. Core has no persistent secret store and reads environment variables only through the `env:` resolver the credentials slot defaults to. For durable storage, use [`@arnilo/prism-extensions/keyring`](../packages/extensions/keyring/README.md) encrypted-file or keychain backends. See [Security/auth/trust](settings-auth-trust-security.md).

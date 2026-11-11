@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { OwnershipScope } from "@arnilo/prism";
-import type { CheckpointRecord, CheckpointStore, LeaseStore } from "@arnilo/prism-workflows";
+import type { CheckpointRecord, CheckpointStore, LeaseStore } from "@arnilo/prism-extensions/workflows";
 import { HeadlessError } from "../errors.js";
 import { type SchedulerClock, systemClock } from "./clock.js";
 import { nextCron } from "./cron.js";

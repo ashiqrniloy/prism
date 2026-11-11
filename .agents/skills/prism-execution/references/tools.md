@@ -14,7 +14,7 @@ The kernel tools, skills, and commands registries, plus the tool packages: `tool
   - `SKILL.md` directory discovery
   - progressive disclosure: a catalog in `context.build` plus the `load_skill` tool
   - eager disclosure: full bodies
-- **Approval (`@arnilo/prism-approval`):**
+- **Approval (`@arnilo/prism-extensions/approval`):**
   - provides the `deny | ask | edits | auto` modes over `effects` and roots, as a `tool.call` gate
   - `ask` resolves through `host.ui` confirm, or suspends the run
   - hard denies always stay on
@@ -26,9 +26,9 @@ The kernel tools, skills, and commands registries, plus the tool packages: `tool
 
 - Kernel: `src/tools.ts` (`createToolRegistry`, schema validation), `src/agent-tool-dispatch.ts` and `src/loop/dispatch.ts` (dispatch through `RunController.executeTools`), `src/tool-effects.ts` (declared `effects`), `src/registry-options.ts`; skills in `src/skills.ts`, `src/skill-load.ts` (`load_skill`), `src/skill-disclosure.ts`, `src/skills-catalog.ts`.
 - Tool packages (`packages/tools/*`): `coding` (file, search, shell, git, checks, todo, `ask_user_decision`, sandboxes, the `workspace` service, the `coding.targets` service, `tool.call` hard denies), `web` (Brave, Exa, Firecrawl, Obscura; provides `web.fetch`), `browser`, `work` (documents, sheets, diagrams, document reader, connectors, bundled skills), `computer-use`, `openapi`, `research` (citation ledger, `cite`, `run.end` check).
-- Policy and instructions: `@arnilo/prism-approval` (`packages/policy/approval`) owns prompting over `effects`; `@arnilo/prism-context-files` (`packages/context/files`) owns `AGENTS.md`/`SYSTEM.md` layers.
+- Policy and instructions: `@arnilo/prism-extensions/approval` (`packages/extensions/approval`) owns prompting over `effects`; `@arnilo/prism-extensions/context-files` (`packages/extensions/context-files`) owns `AGENTS.md`/`SYSTEM.md` layers.
 - In flight: plans 189 (coding tools) and 190 (skills) on the release path change tool names, schemas, and the skill load path; read them before touching these areas.
-- Current docs: [tools.md](../../../../docs/tools.md), [agent.md](../../../../docs/agent.md) (skills), [coding-security.md](../../../../docs/coding-security.md), [resource-loading.md](../../../../docs/resource-loading.md); [`coding`](../../../../packages/tools/coding/README.md), [`web`](../../../../packages/tools/web/README.md), [`browser`](../../../../packages/tools/browser/README.md), [`work`](../../../../packages/tools/work/README.md), [`computer-use`](../../../../packages/tools/computer-use/README.md), [`openapi`](../../../../packages/tools/openapi/README.md), [`research`](../../../../packages/tools/research/README.md), [`approval`](../../../../packages/policy/approval/README.md), [`files`](../../../../packages/context/files/README.md).
+- Current docs: [tools.md](../../../../docs/tools.md), [agent.md](../../../../docs/agent.md) (skills), [coding-security.md](../../../../docs/coding-security.md), [resource-loading.md](../../../../docs/resource-loading.md); [`coding`](../../../../packages/tools/coding/README.md), [`web`](../../../../packages/tools/web/README.md), [`browser`](../../../../packages/tools/browser/README.md), [`work`](../../../../packages/tools/work/README.md), [`computer-use`](../../../../packages/tools/computer-use/README.md), [`openapi`](../../../../packages/tools/openapi/README.md), [`research`](../../../../packages/tools/research/README.md), [`approval`](../../../../packages/extensions/approval/README.md), [`files`](../../../../packages/extensions/context-files/README.md).
 
 ## Graft queries
 
@@ -40,7 +40,7 @@ The kernel tools, skills, and commands registries, plus the tool packages: `tool
 ## Tests
 
 - Kernel: `src/__tests__/tools.test.ts`, `tool-effects.test.ts`, `tool-effects-annotation.test.ts`, `tool-narrowing.test.ts`, `tool-result-content.test.ts`, `skills.test.ts`, `skill-load.test.ts`, `skill-disclosure.test.ts`
-- Packages: `packages/tools/<name>/src/__tests__/`, `packages/policy/approval/src/__tests__/`, `packages/context/files/src/__tests__/` (run from each package directory)
+- Packages: `packages/tools/<name>/src/__tests__/`, `packages/extensions/approval/src/__tests__/`, `packages/extensions/context-files/src/__tests__/` (run from each package directory)
 - Published conformance: `@arnilo/prism/testing/tool-conformance` (including `assertGateIntegrity`) and `tool-effect-store-conformance`
 
 ## Rules

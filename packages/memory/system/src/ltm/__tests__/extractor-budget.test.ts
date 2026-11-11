@@ -20,7 +20,7 @@ import {
   toolCallContent,
   validateJsonSchema,
 } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { buildConsolidationExtractPrompt, CONSOLIDATION_EXTRACT_SYSTEM, consolidationExtractSchema } from "../consolidation/prompts.js";
 import { createMemory, createLongTermMemory } from "../../index.js";
 import { memoryFabricPromoteSchema, readPromoteState, resolvePromoteConfig } from "../promote.js";

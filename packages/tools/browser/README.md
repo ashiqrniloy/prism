@@ -1,4 +1,4 @@
-# @arnilo/prism-tools-browser
+# @arnilo/prism-tools/browser
 
 The first-party browser automation tools as a Prism package. The default export is a
 `definePackage` definition whose `setup` imports `playwright-core`, launches the run-owned
@@ -7,14 +7,14 @@ browser, and registers six exclusive model-facing tools into the session's tool 
 ## Install
 
 ```bash
-prism add @arnilo/prism-tools-browser
+prism add @arnilo/prism-tools/browser
 bun add playwright-core@1.63.0
 ```
 
 ```jsonc
 // manifest entry, with every config field that has no default
 {
-  "name": "@arnilo/prism-tools-browser",
+  "name": "@arnilo/prism-tools/browser",
   "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": {
@@ -85,7 +85,7 @@ touches no gated `PackageAPI` member.
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import toolsBrowser from "@arnilo/prism-tools-browser";
+import toolsBrowser from "@arnilo/prism-tools/browser";
 
 const agent = await createAgent({
   model,
@@ -94,5 +94,5 @@ const agent = await createAgent({
 ```
 
 The 0.12 factory names (`createBrowserTools`, `createBrowserManager`, `connectObscuraCdp` over
-`@arnilo/prism-tools-web`, the limits/normalize/policy helpers, and the structural Playwright types)
+`@arnilo/prism-tools/web`, the limits/normalize/policy helpers, and the structural Playwright types)
 stay exported for hosts that build tool lists by hand and supply their own browser.

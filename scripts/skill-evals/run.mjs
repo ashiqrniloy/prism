@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { createAgent, providerDone, providerTextDelta, providerToolCall, redactSecrets } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { defineDataset, runExperiment } from "@arnilo/prism-evals";
+import { defineDataset, runExperiment } from "@arnilo/prism-hosts/evals";
 import { parseEnvFile } from "../live-matrix.mjs";
 import {
   ARM_INSTRUCTIONS,
@@ -179,12 +179,12 @@ export async function loadEnv() {
 }
 
 const PROVIDER_TABLE = {
-  hyper: { module: "@arnilo/prism-provider-hyper", factory: "hyper", key: "HYPER_API_KEY" },
-  "opencode-go": { module: "@arnilo/prism-provider-opencode-go", factory: "opencodeGo", key: "OPENCODE_GO_API_KEY" },
-  openrouter: { module: "@arnilo/prism-provider-openrouter", factory: "openrouter", key: "OPENROUTER_API_KEY" },
-  kilo: { module: "@arnilo/prism-provider-kilo", factory: "kilo", key: "KILO_API_KEY" },
-  commandcode: { module: "@arnilo/prism-provider-commandcode", factory: "commandcode", key: "COMMAND_CODE_API_KEY" },
-  "ollama-cloud": { module: "@arnilo/prism-provider-ollama-cloud", factory: "ollamaCloud", key: "OLLAMA_API_KEY" },
+  hyper: { module: "@arnilo/prism-ai/hyper", factory: "hyper", key: "HYPER_API_KEY" },
+  "opencode-go": { module: "@arnilo/prism-ai/opencode-go", factory: "opencodeGo", key: "OPENCODE_GO_API_KEY" },
+  openrouter: { module: "@arnilo/prism-ai/openrouter", factory: "openrouter", key: "OPENROUTER_API_KEY" },
+  kilo: { module: "@arnilo/prism-ai/kilo", factory: "kilo", key: "KILO_API_KEY" },
+  commandcode: { module: "@arnilo/prism-ai/commandcode", factory: "commandcode", key: "COMMAND_CODE_API_KEY" },
+  "ollama-cloud": { module: "@arnilo/prism-ai/ollama-cloud", factory: "ollamaCloud", key: "OLLAMA_API_KEY" },
 };
 
 export async function liveProvider(entry) {

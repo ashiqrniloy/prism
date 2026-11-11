@@ -44,7 +44,7 @@ function ok(_body?: unknown): Response {
   return jsonResponse(OK_RESPONSE);
 }
 
-describe("@arnilo/prism-provider-liquid package", () => {
+describe("@arnilo/prism-ai/liquid package", () => {
   it("liquid_passes_package_conformance", async () => {
     const result = await packageConformance(liquidDefinition, { config: { apiKey: "env:PRISM_TEST_LIQUID_CONFORMANCE" } });
     assert.deepEqual(

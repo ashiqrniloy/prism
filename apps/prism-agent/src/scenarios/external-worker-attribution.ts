@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { type AgentEvent, createAgent } from "@arnilo/prism";
 import { createProfiles } from "@arnilo/prism/driver-kit";
 import { createScriptedCli, type ScriptStep } from "@arnilo/prism/testing";
-import { type AgentAdapter, adapterDriver, processDriver } from "@arnilo/prism-driver-process";
+import { type AgentAdapter, adapterDriver, processDriver } from "@arnilo/prism-hosts/driver-process";
 import { hostStreamCli } from "../adapters/stream-cli.js";
 import type { HostConfig, HostDeps } from "../host/config.js";
 import { createExternalWorker } from "../host/external.js";

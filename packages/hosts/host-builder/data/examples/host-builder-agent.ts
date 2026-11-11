@@ -3,7 +3,7 @@
  * `prism-host-builder` kit (plan 215 Task 19).
  *
  * 1. `prism-host-builder install --target prism` copies the skill into the project's `.agents/skills`.
- * 2. `contextFiles` discovers that skill, `tools-coding` is rooted in the project, and `@arnilo/prism-mcp`
+ * 2. `contextFiles` discovers that skill, `tools-coding` is rooted in the project, and `@arnilo/prism-extensions/mcp`
  *    connects `prism-host-builder mcp` over stdio. The host starts the server; no model output chooses its
  *    command, root or check targets.
  * 3. A scripted turn loads the skill, looks up `createAgent` with `prism_api`, and runs the host's
@@ -22,9 +22,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { type AgentEvent, createAgent } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { contextFiles } from "@arnilo/prism-context-files";
-import { mcp } from "@arnilo/prism-mcp";
-import { toolsCoding } from "@arnilo/prism-tools-coding";
+import { contextFiles } from "@arnilo/prism-extensions/context-files";
+import { mcp } from "@arnilo/prism-extensions/mcp";
+import { toolsCoding } from "@arnilo/prism-tools/coding";
 
 const SKILL = "prism-host-builder";
 const SERVER_ID = "host-builder";
@@ -39,7 +39,7 @@ export async function createInspectionAgent() {
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // `bin/prism-host-builder.ts` is what `bunx prism-host-builder` runs; the example calls it through the package.
 const binEntry = fileURLToPath(
-  new URL("../bin/prism-host-builder.ts", pathToFileURL(createRequire(import.meta.url).resolve("@arnilo/prism-host-builder"))),
+  new URL("../bin/prism-host-builder.ts", pathToFileURL(createRequire(import.meta.url).resolve("@arnilo/prism-hosts/host-builder"))),
 );
 
 /** The text a finished tool call returned (a blocked call returns its reason). */

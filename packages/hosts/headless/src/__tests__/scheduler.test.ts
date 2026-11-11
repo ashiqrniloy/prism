@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createAgent, createMemorySessionStore, createSessionIndex, definePackage } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import workflows, { createMemoryCheckpointStore, defineWorkflow, functionNode, workflowCommand } from "@arnilo/prism-workflows";
+import workflows, { createMemoryCheckpointStore, defineWorkflow, functionNode, workflowCommand } from "@arnilo/prism-extensions/workflows";
 import { createScheduler, type SchedulerClock } from "../index.js";
 import { build } from "./fixtures/agent.js";
 
@@ -461,7 +461,7 @@ test("SQLite_schedule_and_workflow_parent_survive_process_restart", async () => 
   const { join } = await import("node:path");
   const dir = await mkdtemp(join(tmpdir(), "scheduler-restart-"));
   const run = async (mode: string) => {
-    const child = Bun.spawn([process.execPath, join(import.meta.dir, "fixtures/scheduler-restart.mjs"), join(dir, "store.db"), mode], {
+    const child = Bun.spawn([process.execPath, join(import.meta.dirname, "fixtures/scheduler-restart.mjs"), join(dir, "store.db"), mode], {
       stdout: "pipe",
       stderr: "pipe",
     });

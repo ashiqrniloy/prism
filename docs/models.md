@@ -160,27 +160,27 @@ where to look, while an ordinary `429` rate limit still backs off.
 
 ## Provider packages
 
-Prism 0.13.0 ships 9 provider packages: `@arnilo/prism-provider-{hyper, kilo, laya, litellm, liquid, openai-codex, opencode-go, openrouter, typesafe}`. `@arnilo/prism-provider-commandcode` (Chat, Responses, Messages) and `@arnilo/prism-provider-ollama-cloud` (native NDJSON and OpenAI-compatible routes) are built and live-tested in the same tree and ship in the first release after 0.13.0. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-provider-liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
+Prism 0.13.0 ships all eleven providers through `@arnilo/prism-ai/<vendor>`, including Command Code (Chat, Responses, Messages) and Ollama Cloud (native NDJSON and OpenAI-compatible routes). Install `@arnilo/prism-ai` once, then list each provider subpath separately in your agent or manifest. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-ai/liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
 Listing one registers its provider(s); no package imports a sibling. `apiKey` (and every
 other credential field) is an `env:`/`keyring:` ref resolved per request through the `credentials` slot,
-OAuth methods go through `host.ui`, and `keyring:` refs resolve through `@arnilo/prism-credentials-keyring`.
+OAuth methods go through `host.ui`, and `keyring:` refs resolve through `@arnilo/prism-extensions/keyring`.
 A provider package that rotates tokens at request time (an OAuth refresh) persists the new record through
 `credentials.store`/`delete`, which needs the `credentials:write` capability; `env:` refs are never writable.
 The package README carries the config table, the named exports, and the vendor wire notes:
 
 | Package | README |
 | --- | --- |
-| `@arnilo/prism-provider-commandcode` | [README](../packages/providers/commandcode/README.md) |
-| `@arnilo/prism-provider-kilo` | [README](../packages/providers/kilo/README.md) |
-| `@arnilo/prism-provider-litellm` | [README](../packages/providers/litellm/README.md) |
-| `@arnilo/prism-provider-hyper` | [README](../packages/providers/hyper/README.md) |
-| `@arnilo/prism-provider-laya` | [README](../packages/providers/laya/README.md) |
-| `@arnilo/prism-provider-liquid` | [README](../packages/providers/liquid/README.md) |
-| `@arnilo/prism-provider-ollama-cloud` | [README](../packages/providers/ollama-cloud/README.md) |
-| `@arnilo/prism-provider-openai-codex` | [README](../packages/providers/openai-codex/README.md) |
-| `@arnilo/prism-provider-opencode-go` | [README](../packages/providers/opencode-go/README.md) |
-| `@arnilo/prism-provider-openrouter` | [README](../packages/providers/openrouter/README.md) |
-| `@arnilo/prism-provider-typesafe` | [README](../packages/providers/typesafe/README.md) |
+| `@arnilo/prism-ai/commandcode` | [README](../packages/providers/commandcode/README.md) |
+| `@arnilo/prism-ai/kilo` | [README](../packages/providers/kilo/README.md) |
+| `@arnilo/prism-ai/litellm` | [README](../packages/providers/litellm/README.md) |
+| `@arnilo/prism-ai/hyper` | [README](../packages/providers/hyper/README.md) |
+| `@arnilo/prism-ai/laya` | [README](../packages/providers/laya/README.md) |
+| `@arnilo/prism-ai/liquid` | [README](../packages/providers/liquid/README.md) |
+| `@arnilo/prism-ai/ollama-cloud` | [README](../packages/providers/ollama-cloud/README.md) |
+| `@arnilo/prism-ai/openai-codex` | [README](../packages/providers/openai-codex/README.md) |
+| `@arnilo/prism-ai/opencode-go` | [README](../packages/providers/opencode-go/README.md) |
+| `@arnilo/prism-ai/openrouter` | [README](../packages/providers/openrouter/README.md) |
+| `@arnilo/prism-ai/typesafe` | [README](../packages/providers/typesafe/README.md) |
 
 ## Usage and token accounting
 

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createAgent, registerContextSources, withContextBlocks, type ContextSource, type Message, type ProviderRequest } from "../index.js";
+import {
+  createAgent,
+  registerContextSources,
+  withContextBlocks,
+  type ContextSource,
+  type Message,
+  type ProviderRequest,
+} from "../index.js";
 import { mockProvider } from "../testing/index.js";
 
 const MODEL = { provider: "mock", model: "demo" };

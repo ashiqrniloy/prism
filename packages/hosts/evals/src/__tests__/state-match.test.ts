@@ -19,7 +19,12 @@ test("exact_match_fails_with_extra_fields", async () => {
   assert.equal((await grade({ a: 1 }, { a: 1, b: 2 })).score, 0);
   assert.equal((await grade([1], [1, 2])).score, 0);
   assert.equal((await grade({ a: 1, b: null }, { b: null, a: 1 })).score, 1);
-  for (const [expected, actual] of [[null, {}], [[], {}], [1, "1"], [{ a: null }, {}]]) {
+  for (const [expected, actual] of [
+    [null, {}],
+    [[], {}],
+    [1, "1"],
+    [{ a: null }, {}],
+  ]) {
     assert.equal((await grade(expected, actual)).score, 0);
   }
 });
@@ -36,8 +41,12 @@ test("ignore_pointer_excludes_field_without_mutating_states", async () => {
 
 test("diff_is_bounded_and_redacted", async () => {
   const expected = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`key${i}`, `private-secret${"😀".repeat(200)}`]));
-  const [record] = await scoreRun({ result, environment: Object.fromEntries(Object.keys(expected).map(k => [k, "different"])),
-    secrets: ["private-secret"], scorers: [createStateMatchScorer({ expected, mode: "exact" })] });
+  const [record] = await scoreRun({
+    result,
+    environment: Object.fromEntries(Object.keys(expected).map((k) => [k, "different"])),
+    secrets: ["private-secret"],
+    scorers: [createStateMatchScorer({ expected, mode: "exact" })],
+  });
   const diff = record!.metadata!.diff as { path: string; expected: unknown; actual: unknown }[];
   assert.equal(diff.length, 32);
   assert.ok(!JSON.stringify(record).includes("private-secret"));
@@ -46,16 +55,29 @@ test("diff_is_bounded_and_redacted", async () => {
     assert.ok(Buffer.byteLength(JSON.stringify(entry.actual)) <= 256);
     assert.ok(!String(entry.expected).includes("�"));
   }
-  const [redacted] = await scoreRun({ result, environment: { token: "second-secret" }, secrets: ["first-secret", "second-secret"],
-    scorers: [createStateMatchScorer({ expected: { token: "first-secret" }, mode: "exact" })] });
+  const [redacted] = await scoreRun({
+    result,
+    environment: { token: "second-secret" },
+    secrets: ["first-secret", "second-secret"],
+    scorers: [createStateMatchScorer({ expected: { token: "first-secret" }, mode: "exact" })],
+  });
   assert.equal(redacted!.score, 1, "comparison uses redacted values");
 });
 
 test("select_and_item_expected_support_invariants", async () => {
-  const scorer = createStateMatchScorer<string, { paid: boolean }>({ id: "paid", expected: (item: DatasetItem<string, { paid: boolean }> | undefined) => item?.expected,
-    select: env => (env as { order: unknown }).order, mode: "subset", invariant: true });
-  const [record] = await scoreRun({ result, item: { id: "i", input: "pay", expected: { paid: true } },
-    environment: { order: { paid: false, id: 1 } }, scorers: [scorer] });
+  const scorer = createStateMatchScorer<string, { paid: boolean }>({
+    id: "paid",
+    expected: (item: DatasetItem<string, { paid: boolean }> | undefined) => item?.expected,
+    select: (env) => (env as { order: unknown }).order,
+    mode: "subset",
+    invariant: true,
+  });
+  const [record] = await scoreRun({
+    result,
+    item: { id: "i", input: "pay", expected: { paid: true } },
+    environment: { order: { paid: false, id: 1 } },
+    scorers: [scorer],
+  });
   assert.equal(record!.score, 0);
   assert.equal(record!.scorerId, "paid");
   assert.equal(record!.metadata!.invariant, true);
@@ -63,12 +85,16 @@ test("select_and_item_expected_support_invariants", async () => {
 });
 
 test("missing_environment_throws_requirement_error", async () => {
-  await assert.rejects(scoreRun({ result, scorers: [createStateMatchScorer({ expected: {}, mode: "exact" })] }),
-    { code: "ERR_PRISM_EVAL_ENVIRONMENT_REQUIRED" });
+  await assert.rejects(scoreRun({ result, scorers: [createStateMatchScorer({ expected: {}, mode: "exact" })] }), {
+    code: "ERR_PRISM_EVAL_ENVIRONMENT_REQUIRED",
+  });
 });
 
 test("state_bounds_fail_record_with_attributable_code", async () => {
-  for (const [expected, actual] of [["x".repeat(1024 * 1024), "ok"], ["ok", "😀".repeat(262144)]]) {
+  for (const [expected, actual] of [
+    ["x".repeat(1024 * 1024), "ok"],
+    ["ok", "😀".repeat(262144)],
+  ]) {
     const record = await grade(expected, actual);
     assert.equal(record.status, "failed");
     assert.equal(record.error!.code, "ERR_PRISM_EVAL_STATE_BOUNDS");

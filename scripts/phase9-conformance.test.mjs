@@ -8,17 +8,19 @@
  * limit ladder at/below/above frozen caps. FR-3/FR-4/FR-5/FR-6 conformance items
  * land with Tasks 9-12.
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer, request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
-import { createMemoryToolEffectStore } from "../src/index.ts";
 import {
+  createAllowListEgressProxy,
   createBoundGitRunner,
+  createEgressPolicy,
   createGitAwareRepositoryOperations,
   createGitHubForge,
   createLanguageIntelligence,
@@ -26,8 +28,8 @@ import {
   ForgeError,
   LanguageIntelligenceError,
   ProcessSessionError,
-} from "@arnilo/prism-tools-coding";
-import { createAllowListEgressProxy, createEgressPolicy } from "@arnilo/prism-tools-coding";
+} from "@arnilo/prism-tools/coding";
+import { createMemoryToolEffectStore } from "../src/index.ts";
 
 const FAKE_LSP = fileURLToPath(new URL("../packages/tools/coding/src/agent/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
 const IDENTITY = {

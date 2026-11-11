@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AgentEvent, createMemorySessionStore, type HostUi, type HostUiResponse, type Session } from "@arnilo/prism";
-import { createDispatcher, createMemoryTransportPair, pendingDecisionsOf as remotePending, serveAgent } from "@arnilo/prism-remote";
+import { createDispatcher, createMemoryTransportPair, pendingDecisionsOf as remotePending, serveAgent } from "@arnilo/prism-hosts/remote";
 import { createResumeAuthority, policyDefault, routeHostUi } from "../index.js";
 import { pendingDecisionsOf } from "../pending.js";
 import { build } from "./fixtures/agent.js";
@@ -311,7 +311,7 @@ test("first_answer_wins_with_serve_agent", async () => {
 
 test("resume_after_restart_reads_entries", async () => {
   const dir = await mkdtemp(join(tmpdir(), "headless-resume-"));
-  const fixture = join(import.meta.dir, "fixtures/restart.mjs");
+  const fixture = join(import.meta.dirname, "fixtures/restart.mjs");
   const run = async (mode: string, id = "") => {
     const child = Bun.spawn([process.execPath, fixture, join(dir, "sessions.db"), mode, id], { stdout: "pipe", stderr: "pipe" });
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);

@@ -64,7 +64,11 @@ export async function researchAgent(options: {
     slots: { store, ...(options.loop === undefined ? {} : { loop: options.loop }) },
     tools: { add: [...(options.tools ?? [])] },
     packages: [
-      mockProvider(options.script, { onRequest: () => { turns += 1; } }),
+      mockProvider(options.script, {
+        onRequest: () => {
+          turns += 1;
+        },
+      }),
       toolsResearch(options.config ?? { sourceTools: ["web_fetch"] }),
     ],
   });

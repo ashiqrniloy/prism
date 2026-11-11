@@ -126,7 +126,12 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ id: "usage-reported", slots: { store: createMemorySessionStore() }, model: MODEL, packages: [providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      id: "usage-reported",
+      slots: { store: createMemorySessionStore() },
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+    });
     const session = await agent.session({ id: "usage-reported-session", create: true });
     const { events, meters, result, error } = await runWithMeters(session, "hi");
     assert.equal(error, undefined, String(error));

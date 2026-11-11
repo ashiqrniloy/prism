@@ -53,6 +53,10 @@ export const GATE_FILES = [
   "scripts/phase23-quality-gates.test.mjs",
   "scripts/phase24-truth.test.mjs",
   "scripts/phase25-bounded-accumulation.test.mjs",
+  "scripts/bundles.test.mjs",
+  "scripts/bundles-packed.test.mjs",
+  "scripts/post-publish-smoke.test.mjs",
+  "scripts/extensions-bundle.test.mjs",
   "scripts/phase37-provider-matrix.test.mjs",
   // Plan 152 Task 8: cross-vendor conformance walks moved out of the retired
   // provider-family workspace into the gate stage.
@@ -85,6 +89,7 @@ export const GATE_FILES = [
   "scripts/live-doc-check.test.mjs",
   "scripts/version-literal-gate.test.mjs",
   "scripts/host-builder-index.test.mjs",
+  "scripts/hosts-bundle.test.mjs",
   "scripts/host-builder-evals/run.test.mjs",
   "scripts/workflow-liveness.test.mjs",
   "scripts/blocked-gate.test.mjs",
@@ -97,6 +102,8 @@ export const GATE_FILES = [
   "scripts/phase126-sqlite-mapping.test.mjs",
   "scripts/__tests__/decision-bench-metrics.test.mjs",
 ];
+
+const TIMING_FILES = GATE_FILES.filter((file) => file.startsWith("scripts/benchmark-") || file === "scripts/memory-bench/run.test.mjs");
 
 // The old chain left the compiled `dist/__tests__/*.test.js` set to the shell. There is no
 // shell here, and `node --test <dir>`/glob args are only understood from Node 22, so this
@@ -126,7 +133,7 @@ function expandGlob(arg) {
 // §6.1–§6.4: root 20.0 s vs Node 18.5 s at equal file counts, gate 32.1 s vs 32.5 s, sqlite 438 ms vs
 // 470 ms, examples 3.5 s vs 10.0 s). Children spawn `bun` by name: under the Bun parent
 // `process.execPath` is Bun, and `bun --test` is a script run, not a test runner (Task 1 §1.2).
-// Plan 153 Task 4: the SQLite separate stage is gone — the store moved to @arnilo/prism-store-sqlite,
+// Plan 153 Task 4: the SQLite separate stage is gone — the store moved to @arnilo/prism-extensions/store-sqlite,
 // whose own `test` script runs those files in the workspace stage.
 
 // Plan 115 Task 2: the workspace stage runs one npm process per package behind a bounded
@@ -153,6 +160,12 @@ export const STAGES = [
     name: "performance budget",
     command: "bun",
     args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", "scripts/budget-gate.test.mjs"],
+  },
+  {
+    // Fixed timing ceilings measure the scenario without competing gate workers.
+    name: "timing benchmarks",
+    command: "bun",
+    args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", ...TIMING_FILES],
   },
   {
     // Plan 124 Task 2. The worker bound replaces plan 123's `--test-concurrency=4`: Task 1 §6.1
@@ -188,7 +201,14 @@ export const STAGES = [
     // assertions that the default worker pool starves under host load (Task 1 §6.3/§6.7).
     name: "gate suites",
     command: "bun",
-    args: ["scripts/with-build-lock.mjs", "bun", "test", "--parallel=4", "--timeout=0", ...GATE_FILES],
+    args: [
+      "scripts/with-build-lock.mjs",
+      "bun",
+      "test",
+      "--parallel=4",
+      "--timeout=0",
+      ...GATE_FILES.filter((file) => !TIMING_FILES.includes(file)),
+    ],
   },
   { name: "build race", command: "bun", args: ["test", "--timeout=0", "scripts/phase23-build-race.test.mjs"] },
   {

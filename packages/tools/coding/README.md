@@ -1,4 +1,4 @@
-# @arnilo/prism-tools-coding
+# @arnilo/prism-tools/coding
 
 The first-party coding tools — file, search, and shell — as a Prism package. The default export is a
 `definePackage` definition whose `setup` registers the tools into the session's tool registry.
@@ -6,13 +6,13 @@ The first-party coding tools — file, search, and shell — as a Prism package.
 ## Install
 
 ```bash
-prism add @arnilo/prism-tools-coding
+prism add @arnilo/prism-tools/coding
 ```
 
 ```jsonc
 // manifest entry, with every config field that has no default
 {
-  "name": "@arnilo/prism-tools-coding",
+  "name": "@arnilo/prism-tools/coding",
   "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": { "root": "." }
@@ -63,7 +63,7 @@ Registers thirteen tools into the agent's tool registry (plus `diagnostics` when
 | `git_commit` | `["write"]` | durable; needs a principal |
 | `git_pr_handoff` | `["external", "network"]` | durable; forge token is a ref, never a literal |
 | `coding_check` | `["execute"]` | only when `checks` has at least one entry |
-| `todo_write` | `[]` | transcript only; `run.end` id `@arnilo/prism-tools-coding:run.end#todo` continues while items stay open |
+| `todo_write` | `[]` | transcript only; `run.end` id `@arnilo/prism-tools/coding:run.end#todo` continues while items stay open |
 | `ask_user_decision` | `[]` | asks through `host.ui`; `unavailable` suspends |
 
 The rule is one tool per job: `shell` covers what no dedicated tool does — `git branch`, `git worktree`,
@@ -77,7 +77,7 @@ The package ships no skill. A `coding-workflow` skill was measured and removed (
 
 ## Hard denies and the `coding.targets` service
 
-One `tool.call` decide handler, id `@arnilo/prism-tools-coding:tool.call#hard-deny`, returns
+One `tool.call` decide handler, id `@arnilo/prism-tools/coding:tool.call#hard-deny`, returns
 `{ deny }` for:
 
 - any path argument of its own tools that resolves, after realpath and symlink resolution, outside
@@ -110,7 +110,7 @@ against the worktree, and a path inside the main `root` is outside the reported 
 the hard-deny hook pass the `tool.call` payload's `sessionId`, so both follow the session.
 
 `createCodingApprovalPolicy` and its `ExecutionPolicy` approval callback were removed in plan 154
-Task 4 — prompting is `@arnilo/prism-approval`'s job. Containment (`assertPathInsideRoots`),
+Task 4 — prompting is `@arnilo/prism-extensions/approval`'s job. Containment (`assertPathInsideRoots`),
 command rules (`evaluateCommandRules`), and the sandbox adapters stay as named exports.
 
 ## Workspace service
@@ -119,7 +119,7 @@ When `root` is inside a git repository the package provides the `workspace` serv
 (`prism.services.provide("workspace", …)`); outside one it emits an informational `status.note` and
 provides nothing. It replaces the durable 0.12 workspace lifecycle: records, leases,
 checkpoints, and multi-repository identity are gone, and Phase 16 moves those into
-`@arnilo/prism-workflows`. The service is available in `readOnly` mode too — it is a service, not a
+`@arnilo/prism-extensions/workflows`. The service is available in `readOnly` mode too — it is a service, not a
 tool, and no tool reaches it.
 
 ```ts
@@ -267,14 +267,14 @@ how `forge.token` resolves. The package claims no slot and makes no model call a
 In enterprise or multi-tenant deployments, executing uncontained shell commands or file operations directly on the host poses security risks. The package provides multiple layers of defense:
 
 1. **Sandbox Backends (`sandbox`):**
-   By default, `sandbox` is `"none"`, which executes shell commands on the host. When `shell` is registered without a sandbox, setup emits a `warn` status note (`"shell runs on the host without a sandbox; pair it with @arnilo/prism-approval or set sandbox"`). For production workloads, select an isolated backend:
+   By default, `sandbox` is `"none"`, which executes shell commands on the host. When `shell` is registered without a sandbox, setup emits a `warn` status note (`"shell runs on the host without a sandbox; pair it with @arnilo/prism-extensions/approval or set sandbox"`). For production workloads, select an isolated backend:
    - `"docker"`: Runs file operations and shell commands inside a digest-pinned container runner.
    - `"native"`: Uses Linux namespace isolation (`unshare`) to containerize processes on the host.
    - `"e2b"`: Executes operations in isolated cloud microVMs via the optional E2B peer.
    If a configured backend cannot be initialized, the package fails closed by withholding `shell` and noting a warning.
 
-2. **Approval Package (`@arnilo/prism-approval`):**
-   Combine coding tools with `@arnilo/prism-approval` to require explicit human or policy approval before mutating operations (`write`, `edit`, `delete`, `move`) or `shell` commands execute.
+2. **Approval Package (`@arnilo/prism-extensions/approval`):**
+   Combine coding tools with `@arnilo/prism-extensions/approval` to require explicit human or policy approval before mutating operations (`write`, `edit`, `delete`, `move`) or `shell` commands execute.
 
 3. **Command Rules (`commandRules`):**
    Configure granular command policies for `shell` execution:
@@ -317,7 +317,7 @@ In enterprise or multi-tenant deployments, executing uncontained shell commands 
 ## Example
 
 ```ts
-import toolsCoding from "@arnilo/prism-tools-coding";
+import toolsCoding from "@arnilo/prism-tools/coding";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
@@ -326,11 +326,11 @@ const agent = await createAgent({
 });
 ```
 
-`examples/coding-approval.ts` runs this package with `@arnilo/prism-approval` in `ask` mode and
-`@arnilo/prism-context-files` on one agent: the scripted host approves an `edit`, the file changes, and
+`examples/coding-approval.ts` runs this package with `@arnilo/prism-extensions/approval` in `ask` mode and
+`@arnilo/prism-extensions/context-files` on one agent: the scripted host approves an `edit`, the file changes, and
 `disable: { tools: ["shell"] }` removes the shell so a call to it is blocked as an unknown tool.
 
-`examples/serve-tools.ts` runs this package under `@arnilo/prism-mcp-server`'s `serveTools`: the
+`examples/serve-tools.ts` runs this package under `@arnilo/prism-hosts/mcp-server`'s `serveTools`: the
 package's own `read` and `edit` are the definitions served, `coding.targets` is what decides "inside
 roots" for the served calls, the package's default command rules are what deny a dangerous shell
 command, and the session's bound worktree is what a served `edit` changes — so `workspace.diff`

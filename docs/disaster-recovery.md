@@ -64,7 +64,7 @@ The drill's legs: (1) seed multi-tenant state through `createPostgresPersistence
 
 ## Related APIs
 
-- `createPostgresPersistence` ([`@arnilo/prism-store-postgres`](../packages/stores/postgres/README.md)) — the store whose state the drill seeds and verifies.
+- `createPostgresPersistence` ([`@arnilo/prism-extensions/store-postgres`](../packages/extensions/store-postgres/README.md)) — the store whose state the drill seeds and verifies.
 - `scripts/phase27-dr.test.mjs` — the protected drill; `docs/_evidence/phase27-dr-evidence.json` — the recorded run.
 - [Operations runbook: high availability, failover, and fencing](operations.md) — the lease/fence model and failover ceiling the same state relies on.
-- [Signed, hash-chained audit export](../packages/policy/governance/README.md) — the append-only audit ledger preserved through backup/restore.
+- [Signed, hash-chained audit export](../packages/extensions/governance/README.md) — the append-only audit ledger preserved through backup/restore.

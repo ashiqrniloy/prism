@@ -16,12 +16,13 @@
  * set (PRISM_TEST_POSTGRES_URL). The Postgres two-replica leg is the protected
  * evidence for threat T5 split-brain.
  */
+
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { blockedGate } from "./blocked-gate.mjs";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
@@ -35,13 +36,13 @@ if (blocked) {
 // Load the store adapters (Postgres from the session-store-postgres package, same as the 0.2.5 test:postgres profile).
 let createPostgresPersistence;
 try {
-  ({ createPostgresPersistence } = await import("@arnilo/prism-store-postgres"));
+  ({ createPostgresPersistence } = await import("@arnilo/prism-extensions/store-postgres"));
 } catch (error) {
-  blockedGate("phase26-recovery-conformance", { missing: [`@arnilo/prism-store-postgres did not load: ${String(error)}`] });
+  blockedGate("phase26-recovery-conformance", { missing: [`@arnilo/prism-extensions/store-postgres did not load: ${String(error)}`] });
 }
 
-const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism-workflows");
-const { createProcessSessions } = await import("@arnilo/prism-tools-coding");
+const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism-extensions/workflows");
+const { createProcessSessions } = await import("@arnilo/prism-tools/coding");
 
 function makePtyBackend(refPrefix) {
   return {

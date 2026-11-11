@@ -233,9 +233,7 @@ describe("openai provider primitives", () => {
       { imageInput: "always" },
     );
     const msgAlways = (bodyAlways.messages as any[])[0];
-    assert.deepEqual(msgAlways.content, [
-      { type: "image_url", image_url: { url: "https://example.test/img.png" } },
-    ]);
+    assert.deepEqual(msgAlways.content, [{ type: "image_url", image_url: { url: "https://example.test/img.png" } }]);
   });
 
   it("chat_codec_effort_snaps_to_declared_levels", () => {
@@ -327,7 +325,10 @@ describe("openai provider primitives", () => {
     }));
     const body = openAIChatBody({ model: { provider: "mock", model: "demo" }, messages });
     const encoded = JSON.stringify(body.messages).length;
-    const jsonEscaped = messages.reduce((total, message) => total + JSON.stringify(JSON.stringify((message.content[0] as { result: string }).result)).length, 0);
+    const jsonEscaped = messages.reduce(
+      (total, message) => total + JSON.stringify(JSON.stringify((message.content[0] as { result: string }).result)).length,
+      0,
+    );
     assert.ok(encoded < jsonEscaped, `expected ${encoded} < ${jsonEscaped}`);
   });
 });

@@ -8,9 +8,9 @@
  * redactor reject a single note and are counted; everything else rejects the whole answer.
  */
 import type { ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism";
-import { redactJson } from "@arnilo/prism-memory-core";
-import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
+import { redactJson } from "@arnilo/prism-memory-system/core";
+import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-system/core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import { type MemoryNoteScope, validateAppliesTo, validateNoteKey } from "../types.js";
 import type { ConsolidationCandidate } from "./gather.js";
 import {

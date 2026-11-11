@@ -97,13 +97,13 @@ Three packages fill the `store` slot with a durable implementation: each default
 
 | Package | Config | Implements |
 | --- | --- | --- |
-| `@arnilo/prism-store-jsonl` | `{ dir }` — one JSONL file per session | `append`, `list`, `get`, `readBranchPath`, `searchSessions`, `listSessions`, `deleteSession` |
-| `@arnilo/prism-store-sqlite` | `{ path, busyTimeoutMs? }` — `bun:sqlite`, migrations applied at load | the same seven, over one database file |
-| `@arnilo/prism-store-postgres` | `{ url, schema?, pool? }` — `url` is an `env:` / `keyring:` ref | the same seven, over a shared server |
+| `@arnilo/prism-extensions/store-jsonl` | `{ dir }` — one JSONL file per session | `append`, `list`, `get`, `readBranchPath`, `searchSessions`, `listSessions`, `deleteSession` |
+| `@arnilo/prism-extensions/store-sqlite` | `{ path, busyTimeoutMs? }` — `bun:sqlite`, migrations applied at load | the same seven, over one database file |
+| `@arnilo/prism-extensions/store-postgres` | `{ url, schema?, pool? }` — `url` is an `env:` / `keyring:` ref | the same seven, over a shared server |
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { sqliteStore } from "@arnilo/prism-store-sqlite";
+import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
 
 const agent = await createAgent({
   model,
@@ -111,11 +111,11 @@ const agent = await createAgent({
 });
 ```
 
-Each package declares `capabilities: ["slot:store"]`; `@arnilo/prism-store-postgres` also declares
+Each package declares `capabilities: ["slot:store"]`; `@arnilo/prism-extensions/store-postgres` also declares
 `"credentials"`, because its `x-prism-secret` `url` is resolved through the credentials slot once at
 setup and fails closed naming the ref, never the value. The drivers stay inside their packages: an
-agent that does not list `@arnilo/prism-store-postgres` never loads `pg`, and one that does not list
-`@arnilo/prism-store-sqlite` never loads `bun:sqlite`. `@arnilo/prism-store-codecs` is the plain
+agent that does not list `@arnilo/prism-extensions/store-postgres` never loads `pg`, and one that does not list
+`@arnilo/prism-extensions/store-sqlite` never loads `bun:sqlite`. `@arnilo/prism-extensions/store-codecs` is the plain
 library the two SQL stores share for row, cursor, and ownership encoding — it claims no slot and no
 host lists it.
 

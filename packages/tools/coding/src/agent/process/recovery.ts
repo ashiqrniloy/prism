@@ -16,7 +16,7 @@
  */
 import { isAbsolute } from "node:path";
 import { type OwnershipScope } from "@arnilo/prism";
-import type { CheckpointStore, LeaseRecord, LeaseStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore, LeaseRecord, LeaseStore } from "@arnilo/prism-extensions/workflows";
 import {
   DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS,
   DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES,

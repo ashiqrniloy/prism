@@ -6,7 +6,7 @@
  * lexical analysis finds in the note, its evidence, and the repository's own documents.
  */
 import { tmpdir } from "node:os";
-import { lexicalCoverage, lexicalDice, lexicalTerms } from "@arnilo/prism-memory-core";
+import { lexicalCoverage, lexicalDice, lexicalTerms } from "@arnilo/prism-memory-system/core";
 import { createFabricFileJail } from "../files.js";
 import type { ExtractedNote } from "./extract.js";
 import type { ConsolidationCandidate } from "./gather.js";

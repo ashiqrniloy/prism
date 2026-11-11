@@ -4,7 +4,9 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-// @ts-expect-error stdlib-only release tooling intentionally ships as runnable JavaScript.
+// @ts-expect-error stdlib-only bundle tooling.
+import { packagePages } from "../../scripts/bundles.mjs";
+// @ts-expect-error stdlib-only release tooling.
 import { loadRelease } from "../../scripts/release.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -75,9 +77,9 @@ function experimentalImports(text: string, experimental: ReadonlySet<string>): s
 /** Violations as `package: reason`, naming the package, the field or file, and the experimental name. */
 function experimentalBoundaryViolations(root: string, packages: readonly BoundaryPackage[], experimental: ReadonlySet<string>): string[] {
   const violations: string[] = [];
-  for (const pkg of packages) {
+  for (const pkg of packagePages(root, packages) as BoundaryPackage[]) {
     const name = pkg.manifest.name;
-    if (pkg.manifest.private === true || experimental.has(name)) continue;
+    if (pkg.manifest.private === true || [...experimental].some((owner) => name === owner || name.startsWith(`${owner}/`))) continue;
     for (const field of DEPENDENCY_FIELDS) {
       for (const dependency of Object.keys(pkg.manifest[field] ?? {})) {
         if (experimental.has(dependency)) violations.push(`${name}: ${field} names experimental ${dependency}`);
@@ -158,6 +160,10 @@ describe("experimental boundary", () => {
           manifest: { ...pkg.manifest, name: "@arnilo/prism-rag", dependencies: { "@arnilo/prism-memory-core": "1" } },
         };
         assert.deepEqual(experimentalBoundaryViolations(root, [self], experimental), []);
+        assert.deepEqual(
+          experimentalBoundaryViolations(root, [{ ...self, manifest: { ...self.manifest, name: "@arnilo/prism-rag/wiki" } }], experimental),
+          [],
+        );
       } finally {
         rmSync(root, { recursive: true, force: true });
       }

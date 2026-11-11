@@ -151,9 +151,9 @@ describe("plan 079 channel journal against SQLite", () => {
   });
 
   it("passes the durable journal conformance probes against a reopened SQLite database", async () => {
-    let createSqlitePersistence: typeof import("@arnilo/prism-store-sqlite").createSqlitePersistence;
+    let createSqlitePersistence: typeof import("@arnilo/prism-extensions/store-sqlite").createSqlitePersistence;
     try {
-      ({ createSqlitePersistence } = await import("@arnilo/prism-store-sqlite"));
+      ({ createSqlitePersistence } = await import("@arnilo/prism-extensions/store-sqlite"));
     } catch {
       console.log("requires the Bun runtime (bun:sqlite)");
       return;
@@ -187,7 +187,7 @@ const describePostgres = postgresUrl === undefined ? describe.skip : describe;
 describePostgres("plan 079 channel journal against PostgreSQL", () => {
   it("passes the durable journal conformance probes against a real database", async () => {
     const { Pool } = await import("pg");
-    const { createPostgresPersistence } = await import("@arnilo/prism-store-postgres");
+    const { createPostgresPersistence } = await import("@arnilo/prism-extensions/store-postgres");
     const schema = `prism_channels_${randomUUID().replaceAll("-", "")}`;
     const pool = new Pool({ connectionString: postgresUrl, max: 4 });
     const open = () =>

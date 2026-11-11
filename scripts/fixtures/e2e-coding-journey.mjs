@@ -31,7 +31,7 @@ import {
   createProcessSessions,
   createReadPathSet,
   createWriteTool,
-} from "@arnilo/prism-tools-coding";
+} from "@arnilo/prism-tools/coding";
 
 const containmentPolicy = (roots) => ({
   check: async (action) => {

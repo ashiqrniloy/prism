@@ -1,11 +1,13 @@
 // Plan 023 Task 4 regression: quality-gate stabilization (Biome migration,
 // warning/info resolution, timing-assertion quarantine, machine-readable
 // reports). Runs in the bun run test gate segment after sweep-unused.test.mjs.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { expandWorkspaceDirs } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const run = (cmd, args) => spawnSync(cmd, args, { cwd: ROOT, encoding: "utf8" });
@@ -33,16 +35,16 @@ test("config migrated: biome.json uses preset, not the deprecated recommended ke
 });
 
 test("timing quarantine: the racy elapsed assert is gone; kept guards carry named ceilings", () => {
-  const bridge = readFileSync(join(ROOT, "packages", "integrations", "mcp", "src", "__tests__", "bridge.test.ts"), "utf8");
+  const bridge = readFileSync(join(ROOT, "packages", "extensions", "mcp", "src", "__tests__", "bridge.test.ts"), "utf8");
   assert.ok(!bridge.includes("Date.now() - started"), "the bridge timeout test must not measure wall-clock deltas");
   assert.ok(!bridge.includes("hung MCP call exceeded timeout bound"), "the old 150ms elapsed bound is replaced by a test-level timeout");
   for (const [file, needle] of [
-    ["packages/tools/coding/src/agent/__tests__/repository.test.ts", "ponytail: wall-clock anti-block guard"],
+    ["packages/tools/coding/src/agent/__tests__/repository.test.ts", "assert.ok(elapsed < 5_000,"],
     ["packages/tools/coding/src/security/__tests__/native-sandbox.test.ts", "ponytail: wall-clock promptness guard"],
-    ["packages/credentials/keyring/src/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
+    ["packages/extensions/keyring/src/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
   ]) {
     const src = readFileSync(join(ROOT, file), "utf8");
-    assert.ok(src.includes(needle), `${file} must document its kept timing ceiling`);
+    assert.ok(src.includes(needle), `${file} must retain its kept timing guard`);
   }
 });
 
@@ -67,7 +69,16 @@ test("machine-readable reports: unused-report.json is well-formed and both repor
   const result = run(process.execPath, ["scripts/sweep-unused.mjs", "--json"]);
   assert.equal(result.status, 0);
   const json = JSON.parse(readFileSync(join(ROOT, "scripts", "unused-report.json"), "utf8"));
-  assert.ok(Array.isArray(json.configs) && json.configs.length >= 10, "per-tsconfig rows must cover the core plus every workspace");
+  const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
+  const expected = [
+    "tsconfig.json",
+    ...expandWorkspaceDirs(ROOT, manifest.workspaces)
+      .map((dir) => join(dir, "tsconfig.json"))
+      .filter(existsSync)
+      .map((file) => relative(ROOT, file)),
+  ];
+  assert.ok(Array.isArray(json.configs), "per-tsconfig rows must be present");
+  assert.deepEqual(json.configs.map((row) => row.config).sort(), expected.sort(), "report covers the core plus every workspace tsconfig");
   assert.equal(typeof json.totalErrors, "number");
   const workflow = readFileSync(join(ROOT, ".github", "workflows", "release.yml"), "utf8");
   assert.ok(workflow.includes("lint-report.sarif") && workflow.includes("unused-report.json"), "release CI must retain both reports");

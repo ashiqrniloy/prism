@@ -30,7 +30,8 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
         events.push(event);
       });
     },
-    packages: [definePackage({
+    packages: [
+      definePackage({
         name: "probe",
         version: "1.0.0",
         requires: { api: 1 },
@@ -43,14 +44,18 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
             },
           });
         },
-      })(), providerPackage("test-provider", [{
-      id: "mock",
-      async *generate() {
-        if (turns++ === 0) yield { type: "tool_call" as const, call: toolCallContent("call", "probe", {}) };
-        else yield providerTextDelta("done");
-        yield providerDone();
-      },
-    }])],
+      })(),
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            if (turns++ === 0) yield { type: "tool_call" as const, call: toolCallContent("call", "probe", {}) };
+            else yield providerTextDelta("done");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
   });
   const session = await agent.session();
   await session.run("go", { principal: runPrincipal });
@@ -80,13 +85,17 @@ test("cached_session_context_tracks_each_run_principal_without_persisting_it", a
   const agent = await createAgent({
     model: { provider: "mock", model: "test" },
     principal,
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate() {
-        yield providerTextDelta("ok");
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            yield providerTextDelta("ok");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     hooks(hooks) {
       hooks.on("run.input", (input, ctx) => {
         seen.push(ctx.session?.principal);

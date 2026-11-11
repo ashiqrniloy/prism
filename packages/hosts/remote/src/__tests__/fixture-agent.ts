@@ -11,10 +11,10 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import approval from "@arnilo/prism-approval";
+import approval from "@arnilo/prism-extensions/approval";
 
 export async function create({ hostUi, stateDirectory }: { hostUi: HostUi; stateDirectory: string }) {
-  const storeModule = "@arnilo/prism-store-sqlite";
+  const storeModule = "@arnilo/prism-extensions/store-sqlite";
   const sqliteStore: (config: { path: string }) => PackageInstance = (await import(storeModule)).default;
   await mkdir(stateDirectory, { recursive: true });
   const events: ProviderEvent[] = [];

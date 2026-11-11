@@ -190,9 +190,7 @@ async function measureSnapshot() {
     const start = performance.now();
     const session = await agent.session({ id: `snap-${n}`, create: true });
     const first = await session.run("go");
-    for await (const _event of session.resume(
-      first.pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })),
-    )) {
+    for await (const _event of session.resume(first.pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })))) {
       // drain
     }
     const ms = performance.now() - start;

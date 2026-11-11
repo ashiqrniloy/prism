@@ -155,7 +155,7 @@ export function parseRawResponseId(body) {
   return undefined;
 }
 
-export function parseRawUpstreamUsage(responseBody, contentType = "") {
+export function parseRawUpstreamUsage(responseBody, _contentType = "") {
   if (!responseBody || typeof responseBody !== "string") return null;
 
   const trimmed = responseBody.trim();

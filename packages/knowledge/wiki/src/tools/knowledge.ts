@@ -6,7 +6,7 @@
  * so a forgotten note's text cannot ride in on a concept. Neither tool calls a model or writes memory.
  */
 import { type JsonObject, type ToolDefinition, type ToolResult } from "@arnilo/prism";
-import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { type ConceptDoc, type ConceptItem, parseConceptBody, renderConceptBody } from "../ontology/codec.js";
 import type { WikiOntologyPort } from "../ontology/port.js";
 import { citedByCurrentClaims, readConceptBody, renderConceptClaims, renderConceptRead } from "../ontology/render.js";

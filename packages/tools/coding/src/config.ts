@@ -95,7 +95,7 @@ export interface ToolsCodingForgeConfig {
 /** Shared repository limits for `grep` and `glob`. */
 export type ToolsCodingRepositoryConfig = RepositoryLimitOptions;
 
-/** Validated `packageConfig` for `@arnilo/prism-tools-coding`. */
+/** Validated `packageConfig` for `@arnilo/prism-tools/coding`. */
 export interface ToolsCodingConfig {
   /** The workspace root the file tools operate in. Required; checked in `setup` with a naming error. */
   readonly root: string;
@@ -218,7 +218,13 @@ export const toolsCodingConfigSchema: JsonSchema = {
     forge: {
       type: "object",
       properties: {
-        token: { type: "string", minLength: 1, maxLength: 4096, "x-prism-secret": true, description: "An `env:` or `keyring:` ref the credentials slot resolves. A literal token is rejected." },
+        token: {
+          type: "string",
+          minLength: 1,
+          maxLength: 4096,
+          "x-prism-secret": true,
+          description: "An `env:` or `keyring:` ref the credentials slot resolves. A literal token is rejected.",
+        },
       },
     },
     sandbox: { type: "string", enum: ["none", "native", "docker", "e2b"], default: "none" },

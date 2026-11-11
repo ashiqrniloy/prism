@@ -1,18 +1,23 @@
-# Provider packages
+# @arnilo/prism-ai
 
-Each vendor ships as its own package here: `packages/providers/<vendor>/` →
-`@arnilo/prism-provider-<vendor>`. The eleven adapters in the tree are Command Code, Hyper, Kilo, Laya, LiteLLM, Liquid, Ollama Cloud,
-OpenAI Codex, OpenCode Go, OpenRouter, and Typesafe; there is no provider family umbrella package.
+Install the providers bundle once:
 
-A provider package is a `definePackage` definition plus a named factory, both built on the shared
-surface in `@arnilo/prism/provider-kit` (`defineProviderPackage`, `providerPackageInstance`,
-`secretRefProperty`/`baseUrlProperty`/`modelsProperty`, `refSource`/`optionalRefSource`). The
-vendor-specific parts stay in the package: its config schema, its `setup` body, its wire helpers,
-and its model catalog. `docs/provider-kit.md` documents the surface and shows a minimal
-package.
+```sh
+bun add @arnilo/prism @arnilo/prism-ai
+```
 
-Tooling: `workspacePackageCounts()` (`scripts/package-truth.mjs`) counts a package one level under a
-non-package group directory, and `packaging.test.ts` accepts a grouped dir with a TypeScript-source
-export (`sourceExport: true`). The root `workspaces` glob is `packages/providers/*`. Provider
-packages stay on the kernel version line (lockstep) until Phase 11, so they are **not** listed in
-`scripts/independent-packages.json`.
+List each provider separately in your agent packages or manifest. Importing one provider loads only that provider.
+
+| Subpath | Provider |
+| --- | --- |
+| [`@arnilo/prism-ai/commandcode`](./commandcode/README.md) | Command Code |
+| [`@arnilo/prism-ai/hyper`](./hyper/README.md) | Charm Hyper |
+| [`@arnilo/prism-ai/kilo`](./kilo/README.md) | Kilo AI Gateway |
+| [`@arnilo/prism-ai/laya`](./laya/README.md) | Laya |
+| [`@arnilo/prism-ai/liquid`](./liquid/README.md) | Liquid |
+| [`@arnilo/prism-ai/litellm`](./litellm/README.md) | LiteLLM Proxy |
+| [`@arnilo/prism-ai/ollama-cloud`](./ollama-cloud/README.md) | Ollama Cloud |
+| [`@arnilo/prism-ai/openai-codex`](./openai-codex/README.md) | OpenAI Codex |
+| [`@arnilo/prism-ai/opencode-go`](./opencode-go/README.md) | OpenCode Go |
+| [`@arnilo/prism-ai/openrouter`](./openrouter/README.md) | OpenRouter |
+| [`@arnilo/prism-ai/typesafe`](./typesafe/README.md) | TypeSafe Jev |

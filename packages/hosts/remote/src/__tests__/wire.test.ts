@@ -80,21 +80,11 @@ describe("prism-remote wire allow-lists", () => {
     // 1. Direct validator checks on extra keys, outcome values, approvalId length, reason byte length, and elicitation scope.
     expectSyncInvalidParams(() => parseDecisions([]));
     expectSyncInvalidParams(() => parseDecisions("not-an-array"));
-    expectSyncInvalidParams(() =>
-      parseDecisions([{ approvalId: "a1", outcome: "allow_once", extra: true }]),
-    );
-    expectSyncInvalidParams(() =>
-      parseDecisions([{ approvalId: "a1", outcome: "allow_once", scope: { toolName: "write" } }]),
-    );
-    expectSyncInvalidParams(() =>
-      parseDecisions([{ approvalId: "", outcome: "allow_once" }]),
-    );
-    expectSyncInvalidParams(() =>
-      parseDecisions([{ approvalId: "a".repeat(MAX_APPROVAL_ID_LENGTH + 1), outcome: "allow_once" }]),
-    );
-    expectSyncInvalidParams(() =>
-      parseDecisions([{ approvalId: "a1", outcome: "allow_always" }]),
-    );
+    expectSyncInvalidParams(() => parseDecisions([{ approvalId: "a1", outcome: "allow_once", extra: true }]));
+    expectSyncInvalidParams(() => parseDecisions([{ approvalId: "a1", outcome: "allow_once", scope: { toolName: "write" } }]));
+    expectSyncInvalidParams(() => parseDecisions([{ approvalId: "", outcome: "allow_once" }]));
+    expectSyncInvalidParams(() => parseDecisions([{ approvalId: "a".repeat(MAX_APPROVAL_ID_LENGTH + 1), outcome: "allow_once" }]));
+    expectSyncInvalidParams(() => parseDecisions([{ approvalId: "a1", outcome: "allow_always" }]));
     expectSyncInvalidParams(() =>
       parseDecisions([{ approvalId: "a1", outcome: "allow_once", reason: "x".repeat(MAX_DECISION_REASON_BYTES + 1) }]),
     );
@@ -232,15 +222,9 @@ describe("prism-remote wire allow-lists", () => {
     const { client, served } = await connectTestClient(agent, ui);
     const { sessionId } = (await client.call("sessions.open", {})) as { sessionId: string };
 
-    await expectInvalidParams(
-      client.call("steer", { sessionId, input: "more", options: { softInterrupt: true, unexpected: 1 } }),
-    );
-    await expectInvalidParams(
-      client.call("steer", { sessionId, input: "more", options: { softInterrupt: "true" } }),
-    );
-    await expectInvalidParams(
-      client.call("steer", { sessionId, input: "more", options: "not-an-object" }),
-    );
+    await expectInvalidParams(client.call("steer", { sessionId, input: "more", options: { softInterrupt: true, unexpected: 1 } }));
+    await expectInvalidParams(client.call("steer", { sessionId, input: "more", options: { softInterrupt: "true" } }));
+    await expectInvalidParams(client.call("steer", { sessionId, input: "more", options: "not-an-object" }));
 
     await served.close();
     await agent.dispose();
@@ -305,9 +289,7 @@ describe("prism-remote wire allow-lists", () => {
     expectSyncInvalidParams(() => parseSessionListQuery({ cursor: "c".repeat(MAX_SESSION_LIST_CURSOR_LENGTH + 1) }));
     expectSyncInvalidParams(() => parseSessionListQuery({ order: "random" }));
     expectSyncInvalidParams(() => parseSessionListQuery({ actorKind: "robot" }));
-    expectSyncInvalidParams(() =>
-      parseSessionListQuery({ workflowRunId: "w".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) }),
-    );
+    expectSyncInvalidParams(() => parseSessionListQuery({ workflowRunId: "w".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) }));
 
     // Wire-level verification on `sessions.list`.
     const store = createMemorySessionStore();
@@ -360,24 +342,16 @@ describe("prism-remote wire allow-lists", () => {
     expectSyncInvalidParams(() => parseSessionParentLink({ parentSessionId: "wrong-key" }));
     expectSyncInvalidParams(() => parseSessionParentLink({ actor: { kind: "prism", agent: "a" } }));
     expectSyncInvalidParams(() => parseSessionParentLink({ sessionId: "" }));
-    expectSyncInvalidParams(() =>
-      parseSessionParentLink({ sessionId: "s".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) }),
-    );
-    expectSyncInvalidParams(() =>
-      parseSessionParentLink({ workflowRunId: "w".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) }),
-    );
+    expectSyncInvalidParams(() => parseSessionParentLink({ sessionId: "s".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) }));
+    expectSyncInvalidParams(() => parseSessionParentLink({ workflowRunId: "w".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) }));
 
     const ui = remoteHostUi();
     const { build } = gatedAgent({ gate: false, ui });
     const agent = await build();
     const { client, served } = await connectTestClient(agent, ui);
 
-    await expectInvalidParams(
-      client.call("sessions.open", { parent: { extra: "nope" } }),
-    );
-    await expectInvalidParams(
-      client.call("sessions.open", { parent: { sessionId: "s".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) } }),
-    );
+    await expectInvalidParams(client.call("sessions.open", { parent: { extra: "nope" } }));
+    await expectInvalidParams(client.call("sessions.open", { parent: { sessionId: "s".repeat(MAX_SESSION_LINK_ID_LENGTH + 1) } }));
     const opened = (await client.call("sessions.open", {
       parent: { sessionId: "parent-ok", workflowRunId: "wf-ok" },
     })) as { sessionId: string };

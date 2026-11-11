@@ -13,13 +13,8 @@ import { join } from "node:path";
 import { createAgent, type JsonObject, type ProviderRequest } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 
-import { createHashEmbedder, createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
-import memorySystem, {
-  createMemory,
-  createLongTermMemory,
-  encodeMemoryNoteMetadata,
-  parseMemoryNoteMetadata,
-} from "../../index.js";
+import { createHashEmbedder, createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-system/core";
+import memorySystem, { createMemory, createLongTermMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
 import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 import { unreadableNoteReason } from "../types.js";
 

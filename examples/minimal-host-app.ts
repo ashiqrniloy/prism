@@ -12,11 +12,11 @@ import { mockProvider } from "@arnilo/prism/testing";
 export async function demo(): Promise<readonly string[]> {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [mockProvider([[
-      providerTextDelta("Hello, host!"),
-      providerUsage({ inputTokens: 4, outputTokens: 3, totalTokens: 7 }),
-      providerDone(),
-    ]])],
+    packages: [
+      mockProvider([
+        [providerTextDelta("Hello, host!"), providerUsage({ inputTokens: 4, outputTokens: 3, totalTokens: 7 }), providerDone()],
+      ]),
+    ],
   });
 
   const session = await agent.session();

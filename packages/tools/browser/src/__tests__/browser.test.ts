@@ -13,7 +13,7 @@ import {
   parseSnapshotRefs,
   resolveBrowserLimits,
 } from "../index.js";
-import { FakeBrowser, FakeDialog } from "./fake-playwright.js";
+import { FakeBrowser, FakeDialog, FakePage } from "./fake-playwright.js";
 import { waitFor } from "./wait-for.js";
 
 /** Unit tests disable contained-proxy requirement; production defaults remain fail-closed. */
@@ -31,9 +31,9 @@ function ctx(runId = "run-1"): ToolExecutionContext {
   };
 }
 
-describe("@arnilo/prism-tools-browser", () => {
+describe("@arnilo/prism-tools/browser", () => {
   it("package name is stable and import is inert", () => {
-    assert.equal(packageName, "@arnilo/prism-tools-browser");
+    assert.equal(packageName, "@arnilo/prism-tools/browser");
     assert.equal(new FakeBrowser().contexts.length, 0);
   });
 
@@ -182,6 +182,31 @@ describe("@arnilo/prism-tools-browser", () => {
       /Stale snapshotId/,
     );
     await manager.close();
+  });
+
+  it("scroll applies wheel direction and defaults, then invalidates old snapshot refs", async () => {
+    const browser = new FakeBrowser();
+    const manager = mgr(browser);
+    try {
+      await manager.open("run-1");
+      const snapshot = await manager.snapshot("run-1");
+      await manager.act("run-1", { action: "scroll", direction: "up", amount: -120 });
+      await assert.rejects(
+        () => manager.act("run-1", { action: "click", target: { ref: "e4" }, snapshotId: snapshot.snapshotId }),
+        /Stale snapshotId/,
+      );
+      await manager.act("run-1", { action: "scroll", direction: "down" });
+      const context = browser.contexts[0];
+      assert.ok(context);
+      const page = context.pages()[0];
+      assert.ok(page instanceof FakePage);
+      assert.deepEqual(
+        page.actions.filter((action) => action.startsWith("wheel:")),
+        ["wheel:0,-120", "wheel:0,600"],
+      );
+    } finally {
+      await manager.close();
+    }
   });
 
   it("role targets work without refs and ambiguous targets fail", async () => {

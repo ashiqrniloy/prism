@@ -2,5 +2,7 @@
   "name": "@acme/mock-provider",
   "version": "1.0.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" }
+  "exports": {
+    ".": "./src/index.ts"
+  }
 }

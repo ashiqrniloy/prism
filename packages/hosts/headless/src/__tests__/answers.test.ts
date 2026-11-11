@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryCheckpointStore, type CheckpointStore } from "@arnilo/prism-workflows";
+import { createMemoryCheckpointStore, type CheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { policyDefault, routeHostUi } from "../index.js";
 
 test("answer_log_has_no_values_and_survives_restart", async () => {

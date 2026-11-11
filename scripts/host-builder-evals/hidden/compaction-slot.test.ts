@@ -6,9 +6,9 @@ test("memory-compaction owns the compaction slot and the local package still loa
   const agent = await createHost({ model: { provider: "mock", model: "demo" }, providers: [mockProvider()] });
   try {
     const inspection = agent.inspect();
-    expect(inspection.slots.compaction).toBe("@arnilo/prism-memory-compaction");
+    expect(inspection.slots.compaction).toBe("@arnilo/prism-extensions/compaction");
     const names = inspection.packages.map((entry: { name: string }) => entry.name);
-    expect(names).toContain("@arnilo/prism-memory-compaction");
+    expect(names).toContain("@arnilo/prism-extensions/compaction");
     expect(names).toContain("@acme/local-compaction");
     expect(await agent.commands.run("local:ping")).toBe("pong");
   } finally {

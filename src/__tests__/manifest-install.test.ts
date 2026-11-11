@@ -214,6 +214,10 @@ describe("manifest install", () => {
       "github:a/b",
       "npm:other@1",
       "a b",
+      "@acme/tools/..",
+      "@acme/tools/",
+      "a".repeat(215),
+      "@acme/tools/x@npm:alias",
       "file:./nope-missing",
     ]) {
       assert.equal((await codeOf(() => install(spec, { scope: "project", root, bun: script }))).code, "install_failed", spec);

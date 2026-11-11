@@ -18,7 +18,7 @@ import wikiDefault, {
   wiki as wikiPackage,
 } from "../index.js";
 
-const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "../../package.json");
+const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "../../../package.json");
 
 function tempRoot(): string {
   return mkdtempSync(join(tmpdir(), "prism-wiki-"));
@@ -57,16 +57,16 @@ const mock = { provider: "mock", model: "wiki" } as const;
 describe("wiki package: knowledge outside memory", () => {
   it("package_metadata_ships_one_entry_and_no_bin_or_skills", () => {
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-    assert.equal(pkg.name, "@arnilo/prism-wiki");
-    assert.deepEqual(Object.keys(pkg.exports), ["."]);
+    assert.equal(pkg.name, "@arnilo/prism-knowledge");
+    assert.deepEqual(Object.keys(pkg.exports).sort(), ["./rag", "./wiki"]);
     assert.equal(pkg.bin, undefined, "the prism-wiki bin is retired");
     assert.equal(pkg.files.includes("skills"), false, "the bundled skills are retired");
     assert.equal(pkg.peerDependencies["@arnilo/prism"], ">=0.13.0 <1.0.0");
-    // The wiki runs without memory: no memory package is a peer or a dependency (memory-core is the shared library).
+    // Installing the bundle does not activate the memory package; core is its shared library.
     assert.equal(pkg.peerDependencies["@arnilo/prism-memory-system"], undefined);
-    assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["@arnilo/prism-memory-core", "@arnilo/prism-rag"]);
+    assert.deepEqual(pkg.dependencies, { "@arnilo/prism-memory-system": pkg.version });
     assert.equal(pkg.publishConfig?.access, "public");
-    assert.equal(wikiDefault.name, "@arnilo/prism-wiki");
+    assert.equal(wikiDefault.name, "@arnilo/prism-knowledge/wiki");
   });
 
   it("wiki_runs_without_memory_on_its_own_sources", async () => {
@@ -90,7 +90,10 @@ describe("wiki package: knowledge outside memory", () => {
 
   it("wiki_with_semantic_off_loads_and_reports_no_memory", async () => {
     const dir = tempRoot();
-    const agent = await createAgent({ model: mock, packages: [memorySystem({ ltm: { semantic: false } }), wikiPackage({ workspaceRoot: dir })] });
+    const agent = await createAgent({
+      model: mock,
+      packages: [memorySystem({ ltm: { semantic: false } }), wikiPackage({ workspaceRoot: dir })],
+    });
     try {
       const status = (await agent.commands.run(WIKI_STATUS_COMMAND_NAME, {})) as { memory: boolean };
       assert.equal(status.memory, false, "the fabric provides memory.ltm only with indexed notes");

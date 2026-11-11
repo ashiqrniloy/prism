@@ -12,7 +12,7 @@ afterEach(() => {
   delete process.env[TOKEN_ENV];
 });
 
-describe("@arnilo/prism-tools-openapi package", () => {
+describe("@arnilo/prism-tools/openapi package", () => {
   it("tools_openapi_package_conformance", async () => {
     const result = await packageConformance(toolsOpenapi({ specs: [{ id: "pet", source: FIXTURE }] }));
     assert.deepEqual(
@@ -29,7 +29,7 @@ describe("@arnilo/prism-tools-openapi package", () => {
     });
     try {
       assert.deepEqual(agent.tools.map((tool) => tool.name).sort(), ["pet_createPet", "pet_getPet", "pet_listPets"]);
-      for (const tool of agent.tools) assert.equal(tool.package, "@arnilo/prism-tools-openapi");
+      for (const tool of agent.tools) assert.equal(tool.package, "@arnilo/prism-tools/openapi");
       assert.deepEqual(agent.tools.find((tool) => tool.name === "pet_listPets")?.effects, ["network"]);
       assert.deepEqual(agent.tools.find((tool) => tool.name === "pet_getPet")?.effects, ["network"]);
       assert.deepEqual(agent.tools.find((tool) => tool.name === "pet_createPet")?.effects, ["network", "external"]);

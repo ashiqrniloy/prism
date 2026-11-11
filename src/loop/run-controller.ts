@@ -120,7 +120,10 @@ export function createRunController(internals: RunControllerInternals): RunContr
   let pushedInput = false;
 
   const append = async (message: Message): Promise<Message> => {
-    const transformed = await internals.hooks.transform("message.append", message, { sessionId: internals.sessionId, runId: internals.runId });
+    const transformed = await internals.hooks.transform("message.append", message, {
+      sessionId: internals.sessionId,
+      runId: internals.runId,
+    });
     internals.history.push(transformed);
     await internals.appendMessage(transformed);
     return transformed;
@@ -168,7 +171,10 @@ export function createRunController(internals: RunControllerInternals): RunContr
         content: result.content,
         ...(result.metadata ? { metadata: result.metadata } : {}),
       };
-      const transformed = await internals.hooks.transform("model.response", message, { sessionId: internals.sessionId, runId: internals.runId });
+      const transformed = await internals.hooks.transform("model.response", message, {
+        sessionId: internals.sessionId,
+        runId: internals.runId,
+      });
       await append(transformed);
       internals.emit({ type: "message.completed", sessionId: internals.sessionId, runId: internals.runId, message: transformed });
     }
@@ -190,7 +196,12 @@ export function createRunController(internals: RunControllerInternals): RunContr
    * The `tool.call` payload for one round. Args are a deep-frozen copy, so an in-place mutation by a
    * handler throws in strict mode and never reaches execution.
    */
-  const gatePayload = (call: ToolCallContent, args: JsonObject, effects: readonly ToolCapabilityKind[], origin: EventOrigin | undefined) => ({
+  const gatePayload = (
+    call: ToolCallContent,
+    args: JsonObject,
+    effects: readonly ToolCapabilityKind[],
+    origin: EventOrigin | undefined,
+  ) => ({
     name: call.name,
     args: frozenCopy(args),
     effects: Object.freeze([...effects]),
@@ -212,16 +223,14 @@ export function createRunController(internals: RunControllerInternals): RunContr
     effects: readonly ToolCapabilityKind[],
     origin: EventOrigin | undefined,
   ): Promise<{ readonly decision: ToolCallDecision | undefined; readonly call: ToolCallContent }> => {
-    const first = (await internals.hooks.decide(
-      "tool.call",
-      gatePayload(call, call.arguments, effects, origin),
-    )) as ToolCallDecision | undefined;
+    const first = (await internals.hooks.decide("tool.call", gatePayload(call, call.arguments, effects, origin))) as
+      | ToolCallDecision
+      | undefined;
     if (!isRewrite(first)) return { decision: first, call };
     const rewritten: ToolCallContent = { ...call, arguments: first.rewrite };
-    const second = (await internals.hooks.decide(
-      "tool.call",
-      gatePayload(call, rewritten.arguments, effects, origin),
-    )) as ToolCallDecision | undefined;
+    const second = (await internals.hooks.decide("tool.call", gatePayload(call, rewritten.arguments, effects, origin))) as
+      | ToolCallDecision
+      | undefined;
     if (isRewrite(second)) return { decision: { deny: "rewrite_unstable" }, call: rewritten };
     return { decision: second, call: rewritten };
   };

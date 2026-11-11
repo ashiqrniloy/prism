@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { parseCsv, SheetsCapError, SheetsFormatError } from "../index.js";
 import type { SheetsTelemetry, SheetsTelemetryAttributeValue, SheetsTelemetrySpan } from "../telemetry.js";
 
-describe("@arnilo/prism-tools-work — CSV Parser & Dialect Sniffing", () => {
+describe("@arnilo/prism-tools/work — CSV Parser & Dialect Sniffing", () => {
   it("sniffs standard comma delimiter and parses RFC 4180 fields", async () => {
     const csv = 'name,amount,active\n"Alice",1234.56,true\n"Bob",99.95,false\n';
     const result = await parseCsv(csv);

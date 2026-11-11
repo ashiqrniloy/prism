@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { askEveryTool, createAgent,  createMemorySessionStore, loadSuspendedRunEntry, providerDone, providerTextDelta,  type Decision, type RunController, type SessionEntry, toolCallContent } from "../index.js";
-import { echoTool, loopConformance, textProvider , mockProvider } from "../testing/index.js";
+import {
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  loadSuspendedRunEntry,
+  providerDone,
+  providerTextDelta,
+  type Decision,
+  type RunController,
+  type SessionEntry,
+  toolCallContent,
+} from "../index.js";
+import { echoTool, loopConformance, textProvider, mockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
 /**
@@ -66,7 +77,22 @@ describe("hook invariants", () => {
     assert.ok(fired.has("tool.call"), "tool.call did not fire");
     assert.deepEqual(order, ["tool.call", "tool.execute"]);
     // The loop can reach a tool only through `executeTools`, and a model only through `turn`.
-    assert.deepEqual(controllerKeys, ["append", "ask", "emit", "end", "executeTools", "input", "limits", "model", "observe", "session", "signal", "state", "steers", "turn"]);
+    assert.deepEqual(controllerKeys, [
+      "append",
+      "ask",
+      "emit",
+      "end",
+      "executeTools",
+      "input",
+      "limits",
+      "model",
+      "observe",
+      "session",
+      "signal",
+      "state",
+      "steers",
+      "turn",
+    ]);
   });
 
   it("deny_wins_over_allow_and_ask", async () => {
@@ -178,22 +204,26 @@ describe("hook invariants", () => {
       id: "invariant-suspend",
       model,
       slots: { store },
-      packages: [providerPackage("test-provider", [(() => {
-        let turn = 0;
-        return {
-          id: "mock",
-          async *generate() {
-            turn += 1;
-            if (turn === 1) {
-              yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "ok" }) };
-              yield providerDone();
-              return;
-            }
-            yield providerTextDelta("finished");
-            yield providerDone();
-          },
-        };
-      })()])],
+      packages: [
+        providerPackage("test-provider", [
+          (() => {
+            let turn = 0;
+            return {
+              id: "mock",
+              async *generate() {
+                turn += 1;
+                if (turn === 1) {
+                  yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "ok" }) };
+                  yield providerDone();
+                  return;
+                }
+                yield providerTextDelta("finished");
+                yield providerDone();
+              },
+            };
+          })(),
+        ]),
+      ],
       tools: { add: tools },
       hooks: askEveryTool(),
     });

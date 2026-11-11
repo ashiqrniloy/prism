@@ -22,7 +22,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import memorySystem, { foldObservationalMemoryLedger, type MemoryFabricConfig, REFLECTIONS_RECORDED } from "@arnilo/prism-memory-system";
 import { createMemory, createLongTermMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
 import { MEMORY_NOTE_METADATA_KEY } from "../types.js";
@@ -87,7 +87,9 @@ function scriptedProvider(counts: { recordNotes: number }): ModelProvider {
         .join("\n");
       const ids = [...prompt.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]!);
       if (!alreadyCalled && names.has("record_event") && ids.length > 0) {
-        yield providerToolCall(toolCallContent("o1", "record_event", { kind: "statement", description: USER_TEXT, relevance: "high", sourceEntryIds: ids }));
+        yield providerToolCall(
+          toolCallContent("o1", "record_event", { kind: "statement", description: USER_TEXT, relevance: "high", sourceEntryIds: ids }),
+        );
       } else if (!alreadyCalled && names.has("record_reflection") && ids.length > 0) {
         yield providerToolCall(toolCallContent("r1", "record_reflection", { content: USER_TEXT, supportingObservationIds: ids }));
       } else if (!alreadyCalled && names.has("record_notes") && prompt.includes("c1")) {

@@ -154,7 +154,14 @@ describe("web_fetch slices", () => {
     const { fetch } = countingFetch(page);
     const tool = createWebTools({ fetch }).find((candidate) => candidate.name === "web_fetch")!;
     const result = await tool.execute({ url: "https://example.com/doc" }, { sessionId: "s", runId: "r", toolCallId: "c" });
-    const value = result.value as { markdown: string; totalChars: number; truncated: boolean; nextOffset?: number; offset: number; title?: string };
+    const value = result.value as {
+      markdown: string;
+      totalChars: number;
+      truncated: boolean;
+      nextOffset?: number;
+      offset: number;
+      title?: string;
+    };
     assert.equal(value.markdown.length, 32_000, "the whole page is never returned");
     assert.equal(value.offset, 0);
     assert.equal(value.totalChars, 100_000);
@@ -304,21 +311,21 @@ describe("Firecrawl adapters and tools", () => {
 
   it("web_tools_emit_no_banner_text", async () => {
     const tool = async (name: string, args: JsonObject) =>
-      (
-        createWebTools({
-          search: createBraveSearch({ credentials: async () => "key", fetch: async () => json({ web: { results: [] } }) }),
-          fetch: createFirecrawlFetch({
-            credentials: async () => "key",
-            fetch: async () => json({ success: true, data: { markdown: "ok", metadata: { sourceURL: "https://example.com/doc" } } }),
-          }),
-          extract: createFirecrawlExtractor({
-            credentials: async () => "key",
-            schema: { type: "object", properties: { title: { type: "string" } } } as JsonObject,
-            validator,
-            fetch: async () => json({ success: true, data: { title: "Prism" } }),
-          }),
-        }).find((candidate) => candidate.name === name)!
-      ).execute(args, { sessionId: "s", runId: "r", toolCallId: "c" });
+      createWebTools({
+        search: createBraveSearch({ credentials: async () => "key", fetch: async () => json({ web: { results: [] } }) }),
+        fetch: createFirecrawlFetch({
+          credentials: async () => "key",
+          fetch: async () => json({ success: true, data: { markdown: "ok", metadata: { sourceURL: "https://example.com/doc" } } }),
+        }),
+        extract: createFirecrawlExtractor({
+          credentials: async () => "key",
+          schema: { type: "object", properties: { title: { type: "string" } } } as JsonObject,
+          validator,
+          fetch: async () => json({ success: true, data: { title: "Prism" } }),
+        }),
+      })
+        .find((candidate) => candidate.name === name)!
+        .execute(args, { sessionId: "s", runId: "r", toolCallId: "c" });
 
     for (const [name, args] of [
       ["web_search", { query: "prism" }],
@@ -352,7 +359,7 @@ describe("Firecrawl adapters and tools", () => {
     const tool = createWebTools({ search }).find((candidate) => candidate.name === "web_search")!;
     const result = await tool.execute({ query: "prism" }, { sessionId: "s", runId: "r", toolCallId: "c" });
     assert.equal(JSON.stringify(result.value).split('"requestId"').length - 1, 1);
-    assert.match((result.content as readonly { text: string }[])[0]!.text, /^1\. A\n   https:\/\/example\.com\/a\n   snippet$/u);
+    assert.match((result.content as readonly { text: string }[])[0]!.text, /^1\. A\n {3}https:\/\/example\.com\/a\n {3}snippet$/u);
   });
 
   it("web_search_schema_states_count_maximum", async () => {

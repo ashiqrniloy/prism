@@ -23,7 +23,10 @@ const FIXTURES: readonly unknown[] = [
   { version: 1, packages: [] },
   {
     version: 1,
-    packages: [entry("@arnilo/prism-approval", { config: { mode: "ask" } }), entry("plain-pkg", { enabled: false, optional: true })],
+    packages: [
+      entry("@arnilo/prism-extensions/approval", { config: { mode: "ask" } }),
+      entry("plain-pkg", { enabled: false, optional: true }),
+    ],
   },
   { version: 1, packages: [entry("@a/store", { capabilities: ["slot:store", "host-ui"] })], slots: { store: "@a/store" } },
 ];

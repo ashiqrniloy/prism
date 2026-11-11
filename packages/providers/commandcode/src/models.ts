@@ -1,10 +1,4 @@
-import {
-  type JsonObject,
-  type ModelConfig,
-  type ModelCost,
-  redactSecrets,
-  trimTrailingSlashes,
-} from "@arnilo/prism";
+import { type JsonObject, type ModelConfig, type ModelCost, redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText, type ThinkingCompatFamily, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** Official Command Code Provider API base (`/chat/completions`, `/responses`, `/messages`, `/models`). */

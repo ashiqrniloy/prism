@@ -12,7 +12,7 @@
 
 - **Background processes (plan 189 Task 9).** `shell` takes `background: true` and returns `Started process <id>` plus the output that arrived within one second; `shell_output({ id, waitSeconds?, kill? })` reads the increment since the last call, waits for new output or exit (max 60 s), or kills the process. Processes run on the process-session library, are owned by the calling session (another session's id is an error), are capped by `shell.background.maxProcesses` (default 4, hard 16), and are killed on `session.closed` and `agent.dispose()`. The hard-deny `commandRules` and built-in denies, the environment allow-list, `commandPrefix`, and `spawnHook` all apply to background commands. A backend without `startProcess` (the native `unshare` sandbox) offers no `background` argument and no `shell_output`. New exports: `createBackgroundProcesses`, `createShellOutputTool`, `BackgroundProcesses`, `BackgroundProcessOptions`, `BackgroundRead`, `BackgroundReadInput`, `BackgroundStarted`, `BackgroundStartInput`, `ShellOutputToolOptions`, `DEFAULT_MAX_BACKGROUND_PROCESSES`, `HARD_MAX_BACKGROUND_PROCESSES`, `HARD_MAX_BACKGROUND_WAIT_SECONDS`, `BACKGROUND_FIRST_OUTPUT_MS`.
 
-- **`examples/serve-tools.ts`: serving a run's tools to an external agent (plan 165 Task 8).** The Phase 14 end-to-end example, offline. Inside one `session.run` an inline `defineDriver` driver binds a `workspace` worktree for the run's session, writes the vendor's MCP configuration into it with `excludeOverlay`, and serves `read`, `edit`, and the permission tool with `serveTools` over `loopback-http` and then `stdio-relay`, driving the scripted `jsonl-stream` CLI as the vendor binary through `--mcp-endpoint`. It shows an allowed `edit` that changes the file in the worktree, a declined `edit` under `@arnilo/prism-approval` in `ask` mode, the permission tool's deny and allow, an unserved name as a JSON-RPC error, a call after `close()` refused, the served calls' `origin` on the run's events, the worktree diff with the overlay excluded, and a conflicting `merge` reported unresolved.
+- **`examples/serve-tools.ts`: serving a run's tools to an external agent (plan 165 Task 8).** The Phase 14 end-to-end example, offline. Inside one `session.run` an inline `defineDriver` driver binds a `workspace` worktree for the run's session, writes the vendor's MCP configuration into it with `excludeOverlay`, and serves `read`, `edit`, and the permission tool with `serveTools` over `loopback-http` and then `stdio-relay`, driving the scripted `jsonl-stream` CLI as the vendor binary through `--mcp-endpoint`. It shows an allowed `edit` that changes the file in the worktree, a declined `edit` under `@arnilo/prism-extensions/approval` in `ask` mode, the permission tool's deny and allow, an unserved name as a JSON-RPC error, a call after `close()` refused, the served calls' `origin` on the run's events, the worktree diff with the overlay excluded, and a conflicting `merge` reported unresolved.
 - **Per-session worktree routing (plan 165 Task 7).** A worktree bound with `worktree.create({ sessionId })` now routes that session's tool calls into the worktree: one wrapper at registration (`createWorktreeRouting({ base, create, workspace })`) wraps each registered tool's `execute` with a lookup of the calling session's worktree and dispatches to the tool instance built for it, so relative paths resolve inside the worktree and the tools' own containment follows it. Tool names, descriptions, and schemas are unchanged. The binding lives only in the service's memory, keyed by session id, and is never read from tool arguments or model output. Instances are built once per bound worktree, dropped on `dispose`, and dropped on the `session.closed` hook. A session rebound to another worktree rebuilds. New exports: `createWorktreeRouting`, `WorktreeRouting`, `WorktreeRoutingOptions`, `CodingTargetsContext`.
 
 ### Removed
@@ -40,7 +40,7 @@
 - `coding.targets`' `CodingTargetsFn` takes an optional third argument, `{ sessionId? }`, and `createCodingTargets(root, roots, workspace?)` takes the `workspace` service. For a bound session it reports the worktree as the session's root and resolves relative paths against it, so approval and the hard-deny hook follow the session; unbound sessions are unchanged. The hard-deny hook now passes the `tool.call` payload's `sessionId`.
 - `worktree.create({ sessionId })` fails with the new `workspace_sandbox_unsupported` when `sandbox` is other than `none`, because a routed worktree path is outside the sandbox root. `create` without `sessionId` still works.
 
-- `@arnilo/prism-tools-coding` (plan 154 Task 3): the coding tools moved out of
+- `@arnilo/prism-tools/coding` (plan 154 Task 3): the coding tools moved out of
   `@arnilo/prism-coding-tools/{agent,security}` into a source-exported package on the lockstep line.
   The default export is a `definePackage` definition whose `setup` registers `read`, `write`, `edit`,
   `delete`, `move`, `repo_list`, `repo_search`, `glob`, and `shell` (or the read subset with
@@ -53,7 +53,7 @@
   factories and aggregators, the opt-in Git/check/todo/`ask_user` tools, the workspace/process/
   language/review helpers, and the sandbox, command-rule, path-containment, and egress modules.
 - `tool.call` hard denies (plan 154 Task 4): one decide handler, id
-  `@arnilo/prism-tools-coding:tool.call#hard-deny`, denies a path outside `root` ∪ `roots` after
+  `@arnilo/prism-tools/coding:tool.call#hard-deny`, denies a path outside `root` ∪ `roots` after
   realpath/symlink resolution, a `shell` command matching a deny `commandRules` entry or a built-in
   deny pattern, and any mutating tool under `readOnly`. The kernel's any-deny-wins rule makes it hold
   under every approval mode and from a custom loop.
@@ -65,7 +65,7 @@
 - Git, checks, todo, and `ask_user` (plan 154 Task 5). `git` (default on) registers the seven git
   tools with declared effects. `checks` registers `coding_check` only when at least one check is
   configured. `todo` registers `todo_write` and a `run.end` handler, id
-  `@arnilo/prism-tools-coding:run.end#todo`, unless `continueOnOpen` is `false`. `ask_user_decision`
+  `@arnilo/prism-tools/coding:run.end#todo`, unless `continueOnOpen` is `false`. `ask_user_decision`
   asks through `host.ui`; `unavailable` suspends and `session.resume(decisions)` delivers the answer.
   Durable-effect tools fail closed with `ERR_PRISM_CODING_PRINCIPAL_REQUIRED` or
   `ERR_PRISM_CODING_PRINCIPAL_MISMATCH`. `forge.token` is an `env:`/`keyring:` ref resolved through
@@ -97,12 +97,12 @@
   `resolveWorkspaceLimits`, `WorkspaceError`, the `WORKSPACE_NAMESPACE`/`WORKSPACE_SCHEMA_VERSION`/
   `WORKSPACE_LOCK_REASON_PREFIX`/`WORKSPACE_STATES` constants, the `CodingWorkspaceRecord`/`Workspace*`
   record and limit types, and the ten `*_MAX_WORKSPACE_*` caps, with no alias. Durable records, leases,
-  checkpoints, and multi-repository identity move to `@arnilo/prism-workflows` in Phase 16; the
+  checkpoints, and multi-repository identity move to `@arnilo/prism-extensions/workflows` in Phase 16; the
   in-process `workspace` service replaces the rest. The phase26 coding-journey fixture's workspace leg
   now uses the service and drops its Postgres verify/cleanup calls.
 - `createCodingApprovalPolicy` and its `CodingApprovalFn`, `CodingApprovalRequest`,
   `CodingApprovalPolicyOptions`, and `ApprovalCacheScope` types (plan 154 Task 4). Prompting moves to
-  `@arnilo/prism-approval` (plan 154 Task 6); containment and command-rule evaluation stay as
+  `@arnilo/prism-extensions/approval` (plan 154 Task 6); containment and command-rule evaluation stay as
   internal checks behind the `tool.call` hard deny.
 - The host ask callback, the workflow suspend/resume validators, and the mutable todo-continuation
   handler (plan 154 Task 5). Asking goes through `host.ui` and `session.resume`. Continuation is
@@ -113,7 +113,7 @@
 - `@arnilo/prism-coding-tools` no longer exports `./agent` or `./security`; the two subpaths are
   deleted with no alias. Its remaining surface is `./openapi`, `./computer-use-linux`, `./dev`,
   `./dev/cli`, and `./impeccable`. Its `diff` dependency moved with the coding tools.
-- Every importer migrates to `@arnilo/prism-tools-coding`: `@arnilo/prism-code`,
+- Every importer migrates to `@arnilo/prism-tools/coding`: `@arnilo/prism-code`,
   `@arnilo/prism-ag-ui`, `@arnilo/prism-acp-agent`, `@arnilo/prism-agent-sdk`, the examples, and the
   scripts.
 

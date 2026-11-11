@@ -1481,7 +1481,7 @@ export function assertTask5OwnerGate(gate, manifest, proposalPath = TASK5_ACTIVE
   return gate;
 }
 
-export function task5OwnerGateMarkdown(manifest, gate) {
+export function task5OwnerGateMarkdown(_manifest, gate) {
   return [
     `# Plan 202 Task ${gate.subtask} — owner gate ${gate.gate}`,
     "",

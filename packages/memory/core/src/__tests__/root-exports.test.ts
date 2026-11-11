@@ -7,11 +7,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
-import * as barrel from "../index.js";
 import * as fabricStores from "../fabric/index.js";
-import * as postgres from "../postgres/index.js";
-import * as sqlite from "../sqlite/index.js";
 import type {
   ApplySourceRenamesOptions,
   ApplySourceRenamesResult,
@@ -47,10 +43,10 @@ import type {
   MemoryRetentionPolicy,
   MemoryRetentionResult,
   MemoryScope,
-  MemoryValidationCode,
   MemoryShareGrant,
   MemoryTagCount,
   MemoryTopTagsQuery,
+  MemoryValidationCode,
   MemoryVectorHit,
   MemoryVectorListQuery,
   MemoryVectorMetadataPage,
@@ -90,6 +86,9 @@ import type {
   VectorScanMetadataQuery,
   VectorStore,
 } from "../index.js";
+import * as barrel from "../index.js";
+import * as postgres from "../postgres/index.js";
+import * as sqlite from "../sqlite/index.js";
 
 type _StableTypes = [
   ApplySourceRenamesOptions,
@@ -252,6 +251,7 @@ const SHARED_ROOT = [
   "HARD_MAX_WORKER_TOOL_CALLS",
   "HARD_MAX_WORKER_TOOL_CALLS_PER_TURN",
   "HARD_MAX_WORKER_TURNS",
+  "MEMORY_WORKER_TOOL_CALL_LIMIT",
   "MemoryWorkerError",
   "MemoryWorkerLimitError",
   "gateScopedMemoryContent",
@@ -293,7 +293,17 @@ describe("memory-core exports", () => {
   it("core_subpath_exports_are_frozen", () => {
     expect(Object.keys(fabricStores).sort()).toEqual(["createMarkdownMemoryStores", "noteRelPath"]);
     expect(Object.keys(sqlite).sort()).toEqual(["buildSqliteMemoryDdl", "createSqliteMemoryStores", "openSqliteDatabase"]);
-    expect(Object.keys(postgres).sort()).toEqual(["DEFAULT_MEMORY_SCHEMA", "DEFAULT_VECTOR_TABLE", "buildMemoryDdl", "buildVectorSearchDdl", "createPostgresMemoryStores", "createPostgresVectorStore", "qualifyTable", "queryPostgres", "quoteIdentifier"]);
+    expect(Object.keys(postgres).sort()).toEqual([
+      "DEFAULT_MEMORY_SCHEMA",
+      "DEFAULT_VECTOR_TABLE",
+      "buildMemoryDdl",
+      "buildVectorSearchDdl",
+      "createPostgresMemoryStores",
+      "createPostgresVectorStore",
+      "qualifyTable",
+      "queryPostgres",
+      "quoteIdentifier",
+    ]);
   });
 
   it("core_root_barrel_does_not_name_an_internal", () => {

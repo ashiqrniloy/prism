@@ -9,17 +9,27 @@ export function createJudgePanel<TInput = unknown, TExpected = unknown>(
   const { id, combine, requireDistinctModels = true } = options;
   const judges = [...options.judges];
   const fail = (message: string) => new EvalError(message, "ERR_PRISM_EVAL_JUDGE_PANEL");
-  if (typeof id !== "string" || !id.trim() || !judges.length ||
-    !["majority", "mean", "median"].includes(combine) || typeof requireDistinctModels !== "boolean" ||
-    judges.some(judge => !judge || typeof judge.id !== "string" || !judge.id.trim() || typeof judge.score !== "function")) {
+  if (
+    typeof id !== "string" ||
+    !id.trim() ||
+    !judges.length ||
+    !["majority", "mean", "median"].includes(combine) ||
+    typeof requireDistinctModels !== "boolean" ||
+    judges.some((judge) => !judge || typeof judge.id !== "string" || !judge.id.trim() || typeof judge.score !== "function")
+  ) {
     throw fail("panel requires an id, judges, and a valid combine method");
   }
   if (requireDistinctModels) {
     const models = new Set<string>();
     for (const judge of judges) {
       const model = judge.judgeModel;
-      if (!model || typeof model.provider !== "string" || !model.provider.trim() ||
-        typeof model.model !== "string" || !model.model.trim()) {
+      if (
+        !model ||
+        typeof model.provider !== "string" ||
+        !model.provider.trim() ||
+        typeof model.model !== "string" ||
+        !model.model.trim()
+      ) {
         throw fail("distinct-model panels require every judge to declare judgeModel");
       }
       const key = JSON.stringify([model.provider, model.model]);
@@ -27,29 +37,35 @@ export function createJudgePanel<TInput = unknown, TExpected = unknown>(
       models.add(key);
     }
   }
-  const requires = [...new Set(judges.flatMap(judge => judge.requires ?? []))];
+  const requires = [...new Set(judges.flatMap((judge) => judge.requires ?? []))];
   return {
     id,
     ...(requires.length ? { requires } : {}),
     async score(input) {
       input.signal?.throwIfAborted();
-      const verdicts = await Promise.all(judges.map(async judge => {
-        try {
-          const result = validateScoreResult(await judge.score(input));
-          const label = result.metadata?.label;
-          if (combine === "majority" && (typeof label !== "string" || !label.trim())) {
-            throw fail("majority judges must return a label");
+      const verdicts = await Promise.all(
+        judges.map(async (judge) => {
+          try {
+            const result = validateScoreResult(await judge.score(input));
+            const label = result.metadata?.label;
+            if (combine === "majority" && (typeof label !== "string" || !label.trim())) {
+              throw fail("majority judges must return a label");
+            }
+            return {
+              id: judge.id,
+              model: result.metadata?.judgeModel ?? judge.judgeModel,
+              label: typeof label === "string" && label.trim() ? label : null,
+              score: result.score,
+              status: "scored" as const,
+            };
+          } catch {
+            // Member errors may contain raw prompt text; retain only identity and failure status.
+            return { id: judge.id, model: judge.judgeModel, label: null, status: "failed" as const };
           }
-          return { id: judge.id, model: result.metadata?.judgeModel ?? judge.judgeModel,
-            label: typeof label === "string" && label.trim() ? label : null,
-            score: result.score, status: "scored" as const };
-        } catch {
-          // Member errors may contain raw prompt text; retain only identity and failure status.
-          return { id: judge.id, model: judge.judgeModel, label: null, status: "failed" as const };
-        }
-      }));
+        }),
+      );
       input.signal?.throwIfAborted();
-      const successes = verdicts.filter(verdict => verdict.status === "scored");
+      const successes = verdicts.filter((verdict) => verdict.status === "scored");
       const failedJudges = judges.length - successes.length;
       if (successes.length < judges.length / 2) {
         throw fail(`panel quorum failed: ${failedJudges} of ${judges.length} judges failed`);
@@ -68,13 +84,26 @@ export function createJudgePanel<TInput = unknown, TExpected = unknown>(
         label = winner[0];
         score = winner[1].score;
       } else {
-        const scores = successes.map(verdict => verdict.score).sort((a, b) => a - b);
+        const scores = successes.map((verdict) => verdict.score).sort((a, b) => a - b);
         const middle = Math.floor(scores.length / 2);
-        score = combine === "mean" ? scores.reduce((sum, value) => sum + value, 0) / scores.length
-          : scores.length % 2 ? scores[middle]! : (scores[middle - 1]! + scores[middle]!) / 2;
+        score =
+          combine === "mean"
+            ? scores.reduce((sum, value) => sum + value, 0) / scores.length
+            : scores.length % 2
+              ? scores[middle]!
+              : (scores[middle - 1]! + scores[middle]!) / 2;
       }
-      return { score, metadata: { evaluatorKind: "panel", combine, judges: verdicts,
-        labels: verdicts.map(verdict => verdict.label), failedJudges, ...(label === undefined ? {} : { label }) } };
+      return {
+        score,
+        metadata: {
+          evaluatorKind: "panel",
+          combine,
+          judges: verdicts,
+          labels: verdicts.map((verdict) => verdict.label),
+          failedJudges,
+          ...(label === undefined ? {} : { label }),
+        },
+      };
     },
   };
 }

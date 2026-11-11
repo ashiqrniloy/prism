@@ -2,8 +2,8 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createSecretRedactor, type JsonObject, type JsonSchema, type ModelClient, validateJsonSchema } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory } from "../../../index.js";
 import { ConsolidationExtractionError, type ExtractConsolidationNotesInput, extractConsolidationNotes } from "../extract.js";
 import type { ConsolidationCandidate } from "../gather.js";
@@ -429,7 +429,9 @@ describe("extractor subjects", () => {
     );
     assert.equal(result.correctionCalls, 0);
     const requests: Parameters<ModelClient["generate"]>[0][] = [];
-    await extractConsolidationNotes(input({ notes: [] }, { client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])) }));
+    await extractConsolidationNotes(
+      input({ notes: [] }, { client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])) }),
+    );
     assert.equal(JSON.stringify(requests[0]!.messages).includes("Known subjects"), false, "no subject list rides in the prompt");
     const schema = requests[0]!.tools![0]!.parameters as JsonObject;
     const properties = (((schema.properties as JsonObject).notes as JsonObject).items as JsonObject).properties as JsonObject;

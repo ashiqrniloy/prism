@@ -1,5 +1,5 @@
 /** Runs `adapterConformance` for every reference adapter and prints one JSON summary per adapter. */
-import { adapterConformance } from "@arnilo/prism-driver-process/testing";
+import { adapterConformance } from "@arnilo/prism-hosts/driver-process/testing";
 import { rpcServerDialect, rpcServerFixtures } from "./rpc-server.dialect.js";
 import { rpcServer } from "./rpc-server.js";
 import { streamCliDialect, streamCliFixtures } from "./stream-cli.dialect.js";

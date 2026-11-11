@@ -1,8 +1,8 @@
 /**
  * Delegate Demo (plan 160 Task 4, plan 191 Task 5).
  *
- * `@arnilo/prism-delegate` adds a `delegate` tool. The parent model calls `delegate { child: "reviewer" }`;
- * the reviewer runs as its own agent that inherits only `@arnilo/prism-tools-coding` (read-only here), so it
+ * `@arnilo/prism-extensions/delegate` adds a `delegate` tool. The parent model calls `delegate { child: "reviewer" }`;
+ * the reviewer runs as its own agent that inherits only `@arnilo/prism-tools/coding` (read-only here), so it
  * never sees the parent's `parent_note` tool or `delegate` itself. The parent gets the child's answer as the
  * tool result, and `delegate.step` package events record start and finish.
  *
@@ -32,8 +32,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import delegate from "@arnilo/prism-delegate";
-import toolsCoding from "@arnilo/prism-tools-coding";
+import delegate from "@arnilo/prism-extensions/delegate";
+import toolsCoding from "@arnilo/prism-tools/coding";
 
 const parentOnly = definePackage({
   name: "parent-notes",
@@ -96,7 +96,7 @@ export async function demo() {
       delegate({
         children: {
           reviewer: {
-            inherit: ["@arnilo/prism-tools-coding"],
+            inherit: ["@arnilo/prism-tools/coding"],
             instructions: "Review the diff.",
             report: "milestones",
             context: { lastTurns: 2 },
@@ -181,7 +181,7 @@ export async function demoIsolated() {
         delegate({
           // The child has no store of its own: the scope it appends under is the host's to name.
           ownership: { tenantId: "demo" },
-          children: { coder: { inherit: ["@arnilo/prism-tools-coding"], isolation: "worktree", description: "Writes one file." } },
+          children: { coder: { inherit: ["@arnilo/prism-tools/coding"], isolation: "worktree", description: "Writes one file." } },
         }),
       ],
     });

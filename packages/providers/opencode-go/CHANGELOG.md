@@ -15,7 +15,7 @@
 - Removed obsolete internal wire, cache, and thinking helper exports: `openAIChatBody`, `openAIChatEvents`, `serializeOpenCodeGoChatMessage`, `anthropicMessagesBody`, `anthropicMessagesEvents`, `applyOpencodeAnthropicCacheControl`, `opencodeAnthropicCacheEnabled`, `opencodeOwnedHeaders`, `opencodeSessionId`, `openCodeGoPreserveThinking`, `openCodeGoReasoning`, `openCodeGoReasoningEffort`, `openCodeGoThinking`, `stripOpenCodeGoOwnedCompat`.
 
 
-- New provider package (plan 152 Task 4): `@arnilo/prism-provider-opencode-go` replaces the
+- New provider package (plan 152 Task 4): `@arnilo/prism-ai/opencode-go` replaces the
   `@arnilo/prism-providers/opencode-go` subpath. The default export is a `definePackage` definition
   that registers the `opencode-go` provider, declares `capabilities: ["credentials"]`, and takes a
   ref-only config (`apiKey` defaults to `env:OPENCODE_GO_API_KEY`). The key resolves through the credentials slot on every request; a

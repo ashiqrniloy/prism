@@ -12,7 +12,7 @@ import {
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMockProvider } from "@arnilo/prism/testing";
-import { resolveInstructionSources } from "@arnilo/prism-context-files";
+import { resolveInstructionSources } from "@arnilo/prism-extensions/context-files";
 
 // Instruction injection, end-to-end with the mock provider.
 //

@@ -13,16 +13,20 @@
 import { createHash, subtle } from "node:crypto";
 import { createServer } from "node:http";
 import { performance } from "node:perf_hooks";
-import { createOpaPolicyEvaluator } from "@arnilo/prism-governance";
-import { createMcpOAuthTransport } from "@arnilo/prism-mcp";
-import { createPrismMcpWebHandler } from "@arnilo/prism-mcp-server";
-import { createOpenApiTools } from "@arnilo/prism-tools-openapi";
+import { createOpaPolicyEvaluator } from "@arnilo/prism-extensions/governance";
+import { createMcpOAuthTransport } from "@arnilo/prism-extensions/mcp";
+import { createPrismMcpWebHandler } from "@arnilo/prism-hosts/mcp-server";
+import { createOpenApiTools } from "@arnilo/prism-tools/openapi";
 import { Client } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 
-function createOidcIdentityVerifier() { throw new Error("retired"); }
-function createS3ArtifactBodyStore() { throw new Error("retired"); }
+function createOidcIdentityVerifier() {
+  throw new Error("retired");
+}
+function createS3ArtifactBodyStore() {
+  throw new Error("retired");
+}
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
 

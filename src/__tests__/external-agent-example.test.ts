@@ -29,6 +29,9 @@ it("external_agent_example_passes_driver_conformance_on_both_dialects", () => {
       expectedSkips[dialect],
       `${dialect} skipped legs`,
     );
-    assert.ok(legs.some((leg) => leg.name === "credential_canary" && leg.status === "passed"), `${dialect} ran the canary`);
+    assert.ok(
+      legs.some((leg) => leg.name === "credential_canary" && leg.status === "passed"),
+      `${dialect} ran the canary`,
+    );
   }
 }, 180_000);

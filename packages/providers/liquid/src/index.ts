@@ -1,8 +1,8 @@
 /**
- * @arnilo/prism-provider-liquid — Liquid provider package for Prism.
+ * @arnilo/prism-ai/liquid — Liquid provider package for Prism.
  *
  * ```ts
- * import liquid from "@arnilo/prism-provider-liquid";
+ * import liquid from "@arnilo/prism-ai/liquid";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({ model: "liquid/d1.1", packages: [liquid({ apiKey: "env:LIQUID_API_KEY" })] });
@@ -77,7 +77,7 @@ const configSchema: JsonSchema = {
 
 function definitionFor(options: LiquidProviderPackageOptions) {
   return defineProviderPackage<LiquidProviderConfig>({
-    name: "@arnilo/prism-provider-liquid",
+    name: "@arnilo/prism-ai/liquid",
     description: "Liquid provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {

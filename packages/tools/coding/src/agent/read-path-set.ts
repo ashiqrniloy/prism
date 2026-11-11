@@ -1,5 +1,5 @@
 import type { OwnershipScope } from "@arnilo/prism";
-import type { CheckpointStore } from "@arnilo/prism-workflows";
+import type { CheckpointStore } from "@arnilo/prism-extensions/workflows";
 
 /** Session-scoped paths successfully read via the read tool (host-owned, not checkpointed). */
 export interface ReadPathSet {

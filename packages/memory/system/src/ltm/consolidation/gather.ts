@@ -7,9 +7,17 @@
  * no model or store call. Only the extractor (Task 2) interprets what is gathered here.
  */
 import type { ContentBlock, Message, SessionEntry } from "@arnilo/prism";
-import { DEFAULT_MAX_ENTRY_TEXT_CHARS } from "@arnilo/prism-memory-core";
+import { DEFAULT_MAX_ENTRY_TEXT_CHARS } from "@arnilo/prism-memory-system/core";
 import { activeObservations, activeReflections, foldObservationalMemoryLedger, recordData } from "../../session/ledger.js";
-import { foldedMemoryFromEntry, isMemoryObservation, isMemoryReflection, isObservationsRecordedData, isReflectionsRecordedData, isTaskStateRecordedData, type MemoryObservation } from "../../session/types.js";
+import {
+  foldedMemoryFromEntry,
+  isMemoryObservation,
+  isMemoryReflection,
+  isObservationsRecordedData,
+  isReflectionsRecordedData,
+  isTaskStateRecordedData,
+  type MemoryObservation,
+} from "../../session/types.js";
 
 export type ConsolidationSource = "explicit" | "correction" | "decision" | "observation" | "reflection" | "exchange";
 
@@ -171,7 +179,8 @@ export function gatherConsolidationCandidates(
     (observation) => observation.relevance === "high" || observation.relevance === "critical",
   );
   relevant.sort((left, right) => rank(left.relevance) - rank(right.relevance));
-  for (const observation of relevant) candidate("observation", observation.description, evidenceForObservation(observation, recordEntry), {});
+  for (const observation of relevant)
+    candidate("observation", observation.description, evidenceForObservation(observation, recordEntry), {});
 
   // --- reflections that no later record superseded.
   for (const reflection of activeReflections(ledger)) {

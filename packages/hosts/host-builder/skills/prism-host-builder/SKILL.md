@@ -14,9 +14,9 @@ All paths are relative to the project root and describe the installed version.
 
 - Docs index: `node_modules/@arnilo/prism/docs/index.md`. Kernel pages sit beside it. Each package has
   `node_modules/@arnilo/<package>/README.md`.
-- Version-exact indexes: `node_modules/@arnilo/prism-host-builder/data/api.json` (every public name, its signature,
+- Version-exact indexes: `node_modules/@arnilo/prism-hosts/host-builder/data/api.json` (every public name, its signature,
   the docs that mention it), `errors.json` (every error code and what it means) and `examples.json`.
-- Tested example sources: `node_modules/@arnilo/prism-host-builder/data/examples/<name>.ts`. Copy one; do not retype it.
+- Tested example sources: `node_modules/@arnilo/prism-hosts/host-builder/data/examples/<name>.ts`. Copy one; do not retype it.
 - If an MCP server named `prism-host-builder` is connected, its lookup tools read the same indexes. They are an
   accelerator. Every step below also works with a file read.
 
@@ -55,7 +55,7 @@ receives), never guess it.
 ## Mistakes the compiler cannot catch
 
 - **A host that runs tools needs a principal.** Tools with durable effects (`shell`, `write`, `edit`, git commits in
-  `@arnilo/prism-tools-coding`) fail closed at run time unless `createAgent` gets `principal: { kind, id }` (and the
+  `@arnilo/prism-tools/coding`) fail closed at run time unless `createAgent` gets `principal: { kind, id }` (and the
   `ownership` scope the host serves). A type check passes without it. A host that runs as a local user sets both.
 - **Deleting a retired field is not an upgrade.** `identity` is gone: it became `principal`. Look every removed field
   up in `references/upgrading.md` and move what it did; do not just delete it.

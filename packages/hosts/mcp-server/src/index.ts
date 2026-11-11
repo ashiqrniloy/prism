@@ -1,4 +1,4 @@
-export { McpBridgeError } from "@arnilo/prism-mcp";
+export { McpBridgeError } from "@arnilo/prism-extensions/mcp";
 export { mcpHost } from "./host.js";
 export { ServeToolsError, serveTools } from "./serve-tools.js";
 export { serveMcp } from "./serve.js";

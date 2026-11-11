@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { it } from "bun:test";
-import { createBraveSearch, createExaSearch, createFirecrawlFetch, createKagiSearch, createSearxngSearch, createTavilySearch } from "../index.js";
+import {
+  createBraveSearch,
+  createExaSearch,
+  createFirecrawlFetch,
+  createKagiSearch,
+  createSearxngSearch,
+  createTavilySearch,
+} from "../index.js";
 
 const live = process.env.PRISM_LIVE_WEB === "1";
 it.skipIf(!live || !process.env.PRISM_BRAVE_SEARCH_TOKEN)(

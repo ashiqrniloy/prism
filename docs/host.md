@@ -173,7 +173,7 @@ constructs an `AuthContext`. Build one from the host's UI and a writable credent
 
 ```ts
 import type { Secret } from "@arnilo/prism";
-import { createKeyringCredentialResolver } from "@arnilo/prism-credentials-keyring";
+import { createKeyringCredentialResolver } from "@arnilo/prism-extensions/keyring";
 
 const resolver = createKeyringCredentialResolver({ store }); // the store the host opened
 const credentials = {
@@ -195,4 +195,4 @@ partial grant.
 
 ### Remote UI binding
 
-`remoteHostUi()` from `@arnilo/prism-remote` returns a `HostUi`. Pass the same object to the served agent's `host.ui` and to `serveAgent(agent, { hostUi: ui, transport })`. A connected client's local `host.ui` answers requests. Without a client, or when it disconnects, the remote UI answers `unavailable`, driving the existing kernel ask and elicitation suspension paths. Other package requests fail closed under their own contracts; the transport does not add suspension to them. Durable recovery after a server restart requires a persistent store on the served agent. See the [remote host library](../packages/hosts/remote/README.md).
+`remoteHostUi()` from `@arnilo/prism-hosts/remote` returns a `HostUi`. Pass the same object to the served agent's `host.ui` and to `serveAgent(agent, { hostUi: ui, transport })`. A connected client's local `host.ui` answers requests. Without a client, or when it disconnects, the remote UI answers `unavailable`, driving the existing kernel ask and elicitation suspension paths. Other package requests fail closed under their own contracts; the transport does not add suspension to them. Durable recovery after a server restart requires a persistent store on the served agent. See the [remote host library](../packages/hosts/remote/README.md).

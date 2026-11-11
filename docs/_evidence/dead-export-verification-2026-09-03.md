@@ -197,3 +197,25 @@ validates: every candidate classified in this table; zero `remove` verdicts on c
 exports. `scripts/sweep-unused.test.mjs` stays green (no emitter change; the verifier is
 read-only over `scripts/unused-report.json`).
 
+
+## Addendum — 2026-11-10 (plan 224 Task 9)
+
+The seven-bundle consolidation changes workspace ownership and baseline keys to
+`<subpath> <symbol>`. The verifier now reads those keys when checking compatibility;
+no export is removed by this release-proof task. The following additional candidates
+are retained after checking their current definitions and package entry reachability.
+This addendum makes no new claim about external usage; the registry/search observations
+above remain dated historical evidence.
+
+| export | package | repo uses | compat | docs | external | verdict | why |
+|---|---|---|---|---|---|---|---|
+| `normalizePageLimit` | @arnilo/prism-hosts | no | no | no | unmeasured | keep | Internal eval pagination validation in `evals/src/util.ts`; preserve the bounded-input helper during packaging consolidation |
+| `statusMatches` | @arnilo/prism-hosts | no | no | no | unmeasured | keep | Internal eval status matcher in `evals/src/util.ts`; deleting implementation helpers is outside the package-move task |
+| `ConsultAnswer` | @arnilo/prism-extensions | no | no | no | unmeasured | keep | Advisor consultation result type in `advisor/src/consult.ts`; preserve the implementation contract during consolidation |
+| `FabricCandidateLoader` | @arnilo/prism-memory-system | no | no | no | unmeasured | keep | Internal recall candidate-loader type in `system/src/ltm/recall.ts`; memory behavior is outside this release task |
+| `coverageTierValues` | @arnilo/prism-memory-system | no | no | no | unmeasured | keep | Canonical coverage-tier vocabulary in `system/src/session/types.ts`; preserve session behavior and its closed values |
+| `coverageTier` | @arnilo/prism-memory-system | no | no | no | unmeasured | keep | Session-worker coverage classification in `system/src/session/workers/coverage.ts`; memory behavior is outside this release task |
+| `HARD_PROMPT_INPUT_CHARS` | @arnilo/prism-tools | no | yes | no | unmeasured | keep | Public `/web` input hard cap, tracked by the tools compat baseline; retain the trust-boundary limit |
+| `HARD_PROMPT_OUTPUT_TOKENS` | @arnilo/prism-tools | no | yes | no | unmeasured | keep | Public `/web` output hard cap, tracked by the tools compat baseline; retain the bounded-output contract |
+| `ModelDiscovery` | @arnilo/prism | no | yes | no | unmeasured | keep | Root-exported model discovery contract tracked by the kernel baseline; preserve the public interface |
+| `OpenAIChatBodyOptions` | @arnilo/prism | no | yes | no | unmeasured | keep | Public provider-kit options alias tracked by the kernel baseline; preserve codec configuration typing |

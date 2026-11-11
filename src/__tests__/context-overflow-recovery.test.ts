@@ -83,10 +83,7 @@ describe("Provider failure classification (plan 194 Task 3)", () => {
   const statusError = (status: number, body: string) => Object.assign(new Error(`request failed: ${status} ${body}`), { code: status });
 
   it("classifies the recorded OpenCode Go overflow bodies", () => {
-    assert.equal(
-      classifyProviderFailure(statusError(400, "invalid params, context window exceeds limit (2013)")),
-      "context_overflow",
-    );
+    assert.equal(classifyProviderFailure(statusError(400, "invalid params, context window exceeds limit (2013)")), "context_overflow");
     assert.equal(
       classifyProviderFailure(
         statusError(400, "This endpoint's maximum context length is 204800 tokens. However, you requested about 506266 tokens"),
@@ -127,7 +124,10 @@ describe("Context-overflow recovery (plan 194 Task 3)", () => {
     const completed = events.filter((event) => event.type === "compaction.completed");
     assert.equal(completed.length, 1, "exactly one compaction");
     assert.equal(completed[0]?.trigger, "overflow");
-    assert.ok(events.some((event) => event.type === "turn.completed" && event.error), "the rejected attempt is observable");
+    assert.ok(
+      events.some((event) => event.type === "turn.completed" && event.error),
+      "the rejected attempt is observable",
+    );
     await session.close();
   });
 

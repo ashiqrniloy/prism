@@ -6,10 +6,10 @@ import { historicalSessionEntries, sessionRounds, extractEvidence } from "../../
 import { exchangePairs, createExchangeArchive } from "../../../../../packages/memory/fabric/src/exchanges.ts";
 import { pairedAnalysis } from "../../../../../scripts/memory-bench/stats.mjs";
 const base = "docs/_evidence/memory-bench/202/";
-const closurePath = base + "muse13-screen-closure.json";
+const closurePath = `${base}muse13-screen-closure.json`;
 const closureBefore = await readFile(closurePath, "utf8");
 assert.equal(JSON.parse(closureBefore).status, "closed-by-owner");
-const manifest = JSON.parse(await readFile(base + "muse13-screen-final/manifest.json", "utf8"));
+const manifest = JSON.parse(await readFile(`${base}muse13-screen-final/manifest.json`, "utf8"));
 const reports = [];
 for (const rec of manifest.reports) {
   const bytes = await readFile(rec.path);
@@ -161,7 +161,7 @@ audit.locomoGranularity = {
 };
 assert.equal(await readFile(closurePath, "utf8"), closureBefore);
 audit.ownerClosurePreserved = true;
-await writeFile(base + "diagnosis-2026-10-30/audit.json", JSON.stringify(audit, null, 2) + "\n");
+await writeFile(`${base}diagnosis-2026-10-30/audit.json`, `${JSON.stringify(audit, null, 2)}\n`);
 console.log(
   JSON.stringify(
     {

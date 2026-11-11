@@ -118,6 +118,7 @@ export async function loadManifest(options: LoadManifestOptions = {}): Promise<P
   });
 
   const inputs: PackageInput[] = [];
+  const cache = new Map<string, Promise<string>>();
   for (const entry of merged.packages) {
     if (!entry.enabled) continue;
     const scopeDir = dirs[entry.scope];
@@ -131,7 +132,7 @@ export async function loadManifest(options: LoadManifestOptions = {}): Promise<P
       ...(entry.scopes !== undefined ? { scopes: entry.scopes } : {}),
     };
     try {
-      await verifyInstalled(entry, scopeDir.packagesDir, entry.scope);
+      await verifyInstalled(entry, scopeDir.packagesDir, entry.scope, { cache });
     } catch (error) {
       if (error instanceof ManifestError && error.code === "package_missing" && entry.optional) {
         inputs.push(

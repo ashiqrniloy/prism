@@ -71,7 +71,9 @@ function observe(request: ProviderRequest): ProviderEvent[] {
   const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] message:/.exec(prompt.text)?.[1] : undefined;
   if (request.messages.some((message) => message.role === "tool") || !sourceId) return [providerDone()];
   return [
-    providerToolCall(toolCallContent("observe-1", "record_event", { kind: "statement", description: FACT, relevance: "high", sourceEntryIds: [sourceId] })),
+    providerToolCall(
+      toolCallContent("observe-1", "record_event", { kind: "statement", description: FACT, relevance: "high", sourceEntryIds: [sourceId] }),
+    ),
     providerDone(),
   ];
 }

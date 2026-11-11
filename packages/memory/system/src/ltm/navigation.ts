@@ -1,4 +1,4 @@
-import type { Memory, MemoryVectorMetadataRow, VectorStore } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryVectorMetadataRow, VectorStore } from "@arnilo/prism-memory-system/core";
 import { parseMemoryNoteMetadata } from "./types.js";
 
 /** One `memory.read` navigation request: an exchange's same-session neighbours, or one session page. */

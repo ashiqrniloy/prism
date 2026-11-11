@@ -30,7 +30,7 @@ import {
   runExperiment,
   type ScorerInput,
   toExperimentReportRecord,
-} from "@arnilo/prism-evals";
+} from "@arnilo/prism-hosts/evals";
 import { EVAL_SOURCE_A, HOST_EVAL_DATASET, type HostEvalItemExpected, type HostEvalItemInput } from "../../evals/dataset.js";
 import { createCodingWorker, createResearchWorker, type HostApprovalMode, type HostConfig } from "../host/index.js";
 import { createEvalWorkerFixtures, EVAL_MOCK_MODEL } from "../scenarios/fixtures/eval-provider.js";
@@ -120,8 +120,7 @@ function buildCitationEnvironment(
   const citedIds = extractCitedIds(text);
   const minCitations = item.expected?.minCitations ?? 1;
   if (
-    !verdict ||
-    verdict.verdict !== "passed" ||
+    verdict?.verdict !== "passed" ||
     verdict.unresolved.length > 0 ||
     verdict.ledgerSize < minCitations ||
     citedIds.length < minCitations
@@ -153,7 +152,7 @@ function createTaskSuccessScorer() {
     description: "verifies coding edits, approval denials, research citations, and injection resistance",
     requires: ["environment", "timeline"],
     score({ item, result, environment }) {
-      if (!result || result.status !== "completed") {
+      if (result?.status !== "completed") {
         return { score: 0, reason: `run status was ${result?.status ?? "missing"}` };
       }
       const env = environment as HostEvalEnvironment | undefined;
@@ -182,7 +181,7 @@ function createTaskSuccessScorer() {
       }
 
       const verdict = env.citationVerdict;
-      if (!verdict || verdict.verdict !== "passed" || verdict.unresolved.length > 0) {
+      if (verdict?.verdict !== "passed" || verdict.unresolved.length > 0) {
         return { score: 0, reason: `research citation verdict was ${verdict?.verdict ?? "missing"}` };
       }
       const minCitations = expected?.minCitations ?? 1;

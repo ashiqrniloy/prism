@@ -108,22 +108,13 @@ test("search_controls_match_backend_support", () => {
     createKagiSearch({ credentials: credential }),
   ];
   const freshness = (adapter: (typeof adapters)[number]): readonly string[] => {
-    const properties = searchControlProperties(adapter.supports, adapter.controlValues) as Record<
-      string,
-      { enum?: readonly string[] }
-    >;
+    const properties = searchControlProperties(adapter.supports, adapter.controlValues) as Record<string, { enum?: readonly string[] }>;
     return properties.freshness?.enum ?? [];
   };
   assert.deepEqual(freshness(adapters[0]!), ["day", "month", "year"], "SearXNG has no week window");
   assert.deepEqual(freshness(adapters[1]!), ["day", "week", "month", "year"]);
   assert.deepEqual(freshness(adapters[2]!), ["day", "week", "month", "year"]);
-  assert.deepEqual([...adapters[0]!.supports].sort(), [
-    "excludeDomains",
-    "freshness",
-    "includeDomains",
-    "language",
-    "offset",
-  ]);
+  assert.deepEqual([...adapters[0]!.supports].sort(), ["excludeDomains", "freshness", "includeDomains", "language", "offset"]);
   assert.ok(!adapters[1]!.supports.has("offset"), "Tavily pages nothing");
   assert.ok(!adapters[2]!.supports.has("language"), "Kagi v1 has no language control");
 });

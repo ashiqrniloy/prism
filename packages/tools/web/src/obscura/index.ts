@@ -35,7 +35,6 @@ export {
   type ObscuraMcpTools,
   type ObscuraMcpToolsOptions,
 } from "./mcp.js";
-export { resolveObscuraCommand, spawnObscuraProcess, validateObscuraCommand } from "./process.js";
 export type {
   PlaywrightBrowser,
   PlaywrightBrowserContext,
@@ -47,6 +46,7 @@ export type {
   PlaywrightRequest,
   PlaywrightRoute,
 } from "./playwright.js";
+export { resolveObscuraCommand, spawnObscuraProcess, validateObscuraCommand } from "./process.js";
 export { DEFAULT_OBSCURA_SEARCH_PROFILE, type ObscuraSearchProfile, resolveObscuraSearchProfile } from "./search-profile.js";
 export type {
   ObscuraCloseOptions,
@@ -56,4 +56,4 @@ export type {
 } from "./types.js";
 export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js";
 
-export const packageName = "@arnilo/prism-tools-web";
+export const packageName = "@arnilo/prism-tools/web";

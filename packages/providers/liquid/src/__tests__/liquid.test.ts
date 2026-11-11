@@ -14,7 +14,7 @@ import {
   liquidModels,
 } from "../index.js";
 
-describe("@arnilo/prism-provider-liquid", () => {
+describe("@arnilo/prism-ai/liquid", () => {
   it("liquid_passes_systemone_conformance_hosted", async () => {
     const recordings = new URL("wire/systemone", import.meta.url);
     const result = await systemOneConformance({

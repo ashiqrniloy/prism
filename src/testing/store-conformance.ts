@@ -206,7 +206,12 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     const source = (await store.list(sessionId)).filter((row) => row.id === "root" || row.id === "branch-a");
     let parentId: string | undefined;
     const copies = source.map((row) => {
-      const copy: SessionEntry = { ...row, id: `copy-${row.id}`, sessionId: forkSessionId, ...(parentId === undefined ? {} : { parentId }) };
+      const copy: SessionEntry = {
+        ...row,
+        id: `copy-${row.id}`,
+        sessionId: forkSessionId,
+        ...(parentId === undefined ? {} : { parentId }),
+      };
       parentId = copy.id;
       return copy;
     });
@@ -329,7 +334,10 @@ export async function storeConformance(factory: StoreConformanceFactory, options
       leaf = id;
     }
     const stored = (await store.list(sessionId)).filter((row) => row.kind === "external_state");
-    if (JSON.stringify(stored.map((row) => row.data)) !== JSON.stringify(records.map((r) => ({ vendor: "acme-loop", key: "transcript", seq: r.seq, data: r.data })))) {
+    if (
+      JSON.stringify(stored.map((row) => row.data)) !==
+      JSON.stringify(records.map((r) => ({ vendor: "acme-loop", key: "transcript", seq: r.seq, data: r.data })))
+    ) {
       throw new Error("session store must preserve external_state entries byte-for-byte and in append order");
     }
     if (typeof store.readBranchPath === "function") {
@@ -396,7 +404,8 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     }
     if (typeof store.readBranchPath === "function") {
       const chain = await chainOf(written.id);
-      if (chain.at(-1) !== written.id) throw new Error("unknown_entry_kind_round_trips: an unknown-kind entry must be part of the branch path");
+      if (chain.at(-1) !== written.id)
+        throw new Error("unknown_entry_kind_round_trips: an unknown-kind entry must be part of the branch path");
     }
   });
 
@@ -448,7 +457,8 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     if (claimed.has("listSessions")) {
       const ids = (await store.listSessions!({ tenantId: tenantA, limit: 100 })).items.map((item) => item.sessionId);
       for (const expected of [mine, newer, doomed]) {
-        if (!ids.includes(expected)) throw new Error(`listSessions must return the scope's session ${expected}; got ${JSON.stringify(ids)}`);
+        if (!ids.includes(expected))
+          throw new Error(`listSessions must return the scope's session ${expected}; got ${JSON.stringify(ids)}`);
       }
       if (ids.includes(theirs) || ids.includes(foreign)) {
         throw new Error(`listSessions leaked a session outside the scope; got ${JSON.stringify(ids)}`);
@@ -478,17 +488,18 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     }
 
     if (claimed.has("deleteSession")) {
-      if (await store.deleteSession!(theirs, { tenantId: tenantA })) throw new Error("deleteSession must refuse a session outside the scope");
+      if (await store.deleteSession!(theirs, { tenantId: tenantA }))
+        throw new Error("deleteSession must refuse a session outside the scope");
       if ((await store.list(theirs)).length === 0) throw new Error("a refused deleteSession removed entries");
       if (!(await store.deleteSession!(doomed, { tenantId: tenantA }))) throw new Error("deleteSession must delete an in-scope session");
       if ((await store.list(doomed)).length !== 0) throw new Error("deleteSession must remove every entry");
-      if (await store.deleteSession!(doomed, { tenantId: tenantA })) throw new Error("deleteSession of an absent session must resolve false");
+      if (await store.deleteSession!(doomed, { tenantId: tenantA }))
+        throw new Error("deleteSession of an absent session must resolve false");
       if ((await store.list(mine)).length === 0) throw new Error("deleteSession must not touch another session");
     } else {
       await reject(() => sessions.delete(mine), isUnsupportedStoreCapability, unclaimed("deleteSession", "delete"));
     }
   });
-
 
   await leg("session-links", async () => {
     // Links ride on the session's first `metadata` entry; a store indexes them but the entry stays the source of truth.
@@ -510,13 +521,34 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     const childForeign = `link-foreign-${suffix}`;
     const plain = `link-plain-${suffix}`;
     await store.append(stamp(parentId, 70, tenantA));
-    await store.append(linked(childA, 71, tenantA, { sessionId: parentId, agentId, workflowRunId: wf, delegationId: delegation, actor: { kind: "external", agent: actorAgent, vendor: "acme" } }));
+    await store.append(
+      linked(childA, 71, tenantA, {
+        sessionId: parentId,
+        agentId,
+        workflowRunId: wf,
+        delegationId: delegation,
+        actor: { kind: "external", agent: actorAgent, vendor: "acme" },
+      }),
+    );
     await store.append(linked(childB, 72, tenantA, { sessionId: parentId, workflowRunId: `${wf}-2` }));
     await store.append(linked(childForeign, 73, tenantB, { sessionId: parentId, workflowRunId: wf }));
     await store.append(stamp(plain, 74, tenantA));
     // A fork copies the branch under a new session id; the copied links entry must carry them over.
     const forked = `link-fork-${suffix}`;
-    await store.append({ ...linked(childA, 75, tenantA, {}), id: `${forked}-links`, sessionId: forked, data: { [SESSION_LINKS_DATA_KEY]: { sessionId: parentId, agentId, workflowRunId: wf, delegationId: delegation, actor: { kind: "external", agent: actorAgent, vendor: "acme" } } } });
+    await store.append({
+      ...linked(childA, 75, tenantA, {}),
+      id: `${forked}-links`,
+      sessionId: forked,
+      data: {
+        [SESSION_LINKS_DATA_KEY]: {
+          sessionId: parentId,
+          agentId,
+          workflowRunId: wf,
+          delegationId: delegation,
+          actor: { kind: "external", agent: actorAgent, vendor: "acme" },
+        },
+      },
+    });
 
     const scoped = createSessionIndex(store, { ownership: { tenantId: tenantA } });
     const idsOf = (page: { readonly items: readonly { readonly sessionId: string }[] }) => page.items.map((item) => item.sessionId).sort();
@@ -548,7 +580,9 @@ export async function storeConformance(factory: StoreConformanceFactory, options
       }
       const unscopedWorkflow = idsOf(await store.listSessions!({ workflowRunId: wf, limit: 100 }));
       if (!unscopedWorkflow.includes(childForeign)) throw new Error("an unscoped listSessions must see every tenant's linked sessions");
-      const summary = (await scoped.list({ workflowRunId: wf, delegationId: delegation, limit: 100 })).items.find((item) => item.sessionId === childA);
+      const summary = (await scoped.list({ workflowRunId: wf, delegationId: delegation, limit: 100 })).items.find(
+        (item) => item.sessionId === childA,
+      );
       if (
         summary?.parentSessionId !== parentId ||
         summary.agentId !== agentId ||
@@ -561,7 +595,12 @@ export async function storeConformance(factory: StoreConformanceFactory, options
         throw new Error(`listSessions must surface the persisted links; got ${JSON.stringify(summary)}`);
       }
       const plainSummary = (await scoped.list({ limit: 100 })).items.find((item) => item.sessionId === plain);
-      if (!plainSummary || plainSummary.parentSessionId !== undefined || plainSummary.workflowRunId !== undefined || plainSummary.actor !== undefined) {
+      if (
+        !plainSummary ||
+        plainSummary.parentSessionId !== undefined ||
+        plainSummary.workflowRunId !== undefined ||
+        plainSummary.actor !== undefined
+      ) {
         throw new Error("a session opened without links must list with absent links");
       }
       const got = await scoped.get(childA);
@@ -640,7 +679,8 @@ export async function storeConformance(factory: StoreConformanceFactory, options
         if (hits.length === 0) throw new Error("searchSessions must still find a match after reopen");
       }
       if (claimed.has("deleteSession")) {
-        if (!(await reopened.deleteSession!(mine, { tenantId: tenantA }))) throw new Error("deleteSession must still delete an in-scope session after reopen");
+        if (!(await reopened.deleteSession!(mine, { tenantId: tenantA })))
+          throw new Error("deleteSession must still delete an in-scope session after reopen");
       }
     });
   }
@@ -654,8 +694,16 @@ export async function storeConformance(factory: StoreConformanceFactory, options
 async function assertSessionStoreSearchSessions(store: SessionStore, token: string): Promise<void> {
   const search = store.searchSessions!;
 
-  await reject(() => search({ limit: 0 }), (error) => error instanceof TypeError, "searchSessions must reject non-positive limit");
-  await reject(() => search({ limit: Number.NaN }), (error) => error instanceof TypeError, "searchSessions must reject NaN limit");
+  await reject(
+    () => search({ limit: 0 }),
+    (error) => error instanceof TypeError,
+    "searchSessions must reject non-positive limit",
+  );
+  await reject(
+    () => search({ limit: Number.NaN }),
+    (error) => error instanceof TypeError,
+    "searchSessions must reject NaN limit",
+  );
   await reject(
     () => search({ limit: HARD_MAX_SESSION_SEARCH_LIMIT + 1 }),
     (error) => error instanceof TypeError,
@@ -747,12 +795,18 @@ function unclaimed(capability: SessionStoreCapability, method: string): string {
 }
 
 /** The last `package_state` value for a `{ package, key }`, as the package-state reader resolves it. */
-function readLatestPackageState(entries: readonly SessionEntry[], pkg: string, key: string): { readonly found: boolean; readonly value: unknown } {
+function readLatestPackageState(
+  entries: readonly SessionEntry[],
+  pkg: string,
+  key: string,
+): { readonly found: boolean; readonly value: unknown } {
   let found = false;
   let value: unknown;
   for (const entry of entries) {
     if (entry.kind !== "package_state") continue;
-    const data = entry.data as { readonly package?: unknown; readonly key?: unknown; readonly value?: unknown; readonly op?: unknown } | undefined;
+    const data = entry.data as
+      | { readonly package?: unknown; readonly key?: unknown; readonly value?: unknown; readonly op?: unknown }
+      | undefined;
     if (data?.package !== pkg || data.key !== key || data.op === "append") continue;
     found = true;
     value = data.value;
@@ -765,7 +819,9 @@ function readPackageStateLog(entries: readonly SessionEntry[], pkg: string, key:
   const log: unknown[] = [];
   for (const entry of entries) {
     if (entry.kind !== "package_state") continue;
-    const data = entry.data as { readonly package?: unknown; readonly key?: unknown; readonly value?: unknown; readonly op?: unknown } | undefined;
+    const data = entry.data as
+      | { readonly package?: unknown; readonly key?: unknown; readonly value?: unknown; readonly op?: unknown }
+      | undefined;
     if (data?.package !== pkg || data.key !== key || data.op !== "append") continue;
     log.push(data.value);
   }
@@ -781,7 +837,11 @@ async function leg(name: StoreConformanceStep, run: () => Promise<void>): Promis
 }
 
 function assertIds(entries: readonly SessionEntry[], expected: readonly string[], message: string): void {
-  assertChain(entries.map((entry) => entry.id), expected, message);
+  assertChain(
+    entries.map((entry) => entry.id),
+    expected,
+    message,
+  );
 }
 
 function assertChain(actual: readonly string[], expected: readonly string[], message: string): void {

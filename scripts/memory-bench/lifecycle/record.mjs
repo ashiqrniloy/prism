@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { readFile } from "node:fs/promises";
 import { createSecretRedactor, redactSessionEntry } from "@arnilo/prism";
-import { createJsonlSessionStore } from "@arnilo/prism-store-jsonl";
+import { createJsonlSessionStore } from "@arnilo/prism-extensions/store-jsonl";
 import { args, hash, writeLedger } from "./io.mjs";
 
 export async function recordLedger({

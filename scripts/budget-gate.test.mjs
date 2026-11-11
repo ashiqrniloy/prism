@@ -267,7 +267,11 @@ describe("performance budget gate", () => {
 
   it("per-package export counts stay at the plan 058 post-cut ceiling", () => {
     const entries = Object.entries(budgets.exportCounts).filter(([key]) => key !== "$comment");
-    assert.ok(entries.length >= 10, "every publishable package needs an export ceiling");
+    assert.deepEqual(
+      entries.map(([name]) => name).sort(),
+      Object.keys(measureExportCounts()).sort(),
+      "every publishable package needs an export ceiling",
+    );
     for (const [name, entry] of entries) {
       assert.ok(Number.isInteger(entry.baseline) && entry.baseline > 0, `exportCounts.${name}.baseline must be a positive integer`);
       assert.ok(typeof entry.reason === "string" && entry.reason.length > 0, `exportCounts.${name} must record a reason`);

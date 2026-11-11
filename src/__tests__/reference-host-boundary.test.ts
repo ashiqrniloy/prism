@@ -92,14 +92,14 @@ describe("reference host boundary", () => {
   const packages = referenceHostPackages(REPO);
 
   it("reference_host_imports_only_public_surface", () => {
-    assert.ok(packages.has("@arnilo/prism-tools-research"), "a new native package is allowed without editing this test");
-    assert.equal(packages.has("@arnilo/prism-channels"), true, "do not reject from PRISM_FAMILY");
+    assert.ok(packages.get("@arnilo/prism-tools")?.has("research"), "a new native package is allowed without editing this test");
+    assert.equal(packages.get("@arnilo/prism-hosts")?.has("channels"), true, "do not reject from PRISM_FAMILY");
     for (const name of REJECT) assert.equal(packages.has(name), false, `${name} stays rejected`);
     assert.ok(appFiles(APP).length >= 2, "the scaffold must be scanned");
     assert.deepEqual(scanReferenceHost(APP, packages), []);
 
     const clean = fixture({
-      "src/ok.ts": `import { createAgent } from "@arnilo/prism";\nimport research from "@arnilo/prism-tools-research";\nimport "@arnilo/prism/manifest";\nexport const unused = [createAgent, research];\n`,
+      "src/ok.ts": `import { createAgent } from "@arnilo/prism";\nimport research from "@arnilo/prism-tools/research";\nimport "@arnilo/prism/manifest";\nexport const unused = [createAgent, research];\n`,
       "src/scenarios/offline.ts": `import { mockProvider } from "@arnilo/prism/testing";\nexport const provider = mockProvider;\n`,
       "src/__tests__/helper.ts": `import { mockProvider } from "@arnilo/prism/testing/tool-conformance";\nexport const helper = mockProvider;\n`,
     });
@@ -114,7 +114,7 @@ describe("reference host boundary", () => {
       ["prism-code", "src/bad.ts", `import code from "@arnilo/prism-code";\n`],
       ["provider-kit", "src/bad.ts", `import kit from "@arnilo/prism/provider-kit";\n`],
       ["node subpath", "src/bad.ts", `import config from "@arnilo/prism/node/config";\n`],
-      ["deep path", "src/bad.ts", `import ledger from "@arnilo/prism-tools-research/src/ledger.ts";\n`],
+      ["deep path", "src/bad.ts", `import ledger from "@arnilo/prism-tools/research/src/ledger.ts";\n`],
       ["testing outside", "src/index.ts", `import { mockProvider } from "@arnilo/prism/testing";\n`],
       ["non-literal", "src/bad.ts", `const name = "@arnilo/prism";\nimport(name);\n`],
       ["relative escape", "src/bad.ts", `import outside from "../../outside";\n`],

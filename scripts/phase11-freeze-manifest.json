@@ -4,7 +4,7 @@
   "baseline": "0.0.27 (Phase 10 exit gate passed 2026-08-07)",
   "placement": {
     "$comment": "Adapter-over-primitives confirmed: every adapter composes existing IdentityVerifier, PolicyEvaluator/evaluateAndAppend, OAuthProvider/OAuthCredentialStore, credential resolver chain, SsrfPolicy (assertSsrfAllowedUrl, src/content.ts), SecretRedactor, MCP bridge/server limits, ArtifactService, and PersistenceLifecycleStore (legal hold + retention). Core gains only the ArtifactBodyStore contract (proven missing: metadata lives in checkpoints, bodies never do).",
-    "decision": "Four placements: (1) OIDC verifier as @arnilo/prism-credentials-node/oidc subpath (Node-only network adapter; reuses limits/errors/redaction patterns). (2) OPA evaluator as @arnilo/prism-policy/opa subpath (recorded through existing evaluateAndAppend durable ledger; enterprise-postgres createPostgresPolicyDecisionStore unchanged). (3) MCP OAuth extends @arnilo/prism-mcp (client auth option on connectMcpTools/attachMcpToolBridge; server protected-resource metadata; reuse @modelcontextprotocol/sdk@1.30.0 client/auth.js + server/auth OAuthServerProvider). (4) OpenAPI tools as new minimal package @arnilo/prism-openapi-tools (work-tools and web-tools are vendor-connector scoped: Google/M365 and Brave/Exa/Firecrawl; core stays network-free). Artifact blob contract goes to core src/artifacts.ts; reference S3 adapter as @arnilo/prism-server/artifact-bodies subpath.",
+    "decision": "Four placements: (1) OIDC verifier as @arnilo/prism-credentials-node/oidc subpath (Node-only network adapter; reuses limits/errors/redaction patterns). (2) OPA evaluator as @arnilo/prism-policy/opa subpath (recorded through existing evaluateAndAppend durable ledger; enterprise-postgres createPostgresPolicyDecisionStore unchanged). (3) MCP OAuth extends @arnilo/prism-extensions/mcp (client auth option on connectMcpTools/attachMcpToolBridge; server protected-resource metadata; reuse @modelcontextprotocol/sdk@1.30.0 client/auth.js + server/auth OAuthServerProvider). (4) OpenAPI tools as new minimal package @arnilo/prism-openapi-tools (work-tools and web-tools are vendor-connector scoped: Google/M365 and Brave/Exa/Firecrawl; core stays network-free). Artifact blob contract goes to core src/artifacts.ts; reference S3 adapter as @arnilo/prism-server/artifact-bodies subpath.",
     "packageCountAtFreeze": 47,
     "packageCountPlanned": 48,
     "newPackages": [
@@ -56,7 +56,7 @@
           "ERR_PRISM_OPA_VERSION_MISMATCH"
         ]
       },
-      "@arnilo/prism-mcp": {
+      "@arnilo/prism-extensions/mcp": {
         "extendOnly": true,
         "newExports": [
           "McpClientAuthOptions",

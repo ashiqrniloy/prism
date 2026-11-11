@@ -12,7 +12,7 @@
   "suites": [
     {
       "id": "providers/ollama-cloud",
-      "package": "@arnilo/prism-provider-ollama-cloud",
+      "package": "@arnilo/prism-ai/ollama-cloud",
       "status": "active",
       "source": "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
@@ -43,7 +43,7 @@
     },
     {
       "id": "providers/hyper",
-      "package": "@arnilo/prism-provider-hyper",
+      "package": "@arnilo/prism-ai/hyper",
       "status": "active",
       "source": "packages/providers/hyper/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -69,7 +69,7 @@
     },
     {
       "id": "providers/opencode-go",
-      "package": "@arnilo/prism-provider-opencode-go",
+      "package": "@arnilo/prism-ai/opencode-go",
       "status": "active",
       "source": "packages/providers/opencode-go/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -95,7 +95,7 @@
     },
     {
       "id": "providers/typesafe",
-      "package": "@arnilo/prism-provider-typesafe",
+      "package": "@arnilo/prism-ai/typesafe",
       "status": "active",
       "source": "packages/providers/typesafe/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -116,7 +116,7 @@
     },
     {
       "id": "providers/laya",
-      "package": "@arnilo/prism-provider-laya",
+      "package": "@arnilo/prism-ai/laya",
       "status": "active",
       "source": "packages/providers/laya/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -137,7 +137,7 @@
     },
     {
       "id": "providers/openrouter",
-      "package": "@arnilo/prism-provider-openrouter",
+      "package": "@arnilo/prism-ai/openrouter",
       "status": "active",
       "source": "packages/providers/openrouter/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -166,7 +166,7 @@
     },
     {
       "id": "providers/liquid",
-      "package": "@arnilo/prism-provider-liquid",
+      "package": "@arnilo/prism-ai/liquid",
       "status": "active",
       "source": "packages/providers/liquid/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -187,7 +187,7 @@
     },
     {
       "id": "providers/liquid-local",
-      "package": "@arnilo/prism-provider-liquid",
+      "package": "@arnilo/prism-ai/liquid",
       "status": "active",
       "source": "packages/providers/liquid/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -208,7 +208,7 @@
     },
     {
       "id": "providers/commandcode",
-      "package": "@arnilo/prism-provider-commandcode",
+      "package": "@arnilo/prism-ai/commandcode",
       "status": "active",
       "source": "packages/providers/commandcode/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
@@ -244,7 +244,7 @@
     },
     {
       "id": "providers/openai-codex",
-      "package": "@arnilo/prism-provider-openai-codex",
+      "package": "@arnilo/prism-ai/openai-codex",
       "status": "active",
       "source": "packages/providers/openai-codex/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -269,7 +269,7 @@
     },
     {
       "id": "web-tools/brave",
-      "package": "@arnilo/prism-tools-web",
+      "package": "@arnilo/prism-tools/web",
       "status": "active",
       "source": "packages/tools/web/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -283,7 +283,7 @@
     },
     {
       "id": "web-tools/exa",
-      "package": "@arnilo/prism-tools-web",
+      "package": "@arnilo/prism-tools/web",
       "status": "active",
       "source": "packages/tools/web/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -297,7 +297,7 @@
     },
     {
       "id": "web-tools/firecrawl",
-      "package": "@arnilo/prism-tools-web",
+      "package": "@arnilo/prism-tools/web",
       "status": "active",
       "source": "packages/tools/web/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -311,7 +311,7 @@
     },
     {
       "id": "tools-browser/browser-live",
-      "package": "@arnilo/prism-tools-browser",
+      "package": "@arnilo/prism-tools/browser",
       "status": "active",
       "source": "packages/tools/browser/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -326,7 +326,7 @@
     },
     {
       "id": "web-tools/obscura-live",
-      "package": "@arnilo/prism-tools-web",
+      "package": "@arnilo/prism-tools/web",
       "status": "active",
       "source": "packages/tools/web/src/obscura/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/obscura/__tests__/live.test.ts",
@@ -379,11 +379,11 @@
     },
     {
       "id": "memory/compaction-llm-live",
-      "package": "@arnilo/prism-memory-compaction",
+      "package": "@arnilo/prism-extensions/compaction",
       "status": "active",
-      "source": "packages/memory/compaction/src/__tests__/live.test.ts",
+      "source": "packages/extensions/compaction/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
-      "cwd": "packages/memory/compaction",
+      "cwd": "packages/extensions/compaction",
       "requires": [
         "PRISM_LIVE_COMPACTION_TESTS"
       ],
@@ -392,7 +392,7 @@
     },
     {
       "id": "work/libreoffice-golden",
-      "package": "@arnilo/prism-tools-work",
+      "package": "@arnilo/prism-tools/work",
       "status": "active",
       "source": "packages/tools/work/src/documents/__tests__/golden.test.ts",
       "command": "bun test --timeout=0 dist/documents/__tests__/golden.test.js",
@@ -405,7 +405,7 @@
     },
     {
       "id": "work/drawio-live",
-      "package": "@arnilo/prism-tools-work",
+      "package": "@arnilo/prism-tools/work",
       "status": "active",
       "source": "packages/tools/work/src/diagrams/__tests__/drawio-live.test.ts",
       "command": "bun test --timeout=0 dist/diagrams/__tests__/drawio-live.test.js",
@@ -420,7 +420,7 @@
     },
     {
       "id": "coding-tools/docker-sandbox",
-      "package": "@arnilo/prism-tools-coding",
+      "package": "@arnilo/prism-tools/coding",
       "status": "active",
       "source": "packages/tools/coding/src/security/__tests__/docker-sandbox.test.ts",
       "command": "bun test --timeout=0 src/security/__tests__/docker-sandbox.test.ts",
@@ -436,7 +436,7 @@
     },
     {
       "id": "coding-tools/e2b-sandbox-live",
-      "package": "@arnilo/prism-tools-coding",
+      "package": "@arnilo/prism-tools/coding",
       "status": "active",
       "source": "packages/tools/coding/src/security/__tests__/e2b-sandbox-live.test.ts",
       "command": "bun test --timeout=0 src/security/__tests__/e2b-sandbox-live.test.ts",
@@ -449,7 +449,7 @@
     },
     {
       "id": "work/mistral-ocr-live",
-      "package": "@arnilo/prism-tools-work",
+      "package": "@arnilo/prism-tools/work",
       "status": "active",
       "source": "packages/tools/work/src/document-reader/__tests__/mistral-ocr-live.test.ts",
       "command": "bun test --timeout=0 dist/document-reader/__tests__/mistral-ocr-live.test.js",
@@ -462,25 +462,25 @@
     },
     {
       "id": "core/postgres",
-      "package": "@arnilo/prism-store-postgres",
+      "package": "@arnilo/prism-extensions/store-postgres",
       "status": "active",
-      "source": "packages/stores/postgres/src/__tests__/postgres-integration.test.ts",
+      "source": "packages/extensions/store-postgres/src/__tests__/postgres-integration.test.ts",
       "command": "bun run test:postgres",
-      "cwd": "packages/stores/postgres",
+      "cwd": "packages/extensions/store-postgres",
       "requires": [
         "PRISM_TEST_POSTGRES_URL"
       ],
       "scope": "Postgres state-store persistence over the real wire (migrations, tenant-scoped queries, checkpoint/lease services).",
       "cost": "Bounded insert/query cycles against the configured Postgres.",
-      "notes": "Plan 181 Task 3: the 0.7.0 evidence row required the core postgres suite; it moved with the package from packages/prism-core to packages/stores/postgres and lost its matrix entry."
+      "notes": "Plan 181 Task 3: the 0.7.0 evidence row required the core postgres suite; it moved with the package from packages/prism-core to packages/extensions/store-postgres and lost its matrix entry."
     },
     {
       "id": "core/keychain",
-      "package": "@arnilo/prism-credentials-keyring",
+      "package": "@arnilo/prism-extensions/keyring",
       "status": "active",
-      "source": "packages/credentials/keyring/src/__tests__/credentials-node.test.ts",
+      "source": "packages/extensions/keyring/src/__tests__/credentials-node.test.ts",
       "command": "bun test --timeout=0 src/__tests__/credentials-node.test.ts",
-      "cwd": "packages/credentials/keyring",
+      "cwd": "packages/extensions/keyring",
       "requires": [
         "PRISM_TEST_KEYCHAIN"
       ],
@@ -552,7 +552,7 @@
     },
     {
       "id": "memory/rag-rerankers-live",
-      "package": "@arnilo/prism-rag",
+      "package": "@arnilo/prism-knowledge/rag",
       "status": "active",
       "source": "packages/knowledge/rag/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -583,7 +583,7 @@
     },
     {
       "id": "memory/local-rerank-live",
-      "package": "@arnilo/prism-rag",
+      "package": "@arnilo/prism-knowledge/rag",
       "status": "active",
       "source": "packages/knowledge/rag/src/__tests__/local-reranker-live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/local-reranker-live.test.ts",
@@ -607,7 +607,7 @@
     },
     {
       "id": "memory/drive-sync-live",
-      "package": "@arnilo/prism-rag",
+      "package": "@arnilo/prism-knowledge/rag",
       "status": "active",
       "source": "packages/knowledge/rag/src/__tests__/google-drive-live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/google-drive-live.test.ts",
@@ -624,7 +624,7 @@
     },
     {
       "id": "tools-openapi/openapi-live",
-      "package": "@arnilo/prism-tools-openapi",
+      "package": "@arnilo/prism-tools/openapi",
       "status": "active",
       "source": "packages/tools/openapi/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -637,7 +637,7 @@
     },
     {
       "id": "tools-computer-use/computer-use-live",
-      "package": "@arnilo/prism-tools-computer-use",
+      "package": "@arnilo/prism-tools/computer-use",
       "status": "active",
       "source": "packages/tools/computer-use/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
@@ -652,7 +652,7 @@
     },
     {
       "id": "mcp/client-smoke",
-      "package": "@arnilo/prism-mcp-server",
+      "package": "@arnilo/prism-hosts/mcp-server",
       "status": "active",
       "source": "scripts/mcp-client-smoke.mjs",
       "command": "bun scripts/mcp-client-smoke.mjs",
@@ -661,13 +661,13 @@
       ],
       "scope": "Real @modelcontextprotocol/client SDK over a real stdio subprocess serving a plain SDK McpServer.",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "Modern+legacy handshake, tools/list, tools/call round-trip, authorize-gated denial, malformed-frame fail-closed. The fixture is a plain SDK McpServer (Prism tool serving waits for Phase 14 serveTools); approvals over MCP are covered by packages/hosts/mcp-server serve.test.ts and the bridge-side MRTR elicitation round-trip over real HTTP by packages/integrations/mcp modern-bridge tests.",
+      "notes": "Modern+legacy handshake, tools/list, tools/call round-trip, authorize-gated denial, malformed-frame fail-closed. The fixture is a plain SDK McpServer (Prism tool serving waits for Phase 14 serveTools); approvals over MCP are covered by packages/hosts/mcp-server serve.test.ts and the bridge-side MRTR elicitation round-trip over real HTTP by packages/extensions/mcp modern-bridge tests.",
       "cwd": ".",
       "cost": "Local only; ≤30s."
     },
     {
       "id": "acp/in-process",
-      "package": "@arnilo/prism-acp",
+      "package": "@arnilo/prism-hosts/acp",
       "status": "active",
       "source": "packages/hosts/acp/src/__tests__/serve.test.ts",
       "command": "bun test packages/hosts/acp/src/__tests__/serve.test.ts",
@@ -725,12 +725,12 @@
       "scope": "The wiki, knowledge outside memory, over the real fabric read through memory.ltm and on its own sources without it: wiki:status counts, the scripted concept pass (cited edits, fail-closed answers, repair), the deletion cascade from memory, claim lint and source staging over real fs trees.",
       "cost": "Hermetic; no network.",
       "notes": "Always-runnable leg; the concept pass has no live leg (plan 208 measures it).",
-      "package": "@arnilo/prism-wiki"
+      "package": "@arnilo/prism-knowledge/wiki"
     },
     {
       "id": "coding-tools/lsp-forge",
       "status": "active",
-      "package": "@arnilo/prism-tools-coding",
+      "package": "@arnilo/prism-tools/coding",
       "source": "packages/tools/coding/src/agent/__tests__/language-intelligence.test.ts",
       "command": "bun test --timeout=0 src/agent/__tests__/language-intelligence.test.ts src/agent/__tests__/language-diagnostics.test.ts src/agent/__tests__/forge-github.test.ts",
       "cwd": "packages/tools/coding",
@@ -742,7 +742,7 @@
     {
       "id": "ag-ui/conformance",
       "status": "active",
-      "package": "@arnilo/prism-ag-ui",
+      "package": "@arnilo/prism-hosts/ag-ui",
       "source": "packages/hosts/ag-ui/src/__tests__",
       "command": "bun run test",
       "cwd": "packages/hosts/ag-ui",
@@ -766,7 +766,7 @@
     },
     {
       "id": "channels/telegram-live",
-      "package": "@arnilo/prism-channels",
+      "package": "@arnilo/prism-hosts/channels",
       "status": "active",
       "source": "packages/hosts/channels/src/__tests__/telegram-live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/telegram-live.test.ts",
@@ -784,7 +784,7 @@
     },
     {
       "id": "channels/signal-live",
-      "package": "@arnilo/prism-channels",
+      "package": "@arnilo/prism-hosts/channels",
       "status": "active",
       "source": "packages/hosts/channels/src/__tests__/signal-live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/signal-live.test.ts",
@@ -804,7 +804,7 @@
     },
     {
       "id": "release/context-rot",
-      "package": "@arnilo/prism-context-engineering",
+      "package": "@arnilo/prism-extensions/context-engineering",
       "status": "active",
       "source": "scripts/context-rot/run.mjs",
       "command": "bun scripts/context-rot/run.mjs --provider hyper --model $PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL && bun scripts/context-rot/run.mjs --provider opencode-go --model $PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL",
@@ -830,7 +830,7 @@
     },
     {
       "id": "release/skill-evals",
-      "package": "@arnilo/prism-evals",
+      "package": "@arnilo/prism-hosts/evals",
       "status": "active",
       "source": "scripts/skill-evals/run.mjs",
       "command": "bun scripts/skill-evals/run.mjs --live --providers hyper,opencode-go,openrouter,kilo,commandcode",
@@ -897,7 +897,7 @@
     },
     {
       "id": "release/eval-gate",
-      "package": "@arnilo/prism-evals",
+      "package": "@arnilo/prism-hosts/evals",
       "status": "active",
       "source": "apps/prism-agent/evals/live.test.ts",
       "command": "bun test --timeout=0 evals/live.test.ts",
@@ -919,7 +919,7 @@
     },
     {
       "id": "release/cache-parity",
-      "package": "@arnilo/prism-provider-commandcode",
+      "package": "@arnilo/prism-ai/commandcode",
       "status": "active",
       "source": "scripts/cache-parity/live.mjs",
       "command": "bun scripts/cache-parity/live.mjs",
@@ -1007,7 +1007,7 @@
     },
     {
       "id": "providers/kilo",
-      "package": "@arnilo/prism-provider-kilo",
+      "package": "@arnilo/prism-ai/kilo",
       "status": "active",
       "source": "packages/providers/kilo/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
@@ -1038,7 +1038,7 @@
     },
     {
       "id": "providers/litellm",
-      "package": "@arnilo/prism-provider-litellm",
+      "package": "@arnilo/prism-ai/litellm",
       "status": "active",
       "source": "packages/providers/litellm/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",

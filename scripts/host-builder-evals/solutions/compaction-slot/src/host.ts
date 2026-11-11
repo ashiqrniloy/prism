@@ -1,5 +1,5 @@
 import { type Agent, createAgent, type ModelSpec, type PackageInput } from "@arnilo/prism";
-import memoryCompaction from "@arnilo/prism-memory-compaction";
+import memoryCompaction from "@arnilo/prism-extensions/compaction";
 import localCompaction from "./local-compaction.ts";
 
 export interface HostOptions {
@@ -12,7 +12,7 @@ export async function createHost(options: HostOptions): Promise<Agent> {
     model: options.model,
     ownership: { tenantId: "local" },
     principal: { kind: "user", id: "local" },
-    slots: { compaction: "@arnilo/prism-memory-compaction" },
+    slots: { compaction: "@arnilo/prism-extensions/compaction" },
     packages: [...options.providers, localCompaction(), memoryCompaction()],
   });
 }

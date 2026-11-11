@@ -1,7 +1,7 @@
-import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-extensions/workflows";
 import { createAgent, createSecretRedactor, createToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
-import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, runWorkflow } from "@arnilo/prism-workflows";
+import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, runWorkflow } from "@arnilo/prism-extensions/workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Sequential research → draft → review pipeline with in-memory checkpoints.

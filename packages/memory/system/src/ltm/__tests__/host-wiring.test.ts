@@ -4,7 +4,7 @@
  * One propagation pass wires the RAG and fabric-note legs in one place (the wiki's concept cascade reads memory's deletion feed since plan 216 Task 3), and the
  * same tombstone set is what a projection reads when it builds instead of writing a drop entry. These
  * tests are the executable recipe: no in-tree runtime is invented, no facade is added, and every import
- * is a published entry point (`@arnilo/prism-memory-core`, `-rag`, `-fabric`).
+ * is a published entry point (`@arnilo/prism-memory-system/core`, `-rag`, `-fabric`).
  */
 
 import { describe, it } from "bun:test";
@@ -17,9 +17,9 @@ import {
   type MemoryScope,
   MemoryScopeError,
   type MemoryVectorRecord,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
-import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "@arnilo/prism-rag";
+import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "@arnilo/prism-knowledge/rag";
 import { createFabricRepointHandler } from "../repoint.js";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "handbook", threadId: "s1" };

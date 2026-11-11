@@ -428,10 +428,7 @@ test("edit_exact_match_reports_changed_lines_with_numbers", async () => {
     await writeFile(join(cwd, "a.ts"), `${lines.join("\n")}\n`);
     const r = await createEditTool(cwd).execute({ path: "a.ts", edits: [{ oldText: "line 4", newText: "LINE 4" }] }, ctx());
     assert.equal(r.error, undefined, JSON.stringify(r.error));
-    assert.equal(
-      textOf(r),
-      ["Edited a.ts: 1 block(s).", "2\tline 2", "3\tline 3", "4\tLINE 4", "5\tline 5", "6\tline 6"].join("\n"),
-    );
+    assert.equal(textOf(r), ["Edited a.ts: 1 block(s).", "2\tline 2", "3\tline 3", "4\tLINE 4", "5\tline 5", "6\tline 6"].join("\n"));
     assert.doesNotMatch(textOf(r), /fuzzy/i);
     assert.equal((meta(r) as { fuzzy?: boolean } | undefined)?.fuzzy, undefined, "no fuzzy flag");
   } finally {

@@ -2,7 +2,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { type ToolExecutionContext } from "@arnilo/prism";
 import { type ArtifactBodyRef, type ArtifactBodyStore } from "@arnilo/prism/artifacts";
-import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
+import { createMemoryCheckpointStore } from "@arnilo/prism-extensions/workflows";
 import { type AgentIdentity } from "../identity.js";
 import {
   canonicalJson,

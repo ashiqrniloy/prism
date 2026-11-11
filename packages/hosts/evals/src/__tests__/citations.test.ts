@@ -53,11 +53,9 @@ test("citation integrity scorer is invariant 0 on revoked ACL / forged hash even
   const report = await runExperiment({
     agent: await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([[
-        providerTextDelta("ok"),
-        providerUsage({ inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
-        providerDone(),
-      ]])],
+      packages: [
+        mockProvider([[providerTextDelta("ok"), providerUsage({ inputTokens: 1, outputTokens: 1, totalTokens: 2 }), providerDone()]]),
+      ],
     }),
     dataset: defineDataset({ id: "cite", items: [{ id: "i1", input: "q" }] }),
     scorers: [integrity, judge],

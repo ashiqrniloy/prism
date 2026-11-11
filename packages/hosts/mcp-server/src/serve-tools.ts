@@ -12,7 +12,7 @@ import {
 } from "@arnilo/prism";
 import { ALL_TOOL_EFFECTS, bridgeTools } from "@arnilo/prism/driver-kit";
 import { type CallToolResult, fromJsonSchema, type JsonSchemaType, McpServer, type McpServerFactory } from "@modelcontextprotocol/server";
-import manifest from "../package.json" with { type: "json" };
+import manifest from "../../package.json" with { type: "json" };
 import { bounded, truncateUtf8 } from "./bounds.js";
 import { createPrismMcpWebHandler } from "./server.js";
 import type { PermissionDecision, PermissionRequest, PrismMcpWebHandler, ServeToolsHandle, ServeToolsOptions } from "./types.js";

@@ -15,8 +15,8 @@ for (const crash of [false, true])
   test(crash ? "crash_after_claim_is_not_replayed" : "two_processes_fire_each_tick_once", async () => {
     const dir = mkdtempSync(join(tmpdir(), "scheduler-leases-"));
     const children: ReturnType<typeof spawn>[] = [];
-    const spawn = (mode: string, owner: string): Bun.Subprocess<"ignore", "pipe", "pipe"> => {
-      const child = Bun.spawn([process.execPath, join(import.meta.dir, "fixtures/scheduler-worker.mjs"), dir, mode, owner], {
+    const spawn = (mode: string, owner: string): ReturnType<typeof Bun.spawn> => {
+      const child = Bun.spawn([process.execPath, join(import.meta.dirname, "fixtures/scheduler-worker.mjs"), dir, mode, owner], {
         stdout: "pipe",
         stderr: "pipe",
       });

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createAgent, definePackage, PackageLoadError, validateJsonSchema } from "@arnilo/prism";
-import memoryCompaction from "@arnilo/prism-memory-compaction";
+import memoryCompaction from "@arnilo/prism-extensions/compaction";
 import memorySystem, {
   MEMORY_LTM_SERVICE,
   MEMORY_SYSTEM_SERVICE,
@@ -134,7 +134,7 @@ describe("memory-system components", () => {
     // stm: false beside another compaction package: no slot claim, so no conflict and no assignment needed.
     const beside = await createAgent({ model: MODEL, packages: [memorySystem({ stm: false, ltm: {} }), memoryCompaction()] });
     try {
-      assert.equal(beside.inspect().slots.compaction, "@arnilo/prism-memory-compaction");
+      assert.equal(beside.inspect().slots.compaction, "@arnilo/prism-extensions/compaction");
       assert.ok(!beside.inspect().tools.some((tool) => tool.name === "recall"));
     } finally {
       await beside.dispose();

@@ -19,7 +19,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { appendFile, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { reviewConceptFile } from "./ontology/review.js";
 import {
   CONCEPT_DIRTY_REASONS,

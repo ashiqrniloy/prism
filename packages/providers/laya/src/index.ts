@@ -1,25 +1,16 @@
 /**
- * @arnilo/prism-provider-laya — Laya provider package for Prism.
+ * @arnilo/prism-ai/laya — Laya provider package for Prism.
  */
 import type { PackageInstance } from "@arnilo/prism";
-import {
-  systemOneProviderPackage,
-  type SystemOneProviderConfig,
-  type SystemOneProviderPackageOptions,
-} from "@arnilo/prism/provider-kit";
-import {
-  LAYA_API_KEY_ENV,
-  LAYA_DEFAULT_API_KEY_REF,
-  LAYA_DEFAULT_BASE_URL,
-  layaModels,
-} from "./models.js";
+import { systemOneProviderPackage, type SystemOneProviderConfig, type SystemOneProviderPackageOptions } from "@arnilo/prism/provider-kit";
+import { LAYA_DEFAULT_API_KEY_REF, LAYA_DEFAULT_BASE_URL, layaModels } from "./models.js";
 import { createLayaProvider } from "./provider.js";
 
 export type LayaProviderConfig = SystemOneProviderConfig;
 export type LayaProviderPackageOptions = SystemOneProviderPackageOptions;
 
 const pkg = systemOneProviderPackage({
-  name: "@arnilo/prism-provider-laya",
+  name: "@arnilo/prism-ai/laya",
   providerId: "laya",
   label: "Laya",
   defaultBaseUrl: LAYA_DEFAULT_BASE_URL,

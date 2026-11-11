@@ -15,7 +15,7 @@ import { resolveWebLimits } from "../limits.js";
 import { citation } from "../normalize.js";
 import { truncateUtf8Bytes } from "../slice.js";
 import { WebToolError } from "../transport.js";
-import type { ResolvedWebLimits, WebDocument, WebFetchAdapter, WebLimits } from "../types.js";
+import type { ResolvedWebLimits, WebFetchAdapter, WebLimits } from "../types.js";
 import { convertHtml, decodeBody } from "./convert.js";
 
 export const DEFAULT_MAX_REDIRECTS = 5;

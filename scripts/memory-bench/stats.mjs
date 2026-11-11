@@ -1,4 +1,4 @@
-import { mcnemarExact as mcnemar } from "@arnilo/prism-evals";
+import { mcnemarExact as mcnemar } from "@arnilo/prism-hosts/evals";
 import { improvementDelta, METRIC_VERSION, metricDefinition, metricValue } from "./metrics.mjs";
 
 export { mcnemar };

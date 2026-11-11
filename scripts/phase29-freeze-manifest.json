@@ -93,11 +93,11 @@
       },
       {
         "name": "@arnilo/prism-memory",
-        "live": "@arnilo/prism-memory-core"
+        "live": "@arnilo/prism-memory-system/core"
       },
       {
-        "name": "@arnilo/prism-mcp",
-        "live": "@arnilo/prism-mcp"
+        "name": "@arnilo/prism-extensions/mcp",
+        "live": "@arnilo/prism-extensions/mcp"
       },
       {
         "name": "@arnilo/prism-acp-agent",
@@ -138,13 +138,13 @@
         "by": "plan 054"
       },
       {
-        "name": "@arnilo/prism-wiki",
-        "foldedInto": "@arnilo/prism-wiki",
+        "name": "@arnilo/prism-knowledge/wiki",
+        "foldedInto": "@arnilo/prism-knowledge/wiki",
         "by": "plan 054"
       },
       {
         "name": "@arnilo/prism-graft",
-        "foldedInto": "@arnilo/prism-memory-core",
+        "foldedInto": "@arnilo/prism-memory-system/core",
         "by": "plan 054"
       },
       {

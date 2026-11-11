@@ -76,7 +76,7 @@ function terminalError(events: readonly ProviderEvent[]) {
   return terminal.error as { message: string; failureClass?: string };
 }
 
-describe("@arnilo/prism-provider-ollama-cloud native route", () => {
+describe("@arnilo/prism-ai/ollama-cloud native route", () => {
   it("ollama_cloud_native_conformance", async () => {
     const recording = fixture("native/text.json") as RecordedExchange;
     const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: replayFetch(recording) });
@@ -244,7 +244,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
   });
 });
 
-describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
+describe("@arnilo/prism-ai/ollama-cloud routes and options", () => {
   it("ollama_compat_omits_tool_choice_and_cache_fields", async () => {
     const compat: ModelConfig = { ...gemma, compat: { ...gemma.compat, route: "openai" } };
     const result = await capture(compat, {
@@ -386,7 +386,7 @@ describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
   });
 });
 
-describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
+describe("@arnilo/prism-ai/ollama-cloud discovery and balance", () => {
   it("ollama_cloud_catalog_declares_context_windows", () => {
     assert.ok(ollamaCloudModels.every((model) => typeof model.limits?.contextWindow === "number"));
     assert.equal(gemma.limits?.contextWindow, 262_144);
@@ -476,7 +476,7 @@ describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
   });
 });
 
-describe("@arnilo/prism-provider-ollama-cloud decision models", () => {
+describe("@arnilo/prism-ai/ollama-cloud decision models", () => {
   const clef = mapOllamaCloudModel(
     { model: "clef:27b", capabilities: ["decision", "vision"] },
     { capabilities: ["decision", "vision"], model_info: { "qwen35.context_length": 65_536 } },

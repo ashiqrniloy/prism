@@ -1,17 +1,17 @@
-# `@arnilo/prism-provider-kilo`
+# `@arnilo/prism-ai/kilo`
 
 Kilo AI Gateway provider package for [Prism](https://github.com/ashiqrniloy/prism): registers the `kilo` provider, resolves its key from `env:`/`keyring:` refs, and serves the gateway's three wires — Chat Completions, Responses and Anthropic Messages — plus the model catalog.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-kilo
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import { kilo } from "@arnilo/prism-provider-kilo";
+import { kilo } from "@arnilo/prism-ai/kilo";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
@@ -70,7 +70,7 @@ There are two paths, and the key wins when both resolve:
    `api-key` method. A host, not the kernel, runs it:
 
 ```ts
-import { kilo, kiloLogout } from "@arnilo/prism-provider-kilo";
+import { kilo, kiloLogout } from "@arnilo/prism-ai/kilo";
 
 const provider = /* the registered kilo provider */;
 const login = provider.auth?.find((method) => method.kind === "oauth" && method.id === "kilo");

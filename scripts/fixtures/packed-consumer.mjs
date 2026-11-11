@@ -18,7 +18,7 @@
  *
  * Plan 153 Task 4: the fixtures name their entry points, and the helper packs
  * their first-party closure too — a dependency such as
- * `@arnilo/prism-store-sqlite` reaching `@arnilo/prism-store-codecs`, or
+ * `@arnilo/prism-extensions/store-sqlite` reaching `@arnilo/prism-extensions/store-codecs`, or
  * a retired family package reaching it for the Postgres tree, cannot resolve from
  * the registry either, and a fixture should not have to re-list every internal
  * edge a package grows.
@@ -29,6 +29,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { activeBundles } from "../bundles.mjs";
 import { expandWorkspaceDirs, readManifest } from "../package-truth.mjs";
 
 export const repoRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
@@ -44,8 +45,15 @@ export function withFirstPartyClosure(packages) {
     manifest: readManifest(join(repoRoot, dir, "package.json")),
   }));
   const dirByName = new Map(manifests.map(({ dir, manifest }) => [manifest.name, dir]));
-  const seen = new Map(packages.map((pkg) => [pkg.name, pkg]));
-  const queue = [...packages];
+  const bundles = activeBundles(repoRoot);
+  const seen = new Map(
+    packages.map((pkg) => {
+      const bundle = bundles.find((bundle) => pkg.name === bundle.name || pkg.name.startsWith(`${bundle.name}/`));
+      const owner = bundle ? { dir: bundle.dir, name: bundle.name } : pkg;
+      return [owner.name, owner];
+    }),
+  );
+  const queue = [...seen.values()];
   while (queue.length > 0) {
     const pkg = queue.shift();
     const { dependencies = {}, peerDependencies = {} } = JSON.parse(readFileSync(join(repoRoot, pkg.dir, "package.json"), "utf8"));
@@ -62,7 +70,7 @@ export function withFirstPartyClosure(packages) {
 }
 
 /** Pack `packages` ({dir, name}) and their first-party closure, then install into a fresh consumer dir. */
-export function createPackedConsumer(requested) {
+export function createPackedConsumer(requested, dependencies = {}) {
   const packages = withFirstPartyClosure(requested);
   const staging = mkdtempSync(join(tmpdir(), "prism-e2e-pack-"));
   const consumer = mkdtempSync(join(tmpdir(), "prism-e2e-consumer-"));
@@ -83,17 +91,28 @@ export function createPackedConsumer(requested) {
       return [pkg.name, `file:${join(staging, tgz)}`];
     }),
   );
-  writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-e2e-consumer", type: "module", overrides }, null, 2));
-  let install = spawnSync("bun", ["install", ...tarballs, "--offline", "--no-audit", "--no-fund", "--no-update-notifier"], {
-    cwd: consumer,
-    encoding: "utf8",
-  });
-  if (install.status !== 0) {
-    // Cold cache fallback: same tarballs, registry metadata allowed for externals only.
-    install = spawnSync("bun", ["install", ...tarballs, "--prefer-offline", "--no-audit", "--no-fund", "--no-update-notifier"], {
+  writeFileSync(
+    join(consumer, "package.json"),
+    JSON.stringify({ name: "prism-e2e-consumer", type: "module", overrides, dependencies }, null, 2),
+  );
+  let install = spawnSync(
+    "bun",
+    ["install", ...tarballs, "--ignore-scripts", "--offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+    {
       cwd: consumer,
       encoding: "utf8",
-    });
+    },
+  );
+  if (install.status !== 0) {
+    // Cold cache fallback: same tarballs, registry metadata allowed for externals only.
+    install = spawnSync(
+      "bun",
+      ["install", ...tarballs, "--ignore-scripts", "--prefer-offline", "--no-audit", "--no-fund", "--no-update-notifier"],
+      {
+        cwd: consumer,
+        encoding: "utf8",
+      },
+    );
   }
   const cleanup = () => {
     rmSync(staging, { recursive: true, force: true });
@@ -110,7 +129,7 @@ export function createPackedConsumer(requested) {
 
 /** Installed version of a first-party package inside the consumer. */
 export function installedVersion(consumer, name) {
-  return JSON.parse(readFileSync(join(consumer, "node_modules", name, "package.json"), "utf8")).version;
+  return JSON.parse(readFileSync(join(consumer, "node_modules", name.split("/").slice(0, 2).join("/"), "package.json"), "utf8")).version;
 }
 
 /** Probe: resolved specifier path inside the consumer (must not be the repo). */

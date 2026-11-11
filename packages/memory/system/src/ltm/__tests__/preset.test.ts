@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, createMemorySessionStore, type ProviderRequest, validateJsonSchema } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { CONVERSATIONAL_PRESET_REVISION, memoryFabricConfigSchema, resolveMemoryFabricConfig } from "../config.js";
 import memorySystem from "../../index.js";
 
@@ -62,7 +62,10 @@ describe("the conversational preset (plan 188.11 Task 3)", () => {
     await assert.rejects(
       createAgent({
         model: { provider: "mock", model: "main" },
-        packages: [mockProvider([[providerTextDelta("ok"), providerDone()]]), memorySystem({ ltm: { preset: "unknown" as "conversational" } })],
+        packages: [
+          mockProvider([[providerTextDelta("ok"), providerDone()]]),
+          memorySystem({ ltm: { preset: "unknown" as "conversational" } }),
+        ],
       }),
     );
   });
@@ -72,7 +75,10 @@ describe("the conversational preset (plan 188.11 Task 3)", () => {
     assert.equal(config.exchanges.enabled, false, "explicit wins, even against the storage class");
     const agent = await createAgent({
       model: { provider: "mock", model: "main" },
-      packages: [mockProvider([[providerTextDelta("ok"), providerDone()]]), memorySystem({ ltm: { preset: "conversational", exchanges: false } })],
+      packages: [
+        mockProvider([[providerTextDelta("ok"), providerDone()]]),
+        memorySystem({ ltm: { preset: "conversational", exchanges: false } }),
+      ],
     });
     const overrides = agent.inspect().statusNotes.filter((note) => /override preset conversational/.test(note.message));
     assert.equal(overrides.length, 1, "one note");
@@ -112,7 +118,10 @@ describe("the conversational preset (plan 188.11 Task 3)", () => {
     const root = await tempRoot();
     const agent = await createAgent({
       model: { provider: "mock", model: "main" },
-      packages: [mockProvider([[providerTextDelta("ok"), providerDone()]]), memorySystem({ ltm: { preset: "conversational", tools: { root } } })],
+      packages: [
+        mockProvider([[providerTextDelta("ok"), providerDone()]]),
+        memorySystem({ ltm: { preset: "conversational", tools: { root } } }),
+      ],
       slots: { store: createMemorySessionStore() },
     });
     const session = await agent.session({ id: "preset-status", create: true });
@@ -125,7 +134,14 @@ describe("the conversational preset (plan 188.11 Task 3)", () => {
     assert.equal(status.presetRevision, CONVERSATIONAL_PRESET_REVISION);
     assert.match(status.text, /Preset conversational \(revision 1\)/);
     const inspection = agent.inspect();
-    assert.equal((inspection.packages.find((entry) => entry.name === "@arnilo/prism-memory-system")?.config as { ltm?: { preset?: string } } | undefined)?.ltm?.preset, "conversational");
+    assert.equal(
+      (
+        inspection.packages.find((entry) => entry.name === "@arnilo/prism-memory-system")?.config as
+          | { ltm?: { preset?: string } }
+          | undefined
+      )?.ltm?.preset,
+      "conversational",
+    );
     assert.ok(inspection.statusNotes.some((note) => /preset conversational revision 1/.test(note.message)));
     await session.close();
     await agent.dispose();

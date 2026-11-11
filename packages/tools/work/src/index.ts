@@ -1,5 +1,5 @@
 /**
- * `@arnilo/prism-tools-work` — the first-party work tools as a package.
+ * `@arnilo/prism-tools/work` — the first-party work tools as a package.
  *
  * The default export registers the `office_*` document tools, `work_exec` inside the host-injected
  * `work.sandbox` service, and the `m365_*` / `gws_*` connector tools when a ref-only credential
@@ -8,12 +8,12 @@
  * connector credential, or a missing sandbox writes a `warn` status note and registers less.
  *
  * The document, spreadsheet, diagram, reader, extraction, connector, sandbox, skill, and tool
- * libraries stay importable as subpaths (`@arnilo/prism-tools-work/documents`, `/sheets`,
+ * libraries stay importable as subpaths (`@arnilo/prism-tools/work/documents`, `/sheets`,
  * `/connectors`, …) because the family shares type names (`validateByteCap`, `CellValue`) that a
  * single flat barrel cannot re-export unambiguously. The 0.12 factory names stay exported.
  *
  * ```ts
- * import toolsWork from "@arnilo/prism-tools-work";
+ * import toolsWork from "@arnilo/prism-tools/work";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
@@ -22,12 +22,14 @@
  * });
  * ```
  */
-import manifest from "../package.json" with { type: "json" };
+
 import { isAbsolute } from "node:path";
 import { definePackage, type JsonObject, type PackageAPI, type PackageInstance, type Secret, type ToolDefinition } from "@arnilo/prism";
+import manifest from "../../package.json" with { type: "json" };
 import { resolveCommand } from "./command.js";
 import { type ToolsWorkConfig, toolsWorkConfigSchema } from "./config.js";
 import { createGoogleWorkspaceCliAdapter } from "./connectors/google-workspace.js";
+import { type AgentIdentity } from "./connectors/identity.js";
 import { createMicrosoft365CliAdapter } from "./connectors/microsoft365.js";
 import { createWorkTools } from "./connectors/tools.js";
 import type {
@@ -49,10 +51,10 @@ import {
 import { createMistralOcrParser } from "./document-reader/mistral-ocr.js";
 import { closeWorkerPool } from "./runtime/worker-pool.js";
 import { createWorkComposition, type WorkSandbox } from "./sandbox/composition.js";
+import { loadWorkSkills } from "./skills/index.js";
 import { createLocalWorkFilesystem } from "./tools/local-filesystem.js";
 import { createOfficeTools } from "./tools/office.js";
-import { loadWorkSkills } from "./skills/index.js";
-import { type AgentIdentity } from "./connectors/identity.js";
+
 export type {
   ToolsWorkConfig,
   ToolsWorkConnectorConfig,
@@ -136,8 +138,18 @@ async function buildReader(prism: PackageAPI<ToolsWorkConfig>): Promise<Document
       dropped.push("docx (mammoth)");
     }
   }
-  if (formats.has("xlsx")) parsers.push(createOoxmlParser("xlsx", "sheet", "xl/workbook.xml"));
-  if (formats.has("pptx")) parsers.push(createOoxmlParser("pptx", "deck", "ppt/presentation.xml"));
+  for (const [format, kind, part] of [
+    ["xlsx", "sheet", "xl/workbook.xml"],
+    ["pptx", "deck", "ppt/presentation.xml"],
+  ] as const) {
+    if (!formats.has(format)) continue;
+    try {
+      await import("./documents/parse.js");
+      parsers.push(createOoxmlParser(format, kind, part));
+    } catch {
+      dropped.push(`${format} (install @office-open/docx, @office-open/pptx, @office-open/xlsx, @office-open/xml and ajv)`);
+    }
+  }
 
   if (dropped.length > 0) {
     prism.status.note("warn", `work: dropped reader formats: ${dropped.join(", ")}`);
@@ -216,7 +228,7 @@ async function buildConnectors(prism: PackageAPI<ToolsWorkConfig>): Promise<Work
 }
 
 const definition = definePackage<ToolsWorkConfig>({
-  name: "@arnilo/prism-tools-work",
+  name: "@arnilo/prism-tools/work",
   version: manifest.version,
   description:
     "Office document, spreadsheet, diagram, connector, and bounded reader tools with declared effects, ref-only credentials, and an injected work sandbox.",
@@ -243,7 +255,23 @@ const definition = definePackage<ToolsWorkConfig>({
     if (reader) prism.services.provide("work.reader", reader);
 
     const connectors = await buildConnectors(prism);
-    const officeEnabled = officeConfig?.enabled !== false;
+    let officeEnabled = officeConfig?.enabled !== false;
+    const officePeers = ["@office-open/docx", "@office-open/pptx", "@office-open/xlsx", "@office-open/xml", "ajv", "fast-xml-parser"];
+    const missingPeers = officePeers.filter((peer) => {
+      try {
+        import.meta.resolve(peer);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    if (missingPeers.length > 0) {
+      prism.status.note(
+        "warn",
+        `work: optional peers missing: ${missingPeers.join(", ")}; install them to enable Office tools and OOXML reading`,
+      );
+      officeEnabled = false;
+    }
     const workEnabled = prism.config.work?.enabled !== false;
     const sandbox = prism.services.consume<WorkSandbox>("work.sandbox");
 
@@ -257,7 +285,7 @@ const definition = definePackage<ToolsWorkConfig>({
         filesystem,
         ...(prism.config.env ? { env: prism.config.env } : {}),
       });
-      tools.push(...composed.tools);
+      tools.push(...composed.tools.filter((tool) => officeEnabled || !tool.name.startsWith("office_")));
     } else {
       if (officeEnabled) tools.push(...createOfficeTools(officeOptions));
       if (connectors) tools.push(...createWorkTools({ ...connectors, filesystem }));

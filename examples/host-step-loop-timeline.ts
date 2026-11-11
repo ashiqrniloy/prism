@@ -43,7 +43,7 @@ import {
   providerUsage,
   type ToolDefinition,
 } from "@arnilo/prism";
-import { createTimelineFolder } from "@arnilo/prism-observability";
+import { createTimelineFolder } from "@arnilo/prism-extensions/observability";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const STEP_COUNT = 8;

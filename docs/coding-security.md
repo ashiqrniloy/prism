@@ -2,11 +2,11 @@
 
 ## What it does
 
-`@arnilo/prism-tools-coding` is an optional package that supplies structured execution policy for `@arnilo/prism-tools-coding` tools, one disposable Docker/OCI sandbox reference, and an optional E2B hosted sandbox adapter. It complements name-based `PermissionPolicy` at dispatch time with path/command context checked **inside** each tool before side effects, and optionally contains untrusted coding work in a host-invoked container.
+`@arnilo/prism-tools/coding` is an optional package that supplies structured execution policy for `@arnilo/prism-tools/coding` tools, one disposable Docker/OCI sandbox reference, and an optional E2B hosted sandbox adapter. It complements name-based `PermissionPolicy` at dispatch time with path/command context checked **inside** each tool before side effects, and optionally contains untrusted coding work in a host-invoked container.
 
 | Export | Purpose |
 | --- | --- |
-| `ExecutionPolicy`, `enforceExecutionPolicy` | The host's allow/deny rule over an `ExecutionAction` (path, command, kind), checked inside each tool before side effects. Prompting is `@arnilo/prism-approval`'s job. |
+| `ExecutionPolicy`, `enforceExecutionPolicy` | The host's allow/deny rule over an `ExecutionAction` (path, command, kind), checked inside each tool before side effects. Prompting is `@arnilo/prism-extensions/approval`'s job. |
 | `createSandboxBashOperations(adapter)` | Maps a host-owned `SandboxAdapter` to coding-agent `BashOperations` for delegated shell execution. |
 | `createSandboxCodingComposition(cwd, options)` | Authoritative construction: returns `{ tools, composition }` with required `workspaceMode` (`"host"` \| `"sandbox"`), fail-closed mixed wiring, and containment metadata. |
 | `createSandboxReadOnlyComposition(cwd, options)` | Same contract for read-only tools (`read`/`grep`/`glob`). |
@@ -28,7 +28,7 @@
 The contracts live in this package:
 
 ```ts
-import type { ExecutionAction, ExecutionDecision, ExecutionPolicy } from "@arnilo/prism-tools-coding";
+import type { ExecutionAction, ExecutionDecision, ExecutionPolicy } from "@arnilo/prism-tools/coding";
 ```
 
 ## When to use it
@@ -46,7 +46,7 @@ Use `createEgressPolicy()` + `createAllowListEgressProxy()` when a coding agent 
 `createEgressPolicy({ allow, presets })` builds a deny-all policy. Rules are exact `{ host, port, protocol }` triples — no wildcards, no CIDR, no regex. Presets (`npm-registry`, `github`) expand to explicit rule lists at construction. The policy exposes a stable SHA-256 `fingerprint` over the canonical rule set.
 
 ```ts
-import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-tools-coding";
+import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-tools/coding";
 
 const policy = createEgressPolicy({
   allow: [{ host: "api.github.com", port: 443, protocol: "https" }],
@@ -147,10 +147,10 @@ import {
   createDockerSandbox,
   createSandboxCodingComposition,
   type ExecutionPolicy,
-} from "@arnilo/prism-tools-coding";
-import { createGitTools } from "@arnilo/prism-tools-coding";
+} from "@arnilo/prism-tools/coding";
+import { createGitTools } from "@arnilo/prism-tools/coding";
 
-// Prompting is `@arnilo/prism-approval`'s job; an `ExecutionPolicy` is a synchronous allow/deny rule.
+// Prompting is `@arnilo/prism-extensions/approval`'s job; an `ExecutionPolicy` is a synchronous allow/deny rule.
 const policy: ExecutionPolicy = {
   check: (action) =>
     action.kind === "read" || action.command === "npm test"
@@ -198,11 +198,11 @@ await sandbox.close({
 
 Policies are ordinary host values: attach one globally through `createCodingTools()`/`createReadOnlyTools()`/`createSandboxCodingComposition()` or per tool. A per-tool policy overrides the shared policy. `SandboxAdapter` / `DisposableSandbox` are replaceable and host-owned; approval policy and sandboxing are separate layers. Custom remote sandboxes can implement `DisposableSandbox` without using Docker.
 
-`createSandboxCodingComposition()` requires `workspaceMode`. Sandbox mode auto-wires FS/list/search through `DisposableSandbox.execFile` (or host-supplied custom operations) so mutations stay on the disposable tree until export. Host mode runs every coding tool against the host cwd and reports no isolation capability (`containmentClaim` deprecated false). Sandbox shell + host FS throws unless `allowMixedWorkspaceWiring: true` (warnings + all capabilities false). Opt-in structured Git tools (`createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`) share the same tree/cwd; Prism still never pushes or opens PRs. Optional `@arnilo/prism-tools-web` can share the same disposable boundary: use `assertBrowserSandboxNetwork()` before browse-ready custom networks, and `createSharedSandboxBrowserOptions({ workspaceRoot, downloadsRoot, containedProxyAttestation })` so uploads/downloads align with `/workspace` and `/downloads`. Close the browser context before disposing the sandbox.
+`createSandboxCodingComposition()` requires `workspaceMode`. Sandbox mode auto-wires FS/list/search through `DisposableSandbox.execFile` (or host-supplied custom operations) so mutations stay on the disposable tree until export. Host mode runs every coding tool against the host cwd and reports no isolation capability (`containmentClaim` deprecated false). Sandbox shell + host FS throws unless `allowMixedWorkspaceWiring: true` (warnings + all capabilities false). Opt-in structured Git tools (`createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`) share the same tree/cwd; Prism still never pushes or opens PRs. Optional `@arnilo/prism-tools/web` can share the same disposable boundary: use `assertBrowserSandboxNetwork()` before browse-ready custom networks, and `createSharedSandboxBrowserOptions({ workspaceRoot, downloadsRoot, containedProxyAttestation })` so uploads/downloads align with `/workspace` and `/downloads`. Close the browser context before disposing the sandbox.
 
 The Docker reference adapter starts by recorded container ID/label, uses argument arrays only, mounts source read-only, populates a size-bounded tmpfs `/workspace`, drops all capabilities, enables `no-new-privileges`, runs with `--init`, and never exposes the Docker socket, privileged mode, or host PID/IPC namespaces. Image pull/build/update stays outside Prism. Protected real-Docker checks are opt-in via `PRISM_TEST_DOCKER_SANDBOX=1` with host-supplied `PRISM_TEST_DOCKER_BIN` and digest-pinned `PRISM_TEST_DOCKER_IMAGE`.
 
-Callback approval remains process-local. For approval that must survive restart, register `@arnilo/prism-approval`: an `ask` decision suspends the run durably and `session.resume(decisions)` continues it, or gate a workflow step with `humanGate` from `@arnilo/prism-workflows`. `ask_user_decision` also maps onto the shared decision model: inside a durable gated agent run its call suspends as a kind-`elicitation` pending decision whose schema carries the choice contract (option-id enums) plus the full question/options UX payload on a Prism-owned schema extension property; the resume decision's `elicitation` payload (a `selectedId`/`selectedIds`/`customText` answer) is validated against the schema and the tool-level answer-shape rules, then resolves the call without invoking the blocking `ask()` callback. The process-local `ask()` path and the workflow suspend/resume path are unchanged. The workflow persists `suspended` state before any tool side effect. After explicit approve, it recomputes the action and invokes this package's current `ExecutionPolicy`; durable approval never populates or bypasses the process-local approval cache. Adapters should emit chunks through `request.onData` as they arrive and honor `request.signal`/`request.timeout`; buffering is unnecessary. Coding-agent composes caller abort with its total-output controller, so ignoring the supplied signal defeats process termination even though Prism stops retaining output at the cap. Default caching is `none`; use run-scoped caching only when repeated approval within one run is desired, and session scope only when that wider lifecycle is intentional.
+Callback approval remains process-local. For approval that must survive restart, register `@arnilo/prism-extensions/approval`: an `ask` decision suspends the run durably and `session.resume(decisions)` continues it, or gate a workflow step with `humanGate` from `@arnilo/prism-extensions/workflows`. `ask_user_decision` also maps onto the shared decision model: inside a durable gated agent run its call suspends as a kind-`elicitation` pending decision whose schema carries the choice contract (option-id enums) plus the full question/options UX payload on a Prism-owned schema extension property; the resume decision's `elicitation` payload (a `selectedId`/`selectedIds`/`customText` answer) is validated against the schema and the tool-level answer-shape rules, then resolves the call without invoking the blocking `ask()` callback. The process-local `ask()` path and the workflow suspend/resume path are unchanged. The workflow persists `suspended` state before any tool side effect. After explicit approve, it recomputes the action and invokes this package's current `ExecutionPolicy`; durable approval never populates or bypasses the process-local approval cache. Adapters should emit chunks through `request.onData` as they arrive and honor `request.signal`/`request.timeout`; buffering is unnecessary. Coding-agent composes caller abort with its total-output controller, so ignoring the supplied signal defeats process termination even though Prism stops retaining output at the cap. Default caching is `none`; use run-scoped caching only when repeated approval within one run is desired, and session scope only when that wider lifecycle is intentional.
 
 ## Security and performance notes
 
@@ -225,7 +225,7 @@ A native Windows backend (Job objects / AppContainer) is tracked, not scheduled.
 - [Work sandbox](../packages/tools/work/README.md): work image + `createWorkComposition`; host injects `createDockerSandbox` (prism-work does not fork it)
 - [Coding agent tools](../packages/tools/coding/README.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime
 - [Hosted sandboxes](../packages/tools/coding/README.md): E2B pause/resume adapter, filesystem-only snapshots, reconnect by sandbox id
-- [Workflows](../packages/integrations/workflows/README.md): `runWorkflow` / `resumeWorkflow` / `startWorkflow` composition for coding tasks
+- [Workflows](../packages/extensions/workflows/README.md): `runWorkflow` / `resumeWorkflow` / `startWorkflow` composition for coding tasks
 - [Host security guide](host-security.md)
 - [Performance limits](performance.md)
 - [Forge integration](../packages/tools/coding/README.md): GitHub adapter whose mutations can be routed through the egress proxy

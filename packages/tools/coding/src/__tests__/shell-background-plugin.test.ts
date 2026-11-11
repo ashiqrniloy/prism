@@ -52,7 +52,7 @@ function backgroundProvider(): ReturnType<typeof mockProvider> {
   );
 }
 
-describe("@arnilo/prism-tools-coding background processes", () => {
+describe("@arnilo/prism-tools/coding background processes", () => {
   it("background_processes_killed_on_session_close", async () => {
     const root = await tempRoot();
     const agent = await createAgent({

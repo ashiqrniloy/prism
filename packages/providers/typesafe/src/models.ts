@@ -7,7 +7,6 @@ export const TYPESAFE_API_KEY_ENV = "TYPESAFE_API_KEY";
 /** The `apiKey` ref used when config names none. */
 export const TYPESAFE_DEFAULT_API_KEY_REF = "env:TYPESAFE_API_KEY";
 
-
 /** Jev answers typed questions in one pass — it never generates free text, streams, or calls tools. */
 const DECISION_CAPABILITIES = {
   input: ["text"],

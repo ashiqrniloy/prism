@@ -15,15 +15,15 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createHashEmbedder, lexicalTerms } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
+import { createHashEmbedder, lexicalTerms } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
 import memorySystem, {
   createLongTermMemory,
   createMemory,
   parseMemoryNoteMetadata,
   resolveMemoryFabricConfig,
 } from "@arnilo/prism-memory-system";
-import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-rag";
+import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-knowledge/rag";
 import { parseNoteFile } from "../../packages/memory/core/src/fabric/okf.ts";
 import { scanScopedMemoryContent } from "../../packages/memory/core/src/trust.ts";
 import {

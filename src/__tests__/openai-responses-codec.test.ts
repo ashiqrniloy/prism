@@ -95,7 +95,11 @@ describe("OpenAI Responses codec: body (plan 204 Task 3)", () => {
       { role: "developer", content: [{ type: "input_text", text: "Cite sources." }] },
       "later system content is a developer message",
     );
-    assert.equal(input.some((item) => item.role === "system"), false, "no system-role items on the wire");
+    assert.equal(
+      input.some((item) => item.role === "system"),
+      false,
+      "no system-role items on the wire",
+    );
     assert.deepEqual(input[1], { role: "user", content: [{ type: "input_text", text: "hi" }] });
   });
 
@@ -117,10 +121,7 @@ describe("OpenAI Responses codec: body (plan 204 Task 3)", () => {
     // provider can decrypt its own blob; the item id keeps the reasoning chain aligned.
     assert.equal((input[0] as JsonObject).encrypted_content, reasoningItem.encrypted_content);
     assert.deepEqual((input[0] as JsonObject).summary, reasoningItem.summary);
-    assert.equal(
-      JSON.stringify((input[0] as JsonObject).summary),
-      JSON.stringify(JSON.parse(JSON.stringify(reasoningItem.summary))),
-    );
+    assert.equal(JSON.stringify((input[0] as JsonObject).summary), JSON.stringify(JSON.parse(JSON.stringify(reasoningItem.summary))));
   });
 
   it("responses_body_omit_fields_applied_last", () => {
@@ -228,7 +229,7 @@ describe("OpenAI Responses codec: events (plan 204 Task 3)", () => {
     { type: "response.created", response: { id: "resp_1", status: "in_progress" }, sequence_number: 0 },
     { type: "response.in_progress", response: { id: "resp_1", status: "in_progress" }, sequence_number: 1 },
     { type: "response.output_item.added", item: { id: "rs_1", type: "reasoning", summary: [] }, output_index: 0, sequence_number: 2 },
-    { type: "response.reasoning_summary_text.delta", item_id: "rs_1", output_index: 0, delta: "Thinking " , sequence_number: 3 },
+    { type: "response.reasoning_summary_text.delta", item_id: "rs_1", output_index: 0, delta: "Thinking ", sequence_number: 3 },
     { type: "response.reasoning_summary_text.delta", item_id: "rs_1", output_index: 0, delta: "it over.", sequence_number: 4 },
     { type: "response.output_item.done", item: reasoningItem, output_index: 0, sequence_number: 5 },
     { type: "response.output_item.added", item: { id: "msg_1", type: "message", role: "assistant" }, output_index: 1, sequence_number: 6 },
@@ -268,7 +269,9 @@ describe("OpenAI Responses codec: events (plan 204 Task 3)", () => {
   it("responses_events_text_reasoning_tools_usage", async () => {
     const events = await eventsOf(liveShapedStream, { provider: "acme" });
 
-    const text_chunks = events.flatMap((event) => (event.type === "content_delta" && event.content.type === "text" ? [event.content.text] : []));
+    const text_chunks = events.flatMap((event) =>
+      event.type === "content_delta" && event.content.type === "text" ? [event.content.text] : [],
+    );
     assert.deepEqual(text_chunks, ["Let me ", "check."], "output_text deltas stream as they arrive");
 
     const thinking = events.flatMap((event) =>
@@ -325,13 +328,15 @@ describe("OpenAI Responses codec: events (plan 204 Task 3)", () => {
     assert.match(error.error.message, /invalid_request_error/);
     assert.match(error.error.message, /tools\[0\]/, "the wire param is preserved");
     assert.equal(error.error.failureClass, "unknown");
-    assert.equal(events.some((event) => event.type === "done"), false, "no done follows a failure");
+    assert.equal(
+      events.some((event) => event.type === "done"),
+      false,
+      "no done follows a failure",
+    );
   });
 
   it("responses_error_event_is_classified_error", async () => {
-    const error = terminalError(
-      await eventsOf([{ type: "error", code: 429, message: "Rate limit reached", param: null }]),
-    );
+    const error = terminalError(await eventsOf([{ type: "error", code: 429, message: "Rate limit reached", param: null }]));
     assert.equal(error.error.code, 429);
     assert.equal(error.error.failureClass, "rate_limited");
   });
@@ -368,14 +373,10 @@ describe("OpenAI Responses codec: events (plan 204 Task 3)", () => {
         usage: { input_tokens: 10, output_tokens: 16, total_tokens: 26 },
       },
     };
-    const length = await eventsOf([
-      { ...base, response: { ...base.response, incomplete_details: { reason: "max_output_tokens" } } },
-    ]);
+    const length = await eventsOf([{ ...base, response: { ...base.response, incomplete_details: { reason: "max_output_tokens" } } }]);
     assert.equal((length.at(-1) as Extract<ProviderEvent, { type: "done" }>).stopReason, "max_output_tokens");
 
-    const filtered = await eventsOf([
-      { ...base, response: { ...base.response, incomplete_details: { reason: "content_filter" } } },
-    ]);
+    const filtered = await eventsOf([{ ...base, response: { ...base.response, incomplete_details: { reason: "content_filter" } } }]);
     assert.equal((filtered.at(-1) as Extract<ProviderEvent, { type: "done" }>).stopReason, "content_filter");
   });
 
@@ -385,7 +386,11 @@ describe("OpenAI Responses codec: events (plan 204 Task 3)", () => {
       { type: "response.output_text.delta", item_id: "msg_1", output_index: 0, delta: "partial" },
     ]);
     terminalError(events);
-    assert.equal(events.some((event) => event.type === "done"), false, "a truncated stream never reports done");
+    assert.equal(
+      events.some((event) => event.type === "done"),
+      false,
+      "a truncated stream never reports done",
+    );
 
     const lenient = await eventsOf(
       [
@@ -430,8 +435,7 @@ describe("OpenAI Responses codec: overflow (plan 204 Task 3)", () => {
     );
     assert.equal(after.error.failureClass, "context_overflow");
 
-    const frameBody = (frames: readonly unknown[]) =>
-      `${frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join("")}`;
+    const frameBody = (frames: readonly unknown[]) => `${frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join("")}`;
     const ok = {
       path: "/responses",
       status: 200,
@@ -545,10 +549,6 @@ describe("OpenAI Responses codec: recorded wire conformance (plan 204 Task 3)", 
         : false,
     );
     assert.equal(replayed.length, 1, "the encrypted reasoning item round-trips through body construction");
-    assert.equal(
-      JSON.stringify(replayed[0]!.input).includes("syntheticencryptedpayload"),
-      true,
-      "the payload is sent back byte-for-byte",
-    );
+    assert.equal(JSON.stringify(replayed[0]!.input).includes("syntheticencryptedpayload"), true, "the payload is sent back byte-for-byte");
   });
 });

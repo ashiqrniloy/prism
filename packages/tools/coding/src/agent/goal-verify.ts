@@ -12,7 +12,7 @@ import {
   type WorkflowCheckpointAdapter,
   type WorkflowResumeValidator,
   type WorkflowRunResult,
-} from "@arnilo/prism-workflows";
+} from "@arnilo/prism-extensions/workflows";
 import {
   assertCodingResumeAllowed,
   buildCodingCheckpointMetadata,
@@ -71,7 +71,7 @@ export interface RunCodingGoalVerifyOptions {
   readonly ownership?: OwnershipScope;
   readonly redactor?: SecretRedactor;
   readonly signal?: AbortSignal;
-  readonly transitions?: import("@arnilo/prism-workflows").WorkflowTransitionChannel;
+  readonly transitions?: import("@arnilo/prism-extensions/workflows").WorkflowTransitionChannel;
   /** Second call after suspension — mirrors workflow resume. */
   readonly resume?: {
     readonly runId: string;

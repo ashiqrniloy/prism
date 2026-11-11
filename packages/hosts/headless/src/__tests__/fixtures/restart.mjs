@@ -1,6 +1,6 @@
 import { askEveryTool, createAgent, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import sqliteStore from "@arnilo/prism-store-sqlite";
+import sqliteStore from "@arnilo/prism-extensions/store-sqlite";
 import { createResumeAuthority, routeHostUi } from "../../index.js";
 
 const [path, mode, id] = process.argv.slice(2);

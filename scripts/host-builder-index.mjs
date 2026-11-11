@@ -1,4 +1,4 @@
-// Plan 215 Task 14: generates the reference indexes that ship inside `@arnilo/prism-host-builder`.
+// Plan 215 Task 14: generates the reference indexes that ship inside `@arnilo/prism-hosts/host-builder`.
 //
 //   bun scripts/host-builder-index.mjs            regenerate packages/hosts/host-builder/data
 //   bun scripts/host-builder-index.mjs --check    fail if the committed data is stale (writes nothing)
@@ -21,6 +21,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { redactSecrets } from "../src/redaction.ts";
+import { activeBundles } from "./bundles.mjs";
 import { loadRelease } from "./release.mjs";
 import { declarationDir, extractEntrySurface } from "./release-gates.mjs";
 
@@ -501,7 +502,13 @@ function ownerOf(root, packages, file) {
 
 function sourceFiles(root, packages) {
   const dirs = [join(root, "src")];
-  for (const pkg of packages) if (pkg.path !== ".") dirs.push(join(root, pkg.path, "src"));
+  const bundles = activeBundles(root);
+  for (const pkg of packages) {
+    if (pkg.path === ".") continue;
+    const bundle = bundles.find((bundle) => bundle.dir === pkg.path);
+    const folders = bundle ? [...new Set(bundle.subpaths.map((row) => row.dir))] : ["."];
+    for (const folder of folders) dirs.push(join(root, pkg.path, folder, "src"));
+  }
   const files = [];
   for (const dir of dirs) {
     files.push(

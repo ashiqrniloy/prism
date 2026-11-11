@@ -20,23 +20,29 @@ export function cohensKappa(a: readonly number[], b: readonly number[], quadrati
   const labels = [...new Set([...a, ...b])];
   if (quadratic) labels.sort((x, y) => x - y);
   const indices = new Map(labels.map((label, i) => [label, i]));
-  const left = new Array<number>(labels.length).fill(0), right = [...left];
+  const left = new Array<number>(labels.length).fill(0),
+    right = [...left];
   let observed = 0;
   for (let i = 0; i < a.length; i++) {
-    const x = indices.get(a[i]!)!, y = indices.get(b[i]!)!;
-    left[x]!++; right[y]!++;
+    const x = indices.get(a[i]!)!,
+      y = indices.get(b[i]!)!;
+    left[x]!++;
+    right[y]!++;
     observed += quadratic ? (x - y) ** 2 : Number(x !== y);
   }
   let expected = 0;
   if (quadratic) {
-    let leftFirst = 0, rightFirst = 0, second = 0;
+    let leftFirst = 0,
+      rightFirst = 0,
+      second = 0;
     for (let i = 0; i < labels.length; i++) {
-      leftFirst += i * left[i]!; rightFirst += i * right[i]!;
+      leftFirst += i * left[i]!;
+      rightFirst += i * right[i]!;
       second += i * i * (left[i]! + right[i]!);
     }
-    expected = second - 2 * leftFirst * rightFirst / a.length;
+    expected = second - (2 * leftFirst * rightFirst) / a.length;
   } else {
-    expected = a.length - left.reduce((sum, count, i) => sum + count * right[i]! / a.length, 0);
+    expected = a.length - left.reduce((sum, count, i) => sum + (count * right[i]!) / a.length, 0);
   }
   return expected === 0 ? undefined : 1 - observed / expected;
 }
@@ -60,7 +66,7 @@ export function spearman(a: readonly number[], b: readonly number[]): number | u
   const ranks = (values: readonly number[]) => {
     const order = values.map((value, index) => ({ value, index })).sort((x, y) => x.value - y.value);
     const output = new Array<number>(values.length);
-    for (let start = 0; start < order.length;) {
+    for (let start = 0; start < order.length; ) {
       let end = start + 1;
       while (end < order.length && order[end]!.value === order[start]!.value) end++;
       for (let i = start; i < end; i++) output[order[i]!.index] = (start + end - 1) / 2;
@@ -68,11 +74,18 @@ export function spearman(a: readonly number[], b: readonly number[]): number | u
     }
     return output;
   };
-  const x = ranks(a), y = ranks(b), mean = (a.length - 1) / 2;
-  let covariance = 0, xx = 0, yy = 0;
+  const x = ranks(a),
+    y = ranks(b),
+    mean = (a.length - 1) / 2;
+  let covariance = 0,
+    xx = 0,
+    yy = 0;
   for (let i = 0; i < a.length; i++) {
-    const dx = x[i]! - mean, dy = y[i]! - mean;
-    covariance += dx * dy; xx += dx * dx; yy += dy * dy;
+    const dx = x[i]! - mean,
+      dy = y[i]! - mean;
+    covariance += dx * dy;
+    xx += dx * dx;
+    yy += dy * dy;
   }
   return xx === 0 || yy === 0 ? undefined : Math.max(-1, Math.min(1, covariance / Math.sqrt(xx * yy)));
 }
@@ -111,8 +124,10 @@ function groups(values: readonly number[], ids: readonly ClusterId[]): number[][
   const grouped = new Map<ClusterId, number[]>();
   for (let i = 0; i < values.length; i++) {
     const id = ids[i]!;
-    check((typeof id === "string" && id.length > 0) || (typeof id === "number" && Number.isFinite(id)),
-      "cluster ids must be nonempty strings or finite numbers");
+    check(
+      (typeof id === "string" && id.length > 0) || (typeof id === "number" && Number.isFinite(id)),
+      "cluster ids must be nonempty strings or finite numbers",
+    );
     const group = grouped.get(id);
     if (group) group.push(values[i]!);
     else grouped.set(id, [values[i]!]);
@@ -123,38 +138,47 @@ function groups(values: readonly number[], ids: readonly ClusterId[]): number[][
 // Acklam's inverse normal rational approximation (absolute error < 4e-9).
 function normalQuantile(p: number): number {
   probability(p);
-  if (p < .02425) {
+  if (p < 0.02425) {
     const q = Math.sqrt(-2 * Math.log(p));
-    return (((((-0.007784894002430293 * q - .3223964580411365) * q - 2.400758277161838) * q -
-      2.549732539343734) * q + 4.374664141464968) * q + 2.938163982698783) /
-      ((((.007784695709041462 * q + .3224671290700398) * q + 2.445134137142996) * q + 3.754408661907416) * q + 1);
+    return (
+      (((((-0.007784894002430293 * q - 0.3223964580411365) * q - 2.400758277161838) * q - 2.549732539343734) * q + 4.374664141464968) * q +
+        2.938163982698783) /
+      ((((0.007784695709041462 * q + 0.3224671290700398) * q + 2.445134137142996) * q + 3.754408661907416) * q + 1)
+    );
   }
-  if (p > 1 - .02425) return -normalQuantile(1 - p);
-  const q = p - .5, r = q * q;
-  return (((((-39.69683028665376 * r + 220.9460984245205) * r - 275.9285104469687) * r +
-    138.357751867269) * r - 30.66479806614716) * r + 2.506628277459239) * q /
-    (((((-54.47609879822406 * r + 161.5858368580409) * r - 155.6989798598866) * r +
-      66.80131188771972) * r - 13.28068155288572) * r + 1);
+  if (p > 1 - 0.02425) return -normalQuantile(1 - p);
+  const q = p - 0.5,
+    r = q * q;
+  return (
+    ((((((-39.69683028665376 * r + 220.9460984245205) * r - 275.9285104469687) * r + 138.357751867269) * r - 30.66479806614716) * r +
+      2.506628277459239) *
+      q) /
+    (((((-54.47609879822406 * r + 161.5858368580409) * r - 155.6989798598866) * r + 66.80131188771972) * r - 13.28068155288572) * r + 1)
+  );
 }
 
 // Abramowitz & Stegun 26.2.17, absolute CDF error < 7.5e-8.
 function normalCdf(x: number): number {
-  const t = 1 / (1 + .2316419 * Math.abs(x));
-  const tail = Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI) * t *
-    (.319381530 + t * (-.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const tail =
+    (Math.exp((-x * x) / 2) / Math.sqrt(2 * Math.PI)) *
+    t *
+    (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
   return x < 0 ? tail : 1 - tail;
 }
 
 /** Wilson (1927): (p + z²/2n ± z sqrt(p(1-p)/n + z²/4n²)) / (1+z²/n). */
-export function wilsonInterval(successes: number, n: number, confidence = .95): Interval {
+export function wilsonInterval(successes: number, n: number, confidence = 0.95): Interval {
   integer(n, 1);
   integer(successes, 0);
   check(successes <= n, "successes must not exceed n");
   probability(confidence);
-  const z = -normalQuantile((1 - confidence) / 2), z2 = z * z, p = successes / n;
+  const z = -normalQuantile((1 - confidence) / 2),
+    z2 = z * z,
+    p = successes / n;
   const denominator = 1 + z2 / n;
   const center = (p + z2 / (2 * n)) / denominator;
-  const radius = z * Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / denominator;
+  const radius = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denominator;
   return { low: successes === 0 ? 0 : Math.max(0, center - radius), high: successes === n ? 1 : Math.min(1, center + radius) };
 }
 
@@ -168,22 +192,25 @@ export function clusteredStandardError(values: readonly number[], clusterIds: re
     const residual = cluster.reduce((total, value) => total + (value - mean) / values.length, 0);
     return sum + residual * residual;
   }, 0);
-  return finite(Math.sqrt(clusters.length / (clusters.length - 1) * squares));
+  return finite(Math.sqrt((clusters.length / (clusters.length - 1)) * squares));
 }
 
 /** Efron & Tibshirani (1993), percentile bootstrap: empirical α/2 and 1-α/2 quantiles.
  * Draw N observations or G whole clusters with replacement; unequal clusters retain their sizes.
  * Runtime is O(resamples × n) for a linear-time statistic, plus sorting the resampled statistics.
  */
-export function bootstrapInterval(values: readonly number[], options: {
-  statistic: (values: readonly number[]) => number;
-  resamples?: number;
-  confidence?: number;
-  seed: number;
-  clusterIds?: readonly ClusterId[];
-}): Interval {
+export function bootstrapInterval(
+  values: readonly number[],
+  options: {
+    statistic: (values: readonly number[]) => number;
+    resamples?: number;
+    confidence?: number;
+    seed: number;
+    clusterIds?: readonly ClusterId[];
+  },
+): Interval {
   sample(values);
-  const { statistic, resamples = 2000, confidence = .95, seed, clusterIds } = options;
+  const { statistic, resamples = 2000, confidence = 0.95, seed, clusterIds } = options;
   probability(confidence);
   const random = resampling(resamples, seed);
   check(typeof statistic === "function", "statistic must be a function");
@@ -207,7 +234,9 @@ export function bootstrapInterval(values: readonly number[], options: {
   }
   draws.sort((a, b) => a - b);
   const quantile = (p: number) => {
-    const index = (draws.length - 1) * p, lower = Math.floor(index), weight = index - lower;
+    const index = (draws.length - 1) * p,
+      lower = Math.floor(index),
+      weight = index - lower;
     return finite(draws[lower]! * (1 - weight) + draws[Math.ceil(index)]! * weight);
   };
   return { low: quantile((1 - confidence) / 2), high: quantile(1 - (1 - confidence) / 2) };
@@ -220,7 +249,8 @@ export function mcnemarExact(aOnly: number, bOnly: number): number {
   const n = aOnly + bOnly;
   integer(n, 0);
   if (!n) return 1;
-  let logTerm = -n * Math.log(2), sum = 0;
+  let logTerm = -n * Math.log(2),
+    sum = 0;
   for (let k = 0; k <= Math.min(aOnly, bOnly); k++) {
     sum += Math.exp(logTerm);
     logTerm += Math.log(n - k) - Math.log(k + 1);
@@ -233,7 +263,8 @@ export function mcnemarExact(aOnly: number, bOnly: number): number {
  */
 export function pairedPermutationTest(differences: readonly number[], options: { resamples?: number; seed: number }): number {
   sample(differences);
-  const { resamples = 10000, seed } = options, random = resampling(resamples, seed);
+  const { resamples = 10000, seed } = options,
+    random = resampling(resamples, seed);
   // Scaling keeps sums finite and comparisons invariant, even for very large finite inputs.
   let scale = 0;
   for (const value of differences) scale = Math.max(scale, Math.abs(value));
@@ -241,11 +272,12 @@ export function pairedPermutationTest(differences: readonly number[], options: {
   const values = differences.map((value) => value / scale);
   const observed = Math.abs(values.reduce((sum, value) => sum + value, 0));
   const tolerance = 8 * Number.EPSILON * values.reduce((sum, value) => sum + Math.abs(value), 0);
-  const exact = values.length <= 16, draws = exact ? 2 ** values.length : resamples;
+  const exact = values.length <= 16,
+    draws = exact ? 2 ** values.length : resamples;
   let extreme = 0;
   for (let i = 0; i < draws; i++) {
     let sum = 0;
-    for (let j = 0; j < values.length; j++) sum += values[j]! * ((exact ? (i >>> j) & 1 : random() < .5) ? 1 : -1);
+    for (let j = 0; j < values.length; j++) sum += values[j]! * ((exact ? (i >>> j) & 1 : random() < 0.5) ? 1 : -1);
     if (Math.abs(sum) >= observed - tolerance) extreme++;
   }
   return exact ? extreme / draws : (extreme + 1) / (draws + 1);
@@ -254,7 +286,10 @@ export function pairedPermutationTest(differences: readonly number[], options: {
 /** Benjamini & Hochberg (1995): q_(i) = min_{j≥i}(1, m p_(j)/j), restored to input order. */
 export function benjaminiHochberg(pValues: readonly number[]): number[] {
   sample(pValues);
-  check(pValues.every((p) => p >= 0 && p <= 1), "p-values must be in [0, 1]");
+  check(
+    pValues.every((p) => p >= 0 && p <= 1),
+    "p-values must be in [0, 1]",
+  );
   const order = pValues.map((p, index) => ({ p, index })).sort((a, b) => a.p - b.p);
   const adjusted = new Array<number>(pValues.length);
   let next = 1;
@@ -307,15 +342,16 @@ function powerParameters(discordantRate: number, n: number, alpha: number): void
  * q=discordantRate, d=|effect|: Φ((-z√q-√n d)/√(q-d²)) + Φ((√n d-z√q)/√(q-d²)).
  */
 export function pairedProportionPower(options: { discordantRate: number; effect: number; n: number; alpha?: number }): number {
-  const { discordantRate: q, effect, n, alpha = .05 } = options;
+  const { discordantRate: q, effect, n, alpha = 0.05 } = options;
   powerParameters(q, n, alpha);
   finite(effect);
   const d = Math.abs(effect);
   check(d <= q, "absolute effect must not exceed discordantRate");
   if (d === 0) return alpha;
-  const cutoff = -normalQuantile(alpha / 2) * Math.sqrt(q), shift = Math.sqrt(n) * d;
+  const cutoff = -normalQuantile(alpha / 2) * Math.sqrt(q),
+    shift = Math.sqrt(n) * d;
   const sd = Math.sqrt(q - d * d);
-  if (sd === 0) return shift > cutoff ? 1 : shift === cutoff ? .5 : 0;
+  if (sd === 0) return shift > cutoff ? 1 : shift === cutoff ? 0.5 : 0;
   return Math.min(1, normalCdf((-cutoff - shift) / sd) + normalCdf((shift - cutoff) / sd));
 }
 
@@ -323,17 +359,20 @@ export function pairedProportionPower(options: { discordantRate: number; effect:
  * Throws if the requested power is unattainable for this n and discordant rate.
  */
 export function minimumDetectableEffect(options: { discordantRate: number; n: number; alpha?: number; power?: number }): number {
-  const { discordantRate, n, alpha = .05, power = .8 } = options;
+  const { discordantRate, n, alpha = 0.05, power = 0.8 } = options;
   powerParameters(discordantRate, n, alpha);
   probability(power);
   check(power > alpha, "target power must exceed alpha");
   const at = (effect: number) => pairedProportionPower({ discordantRate, n, alpha, effect });
-  let low = 0, high = discordantRate;
+  let low = 0,
+    high = discordantRate;
   // At very small n the normal approximation can peak before the feasible endpoint.
   if (at(high) < power) {
-    let left = 0, right = high;
+    let left = 0,
+      right = high;
     for (let i = 0; i < 60; i++) {
-      const a = left + (right - left) / 3, b = right - (right - left) / 3;
+      const a = left + (right - left) / 3,
+        b = right - (right - left) / 3;
       if (at(a) < at(b)) left = a;
       else right = b;
     }
@@ -359,7 +398,7 @@ export function powerAnalysis(options: {
   power?: number;
   expectedDiscordance?: number;
 }): { items: number } {
-  const { baselinePassRate: p, minimumDetectableDrop: d, alpha = .05, power = .8 } = options;
+  const { baselinePassRate: p, minimumDetectableDrop: d, alpha = 0.05, power = 0.8 } = options;
   finite(p);
   finite(d);
   check(p > 0 && p <= 1, "baselinePassRate must be in (0, 1]");
@@ -368,10 +407,10 @@ export function powerAnalysis(options: {
   powerParameters(q, 1, alpha);
   probability(power);
   check(power > alpha, "target power must exceed alpha");
-  check(q >= d && q <= Math.min(2 * p - d, 2 * (1 - p) + d),
-    "expectedDiscordance is infeasible for the baseline and candidate pass rates");
+  check(q >= d && q <= Math.min(2 * p - d, 2 * (1 - p) + d), "expectedDiscordance is infeasible for the baseline and candidate pass rates");
   const at = (n: number) => pairedProportionPower({ discordantRate: q, effect: d, n, alpha });
-  let low = 0, high = 1;
+  let low = 0,
+    high = 1;
   while (at(high) < power) {
     check(high < Number.MAX_SAFE_INTEGER, "required item count exceeds the safe integer range");
     low = high;
@@ -385,27 +424,31 @@ export function powerAnalysis(options: {
   return { items: high };
 }
 
-
 /** Maximize quality and minimize cost (Kapoor et al. 2024); equal points all survive. */
 export function paretoFrontier<T>(
   reports: readonly T[],
   axes: { readonly quality: (report: T) => number; readonly cost: (report: T) => number },
 ): T[] {
-  const points = reports.map(report => {
-    const quality = finite(axes.quality(report)), cost = axes.cost(report);
-    // Infinity represents unavailable billing, as in the report selection example.
-    check(Number.isFinite(cost) || cost === Infinity, "Pareto cost must be finite or positive Infinity");
-    return { report, quality, cost };
-  }).sort((a, b) => a.cost - b.cost || b.quality - a.quality);
-  let best = -Infinity, bestCost = Infinity;
-  return points.filter(point => {
-    if (point.quality < best || (point.quality === best && point.cost > bestCost)) return false;
-    best = point.quality;
-    bestCost = point.cost;
-    return true;
-  }).map(point => point.report);
+  const points = reports
+    .map((report) => {
+      const quality = finite(axes.quality(report)),
+        cost = axes.cost(report);
+      // Infinity represents unavailable billing, as in the report selection example.
+      check(Number.isFinite(cost) || cost === Infinity, "Pareto cost must be finite or positive Infinity");
+      return { report, quality, cost };
+    })
+    .sort((a, b) => a.cost - b.cost || b.quality - a.quality);
+  let best = -Infinity,
+    bestCost = Infinity;
+  return points
+    .filter((point) => {
+      if (point.quality < best || (point.quality === best && point.cost > bestCost)) return false;
+      best = point.quality;
+      bestCost = point.cost;
+      return true;
+    })
+    .map((point) => point.report);
 }
-
 
 /** Fleiss (1971): (observed pair agreement − chance agreement) / (1 − chance).
  * Rows are items, columns are judge labels; all rows need the same number of judges.
@@ -426,7 +469,7 @@ export function fleissKappa(labels: readonly (readonly string[])[]): number | un
       counts.set(label, (counts.get(label) ?? 0) + 1);
       totals.set(label, (totals.get(label) ?? 0) + 1);
     }
-    for (const count of counts.values()) observed += count * (count - 1) / (raters * (raters - 1)) / labels.length;
+    for (const count of counts.values()) observed += (count * (count - 1)) / (raters * (raters - 1)) / labels.length;
   }
   if (totals.size === 1) return undefined;
   let chance = 0;
@@ -438,35 +481,49 @@ export function fleissKappa(labels: readonly (readonly string[])[]): number | un
  * Returns null without a strongly connected win graph or convergence in 1,000 steps.
  * Strengths have geometric mean 1; no pseudocounts or regularization are added.
  */
-export function bradleyTerry(pairs: readonly {
-  readonly left: string; readonly right: string; readonly preference: "left" | "right" | "tie";
-}[]): Readonly<Record<string, number>> | null {
-  const names = [...new Set(pairs.flatMap(pair => [pair.left, pair.right]))].sort();
+export function bradleyTerry(
+  pairs: readonly {
+    readonly left: string;
+    readonly right: string;
+    readonly preference: "left" | "right" | "tie";
+  }[],
+): Readonly<Record<string, number>> | null {
+  const names = [...new Set(pairs.flatMap((pair) => [pair.left, pair.right]))].sort();
   if (!names.length) return null;
   const indices = new Map(names.map((name, i) => [name, i]));
-  const n = names.length, wins = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  const n = names.length,
+    wins = Array.from({ length: n }, () => new Array<number>(n).fill(0));
   for (const pair of pairs) {
-    check(typeof pair.left === "string" && pair.left.trim().length > 0 &&
-      typeof pair.right === "string" && pair.right.trim().length > 0 && pair.left !== pair.right &&
-      ["left", "right", "tie"].includes(pair.preference), "invalid Bradley–Terry pair");
-    const i = indices.get(pair.left)!, j = indices.get(pair.right)!;
-    wins[i]![j]! += pair.preference === "left" ? 1 : pair.preference === "tie" ? .5 : 0;
-    wins[j]![i]! += pair.preference === "right" ? 1 : pair.preference === "tie" ? .5 : 0;
+    check(
+      typeof pair.left === "string" &&
+        pair.left.trim().length > 0 &&
+        typeof pair.right === "string" &&
+        pair.right.trim().length > 0 &&
+        pair.left !== pair.right &&
+        ["left", "right", "tie"].includes(pair.preference),
+      "invalid Bradley–Terry pair",
+    );
+    const i = indices.get(pair.left)!,
+      j = indices.get(pair.right)!;
+    wins[i]![j]! += pair.preference === "left" ? 1 : pair.preference === "tie" ? 0.5 : 0;
+    wins[j]![i]! += pair.preference === "right" ? 1 : pair.preference === "tie" ? 0.5 : 0;
   }
   // Reachability in both directions from one vertex proves strong connectivity.
   for (const reverse of [false, true]) {
-    const seen = new Set([0]), pending = [0];
+    const seen = new Set([0]),
+      pending = [0];
     while (pending.length) {
       const i = pending.pop()!;
       for (let j = 0; j < n; j++) {
         if ((reverse ? wins[j]![i]! : wins[i]![j]!) > 0 && !seen.has(j)) {
-          seen.add(j); pending.push(j);
+          seen.add(j);
+          pending.push(j);
         }
       }
     }
     if (seen.size !== n) return null;
   }
-  const totals = wins.map(row => row.reduce((sum, value) => sum + value, 0));
+  const totals = wins.map((row) => row.reduce((sum, value) => sum + value, 0));
   let strengths = new Array<number>(n).fill(1);
   for (let iteration = 0; iteration < 1000; iteration++) {
     const next = totals.map((total, i) => {
@@ -490,19 +547,13 @@ export function bradleyTerry(pairs: readonly {
 }
 
 /** Horvitz & Thompson (1952); Hájek (1971) ratio estimator: (Σ y_i/π_i) / (Σ 1/π_i), with percentile bootstrap CI. */
-export function estimateOnline(
-  records: readonly EvaluationRecord[],
-  options?: EstimateOnlineOptions,
-): OnlineEstimate {
+export function estimateOnline(records: readonly EvaluationRecord[], options?: EstimateOnlineOptions): OnlineEstimate {
   check(Array.isArray(records) && records.length > 0, "estimateOnline requires a nonempty record array");
   const requestedScorerId = options?.scorerId;
   if (requestedScorerId !== undefined) {
     check(typeof requestedScorerId === "string" && requestedScorerId.trim().length > 0, "scorerId must be a nonempty string");
   }
-  const matching =
-    requestedScorerId === undefined
-      ? records
-      : records.filter((record) => record && record.scorerId === requestedScorerId);
+  const matching = requestedScorerId === undefined ? records : records.filter((record) => record && record.scorerId === requestedScorerId);
   check(matching.length > 0, "estimateOnline requires at least one record for the scorer");
   const scorerIds = new Set(matching.map((record) => record?.scorerId));
   check(

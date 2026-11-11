@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { type Agent, type ModelProvider, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
 import { createChannelStateStore, createChannelRuntime } from "../index.js";
 import type { ChannelAuthorization, ChannelInboundEvent, ChannelReply, ChannelRuntimeOptions } from "../types.js";
 import { providerPackage } from "@arnilo/prism/provider-kit";
@@ -86,10 +86,19 @@ function hangingProvider(calls: { count: number }): ModelProvider {
 }
 
 async function agentWith(provider: ModelProvider, persistence: ReturnType<typeof createSqlitePersistence>): Promise<Agent> {
-  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store: persistence } });
+  return await createAgent({
+    id: "channel-agent",
+    model: { provider: "mock", model: "demo" },
+    packages: [providerPackage("test-provider", [provider])],
+    slots: { store: persistence },
+  });
 }
 
-async function host(persistence: ReturnType<typeof createSqlitePersistence>, provider: ModelProvider, rest: Partial<ChannelRuntimeOptions> = {}) {
+async function host(
+  persistence: ReturnType<typeof createSqlitePersistence>,
+  provider: ModelProvider,
+  rest: Partial<ChannelRuntimeOptions> = {},
+) {
   const delivered: ChannelReply[] = [];
   const agent = await agentWith(provider, persistence);
   const runtime = createChannelRuntime(agent, {

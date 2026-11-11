@@ -26,12 +26,7 @@ import type {
   ToolResult,
   Usage,
 } from "../../contracts.js";
-import {
-  AgentDecisionError,
-  AgentDelegationSuspendedError,
-  HARD_MAX_PENDING_DECISIONS,
-  MAX_ATTRIBUTION_DEPTH,
-} from "../../contracts.js";
+import { AgentDecisionError, AgentDelegationSuspendedError, HARD_MAX_PENDING_DECISIONS, MAX_ATTRIBUTION_DEPTH } from "../../contracts.js";
 import { toToolResultMessage } from "../../input.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../../tool-effects.js";
 import { dispatchToolCall, resolveToolEffectDeclaration } from "../../tools.js";

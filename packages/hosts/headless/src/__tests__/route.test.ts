@@ -2,7 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { expect, test } from "bun:test";
 import { createAgent, type HostUi, type HostUiResponse } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import approval from "@arnilo/prism-approval";
+import approval from "@arnilo/prism-extensions/approval";
 import { policyDefault, routeHostUi } from "../index.js";
 
 const ui = (answer: HostUiResponse): HostUi => ({

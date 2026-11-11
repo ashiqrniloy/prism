@@ -192,7 +192,7 @@ export async function buildPreservationRecord({ base, equivalencePath }) {
       moves: [
         {
           task: 3,
-          move: "ontology out of the fabric into @arnilo/prism-wiki",
+          move: "ontology out of the fabric into @arnilo/prism-knowledge/wiki",
           fixtures: [`${GOLDEN} (conversational and coding presets, 12 requests each)`],
           result: "re-pinned (attributed); measured in-tree before the base commit",
           attributedDifferences: slimmed.byteIdenticalTest.repinned

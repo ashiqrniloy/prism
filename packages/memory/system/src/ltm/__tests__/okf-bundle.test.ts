@@ -10,9 +10,15 @@ import { join } from "node:path";
 
 import { createAgent, type JsonObject } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import memorySystem, { createMemory, createLongTermMemory, exportMemoryOkf, importMemoryOkf, parseMemoryNoteMetadata } from "../../index.js";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
+import memorySystem, {
+  createMemory,
+  createLongTermMemory,
+  exportMemoryOkf,
+  importMemoryOkf,
+  parseMemoryNoteMetadata,
+} from "../../index.js";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -163,7 +169,10 @@ describe("fabric OKF bundle (plan 188.1 Task 7)", () => {
 
   it("okf_commands_refuse_without_root_and_outside_jail", async () => {
     const script = [[providerTextDelta("ok"), providerDone()]] as const;
-    const noRoot = await createAgent({ model: { provider: "mock", model: "main" }, packages: [mockProvider(script), memorySystem({ ltm: {} })] });
+    const noRoot = await createAgent({
+      model: { provider: "mock", model: "main" },
+      packages: [mockProvider(script), memorySystem({ ltm: {} })],
+    });
     try {
       const session = await noRoot.session({ id: "noroot", create: true });
       await session.run("hi");

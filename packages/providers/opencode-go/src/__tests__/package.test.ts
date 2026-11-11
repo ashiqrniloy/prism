@@ -41,7 +41,7 @@ function completion(): ReadableStream<Uint8Array> {
   ]);
 }
 
-describe("@arnilo/prism-provider-opencode-go package", () => {
+describe("@arnilo/prism-ai/opencode-go package", () => {
   it("opencode-go_passes_package_conformance", async () => {
     const result = await packageConformance(opencodeGoDefinition, { config: { apiKey: "env:PRISM_TEST_OPENCODE_GO_CONFORMANCE" } });
     assert.deepEqual(
@@ -148,10 +148,13 @@ describe("@arnilo/prism-provider-opencode-go package", () => {
     const urls: string[] = [];
     const fetchImpl = (async (input: RequestInfo | URL) => {
       urls.push(String(input));
-      return new Response(JSON.stringify({ object: "list", data: [{ id: "opencode-go-discovered", object: "model", created: 1, owned_by: "opencode-go" }] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ object: "list", data: [{ id: "opencode-go-discovered", object: "model", created: 1, owned_by: "opencode-go" }] }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
     }) as typeof fetch;
     const agent = await createAgent({
       model: { provider: "opencode-go", model: model.model },
@@ -161,8 +164,14 @@ describe("@arnilo/prism-provider-opencode-go package", () => {
       assert.deepEqual(urls, [], "no discovery at setup");
       const listed = await agent.models.list();
       assert.deepEqual(urls, ["https://opencode.ai/zen/go/v1/models"]);
-      assert.ok(listed.some((entry) => entry.model === "opencode-go-discovered"), "the discovered model is listed");
-      assert.ok(listed.some((entry) => entry.model === model.model), "the configured model is always listed");
+      assert.ok(
+        listed.some((entry) => entry.model === "opencode-go-discovered"),
+        "the discovered model is listed",
+      );
+      assert.ok(
+        listed.some((entry) => entry.model === model.model),
+        "the configured model is always listed",
+      );
     } finally {
       await agent.dispose();
       if (previous === undefined) delete process.env.PRISM_TEST_OPENCODE_GO_KEY;

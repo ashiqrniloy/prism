@@ -36,44 +36,50 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "custom-loop",
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore(), loop: planThenAct },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate(request) {
-        turn += 1;
-        if (turn === 1) {
-          yield { type: "tool_call" as const, call: toolCallContent("n1", "fetch_url", { url: "https://example.com" }) };
-          yield { type: "tool_call" as const, call: toolCallContent("r1", "read_file", { path: "README.md" }) };
-          yield providerDone();
-          return;
-        }
-        // The denied call reached the model as an ordinary tool result on the next turn.
-        sawDenial = request.messages.some((message) =>
-          message.content.some((block) => block.type === "tool_result" && block.error?.code === "hook_denied"),
-        );
-        yield providerTextDelta(sawDenial ? "network denied; used the local file" : "no denial seen");
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate(request) {
+            turn += 1;
+            if (turn === 1) {
+              yield { type: "tool_call" as const, call: toolCallContent("n1", "fetch_url", { url: "https://example.com" }) };
+              yield { type: "tool_call" as const, call: toolCallContent("r1", "read_file", { path: "README.md" }) };
+              yield providerDone();
+              return;
+            }
+            // The denied call reached the model as an ordinary tool result on the next turn.
+            sawDenial = request.messages.some((message) =>
+              message.content.some((block) => block.type === "tool_result" && block.error?.code === "hook_denied"),
+            );
+            yield providerTextDelta(sawDenial ? "network denied; used the local file" : "no denial seen");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     hooks: (hooks) => {
       hooks.on("tool.call", (call) => (call.name === "fetch_url" ? { deny: "network access is disabled" } : "allow"));
     },
-    tools: { add: [
-      {
-        name: "fetch_url",
-        parameters: {},
-        execute: () => {
-          throw new Error("the network tool must never run");
+    tools: {
+      add: [
+        {
+          name: "fetch_url",
+          parameters: {},
+          execute: () => {
+            throw new Error("the network tool must never run");
+          },
         },
-      },
-      {
-        name: "read_file",
-        parameters: {},
-        execute: (_args, context) => {
-          executed.push("read_file");
-          return { toolCallId: context.toolCallId, name: "read_file", value: "contents" };
+        {
+          name: "read_file",
+          parameters: {},
+          execute: (_args, context) => {
+            executed.push("read_file");
+            return { toolCallId: context.toolCallId, name: "read_file", value: "contents" };
+          },
         },
-      },
-    ] },
+      ],
+    },
   });
 
   const result = await (await agent.session()).run("plan then act");

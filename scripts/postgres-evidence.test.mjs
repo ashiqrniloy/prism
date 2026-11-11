@@ -43,8 +43,8 @@ test("the wrapper is wired into the bun chain: URL gate first, workspace legs, t
   const chain = scripts["test:postgres:run"];
   const order = [
     "bun scripts/require-postgres-url.mjs",
-    "bun run --filter @arnilo/prism-store-postgres test:postgres",
-    "bun run --filter @arnilo/prism-channels test:postgres",
+    "bun run --filter @arnilo/prism-extensions test:postgres",
+    "bun run --filter @arnilo/prism-hosts test:postgres",
     "bun test --timeout=0 scripts/phase7-conformance.test.mjs",
   ].map((step) => chain.indexOf(step));
   assert.ok(
@@ -66,12 +66,12 @@ const postgresRegressions = [
   "scopes ordinary and leaf entry queries to the owning session",
   "filters and keyset-paginates branch entry queries",
   "keeps session activity monotonic across run, usage, and event writes",
-].map((name) => `@arnilo/prism-store-postgres test:postgres: (pass) createPostgresPersistence integration > ${name} [1ms]`);
+].map((name) => `@arnilo/prism-extensions test:postgres: (pass) createPostgresPersistence integration > ${name} [1ms]`);
 const liveCapture = [
   ...postgresRegressions,
-  "@arnilo/prism-store-postgres test:postgres: Ran 5 tests across 1 file. [1ms]",
-  "@arnilo/prism-channels test:postgres: (pass) channels integration [1ms]",
-  "@arnilo/prism-channels test:postgres: Ran 1 test across 1 file. [1ms]",
+  "@arnilo/prism-extensions test:postgres: Ran 5 tests across 1 file. [1ms]",
+  "@arnilo/prism-hosts test:postgres: (pass) channels integration [1ms]",
+  "@arnilo/prism-hosts test:postgres: Ran 1 test across 1 file. [1ms]",
   "(pass) process conformance [1ms]",
   "Ran 1 test across 1 file. [1ms]",
 ].join("\n");
@@ -90,7 +90,7 @@ test("service evidence counts every leg and requires live PostgreSQL regression 
   assert.throws(
     () =>
       makeDocument(
-        liveCapture.replace(postgresRegressions[0], postgresRegressions[0].replace("@arnilo/prism-store-postgres test:postgres: ", "")),
+        liveCapture.replace(postgresRegressions[0], postgresRegressions[0].replace("@arnilo/prism-extensions test:postgres: ", "")),
       ),
     /required PostgreSQL regression did not pass/,
   );
@@ -99,7 +99,7 @@ test("service evidence counts every leg and requires live PostgreSQL regression 
       makeDocument(
         liveCapture
           .split("\n")
-          .filter((line) => !line.startsWith("@arnilo/prism-store-postgres"))
+          .filter((line) => !line.startsWith("@arnilo/prism-extensions test:postgres"))
           .join("\n"),
       ),
     /PostgreSQL service leg missing/,
@@ -116,11 +116,14 @@ test("missing URL blocks PostgreSQL, and release publish depends on the live ser
   assert.notEqual(guard.status, 0);
   assert.match(guard.stderr, /PRISM_TEST_POSTGRES_URL is required/);
   const release = readFileSync(join(ROOT, ".github", "workflows", "release.yml"), "utf8");
-  assert.match(release, /postgres-integration:[\s\S]*?run: bun run test:postgres/);
+  assert.match(release, /postgres-integration:[\s\S]*?uses: \.\/\.github\/workflows\/integration-postgres\.yml/);
   assert.match(release, /needs: \[verify, postgres-integration,/);
   const service = readFileSync(join(ROOT, ".github", "workflows", "integration-postgres.yml"), "utf8");
-  assert.match(service, /run --filter @arnilo\/prism-store-postgres test:postgres/);
-  assert.match(service, /run --filter @arnilo\/prism-store-postgres test:postgres/);
+  assert.match(service, /run: bun run test:postgres/);
+  assert.match(
+    JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts["test:postgres:run"],
+    /run --filter @arnilo\/prism-extensions test:postgres/,
+  );
 });
 
 test("a failing test never becomes evidence, and the capture text never reaches the document", () => {

@@ -7,7 +7,6 @@ export const LAYA_API_KEY_ENV = "LAYA_API_KEY";
 /** The `apiKey` ref used when config names none. */
 export const LAYA_DEFAULT_API_KEY_REF = "env:LAYA_API_KEY";
 
-
 /** Laya answers typed questions in one pass — it never generates free text, streams, or calls tools. */
 const DECISION_CAPABILITIES = {
   input: ["text"],

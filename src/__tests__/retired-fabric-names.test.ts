@@ -46,7 +46,7 @@ describe("retired fabric package name (plan 216 Task 5)", () => {
       "scripts/independent-packages.json",
       "scripts/package-truth.json",
       "bun.lock",
-      "packages/memory/system/package.json",
+      "packages/memory/package.json",
     ]) {
       assert.equal(readFileSync(file, "utf8").includes(`"${RETIRED}"`), false, `${file} still names ${RETIRED}`);
     }
@@ -64,7 +64,7 @@ describe("retired fabric package name (plan 216 Task 5)", () => {
       /^plans\//,
       /CHANGELOG\.md$/,
       /^scripts\/compat-baseline\/arnilo__prism-memory\.txt$/,
-      /^scripts\/(budgets|coverage-thresholds|independent-packages)\.json$/, // dated rationale notes
+      /^scripts\/(budgets|coverage-thresholds|independent-packages|retired-names)\.json$/, // dated rationale notes
       /^packages\/memory\/system\/src\/ltm\/__tests__\/ltm-port\.test\.ts$/, // asserts the old service stays retired
       /^scripts\/memory-bench\/(task5-[a-z-]+\.mjs|cleanup-criteria\.json)$/,
       /^packages\/memory\/system\/README\.md$/,

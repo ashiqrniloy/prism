@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** Host libraries may import only allow-listed names from the kernel root and a small set of peers. */
-const ALLOWED_PACKAGES = new Set(["@arnilo/prism", "@arnilo/prism-mcp"]);
+const ALLOWED_PACKAGES = new Set(["@arnilo/prism", "@arnilo/prism-extensions/mcp"]);
 const FORBIDDEN_KERNEL_NAMES = new Set([
   "createAgent",
   "createAgentRunLifecycle",
@@ -64,7 +64,7 @@ describe("ag_ui_host_library_uses_public_api", () => {
     for (const file of sourceFiles(srcDir)) {
       const content = readFileSync(file, "utf8");
       for (const [, specifier] of content.matchAll(/(?:from|import)\s*\(?\s*["'](@arnilo\/[^"']+)["']/g)) {
-        const pkg = specifier.startsWith("@arnilo/prism-mcp/") ? "@arnilo/prism-mcp" : specifier;
+        const pkg = specifier.startsWith("@arnilo/prism-extensions/mcp/") ? "@arnilo/prism-extensions/mcp" : specifier;
         assert.ok(ALLOWED_PACKAGES.has(pkg), `${file} imports non-public external package: ${specifier}`);
       }
       for (const name of namedImports(content, "@arnilo/prism")) {
@@ -72,7 +72,7 @@ describe("ag_ui_host_library_uses_public_api", () => {
         assert.ok(!FORBIDDEN_KERNEL_NAMES.has(name), `${file} imports a forbidden kernel name: ${name}`);
       }
       for (const [, specifier] of content.matchAll(/(?:from|import)\s+["'](\.\.\/\.\.[^"']+)["']/g)) {
-        assert.fail(`${file} has a relative import escaping the host library: ${specifier}`);
+        assert.equal(specifier, "../../package.json", `${file} has a relative import escaping the host library: ${specifier}`);
       }
       assert.ok(!/\bcreateAgent\s*\(/.test(content), `${file} constructs an agent`);
     }

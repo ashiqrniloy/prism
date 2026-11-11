@@ -1,5 +1,5 @@
 // @types/bun's globals (notably its `fetch.preconnect`) conflict with the `fetch` shapes in
-// @arnilo/prism-mcp and @arnilo/prism-rag, which @arnilo/prism-remote's network transport imports.
+// @arnilo/prism-extensions/mcp and @arnilo/prism-knowledge/rag, which @arnilo/prism-hosts/remote's network transport imports.
 // The reference host serves a worker over stdio only, so `tsconfig.json` maps "bun" here: a shim that
 // declares just the exports the transport needs.
 declare module "bun" {

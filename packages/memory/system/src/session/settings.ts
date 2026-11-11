@@ -1,5 +1,5 @@
 import type { ModelConfig, ProviderRequestOptions, SettingsProvider } from "@arnilo/prism";
-import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-core";
+import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-system/core";
 import { DEFAULT_COMPACT_AT_RATIO, type ResolvedCompactAt } from "./config.js";
 import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
 

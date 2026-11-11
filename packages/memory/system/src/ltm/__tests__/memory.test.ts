@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createSecretRedactor } from "@arnilo/prism";
-import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import type { MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import {
   assertFiniteVector,
   createHashEmbedder,
@@ -12,8 +12,8 @@ import {
   resolveMemoryLimits,
   resolveRecallScoring,
   validateAgainstJsonSchema,
-} from "@arnilo/prism-memory-core";
-import { createPostgresMemoryStores } from "@arnilo/prism-memory-core/postgres";
+} from "@arnilo/prism-memory-system/core";
+import { createPostgresMemoryStores } from "@arnilo/prism-memory-system/core/postgres";
 import { validateIdentifier } from "../../../../core/src/postgres/postgres-identifiers.js";
 import { createMemory, runMemoryConformance } from "../../index.js";
 

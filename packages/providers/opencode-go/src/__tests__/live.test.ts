@@ -14,5 +14,5 @@ runProviderLiveScenarios({
     },
   },
   secretEnv: ["OPENCODE_GO_API_KEY", "OPENCODE_API_KEY"],
-  title: "@arnilo/prism-provider-opencode-go live tests",
+  title: "@arnilo/prism-ai/opencode-go live tests",
 });

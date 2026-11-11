@@ -58,11 +58,10 @@ function qualityWinner(left?: InspectorAggregateSlice, right?: InspectorAggregat
   const winner = numericWinner(left?.macroMean, right?.macroMean, "higher");
   const ids = Object.keys(left?.scorers ?? {});
   if (!ids.length || ids.length !== Object.keys(right?.scorers ?? {}).length) return winner;
-  const pairs = ids.map(id => [left?.scorers?.[id]?.ci95, right?.scorers?.[id]?.ci95] as const);
+  const pairs = ids.map((id) => [left?.scorers?.[id]?.ci95, right?.scorers?.[id]?.ci95] as const);
   if (pairs.some(([a, b]) => !a || !b)) return winner;
   // A macro winner needs every scorer's interval to support the same direction.
-  return pairs.every(([a, b]) => winner === "left" ? a!.low > b!.high : winner === "right" && b!.low > a!.high)
-    ? winner : "tie";
+  return pairs.every(([a, b]) => (winner === "left" ? a!.low > b!.high : winner === "right" && b!.low > a!.high)) ? winner : "tie";
 }
 
 export function parseInspectorCompareBody(text: string): InspectorComparison {
@@ -139,11 +138,16 @@ function asAggregate(value: unknown): InspectorAggregateSlice | undefined {
       const raw = value as Record<string, unknown>;
       if (!finiteUnit(raw.mean)) return undefined;
       const interval = raw.ci95 as { low?: unknown; high?: unknown } | undefined;
-      if (interval !== undefined && (!interval || !finiteUnit(interval.low) || !finiteUnit(interval.high) || interval.low > interval.high)) return undefined;
-      return [id, { mean: raw.mean, ...(interval ? { ci95: { low: interval.low as number, high: interval.high as number } } : {}) }] as const;
+      if (interval !== undefined && (!interval || !finiteUnit(interval.low) || !finiteUnit(interval.high) || interval.low > interval.high))
+        return undefined;
+      return [
+        id,
+        { mean: raw.mean, ...(interval ? { ci95: { low: interval.low as number, high: interval.high as number } } : {}) },
+      ] as const;
     });
-    if (entries.some(entry => entry === undefined)) throw new DevtoolsError("invalid scorer statistics", "ERR_PRISM_DEVTOOLS_REQUEST", 400);
-    scorers = Object.fromEntries(entries as NonNullable<typeof entries[number]>[]);
+    if (entries.some((entry) => entry === undefined))
+      throw new DevtoolsError("invalid scorer statistics", "ERR_PRISM_DEVTOOLS_REQUEST", 400);
+    scorers = Object.fromEntries(entries as NonNullable<(typeof entries)[number]>[]);
   }
   if (macroMean === undefined && invariantsPassed === undefined && scorers === undefined) return undefined;
   return {

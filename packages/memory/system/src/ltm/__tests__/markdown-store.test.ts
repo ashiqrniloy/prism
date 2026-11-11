@@ -3,7 +3,7 @@
  *
  * These exercise the package wiring (store selection, the notes tree, `memory:reindex`, in-place
  * correction, restart durability), not the store internals — those live in
- * `@arnilo/prism-memory-core`'s `fabric/__tests__/markdown.test.ts`.
+ * `@arnilo/prism-memory-system/core`'s `fabric/__tests__/markdown.test.ts`.
  */
 import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
@@ -64,10 +64,7 @@ describe("fabric markdown store (plan 188.1 Task 5)", () => {
     const script = [[providerTextDelta("ok"), providerDone()]] as const;
     await assert.rejects(harness({ config: { store: "markdown" }, script }), /requires tools.root/);
     for (const dir of ["../outside", join(await tempRoot(), "outside")]) {
-      await assert.rejects(
-        harness({ config: { tools: { root }, store: { markdown: { dir } } }, script }),
-        /inside tools.root/,
-      );
+      await assert.rejects(harness({ config: { tools: { root }, store: { markdown: { dir } } }, script }), /inside tools.root/);
     }
   });
 
@@ -81,7 +78,7 @@ describe("fabric markdown store (plan 188.1 Task 5)", () => {
     await session.run("hello");
     await session.close();
     await agent.dispose();
-    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+    const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-system/core/fabric");
     const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
     try {
       const records = await stores.vectorStore.getByThread({ tenantId: "prism", resourceId: PROJECT_RESOURCE, threadId: "default" });

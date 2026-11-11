@@ -1,17 +1,17 @@
-# `@arnilo/prism-provider-commandcode`
+# `@arnilo/prism-ai/commandcode`
 
 Command Code provider package for [Prism](https://github.com/ashiqrniloy/prism): registers the `commandcode` provider, resolves its key from an `env:`/`keyring:` ref per request, and ships the Provider API's three wires — Chat Completions, Responses, and Anthropic Messages — plus the model catalog.
 
 ## Install
 
 ```sh
-bun add @arnilo/prism-provider-commandcode
+bun add @arnilo/prism-ai
 ```
 
 ## Use
 
 ```ts
-import commandcode from "@arnilo/prism-provider-commandcode";
+import commandcode from "@arnilo/prism-ai/commandcode";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({

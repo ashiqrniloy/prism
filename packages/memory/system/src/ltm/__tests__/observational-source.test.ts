@@ -9,17 +9,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { ModelProvider, ProviderRequest } from "@arnilo/prism";
-import {
-  createAgent,
-  createMemorySessionStore,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  toolCallContent,
-} from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import memorySystem, { foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createMemory, createLongTermMemory } from "../../index.js";
 
 const OBSERVATION_TEXT = "The user asked for a smaller retry budget.";
@@ -37,12 +30,15 @@ function workerProvider(): ModelProvider {
       const names = new Set(request.tools?.map((tool) => tool.name) ?? []);
       if (!alreadyCalled && ids.length > 0) {
         if (names.has("record_reflection")) {
-          yield providerToolCall(
-            toolCallContent("c1", "record_reflection", { content: REFLECTION_TEXT, supportingObservationIds: ids }),
-          );
+          yield providerToolCall(toolCallContent("c1", "record_reflection", { content: REFLECTION_TEXT, supportingObservationIds: ids }));
         } else if (names.has("record_event")) {
           yield providerToolCall(
-            toolCallContent("c1", "record_event", { kind: "statement", description: OBSERVATION_TEXT, relevance: "high", sourceEntryIds: ids }),
+            toolCallContent("c1", "record_event", {
+              kind: "statement",
+              description: OBSERVATION_TEXT,
+              relevance: "high",
+              sourceEntryIds: ids,
+            }),
           );
         }
       }

@@ -3,7 +3,14 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import { createAgent, createMemorySessionStore, type LoopStrategy, type ProviderRequest, providerDone, providerTextDelta } from "../index.js";
+import {
+  createAgent,
+  createMemorySessionStore,
+  type LoopStrategy,
+  type ProviderRequest,
+  providerDone,
+  providerTextDelta,
+} from "../index.js";
 import { mockProvider, createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -30,14 +37,18 @@ describe("kernel behavior moved from the agent SDK", () => {
       const requests: ProviderRequest[] = [];
       const agent = await createAgent({
         model: defaultModel,
-        packages: [providerPackage("test-provider", [{
-          id: "mock",
-          async *generate(request: ProviderRequest) {
-            requests.push(request);
-            yield providerTextDelta("done");
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate(request: ProviderRequest) {
+                requests.push(request);
+                yield providerTextDelta("done");
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
         skills: { dirs: [dir] },
       });
       await (await agent.session()).run("Test message");
@@ -69,23 +80,27 @@ describe("kernel behavior moved from the agent SDK", () => {
       let turn = 0;
       const agent = await createAgent({
         model: defaultModel,
-        packages: [providerPackage("test-provider", [{
-          id: "mock",
-          async *generate(request: ProviderRequest) {
-            requests.push(request);
-            turn += 1;
-            if (turn === 1) {
-              yield {
-                type: "tool_call" as const,
-                call: { type: "tool_call" as const, id: "call-1", name: "load_skill", arguments: { name: "linter" } },
-              };
-              yield providerDone();
-              return;
-            }
-            yield providerTextDelta("done");
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate(request: ProviderRequest) {
+                requests.push(request);
+                turn += 1;
+                if (turn === 1) {
+                  yield {
+                    type: "tool_call" as const,
+                    call: { type: "tool_call" as const, id: "call-1", name: "load_skill", arguments: { name: "linter" } },
+                  };
+                  yield providerDone();
+                  return;
+                }
+                yield providerTextDelta("done");
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
         skills: { dirs: [dir] },
       });
       const result = await (await agent.session()).run("lint it");
@@ -140,7 +155,11 @@ describe("kernel behavior moved from the agent SDK", () => {
   it('store omitted and "memory" both use the in-memory default', async () => {
     const make = () => createMockProvider([providerTextDelta("a"), providerDone(), providerTextDelta("b"), providerDone()]);
     const omitted = await createAgent({ model: defaultModel, packages: [providerPackage("test-provider", [make()])] });
-    const explicit = await createAgent({ model: defaultModel, packages: [providerPackage("test-provider", [make()])], slots: { store: createMemorySessionStore() } });
+    const explicit = await createAgent({
+      model: defaultModel,
+      packages: [providerPackage("test-provider", [make()])],
+      slots: { store: createMemorySessionStore() },
+    });
     for (const agent of [omitted, explicit]) {
       const first = await agent.session({ id: "s", create: true });
       assert.equal((await first.run("hi")).status, "completed");
@@ -179,14 +198,18 @@ describe("kernel behavior moved from the agent SDK", () => {
     const requests: ProviderRequest[] = [];
     const agent = await createAgent({
       model: defaultModel,
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate(request: ProviderRequest) {
-          requests.push(request);
-          yield providerTextDelta(`turn ${requests.length}`);
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate(request: ProviderRequest) {
+              requests.push(request);
+              yield providerTextDelta(`turn ${requests.length}`);
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       hooks: (hooks) =>
         hooks.on("run.end", () => {
           ends += 1;

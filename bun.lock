@@ -20,333 +20,99 @@
         "prism-agent": "./bin/prism-agent.ts",
       },
       "dependencies": {
-        "@arnilo/prism-acp": "workspace:*",
-        "@arnilo/prism-approval": "workspace:*",
-        "@arnilo/prism-channels": "workspace:*",
-        "@arnilo/prism-context-engineering": "workspace:*",
-        "@arnilo/prism-context-files": "workspace:*",
-        "@arnilo/prism-delegate": "workspace:*",
-        "@arnilo/prism-driver-process": "workspace:*",
-        "@arnilo/prism-evals": "workspace:*",
-        "@arnilo/prism-headless": "workspace:*",
-        "@arnilo/prism-hooks-json": "workspace:*",
-        "@arnilo/prism-memory-compaction": "workspace:*",
+        "@arnilo/prism-ai": "workspace:*",
+        "@arnilo/prism-extensions": "workspace:*",
+        "@arnilo/prism-hosts": "^0.13.0",
+        "@arnilo/prism-knowledge": "0.13.0-experimental.0",
         "@arnilo/prism-memory-system": "workspace:*",
-        "@arnilo/prism-provider-hyper": "workspace:*",
-        "@arnilo/prism-rag": "workspace:*",
-        "@arnilo/prism-remote": "workspace:*",
-        "@arnilo/prism-store-sqlite": "workspace:*",
-        "@arnilo/prism-tools-browser": "workspace:*",
-        "@arnilo/prism-tools-coding": "workspace:*",
-        "@arnilo/prism-tools-research": "workspace:*",
-        "@arnilo/prism-tools-web": "workspace:*",
-        "@arnilo/prism-wiki": "workspace:*",
-        "@arnilo/prism-workflows": "workspace:*",
+        "@arnilo/prism-tools": "workspace:*",
       },
       "devDependencies": {
-        "@arnilo/prism-provider-commandcode": "workspace:*",
-        "@arnilo/prism-provider-ollama-cloud": "workspace:*",
-        "@arnilo/prism-provider-opencode-go": "workspace:*",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
     },
-    "packages/context/engineering": {
-      "name": "@arnilo/prism-context-engineering",
+    "packages/extensions": {
+      "name": "@arnilo/prism-extensions",
       "version": "0.13.0",
       "devDependencies": {
-        "@arnilo/prism-memory-core": "file:../../memory/core",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/context/files": {
-      "name": "@arnilo/prism-context-files",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/credentials/keyring": {
-      "name": "@arnilo/prism-credentials-keyring",
-      "version": "0.13.0",
-      "dependencies": {
+        "@arnilo/prism-ai": "workspace:*",
+        "@arnilo/prism-hosts": "workspace:*",
+        "@arnilo/prism-knowledge": "workspace:*",
+        "@arnilo/prism-memory-system": "workspace:*",
+        "@arnilo/prism-tools": "workspace:*",
+        "@modelcontextprotocol/server": "^2.3.0",
         "@napi-rs/keyring": "^2.0.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-provider-hyper": "file:../../providers/hyper",
+        "@opentelemetry/api": "1.9.0",
+        "@types/bun": "1.4.2",
         "@types/node": "^22.20.0",
+        "@types/pg": "^8.23.1",
+        "pg": "^8.23.0",
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
+        "@modelcontextprotocol/client": "^2.3.0",
+        "@napi-rs/keyring": "^2.0.0",
+        "@opentelemetry/api": "^1.9.0",
+        "pg": "^8.23.0",
+        "zod": "^4.6.2",
       },
+      "optionalPeers": [
+        "@modelcontextprotocol/client",
+        "@napi-rs/keyring",
+        "@opentelemetry/api",
+        "pg",
+        "zod",
+      ],
     },
-    "packages/drivers/process": {
-      "name": "@arnilo/prism-driver-process",
+    "packages/hosts": {
+      "name": "@arnilo/prism-hosts",
       "version": "0.13.0",
+      "bin": {
+        "prism-devtools": "./devtools/bin/prism-devtools.ts",
+        "prism-host-builder": "./host-builder/bin/prism-host-builder.ts",
+      },
       "dependencies": {
-        "@arnilo/prism-mcp-server": "^0.13.0",
-      },
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/acp": {
-      "name": "@arnilo/prism-acp",
-      "version": "0.13.0",
-      "dependencies": {
-        "@agentclientprotocol/sdk": "1.4.0",
-      },
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/ag-ui": {
-      "name": "@arnilo/prism-ag-ui",
-      "version": "0.13.0",
-      "dependencies": {
-        "@ag-ui/core": "0.0.59",
+        "@arnilo/prism-extensions": "^0.13.0",
       },
       "devDependencies": {
         "@ag-ui/client": "0.0.59",
-        "@arnilo/prism-acp": "file:../acp",
-        "@arnilo/prism-mcp": "file:../../integrations/mcp",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-mcp": "^0.13.0",
-      },
-      "optionalPeers": [
-        "@arnilo/prism-mcp",
-      ],
-    },
-    "packages/hosts/channels": {
-      "name": "@arnilo/prism-channels",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-store-sqlite": "file:../../stores/sqlite",
+        "@ag-ui/core": "0.0.59",
+        "@agentclientprotocol/sdk": "1.4.0",
+        "@arnilo/prism-extensions": "workspace:*",
+        "@arnilo/prism-tools": "workspace:*",
+        "@modelcontextprotocol/client": "^2.3.0",
+        "@modelcontextprotocol/server": "^2.3.0",
         "@types/node": "^22.20.0",
         "@types/pg": "^8.23.1",
         "pg": "^8.23.0",
         "typescript": "^7.0.2",
+        "zod": "^4.6.2",
       },
       "peerDependencies": {
+        "@ag-ui/core": "0.0.59",
+        "@agentclientprotocol/sdk": "1.4.0",
         "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/devtools": {
-      "name": "@arnilo/prism-devtools",
-      "version": "0.13.0",
-      "bin": {
-        "prism-devtools": "./bin/prism-devtools.ts",
-      },
-      "devDependencies": {
-        "@arnilo/prism-evals": "file:../evals",
-        "@arnilo/prism-governance": "file:../../policy/governance",
-        "@arnilo/prism-observability": "file:../../integrations/observability",
-        "@arnilo/prism-tools-work": "file:../../tools/work",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/evals": {
-      "name": "@arnilo/prism-evals",
-      "version": "0.13.0",
-      "dependencies": {
-        "@arnilo/prism-store-codecs": "^0.13.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-observability": "file:../../integrations/observability",
-        "@arnilo/prism-store-codecs": "file:../../stores/codecs",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-observability": "^0.13.0",
+        "@modelcontextprotocol/server": "^2.3.0",
+        "zod": "^4.6.2",
       },
       "optionalPeers": [
-        "@arnilo/prism-observability",
+        "@ag-ui/core",
+        "@agentclientprotocol/sdk",
+        "@modelcontextprotocol/server",
+        "zod",
       ],
     },
-    "packages/hosts/headless": {
-      "name": "@arnilo/prism-headless",
-      "version": "0.13.0",
-      "dependencies": {
-        "@arnilo/prism-workflows": "^0.13.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-approval": "file:../../policy/approval",
-        "@arnilo/prism-remote": "file:../remote",
-        "@arnilo/prism-store-sqlite": "file:../../stores/sqlite",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/host-builder": {
-      "name": "@arnilo/prism-host-builder",
-      "version": "0.13.0",
-      "bin": {
-        "prism-host-builder": "./bin/prism-host-builder.ts",
-      },
-      "dependencies": {
-        "@arnilo/prism-mcp-server": "^0.13.0",
-        "@modelcontextprotocol/server": "^2.3.0",
-        "zod": "^4.6.2",
-      },
-      "devDependencies": {
-        "@modelcontextprotocol/client": "^2.3.0",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/mcp-server": {
-      "name": "@arnilo/prism-mcp-server",
-      "version": "0.13.0",
-      "dependencies": {
-        "@arnilo/prism-mcp": "^0.13.0",
-        "@modelcontextprotocol/server": "^2.3.0",
-        "zod": "^4.6.2",
-      },
-      "devDependencies": {
-        "@arnilo/prism-approval": "file:../../policy/approval",
-        "@arnilo/prism-tools-coding": "file:../../tools/coding",
-        "@modelcontextprotocol/client": "^2.3.0",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/hosts/remote": {
-      "name": "@arnilo/prism-remote",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/integrations/advisor": {
-      "name": "@arnilo/prism-advisor",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-delegate": "file:../delegate",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/integrations/delegate": {
-      "name": "@arnilo/prism-delegate",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-tools-coding": "file:../../tools/coding",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/integrations/hooks-json": {
-      "name": "@arnilo/prism-hooks-json",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/integrations/mcp": {
-      "name": "@arnilo/prism-mcp",
-      "version": "0.13.0",
-      "dependencies": {
-        "@arnilo/prism-governance": "^0.13.0",
-        "@modelcontextprotocol/client": "^2.3.0",
-        "zod": "^4.6.2",
-      },
-      "devDependencies": {
-        "@modelcontextprotocol/server": "^2.3.0",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/integrations/observability": {
-      "name": "@arnilo/prism-observability",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-evals": "file:../../hosts/evals",
-        "@arnilo/prism-memory-core": "file:../../memory/core",
-        "@arnilo/prism-rag": "file:../../knowledge/rag",
-        "@arnilo/prism-workflows": "file:../workflows",
-        "@opentelemetry/api": "1.9.0",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@opentelemetry/api": "^1.9.0",
-      },
-      "optionalPeers": [
-        "@opentelemetry/api",
-      ],
-    },
-    "packages/integrations/workflows": {
-      "name": "@arnilo/prism-workflows",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/knowledge/rag": {
-      "name": "@arnilo/prism-rag",
+    "packages/knowledge": {
+      "name": "@arnilo/prism-knowledge",
       "version": "0.13.0-experimental.0",
       "dependencies": {
-        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
+        "@arnilo/prism-memory-system": "0.13.0-experimental.0",
       },
       "devDependencies": {
-        "@arnilo/prism-tools-web": "file:../../tools/web",
-        "@arnilo/prism-workflows": "file:../../integrations/workflows",
+        "@arnilo/prism-extensions": "workspace:*",
+        "@arnilo/prism-tools": "workspace:*",
         "@types/node": "^22.20.0",
         "@types/pg": "^8.23.1",
         "pg": "^8.23.0",
@@ -354,72 +120,20 @@
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-tools-web": "^0.13.0",
+        "@arnilo/prism-tools": "^0.13.0",
         "pg": "^8.23.0",
       },
       "optionalPeers": [
-        "@arnilo/prism-tools-web",
+        "@arnilo/prism-tools",
         "pg",
       ],
     },
-    "packages/knowledge/wiki": {
-      "name": "@arnilo/prism-wiki",
-      "version": "0.13.0-experimental.0",
-      "dependencies": {
-        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
-        "@arnilo/prism-rag": "0.13.0-experimental.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-memory-system": "file:../../memory/system",
-        "@arnilo/prism-tools-web": "file:../../tools/web",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-tools-web": "^0.13.0",
-      },
-      "optionalPeers": [
-        "@arnilo/prism-tools-web",
-      ],
-    },
-    "packages/memory/compaction": {
-      "name": "@arnilo/prism-memory-compaction",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/memory/core": {
-      "name": "@arnilo/prism-memory-core",
-      "version": "0.13.0-experimental.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "@types/pg": "^8.23.1",
-        "pg": "^8.23.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "pg": "^8.23.0",
-      },
-      "optionalPeers": [
-        "pg",
-      ],
-    },
-    "packages/memory/system": {
+    "packages/memory": {
       "name": "@arnilo/prism-memory-system",
       "version": "0.13.0-experimental.0",
-      "dependencies": {
-        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
-      },
       "devDependencies": {
-        "@arnilo/prism-memory-compaction": "file:../compaction",
-        "@arnilo/prism-rag": "file:../../knowledge/rag",
+        "@arnilo/prism-extensions": "workspace:*",
+        "@arnilo/prism-knowledge": "workspace:*",
         "@types/node": "^22.20.0",
         "@types/pg": "^8.23.1",
         "pg": "^8.23.0",
@@ -433,8 +147,8 @@
         "pg",
       ],
     },
-    "packages/policy/approval": {
-      "name": "@arnilo/prism-approval",
+    "packages/providers": {
+      "name": "@arnilo/prism-ai",
       "version": "0.13.0",
       "devDependencies": {
         "@types/node": "^22.20.0",
@@ -444,351 +158,60 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
-    "packages/policy/governance": {
-      "name": "@arnilo/prism-governance",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/policy/guardrail-packs": {
-      "name": "@arnilo/prism-guardrail-packs",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/policy/model-router": {
-      "name": "@arnilo/prism-model-router",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-governance": "file:../governance",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/commandcode": {
-      "name": "@arnilo/prism-provider-commandcode",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/hyper": {
-      "name": "@arnilo/prism-provider-hyper",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/kilo": {
-      "name": "@arnilo/prism-provider-kilo",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/laya": {
-      "name": "@arnilo/prism-provider-laya",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/liquid": {
-      "name": "@arnilo/prism-provider-liquid",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/litellm": {
-      "name": "@arnilo/prism-provider-litellm",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/ollama-cloud": {
-      "name": "@arnilo/prism-provider-ollama-cloud",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/openai-codex": {
-      "name": "@arnilo/prism-provider-openai-codex",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/opencode-go": {
-      "name": "@arnilo/prism-provider-opencode-go",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/openrouter": {
-      "name": "@arnilo/prism-provider-openrouter",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/providers/typesafe": {
-      "name": "@arnilo/prism-provider-typesafe",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/stores/codecs": {
-      "name": "@arnilo/prism-store-codecs",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/stores/jsonl": {
-      "name": "@arnilo/prism-store-jsonl",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/stores/postgres": {
-      "name": "@arnilo/prism-store-postgres",
-      "version": "0.13.0",
-      "dependencies": {
-        "@arnilo/prism-store-codecs": "^0.13.0",
-        "pg": "^8.23.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-workflows": "file:../../integrations/workflows",
-        "@types/bun": "1.4.2",
-        "@types/node": "^22.20.0",
-        "@types/pg": "^8.23.1",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/stores/sqlite": {
-      "name": "@arnilo/prism-store-sqlite",
-      "version": "0.13.0",
-      "dependencies": {
-        "@arnilo/prism-store-codecs": "^0.13.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-workflows": "file:../../integrations/workflows",
-        "@types/bun": "1.4.2",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/tools/browser": {
-      "name": "@arnilo/prism-tools-browser",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-approval": "file:../../policy/approval",
-        "@arnilo/prism-evals": "file:../../hosts/evals",
-        "@arnilo/prism-tools-web": "file:../web",
-        "@types/node": "^22.20.0",
-        "playwright-core": "1.63.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "playwright-core": "1.63.0",
-      },
-      "optionalPeers": [
-        "playwright-core",
-      ],
-    },
-    "packages/tools/coding": {
-      "name": "@arnilo/prism-tools-coding",
-      "version": "0.13.0",
-      "dependencies": {
-        "diff": "^9.0.0",
-      },
-      "devDependencies": {
-        "@arnilo/prism-evals": "file:../../hosts/evals",
-        "@arnilo/prism-workflows": "file:../../integrations/workflows",
-        "@types/diff": "^7.0.2",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-workflows": "^0.13.0",
-        "e2b": "2.49.1",
-      },
-      "optionalPeers": [
-        "e2b",
-      ],
-    },
-    "packages/tools/computer-use": {
-      "name": "@arnilo/prism-tools-computer-use",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@arnilo/prism-approval": "file:../../policy/approval",
-        "@arnilo/prism-mcp": "file:../../integrations/mcp",
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-mcp": "^0.13.0",
-      },
-      "optionalPeers": [
-        "@arnilo/prism-mcp",
-      ],
-    },
-    "packages/tools/openapi": {
-      "name": "@arnilo/prism-tools-openapi",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/tools/research": {
-      "name": "@arnilo/prism-tools-research",
-      "version": "0.13.0",
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
-    },
-    "packages/tools/web": {
-      "name": "@arnilo/prism-tools-web",
+    "packages/tools": {
+      "name": "@arnilo/prism-tools",
       "version": "0.13.0",
       "dependencies": {
         "@mozilla/readability": "0.6.0",
+        "diff": "^9.0.0",
         "linkedom": "0.18.14",
         "turndown": "7.2.4",
       },
       "devDependencies": {
+        "@arnilo/prism-extensions": "workspace:*",
+        "@arnilo/prism-hosts": "workspace:*",
+        "@firecrawl/anydoc": "0.2.4",
+        "@office-open/docx": "0.14.5",
+        "@office-open/pptx": "0.14.5",
+        "@office-open/xlsx": "0.14.5",
+        "@office-open/xml": "0.14.5",
+        "@types/diff": "^7.0.2",
         "@types/node": "^22.20.0",
         "@types/turndown": "5.0.6",
+        "ajv": "^8.17.1",
+        "fast-xml-parser": "5.11.1",
+        "mammoth": "^1.8.0",
+        "pdf-parse": "^2.4.5",
         "playwright-core": "1.63.0",
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-mcp": "^0.13.0",
-        "playwright-core": "1.63.0",
-      },
-      "optionalPeers": [
-        "@arnilo/prism-mcp",
-        "playwright-core",
-      ],
-    },
-    "packages/tools/work": {
-      "name": "@arnilo/prism-tools-work",
-      "version": "0.13.0",
-      "dependencies": {
+        "@arnilo/prism-extensions": "^0.13.0",
+        "@firecrawl/anydoc": "0.2.4",
         "@office-open/docx": "0.14.5",
         "@office-open/pptx": "0.14.5",
         "@office-open/xlsx": "0.14.5",
         "@office-open/xml": "0.14.5",
         "ajv": "^8.17.1",
+        "e2b": "2.49.1",
         "fast-xml-parser": "5.11.1",
-      },
-      "devDependencies": {
-        "@arnilo/prism-workflows": "file:../../integrations/workflows",
-        "@firecrawl/anydoc": "0.2.4",
-        "@types/node": "^22.20.0",
         "mammoth": "^1.8.0",
         "pdf-parse": "^2.4.5",
         "playwright-core": "1.63.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@firecrawl/anydoc": "0.2.4",
-        "mammoth": "^1.8.0",
-        "pdf-parse": "^2.4.5",
       },
       "optionalPeers": [
         "@firecrawl/anydoc",
+        "@office-open/docx",
+        "@office-open/pptx",
+        "@office-open/xlsx",
+        "@office-open/xml",
+        "ajv",
+        "e2b",
+        "fast-xml-parser",
         "mammoth",
         "pdf-parse",
+        "playwright-core",
       ],
     },
   },
@@ -807,107 +230,19 @@
 
     "@arnilo/prism": ["@arnilo/prism@root:", {}],
 
-    "@arnilo/prism-acp": ["@arnilo/prism-acp@workspace:packages/hosts/acp"],
-
-    "@arnilo/prism-advisor": ["@arnilo/prism-advisor@workspace:packages/integrations/advisor"],
-
-    "@arnilo/prism-ag-ui": ["@arnilo/prism-ag-ui@workspace:packages/hosts/ag-ui"],
-
     "@arnilo/prism-agent": ["@arnilo/prism-agent@workspace:apps/prism-agent"],
 
-    "@arnilo/prism-approval": ["@arnilo/prism-approval@workspace:packages/policy/approval"],
+    "@arnilo/prism-ai": ["@arnilo/prism-ai@workspace:packages/providers"],
 
-    "@arnilo/prism-channels": ["@arnilo/prism-channels@workspace:packages/hosts/channels"],
+    "@arnilo/prism-extensions": ["@arnilo/prism-extensions@workspace:packages/extensions"],
 
-    "@arnilo/prism-context-engineering": ["@arnilo/prism-context-engineering@workspace:packages/context/engineering"],
+    "@arnilo/prism-hosts": ["@arnilo/prism-hosts@workspace:packages/hosts"],
 
-    "@arnilo/prism-context-files": ["@arnilo/prism-context-files@workspace:packages/context/files"],
+    "@arnilo/prism-knowledge": ["@arnilo/prism-knowledge@workspace:packages/knowledge"],
 
-    "@arnilo/prism-credentials-keyring": ["@arnilo/prism-credentials-keyring@workspace:packages/credentials/keyring"],
+    "@arnilo/prism-memory-system": ["@arnilo/prism-memory-system@workspace:packages/memory"],
 
-    "@arnilo/prism-delegate": ["@arnilo/prism-delegate@workspace:packages/integrations/delegate"],
-
-    "@arnilo/prism-devtools": ["@arnilo/prism-devtools@workspace:packages/hosts/devtools"],
-
-    "@arnilo/prism-driver-process": ["@arnilo/prism-driver-process@workspace:packages/drivers/process"],
-
-    "@arnilo/prism-evals": ["@arnilo/prism-evals@workspace:packages/hosts/evals"],
-
-    "@arnilo/prism-governance": ["@arnilo/prism-governance@workspace:packages/policy/governance"],
-
-    "@arnilo/prism-guardrail-packs": ["@arnilo/prism-guardrail-packs@workspace:packages/policy/guardrail-packs"],
-
-    "@arnilo/prism-headless": ["@arnilo/prism-headless@workspace:packages/hosts/headless"],
-
-    "@arnilo/prism-hooks-json": ["@arnilo/prism-hooks-json@workspace:packages/integrations/hooks-json"],
-
-    "@arnilo/prism-host-builder": ["@arnilo/prism-host-builder@workspace:packages/hosts/host-builder"],
-
-    "@arnilo/prism-mcp": ["@arnilo/prism-mcp@workspace:packages/integrations/mcp"],
-
-    "@arnilo/prism-mcp-server": ["@arnilo/prism-mcp-server@workspace:packages/hosts/mcp-server"],
-
-    "@arnilo/prism-memory-compaction": ["@arnilo/prism-memory-compaction@workspace:packages/memory/compaction"],
-
-    "@arnilo/prism-memory-core": ["@arnilo/prism-memory-core@workspace:packages/memory/core"],
-
-    "@arnilo/prism-memory-system": ["@arnilo/prism-memory-system@workspace:packages/memory/system"],
-
-    "@arnilo/prism-model-router": ["@arnilo/prism-model-router@workspace:packages/policy/model-router"],
-
-    "@arnilo/prism-observability": ["@arnilo/prism-observability@workspace:packages/integrations/observability"],
-
-    "@arnilo/prism-provider-commandcode": ["@arnilo/prism-provider-commandcode@workspace:packages/providers/commandcode"],
-
-    "@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@workspace:packages/providers/hyper"],
-
-    "@arnilo/prism-provider-kilo": ["@arnilo/prism-provider-kilo@workspace:packages/providers/kilo"],
-
-    "@arnilo/prism-provider-laya": ["@arnilo/prism-provider-laya@workspace:packages/providers/laya"],
-
-    "@arnilo/prism-provider-liquid": ["@arnilo/prism-provider-liquid@workspace:packages/providers/liquid"],
-
-    "@arnilo/prism-provider-litellm": ["@arnilo/prism-provider-litellm@workspace:packages/providers/litellm"],
-
-    "@arnilo/prism-provider-ollama-cloud": ["@arnilo/prism-provider-ollama-cloud@workspace:packages/providers/ollama-cloud"],
-
-    "@arnilo/prism-provider-openai-codex": ["@arnilo/prism-provider-openai-codex@workspace:packages/providers/openai-codex"],
-
-    "@arnilo/prism-provider-opencode-go": ["@arnilo/prism-provider-opencode-go@workspace:packages/providers/opencode-go"],
-
-    "@arnilo/prism-provider-openrouter": ["@arnilo/prism-provider-openrouter@workspace:packages/providers/openrouter"],
-
-    "@arnilo/prism-provider-typesafe": ["@arnilo/prism-provider-typesafe@workspace:packages/providers/typesafe"],
-
-    "@arnilo/prism-rag": ["@arnilo/prism-rag@workspace:packages/knowledge/rag"],
-
-    "@arnilo/prism-remote": ["@arnilo/prism-remote@workspace:packages/hosts/remote"],
-
-    "@arnilo/prism-store-codecs": ["@arnilo/prism-store-codecs@workspace:packages/stores/codecs"],
-
-    "@arnilo/prism-store-jsonl": ["@arnilo/prism-store-jsonl@workspace:packages/stores/jsonl"],
-
-    "@arnilo/prism-store-postgres": ["@arnilo/prism-store-postgres@workspace:packages/stores/postgres"],
-
-    "@arnilo/prism-store-sqlite": ["@arnilo/prism-store-sqlite@workspace:packages/stores/sqlite"],
-
-    "@arnilo/prism-tools-browser": ["@arnilo/prism-tools-browser@workspace:packages/tools/browser"],
-
-    "@arnilo/prism-tools-coding": ["@arnilo/prism-tools-coding@workspace:packages/tools/coding"],
-
-    "@arnilo/prism-tools-computer-use": ["@arnilo/prism-tools-computer-use@workspace:packages/tools/computer-use"],
-
-    "@arnilo/prism-tools-openapi": ["@arnilo/prism-tools-openapi@workspace:packages/tools/openapi"],
-
-    "@arnilo/prism-tools-research": ["@arnilo/prism-tools-research@workspace:packages/tools/research"],
-
-    "@arnilo/prism-tools-web": ["@arnilo/prism-tools-web@workspace:packages/tools/web"],
-
-    "@arnilo/prism-tools-work": ["@arnilo/prism-tools-work@workspace:packages/tools/work"],
-
-    "@arnilo/prism-wiki": ["@arnilo/prism-wiki@workspace:packages/knowledge/wiki"],
-
-    "@arnilo/prism-workflows": ["@arnilo/prism-workflows@workspace:packages/integrations/workflows"],
+    "@arnilo/prism-tools": ["@arnilo/prism-tools@workspace:packages/tools"],
 
     "@biomejs/biome": ["@biomejs/biome@2.5.15", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.5.15", "@biomejs/cli-darwin-x64": "2.5.15", "@biomejs/cli-linux-arm64": "2.5.15", "@biomejs/cli-linux-arm64-musl": "2.5.15", "@biomejs/cli-linux-x64": "2.5.15", "@biomejs/cli-linux-x64-musl": "2.5.15", "@biomejs/cli-win32-arm64": "2.5.15", "@biomejs/cli-win32-x64": "2.5.15" }, "bin": { "biome": "bin/biome" } }, ""],
 
@@ -951,11 +286,31 @@
 
     "@napi-rs/canvas-linux-x64-musl": ["@napi-rs/canvas-linux-x64-musl@0.1.80", "", { "os": "linux", "cpu": "x64" }, ""],
 
-    "@napi-rs/keyring": ["@napi-rs/keyring@2.1.0", "", { "optionalDependencies": { "@napi-rs/keyring-darwin-arm64": "2.1.0", "@napi-rs/keyring-darwin-x64": "2.1.0", "@napi-rs/keyring-freebsd-x64": "2.1.0", "@napi-rs/keyring-linux-arm-gnueabihf": "2.1.0", "@napi-rs/keyring-linux-arm64-gnu": "2.1.0", "@napi-rs/keyring-linux-arm64-musl": "2.1.0", "@napi-rs/keyring-linux-riscv64-gnu": "2.1.0", "@napi-rs/keyring-linux-x64-gnu": "2.1.0", "@napi-rs/keyring-linux-x64-musl": "2.1.0", "@napi-rs/keyring-win32-arm64-msvc": "2.1.0", "@napi-rs/keyring-win32-ia32-msvc": "2.1.0", "@napi-rs/keyring-win32-x64-msvc": "2.1.0" } }, ""],
+    "@napi-rs/keyring": ["@napi-rs/keyring@2.1.2", "", { "optionalDependencies": { "@napi-rs/keyring-darwin-arm64": "2.1.2", "@napi-rs/keyring-darwin-x64": "2.1.2", "@napi-rs/keyring-freebsd-x64": "2.1.2", "@napi-rs/keyring-linux-arm-gnueabihf": "2.1.2", "@napi-rs/keyring-linux-arm64-gnu": "2.1.2", "@napi-rs/keyring-linux-arm64-musl": "2.1.2", "@napi-rs/keyring-linux-riscv64-gnu": "2.1.2", "@napi-rs/keyring-linux-x64-gnu": "2.1.2", "@napi-rs/keyring-linux-x64-musl": "2.1.2", "@napi-rs/keyring-win32-arm64-msvc": "2.1.2", "@napi-rs/keyring-win32-ia32-msvc": "2.1.2", "@napi-rs/keyring-win32-x64-msvc": "2.1.2" } }, "sha512-9i1SR6tYeQ3o1beLeVMxhN6Fq513m9TZlTs+46+4JgvSNkaFoW9S4WrpV5MjzE+0CzVoC+dZ4RfZDIgW6+afnQ=="],
 
-    "@napi-rs/keyring-linux-x64-gnu": ["@napi-rs/keyring-linux-x64-gnu@2.1.0", "", { "os": "linux", "cpu": "x64" }, ""],
+    "@napi-rs/keyring-darwin-arm64": ["@napi-rs/keyring-darwin-arm64@2.1.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-vsInUWUzWS6/WzR/TFNwmdtmwKWjnnR8TOpvZ/pjjxDAkJB/waz37PWzp2b8AFcw1aCcq2aQ7k2vvbLQy8pTrw=="],
 
-    "@napi-rs/keyring-linux-x64-musl": ["@napi-rs/keyring-linux-x64-musl@2.1.0", "", { "os": "linux", "cpu": "x64" }, ""],
+    "@napi-rs/keyring-darwin-x64": ["@napi-rs/keyring-darwin-x64@2.1.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-wQihYroaQ3r++R6u5c9Gj0TCw1l1F53LCb5aLOXfVvT4DsnDnpe7p7VGYo4/33bLe0iqVevtAj+ET3yKCtOlJQ=="],
+
+    "@napi-rs/keyring-freebsd-x64": ["@napi-rs/keyring-freebsd-x64@2.1.2", "", { "os": "freebsd", "cpu": "x64" }, "sha512-Ve5ha7MbJsq+4TYyXYiTy4IeZOnYxkBB05uH2+nIrEKBkHmyfHttF814EfWAfoJa63KqBhYRXdYJo0o1WVL2sg=="],
+
+    "@napi-rs/keyring-linux-arm-gnueabihf": ["@napi-rs/keyring-linux-arm-gnueabihf@2.1.2", "", { "os": "linux", "cpu": "arm" }, "sha512-zxijTnVnTApEyJMjgnLdVQL1g1DAudku/5brrWNDRWj4J0q0nFhUZEtzUA+nY2FvgDjl4s+2YCZYXSTH4TFMUg=="],
+
+    "@napi-rs/keyring-linux-arm64-gnu": ["@napi-rs/keyring-linux-arm64-gnu@2.1.2", "", { "os": "linux", "cpu": "arm64", "libc": "glibc" }, "sha512-PM+SAcl/yGzgGbeeCsKrnlG4T5DBIDjmDqtKm5an1bJz0o0gwSzR3BMiXf04JenkcqascZpdcIReoEvLj0cvCw=="],
+
+    "@napi-rs/keyring-linux-arm64-musl": ["@napi-rs/keyring-linux-arm64-musl@2.1.2", "", { "os": "linux", "cpu": "arm64", "libc": "musl" }, "sha512-+ERS9oyInPCALN957cViBDbYJc724/Q+rZ8ZAz4rOHj4B4v0VR4OAWThdYZgZqD54sZVV0MdyX24qva97hYoAQ=="],
+
+    "@napi-rs/keyring-linux-riscv64-gnu": ["@napi-rs/keyring-linux-riscv64-gnu@2.1.2", "", { "os": "linux", "cpu": "none", "libc": "glibc" }, "sha512-pGADtqeT3U1SaFZGjkVsmZVjeNOQx0fr77S+NWszXjZboyaUOLlGKgqG6ssAWzcwxv8uPhKc9Ij17ujNZhSqLw=="],
+
+    "@napi-rs/keyring-linux-x64-gnu": ["@napi-rs/keyring-linux-x64-gnu@2.1.2", "", { "os": "linux", "cpu": "x64", "libc": "glibc" }, "sha512-Fj5TmTnl2oriuCT5DDEYlhgxYes20uGfgOg10LK9PyPVsI8/PQ1m8I4rq/4A5hkrMtY7wvFb70YmX/yPHDYWvQ=="],
+
+    "@napi-rs/keyring-linux-x64-musl": ["@napi-rs/keyring-linux-x64-musl@2.1.2", "", { "os": "linux", "cpu": "x64", "libc": "musl" }, "sha512-C+KhAeU6x2A43FV3dOmMvUraJb8zsC9VZfsunjZ1cgtuAb208TALaUuAY0jThOphXqhyhBJOs2xTCQhOrRkJIw=="],
+
+    "@napi-rs/keyring-win32-arm64-msvc": ["@napi-rs/keyring-win32-arm64-msvc@2.1.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-kBq80ZZfjXoa5wHG9kgAVhYYjaPOLgHh5ngt7r1ftwFXPXDPXKH7oM2r2j2Q64cs0pVtmodVtn5Q9e6xCwzQUQ=="],
+
+    "@napi-rs/keyring-win32-ia32-msvc": ["@napi-rs/keyring-win32-ia32-msvc@2.1.2", "", { "os": "win32", "cpu": "ia32" }, "sha512-bhgKvVbWlZ6iR/tmvb2ht6/o0OzarUX9W7hjg+G+eVdGjR1prwtQ9lYo5ZESdn/+zyF1MIFvHkOCGja9YqDcww=="],
+
+    "@napi-rs/keyring-win32-x64-msvc": ["@napi-rs/keyring-win32-x64-msvc@2.1.2", "", { "os": "win32", "cpu": "x64" }, "sha512-yQtFdfuwqM0ezKlYO6r2n44in2LGzd4MC679Ddhvojip3t1hn+q/4I+gJU+cIJQVd5FAZSKNrK4tGfew3UTpAQ=="],
 
     "@noble/hashes": ["@noble/hashes@2.3.0", "", {}, ""],
 
@@ -1211,22 +566,6 @@
 
     "@ag-ui/core/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
-    "@arnilo/prism-context-engineering/@arnilo/prism-memory-core": ["@arnilo/prism-memory-core@file:packages/memory/core", { "devDependencies": { "@types/node": "^22.20.0", "@types/pg": "^8.23.1", "pg": "^8.23.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "pg": "^8.23.0" }, "optionalPeers": ["pg"] }],
-
-    "@arnilo/prism-credentials-keyring/@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@file:packages/providers/hyper", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
-
-    "@arnilo/prism-delegate/@arnilo/prism-tools-coding": ["@arnilo/prism-tools-coding@file:packages/tools/coding", { "dependencies": { "diff": "^9.0.0" }, "devDependencies": { "@arnilo/prism-evals": "file:../../hosts/evals", "@arnilo/prism-workflows": "file:../../integrations/workflows", "@types/diff": "^7.0.2", "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-workflows": "^0.13.0", "e2b": "2.49.1" }, "optionalPeers": ["e2b"] }],
-
-    "@arnilo/prism-memory-system/@arnilo/prism-memory-compaction": ["@arnilo/prism-memory-compaction@file:packages/memory/compaction", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
-
-    "@arnilo/prism-rag/@arnilo/prism-tools-web": ["@arnilo/prism-tools-web@file:packages/tools/web", { "dependencies": { "@mozilla/readability": "0.6.0", "linkedom": "0.18.14", "turndown": "7.2.4" }, "devDependencies": { "@types/node": "^22.20.0", "@types/turndown": "5.0.6", "playwright-core": "1.63.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-mcp": "^0.13.0", "playwright-core": "1.63.0" }, "optionalPeers": ["@arnilo/prism-mcp", "playwright-core"] }],
-
-    "@arnilo/prism-rag/@arnilo/prism-workflows": ["@arnilo/prism-workflows@file:packages/integrations/workflows", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
-
-    "@arnilo/prism-wiki/@arnilo/prism-memory-system": ["@arnilo/prism-memory-system@file:packages/memory/system", { "dependencies": { "@arnilo/prism-memory-core": "0.13.0-experimental.0" }, "devDependencies": { "@arnilo/prism-memory-compaction": "file:../compaction", "@arnilo/prism-rag": "file:../../knowledge/rag", "@types/node": "^22.20.0", "@types/pg": "^8.23.1", "pg": "^8.23.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "pg": "^8.23.0" }, "optionalPeers": ["pg"] }],
-
-    "@arnilo/prism-wiki/@arnilo/prism-tools-web": ["@arnilo/prism-tools-web@file:packages/tools/web", { "dependencies": { "@mozilla/readability": "0.6.0", "linkedom": "0.18.14", "turndown": "7.2.4" }, "devDependencies": { "@types/node": "^22.20.0", "@types/turndown": "5.0.6", "playwright-core": "1.63.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-mcp": "^0.13.0", "playwright-core": "1.63.0" }, "optionalPeers": ["@arnilo/prism-mcp", "playwright-core"] }],
-
     "@types/pg/@types/node": ["@types/node@26.6.4", "", { "dependencies": { "undici-types": "~8.9.0" } }, ""],
 
     "bun-types/@types/node": ["@types/node@26.6.4", "", { "dependencies": { "undici-types": "~8.9.0" } }, ""],
@@ -1242,14 +581,6 @@
     "htmlparser2/domhandler": ["domhandler@5.0.3", "", { "dependencies": { "domelementtype": "^2.3.0" } }, "sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w=="],
 
     "htmlparser2/domutils": ["domutils@3.2.2", "", { "dependencies": { "dom-serializer": "^2.0.0", "domelementtype": "^2.3.0", "domhandler": "^5.0.3" } }, "sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw=="],
-
-    "@arnilo/prism-delegate/@arnilo/prism-tools-coding/@arnilo/prism-evals": ["@arnilo/prism-evals@file:packages/hosts/evals", {}],
-
-    "@arnilo/prism-delegate/@arnilo/prism-tools-coding/@arnilo/prism-workflows": ["@arnilo/prism-workflows@file:packages/integrations/workflows", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
-
-    "@arnilo/prism-wiki/@arnilo/prism-memory-system/@arnilo/prism-memory-compaction": ["@arnilo/prism-memory-compaction@file:packages/memory/compaction", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
-
-    "@arnilo/prism-wiki/@arnilo/prism-memory-system/@arnilo/prism-rag": ["@arnilo/prism-rag@file:packages/knowledge/rag", {}],
 
     "@types/pg/@types/node/undici-types": ["undici-types@8.9.0", "", {}, ""],
 

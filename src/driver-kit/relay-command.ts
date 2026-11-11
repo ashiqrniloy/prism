@@ -13,7 +13,10 @@ export function relayCommand(): readonly string[] {
   const source = fileURLToPath(new URL("../cli.ts", import.meta.url));
   if (!existsSync(source)) throw new DriverError("driver_unavailable", "the kernel's cli entry was not found next to the driver kit");
   if (!/(^|[\\/])bun(\.exe)?$/i.test(process.execPath)) {
-    throw new DriverError("driver_unavailable", "the kernel runs from source here, and only Bun can run its cli.ts; build the kernel or run under Bun");
+    throw new DriverError(
+      "driver_unavailable",
+      "the kernel runs from source here, and only Bun can run its cli.ts; build the kernel or run under Bun",
+    );
   }
   return [process.execPath, source];
 }

@@ -820,7 +820,7 @@
 ./manifest HashPackageClosureOptions	interface HashPackageClosureOptions { readonly maxClosurePackages?: number; }
 ./manifest HashPackageTreeContext	interface HashPackageTreeContext { readonly dependency?: string; readonly name: string; readonly rootPackage?: string; readonly scope: ManifestScope; }
 ./manifest InstallLocation	interface InstallLocation { readonly bun?: string; readonly env?: NodeJS.ProcessEnv; readonly home?: string; readonly root?: string; readonly scope: ManifestScope; }
-./manifest InstallOptions	interface InstallOptions extends InstallLocation { readonly cwd?: string; readonly review?: (entry: ManifestEntry) => void | Promise<void>; readonly version?: string; }
+./manifest InstallOptions	interface InstallOptions extends InstallLocation { readonly cwd?: string; readonly packFrom?: string; readonly review?: (entry: ManifestEntry) => void | Promise<void>; readonly version?: string; }
 ./manifest ListedManifest	interface ListedManifest { readonly packages: readonly ListedPackage[]; readonly slots: Partial<Record<SlotName, string>>; }
 ./manifest ListedPackage	interface ListedPackage { readonly capabilities: readonly Capability[]; readonly configKeys: readonly string[]; readonly enabled: boolean; readonly name: string; readonly optional: boolean; readonly scope: ManifestScope; readonly slots: readonly SlotName[]; readonly version: string; }
 ./manifest LoadManifestOptions	interface LoadManifestOptions { readonly home?: string; readonly root?: string; readonly scopes?: readonly ManifestScope[]; readonly trustProject?: (request: ManifestTrustRequest) => boolean | Promise<boolean>; }
@@ -868,7 +868,7 @@
 ./manifest setEnabled	function setEnabled(name: string, enabled: boolean, options: MaintainOptions): Promise<void>
 ./manifest toPackageDefinition	function toPackageDefinition(exported: unknown, context: { readonly name: string; readonly scope: ManifestScope; }): PackageDefinition<any>
 ./manifest verify	function verify(options?: VerifyOptions): Promise<VerifyResult[]>
-./manifest verifyInstalled	function verifyInstalled(entry: { readonly name: string; readonly integrity: string; }, packagesDir: string, scope: ManifestScope, options?: HashPackageClosureOptions): Promise<void>
+./manifest verifyInstalled	function verifyInstalled(entry: { readonly name: string; readonly integrity: string; }, packagesDir: string, scope: ManifestScope, options?: HashPackageClosureOptions & { readonly cache?: Map<string, Promise<string>>; }): Promise<void>
 ./manifest writeManifest	function writeManifest(dirs: ScopeDirs, manifest: PrismManifestV1, io?: WriteIo): Promise<void>
 ./net PinnedFetchOptions	interface PinnedFetchOptions { readonly allowLoopback?: boolean; readonly errorPrefix?: string; readonly hostnameErrorPrefix?: string; readonly maxResponseBytes?: number; readonly resolver?: MediaHostnameResolver; readonly ssrf?: SsrfPolicy; }
 ./net boundResponse	function boundResponse(response: Response, maxBytes: number, errorPrefix?: string): Response

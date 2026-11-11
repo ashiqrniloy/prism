@@ -1,4 +1,4 @@
-import type { MemoryVectorHit, MemoryVectorRecord, RecallScoringOptions } from "@arnilo/prism-memory-core";
+import type { MemoryVectorHit, MemoryVectorRecord, RecallScoringOptions } from "@arnilo/prism-memory-system/core";
 import {
   HARD_TOP_K_CAP,
   lexicalDice,
@@ -8,7 +8,7 @@ import {
   MemoryValidationError,
   RECALL_OVERSAMPLE,
   resolveMemoryLimits,
-} from "@arnilo/prism-memory-core";
+} from "@arnilo/prism-memory-system/core";
 import { expandLexicalQuery } from "./lexical-expansion.js";
 import { ARCHIVE_SEARCH_COVERAGE, isActiveNote, MAX_ARCHIVED_HITS } from "./lifecycle/index.js";
 import {
@@ -470,9 +470,7 @@ export function createFabricRecall(deps: {
     // Group before selection so a same-subject history competes for the budget as one unit, not as
     // unrelated hits. An explicit time order keeps its chronological contract and is not regrouped.
     const rankedById = new Map(ranked.map((item) => [item.candidate.hit.id, item]));
-    const ordered = timeOrder
-      ? ranked
-      : groupRecallHits(ranked.map((item) => toHit(item.candidate))).map((hit) => rankedById.get(hit.id)!);
+    const ordered = timeOrder ? ranked : groupRecallHits(ranked.map((item) => toHit(item.candidate))).map((hit) => rankedById.get(hit.id)!);
     const picked = new Set(
       selectWithScopeReserve(ordered, {
         ...(budget === undefined ? {} : { budget }),

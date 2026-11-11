@@ -2,11 +2,12 @@
  * Plan 215 Task 27 (ex-plan 185 Task 3): the migration-era shapes stay retired, and every
  * secret-bearing field in a first-party package is ref-only.
  */
-import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { JsonSchema } from "../packages/schema.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -31,22 +32,19 @@ function secretFields(schema: JsonSchema | undefined, path: string, out: SecretF
   for (const branch of [...(schema.oneOf ?? []), ...(schema.anyOf ?? [])]) secretFields(branch, path, out);
 }
 
-/** Every workspace package under `packages/<group>/<name>` whose root entry exports a package definition. */
+/** Every package definition exported by the bundle map, including bundle-root definitions. */
 async function packageDefinitions(): Promise<{ name: string; config: JsonSchema }[]> {
   const found: { name: string; config: JsonSchema }[] = [];
-  for (const group of readdirSync(join(ROOT, "packages")).sort()) {
-    const groupDir = join(ROOT, "packages", group);
-    if (!statSync(groupDir).isDirectory()) continue;
-    for (const name of readdirSync(groupDir).sort()) {
-      const manifestPath = join(groupDir, name, "package.json");
-      if (!existsSync(manifestPath)) continue;
-      const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { name: string; exports?: string | Record<string, unknown> };
-      const entry = typeof manifest.exports === "string" ? manifest.exports : manifest.exports?.["."];
-      if (typeof entry !== "string") continue;
-      const mod = (await import(pathToFileURL(join(groupDir, name, entry)).href)) as { default?: { config?: JsonSchema } };
+  const { bundles } = JSON.parse(readFileSync(join(ROOT, "scripts/bundles.json"), "utf8")) as {
+    bundles: { name: string; subpaths: { path: string; kind: string }[] }[];
+  };
+  for (const bundle of bundles) {
+    for (const row of bundle.subpaths.filter((row) => row.kind === "package")) {
+      const name = bundle.name + (row.path === "." ? "" : row.path.slice(1));
+      const mod = (await import(name)) as { default?: { config?: JsonSchema } };
       const definition = mod.default;
       if ((typeof definition === "object" || typeof definition === "function") && definition?.config !== undefined) {
-        found.push({ name: manifest.name, config: definition.config });
+        found.push({ name, config: definition.config });
       }
     }
   }
@@ -87,6 +85,7 @@ function sanctioned(rel: string): boolean {
     rel === "src/__tests__/public-contracts.test.ts" ||
     /^scripts\/phase\d+-(freeze|security)/.test(rel) ||
     rel.startsWith("scripts/compat-baseline/") ||
+    rel === "scripts/retired-names.json" ||
     rel === "scripts/budgets.json"
   );
 }

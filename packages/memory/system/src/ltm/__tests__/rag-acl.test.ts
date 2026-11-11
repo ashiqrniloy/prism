@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createHashEmbedder, createMemoryVectorStore, type MemoryVectorHit, type VectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore, type MemoryVectorHit, type VectorStore } from "@arnilo/prism-memory-system/core";
 import {
   chunkText,
   indexChunks,
@@ -10,7 +10,7 @@ import {
   type RagTelemetrySpan,
   RagValidationError,
   retrieveContext,
-} from "@arnilo/prism-rag";
+} from "@arnilo/prism-knowledge/rag";
 
 const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };
 const thread = { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId };

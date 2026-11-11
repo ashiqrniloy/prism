@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { resolveLifecycleConfig } from "../../packages/memory/system/src/ltm/config.js";
 import { createMemory, createLongTermMemory } from "../../packages/memory/system/src/index.js";
 

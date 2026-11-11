@@ -6,7 +6,7 @@
  * (`serveTools`), so this fixture deliberately uses no Prism tool surface.
  */
 
-import { servePrismMcpStdio } from "@arnilo/prism-mcp-server";
+import { servePrismMcpStdio } from "@arnilo/prism-hosts/mcp-server";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 

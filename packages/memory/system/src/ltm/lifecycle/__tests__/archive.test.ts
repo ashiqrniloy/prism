@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createLongTermMemory } from "../../create.js";
 import { parseMemoryNoteMetadata } from "../../../index.js";
 import { createFabricLifecycle } from "../index.js";
@@ -21,17 +21,21 @@ function makeMemory(options: { readonly embedder?: boolean } = {}) {
     tenantId: "t",
     resourceId: "r",
     threadId: "s",
-    ...(options.embedder !== true ? {} : { embedder: {
-      id: "test-hash",
-      dimensions: 8,
-      available: () => true,
-      embed: async (texts: readonly string[]) =>
-        texts.map((text) => {
-          const vector = new Array(8).fill(0);
-          for (let i = 0; i < text.length; i++) vector[i % 8] = ((vector[i % 8] + text.charCodeAt(i)) % 100) / 100;
-          return vector;
+    ...(options.embedder !== true
+      ? {}
+      : {
+          embedder: {
+            id: "test-hash",
+            dimensions: 8,
+            available: () => true,
+            embed: async (texts: readonly string[]) =>
+              texts.map((text) => {
+                const vector = new Array(8).fill(0);
+                for (let i = 0; i < text.length; i++) vector[i % 8] = ((vector[i % 8] + text.charCodeAt(i)) % 100) / 100;
+                return vector;
+              }),
+          },
         }),
-    } }),
     vectorStore: store,
   });
   return { store, memory };
@@ -71,7 +75,12 @@ describe("shouldArchive (plan 188.4 Task 4)", () => {
     const promoted = note({ uses: [use(0)], useSessions: 1, promotion: { score: 1, signals: { explicit: 1 }, pass: "p1" } });
     assert.ok(storageStrength(promoted) >= DEFAULT_ARCHIVE_CONFIG.storageBelow);
     assert.equal(shouldArchive(promoted, 5_000), false, "explicit evidence keeps an unused note");
-    const reinforced = note({ uses: [use(0)], useSessions: 6, helpful: 3, promotion: { score: 1, signals: { explicit: 1, outcome: 1 }, pass: "p1" } });
+    const reinforced = note({
+      uses: [use(0)],
+      useSessions: 6,
+      helpful: 3,
+      promotion: { score: 1, signals: { explicit: 1, outcome: 1 }, pass: "p1" },
+    });
     assert.equal(shouldArchive(reinforced, 5_000), false);
     // Same note without the evidence is archived: the two strengths are what differ.
     assert.equal(shouldArchive(note({ uses: [use(0)], useSessions: 1 }), 5_000), true);
@@ -142,20 +151,32 @@ describe("archive search and revival (plan 188.4 Task 4)", () => {
 
     // A strong active hit keeps archived notes out of the way.
     const strong = await fabric.recall("build", { minSimilarity: 0, topK: 3 });
-    assert.deepEqual(strong.hits.map((hit) => hit.id), [active.id]);
+    assert.deepEqual(
+      strong.hits.map((hit) => hit.id),
+      [active.id],
+    );
 
     // A weak result appends the archived note, after the active hits and marked by its status.
     const weak = await fabric.recall("rollback", { minSimilarity: 0, topK: 3 });
-    assert.deepEqual(weak.hits.map((hit) => hit.id), [archived.id]);
+    assert.deepEqual(
+      weak.hits.map((hit) => hit.id),
+      [archived.id],
+    );
     assert.equal(weak.hits[0]?.status, "archived");
 
     // The explicit flag searches both regardless of how strong the active hit is.
     const both = await fabric.recall("build", { minSimilarity: 0, topK: 3, includeArchived: true });
-    assert.deepEqual(both.hits.map((hit) => hit.id), [active.id, archived.id]);
+    assert.deepEqual(
+      both.hits.map((hit) => hit.id),
+      [active.id, archived.id],
+    );
     assert.equal(both.hits[1]?.status, "archived");
 
     // Passive injection never asks for archived notes: the default path leaves them out.
-    assert.equal((await fabric.recall("build", { minSimilarity: 0 })).hits.some((hit) => hit.status === "archived"), false);
+    assert.equal(
+      (await fabric.recall("build", { minSimilarity: 0 })).hits.some((hit) => hit.status === "archived"),
+      false,
+    );
   });
 
   it("citing_archived_note_revives_it_and_logs", async () => {

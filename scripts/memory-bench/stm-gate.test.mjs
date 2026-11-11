@@ -87,13 +87,16 @@ function allReports({ stmCorrect, stmWorker = 1000, stmRederivations = () => 0 }
 
 test("gate_m1_arms_paired_on_identical_items", async () => {
   const jobs = m1Jobs();
-  assert.equal(jobs.length, 2 * 3 * 3);
+  // The family: 2 models x 3 arms; the S4 suite sample: 2 models x 2 suites x {STM, OM-before}.
+  assert.equal(jobs.length, 2 * 3 + 2 * 2 * 2);
   assertM1Paired(jobs);
   // Every (model, suite) group holds the three arms, alike in everything but the arm and its tree.
   for (const model of ["small", "large"])
     for (const suite of ["longmemeval-m", "beam-1m", "long-session"]) {
       const group = jobs.filter((job) => job.model_key === model && job.suite === suite);
-      assert.deepEqual(group.map((job) => job.arm).sort(), M1_ARMS.map((arm) => arm.id).sort());
+      const arms = suite === "long-session" ? M1_ARMS.map((arm) => arm.id) : ["OM-before", "STM"];
+      assert.deepEqual(group.map((job) => job.arm).sort(), [...arms].sort());
+      if (suite !== "long-session") assert.ok(group.every((job) => job.maxQuestions === 2 && job.concurrency === 1));
       assert.equal(new Set(group.map((job) => `${job.provider}/${job.model}|${job.judges}|${job.subset}`)).size, 1);
       assert.ok(group.every((job) => job.subset === "dev"));
     }
@@ -212,10 +215,12 @@ test("m1_verdicts_computed_from_memory_model_criteria_only", async () => {
   const evidence = buildM1Evidence({ reports: allReports({ stmWorker: 1300 }), manifest, probes, iterations: 200 });
   const verdict = memoryModelGateVerdict("M-1", evidence, { partition: "dev" });
   const status = Object.fromEntries(verdict.rows.map((row) => [row.row, row.status]));
-  assert.deepEqual(status, { S1: "pass", S2: "pass", S3: "pass", S4: "miss" });
+  assert.deepEqual(status, { S1: "pass", S2: "pass", S3: "deferred", S4: "miss" });
+  assert.equal(verdict.status, "miss");
   assert.equal(evidence.rows.S4.tests["token-ratio"].value, 1.3);
-  assert.equal(evidence.rows.S3.tests["vs-om-before"].models.length, 4);
-  assert.ok(Object.keys(evidence.rows.S3.coverage).length > 0);
+  // S3 is deferred to gate A (owner decision m1S3Deferred); the sample's paired accuracy is a diagnostic only.
+  assert.deepEqual(evidence.rows.S3.deferred, { to: "A", decision: "m1S3Deferred" });
+  assert.equal(evidence.rows.S3.diagnostic.cells.length, 4);
   // A written justification is the only thing that turns S4's miss into a pass; it is read, never set by the builder.
   const justified = buildM1Evidence({
     reports: allReports({ stmWorker: 1300 }),
@@ -225,7 +230,7 @@ test("m1_verdicts_computed_from_memory_model_criteria_only", async () => {
     iterations: 200,
   });
   assert.equal(memoryModelGateVerdict("M-1", justified).rows.find((row) => row.row === "S4").status, "pass");
-  // An accuracy loss beyond 2 points on a cell is a miss; no re-derivation gain is a miss.
+  // No re-derivation gain is a miss; an accuracy loss no longer decides M-1 (S3 is gate A's).
   const worse = buildM1Evidence({
     reports: allReports({ stmCorrect: (index) => index % 3 !== 0, stmRederivations: () => 2 }),
     manifest,
@@ -234,7 +239,7 @@ test("m1_verdicts_computed_from_memory_model_criteria_only", async () => {
   });
   const worseStatus = Object.fromEntries(memoryModelGateVerdict("M-1", worse).rows.map((row) => [row.row, row.status]));
   assert.equal(worseStatus.S1, "miss");
-  assert.equal(worseStatus.S3, "miss");
+  assert.equal(worseStatus.S3, "deferred");
   // A missing or unfinished report leaves its row missing, never passed.
   const partial = allReports();
   partial.delete("217-m1.large.OM-before.beam-1m");
@@ -245,7 +250,21 @@ test("m1_verdicts_computed_from_memory_model_criteria_only", async () => {
       row.status,
     ]),
   );
-  assert.deepEqual(missing, { S1: "missing", S2: "pass", S3: "missing", S4: "missing" });
+  assert.deepEqual(missing, { S1: "missing", S2: "pass", S3: "deferred", S4: "missing" });
+  // A capped sample (the run reports `partial`) counts once it answered exactly its sample, on the same ids in both arms.
+  const capped = allReports({ stmWorker: 1100 });
+  for (const [id, report] of capped)
+    if (!id.endsWith("long-session")) capped.set(id, { ...report, status: "partial", results: report.results.slice(0, 2) });
+  const cappedManifest = {
+    ...manifest,
+    jobs: manifest.jobs.map((job) => (job.suite === "long-session" ? job : { ...job, maxQuestions: 2 })),
+  };
+  const cappedEvidence = buildM1Evidence({ reports: capped, manifest: cappedManifest, probes, iterations: 200 });
+  assert.equal(memoryModelGateVerdict("M-1", cappedEvidence).rows.find((row) => row.row === "S4").status, "pass");
+  const other = capped.get("217-m1.small.STM.beam-1m");
+  capped.set("217-m1.small.STM.beam-1m", { ...other, results: [other.results[0], { ...other.results[1], id: "elsewhere" }] });
+  const mismatched = buildM1Evidence({ reports: capped, manifest: cappedManifest, probes, iterations: 200 });
+  assert.equal(mismatched.cells["small.beam-1m"], "missing");
   // The evidence pins the frozen criteria and carries ids, counts and scores only.
   assert.equal(evidence.memoryModelCriteriaHash, manifest.memoryModelCriteriaHash);
   assert.doesNotMatch(JSON.stringify(evidence), /"(text|answer|question|gold|description)"/);

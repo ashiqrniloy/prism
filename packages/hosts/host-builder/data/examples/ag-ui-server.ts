@@ -8,7 +8,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createAgUiHandler } from "@arnilo/prism-ag-ui";
+import { createAgUiHandler } from "@arnilo/prism-hosts/ag-ui";
 
 export async function demo() {
   const executed: string[] = [];

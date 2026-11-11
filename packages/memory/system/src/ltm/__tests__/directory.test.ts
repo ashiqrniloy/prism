@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ContextDraft, HookContext, JsonObject, ToolExecutionContext } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createFabricContext } from "../context.js";
 import {
   createFabricDirectory,
@@ -224,7 +224,8 @@ describe("memory directory", () => {
   it("topic_list_drops_stop_words_and_keeps_content_words", async () => {
     const { fabric, memory } = harness();
     await fabric.remember({ kind: "fact", content: "billing uses stripe", tags: ["i", "it", "we", "billing", "hey john"] });
-    const topicsOf = async (source: ReturnType<typeof createFabricDirectory>) => (await source.snapshot()).topics.map((topic) => topic.tag).sort();
+    const topicsOf = async (source: ReturnType<typeof createFabricDirectory>) =>
+      (await source.snapshot()).topics.map((topic) => topic.tag).sort();
     const off = await topicsOf(createFabricDirectory({ memory }));
     assert.deepEqual(off, ["billing", "hey john", "i", "it", "we"], "unset keeps every topic, as before");
     const on = await topicsOf(createFabricDirectory({ memory, stopWords: true }));
@@ -234,6 +235,9 @@ describe("memory directory", () => {
   it("directory_stop_words_field_is_off_by_default_and_fails_closed_on_a_non_boolean", () => {
     assert.equal((resolveFabricDirectoryOptions(true, true) as ResolvedFabricDirectoryOptions).stopWords, false);
     assert.equal((resolveFabricDirectoryOptions({ stopWords: true }, true) as ResolvedFabricDirectoryOptions).stopWords, true);
-    assert.throws(() => resolveFabricDirectoryOptions({ stopWords: "yes" as unknown as boolean }, true), /directory\.stopWords must be a boolean/);
+    assert.throws(
+      () => resolveFabricDirectoryOptions({ stopWords: "yes" as unknown as boolean }, true),
+      /directory\.stopWords must be a boolean/,
+    );
   });
 });

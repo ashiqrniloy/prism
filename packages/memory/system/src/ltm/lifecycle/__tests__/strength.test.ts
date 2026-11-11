@@ -5,14 +5,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { MemoryNoteMetadata, MemoryNoteUseEvent } from "../../types.js";
-import {
-  DEFAULT_DECAY,
-  DEFAULT_STRENGTH_WEIGHTS,
-  noteImportance,
-  retrievalStrength,
-  storageStrength,
-  strengthPrior,
-} from "../index.js";
+import { DEFAULT_DECAY, DEFAULT_STRENGTH_WEIGHTS, noteImportance, retrievalStrength, storageStrength, strengthPrior } from "../index.js";
 
 const AT = "2026-01-01T00:00:00.000Z";
 

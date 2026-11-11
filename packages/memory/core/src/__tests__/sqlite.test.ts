@@ -133,7 +133,7 @@ test("memory_core_root_does_not_load_bun_sqlite", () => {
     "bun",
     [
       "-e",
-      `const { mock } = await import('bun:test'); mock.module('bun:sqlite', () => { throw new Error('sqlite loaded'); }); await import('@arnilo/prism-memory-core');`,
+      `const { mock } = await import('bun:test'); mock.module('bun:sqlite', () => { throw new Error('sqlite loaded'); }); await import('@arnilo/prism-memory-system/core');`,
     ],
     { timeout: 10000 },
   );

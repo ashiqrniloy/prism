@@ -33,7 +33,7 @@ function maskVendor(source: string, vendor: "typesafe" | "laya"): string {
   }
 }
 
-describe("@arnilo/prism-provider-typesafe", () => {
+describe("@arnilo/prism-ai/typesafe", () => {
   it("typesafe_passes_systemone_conformance", async () => {
     const recordings = new URL("wire/systemone", import.meta.url);
     const result = await systemOneConformance({
@@ -103,10 +103,6 @@ describe("@arnilo/prism-provider-typesafe", () => {
 
     const typesafeProvider = readFileSync(join(typesafeDir, "provider.ts"), "utf8");
     const layaProvider = readFileSync(join(layaDir, "provider.ts"), "utf8");
-    assert.equal(
-      maskVendor(typesafeProvider, "typesafe"),
-      maskVendor(layaProvider, "laya"),
-      "provider.ts matches with vendor masked",
-    );
+    assert.equal(maskVendor(typesafeProvider, "typesafe"), maskVendor(layaProvider, "laya"), "provider.ts matches with vendor masked");
   });
 });

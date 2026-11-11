@@ -1,6 +1,6 @@
 # Performance limits
 
-Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate trace data; one model-judge attempt with 30-second/16-KiB bounds; 8 comparison candidates, 1-MiB candidate results, 10,000 dataset items, and 4-MiB serialized reports. Hard caps are exported by `@arnilo/prism-evals`; overflow fails rather than truncating grading evidence.
+Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate trace data; one model-judge attempt with 30-second/16-KiB bounds; 8 comparison candidates, 1-MiB candidate results, 10,000 dataset items, and 4-MiB serialized reports. Hard caps are exported by `@arnilo/prism-hosts/evals`; overflow fails rather than truncating grading evidence.
 
 ## What it does
 
@@ -333,7 +333,7 @@ These values are dated local comparison evidence, not portable thresholds.
 
 ## Release 0.0.12 frontend interoperability caps and evidence
 
-`@arnilo/prism-ag-ui` uses finite handler/projection limits, all defaults / hard: request 64 KiB / 1 MiB; input 128 / 1024 messages and 64 KiB / 1 MiB text; event 64 KiB / 1 MiB; error 8 KiB / 64 KiB; replay cursor 4 / 16 KiB; replay page 100 / 500; subscriber queue 128 / 4096; stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. Tool arguments/results/progress, frontend tools, and mutable frontend state default to zero exposure; hosts may only add bounded safe projection.
+`@arnilo/prism-hosts/ag-ui` uses finite handler/projection limits, all defaults / hard: request 64 KiB / 1 MiB; input 128 / 1024 messages and 64 KiB / 1 MiB text; event 64 KiB / 1 MiB; error 8 KiB / 64 KiB; replay cursor 4 / 16 KiB; replay page 100 / 500; subscriber queue 128 / 4096; stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. Tool arguments/results/progress, frontend tools, and mutable frontend state default to zero exposure; hosts may only add bounded safe projection.
 
 Reconnect is one ownership-scoped redacted durable page plus an optional bounded live subscriber. It is at-least-once at a page boundary, never a polling loop or terminal-run rerun. ACP uses the same event/byte/queue caps. Coding compaction reuses LLM summary/reserve/error/file-operation bounds (16,384 / 131,072 summary and reserve tokens; 1 / 8 KiB summary errors) and makes no additional provider call.
 
@@ -409,9 +409,9 @@ Security automation is isolated from `npm test`: CodeQL/supply-chain jobs have 1
 
 Web tools default/hard ceilings are query 4/16 KiB, results 10/20, URLs 5/20, request 256 KiB/1 MiB, response/aggregate 2/16 MiB, Markdown 1/8 MiB, extraction 256 KiB/1 MiB, schema 64/256 KiB, concurrency 4/16, retries 2/4, polling 20/100, and wall time 60 seconds/30 minutes. Bounds charge before request, retention, retry, or polling; overflow fails rather than truncating citation/extraction evidence.
 
-Docker sandbox defaults/hard caps from `@arnilo/prism-tools-coding`: startup 30 s/120 s; wall 20 min/30 min; idle 5 min/15 min; CPUs 2/8; memory 2 GiB/16 GiB (swap equal to memory); PIDs 256/1,024; FDs 1,024/8,192; workspace/tmp/download tmpfs 1 GiB/8 GiB, 256 MiB/2 GiB, 64 MiB/512 MiB; commands 100/256 with concurrent execs 1/8; env 64/256 names and 64 KiB/256 KiB values; export 50,000/250,000 entries and 256 MiB/2 GiB bytes with 16/64 retained artifacts; stop grace 5 s/30 s and cleanup 30 s/120 s. Caps validate before `docker create`/exec/export; overflow aborts and cleans the recorded container. Output still streams into the coding-agent `OutputAccumulator` ceilings (64 MiB/1 GiB).
+Docker sandbox defaults/hard caps from `@arnilo/prism-tools/coding`: startup 30 s/120 s; wall 20 min/30 min; idle 5 min/15 min; CPUs 2/8; memory 2 GiB/16 GiB (swap equal to memory); PIDs 256/1,024; FDs 1,024/8,192; workspace/tmp/download tmpfs 1 GiB/8 GiB, 256 MiB/2 GiB, 64 MiB/512 MiB; commands 100/256 with concurrent execs 1/8; env 64/256 names and 64 KiB/256 KiB values; export 50,000/250,000 entries and 256 MiB/2 GiB bytes with 16/64 retained artifacts; stop grace 5 s/30 s and cleanup 30 s/120 s. Caps validate before `docker create`/exec/export; overflow aborts and cleans the recorded container. Output still streams into the coding-agent `OutputAccumulator` ceilings (64 MiB/1 GiB).
 
-Repository list/search defaults/hard caps from `@arnilo/prism-tools-coding`: depth 32/128; entries/files 10,000/100,000; page/results 1,000/10,000; search scan 64 MiB/1 GiB aggregate and 8 MiB/64 MiB per file; matches 1,000/10,000; pattern 512 B/4 KiB; line 50 KiB/1 MiB; context 5/20; wall 30 s/300 s; concurrency config 8/32. Walks stream via `opendir`/`lstat`, never follow symlink escapes, and stop immediately on aggregate limits or abort.
+Repository list/search defaults/hard caps from `@arnilo/prism-tools/coding`: depth 32/128; entries/files 10,000/100,000; page/results 1,000/10,000; search scan 64 MiB/1 GiB aggregate and 8 MiB/64 MiB per file; matches 1,000/10,000; pattern 512 B/4 KiB; line 50 KiB/1 MiB; context 5/20; wall 30 s/300 s; concurrency config 8/32. Walks stream via `opendir`/`lstat`, never follow symlink escapes, and stop immediately on aggregate limits or abort.
 
 Structured Git/check/handoff defaults/hard caps: paths 1,000/10,000; refs 1 KiB/4 KiB; commit message 64 KiB/256 KiB; inline Git output 4 MiB/64 MiB; diff lines 10,000/100,000; changed files 1,000/10,000; patch input 16 MiB/64 MiB; worktrees 4/16; named checks 8/32 names, concurrency 1/4, timeout 10 min/60 min, diagnostic lines 2,000/100,000, output 4 MiB/64 MiB; PR handoff JSON 256 KiB/1 MiB with 100/1,000 commits. Git tools use typed argument arrays (never shell), disable hooks/credential prompts/external diff by default, and emit host-owned PR handoff data only — no push/network/PR client.
 
@@ -587,7 +587,7 @@ Scope froze at commit `f5128a816ae204c52f3e2f089de71c99bd5de6d4`. Measurement ho
 | Root artifact | `@arnilo/prism@0.0.4` dry-run tarball | 346.0 kB packed; 1.3 MB unpacked; 196 files |
 | Installed workspace | Current root `node_modules` | 72 MiB |
 
-Synthetic stream/tool/workflow values are medians of seven measured runs after one warm-up and contain no network, database, or exporter I/O. The temporary benchmark reused public `AgentSession`, `dispatchToolCallsInOrder`, and `@arnilo/prism-workflows` APIs; it was not added to CI because this phase records a baseline rather than creating hardware-sensitive tests.
+Synthetic stream/tool/workflow values are medians of seven measured runs after one warm-up and contain no network, database, or exporter I/O. The temporary benchmark reused public `AgentSession`, `dispatchToolCallsInOrder`, and `@arnilo/prism-extensions/workflows` APIs; it was not added to CI because this phase records a baseline rather than creating hardware-sensitive tests.
 
 Repository size at the same commit, counted from `src/` and `packages/` while excluding `dist/`:
 
@@ -620,7 +620,7 @@ Usage aggregation performs one constant-size accumulator update per terminal pro
 
 ### 0.0.5 Phase 4 verification (2026-07-15)
 
-Optional `@arnilo/prism-evals` adds package-local scoring without changing core run latency. Validation stayed within the frozen release gate:
+Optional `@arnilo/prism-hosts/evals` adds package-local scoring without changing core run latency. Validation stayed within the frozen release gate:
 
 | Surface | Result |
 | --- | --- |
@@ -687,7 +687,7 @@ Durable human suspension extends existing workflow checkpoint JSON/CAS; no worke
 
 ### 0.0.5 Phase 9 verification (2026-07-16)
 
-Optional `@arnilo/prism-rag` reuses Phase 7 vector contracts and adds no core path, parser dependency, network loader, or profile activation.
+Optional `@arnilo/prism-knowledge/rag` reuses Phase 7 vector contracts and adds no core path, parser dependency, network loader, or profile activation.
 
 | Surface | Result |
 | --- | --- |
@@ -701,7 +701,7 @@ Optional `@arnilo/prism-rag` reuses Phase 7 vector contracts and adds no core pa
 
 ### 0.0.5 Phase 10 verification (2026-07-16)
 
-Optional `@arnilo/prism-remote` and `@arnilo/prism-mcp-server` compose existing agent/workflow/tool/SDK primitives; no core path, framework/listener, auth provider, database, or profile activation was added.
+Optional `@arnilo/prism-hosts/remote` and `@arnilo/prism-hosts/mcp-server` compose existing agent/workflow/tool/SDK primitives; no core path, framework/listener, auth provider, database, or profile activation was added.
 
 | Surface | Result |
 | --- | --- |
@@ -782,7 +782,7 @@ No performance ceiling was raised. Core grew from Phase 0's 346.0 kB packed base
 
 ### 0.0.13 Phase 8 server deployment seams (2026-07-23)
 
-Optional health/drain/rate-limit/replay/deployment-lease helpers on `@arnilo/prism-remote`. No listener, queue adapter, or concurrency hard-cap raise.
+Optional health/drain/rate-limit/replay/deployment-lease helpers on `@arnilo/prism-hosts/remote`. No listener, queue adapter, or concurrency hard-cap raise.
 
 | Surface | Result |
 | --- | --- |
@@ -827,7 +827,7 @@ Kernel cost per run as one session's history grows, network-free: `bun scripts/b
 
 - [Agent events](events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.
 - [Agent/session runtime](agent.md): `session.subscribe()` and runtime event flow.
-- [Session stores](../packages/stores/jsonl/README.md): `SessionStore.readBranchPath` and dev-vs-production branch reads.
-- [Database persistence](../packages/stores/sqlite/README.md): cursor queries, reference schema, indexes, and event sequence guidance.
+- [Session stores](../packages/extensions/store-jsonl/README.md): `SessionStore.readBranchPath` and dev-vs-production branch reads.
+- [Database persistence](../packages/extensions/store-sqlite/README.md): cursor queries, reference schema, indexes, and event sequence guidance.
 - [Runs and usage ledger](events.md): durable event, tool-call, and usage persistence.
 - [Provider primitives](provider-kit.md): bounded SSE/error-body limits for first-party providers.

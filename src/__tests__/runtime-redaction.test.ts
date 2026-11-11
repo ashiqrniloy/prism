@@ -12,15 +12,19 @@ describe("runtime redaction", () => {
       model: { provider: "mock", model: "demo" },
       slots: { store },
       redactor: createSecretRedactor(["token-value"]),
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate(req) {
-          request = req;
-          yield { type: "message_start", messageId: "m1" };
-          yield { type: "content_delta", content: { type: "text", text: "echo token-value" } };
-          yield { type: "done" };
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate(req) {
+              request = req;
+              yield { type: "message_start", messageId: "m1" };
+              yield { type: "content_delta", content: { type: "text", text: "echo token-value" } };
+              yield { type: "done" };
+            },
+          },
+        ]),
+      ],
     });
 
     const session = await agent.session({ id: "s1", create: true });

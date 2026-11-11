@@ -10,28 +10,17 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
-import {
-  providerDone,
-  providerTextDelta,
-  resolveInputCap,
-} from "@arnilo/prism";
+import { providerDone, providerTextDelta, resolveInputCap } from "@arnilo/prism";
 import {
   foldToolResultHistory,
   planToolResultFoldBatch,
   resolveToolResultFold,
   truncateSummarize,
-} from "@arnilo/prism-context-engineering";
+} from "@arnilo/prism-extensions/context-engineering";
 import { collectProviderEvents } from "@arnilo/prism/provider-kit";
 import { parseEnvFile } from "../live-matrix.mjs";
 import { startWireProxy } from "../wire-proxy.mjs";
-import {
-  buildHistoryMessages,
-  cloneHistory,
-  extractSnapshot,
-  lastHistoryMessageId,
-  readSnapshotFiles,
-  EXPRESS_PIN,
-} from "./history.mjs";
+import { buildHistoryMessages, cloneHistory, extractSnapshot, lastHistoryMessageId, readSnapshotFiles, EXPRESS_PIN } from "./history.mjs";
 import { gradeTask, prepareWorkspace } from "./grade.mjs";
 import { aggregate, writeEvidence, updateSummary } from "./report.mjs";
 import tasksData from "./tasks.json" with { type: "json" };
@@ -41,14 +30,14 @@ const FIXTURE_ROOT = join(ROOT, "fixtures/repo");
 const DEFAULT_LENGTHS = [0, 16_000, 32_000, 64_000, 96_000];
 const PROVIDERS = {
   hyper: {
-    module: "@arnilo/prism-provider-hyper",
+    module: "@arnilo/prism-ai/hyper",
     create: "createHyperProvider",
     list: "listHyperModels",
     secret: "HYPER_API_KEY",
     url: "https://hyper.charm.land/v1",
   },
   "opencode-go": {
-    module: "@arnilo/prism-provider-opencode-go",
+    module: "@arnilo/prism-ai/opencode-go",
     create: "createOpenCodeGoProvider",
     list: "listOpenCodeGoModels",
     secret: "OPENCODE_GO_API_KEY",
@@ -94,21 +83,28 @@ export function parseArgs(argv) {
   for (const key of ["repeats", "maxInputTokens", "maxTurns", "maxTasks"]) {
     if (options[key] === undefined) continue;
     options[key] = Number(options[key]);
-    if (!Number.isSafeInteger(options[key]) || options[key] < 1) throw new TypeError(`ContextRotArguments: ${key} must be a positive integer`);
+    if (!Number.isSafeInteger(options[key]) || options[key] < 1)
+      throw new TypeError(`ContextRotArguments: ${key} must be a positive integer`);
   }
   if (options.lengths !== undefined) {
     const lengths = options.lengths.split(",").map((value) => Number(value));
-    if (lengths.some((value) => !Number.isSafeInteger(value) || value < 0)) throw new TypeError("ContextRotArguments: lengths must be non-negative integers");
+    if (lengths.some((value) => !Number.isSafeInteger(value) || value < 0))
+      throw new TypeError("ContextRotArguments: lengths must be non-negative integers");
     options.lengths = [...new Set(lengths)].sort((left, right) => left - right);
   }
-  if (!options.offline && (!options.provider || !options.model)) throw new TypeError("ContextRotArguments: --provider and --model are required unless --offline");
+  if (!options.offline && (!options.provider || !options.model))
+    throw new TypeError("ContextRotArguments: --provider and --model are required unless --offline");
   return options;
 }
 
 /** Round-robin by kind when a pilot limit is set, so a 3-task run covers coding, needle and tools. */
 export function selectTasks(all, limit) {
   if (limit === undefined || limit >= all.length) return all;
-  const buckets = [all.filter((task) => task.kind === "coding"), all.filter((task) => task.kind === "needle"), all.filter((task) => task.kind === "tools")];
+  const buckets = [
+    all.filter((task) => task.kind === "coding"),
+    all.filter((task) => task.kind === "needle"),
+    all.filter((task) => task.kind === "tools"),
+  ];
   const selected = [];
   for (let index = 0; selected.length < limit; index += 1) {
     for (const bucket of buckets) {
@@ -357,9 +353,10 @@ async function runTask({ provider, model, task, history, fold, maxTurns, cacheAn
   }
   const workspace = task.kind === "needle" ? undefined : await prepareWorkspace(FIXTURE_ROOT, join(ROOT, ".work"), task);
   const tools = workspace ? toolDefinitions(workspace, task) : undefined;
-  const foldOptions = fold === "fold"
-    ? resolveToolResultFold({ minAgeTurns: 2, minBytes: 4096, keepLast: 3, clearAtLeastTokens: 4096, summarize: truncateSummarize })
-    : undefined;
+  const foldOptions =
+    fold === "fold"
+      ? resolveToolResultFold({ minAgeTurns: 2, minBytes: 4096, keepLast: 3, clearAtLeastTokens: 4096, summarize: truncateSummarize })
+      : undefined;
   const foldState = { cleared: new Set(), sessionId: runId };
   const historyTurns = history.filter((message) => message.role === "assistant").length;
   let turn = historyTurns + 1;
@@ -383,25 +380,40 @@ async function runTask({ provider, model, task, history, fold, maxTurns, cacheAn
     const toolCalls = message.content.filter((block) => block.type === "tool_call" && block.authority !== "provider-hosted");
     answer = textFromMessage(message) || answer;
     if (process.env.PRISM_CONTEXT_ROT_DEBUG)
-      console.log(`[debug] turn=${step + 1} text=${JSON.stringify(answer.slice(0, 200))} calls=${toolCalls.map((call) => `${call.name}(${JSON.stringify(call.arguments)})`).join(" ")}`);
+      console.log(
+        `[debug] turn=${step + 1} text=${JSON.stringify(answer.slice(0, 200))} calls=${toolCalls.map((call) => `${call.name}(${JSON.stringify(call.arguments)})`).join(" ")}`,
+      );
     if (toolCalls.length === 0) break;
     for (const call of toolCalls) {
       const tool = tools?.find((entry) => entry.name === call.name);
       const result = tool
         ? await tool.execute(call.arguments ?? {}, { toolCallId: call.id, name: call.name })
         : { toolCallId: call.id, name: call.name, content: [{ type: "text", text: "ERROR: unknown tool" }] };
-      if (process.env.PRISM_CONTEXT_ROT_DEBUG) console.log(`[debug] result=${JSON.stringify((result.content ?? []).map((block) => block.text).join("\n").slice(0, 300))}`);
+      if (process.env.PRISM_CONTEXT_ROT_DEBUG)
+        console.log(
+          `[debug] result=${JSON.stringify(
+            (result.content ?? [])
+              .map((block) => block.text)
+              .join("\n")
+              .slice(0, 300),
+          )}`,
+        );
       messages.push({
         role: "tool",
-        content: [{ type: "tool_result", toolCallId: call.id, name: call.name, result: result.content?.map((block) => block.text).join("\n") ?? "" }],
+        content: [
+          {
+            type: "tool_result",
+            toolCallId: call.id,
+            name: call.name,
+            result: result.content?.map((block) => block.text).join("\n") ?? "",
+          },
+        ],
         metadata: { prismToolResultTurn: turn + 1 },
       });
     }
     turn += 1;
   }
-  const grade = task.kind === "needle" || !workspace
-    ? await gradeTask(task, { answer })
-    : await gradeTask(task, { workspace, answer });
+  const grade = task.kind === "needle" || !workspace ? await gradeTask(task, { answer }) : await gradeTask(task, { workspace, answer });
   if (workspace && !process.env.PRISM_CONTEXT_ROT_DEBUG) await rm(workspace, { recursive: true, force: true });
   return { score: grade.score, answer, usage, calls };
 }
@@ -577,7 +589,9 @@ export async function run(options = {}) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log("usage: bun scripts/context-rot/run.mjs --provider <id> --model <id> [--lengths 0,16000,...] [--repeats 3] [--max-input-tokens 50000000] [--offline]");
+    console.log(
+      "usage: bun scripts/context-rot/run.mjs --provider <id> --model <id> [--lengths 0,16000,...] [--repeats 3] [--max-input-tokens 50000000] [--offline]",
+    );
     return;
   }
   const report = await run(options);

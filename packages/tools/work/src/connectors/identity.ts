@@ -2,7 +2,7 @@ import type { Principal } from "@arnilo/prism";
 
 /**
  * Structural stand-in for a host-verified identity.
- * ponytail: active check only — shape and byte limits stay in `@arnilo/prism-governance`.
+ * ponytail: active check only — shape and byte limits stay in `@arnilo/prism-extensions/governance`.
  * This package must not depend on it (plan 159 Task 1 (g)).
  */
 export interface AgentIdentity {

@@ -4,7 +4,7 @@
 
 ### Added
 
-- New provider package (plan 152 Task 5): `@arnilo/prism-provider-typesafe` replaces the
+- New provider package (plan 152 Task 5): `@arnilo/prism-ai/typesafe` replaces the
   `@arnilo/prism-providers/typesafe` subpath. The default export is a `definePackage` definition that
   registers the `typesafe` provider, declares `capabilities: ["credentials"]`, and takes a ref-only config
   (`apiKey` defaults to `env:TYPESAFE_API_KEY`, plus `baseUrl`, `models`). The key resolves through the

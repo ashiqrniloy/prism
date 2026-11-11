@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import type { ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
+import type { ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { assertNoFetches, assertNoSecretLeak, ProviderRequirementError } from "@arnilo/prism/provider-kit";
 import { loadProviderPackage } from "@arnilo/prism/testing";
 import {
@@ -53,7 +53,7 @@ function ok(body: ReadableStream<Uint8Array>): Response {
   return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
-describe("@arnilo/prism-provider-hyper", () => {
+describe("@arnilo/prism-ai/hyper", () => {
   it("hyper_registers_featured_models_and_setup_does_not_fetch", async () => {
     const fetchCalls: unknown[] = [];
     const fetchImpl = (async () => {

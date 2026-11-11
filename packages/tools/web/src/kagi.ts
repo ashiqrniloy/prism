@@ -51,14 +51,9 @@ export function createKagiSearch(options: WebAdapterOptions): WebSearchAdapter {
           ...(Object.keys(lens).length === 0 ? {} : { lens }),
         });
         // Search is billed per request; a 429 was refused, so retrying it cannot double-bill.
-        const response = await transport.json(
-          "kagi",
-          "api_key",
-          new URL("/api/v1/search", ORIGIN),
-          { method: "POST", body },
-          signal,
-          { retry: "safe-post" },
-        );
+        const response = await transport.json("kagi", "api_key", new URL("/api/v1/search", ORIGIN), { method: "POST", body }, signal, {
+          retry: "safe-post",
+        });
         const metadata = providerFacts(response.value, response.metadata);
         return boundedJson(
           {

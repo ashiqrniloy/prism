@@ -21,7 +21,7 @@ runProviderLiveScenarios({
     },
   },
   secretEnv: ["OLLAMA_API_KEY"],
-  title: "@arnilo/prism-provider-ollama-cloud live tests",
+  title: "@arnilo/prism-ai/ollama-cloud live tests",
 });
 
 // Decision models (`/api/show` capability `decision`) answer the System One wire at `/v1/systemone`.
@@ -30,5 +30,5 @@ await runSystemOneLiveScenarios({
   model: process.env.PRISM_LIVE_OLLAMA_CLOUD_DECISION_MODEL ?? "clef:27b",
   secretEnv: "OLLAMA_API_KEY",
   decideTestName: "ollama_cloud_live_decide",
-  title: "@arnilo/prism-provider-ollama-cloud decision live tests",
+  title: "@arnilo/prism-ai/ollama-cloud decision live tests",
 });

@@ -93,7 +93,7 @@ Catalog (roadmap §2.4). `payload → result` is the handler's value; the error 
 | `run.end` | decide | transcript view → `{ continue }` | first continue wins, capped by `limits.maxContinuations`; throw fails closed |
 | `compaction.when` | decide | context estimate → `{ compact }` | any `true` compacts, else any `false` vetoes, else every handler abstained; then `CompactionOptions.thresholdEntries` (the kernel default trigger) is the fallback; throw fails closed |
 
-Context engineering is package work, not a kernel stage: `@arnilo/prism-context-engineering` registers
+Context engineering is package work, not a kernel stage: `@arnilo/prism-extensions/context-engineering` registers
 one `context.build` handler that composes tool-result folding, tool search, attention, and budget
 eviction in a fixed order at the lowest first-party priority (so a budget sees every block another
 handler added this turn), plus a `compaction.when` handler when attention is configured and the

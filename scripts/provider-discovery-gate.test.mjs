@@ -11,10 +11,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { createAgent } from "@arnilo/prism";
-import { hyper } from "@arnilo/prism-provider-hyper";
-import { laya } from "@arnilo/prism-provider-laya";
-import { opencodeGo } from "@arnilo/prism-provider-opencode-go";
-import { typesafe } from "@arnilo/prism-provider-typesafe";
+import { hyper } from "@arnilo/prism-ai/hyper";
+import { laya } from "@arnilo/prism-ai/laya";
+import { opencodeGo } from "@arnilo/prism-ai/opencode-go";
+import { typesafe } from "@arnilo/prism-ai/typesafe";
 
 /** `endpoint: undefined` marks a vendor with no live discovery: `models()` must never fetch. */
 const CASES = [

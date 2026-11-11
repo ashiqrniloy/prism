@@ -25,7 +25,7 @@ import { REPO_ROOT } from "./run.mjs";
 
 const MODEL = "nvidia/nemotron-3.5-super-vl:free";
 const FIXTURE = JSON.parse(readFileSync(new URL("./fixtures/three-turn-coding.json", import.meta.url), "utf8"));
-const TURNS = 4;
+const _TURNS = 4;
 const MAIN_REQUEST_MIN_TOKENS = 8192;
 
 /** The four user messages: the padded first message, then short follow-ups with the same history. */
@@ -41,10 +41,15 @@ export function turnPrompts(fixture = FIXTURE) {
 
 /** Reuse over the main requests (prompt tokens at least the fixture's 8192-token minimum). Missing counts => unmeasurable. */
 export function summarize(entries) {
-  const main = entries.filter((entry) => (entry.status === undefined || (entry.status >= 200 && entry.status < 300)) && (entry.inputTokens ?? 0) >= MAIN_REQUEST_MIN_TOKENS);
-  if (main.length < 2) return { status: "unmeasurable", reason: `only ${main.length} main request(s) reached the proxy`, turns: main.length };
+  const main = entries.filter(
+    (entry) =>
+      (entry.status === undefined || (entry.status >= 200 && entry.status < 300)) && (entry.inputTokens ?? 0) >= MAIN_REQUEST_MIN_TOKENS,
+  );
+  if (main.length < 2)
+    return { status: "unmeasurable", reason: `only ${main.length} main request(s) reached the proxy`, turns: main.length };
   const warm = main.slice(1);
-  if (warm.some((entry) => !Number.isSafeInteger(entry.cacheReadTokens))) return { status: "unmeasurable", reason: "no cache counts reported", turns: main.length };
+  if (warm.some((entry) => !Number.isSafeInteger(entry.cacheReadTokens)))
+    return { status: "unmeasurable", reason: "no cache counts reported", turns: main.length };
   const prefix = main[0].inputTokens;
   const reuse = warm.reduce((sum, entry) => sum + entry.cacheReadTokens, 0) / (prefix * warm.length);
   return {
@@ -108,10 +113,23 @@ async function main() {
     }
     await proxy.drain();
     const entries = parseUsageLog(readFileSync(usageLog, "utf8"));
-    const report = { schema: "kilo-cli-reference/1", date: new Date().toISOString().slice(0, 10), cli: "@kilocode/cli 7.8.18", model: MODEL, route: "chat", exits, requests: entries.length, ...summarize(entries) };
+    const report = {
+      schema: "kilo-cli-reference/1",
+      date: new Date().toISOString().slice(0, 10),
+      cli: "@kilocode/cli 7.8.18",
+      model: MODEL,
+      route: "chat",
+      exits,
+      requests: entries.length,
+      ...summarize(entries),
+    };
     const text = JSON.stringify(report, null, 2);
     if (text.includes(key)) throw new Error("KiloReference: the key appeared in the report");
-    const out = join(REPO_ROOT, "docs/_evidence/cache-probe", `kilo-cli-headless-${MODEL.replace(/[^A-Za-z0-9.-]+/g, "-")}-${report.date}.json`);
+    const out = join(
+      REPO_ROOT,
+      "docs/_evidence/cache-probe",
+      `kilo-cli-headless-${MODEL.replace(/[^A-Za-z0-9.-]+/g, "-")}-${report.date}.json`,
+    );
     writeFileSync(out, `${text}\n`, { mode: 0o600 });
     console.log(JSON.stringify({ status: report.status, reuse: report.reuse ?? null, requests: report.requests, evidence: out }));
   } finally {

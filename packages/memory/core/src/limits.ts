@@ -23,7 +23,6 @@ export const HARD_MAX_VECTOR_DIMENSIONS_CAP = 4_096;
 export const DEFAULT_MAX_ENTRY_TEXT_CHARS = 16_384;
 export const HARD_MAX_ENTRY_TEXT_CHARS_CAP = 64_384;
 
-
 /** Retention sweeps delete in bounded batches (no full-corpus scan per run). */
 export const DEFAULT_MEMORY_RETENTION_BATCH = 500;
 export const HARD_MEMORY_RETENTION_BATCH_CAP = 5_000;
