@@ -55,6 +55,17 @@ function createContainmentChecker(roots: readonly string[]): (target: string) =>
 
 /** The `tool.call` decide handler. Returns `{ deny }` or `undefined`; never throws. */
 export function createHardDenyHook(options: HardDenyOptions) {
+  // Targets hand back the same frozen roots array while worktree and skill roots are unchanged, so
+  // the roots are realpathed once per array instead of once per decision.
+  const checkers = new WeakMap<readonly string[], (target: string) => Promise<boolean>>();
+  const checkerFor = (roots: readonly string[]) => {
+    let checker = checkers.get(roots);
+    if (checker === undefined) {
+      checker = createContainmentChecker(roots);
+      checkers.set(roots, checker);
+    }
+    return checker;
+  };
   return async (payload: ToolCallHookPayload): Promise<ToolCallDecision | undefined> => {
     if (!CODING_TOOL_NAMES.has(payload.name)) return undefined;
     const targets = options.targets(payload.name, payload.args, { sessionId: payload.sessionId });
@@ -65,7 +76,7 @@ export function createHardDenyHook(options: HardDenyOptions) {
     }
 
     if (targets.paths.length > 0) {
-      const contained = createContainmentChecker(targets.roots);
+      const contained = checkerFor(targets.roots);
       for (const path of targets.paths) {
         if (!(await contained(path))) {
           return { deny: `${payload.name} denied: path outside coding roots (${targets.roots.join(", ")}): ${path}` };

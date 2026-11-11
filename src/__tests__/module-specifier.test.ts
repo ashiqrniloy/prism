@@ -231,7 +231,12 @@ describe("module specifiers", () => {
     );
     await chmod(bun, 0o755);
     const entry = await install("@acme/bundle/nested/two@latest", { root, scope: "project", bun });
-    assert.deepEqual((await readFile(log, "utf8")).trim().split("\n"), ["add", "--ignore-scripts", "@acme/bundle@latest"]);
+    assert.deepEqual((await readFile(log, "utf8")).trim().split("\n"), [
+      "add",
+      "--ignore-scripts",
+      "--backend=copyfile",
+      "@acme/bundle@latest",
+    ]);
     assert.equal(entry.name, "@acme/bundle/nested/two");
     assert.equal(entry.version, "^1.0.0");
   });

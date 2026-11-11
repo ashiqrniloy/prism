@@ -251,7 +251,9 @@ describe("delegate worktree isolation", () => {
     assert.equal((text.match(/, merged [0-9a-f]{7} \(1 file\)/g) ?? []).length, 2, text);
     assert.equal(await readFile(join(repo, "a.txt"), "utf8"), "from a\n");
     assert.equal(await readFile(join(repo, "b.txt"), "utf8"), "from b\n");
-    const subjects = (await git(repo, ["log", "--format=%s", "main"])).trim().split("\n");
+    // First-parent history is the merge chain on main; plain log interleaves each child's own commit
+    // (same subject) by commit date, which depends on timing.
+    const subjects = (await git(repo, ["log", "--first-parent", "--format=%s", "main"])).trim().split("\n");
     // Both merges landed, and each is a commit on the other: one at a time, so neither compare-and-swap was lost.
     assert.deepEqual(subjects.slice(0, 2).sort(), ["delegate(a): write a", "delegate(b): write b"]);
     await run.agent.dispose();

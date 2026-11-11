@@ -107,7 +107,10 @@ describe("@arnilo/prism-tools/coding package", () => {
       // Hosts that refuse unprivileged user namespaces (GitHub's Ubuntu runners) fail the unshare
       // preflight; the sandbox then fails closed and shell is not registered at all.
       const nativeAvailable = await createNativeSandbox({ root }).then(
-        async (sandbox) => (await sandbox.close(), true),
+        async (sandbox) => {
+          await sandbox.close();
+          return true;
+        },
         () => false,
       );
       assert.equal(names.includes("shell"), nativeAvailable, `shell registered iff native works, got ${names.join(", ")}`);
