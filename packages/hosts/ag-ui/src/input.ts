@@ -1,11 +1,5 @@
-import {
-  type Message as AgUiMessage,
-  type Context,
-  type ResumeEntry,
-  type RunAgentInput,
-  RunAgentInputSchema,
-  type Tool,
-} from "@ag-ui/core";
+import { type Message as AgUiMessage, type Context, type ResumeEntry, type RunAgentInput, type Tool } from "@ag-ui/core";
+import { RunAgentInputSchema } from "@ag-ui/core/schemas";
 import { AgUiError } from "./errors.js";
 import type { ResolvedAgUiLimits } from "./limits.js";
 
@@ -174,11 +168,10 @@ function assertMediaBounds(messages: readonly AgUiMessage[], limits: ResolvedAgU
   for (const message of messages) {
     if (message.role !== "user" || !Array.isArray(message.content)) continue;
     for (const part of message.content) {
-      if (part.type !== "image" && part.type !== "audio" && part.type !== "video" && part.type !== "document" && part.type !== "binary")
-        continue;
+      if (part.type !== "image" && part.type !== "audio" && part.type !== "video" && part.type !== "document") continue;
       parts += 1;
       if (parts > limits.maxInputMediaParts) throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Too many input media parts");
-      const data = part.type === "binary" ? part.data : part.source.type === "data" ? part.source.value : undefined;
+      const data = part.source.type === "data" ? part.source.value : undefined;
       if (data) bytes += estimateBase64DecodedBytes(data);
       if (bytes > limits.maxInputMediaBytes) throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", "Input media exceeds maxInputMediaBytes");
     }

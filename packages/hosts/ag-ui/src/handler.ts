@@ -1,4 +1,5 @@
-import { type AGUIEvent, type AgentCapabilities, AgentCapabilitiesSchema, EventSchemas, EventType, type Interrupt } from "@ag-ui/core";
+import { type AGUIEvent, type AgentCapabilities, EventType, type Interrupt } from "@ag-ui/core";
+import { AgentCapabilitiesSchema, EventSchemas } from "@ag-ui/core/schemas";
 import {
   type Agent,
   type AgentEvent,

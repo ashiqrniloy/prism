@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Remove the vulnerable transitive Zod 3 chain by targeting AG-UI 1.0.4, using its validator subpath and requiring patched Zod `^4.6.6` for protocol validation. AG-UI serving needs both peers; the renderer needs only the protocol core. Track the remote host's authored Bun declaration so clean CI typechecking matches local checks (plan 224 Task 10).
+
 - Prove the seven-bundle release from packed consumers, including stable and experimental manifest installs, registry smoke, dependency-ordered npm OIDC publishing, and the six-name bootstrap checklist (plan 224 Task 9).
 
 - Plan 224 Task 8: consolidate experimental memory and knowledge into `@arnilo/prism-memory-system` (root and `/core` libraries) and `@arnilo/prism-knowledge` (`/wiki`, `/rag`), retaining exact experimental version pins.

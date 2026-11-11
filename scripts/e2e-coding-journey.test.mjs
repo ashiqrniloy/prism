@@ -27,7 +27,7 @@ let consumer, run;
 let fixtureStartedMs;
 before(() => {
   fixtureStartedMs = Date.now();
-  const packed = createPackedConsumer(packages, { "@ag-ui/core": "0.0.59" });
+  const packed = createPackedConsumer(packages, { "@ag-ui/core": "1.0.4", zod: "^4.6.6" });
   consumer = packed;
   if (packed.installStatus !== 0) return;
   copyFileSync(join(repoRoot, "scripts/fixtures/e2e-coding-journey.mjs"), join(packed.consumer, "journey.mjs"));

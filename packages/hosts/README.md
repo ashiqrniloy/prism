@@ -28,7 +28,8 @@ Protocol SDKs are optional peers. Install them for the entrypoint your host uses
 | Entry | Peers | Installed size |
 | --- | --- | --- |
 | `acp` | `@agentclientprotocol/sdk@1.4.0` | 5.8 M |
-| `ag-ui` | `@ag-ui/core@0.0.59` | 6.4 M |
-| `mcp-server`, host-builder MCP command | `@modelcontextprotocol/server@^2.3.0`, `zod@^4.6.2` | 7.0 M + 8.1 M |
+| `ag-ui` | `@ag-ui/core@1.0.4`, `zod@^4.6.6` | 1.1 M + 6.1 M |
+| `ag-ui/renderer` | `@ag-ui/core@1.0.4` | 1.1 M |
+| `mcp-server`, host-builder MCP command | `@modelcontextprotocol/server@^2.3.0`, `zod@^4.6.6` | 7.0 M + 6.1 M |
 
 Protocol entrypoints require their peers and fail at import if they are absent. The host-builder `info`, `install` and `help` commands and devtools work without those peers. Importing `headless` loads no protocol SDK. The required extensions bundle supplies workflows, codecs and observability. The bundle has no install script.

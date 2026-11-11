@@ -372,6 +372,8 @@ Install `@arnilo/prism-tools` once, then import and list `@arnilo/prism-tools/{c
 
 ### Hosts bundle (plan 224 Task 7)
 
+AG-UI serving uses `@ag-ui/core@1.0.4` and `zod@^4.6.6`, removing the Zod 3 dependency chain flagged by GHSA-mrhx-c7xc-m3w5. Install both peers for `@arnilo/prism-hosts/ag-ui`; the renderer only needs `@ag-ui/core`. Upstream validators now come from `@ag-ui/core/schemas`. The 1.0 protocol rejects the retired `binary` content-part shape: use `image`, `audio`, `video` or `document` with a `source`. Existing SSE framing, authorization, projection and byte limits remain in force. The AG-UI client used by conformance tests is also pinned to 1.0.4.
+
 Install `@arnilo/prism-hosts` once and import host libraries through its subpaths; `packages/drivers/process` moved to `packages/hosts/driver-process`. Replace former host package names with `@arnilo/prism-hosts/{acp,ag-ui,channels,devtools,evals,headless,host-builder,mcp-server,remote,driver-process}`. Nested renderer, channel and testing imports keep their suffixes. Run the bins with `bunx --package @arnilo/prism-hosts prism-host-builder` or `bunx --package @arnilo/prism-hosts prism-devtools`. There are no compatibility aliases.
 
 ### Experimental bundle entries (plan 224 Task 8)

@@ -1,6 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { EventSchemas, EventType } from "@ag-ui/core";
+import { EventType } from "@ag-ui/core";
+import { EventSchemas } from "@ag-ui/core/schemas";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import {

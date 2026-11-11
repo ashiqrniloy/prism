@@ -8,7 +8,7 @@ examples/*.js
 node_modules/
 
 # in-place tsc declaration emit beside sources: never commit (the kernel size budget counts src/**/*.d.ts as source).
-# The four hand-written ambient declarations are already tracked; a new one needs `git add -f`.
+# Hand-written ambient declarations are explicitly tracked; a new one needs `git add -f`.
 src/**/*.d.ts
 packages/**/src/**/*.d.ts
 apps/**/src/**/*.d.ts

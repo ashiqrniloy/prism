@@ -12,7 +12,8 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { EventSchemas, EventType } from "@ag-ui/core";
+import { EventType } from "@ag-ui/core";
+import { EventSchemas } from "@ag-ui/core/schemas";
 import {
   AgentDecisionError,
   AgentLoopStateError,

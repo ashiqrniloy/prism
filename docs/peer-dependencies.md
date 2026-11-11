@@ -21,13 +21,13 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 | --- | --- | --- | --- | --- | --- | --- |
 | `@napi-rs/keyring` | `^2.0.0` | yes | `@arnilo/prism-extensions` | `./keyring` OS backend | `bun add @napi-rs/keyring` | no |
 | `@modelcontextprotocol/client` | `^2.3.0` | yes | `@arnilo/prism-extensions` | `./mcp` | `bun add @modelcontextprotocol/client zod` | no |
-| `zod` | `^4.6.2` | yes | `@arnilo/prism-extensions` | `./mcp` validation | `bun add zod` | no |
+| `zod` | `^4.6.6` | yes | `@arnilo/prism-extensions` | `./mcp` validation | `bun add zod` | no |
 | `@opentelemetry/api` | `^1.9.0` | yes | `@arnilo/prism-extensions` | `./observability` | `bun add @opentelemetry/api` | no |
 | `pg` | `^8.23.0` | yes | `@arnilo/prism-extensions` | `./store-postgres` | `bun add pg` | yes |
 | `@agentclientprotocol/sdk` | `1.4.0` | yes | `@arnilo/prism-hosts` | `./acp` | `bun add @agentclientprotocol/sdk@1.4.0` | no |
-| `@ag-ui/core` | `0.0.59` | yes | `@arnilo/prism-hosts` | `./ag-ui` | `bun add @ag-ui/core@0.0.59` | no |
+| `@ag-ui/core` | `1.0.4` | yes | `@arnilo/prism-hosts` | `./ag-ui`, `./ag-ui/renderer` | `bun add @ag-ui/core@1.0.4` | no |
 | `@modelcontextprotocol/server` | `^2.3.0` | yes | `@arnilo/prism-hosts` | `./mcp-server`, `./host-builder` MCP command | `bun add @modelcontextprotocol/server zod` | no |
-| `zod` | `^4.6.2` | yes | `@arnilo/prism-hosts` | `./mcp-server`, `./host-builder` validation | `bun add zod` | no |
+| `zod` | `^4.6.6` | yes | `@arnilo/prism-hosts` | `./ag-ui`, `./mcp-server`, `./host-builder` validation | `bun add zod` | no |
 | `@office-open/docx` | `0.14.5` | yes | `@arnilo/prism-tools` | `./work`, `./work/documents` | `bun add @office-open/docx@0.14.5` | no |
 | `@office-open/pptx` | `0.14.5` | yes | `@arnilo/prism-tools` | `./work`, `./work/documents` | `bun add @office-open/pptx@0.14.5` | no |
 | `@office-open/xlsx` | `0.14.5` | yes | `@arnilo/prism-tools` | `./work`, `./work/sheets` | `bun add @office-open/xlsx@0.14.5` | no |
@@ -50,7 +50,7 @@ Exact pins preserve the integration versions verified for this release:
 - **`e2b@2.49.1`** (`@arnilo/prism-tools/coding`). Pause `keepMemory`, `Sandbox.connect` auto-resume, and `ServiceBusyError` 503 semantics are version-specific. Hosts may inject `{ client }` instead of installing the peer. See [Hosted sandboxes](../packages/tools/coding/README.md).
 - **`@firecrawl/anydoc@0.2.4`** (`@arnilo/prism-tools/work/document-extraction`). Error codes and the wrapper's optional third argument were checked against this release. The wrapper can upload a PDF when `ocr` is `'hosted'`; the Prism subpath never passes that argument and does not read an API key.
 - **Office peers and XML parser** stay on the versions measured and tested for the bundle: `@office-open/{docx,pptx,xlsx,xml}@0.14.5` and `fast-xml-parser@5.11.1`. See the [tools dependency table](../packages/tools/README.md#dependencies-and-footprint).
-- **Protocol peers** `@agentclientprotocol/sdk@1.4.0` and `@ag-ui/core@0.0.59` match the host protocol implementations checked for this release. See the [hosts dependency table](../packages/hosts/README.md).
+- **Protocol peers** `@agentclientprotocol/sdk@1.4.0` and `@ag-ui/core@1.0.4` match the host protocol implementations checked for this release. AG-UI handler validation also needs `zod@^4.6.6`. See the [hosts dependency table](../packages/hosts/README.md).
 
 ## Peers that touch the network
 
@@ -115,4 +115,4 @@ The matrix above lists each Office peer, its pin and the exported library entrie
 
 Missing Office peers write a work status note and disable Office tool registration; validation never falls back to unchecked models. PDF/DOCX optional parsers, connector credentials and sandbox requirements retain their existing behavior. See the [bundle footprint](../packages/tools/README.md#dependencies-and-footprint).
 
-The `@arnilo/prism-hosts` protocol SDKs are optional peers: `@agentclientprotocol/sdk` for ACP, `@ag-ui/core` for AG-UI, and `@modelcontextprotocol/server` plus `zod` for MCP serving and host-builder MCP. Install the peers for the subpath you use; protocol entrypoints fail at import when a peer is missing. The headless, devtools and host-builder installer entries work without them. See the [hosts dependency table](../packages/hosts/README.md).
+The `@arnilo/prism-hosts` protocol SDKs are optional peers: `@agentclientprotocol/sdk` for ACP, `@ag-ui/core` plus `zod` for AG-UI serving, and `@modelcontextprotocol/server` plus `zod` for MCP serving and host-builder MCP. The AG-UI renderer needs only `@ag-ui/core`. Install the peers for the subpath you use; protocol entrypoints fail at import when a peer is missing. The headless, devtools and host-builder installer entries work without them. See the [hosts dependency table](../packages/hosts/README.md).

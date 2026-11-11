@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-11-11T10:14:05.339Z`
+Generated: `2026-11-11T11:43:24.513Z`
 Repository root version: `0.13.0`
 
 ## 1. Executive Summary & Counts

@@ -1,6 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { EventSchemas, EventType } from "@ag-ui/core";
+import { EventType } from "@ag-ui/core";
+import { EventSchemas } from "@ag-ui/core/schemas";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createAcpEventMapper } from "@arnilo/prism-hosts/acp";
@@ -75,6 +76,7 @@ describe("co-work event projection", () => {
   it("applies the host coWork projection hook before redaction", async () => {
     const mapper = createAgUiEventMapper({ projection: { coWork: (event) => ({ kind: event.kind, curated: true }) } });
     const mapped = await mapper.mapCoWork(events.snapshot);
+    assert.ok(mapped[0]?.type === EventType.CUSTOM);
     assert.equal(mapped[0].value.curated, true);
     assert.equal(mapped[0].value.summary, undefined);
   });

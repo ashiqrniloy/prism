@@ -1,6 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { EventSchemas, EventType } from "@ag-ui/core";
+import { EventType } from "@ag-ui/core";
+import { EventSchemas } from "@ag-ui/core/schemas";
 import { createAgUiEventMapper } from "../index.js";
 import {
   composeAgUiProjections,

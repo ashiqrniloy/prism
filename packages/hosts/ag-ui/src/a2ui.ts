@@ -1,4 +1,4 @@
-import { type AGUIEvent, EventType } from "@ag-ui/core";
+import { type ActivityDeltaEvent, type AGUIEvent, EventType } from "@ag-ui/core";
 import type { SecretRedactor, ToolCallDeltaContent, ToolResult } from "@arnilo/prism";
 import { AgUiError } from "./errors.js";
 import type { ParsedAgUiInput } from "./input.js";
@@ -197,7 +197,7 @@ export function createAgUiA2UiPainter(options: AgUiA2UiOptions, limits: Resolved
         type: EventType.ACTIVITY_DELTA,
         messageId: existing.messageId,
         activityType: A2UI_ACTIVITY_TYPE,
-        patch: [...projected],
+        patch: [...projected] as ActivityDeltaEvent["patch"],
       });
     }
     return events;

@@ -53,4 +53,4 @@ Defaults / hard: request/event/state/activity/reasoning/raw 64 KiB / 1 MiB; inpu
 
 Run the demos with `bun examples/ag-ui-server.ts` (approval interrupt/resume), `bun examples/ag-ui-a2ui.ts` (A2UI painting), and `bun examples/ag-ui-mcp-apps.ts` (MCP Apps proxy).
 
-Protocol dependencies are optional peers of `@arnilo/prism-hosts`. Install `@ag-ui/core@0.0.59`. Protocol entrypoints require these peers; see the [bundle dependency table](../README.md).
+Protocol dependencies are optional peers of `@arnilo/prism-hosts`. Install `@ag-ui/core@1.0.4` and `zod@^4.6.6` for the handler's protocol validation. The renderer only needs `@ag-ui/core`. See the [bundle dependency table](../README.md).

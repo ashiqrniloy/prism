@@ -17,6 +17,17 @@ function input(overrides: Record<string, unknown> = {}) {
 }
 
 describe("parseAgUiInput", () => {
+  it("rejects the binary content shape retired by AG-UI 1.0", () => {
+    assert.throws(
+      () =>
+        parseAgUiInput(
+          input({ messages: [{ id: "user-1", role: "user", content: [{ type: "binary", mimeType: "image/png", data: "YWJj" }] }] }),
+          resolveAgUiLimits(),
+        ),
+      /Invalid AG-UI run input/,
+    );
+  });
+
   it("retains official full request fields for a host projector without granting them authority", () => {
     const parsed = parseAgUiInput(
       input({

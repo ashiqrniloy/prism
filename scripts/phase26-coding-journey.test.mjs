@@ -99,7 +99,7 @@ let fixtureStartedMs;
 let playwrightInstall;
 before(() => {
   fixtureStartedMs = Date.now();
-  const packed = createPackedConsumer(packages, { "@ag-ui/core": "0.0.59" });
+  const packed = createPackedConsumer(packages, { "@ag-ui/core": "1.0.4", zod: "^4.6.6" });
   consumer = packed;
   if (packed.installStatus !== 0) return;
   if (process.env.PRISM_LIVE_PLAYWRIGHT === "1") {
