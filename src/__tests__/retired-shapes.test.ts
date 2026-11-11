@@ -5,7 +5,7 @@
 
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { JsonSchema } from "../packages/schema.js";
@@ -60,6 +60,8 @@ function sweepFiles(): string[] {
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.isDirectory()) {
+        // The concurrent host-builder test creates and deletes typecheck scratch files here.
+        if (dir === join(ROOT, "examples") && entry.name.startsWith(".host-builder-kit-")) continue;
         if (!skipDir.has(entry.name)) walk(join(dir, entry.name));
       } else if (keep.test(entry.name)) {
         out.push(join(dir, entry.name));
@@ -102,6 +104,19 @@ const RETIRED: readonly { readonly name: string; readonly pattern: RegExp }[] = 
 ];
 
 describe("retired migration-era shapes (plan 215 Task 27)", () => {
+  it("sweep_ignores_host_builder_typecheck_scratch", () => {
+    const dir = mkdtempSync(join(ROOT, "examples", ".host-builder-kit-"));
+    try {
+      const file = join(dir, "block-0.ts");
+      writeFileSync(file, "export {};\n");
+      const files = sweepFiles();
+      assert.equal(files.includes(file), false);
+      assert.ok(files.includes(fileURLToPath(import.meta.url)), "ordinary source files remain covered");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("all_first_party_secret_fields_are_refs", async () => {
     const definitions = await packageDefinitions();
     assert.ok(definitions.length >= 30, `expected the first-party package definitions, found ${definitions.length}`);

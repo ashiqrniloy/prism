@@ -103,7 +103,10 @@ export const GATE_FILES = [
   "scripts/__tests__/decision-bench-metrics.test.mjs",
 ];
 
-const TIMING_FILES = GATE_FILES.filter((file) => file.startsWith("scripts/benchmark-") || file === "scripts/memory-bench/run.test.mjs");
+const TIMING_FILES = [
+  ...GATE_FILES.filter((file) => file.startsWith("scripts/benchmark-") || file === "scripts/memory-bench/run.test.mjs"),
+  "packages/extensions/governance/src/__tests__/field-policy.test.ts",
+];
 
 // The old chain left the compiled `dist/__tests__/*.test.js` set to the shell. There is no
 // shell here, and `node --test <dir>`/glob args are only understood from Node 22, so this
@@ -146,7 +149,13 @@ function expandGlob(arg) {
 const WORKSPACE_LEAVES = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces).map((dir) => ({
   name: relative(ROOT, dir),
   command: "bun",
-  args: ["run", "--cwd", relative(ROOT, dir), "test"],
+  args: [
+    "run",
+    "--cwd",
+    relative(ROOT, dir),
+    "test",
+    ...(relative(ROOT, dir) === "packages/extensions" ? ["--path-ignore-patterns=governance/src/__tests__/field-policy.test.ts"] : []),
+  ],
 }));
 
 // The source-consuming suites run behind the build lock (they import the root kernel via

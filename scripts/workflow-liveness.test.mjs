@@ -445,8 +445,12 @@ export function releaseTagLiteralProblems(text) {
  * clauses joined by `||`. Anything else throws: the pattern form is the contract, so an
  * enumerated version list can never come back unnoticed.
  */
-export function evaluateRefCondition(expression, ref) {
+export function evaluateRefCondition(expression, ref, eventName = "push") {
   for (const clause of expression.split("||")) {
+    if (clause.trim() === "github.event_name == 'workflow_dispatch'") {
+      if (eventName === "workflow_dispatch") return true;
+      continue;
+    }
     const match = /^startsWith\(\s*github\.ref\s*,\s*'([^']+)'\s*\)$/.exec(clause.trim());
     if (!match) throw new Error(`unsupported release condition: ${clause.trim()}`);
     if (ref.startsWith(match[1])) return true;
@@ -512,6 +516,24 @@ test("release_publish_path_for_v0_13_0: every tag publishes, and no condition na
   assert.doesNotMatch(step, /v0\.\d/, "the publish step must not enumerate versions");
   // Fail closed: an enumerated condition is rejected, not silently mis-evaluated.
   assert.throws(() => evaluateRefCondition("github.ref == 'refs/tags/v0.12.1'", "refs/tags/v0.12.1"), /unsupported release condition/);
+});
+
+test("manual_release_prepares_attested_bootstrap_artifacts_without_publishing", () => {
+  const workflow = readFileSync(join(WORKFLOWS, "release.yml"), "utf8");
+  for (const id of ["publish", "security-release"]) {
+    const guard = /^ {4}if: (.+)$/m.exec(jobBody(workflow, id));
+    assert.ok(guard, `${id} needs an event guard`);
+    assert.equal(evaluateRefCondition(guard[1], "refs/heads/main", "workflow_dispatch"), true);
+    assert.equal(evaluateRefCondition(guard[1], "refs/heads/main", "push"), false);
+  }
+  const publish = jobBody(workflow, "publish");
+  const step = publish.split("- name: publish in dependency order")[1];
+  const guard = /^ {8}if: (.+)$/m.exec(step);
+  assert.ok(guard, "the registry-write step needs its own tag guard");
+  assert.equal(evaluateRefCondition(guard[1], "refs/heads/main", "workflow_dispatch"), false);
+  assert.equal(evaluateRefCondition(guard[1], "refs/tags/v0.13.0"), true);
+  assert.match(publish, /subject-path: release-artifacts\/\*\.tgz/);
+  assert.match(publish, /name: release-artifacts-\$\{\{ env\.SAFE_REF \}\}/);
 });
 
 test("release_gate_runs_plan_gates: the gates this plan adds stay in bun run test or release:gate", () => {

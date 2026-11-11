@@ -1,5 +1,7 @@
 # Live release acceptance, 0.13.0 (plan 215 Task 34)
 
+> Task 10 rerun, 2026-11-11: cache parity, both release journeys and all in-scope providers pass on candidate `2cd2b553` under the owner's amended scope. Owner sign-off and publication are pending. See the candidate record below. The original run remains unchanged.
+
 - **Run:** 1, the first acceptance run. Task 39 repeats it on the release commit.
 - **Dates:** 2026-11-08 23:55 to 2026-11-09 02:40 (+06:00).
 - **Commit:** `2fd3c592` plus the uncommitted 0.13.0 working tree (the in-flight memory rename and this task's edits listed under "Changes made during the run").
@@ -141,3 +143,26 @@ The gate reruns only `inconclusive` cells, so the cell was not rerun to look for
 ## Secret scan
 
 `assertNoSecretLeak` (from `@arnilo/prism/provider-kit`) ran over 13 files: this file, `live-matrix-report.{json,md}`, and the ten reports in `live-release-acceptance-0.13.0/`. The needles were all 12 values in the env file that are at least 8 characters long. Result: **no hit**.
+
+## Task 10 release candidate (2026-11-11)
+
+Candidate: `2cd2b553` (`chore(release): prepare seven-bundle 0.13.0 candidate`). The owner authorized committing the entire checkout, including memory-track changes, and required the existing cache-parity gate to pass. No metric waiver or threshold change was made. Credentials stayed in the existing private env file.
+
+- **Cache parity: pass.** Strict `release/cache-parity`: one suite ran, zero skipped, zero failed; all four cells passed on their first attempt. [Gate](cache-parity/gate-2026-11-11.json), [matrix report](live-release-acceptance-0.13.0/task10-2026-11-11-cache-parity.json). Across both harnesses, the four cells used 176 requests within their existing per-cell ceilings. This supersedes the earlier `behind` blocker for this candidate only; it does not change the historical result.
+
+  | Cell | Prism median hit rate | pi median hit rate | Verdict |
+  | --- | ---: | ---: | --- |
+  | Command Code chat | 0.794 | 0.733 | pass |
+  | Command Code Responses | 0.868 | 0.737 | pass |
+  | Command Code Messages | 0.726 | 0.685 | pass |
+  | Ollama Cloud chat | 0.897 | 0.853 | pass |
+
+- **Release journeys: pass.** Strict `release/journey-` with `PRISM_LIVE_RELEASE_JOURNEY=1`: both Command Code and Ollama Cloud ran, zero skipped, zero failed. [Matrix report](live-release-acceptance-0.13.0/task10-2026-11-11-journeys.json).
+- **Providers: not green.** Strict `providers/`: four suites ran, five skipped, three failed. Command Code, Ollama Cloud and OpenRouter passed. Hyper returns 402 (no credits) and its Messages fixture model `qwen3.6-plus` returns 404. Kilo returns 402 (negative balance). OpenCode Go returns 410 for retired `mimo-v2.5`. [Matrix report](live-release-acceptance-0.13.0/task10-2026-11-11-providers.json).
+- **OpenCode Go replacement check: still blocked.** With the existing `PRISM_LIVE_OPENCODE_GO_CHAT_MODEL=mimo-v2.6-flash` override, the vendor's stated replacement returns 429 (`GoUsageLimitError`, 5-hour limit). Its Messages route returns 400 (model unavailable). The suite has six passing and six failing tests; no default or model fixture was changed. [Matrix report](live-release-acceptance-0.13.0/task10-2026-11-11-opencode-go-replacement.json).
+- **Carried scope:** TypeSafe, Liquid, Laya, local Liquid, Codex and LiteLLM remain under the 2026-11-08 owner scope above. Five matrix rows skip for missing prerequisites. LiteLLM is marked run by the matrix but its two tests skip; its pool is unavailable. This is not evidence that LiteLLM passed.
+- **Owner scope amendment (2026-11-11):** ignore Hyper's blocked tests, test Kilo with a specific free model, and require OpenCode Go to pass. The owner subsequently confirmed OpenCode Go's five-hour limit had reset. The earlier failed runs above remain historical evidence, not passing runs.
+- **Kilo free-model rerun: pass.** `nvidia/nemotron-3.5-super-vl:free` on Chat, Responses and Messages: 20 tests pass, three separate warm-prefix probes skip, zero fail. The strict matrix row runs with zero skipped suites. Includes the three kernel smoke sessions. [Report](live-release-acceptance-0.13.0/task10-2026-11-11-kilo-free.json). This is no claim about paid Kilo models or cache parity.
+- **OpenCode Go after reset: pass.** Current catalog models `mimo-v2.6-flash` (Chat) and `qwen3.7-plus` (Messages): all 12 tests pass, zero skips/failures, including both warm-prefix probes. The existing model overrides select them; no default fixture was changed. [Report](live-release-acceptance-0.13.0/task10-2026-11-11-opencode-go-reset.json).
+- **Scoped live verdict: pass.** Command Code, Ollama Cloud and OpenRouter passed in the original candidate provider run; Kilo and OpenCode Go pass in the follow-up strict runs. Hyper and the six previously scoped-out rows remain excluded by owner decision. Cache parity's four cells and both release journeys pass without a waiver.
+- **Release status:** owner acceptance signature, clean final release-commit verification and bootstrap/trusted-publisher setup remain pending. No tag, publish, deprecation, provenance verification or Phase 11 Done record is claimed.

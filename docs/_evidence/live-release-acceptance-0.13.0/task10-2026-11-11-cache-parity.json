@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-11T10:39:32.159Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "release/cache-parity",
+  "totals": {
+    "ran": 1,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "release/cache-parity",
+      "package": "@arnilo/prism-ai/commandcode",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 371822,
+      "command": "bun scripts/cache-parity/live.mjs",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL",
+          "value": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL",
+          "value": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL",
+          "value": "claude-haiku-5-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_OLLAMA_MODEL",
+          "value": "gemma4:31b",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    }
+  ]
+}

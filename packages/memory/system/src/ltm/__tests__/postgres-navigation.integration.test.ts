@@ -1,6 +1,6 @@
 /**
  * Plan 202 Task 5.6: Task 5 (session addressing, `memory.read` around/session navigation, lexical
- * enrichment) against a real PostgreSQL. The PostgreSQL vector store has no `listBySession`, so
+ * recall) against a real PostgreSQL. The PostgreSQL vector store has no `listBySession`, so
  * navigation uses the fabric's status-emitting `scanMetadata` fallback; these cases prove that path
  * (and that it is the path taken), compare it with the SQLite indexed path, and cross the scan's
  * 200-row cursor boundary.
@@ -95,7 +95,7 @@ describeIntegration("Task 5 navigation on PostgreSQL", () => {
     }
   }
 
-  it("postgres_exchange_session_and_keywords_survive_reopen", async () => {
+  it("postgres_exchange_session_survives_reopen_without_retired_keywords", async () => {
     const schema = uniqueSchema();
     const pool = createPool();
     await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
@@ -129,7 +129,7 @@ describeIntegration("Task 5 navigation on PostgreSQL", () => {
       const metadata = parseMemoryNoteMetadata(page.rows[0]!.metadata);
       assert.equal(metadata?.kind, "exchange");
       assert.equal(metadata?.session, "persisted-session");
-      assert.ok(metadata?.keywords?.includes("travel"), "category keywords persist");
+      assert.equal(metadata?.keywords, undefined, "the archive no longer derives category keywords (plan 210 Task 7)");
       const [record] = await memory2.get([page.rows[0]!.id]);
       assert.equal(parseMemoryNoteMetadata(record?.metadata)?.session, "persisted-session");
     } finally {
@@ -138,7 +138,7 @@ describeIntegration("Task 5 navigation on PostgreSQL", () => {
     }
   });
 
-  it("postgres_lexical_enrichment_and_unmatched_terms", async () => {
+  it("postgres_lexical_recall_and_unmatched_terms", async () => {
     await withStores(async ({ stores }) => {
       const memory = createMemory({ ...scope, vectorStore: stores.vectorStore });
       assert.equal(memory.retrieval, "lexical", "no embedder: the preset lexical path on PostgreSQL");
@@ -156,23 +156,24 @@ describeIntegration("Task 5 navigation on PostgreSQL", () => {
         assistant: entry("a", "assistant", "Welcome to London."),
       });
 
-      // Category keywords are stored and retrievable via directory topTags on PostgreSQL
+      // The archive no longer derives category keywords (plan 210 Task 7).
       const tags = await stores.vectorStore.topTags!(scope);
-      assert.ok(
+      assert.equal(
         tags.some((t) => t.tag === "travel"),
-        "category keyword travel retrieved via topTags",
+        false,
+        "retired category enrichment does not appear in topTags",
       );
 
       // Memory recall tool unmatched-term feedback
       const recallTool = fabric.tools().find((definition) => definition.name === "memory.recall")!;
 
-      // 1) Matching content + category keyword: both matched (travel matched via hit.keywords)
+      // 1) Content matches, but the retired category keyword remains unmatched.
       const hitRes = (await recallTool.execute({ query: "Heathrow travel" }, context)).value as {
         hits: unknown[];
         unmatchedTerms: string[];
       };
       assert.equal(hitRes.hits.length, 1);
-      assert.deepEqual(hitRes.unmatchedTerms, []);
+      assert.deepEqual(hitRes.unmatchedTerms, ["travel"]);
 
       // 2) Partial match: matching content + unmatched term -> unmatched reported
       const partialRes = (await recallTool.execute({ query: "Heathrow kubernetes" }, context)).value as {

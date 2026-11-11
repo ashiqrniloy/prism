@@ -124,7 +124,7 @@ jobs:
 
   security-release:
     name: "security (CodeQL SAST, audit, SPDX, licenses, source secrets)"
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/security.yml
     # The called workflow's max: `codeql` writes security-events; its other jobs narrow
     # themselves back to `contents: read`.
@@ -151,11 +151,10 @@ jobs:
         run: bun run --filter @arnilo/prism-tools test:office
 
   publish:
-    name: publish (deterministic, resumable, provenance)
+    name: prepare artifacts / publish (deterministic, resumable, provenance)
     needs: [verify, postgres-integration, office-validation, security-release]
-    # Any tag publishes: `v*` lockstep, `@arnilo/<name>@<version>` independent. A pattern, not a
-    # version list, so the next cut needs no edit here (plan 215 Task 36 (b)).
-    if: startsWith(github.ref, 'refs/tags/')
+    # Manual runs prepare the attested first-publish artifacts; only tags publish them.
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     environment: npm-publish
     runs-on: ubuntu-latest
     permissions:
@@ -214,6 +213,7 @@ jobs:
           path: release-artifacts
           retention-days: 30
       - name: publish in dependency order
+        if: startsWith(github.ref, 'refs/tags/')
         # No credential step: npm detects the OIDC environment and authenticates with the
         # trusted publisher configured for each name. `environment: npm-publish` is the approval.
         run: |
@@ -225,7 +225,7 @@ jobs:
             bun run release:publish -- --resume --report release-artifacts/publish-report.json
           fi
       - name: retain publish report
-        if: always()
+        if: always() && startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: publish-report-${{ env.SAFE_REF }}

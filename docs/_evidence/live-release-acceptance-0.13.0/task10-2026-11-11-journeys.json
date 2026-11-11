@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-11T10:42:24.030Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "release/journey-",
+  "totals": {
+    "ran": 2,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "release/journey-commandcode",
+      "package": "@arnilo/prism-agent",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 99645,
+      "command": "bun run test:live:journey:commandcode",
+      "cwd": "apps/prism-agent",
+      "models": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_JOURNEY_MODEL",
+          "value": "Qwen/Qwen3.7-Flash",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    },
+    {
+      "id": "release/journey-ollama-cloud",
+      "package": "@arnilo/prism-agent",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 32234,
+      "command": "bun run test:live:journey:ollama-cloud",
+      "cwd": "apps/prism-agent",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_JOURNEY_MODEL",
+          "value": "gemma4:31b",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    }
+  ]
+}

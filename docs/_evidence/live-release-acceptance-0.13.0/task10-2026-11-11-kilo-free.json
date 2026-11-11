@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-11T11:04:20.452Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/kilo",
+  "totals": {
+    "ran": 1,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/kilo",
+      "package": "@arnilo/prism-ai/kilo",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 56495,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/kilo",
+      "models": [
+        {
+          "env": "PRISM_LIVE_KILO_CHAT_MODEL",
+          "value": "nvidia/nemotron-3.5-super-vl:free",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_KILO_RESPONSES_MODEL",
+          "value": "nvidia/nemotron-3.5-super-vl:free",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_KILO_MESSAGES_MODEL",
+          "value": "nvidia/nemotron-3.5-super-vl:free",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    }
+  ]
+}

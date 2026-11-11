@@ -43,8 +43,11 @@ npm has no API for this, so it is set per package on npmjs.com. `bun scripts/reg
    `@arnilo/prism`, `@arnilo/prism-ai`, `@arnilo/prism-extensions`, `@arnilo/prism-tools`,
    `@arnilo/prism-hosts`, `@arnilo/prism-memory-system` and `@arnilo/prism-knowledge`.
    Only the kernel already has a registry record. Its settings page does not exist until a version
-   does, so the first publish of each name is manual: `bun run release:publish` locally with 2FA,
-   from the tarballs CI packed (check them against `SHA256SUMS`). A manual publish carries the
+   does, so the first publish of each name is manual: `npm publish <tarball> --access public --tag latest`
+   locally with 2FA (`--tag experimental` for memory-system and knowledge). First dispatch `release.yml`
+   on the clean release commit and approve `npm-publish`: the manual run packs, attests and uploads
+   `release-artifacts-<ref>` after all prerequisite jobs pass, but its registry-write step is tag-only.
+   Download those CI tarballs and check them against `SHA256SUMS` before bootstrapping. A manual publish carries the
    GitHub attestation from the CI run but no npm provenance statement. Configure the trusted
    publisher right after, and from then on OIDC is the only path.
 4. **Delete the `NPM_TOKEN` secret** (repository and organization) and revoke the token on

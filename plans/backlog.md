@@ -1140,6 +1140,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Plan 198 whole-plan verification remains blocked
 
+- Status: Resolved 2026-11-11 by plan 224 Task 10; current bundle-aware whole-tree, coverage, example and official release checks pass. Historical findings retained below.
 - Section: Compromises Made
 - Priority: P2
 - Source: plans/198-Phase-11-Part-W-Evals-Statistics-Clustered-Errors-Pass-At-K-Paired-Comparison-And-Confidence-Gates.md
@@ -1148,6 +1149,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Restore plan 198 whole-plan verification
 
+- Status: Resolved 2026-11-11 by plan 224 Task 10; current bundle-aware whole-tree, coverage, example and official release checks pass. Historical findings retained below.
 - Section: Further Actions
 - Priority: P2
 - Source: plans/198-Phase-11-Part-W-Evals-Statistics-Clustered-Errors-Pass-At-K-Paired-Comparison-And-Confidence-Gates.md
@@ -1157,6 +1159,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Plan 200 whole-plan verification remains blocked
 
+- Status: Resolved 2026-11-11 by plan 224 Task 10; current bundle-aware whole-tree, coverage, example and official release checks pass. Historical findings retained below.
 - Section: Compromises Made
 - Priority: P2
 - Source: plans/200-Phase-11-Part-Y-Evals-Dataset-Hygiene-Scenario-Items-User-Simulation-State-Grading-And-Injection-Suite.md
@@ -1165,6 +1168,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Restore plan 200 whole-plan verification
 
+- Status: Resolved 2026-11-11 by plan 224 Task 10; current bundle-aware whole-tree, coverage, example and official release checks pass. Historical findings retained below.
 - Section: Further Actions
 - Priority: P2
 - Source: plans/200-Phase-11-Part-Y-Evals-Dataset-Hygiene-Scenario-Items-User-Simulation-State-Grading-And-Injection-Suite.md

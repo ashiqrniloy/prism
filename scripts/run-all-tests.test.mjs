@@ -317,6 +317,14 @@ test("every workspace test file runs exactly once: default suite or an opt-in le
   assert.ok(claimed.size > 0, "the partition must be non-empty (positive control)");
 });
 
+test("the field-policy benchmark runs serially and is excluded from the workspace pool", () => {
+  const timing = STAGES.find((stage) => stage.name === "timing benchmarks");
+  const extensions = STAGES.find((stage) => stage.name === "workspace suites").parallel.find((leaf) => leaf.name === "packages/extensions");
+  assert.equal(timing.args.filter((arg) => arg === "packages/extensions/governance/src/__tests__/field-policy.test.ts").length, 1);
+  assert.ok(!timing.args.some((arg) => arg.startsWith("--parallel")));
+  assert.ok(extensions.args.includes("--path-ignore-patterns=governance/src/__tests__/field-policy.test.ts"));
+});
+
 test("the runner spawns bun by name, never through process.execPath, and never node", () => {
   const source = readFileSync(join(ROOT, "scripts", "run-all-tests.mjs"), "utf8");
   // Comments may name the rule; code may not use it. Under the Bun parent `process.execPath` is Bun,
@@ -385,7 +393,13 @@ test("the workspace stage is one shared-lock reader per package behind a bounded
   assert.ok(stage.concurrency <= availableParallelism(), "the bound stays inside the host's capacity");
   for (const leaf of stage.parallel) {
     assert.equal(leaf.command, "bun");
-    assert.deepEqual(leaf.args, ["run", "--cwd", leaf.name, "test"]);
+    assert.deepEqual(leaf.args, [
+      "run",
+      "--cwd",
+      leaf.name,
+      "test",
+      ...(leaf.name === "packages/extensions" ? ["--path-ignore-patterns=governance/src/__tests__/field-policy.test.ts"] : []),
+    ]);
     const script = readManifest(join(ROOT, leaf.name, "package.json")).scripts.test;
     assert.ok(script.includes("with-build-lock.mjs --shared"), `${leaf.name} test must take the shared reader lock`);
     assert.ok(!script.includes("node "), `${leaf.name} test must not spawn node`);

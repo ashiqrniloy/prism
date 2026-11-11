@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-11T10:45:54.033Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/opencode-go",
+  "totals": {
+    "ran": 0,
+    "skipped": 0,
+    "failed": 1,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/opencode-go",
+      "package": "@arnilo/prism-ai/opencode-go",
+      "status": "failed",
+      "reason": "exit 1",
+      "exitCode": 1,
+      "durationMs": 4807,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/opencode-go",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OPENCODE_GO_CHAT_MODEL",
+          "value": "mimo-v2.6-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OPENCODE_GO_MESSAGES_MODEL",
+          "value": "qwen3.6-plus",
+          "wired": true
+        }
+      ],
+      "outputTail": "hed tokens\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioCacheProbe (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:604:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:978:17\n(fail) @arnilo/prism-ai/opencode-go live tests > openai route > live_warm_prefix_cache_probe [663.10ms]\n280 |         sessionId: options.sessionId ?? `live-text-${Date.now()}`,\n281 |       },\n282 |     },\n283 |   });\n284 |   const text = events.map((e) => (e.type === \"content_delta\" && e.content.type === \"text\" ? e.content.text : \"\")).join(\"\");\n285 |   assert.ok(text.length > 0, `live text response was empty${terminalErrorSuffix(events, options.secrets)}`);\n               ^\nAssertionError: live text response was empty (provider error: opencode-go request failed: 400 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}})\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioTextStream (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:285:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:906:19\n(fail) @arnilo/prism-ai/opencode-go live tests > anthropic route > live_text_generation_streams_and_leaks_no_secret [676.46ms]\n343 |   if (turn1Usage) {\n344 |     console.info(`[${options.provider.id} live] ${options.route} tool-loop turn1 usage: ${JSON.stringify(turn1Usage)}`);\n345 |   }\n346 | \n347 |   const toolCallEvents = turn1Events.filter((e) => e.type === \"tool_call\");\n348 |   assert.ok(toolCallEvents.length > 0, `Turn 1 tool prompt produced no tool calls${terminalErrorSuffix(turn1Events, options.secrets)}`);\n               ^\nAssertionError: Turn 1 tool prompt produced no tool calls (provider error: opencode-go request failed: 400 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Upstream request failed: Model is unavailable.\"}})\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioToolLoop (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:348:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:920:19\n(fail) @arnilo/prism-ai/opencode-go live tests > anthropic route > live_two_turn_tool_loop_with_thinking_replay [322.94ms]\n(pass) @arnilo/prism-ai/opencode-go live tests > anthropic route > live_structured_output [0.31ms]\n(pass) @arnilo/prism-ai/opencode-go live tests > anthropic route > live_abort_signal_is_observed_before_first_request [0.03ms]\n(pass) @arnilo/prism-ai/opencode-go live tests > anthropic route > live_error_response_leaks_no_secret [303.12ms]\n[opencode-go live] messages-route cache probe: create {write:0, read:0} warm {read:0, write:0}\n570 |     const u2 = turn2Events.find((e) => e.type === \"usage\")?.usage;\n571 |     console.info(\n572 |       `[${options.provider.id} live] messages-route cache probe: create {write:${u1?.cacheWriteTokens ?? 0}, read:${u1?.cacheReadTokens ?? 0}} ` +\n573 |         `warm {read:${u2?.cacheReadTokens ?? 0}, write:${u2?.cacheWriteTokens ?? 0}}`,\n574 |     );\n575 |     assert.ok((u2?.cacheReadTokens ?? 0) > 0, \"Warm messages-route replay reported no cached tokens\");\n                 ^\nAssertionError: Warm messages-route replay reported no cached tokens\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioCacheProbe (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:575:12)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:978:17\n(fail) @arnilo/prism-ai/opencode-go live tests > anthropic route > live_warm_prefix_cache_probe [1043.59ms]\n\n 6 pass\n 6 fail\nRan 12 tests across 1 file. [4.78s]\n"
+    }
+  ]
+}

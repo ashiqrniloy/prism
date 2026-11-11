@@ -415,6 +415,12 @@
       ```
     - **Whole-plan status:** All six implementation tasks are complete. Release sign-off remains blocked by existing observability peer-range validation, missing OpenAI Codex/OpenRouter lock entries, kernel budgets (packed **1,191,787 > 1,189,274**, unpacked **3,881,203 > 3,874,436**), `docs/next/hooks.md` navigation and unpromoted `docs/next`. These are not relaxed or changed here. The plan index and backlog record this status. No names/errors/config were retired, so no retirement sweep applies. No live providers or real network tools were used.
 
+## Release verification closure (2026-11-11, plan 224 Task 10)
+
+The bundle-aware equivalents of the whole-plan checks now pass in the documented CI readiness profile: build/typecheck, the complete root/gate/workspace/example suites (all nine runner stages), coverage, pack dry-run, the official release gate (seven packages, `updated: false`), and 52 threat-suite tests. This covers the current hosts/evals, hosts/devtools, tools/coding and tools/browser sources, memory benchmark checks, docs and examples. The former leaf-name commands above are historical; plan 224 consolidated those leaves into bundles. The inherited peer/lock/compatibility/size, docs and test blockers are resolved for this candidate. Earlier failed attempts remain recorded in plan 224; no confidence rule, coverage floor or timing ceiling was relaxed. Publication is still owner-gated in plan 224.
+
+The two corresponding verification backlog entries are marked resolved; the original compromise and action text below remains historical.
+
 ## Verification (whole plan)
 
 - `timeout 600 bun run build:core`
