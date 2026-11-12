@@ -2,7 +2,7 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
-> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. They are replaced by external, outcome-scored suites: Compact-Bench (session tiers and compaction), MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep). Plan 218.1 Task 1 re-scopes the criteria rows to match; this plan's text is amended below. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
+> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. Plan 218.1 runs a lean external screen on Compact-Bench for the session tiers. MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep) are the chosen replacements below, but their adoption is **deferred** (owner, 2026-11-12: cost and time); their rows read `missing` until an adoption task runs before this plan's gate. Plan 218.1 Task 1 re-scopes the criteria rows to match. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
 
 ## Objectives
 
@@ -98,8 +98,8 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
 
       O3 and R3 are repeated with a person's labels. Plan 202's safety gate (Task 14, with the wiki probes) and growth criterion (Task 15) re-run on the frozen product.
     - Functional: **Held-out external suites (amended 2026-11-12 by plan 218.1, replacing plan 202 Task 5's hand-off of `heldout-a` of `longmemeval-m` and `beam-1m`).** The acceptance arms include, with no subsetting:
-      - Compact-Bench's whole task-preservation track, never read by a development gate (S3);
-      - `heldout-a` of Compact-Bench retention (M5, L4);
+      - a held-out outcome set for S3, to be chosen before gate A: plan 218.1's lean screen uses Compact-Bench's 22 validated task-preservation tasks, so they are no longer held out (deferred, plan 218.1 Further Actions);
+      - `heldout-a` of Compact-Bench retention (M5, L4), drawn once that partition is adopted;
       - `heldout-a` of MemoryArena (R5, L4, Z1);
       - `heldout-a` of STATE-Bench's Agent Learning Track (Z1).
 

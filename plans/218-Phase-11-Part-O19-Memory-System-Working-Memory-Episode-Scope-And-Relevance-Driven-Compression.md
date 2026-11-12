@@ -2,7 +2,7 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
-> **Amended 2026-11-12 (owner, benchmark decision):** `beam-1m` and `longmemeval-m` leave every memory-model gate, and [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) replaces them with external outcome suites before Task 6 resumes. Gate M-2's M5 reads Compact-Bench recurring-detail retention instead of QA accuracy. Mentions of the two suites in executed tasks are the record of what ran.
+> **Amended 2026-11-12 (owner, benchmark decision):** `beam-1m` and `longmemeval-m` leave every memory-model gate, and [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) replaces them with a lean external screen on Compact-Bench before Task 6 resumes (about $6–12, half a day of runs, OpenCode Go only). Gate M-2's M5 reads that screen (retention on 30 sessions, outcome on 22 repair tasks) instead of QA accuracy. Mentions of the two suites in executed tasks are the record of what ran.
 
 ## Objectives
 
@@ -588,7 +588,7 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
       - `STM-only`: plan 217's STM with `wm.policy: "deterministic"` and no scope (amended 2026-11-12, Task 3: the deterministic policy also keeps salient records, and the report says so);
       - `OM-before`: plan 217's recorded rows, not rerun.
 
-      They run on the `re-plan` and `long-session` families and on Compact-Bench's recurring-detail retention track (dev partition; amended 2026-11-12, plan 218.1: `beam-1m` and `longmemeval-m` removed, and with them the suite task-framing scope). (Amended 2026-11-12, Task 5:)
+      They run on the `re-plan` and `long-session` families and on plan 218.1's lean Compact-Bench screen (30 retention sessions, 22 repair tasks; amended 2026-11-12, plan 218.1: `beam-1m` and `longmemeval-m` removed, and with them the suite task-framing scope). (Amended 2026-11-12, Task 5:)
       - the `re-plan` family runs through `runLongSession({ family: "re-plan" })` and needs live job wiring like `long-session-live.mjs`;
       - the `WM` arm sets each plan as the scope before its turn;
       - `STM-only`'s deterministic policy discards a changed value to meet the target (`wm.knowledge-update`), and the report says so beside the arm's numbers.
