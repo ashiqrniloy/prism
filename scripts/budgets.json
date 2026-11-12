@@ -68,8 +68,8 @@
       "reason": "Plan 224 consolidation: source export count at the seven-bundle proof, no export/signature additions."
     },
     "@arnilo/prism-extensions": {
-      "baseline": 1452,
-      "reason": "Plan 224 consolidation: source export count at the seven-bundle proof, no export/signature additions."
+      "baseline": 1473,
+      "reason": "0.13.1: +21 exports, all additive. Advisor validateCompletion, the advisor service, advisorPackage, evidence caps, validation types; workflows worktree-ref helpers via AgentNodeWorktree branch/base. Plan 224 seven-bundle proof was 1452."
     }
   },
   "aggregate": {

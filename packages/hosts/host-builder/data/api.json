@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "prismVersion": "0.13.0",
-  "contentHash": "f761429d2b363679a8455a645f3fdd1ae1a1d8a0e6c05351544056c4464f2bd2",
+  "contentHash": "40efec148b9bc9d064ab97787ef2a2f5d50e69e3c9dd631c250a7ffde58a2e7b",
   "packages": [
     {
       "name": "@arnilo/prism",
@@ -1705,7 +1705,7 @@
     },
     {
       "name": "@arnilo/prism-extensions",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "path": "packages/extensions",
       "experimental": false,
       "entries": [
@@ -1976,33 +1976,47 @@
           "exports": [
             {"name":"ADVISE_DESCRIPTION","kind":"const","signature":"export declare const ADVISE_DESCRIPTION = \"Ask a second model for advice on your current approach. It sees the recent conversation; state the specific question.\""},
             {"name":"ADVISE_TOOL","kind":"const","signature":"export declare const ADVISE_TOOL = \"advise\""},
+            {"name":"ADVISOR_SERVICE","kind":"const","signature":"export declare const ADVISOR_SERVICE = \"advisor\"","summary":"Name of the service the advisor provides."},
             {"name":"AdviceVerdict","kind":"type","signature":"export type AdviceVerdict = { readonly verdict: \"proceed\"; } | { readonly verdict: \"revise\"; readonly advice: string; }"},
             {"name":"AdvisorConfig","kind":"interface","signature":"export interface AdvisorConfig","members":["readonly model: ModelRef","readonly instructions?: string","readonly context?: AdvisorContextConfig","readonly adviceMaxChars?: number","readonly tool?: boolean","readonly triggers?: { readonly beforeTools?: readonly string[]; readonly beforeFinish?: boolean; }","readonly maxConsultsPerRun?: number","readonly validate?: AdvisorValidateConfig"]},
             {"name":"AdvisorConfigError","kind":"class","signature":"export declare class AdvisorConfigError extends Error","members":["constructor(message: string)"],"summary":"Setup-time refusal: a config combination that would silently disable one of the two run-end reviews."},
             {"name":"AdvisorContextConfig","kind":"interface","signature":"export interface AdvisorContextConfig","members":["readonly lastTurns?: number","readonly maxChars?: number"],"summary":"Which part of the conversation the advisor reads."},
-            {"name":"AdvisorValidateConfig","kind":"interface","signature":"export interface AdvisorValidateConfig","members":["readonly criteria?: string","readonly engine?: \"model\" | { readonly child: string; }","readonly onError?: \"continue\" | \"end\"","readonly maxRounds?: number","readonly context?: AdvisorContextConfig"],"summary":"Completion validation."},
+            {"name":"AdvisorPackageOptions","kind":"type","signature":"export type AdvisorPackageOptions = Omit<AdvisorConfig, \"validate\"> & { readonly validate?: AdvisorValidateConfig & { readonly evidence?: ValidationEvidenceSource; }; }","summary":"`validate` config plus the host's evidence source, which is a function and so cannot go through `packageConfig`."},
+            {"name":"AdvisorService","kind":"interface","signature":"export interface AdvisorService","members":["validateCompletion(input: { readonly model?: ModelRef; readonly task: string; readonly criteria?: string; readonly evidence?: readonly ValidationEvidence[]; readonly evidenceMaxCha …"],"summary":"The `advisor` service: standalone validation with the advisor's model, or another one the agent resolves."},
+            {"name":"AdvisorValidateConfig","kind":"interface","signature":"export interface AdvisorValidateConfig","members":["readonly criteria?: string","readonly engine?: \"model\" | { readonly child: string; }","readonly onError?: \"continue\" | \"end\"","readonly maxRounds?: number","readonly context?: AdvisorContextConfig","readonly inputs?: { readonly transcript?: boolean; readonly finalAnswer?: boolean; }","readonly evidenceMaxChars?: number"],"summary":"Completion validation."},
+            {"name":"CompletionValidation","kind":"type","signature":"export type CompletionValidation = { readonly verdict: \"complete\"; } | { readonly verdict: \"incomplete\"; readonly missing: readonly string[]; } | { readonly verdict: \"error\"; readonly reasonCode: ValidationErrorCode; }","summary":"One validation's outcome."},
             {"name":"CompletionVerdict","kind":"type","signature":"export type CompletionVerdict = { readonly verdict: \"complete\"; } | { readonly verdict: \"incomplete\"; readonly missing: readonly string[]; }"},
             {"name":"DEFAULT_ADVICE_MAX_CHARS","kind":"const","signature":"export declare const DEFAULT_ADVICE_MAX_CHARS = 4000"},
             {"name":"DEFAULT_ADVISOR_INSTRUCTIONS","kind":"const","signature":"export declare const DEFAULT_ADVISOR_INSTRUCTIONS = \"You are a second opinion for another AI agent that is working on a task. Read the conversation and answer its question directly. Point out a wrong approach, a missed requirement, or a risk it has not noticed, and say what to do instead. Be brief: at most a few short paragraphs. You have no tools and cannot act; the agent acts.\""},
             {"name":"DEFAULT_CONTEXT_LAST_TURNS","kind":"const","signature":"export declare const DEFAULT_CONTEXT_LAST_TURNS = 6"},
             {"name":"DEFAULT_CONTEXT_MAX_CHARS","kind":"const","signature":"export declare const DEFAULT_CONTEXT_MAX_CHARS = 24000"},
+            {"name":"DEFAULT_EVIDENCE_MAX_CHARS","kind":"const","signature":"export declare const DEFAULT_EVIDENCE_MAX_CHARS = 48000","summary":"Character budget for all evidence text together."},
             {"name":"DEFAULT_MAX_CONSULTS_PER_RUN","kind":"const","signature":"export declare const DEFAULT_MAX_CONSULTS_PER_RUN = 3"},
             {"name":"DEFAULT_MAX_ROUNDS","kind":"const","signature":"export declare const DEFAULT_MAX_ROUNDS = 2"},
             {"name":"HARD_ADVICE_MAX_CHARS","kind":"const","signature":"export declare const HARD_ADVICE_MAX_CHARS = 16000"},
             {"name":"HARD_CONTEXT_LAST_TURNS","kind":"const","signature":"export declare const HARD_CONTEXT_LAST_TURNS = 50"},
             {"name":"HARD_CONTEXT_MAX_CHARS","kind":"const","signature":"export declare const HARD_CONTEXT_MAX_CHARS = 120000"},
+            {"name":"HARD_EVIDENCE_MAX_CHARS","kind":"const","signature":"export declare const HARD_EVIDENCE_MAX_CHARS = 120000"},
             {"name":"HARD_MAX_CONSULTS_PER_RUN","kind":"const","signature":"export declare const HARD_MAX_CONSULTS_PER_RUN = 20"},
             {"name":"HARD_MAX_ROUNDS","kind":"const","signature":"export declare const HARD_MAX_ROUNDS = 10"},
+            {"name":"MAX_EVIDENCE_BLOCKS","kind":"const","signature":"export declare const MAX_EVIDENCE_BLOCKS = 16","summary":"Evidence blocks one validation reads."},
             {"name":"MAX_MISSING_CHARS","kind":"const","signature":"export declare const MAX_MISSING_CHARS = 200"},
             {"name":"MAX_MISSING_ITEMS","kind":"const","signature":"export declare const MAX_MISSING_ITEMS = 5","summary":"At most five missing items, each at most 200 chars: an event is a summary, never the transcript."},
+            {"name":"MAX_TASK_CHARS","kind":"const","signature":"export declare const MAX_TASK_CHARS = 16000","summary":"Cap on the task and on the criteria text, each."},
+            {"name":"ValidateCompletionInput","kind":"interface","signature":"export interface ValidateCompletionInput","members":["readonly model: ModelClient","readonly task: string","readonly criteria?: string","readonly evidence?: readonly ValidationEvidence[]","readonly evidenceMaxChars?: number","readonly signal?: AbortSignal"],"summary":"Input to the standalone validation: host text and host evidence only."},
+            {"name":"ValidationErrorCode","kind":"type","signature":"export type ValidationErrorCode = \"model_error\" | \"child_failed\" | \"validator_engine_unavailable\" | \"unparseable_verdict\" | \"child_unparseable_verdict\" | \"task_unavailable\" | \"invalid_input\" | \"evidence_failed\"","summary":"Why a validation produced no verdict."},
+            {"name":"ValidationEvidence","kind":"interface","signature":"export interface ValidationEvidence","members":["readonly label: string","readonly text: string","readonly truncated?: boolean"],"summary":"One block of evidence."},
+            {"name":"ValidationEvidenceSource","kind":"type","signature":"export type ValidationEvidenceSource = (payload: RunEndPayload, session: SessionContext | undefined) => readonly ValidationEvidence[] | Promise<readonly ValidationEvidence[]>","summary":"Evidence the host assembles for an in-run validation: called on `run.end`, after the worker stopped."},
             {"name":"ValidatorDelegateService","kind":"interface","signature":"export interface ValidatorDelegateService","members":["start(input: { readonly child: string; readonly input: string; readonly mode: \"sync\"; readonly session: SessionContext; readonly signal?: AbortSignal; }): Promise<{ readonly status …"],"summary":"The `delegate` service's shape this package needs."},
             {"name":"ValidatorVerdict","kind":"type","signature":"export type ValidatorVerdict = \"verified\" | \"incomplete\" | \"unverified\" | \"error\""},
             {"name":"advisorConfigSchema","kind":"const","signature":"export declare const advisorConfigSchema: { readonly type: \"object\"; readonly properties: { readonly model: { readonly anyOf: readonly [{ readonly type: \"string\"; }, { readonly type: \"object\"; readonly properties: { readonly provider: { readonly type: \"string\"; }; readonly model: { readonly type: \"string\"; }; }; readonly required: readonly [\"provider\", \"model\"]; }]; }; readonly instructions: { readonly type: \"string\"; readonly minLength: 1; }; readonly context: { readonly type: \"object\"; readonly properties: { readonly lastTurns: { readonly type: \"integer\"; readonly minimum: 1; }; readonly ..."},
+            {"name":"advisorPackage","kind":"function","signature":"export declare function advisorPackage(options: AdvisorPackageOptions): PackageInstance","summary":"The advisor as a package instance, with `validate.evidence` allowed."},
             {"name":"default","kind":"reexport","signature":"export default","docs":["node_modules/@arnilo/prism/docs/agent.md","node_modules/@arnilo/prism/docs/compatibility.md","node_modules/@arnilo/prism/docs/live-testing.md","node_modules/@arnilo/prism/docs/packages.md","node_modules/@arnilo/prism/docs/slots.md"],"examples":["examples/advisor.ts","examples/validator.ts"]},
             {"name":"parseAdviceVerdict","kind":"function","signature":"export declare function parseAdviceVerdict(text: string, maxChars: number): AdviceVerdict | undefined","summary":"`{ verdict, advice }` for the review triggers, or `undefined` when the answer is not that shape."},
             {"name":"parseCompletionVerdict","kind":"function","signature":"export declare function parseCompletionVerdict(text: string): CompletionVerdict | undefined","summary":"`{ verdict, missing }` for the validator, or `undefined`."},
             {"name":"resolveContext","kind":"function","signature":"export declare function resolveContext(config: AdvisorContextConfig | undefined): ResolvedContext"},
-            {"name":"resolveLimits","kind":"function","signature":"export declare function resolveLimits(config: AdvisorConfig): { readonly adviceMaxChars: number; readonly maxConsultsPerRun: number; readonly maxRounds: number; readonly clamped: readonly string[]; }","summary":"Every knockout is a ceiling, so a config can only narrow."}
+            {"name":"resolveLimits","kind":"function","signature":"export declare function resolveLimits(config: AdvisorConfig): { readonly adviceMaxChars: number; readonly maxConsultsPerRun: number; readonly maxRounds: number; readonly clamped: readonly string[]; }","summary":"Every knockout is a ceiling, so a config can only narrow."},
+            {"name":"validateCompletion","kind":"function","signature":"export declare function validateCompletion(input: ValidateCompletionInput): Promise<CompletionValidation>","summary":"Independent completion validation for a workflow `gateNode` or any host code: one model call with no tools, no session, no transcript and no final answer."}
           ]
         },
         {
@@ -2300,7 +2314,7 @@
           "specifier": "@arnilo/prism-extensions/workflows",
           "exports": [
             {"name":"AgentNodeDefinition","kind":"interface","signature":"export interface AgentNodeDefinition extends WorkflowNodeBase","members":["readonly kind: \"agent\"","readonly agent: Agent","readonly session?: (ctx: WorkflowNodeContext) => Session | Promise<Session>","readonly input?: (ctx: WorkflowNodeContext) => unknown | Promise<unknown>","readonly runOptions?: Omit<RunOptions, \"signal\" | \"metadata\">","readonly worktree?: AgentNodeWorktree","readonly output?: (result: RunResult, ctx: WorkflowNodeContext) => unknown | Promise<unknown>"]},
-            {"name":"AgentNodeWorktree","kind":"type","signature":"export type AgentNodeWorktree = boolean | { readonly dispose?: \"keep\" | \"dispose\"; }","summary":"Worktree policy of an `agentNode`: `true` is `{ dispose: \"keep\" }`."},
+            {"name":"AgentNodeWorktree","kind":"type","signature":"export type AgentNodeWorktree = boolean | { /** `\"keep\"` (default) leaves the worktree for the next attempt or a merge; `\"dispose\"` removes it after every execution. */ readonly dispose?: \"keep\" | \"dispose\"; /** Branch for a new worktree; default `prism/<short id>`. Checked as a git branch name (`invalid_worktree_branch`). */ readonly branch?: string | ((ctx: WorkflowNodeContext) => string); /** Commit-ish a new worktree starts at; default `HEAD`. */ readonly base?: string | ((ctx: WorkflowNodeContext) => string); }","summary":"Worktree policy of an `agentNode`: `true` is `{ dispose: \"keep\" }`."},
             {"name":"AgentNodeWorktreeOutput","kind":"interface","signature":"export interface AgentNodeWorktreeOutput","members":["readonly path: string","readonly branch: string"],"summary":"Where an `agentNode` worktree is recorded for the merge gate."},
             {"name":"CHECKPOINTS_SERVICE","kind":"const","signature":"export declare const CHECKPOINTS_SERVICE = \"checkpoints\"","summary":"Service names the workflows package consumes."},
             {"name":"CHECKPOINT_CONFLICT_CODE","kind":"const","signature":"export declare const CHECKPOINT_CONFLICT_CODE = \"ERR_PRISM_CHECKPOINT_CONFLICT\""},
@@ -4466,7 +4480,7 @@
     },
     {
       "name": "@arnilo/prism-tools",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "path": "packages/tools",
       "experimental": false,
       "entries": [
@@ -5024,7 +5038,7 @@
             {"name":"WorkspaceOverlayFile","kind":"interface","signature":"export interface WorkspaceOverlayFile","members":["readonly path: string","readonly content: string"],"summary":"One overlay file to write into a worktree, relative to the worktree root."},
             {"name":"WorkspaceService","kind":"interface","signature":"export interface WorkspaceService","members":["readonly worktree: { create(request?: WorkspaceWorktreeCreate): Promise<WorkspaceWorktree>; bound(sessionId: string): WorkspaceWorktree | undefined; rebind(request: WorkspaceWorktr …","diff(path: string, bounds?: Partial<WorkspaceDiffBounds>): Promise<{ changes: readonly FileChange[]; truncated: boolean; }>","merge(path: string, request: WorkspaceMergeRequest): Promise<WorkspaceMergeResult>","commit(path: string, request: { message: string; }): Promise<{ commit: string; }>","excludeOverlay(path: string, files: readonly WorkspaceOverlayFile[]): Promise<WorkspaceOverlay>"],"examples":["examples/custom-adapter.ts","examples/serve-tools.ts"]},
             {"name":"WorkspaceServiceError","kind":"class","signature":"export declare class WorkspaceServiceError extends Error","members":["readonly code: WorkspaceServiceErrorCode","constructor(code: WorkspaceServiceErrorCode, message: string)"]},
-            {"name":"WorkspaceServiceErrorCode","kind":"type","signature":"export type WorkspaceServiceErrorCode = \"workspace_not_git\" | \"workspace_path_escape\" | \"workspace_limit\" | \"workspace_unknown\" | \"workspace_main_immutable\" | \"workspace_dirty\" | \"workspace_dirty_target\" | \"workspace_identity_missing\" | \"workspace_git_unsupported\" | \"workspace_merge_failed\" | \"workspace_sandbox_unsupported\"","summary":"The `workspace` service's error type."},
+            {"name":"WorkspaceServiceErrorCode","kind":"type","signature":"export type WorkspaceServiceErrorCode = \"workspace_not_git\" | \"workspace_path_escape\" | \"workspace_limit\" | \"workspace_unknown\" | \"workspace_main_immutable\" | \"workspace_dirty\" | \"workspace_dirty_target\" | \"workspace_identity_missing\" | \"workspace_git_unsupported\" | \"workspace_merge_failed\" | \"workspace_sandbox_unsupported\" | \"workspace_session_bound\"","summary":"The `workspace` service's error type."},
             {"name":"WorkspaceServiceOptions","kind":"interface","signature":"export interface WorkspaceServiceOptions","members":["readonly root: string","readonly worktreeRoot?: string","readonly maxWorktrees?: number","readonly diff?: Partial<WorkspaceDiffBounds>","readonly gitPath?: string","readonly sandboxed?: boolean","readonly onEvent?: (event: CodingLifecycleEvent) => void","readonly runner?: GitRunner","readonly execFile?: CreateGitOperationsOptions[\"execFile\"]"]},
             {"name":"WorkspaceWorktree","kind":"interface","signature":"export interface WorkspaceWorktree","members":["readonly path: string","readonly branch: string","readonly base: string","readonly parentBranch: string","readonly sessionId?: string","dispose(options?: { force?: boolean; }): Promise<void>"]},
             {"name":"WorkspaceWorktreeCreate","kind":"interface","signature":"export interface WorkspaceWorktreeCreate","members":["readonly branch?: string","readonly base?: string","readonly sessionId?: string"]},
