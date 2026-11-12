@@ -67,8 +67,18 @@ export interface PackageCommandInfo {
 
 /** A model call a package makes outside a run (a compactor's summary, a classifier). */
 export interface ModelClient {
+  /** The model as the ref gave it (the agent's configured model object when the ref names that model). */
   readonly model: ModelConfig;
-  /** Streams one provider turn. Resolves the provider on first use, so providers loaded later are visible. */
+  /**
+   * The model filled in from its provider's own description (`ModelProvider.models()`): `limits`, `capabilities`,
+   * `compat` and the rest of the matching entry, with every field the ref sets winning. Without a matching entry it
+   * answers `model`; it never rejects. Read once per provider per agent. Optional, so a hand-built client stays valid.
+   */
+  resolve?(): Promise<ModelConfig>;
+  /**
+   * Streams one provider turn with the resolved model. Resolves the provider on first use, so providers loaded later
+   * are visible.
+   */
   generate(request: Omit<ProviderRequest, "model">): AsyncIterable<ProviderEvent>;
 }
 

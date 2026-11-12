@@ -668,6 +668,41 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   };
 
   /**
+   * A `models.client` ref that names the agent's configured model (same provider and model) starts from the configured
+   * object, so a package's side call to the run's own model carries its description at once; the ref's fields win.
+   */
+  const clientModel = (spec: ModelSpec): ModelSpec => {
+    const own = hostConfig.model === undefined ? undefined : parseModelRef(hostConfig.model);
+    return own && own !== spec && own.provider === spec.provider && own.model === spec.model ? { ...own, ...spec } : spec;
+  };
+  /** Each provider's own model descriptions, read at most once per agent; a missing or failing `models()` is empty. */
+  const catalogs = new Map<string, Promise<readonly ModelConfig[]>>();
+  const catalogOf = (providerId: string): Promise<readonly ModelConfig[]> => {
+    const cached = catalogs.get(providerId);
+    if (cached) return cached;
+    const provider = providerEntries.get(providerId)?.provider;
+    // A provider not registered yet (a package's setup can ask before later packages load) is not cached as empty.
+    if (!provider) return Promise.resolve([]);
+    const catalog =
+      typeof provider.models === "function"
+        ? Promise.resolve()
+            .then(() => provider.models!())
+            .catch(() => [])
+        : Promise.resolve([]);
+    catalogs.set(providerId, catalog);
+    return catalog;
+  };
+  /**
+   * The model filled in from its provider's description: the catalog entry with the same `model`, under every field
+   * the ref sets (plan 217 Task 6.1: a bare `provider/model` ref had no `compat`, so a worker's thinking level never
+   * reached the wire). No entry, or no catalog, answers the ref as given.
+   */
+  const describeModel = async (spec: ModelSpec): Promise<ModelSpec> => {
+    const entry = (await catalogOf(spec.provider)).find((candidate) => candidate.model === spec.model);
+    return entry ? { ...entry, ...spec, provider: spec.provider } : spec;
+  };
+
+  /**
    * One `models.client` turn with the agent's `retry` policy, the same loop a run turn uses. A failure is
    * retried only before the first event reaches the caller; after that the stream cannot be unsent, so a
    * failure surfaces as a redacted `error` event. Stop reasons land on the closed taxonomy.
@@ -824,8 +859,20 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           requireCapability(name, entry.capabilities, "models", "models.client");
           const configured = ref ?? hostConfig.model;
           if (!configured) throw new TypeError("models.client needs a model reference: the agent has none configured");
-          const model = parseModelRef(configured);
-          return { model, generate: (request) => generateWithRetry(model, request) };
+          const model = clientModel(parseModelRef(configured));
+          let resolved: Promise<ModelSpec> | undefined;
+          const resolve = (): Promise<ModelSpec> => {
+            resolved ??= describeModel(model);
+            return resolved;
+          };
+          return {
+            model,
+            resolve,
+            generate: (request) =>
+              (async function* () {
+                yield* generateWithRetry(await resolve(), request);
+              })(),
+          };
         },
         embeddings(ref?: ModelRef) {
           requireCapability(name, entry.capabilities, "models", "models.embeddings");

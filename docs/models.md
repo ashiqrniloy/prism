@@ -114,6 +114,13 @@ for await (const event of client.generate({ messages: [{ role: "user", content: 
 }
 ```
 
+A string ref names only a provider and a model. `client.resolve()` fills in the rest from the provider's own
+description of that model (`ModelProvider.models()`, read once per provider per agent): `limits`, `capabilities`
+and `compat`, with every field the ref sets winning. `client.generate` sends the resolved model, so provider-side
+mappings that read `request.model.compat` (a thinking level, for example) work for side calls too. Without a
+matching entry, or when the catalog fails, the ref is used as given; resolution never fails a call. A worker that
+maps a thinking level itself does it against `await client.resolve?.()`, as the memory workers do.
+
 ## Extension and configuration notes
 
 One per-agent registry serves every path. It holds the kernel's built-in `openai-compatible` provider first,
