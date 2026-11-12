@@ -59,6 +59,15 @@ agentNode({ agent: uiEngineer, worktree: true, input: (ctx) => ctx.workflowInput
 
 `worktree: true` (or `{ dispose: "keep" | "dispose" }`) creates a worktree through the `workspace` service (`@arnilo/prism-tools/coding`) bound to the child session, so its tools resolve to it. After the run the node calls `workspace.diff(path)`, emits each change as an `agent.file` package event (`source: "diff"`, with `sessionId`, `workflowRunId`, `nodeId`), and returns `{ output, worktree: { path, branch, truncated } }` for a merge gate. Without the `workspace` service, or without a host parent, the node fails with `WorkflowRuntimeError` code `missing_service`; it never falls back to the main tree. The worktree is kept by default for the merge gate, so the host or the gate disposes it; `dispose: "dispose"` force-disposes it when the node ends. Cost: one child session per attempt and one `diff` call per worktree node.
 
+`worktree: { branch?, base?, dispose? }` names the branch and the start commit of a new worktree. Each of `branch` and `base` is a string or a function of the node context, for example `` branch: () => `factory/${taskId}` ``. A literal branch that is not a valid git branch name throws `WorkflowDefinitionError` from `agentNode(...)`. A function that returns one fails the node with `invalid_worktree_branch` (`invalid_worktree_base` for `base`) before any worktree is created. The default branch is `prism/<short id>` from `HEAD`.
+
+**Worktree lifetime.** A worktree belongs to the node's session, and the workspace service holds at most one live worktree per session:
+
+- **Fresh session** (no `session` supplied): every execution opens a new session and therefore a new worktree. This includes a gate back edge and a `retries` attempt.
+- **Supplied session** (`session: () => taskSession`): the first execution creates the worktree. Every later execution, whether a gate back edge (`onFail: "work"`) or a retry, finds it through `workspace.worktree.bound(session.id)` and continues in it. `worktree.create` runs once, and the attempt sees the files the last one left. The `agent.file` diff runs against the worktree's base, so after a retry it covers every attempt. If the held worktree is on a different branch than `branch` asks for, the node fails with `worktree_branch_mismatch`. A worktree the host created and bound to that session itself is reused the same way.
+- **Durable resume** after a process kill: the node rebinds its recorded worktree (see below).
+- With `dispose: "dispose"`, the worktree is removed after every execution, so the next execution starts from a new one even with a supplied session. Keep the default `"keep"` when a back edge should fix what the gate found.
+
 ### `fanOut`
 
 `fanOut({ items, route, maxConcurrency })` evaluates `items(ctx)` (at most `maxFanOut`), asks `route(item, index, ctx)` for the node that runs each item (an `agentNode`, `functionNode`, or `workflowNode`), and outputs the item results in item order. At most `maxConcurrency` items run at once (also capped by the workflow's `maxConcurrency`); an item cannot suspend.
@@ -189,7 +198,7 @@ Sizing: a durable store writes one checkpoint per node completion and one lease 
 
 A suspended `agentNode` resumes through the child: pass the reviewer's **complete** `Decision[]` batch as `resume.input` and the child continues with `session.resume(decisions)`. A partial, unknown, or duplicated batch is rejected by the session, and a non-array `resume.input` fails with `invalid_resume`.
 
-A worktree node that died mid-run resumes only in its recorded worktree. The node first asks the workspace service for its binding, then calls `workspace.worktree.rebind` to re-adopt the recorded path after a process kill; if neither yields that worktree (gone, or not the service's), the node fails with `worktree_lost`. It never creates a new worktree or runs in the main tree.
+A worktree node that died mid-run resumes only in its recorded worktree, including a node with a supplied session and a named branch. The node first asks the workspace service for its binding, then calls `workspace.worktree.rebind` to re-adopt the recorded path after a process kill; if neither yields that worktree (gone, or not the service's), the node fails with `worktree_lost`. It never creates a new worktree or runs in the main tree.
 
 Cost: one checkpoint read per resume, one lease held per run, one extra checkpoint write per agent attempt (after its session and worktree are recorded, so a kill can find them), and one extra write at node start for a `"fail"` node on the superstep scheduler. A node that finishes between the last checkpoint and the kill is indistinguishable from one that never started: that is the window `idempotent` exists for.
 

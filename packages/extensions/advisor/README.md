@@ -109,6 +109,69 @@ Each round, the validator reads `selectTranscript(payload.history, validate.cont
 - The task is captured from the run's input (the `run.input` hook carries the run id), so a mid-run steer cannot replace it. A run whose input was empty (a resume, a restart) falls back to the first user message of the history, and the event says `task: "inferred"`.
 - Rounds are not a gate the runtime enforces on the result: **the host treats a run as done only when the run's last `validator.verdict` is `verified`**. A run reporting `completed` alone does not mean verified.
 
+### What each engine sees
+
+| Section | `engine: "model"` | `engine: { child }` |
+| --- | --- | --- |
+| `TASK` (captured or inferred) | yes | yes |
+| `ACCEPTANCE CRITERIA` (`validate.criteria`) | yes | yes |
+| `FINAL ANSWER` (the run's last assistant text) | unless `inputs.finalAnswer: false` | unless `inputs.finalAnswer: false` |
+| `CONVERSATION` (`selectTranscript` slice) | unless `inputs.transcript: false` | never |
+| `EVIDENCE: <label>` blocks | when the host gives an `evidence` source | when the host gives an `evidence` source |
+| Tools | none | the child's own, through `delegate` on the run's session (its roots and worktree routing) |
+
+`inputs` defaults to `{ transcript: true, finalAnswer: true }`, the 0.13.0 behaviour. A validator that reads the worker's narrative ("all tests pass") judges the claim, not the change. To judge only the change, turn both off and hand it evidence. `evidence` is a function, so it goes through `advisorPackage(...)` instead of the JSON config:
+
+```ts
+import { advisorPackage } from "@arnilo/prism-extensions/advisor";
+
+advisorPackage({
+  model: "hyper/<validator-model>",
+  tool: false,
+  validate: {
+    criteria: "The parser accepts trailing commas; the new test passes.",
+    inputs: { transcript: false, finalAnswer: false },
+    evidence: async (payload, session) => [{ label: "DIFF", text: await diffFor(session) }],
+  },
+});
+```
+
+The evidence source runs on `run.end`, after the worker stopped. A throw is the `error` reason code `evidence_failed`. All evidence text shares `validate.evidenceMaxChars` (default 48,000, hard cap 120,000). A short block keeps its text and the rest is split evenly. A cut block carries `[truncated: shown the first N of M chars]`, and a block the host marks `truncated: true` carries `[truncated: the host cut this evidence before validation]`. At most 16 blocks.
+
+### Standalone validation (a workflow gate)
+
+For validation outside the worker's run, such as a workflow `gateNode` after a deterministic checks gate, call `validateCompletion`. It reads no session, no history and no final answer, and it has no tools. Its prompt holds the task, the criteria and the evidence blocks, and nothing else:
+
+```ts
+import { validateCompletion } from "@arnilo/prism-extensions/advisor";
+
+gateNode({
+  onFail: "work",
+  check: async (ctx) => {
+    const verdict = await validateCompletion({
+      model: validatorClient,          // a ModelClient, e.g. prism.models.client("hyper/<validator-model>")
+      task: task.description,
+      criteria: task.criteria,
+      evidence: [
+        { label: "DIFF", text: diffText, truncated },
+        { label: "CHECKS", text: checkTail },
+      ],
+      signal: ctx.signal,
+    });
+    return verdict.verdict === "complete" ? { pass: true } : { pass: false, reason: verdict.verdict === "incomplete" ? verdict.missing.join("; ") : verdict.reasonCode };
+  },
+});
+```
+
+The result is `{ verdict: "complete" } | { verdict: "incomplete", missing } | { verdict: "error", reasonCode }`. It keeps the in-run guarantees: one model call, no `complete` without a parsed verdict, and `missing` capped at 5 items of 200 characters. The evidence caps are the same as above (`evidenceMaxChars` per call), and the task and the criteria are each capped at 16,000 characters with a marker. The reason codes are:
+
+- `model_error`: the call failed or was aborted;
+- `unparseable_verdict`;
+- `task_unavailable`: an empty task;
+- `invalid_input`: no `ModelClient`, a malformed evidence list, or more than 16 blocks.
+
+A host with only a `ModelRef` can use the `advisor` service instead: `prism.services.consume<AdvisorService>("advisor").validateCompletion({ model?, task, criteria, evidence })` resolves `model` through the agent, and defaults to the advisor's own model. An unresolvable model is `validator_engine_unavailable`. The service exists whenever the advisor's model resolves, whether or not `validate` is set.
+
 Combining with fixed checks: JSON hooks' `Stop` command and the coding package's goal-verify run commands and tests; `validate` covers what needs judgment. Use both when you want both.
 
 ## Advisor or delegate child?
@@ -125,6 +188,7 @@ For a reviewed child that can act, use `delegate` with `context: { lastTurns }` 
 
 - Each consult is one model call: about `context.maxChars / 4` tokens in and `adviceMaxChars / 4` out. The worst case per run is `maxConsultsPerRun` calls. `beforeTools` adds that latency before every listed tool.
 - `validate` costs nothing unless set: one model call per round, or one delegation per round with a child engine (bounded by the child's limits — 500,000 tokens by default, so set tight ones).
+- `validateCompletion` and the `advisor` service see only the text the host passes; nothing is read from a session.
 - The advisor sees only the redacted branch slice. It has no tools and cannot act. The model cannot raise `maxConsultsPerRun`, `context`, or `adviceMaxChars`; `context` comes only from host config.
 - The validator child gets only its configured packages through the `delegate` service; this package cannot add tools or packages to it, and a malformed or oversized child verdict is an `error`, never `verified`.
 - Task capture keeps one message list per active run in memory, bounded to the last 32 runs.

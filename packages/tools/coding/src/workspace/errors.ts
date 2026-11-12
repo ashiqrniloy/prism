@@ -15,7 +15,8 @@ export type WorkspaceServiceErrorCode =
   | "workspace_identity_missing"
   | "workspace_git_unsupported"
   | "workspace_merge_failed"
-  | "workspace_sandbox_unsupported";
+  | "workspace_sandbox_unsupported"
+  | "workspace_session_bound";
 
 export class WorkspaceServiceError extends Error {
   readonly code: WorkspaceServiceErrorCode;
