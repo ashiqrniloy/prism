@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-extensions",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Prism context, credentials, integrations, policy and stores. Import each package through its subpath.",
   "type": "module",
   "exports": {

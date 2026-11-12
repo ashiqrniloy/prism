@@ -162,11 +162,11 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | --- | --- | --- |
 | `@arnilo/prism` | 0.13.0 | core — runtime, CLI/RPC, templates, docs |
 | `@arnilo/prism-ai` | 0.13.0 | capability |
-| `@arnilo/prism-extensions` | 0.13.0 | capability |
+| `@arnilo/prism-extensions` | 0.13.1 | capability |
 | `@arnilo/prism-hosts` | 0.13.0 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
 | `@arnilo/prism-knowledge` | 0.13.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
 | `@arnilo/prism-memory-system` | 0.13.0-experimental.0 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
-| `@arnilo/prism-tools` | 0.13.0 | capability |
+| `@arnilo/prism-tools` | 0.13.1 | capability |
 <!-- generated:package-truth:inventory end -->
 
 - [Extensions bundle](../packages/extensions/README.md): context, credentials, integrations, policy and stores.

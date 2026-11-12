@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-11-11T12:17:42.204Z",
+  "generatedAt": "2026-11-12T07:14:12.931Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
   },
   "versions": {
     "@arnilo/prism": "0.13.0",
-    "@arnilo/prism-extensions": "0.13.0",
+    "@arnilo/prism-extensions": "0.13.1",
     "@arnilo/prism-hosts": "0.13.0",
     "@arnilo/prism-knowledge": "0.13.0-experimental.0",
     "@arnilo/prism-memory-system": "0.13.0-experimental.0",
     "@arnilo/prism-ai": "0.13.0",
-    "@arnilo/prism-tools": "0.13.0",
+    "@arnilo/prism-tools": "0.13.1",
     "@arnilo/prism-ai/commandcode": "0.13.0",
     "@arnilo/prism-ai/hyper": "0.13.0",
     "@arnilo/prism-ai/kilo": "0.13.0",

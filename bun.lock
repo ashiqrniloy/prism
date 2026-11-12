@@ -34,7 +34,7 @@
     },
     "packages/extensions": {
       "name": "@arnilo/prism-extensions",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "devDependencies": {
         "@arnilo/prism-ai": "workspace:*",
         "@arnilo/prism-hosts": "workspace:*",
@@ -160,7 +160,7 @@
     },
     "packages/tools": {
       "name": "@arnilo/prism-tools",
-      "version": "0.13.0",
+      "version": "0.13.1",
       "dependencies": {
         "@mozilla/readability": "0.6.0",
         "diff": "^9.0.0",
@@ -187,7 +187,7 @@
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-extensions": "^0.13.0",
+        "@arnilo/prism-extensions": "^0.13.1",
         "@firecrawl/anydoc": "0.2.4",
         "@office-open/docx": "0.14.5",
         "@office-open/pptx": "0.14.5",

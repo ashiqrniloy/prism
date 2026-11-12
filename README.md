@@ -74,11 +74,11 @@ Pass it to `createAgent({ packages: [...] })` next to the others. [docs/packages
 | --- | --- | --- |
 | `@arnilo/prism` | 0.13.0 | core — runtime, CLI/RPC, templates, docs |
 | `@arnilo/prism-ai` | 0.13.0 | capability |
-| `@arnilo/prism-extensions` | 0.13.0 | capability |
+| `@arnilo/prism-extensions` | 0.13.1 | capability |
 | `@arnilo/prism-hosts` | 0.13.0 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
 | `@arnilo/prism-knowledge` | 0.13.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
 | `@arnilo/prism-memory-system` | 0.13.0-experimental.0 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
-| `@arnilo/prism-tools` | 0.13.0 | capability |
+| `@arnilo/prism-tools` | 0.13.1 | capability |
 <!-- generated:package-truth:inventory end -->
 
 **Experimental memory.** `@arnilo/prism-memory-{core, system}`, `@arnilo/prism-knowledge/wiki` and `@arnilo/prism-knowledge/rag` ship as `0.13.0-experimental.N` on the `experimental` dist-tag (`bun add @arnilo/prism-memory-system@experimental`), outside the stability promise of the stable packages, and no stable package or default agent depends on them. `@arnilo/prism-extensions/compaction` is stable.

@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+- `@arnilo/prism-extensions` 0.13.1 and `@arnilo/prism-tools` 0.13.1:
+  - `advisor` gains `validateCompletion` and the `advisor` service for independent completion validation from host-assembled evidence, plus `validate.inputs` and `advisorPackage({ validate: { evidence } })` for the in-run validator.
+  - `agentNode` reuses the worktree its session already holds on back edges and retries (a behaviour fix: the old behaviour lost the previous attempt's work), and gains `worktree.branch` and `worktree.base`.
+  - `workspace.worktree.create` refuses a second live worktree for one session with `workspace_session_bound`.
+  - See the bundle changelogs for details.
+
 - Remove the vulnerable transitive Zod 3 chain by targeting AG-UI 1.0.4, using its validator subpath and requiring patched Zod `^4.6.6` for protocol validation. AG-UI serving needs both peers; the renderer needs only the protocol core. Track the remote host's authored Bun declaration so clean CI typechecking matches local checks (plan 224 Task 10).
 
 - Prove the seven-bundle release from packed consumers, including stable and experimental manifest installs, registry smoke, dependency-ordered npm OIDC publishing, and the six-name bootstrap checklist (plan 224 Task 9).

@@ -229,6 +229,16 @@ function parseLock(files, path, problems) {
  * Pure: `files` is a path→text map, so the positive control can mutate a fixture
  * rather than the checkout.
  */
+/** `^x.y.z` admits `version` within the same major.minor and at or above the floor. */
+export function caretAdmits(range, version) {
+  const floor = /^\^(\d+)\.(\d+)\.(\d+)$/.exec(range);
+  const target = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  if (!floor || !target) return false;
+  const [, fMajor, fMinor, fPatch] = floor.map(Number);
+  const [, tMajor, tMinor, tPatch] = target.map(Number);
+  return fMajor === tMajor && fMinor === tMinor && fPatch <= tPatch;
+}
+
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
@@ -266,6 +276,10 @@ export function claimViolations(files, current) {
         // The kernel peer is the API-level window (`>=0.13.0 <1.0.0`), not a cut pin; a kernel minor
         // does not rewrite it (docs/compatibility.md).
         if (name === "@arnilo/prism" && /^>=\d+\.\d+\.\d+ <1\.0\.0$/.test(String(range))) continue;
+        // A caret into a stable independent line is a floor, not a cut pin: one that still admits the line's
+        // current version in the same minor (`^0.13.0` for 0.13.1) is true as written, so a patch on that line
+        // never forces already-published consumers to republish. A floor above current or in an older minor is a claim.
+        if (INDEPENDENT_LINES.has(name) && !EXPERIMENTAL_LINES.has(name) && caretAdmits(String(range), expected(name))) continue;
         if (range !== expectedRange(name)) problems.push(`${path}: ${field}.${name} is ${range}, expected ${expectedRange(name)}`);
       }
     }
@@ -464,4 +478,28 @@ test("positive control: a hardcoded definition version is reported, an in-proces
   );
   assert.deepEqual(identityVersionProblems([["g.ts", 'new Client({ name: "prism-mcp-bridge", version: manifest.version }, {})']]), []);
   assert.deepEqual(identityVersionProblems([["h.ts", 'hostInfo: { name: "prism-ag-ui", version: manifest.version }']]), []);
+});
+
+test("a caret into a stable independent line passes while it admits the line's version", () => {
+  assert.equal(caretAdmits("^0.13.0", "0.13.1"), true);
+  assert.equal(caretAdmits("^0.13.1", "0.13.1"), true);
+  assert.equal(caretAdmits("^0.13.2", "0.13.1"), false, "a floor above the published version is a claim");
+  assert.equal(caretAdmits("^0.12.0", "0.13.1"), false, "an older minor is a claim");
+  assert.equal(caretAdmits("~0.13.0", "0.13.1"), false);
+  const files = claimFiles(ROOT);
+  const current = currentVersion(ROOT);
+  const knowledge = JSON.parse(files.get("packages/knowledge/package.json"));
+  const tools = Object.keys(knowledge.peerDependencies ?? {}).find((name) => name === "@arnilo/prism-tools");
+  assert.ok(tools, "fixture: knowledge pins the tools line");
+  for (const stale of ["^0.12.0", "^9.9.9"]) {
+    const changed = new Map(files);
+    changed.set(
+      "packages/knowledge/package.json",
+      `${JSON.stringify({ ...knowledge, peerDependencies: { ...knowledge.peerDependencies, [tools]: stale } }, null, 2)}\n`,
+    );
+    assert.ok(
+      claimViolations(changed, current).some((problem) => problem.includes(`peerDependencies.@arnilo/prism-tools is ${stale}`)),
+      `${stale} must be reported`,
+    );
+  }
 });

@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-11-11T12:17:42.207Z`
+Generated: `2026-11-12T07:14:12.935Z`
 Repository root version: `0.13.0`
 
 ## 1. Executive Summary & Counts
@@ -557,7 +557,7 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
 | `@arnilo/prism` | 0 | 1530 | `scripts/compat-baseline/arnilo__prism.txt` |
-| `@arnilo/prism-extensions` | 0 | 1452 | `scripts/compat-baseline/arnilo__prism-extensions.txt` |
+| `@arnilo/prism-extensions` | 0 | 1473 | `scripts/compat-baseline/arnilo__prism-extensions.txt` |
 | `@arnilo/prism-hosts` | 0 | 1015 | `scripts/compat-baseline/arnilo__prism-hosts.txt` |
 | `@arnilo/prism-knowledge` | 0 | 399 | `scripts/compat-baseline/arnilo__prism-knowledge.txt` |
 | `@arnilo/prism-memory-system` | 0 | 1059 | `scripts/compat-baseline/arnilo__prism-memory-system.txt` |
