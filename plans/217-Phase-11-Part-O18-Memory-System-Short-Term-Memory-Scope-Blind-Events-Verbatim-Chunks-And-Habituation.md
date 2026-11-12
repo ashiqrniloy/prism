@@ -436,7 +436,7 @@ This implements roadmap Phase 11 "Memory model", part STM, after plan 216. It ca
       - `biome check` on the new and edited scripts: clean.
       - No product code, no export, no baseline change; no retired name.
 
-- [ ] Task 6: Gate M-1 — live STM efficacy against the pre-redesign observer (paid), and plan end
+- [x] Task 6: Gate M-1 — live STM efficacy against the pre-redesign observer (paid), and plan end
   - Acceptance Criteria:
     - Functional: **Gate record.** `docs/_evidence/memory-bench/217/gates/owner-gate-m1.json` states:
       - the budget;
@@ -494,7 +494,7 @@ This implements roadmap Phase 11 "Memory model", part STM, after plan 216. It ca
       - the evidence README; the package README's measured-role paragraph (S-row wording only).
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
-  - Notes (in progress, 2026-11-09; the task stays open until the paid run and its verdict):
+  - Notes (executed 2026-11-09 to 2026-11-12):
     - **Owner decision (2026-11-09).** On 2026-11-09, $37.03 of the $60 Ollama Cloud allowance was left until 2026-12-07. The full development cohort is estimated at about 2.6B input tokens, about $116 at the past week's billed rate ($22.97 for 520.9M input tokens, 83.6% cached, from `/api/usage`). Two other options were offered: run now under the C-1 caps (100M per job, about 10 BEAM and 20 LME questions per job, which would likely leave S3 underpowered), or run the small model only. The owner chose "Build now, run full later" with the C-1 roles. The machinery, the manifest and the gate record are built, and the paid run starts on the owner's later word. `217/gates/owner-gate-m1.json` records this with `approved: false`, and the campaign refuses to start until that changes.
     - **What changed.**
       - `stm-gate.mjs` builds the 18 jobs: 2 answer models × (2 suites + the family) × 3 arms, in run order. The family runs first, then memory-off, then STM and OM-before back to back per model and suite, small model first, so a halt on a spent allowance leaves whole pairs. `assertM1Paired` refuses a pair that differs in more than the arm.
@@ -604,15 +604,125 @@ This implements roadmap Phase 11 "Memory model", part STM, after plan 216. It ca
       1. Regenerate the manifest (the moved paths change its hash), rebind the gate record with an amendment, and re-run the checks.
       2. Archive `.cache/memory-bench/217/journal-worker-*.json` from the failed attempt.
       3. Start `sittings.sh` as `m1-sittings` again.
-    - **Remaining (after the owner's start word):**
-      - set `approved`, `approvedAt` and the owner's words in the record, after checking `manifestHash` (regenerate the manifest if the harness changed);
-      - run the campaign as a `systemd-run --user` unit and watch the allowance; it halts below $1.50 and resumes next period;
-      - run `--build --write`;
-      - write `s4-justification.md` only if S4 exceeds 1.25 and the cause is the record shape;
-      - give a miss to the owner with per-row evidence before plan 218 starts;
-      - transfer the `om.observer` and `om.task-state` rows in `210/decisions.md`;
-      - update the package README's measured-role paragraph;
-      - fill Compromises Made and Further Actions, and do the backlog hand-off.
+    - **Sitting 1 (2026-11-11, 16 dev personas, manifest `33d3573b…`).** Every arm completes; memory-off succeeds 0.69 (MiMo) and 0.50 (DeepSeek).
+      - S1 (OM-before − STM re-derivations per related task): DeepSeek 1.375 − 0.875 = +0.5 [−0.06, 1.09]; MiMo 0.031 − 0.375 = −0.34 [−0.78, −0.06]. A miss. S4 family cells 0.62 (DeepSeek), 0.69 (MiMo).
+      - Sittings 2–4 were refused at start: commits `ac072fd5`, `fb8f430c`, `68bae178` (`src/manifest/install.ts`, not on the run path) moved the product hash.
+      - Content analysis (persona `ls12`, MiMo): STM wrote 20 records (165 characters on average): request, action, change, result and outcome events for each task that overlap, tool-call ids and hashes, and a task state one task behind. OM-before wrote 8 consolidated facts (247 characters). OM-before also keeps raw messages in the main view longer (its compaction comes later), so S1 partly measures when each arm trims the view.
+    - **STM instruction revision (owner: "Let's implement the prompt changes ... and then run S1 again ... make sure that STM instructions do not get too bloated").**
+      - `DEFAULT_STM_INSTRUCTION`: a task finished or abandoned within the batch is one `outcome` (old → new, how it was verified); otherwise a result only when it adds to the records and an action only while its result is unknown; no tool-call ids or unrequested hashes; chunks only when the description cannot hold the exact text; `record_task_state` on every new request. Sentences were rewritten, not added: 1,815 → 2,099 characters, and `stm_prompt_records_events_not_facts` caps it at 2,100.
+      - Diagnostic (`ls12`): MiMo 20 → 12 records, worker output 4,631 → 4,223; DeepSeek 27 → 24 records, 13,333 → 10,941 (against the first draft). A first draft showed whole-event retries after a non-verbatim chunk (`chunk_not_verbatim`), which the chunk rule addresses.
+      - Gate amendment 8 (manifest `f8cf96c9…`). Only the two STM family jobs re-ran (about $0.40 estimated, 20 minutes); the OM-before and memory-off reports of sitting 1 stand (neither runs the STM instruction). The old STM reports are in `runs/superseded-s1-stm-prompt-v1/`.
+    - **S1 re-run (2026-11-11).**
+      - DeepSeek: OM-before 1.375 vs STM 0.5, **+0.875 [0.31, 1.44]**, success 1.0 for both: a gain whose interval excludes zero.
+      - MiMo: OM-before 0.031 vs STM 1.625, **−1.59 [−4.41, −0.03]**, STM success 0.94. One persona (`ls1`) accounts for 44 of the 52 re-derivations: the main agent hit `ERR_PRISM_RUN_LIMIT` on tasks 3, 4 and 6 searching for a test runner (`package.json`, `tsconfig.json`, `jest.config.js`, …), although STM held the task-1 outcome with the module and callers. Without `ls1`, STM is 0.27 against sitting 1's 0.375. A live re-run of `ls1` succeeded (11 and 1 re-derivations): the failure is MiMo variance on a persona where OM-before's longer raw view still shows the earlier task's "no package.json; tests run via `run_tests`" results, which STM's outcome leaves out.
+      - S4 family cells: DeepSeek 0.51 (was 0.62), MiMo 0.52 (was 0.69). Worker tokens per persona fell 16–23%, main-agent tokens 9–10%.
+    - **MiMo `ls1` diagnosis and setup-facts rule (owner: "Let's do the second first and rerun S1. We gotta solve the issue that mimo was facing").**
+      - `ls1` live, three times per arm (MiMo): STM 0/0/7 and OM-before 1/0/4 re-derivations on the rename pair. In both arms the third run searched for a test runner at task 3 (`package.json`, `jest.config.js`, `tsconfig.json`): task 1 only calls `run_tests`, so the agent sometimes looks for the setup once it creates a file. The paid run's 44 came from one such search repeating to `ERR_PRISM_RUN_LIMIT` in tasks 3, 4 and 6. MiMo also sent regex-escaped patterns (`test\(`) to the family's literal grep.
+      - `DEFAULT_STM_INSTRUCTION`: a finished task's outcome keeps "setup facts found on the way (a missing file, how checks are run)". Two sentences were shortened to pay for it: 2,089 characters. Diagnostic: the task-3 records kept "package.json read failed", and task 4 went straight to the config.
+      - Gate amendment 9 (manifest `c2562fb2…`); the STM family jobs re-ran (20 minutes), the previous reports are in `runs/superseded-s1-stm-prompt-v2/`.
+    - **S1 re-run 2 (2026-11-11).**
+      - MiMo: OM-before 0.031 vs STM 0.375, −0.34 [−0.69, −0.06]; STM success 1.0 with no failed task (was 0.94, three failed).
+      - DeepSeek: OM-before 1.375 vs STM 0.906, +0.47 [−0.19, 1.16]; success 1.0 for both.
+      - S4 family cells: DeepSeek 0.48, MiMo 0.58.
+      - Across the three STM family runs, DeepSeek gave 0.875, 0.5 and 0.906 and MiMo 0.375, 1.625 and 0.375; each OM-before cell is one run, and `ls1` alone showed OM-before ranging 0–4. Re-running only the STM arm until it wins would bias S1, so further S1 power needs repeats of both arms.
+    - **Sitting 5: S1 replication (owner: "Let's run on two different models from ollama cloud now. GLM-5.3-flash and Minimax m3.1 flash. And see what happens to S1").**
+      - `stm-gate.mjs`: `M1_REPLICATION_MODELS` (`glm` → `ollama-cloud/glm-5.3-flash`, `minimax` → `ollama-cloud/minimax-m3.1-flash`), the family's three arms each in sitting 5. `M1_ANSWER_MODELS` widens the allowed routes (gate check, preflight, `billing.paidAnswers`). `buildM1Evidence` reports their S1 pair and family S4 ratio under `evidence.replication`, outside `rows` and `cells`, so the M-1 verdicts stay on DeepSeek and MiMo. Test: `gate_m1_arms_paired_on_identical_items` (20 jobs, sitting 5, replication kept out of the rows).
+      - Gate amendment 10 (manifest `f1719a40…`). Smoke (`ls12`, STM): GLM 13 records, 4,588 worker output tokens; MiniMax 27 records (12 results), 13,010.
+      - **Result (2026-11-11, 1 h 43 min).** Re-derivations per related task (OM-before vs STM vs memory-off) and success:
+        - GLM-5.3 Flash: 0 vs 0 vs 0.75; S1 0 [0, 0]; success 1.0 in every arm. Family S4 0.60.
+        - MiniMax M3.1 Flash: 2.44 vs 2.34 vs 2.41; S1 +0.09 [−0.88, 1.0]; success 1.0 vs 0.97 vs 0.47. Family S4 0.58. MiniMax re-checks files at the same rate with or without memory, so on it S1 measures a verification habit; memory shows in success (0.47 → 0.97–1.0). STM failed one related task (`ls18` config); five failed tasks in each memory arm include task-1 failures that precede any memory.
+      - Across the four models, STM is ahead of OM-before on DeepSeek (+0.47 to +0.875), level on GLM and MiniMax, and behind on MiMo (−0.34 against a one-run OM-before of 0.03). STM's family worker tokens are 0.48–0.60× OM-before's on all four.
+    - **Sitting 2 (2026-11-11/12, MiMo, manifest `f1719a40…`).** LongMemEval S4 cell 0.88 (STM 4.98M worker tokens per question, OM-before 5.65M). Answers 0/2 (STM) and 1/2 (OM-before); STM BEAM 1/2, 2.18M per question. Sittings 3–4 were refused at start: commit `14ebf5d5` (`src/__tests__/release.test.ts`) moved the product hash.
+    - **Sitting 2 investigation (owner: "Before sitting 3-4, I would like to investigate the issues with STM ... So investigate"; "Do all three and then rerun sitting 2").**
+      - **The knowledge-update miss** (French press ratio, "more or less water"): the old value ("1 Tbsp/6 oz") was in STM's memory, inside a WM reflection of about 1,400 characters that also covered pets, a marathon plan and recipes; the answer model missed it. OM-before kept it as its own observation and answered.
+      - **WM shape:** the WM instruction still read "Rewrite the entire memory log …", and each pass supersedes every reflection. Live (MiMo, 160k tokens of the same history): 9 theme paragraphs averaging 1,084 characters.
+      - **WM call count** (81 WM calls against OM-before's 6 reflector calls): STM writes about 3.5× OM-before's record text on chat history (52k characters per 250k tokens), so it crosses `wm.observationTokens` more often; each WM pass sent a closing turn (about 7.7k input tokens); a turn-0 truncation (9–14k characters of thinking) added 3–5 continuation turns; an attempt that recorded nothing or failed (a garbled `record_rection`) consumed nothing, so WM re-ran on the next STM pass.
+      - **Fixes.** (A) `runReflector` ends after a clean turn (`endAfterCleanTurn`, default true). (B) `observationTokensSinceEmptyReflection` (`coverage-helpers.ts`): after an empty or failed attempt, WM waits for another `wm.observationTokens` of new records; a failed attempt appends an empty `reflections.recorded` entry before rethrowing. (C) `DEFAULT_REFLECTOR_INSTRUCTION`: one subject per reflection, at most about 300 characters, changed values as old → new; WM's full redesign stays with plan 218.
+      - Tests (`reflection-replacement.test.ts`): `wm_instruction_asks_for_one_short_subject_per_reflection_with_old_new_values`, `wm_pass_ends_after_a_clean_turn`, `wm_waits_for_new_records_after_an_empty_or_failed_attempt` (fails with the backoff removed). `packages/memory/system` and `core` 762 pass; typecheck and lint clean.
+      - Diagnostic after the fixes (same 160k tokens): 25 reflections averaging 175 characters (max 327); WM output 7,149 → 3,531 tokens.
+      - Gate amendment 12 (manifest `a8575c37…`). Sitting 2's two STM jobs re-run; its OM-before report stands (pinned tree; answers cached by the pinned revision). The family results stand: 17 family STM diagnostics made no WM call.
+    - **Sitting 2 STM re-run (2026-11-12, 48 minutes).**
+      - LongMemEval (MiMo): WM calls 81 → 4, WM tokens 4.63M → 0.20M, worker tokens 9.97M → 5.74M, wall 98 → 48 minutes, no worker error. **S4 cell 0.88 → 0.51.** Answers 1/2, as OM-before: the French press question is now right ("6 ounces down to 5 … less water"); both arms miss the same multi-session date question.
+      - BEAM (MiMo STM): WM calls 14 → 4, WM tokens 694k → 172k, wall 58 → 42 minutes, answers 1/2 (unchanged). Its ratio waits for OM-before's BEAM job (sitting 3).
+    - **Remaining accuracy misses and their owners (owner: "Add that as a task in 218. Start sitting 3 and 4").**
+      - BEAM contradiction resolution (STM answered a conflicting history without naming the conflict): plan 221 Task 3 (Sleep's conflicts job) and plan 219.1 Task 7 (`history` recall).
+      - LongMemEval `9aaed6a3`, OM-before's miss (the $75 fact dated "as of" its mention, not matched to "last Thursday"): plan 219 (episode time ranges) and plan 219.1 Task 5 (time cue).
+      - LongMemEval `9aaed6a3`, STM's miss (the user's $75 expense not recorded; an assistant-calculated plan read as a real trip): no later plan covered it. **Added as plan 218 Task 4.1** (speaker attribution derived from cited entry roles, a role label on serialized lines, one instruction rule, a render mark for assistant proposals).
+    - **Sittings 3–4 (started 2026-11-12 03:34, manifest `a8575c37…`).**
+      - MiMo OM-before BEAM attempt 1 failed in setup after 46 s (`TimeoutError` in a network call while three jobs started; the dataset loads in the pinned tree in 3 s). The campaign retried it after its cooldown (attempt 2, 03:39:50); a separate re-run started 20 s later as its own campaign, so two copies ran (the extra one about $0.25; the evidence reads the highest attempt).
+      - **OM-before's BEAM baseline fails passes.** The extra copy's report: 27 observer calls over about 2M source tokens (STM: 132), with 6 "source entry exceeds … bytes" and 3 "exceeds 32 tool calls per turn" errors. The pinned observer serializes all unscanned entries into one request; once a BEAM batch outgrows the worker's message budget the pass throws and the batch only grows (the snowball STM had before this task's batch splitting). OM-before's BEAM worker tokens are therefore understated against an STM that processed the whole history.
+      - The campaign's own attempt 2 (the one the evidence reads) was healthy: 51 observer calls, 6.66M worker tokens, two tool-call-limit errors and no byte overflow; answers 1/2, as STM. **MiMo BEAM S4 cell 0.595** (STM 1.98M, OM-before 3.33M worker tokens per question). The overflow is intermittent (one of two runs); the extra copy's report is not read by the evidence and stays as `run-…small.OM-before.beam-1m.json` beside attempt 2.
+      - DeepSeek (sittings 3–4): LongMemEval STM 6.47M worker tokens (8 WM calls), 0/2; OM-before 21.8M (597 observer, 89 reflector, 142 dropper calls, 156 minutes), 0/2. BEAM STM 4.42M (4 WM calls), 1/2; OM-before 11.6M (99 observer calls, no errors), 1/2. Every M-1 cell is paired. S4 cells: DeepSeek 0.48 / 0.30 / 0.38, MiMo 0.58 / 0.51 / 0.595 (family / LongMemEval / BEAM); S4 = 0.595.
+    - **WM regression from fix C (found 2026-11-12 during sittings 3–4).**
+      - Since the sitting 2 re-run, every STM suite answer shows "Reflections: none". One WM call on 22k tokens of real STM records (`.cache/memory-bench/217/diag/wm-one.mjs`, MiMo): with the default thinking level the model spends the whole 8,192-token output on thinking (about 20k characters) and makes no call, so the loop ends with nothing; with `thinkingLevel: "none"` it makes 33 calls in the first turn and the 32-per-turn limit fails the pass; with `"none"` plus `onToolCallLimit: "refuse"` it records 64 reflections (288 characters on average) but stops at the 64-call total, with over half its written calls refused. The 160k-token diagnostic used a 3k WM trigger, so its WM input never reached this size.
+      - Consequences: the STM suite cells (sitting 2 re-run, sittings 3–4) ran without a working WM, so their worker tokens leave out WM's real cost; the pool grows past the render budget, which drops the oldest records first (DeepSeek's block began at 2023-02-24 and lost the 2023-02-11 "6 oz" record; MiMo's shorter records reached 2023-01-12 and kept it).
+      - Pre-existing, made likelier by fix C: a WM pass consumes every uncovered record it was given, including ones no reflection cites.
+      - The `onToolCallLimit: "refuse"` edit was tried and set aside (`reflector.ts` unchanged) so sitting 4 ran on the approved manifest.
+    - **WM restored (owner, 2026-11-12: "go back to the old WM instruction but keep fixes A and B, and make WM refuse calls past the per-turn limit").**
+      - `DEFAULT_REFLECTOR_INSTRUCTION` is the pre-redesign text again; fixes A (end after a clean turn) and B (back off after an empty or failed attempt) stay; `runReflector` passes `onToolCallLimit: "refuse"`. Test `wm_refuses_calls_past_the_per_turn_limit_and_keeps_the_rest` (fails without the refuse option); fix C's instruction test is removed.
+      - Live check (`wm-one.mjs`, 22k tokens): MiMo records 20 reflections (790 characters on average; the output cap stops turn 1, turn 2 ends clean). DeepSeek V4.1 Flash records none at the default, `low` or `none` thinking level: every call ends at 8,192 output tokens. That is not a regression: OM-before's DeepSeek LongMemEval run made 89 reflector calls, each 8,192 output tokens (729,088 in all), so DeepSeek's WM never worked in either arm; with fix B STM stops re-firing it.
+      - The one-subject item shape, batched WM input and consuming only cited records move to plan 218 Task 2 (added there as "A pass fits one model's output").
+      - Manifest `2331a1cf…` (amendment in the gate record). The four STM suite jobs re-run (started 13:08); their sitting 3–4 reports moved to `runs/superseded-s34-wm-v2/`.
+    - **STM suite re-run with WM restored (2026-11-12 13:08–14:41, manifest `2331a1cf…`, exit 0).**
+      - WM works for MiMo: its answers carry reflections again (LongMemEval 6 WM calls, 30,932 output tokens, against 4 × 8,192 before; BEAM 3 calls). DeepSeek's WM calls still end at 8,192 output tokens each (LongMemEval 8, BEAM 4), as in OM-before.
+      - Answers: DeepSeek unchanged (LongMemEval 0/2, BEAM 1/2, as OM-before). MiMo lost two it had right without reflections: LongMemEval `6071bd76` (the French press knowledge update; the answer says the ratio was mentioned once, at 5 oz, so the old 6 oz value was consumed by a WM pass into theme reflections that do not carry it, the sitting 2 failure again) and BEAM `15:abstention:0`. MiMo now 0/2 on both suites, against OM-before's 1/2 and 1/2. Two questions per cell, so this is a direction, not a measurement.
+      - **Verdicts (`--build --write`): S1 miss, S2 pass, S3 deferred to gate A, S4 pass.**
+        - S1 (OM-before − STM re-derivations per related task): DeepSeek +0.47 [−0.19, 1.16]; MiMo −0.34 [−0.69, −0.06]. MiMo's interval lies below zero, so the row misses. (Unchanged by this re-run: S1 is the long-session family.)
+        - S2: verbatim chunks byte-equal (2 chunks), no other tool runs.
+        - S4 = 0.615 (the largest cell, MiMo BEAM), under 1.25, so no justification file. Cells (STM / OM-before worker tokens): DeepSeek 0.48 family, 0.29 LongMemEval, 0.37 BEAM; MiMo 0.58 family, 0.52 LongMemEval, 0.61 BEAM. Every cell is paired. DeepSeek's OM-before cells include 89 failed reflector calls on LongMemEval that STM's backoff (fix B) avoids.
+        - S3 diagnostic (not a verdict): DeepSeek 0 on both suites; MiMo −50 on both (one question of two lost each).
+        - Replication (outside the verdict): GLM S1 0 vs 0, S4 0.60; MiniMax S1 +0.09 [−0.88, 1.0].
+      - Per the Verdicts criterion the miss goes to the owner before plan 218 starts; one fix round on development partitions is allowed.
+    - **Closed (owner, 2026-11-12: "Let's accept and close task 6. But I need to make sure they are addressed in a later plan. If it is not there at the moment, add a task for that in the appropriate plan and order").**
+      - The S1 miss is accepted. Where each open item lands:
+        - S1 re-measured with at least 3 repeats of every arm on MiMo: plan 218 Task 6 (added); held-out S1 and S3: gate A, plan 223 Task 2.
+        - WM's whole-log rewrite, consuming uncited records, batched input and the output cap: plan 218 Task 2 ("A pass fits one model's output", added), with Task 5 probe 10 for the knowledge-update loss (added) and the per-model output-cap count at Task 6 (added).
+        - A worker pass failing on an unknown tool name: plan 218 Task 1.1 (added, before Task 2, which builds on the worker loop).
+        - Speaker attribution: plan 218 Task 4.1. BEAM contradiction: plan 221 Task 3 and plan 219.1 Task 7. Time anchoring: plan 219 and plan 219.1 Task 5.
+        - Test files in the product fingerprint: plan 218 Task 6 proposes leaving them out, for the owner to decide in the M-2 record.
+      - Plan 210 transfer: `om.observer` and `om.task-state` dispositions recorded in `210/dispositions.json`; `decision-record.mjs` regenerated `decisions.{json,md}` (only those two rows changed).
+      - Docs: the package README's measured-role paragraph (plan 217 gate M-1), the evidence README's result section, and the gate record status.
+      - Plan-end verification (2026-11-12): `build:core`, typecheck, `packages/memory/system` tests (791, 0 fail), the STM mechanism probes (all 8 `works`), `@arnilo/prism-agent` tests (67, 0 fail), docs (69) and the release gate pass.
+        - `scripts/memory-bench`: 548 pass; the 2 failures are the known `task5-comparison` archive and `feature-ledger` errors (Task 5 and this task's findings, in the backlog). Two failures from this task were fixed: the `stm.outcome` probe matched the old instruction phrase (it now matches "is one outcome event: what was asked, what changed"), and the `om.reflector=off` variant's anchor missed the WM condition split over lines by fix B.
+        - `safety/run.mjs --suite offline`: poisoning, leakage and deletion pass; false refusal is not read offline (by design), so the run reports `fail`. The committed `202/safety.json` was restored rather than overwritten by the offline run.
+        - Release gate: the kernel byte ceilings were rebaselined (+368 packed, +1,442 unpacked) for Task 6.1's uncommitted kernel and docs edits, which plan 224's ceilings did not include; reason in `scripts/budgets.json`.
+      - No owned paid process remains (the last unit, `m1-stm-wm-rerun`, exited 0 at 14:41).
+
+- [x] Task 6.1: `models.client` carries the provider's model description (kernel, additive; inserted 2026-11-11 before Task 6's sittings)
+  - Acceptance Criteria:
+    - Functional: **The bug (gate M-1 investigation, finding 4).** `PackageAPI.models.client("<provider>/<model>")` (`src/packages/loader.ts`) builds a bare `{ provider, model }` from a string ref, with no `limits`, `capabilities` or `compat`. So `applyThinkingLevelForModel` cannot map a memory worker's `thinkingLevel`, and a provider whose wire mapping reads `request.model.compat` (Ollama Cloud's `thinkingValues`) gets nothing. Every memory worker's `thinkingLevel` is a silent no-op for catalog-described models. Measured: DeepSeek V4.1 Flash honours `think: false` (thinking 249 characters → 0), but the STM worker kept thinking at `stm.thinkingLevel: "none"`.
+    - Functional: **`ModelClient.resolve()`** (optional member, additive) answers the client's model filled in from its provider's own description: the entry of `provider.models()` whose `model` equals the ref's, with every field the ref sets winning. When a string ref names the agent's configured model (same provider and model), the configured object is the starting point, so `client.model` is complete at once. With no `models()`, a failing one, or no matching entry, it answers the ref as given; resolution never fails a call. Catalogs are read at most once per provider per agent.
+    - Functional: **`client.generate`** sends the resolved model to the provider (resolution is awaited once, before the first turn), so provider-side mappings see the same description a run's configured model has.
+    - Functional: **memory-core's worker loop** applies `thinkingLevel` against `await client.resolve?.() ?? client.model`, so `stm`, `wm`, `rehearsal` and the LTM extractor thinking levels reach the wire.
+    - Security: `client.model` and `resolve()` are the provider's own description, handed to the package that asked for the client; nothing is logged or listed. `agent.models.list()` keeps stripping `parameters`, `compat` and `metadata`.
+    - Code Quality: no package is named in the kernel. Compat baseline: additive (`ModelClient.resolve?`).
+  - Test Cases to Write:
+    - `models_client_resolves_the_provider_description_for_a_string_ref`.
+    - `models_client_uses_the_configured_model_object_for_its_own_ref`.
+    - `models_client_falls_back_to_the_ref_when_the_catalog_fails`.
+    - `models_client_reads_a_provider_catalog_once`.
+    - `memory_worker_thinking_level_reaches_the_request_through_resolve`.
+  - Documentation/Wiki Assessment: `docs/packages.md` (the `models.client` row), `docs/models.md` (out-of-band calls); root CHANGELOG; memory CHANGELOG.
+  - Notes (executed 2026-11-11, after the seven-bundle restructure landed; owner: "Do the kernel task first"):
+    - **What changed.**
+      - `src/packages/api.ts`: `ModelClient.resolve?(): Promise<ModelConfig>`, documented.
+      - `src/packages/loader.ts`:
+        - `clientModel`: a ref naming the configured model starts from the configured object; ref fields win.
+        - `catalogOf`: each provider's `models()`, read once per agent. A failure reads as empty, and a provider not yet registered is not cached.
+        - `describeModel`: the catalog entry under the ref's fields.
+        - The client's `generate` awaits `resolve()` once and sends the resolved model.
+      - `packages/memory/core/src/worker.ts`: `thinkingLevel` is mapped against `await client.resolve?.() ?? client.model`. The advisor and the compaction strategy apply no thinking level themselves and benefit from `generate` sending the resolved model.
+    - **Tests.**
+      - `src/__tests__/models-client-resolve.test.ts`, the four kernel cases: string ref resolves and the provider receives `compat`; configured-object start with ref fields winning; catalog failure falls back and never fails a call; catalog read once.
+      - `memory_worker_thinking_level_reaches_the_request_through_resolve` in `workers.test.ts`: `reasoning_effort: "none"` reaches the request; a hand-built client without `resolve` maps nothing, as before.
+    - **Live check** (DeepSeek V4.1 Flash, STM, persona `ls10`, `stm.thinkingLevel: "none"`): thinking 10,235 characters → 0, worker calls 15 → 7, worker tokens per 10k eligible 88k → 39k.
+    - **Checks.**
+      - Kernel `bun test src`: 6,564 pass, 4 fail. Two browser tests pass when run alone. The field-policy microbenchmark and the 200-spawn process-leak test fail identically with `loader.ts` and `api.ts` restored to HEAD, so they predate this task.
+      - `packages/memory`: system 684 and core 75 pass, 0 fail.
+      - Docs test 69 pass; `bun run typecheck` clean.
+      - Release gate: compat additive (`@arnilo/prism`: `ModelClient` compatible), baseline updated. The kernel `sourceLines` ceiling was rebaselined 41113 → 41170 (+57) with the reason in `scripts/budgets.json`.
+      - Biome clean on the changed files, except an import-order finding in `loader.ts` that already exists at HEAD (the diff does not touch the import block).
+    - **For gate M-1.** OM-before runs from the pinned pre-216 tree and cannot get this fix, so the M-1 arms keep the default thinking level (no `stm.thinkingLevel`). Setting it only for STM would change what the comparison measures.
 
 ## Verification (whole plan)
 
@@ -630,8 +740,21 @@ This implements roadmap Phase 11 "Memory model", part STM, after plan 216. It ca
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- **Gate M-1 closed with S1 a miss (owner, 2026-11-12: "Let's accept and close task 6").** MiMo V2.6 Flash re-derived more with STM than with OM-before (−0.34 [−0.69, −0.06]); DeepSeek's gain (+0.47) did not clear zero. No STM defect was found behind it (persona `ls1`'s test-runner hunt appears in both arms). Implications: STM ships as the default without a development-partition S1 pass; gate M-2 re-measures S1 with repeats of every arm (plan 218 Task 6), and gate A decides the held-out S1. Priority P1.
+- **S3 deferred to gate A, and the suites ran two questions per cell.** The owner chose small runs (2026-11-10); a full S3 was about 140 hours of worker time. Implications: the LongMemEval-M and BEAM-1M cells are an S4 sample and a direction only; MiMo's two lost answers with WM restored are not a measurement. Gate A (plan 223 Task 2) reads both suites' held-out partitions in full. Priority P2.
+- **WM ships with the pre-redesign whole-log instruction.** The one-subject rewrite (fix C) stopped WM writing anything on about 22k tokens of records, so it was reverted; fixes A and B and the refuse option stay. Implications: a WM pass still folds records into theme reflections and consumes every record it was sent, so an old value can be lost (LongMemEval `6071bd76`); DeepSeek V4.1 Flash writes no reflection within 8,192 output tokens. Plan 218 Task 2 (verdicts on named items, batched input) and Task 5 probe 10 cover it. Priority P1.
+- **The product fingerprint counts test files.** A release-test commit (`14ebf5d5`) refused sittings 3–4 and forced a manifest rebind. Implications: unrelated test commits cost a gate amendment; plan 218 Task 6 proposes leaving test files out, for the owner to decide in the M-2 gate record. Priority P3.
+- **OM-before's BEAM baseline is intermittently unhealthy.** One of two MiMo runs overflowed its message budget (27 observer calls, byte and call-limit errors); the evidence reads the healthy attempt. Implications: the pinned observer is not fixed (it is the frozen baseline), so a later re-run of OM-before on BEAM can understate its worker tokens; the report's error counts must be checked before reading its S4 cell. Priority P3.
+
+Recorded in plans/backlog.md.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- **A memory worker refuses an unknown tool name instead of failing the pass** (plan 218 Task 1.1). Why: one garbled call (`record_rection`) discards every record the pass made. Priority P1.
+- **Speaker attribution in STM records** (plan 218 Task 4.1). Why: LongMemEval `9aaed6a3`, an assistant-proposed plan read as something the user did. Priority P1.
+- **BEAM contradiction resolution** (plan 221 Task 3, plan 219.1 Task 7). Why: both arms miss `15:contradiction_resolution:1`. Priority P2.
+- **Time anchoring of "as of" facts** (plan 219, plan 219.1 Task 5). Why: OM-before's miss on `9aaed6a3` matched the fact's mention date, not "last Thursday". Priority P2.
+- **Plan 202's `task5-comparison.test.mjs` archives a moved path.** Why: it reads `packages/memory/fabric/src` from HEAD, which plan 216 moved, so it fails since commit `c8d97b33`. Priority P3.
+- **`CompactionOptions.maxSummaryChars` never reaches the default compactor** (kernel). Why: `AgentConfig.compaction.maxSummaryChars` is ignored; only the constructor option is read, and there `0` means unlimited (Task 5 finding). Priority P3.
+
+Recorded in plans/backlog.md.

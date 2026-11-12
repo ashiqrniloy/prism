@@ -1522,3 +1522,80 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md
 - What: A host declares the request kinds it implements, so a package can pick a fallback before asking instead of after an `unavailable`. It is an optional member and can ship in a minor release.
 - Why: Lets a package avoid a round trip that is known to fail.
+
+## Re-measure STM's S1 at gate M-2 with repeats of every arm
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- Compromise: gate M-1 closed with S1 a miss (MiMo −0.34 [−0.69, −0.06]; DeepSeek +0.47 [−0.19, 1.16]), accepted by the owner on 2026-11-12.
+- Implications: STM is the default without a development S1 pass; plan 218 Task 6 re-measures it with at least 3 repeats per arm on MiMo, and gate A (plan 223 Task 2) decides the held-out S1.
+
+## Decide S3 on held-out partitions in full at gate A
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- Compromise: S3 was deferred to gate A and the suite cells ran two questions each.
+- Implications: the LongMemEval-M and BEAM-1M cells are an S4 sample and a direction only; gate A reads both held-out partitions with no subsetting.
+
+## Replace the whole-log WM reflector with verdicts on named items and batched input
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- Compromise: WM ships with the pre-redesign whole-log instruction after the one-subject rewrite stopped WM writing on about 22k tokens of records; fixes A, B and the refuse option stay.
+- Implications: a pass can lose an old value (LongMemEval `6071bd76`), and DeepSeek V4.1 Flash writes nothing within 8,192 output tokens; plan 218 Task 2 and Task 5 probe 10 cover it.
+
+## Leave test files out of the gate product fingerprint
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- Compromise: the M-1 product fingerprint counts test files, so a release-test commit refused sittings 3–4.
+- Implications: unrelated test commits force a gate amendment; plan 218 Task 6 proposes the change for the owner to decide.
+
+## Check OM-before BEAM reports for overflow before reading S4
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- Compromise: the pinned OM-before observer is not fixed; one of two MiMo BEAM runs overflowed its message budget.
+- Implications: a re-run of OM-before on BEAM can understate its worker tokens; read its error counts first.
+
+## Memory worker refuses an unknown tool name
+- Section: Further Actions
+- Priority: P1
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- What: an unknown or garbled tool call becomes an error result and the pass continues (plan 218 Task 1.1).
+- Why: one garbled call discards every record the pass made.
+
+## STM speaker attribution
+- Section: Further Actions
+- Priority: P1
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- What: STM records carry who stated a fact; the memory block marks assistant proposals (plan 218 Task 4.1).
+- Why: LongMemEval `9aaed6a3`, an assistant-proposed plan read as something the user did.
+
+## BEAM contradiction resolution
+- Section: Further Actions
+- Priority: P2
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- What: resolve contradicting memories (plan 221 Task 3, plan 219.1 Task 7).
+- Why: both arms miss BEAM `15:contradiction_resolution:1`.
+
+## Time anchoring of as-of facts
+- Section: Further Actions
+- Priority: P2
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- What: match a fact's event time, not its mention date, to a time cue (plan 219, plan 219.1 Task 5).
+- Why: OM-before's miss on LongMemEval `9aaed6a3`.
+
+## Fix plan 202 task5-comparison test after the fabric move
+- Section: Further Actions
+- Priority: P3
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- What: point `task5-comparison.test.mjs` at the moved fabric source.
+- Why: it archives `packages/memory/fabric/src` from HEAD, which plan 216 moved; it fails since `c8d97b33`.
+
+## Wire CompactionOptions.maxSummaryChars to the default compactor
+- Section: Further Actions
+- Priority: P3
+- Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
+- What: `AgentConfig.compaction.maxSummaryChars` reaches the default compactor.
+- Why: only the constructor option is read today, and there `0` means unlimited (plan 217 Task 5 finding).
