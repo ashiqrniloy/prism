@@ -172,14 +172,15 @@ describe("memory-system components", () => {
       const service = seen.system;
       assert.ok(service);
       assert.deepEqual(service.status().components, { stm: true, wm: true, rehearsal: true, ltm: true, sleep: false });
+      // setScope answers since plan 218 Task 1 (session/__tests__/scope.test.ts).
       for (const [method, plan] of [
-        ["setScope", 218],
         ["endEpisode", 218],
         ["rehearse", 219],
         ["sleep", 221],
       ] as const) {
         await assert.rejects(
-          service[method](),
+          // `rehearse({ only: "wm" })` answers since plan 218 Task 2; any other call still waits for plan 219.
+          (service[method] as (...args: readonly unknown[]) => Promise<unknown>)(),
           (error: unknown) =>
             error instanceof MemorySystemError && error.code === "not_available_yet" && error.message.includes(`plan ${plan}`),
         );
@@ -200,7 +201,7 @@ describe("memory-system components", () => {
       profile: string;
       components: Record<string, boolean>;
       observations: number;
-      reflections: number;
+      wmItems: number;
       dropped: number;
       facts: number;
       compactionOwner: string;
@@ -223,9 +224,9 @@ describe("memory-system components", () => {
     const [ltm, session, stm, full] = ["ltm", "session", "stm", "full"].map(of);
     assert.equal(ltm?.facts, 1);
     assert.equal(ltm?.observations, 0);
-    assert.ok(session && session.observations > 0 && session.reflections > 0);
-    assert.ok(stm && stm.observations > 0 && stm.reflections === 0);
-    assert.ok(full && full.reflections > 0 && full.dropped > 0 && full.facts === 1);
+    assert.ok(session && session.observations > 0 && session.wmItems > 0);
+    assert.ok(stm && stm.observations > 0 && stm.wmItems === 0);
+    assert.ok(full && full.wmItems > 0 && full.dropped > 0 && full.facts === 1);
   });
 });
 

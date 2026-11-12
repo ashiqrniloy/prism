@@ -42,7 +42,7 @@ describe("observational memory worker prompts", () => {
     });
     assert.equal(requests.length, 1);
     assert.match(requests[0]!, /call record_event once per meaningful event/i);
-    assert.match(requests[0]!, /record an outcome/i);
+    assert.match(requests[0]!, /is one outcome event/i);
     assert.match(requests[0]!, /identifiers, paths, commands, errors and numbers exact/i);
     assert.match(requests[0]!, /set supersedes to its id/i);
     assert.match(requests[0]!, /one self-contained line/i);

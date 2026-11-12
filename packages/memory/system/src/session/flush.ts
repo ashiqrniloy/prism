@@ -1,6 +1,6 @@
 /**
- * One memory pass over the session's branch: STM records events → WM reflects → rehearsal drops, appending each recorded
- * batch to the ledger log.
+ * One memory pass over the session's branch: STM records events → WM gives verdicts on them → rehearsal drops, appending
+ * each recorded batch to the ledger log.
  *
  * The pass is bounded and idempotent enough to run on every turn: it reads the branch once, folds the
  * ledger already in memory, and only calls a model when a threshold is crossed. One pass runs per
@@ -16,10 +16,14 @@ import {
   eligibleObservationSources,
   eligibleObservationTokenCount,
   isEligibleObservationSourceEntry,
-  observationsUncoveredByReflection,
+  observationTokensSinceEmptyWmAttempt,
   unscannedEntries,
+  wmBatch,
 } from "./coverage-helpers.js";
-import { activeObservations, activeReflections, boundaryKey, type ObservationalMemoryRecord } from "./ledger.js";
+import { activeObservations, boundaryKey, type ObservationalMemoryRecord } from "./ledger.js";
+import { protectedRecords, protectedTokenCount } from "./protections.js";
+import { salienceSignals } from "./salience.js";
+import { type EpisodeScope, SCOPE_SET } from "./scope.js";
 import { serializeSourceBatches } from "./serialize.js";
 import { ledgerOf, type ObservationalMemoryState } from "./state.js";
 
@@ -31,18 +35,25 @@ import {
   type MemoryTaskState,
   OBSERVATIONS_DROPPED,
   OBSERVATIONS_RECORDED,
-  REFLECTIONS_RECORDED,
+  OBSERVATIONS_TOMBSTONED,
+  type ObservationsTombstonedData,
   TASK_STATE_RECORDED,
+  WM_RECORDED,
+  type WmRecordedData,
+  type WmRejudge,
 } from "./types.js";
 import { dropObservationsToTarget, runDropper } from "./workers/dropper.js";
-import { runReflector } from "./workers/reflector.js";
 import { runStm } from "./workers/stm.js";
+import { deterministicWm, runWm, type WmRecordVerdict, wmTargetTokens } from "./workers/wm.js";
 
-export type ObservationalWorkerKind = "observer" | "reflector" | "dropper";
+export type ObservationalWorkerKind = "observer" | "wm" | "dropper";
 
 export interface ObservationalFlushResult {
   readonly observations: number;
-  readonly reflections: number;
+  /** WM items the pass recorded. */
+  readonly wmItems: number;
+  /** STM records that received a WM verdict (and were tombstoned). */
+  readonly processed: number;
   readonly dropped: number;
   /** Boundary markers this pass recorded. Absent when none. */
   readonly boundaries?: number;
@@ -60,6 +71,8 @@ export interface ObservationalFlushDeps {
   readonly config: ResolvedMemorySystemConfig;
   /** The per-session toggle and worker model refs. */
   readonly readState: (session: SessionContext) => ObservationalMemoryState;
+  /** The session's episode scope (plan 218 Task 1). Only the WM and Rehearsal requests receive it, never STM (I1). */
+  readonly scopeFor?: (session: SessionContext) => EpisodeScope | undefined;
   /** The worker model call for one kind, resolved from session state ← config ← the session model. */
   readonly clientFor: (session: SessionContext, kind: ObservationalWorkerKind) => ModelClient;
   /**
@@ -69,9 +82,10 @@ export interface ObservationalFlushDeps {
    */
   readonly secretsFor?: (session: SessionContext) => readonly (string | undefined)[];
   /**
-   * The chunk store. Each pass writes its new chunks and removes the STM referrers of records it dropped in one
-   * transaction, after its ledger appends (a failed write leaves a ref that recall reports as dropped, never an
-   * unreferenced chunk). Absent, chunks are not stored and the `chunks` argument is off.
+   * The chunk store. Each pass writes its new chunks, adds a `wm` referrer for every chunk a new WM item cites, then
+   * removes the STM referrers of records it dropped or tombstoned, in one transaction after its ledger appends: a chunk
+   * a WM item cites survives, an uncited one is deleted (I2–I3). A failed write leaves a ref that recall reports as
+   * dropped, never an unreferenced chunk. Absent, chunks are not stored and the `chunks` argument is off.
    */
   readonly chunks?: ChunkStoreHandle;
   /** `memory.session.status`, emitted on flush start, flush end, and flush failure. */
@@ -79,11 +93,14 @@ export interface ObservationalFlushDeps {
 }
 
 export interface ObservationalFlush {
-  flush(
-    session: SessionContext,
-    options?: { readonly fullReflectionRebuild?: boolean; readonly signal?: AbortSignal },
-  ): Promise<ObservationalFlushResult>;
+  flush(session: SessionContext, options?: ObservationalFlushOptions): Promise<ObservationalFlushResult>;
   status(sessionId: string): ObservationalFlushStatus;
+}
+
+export interface ObservationalFlushOptions {
+  /** Run a WM pass over the STM surface even below `wm.triggerTokens` (`memory.system.rehearse({ only: "wm" })`). */
+  readonly forceWm?: boolean;
+  readonly signal?: AbortSignal;
 }
 
 export function createObservationalFlush(deps: ObservationalFlushDeps): ObservationalFlush {
@@ -99,7 +116,7 @@ export function createObservationalFlush(deps: ObservationalFlushDeps): Observat
     async flush(session, options = {}) {
       if (statuses.get(session.id)?.inFlight) {
         requested.add(session.id);
-        return { observations: 0, reflections: 0, dropped: 0, skipped: "in_flight" };
+        return { observations: 0, wmItems: 0, processed: 0, dropped: 0, skipped: "in_flight" };
       }
       set(session.id, { inFlight: true });
       deps.onStatus(session, { inFlight: true });
@@ -109,7 +126,7 @@ export function createObservationalFlush(deps: ObservationalFlushDeps): Observat
         // cannot hold the flush forever (its next turn requests again).
         for (let rerun = 0; rerun < MAX_FOLLOW_UP_PASSES && requested.has(session.id) && !options.signal?.aborted; rerun += 1) {
           requested.delete(session.id);
-          result = sumFlushResults(result, await pass(session, deps, limits, options));
+          result = sumFlushResults(result, await pass(session, deps, limits, { ...options, forceWm: false }));
         }
         requested.delete(session.id);
         set(session.id, { inFlight: false });
@@ -136,7 +153,8 @@ function sumFlushResults(a: ObservationalFlushResult, b: ObservationalFlushResul
   const boundaries = (a.boundaries ?? 0) + (b.boundaries ?? 0);
   return {
     observations: a.observations + b.observations,
-    reflections: a.reflections + b.reflections,
+    wmItems: a.wmItems + b.wmItems,
+    processed: a.processed + b.processed,
     dropped: a.dropped + b.dropped,
     ...(boundaries ? { boundaries } : {}),
   };
@@ -146,7 +164,7 @@ async function pass(
   session: SessionContext,
   deps: ObservationalFlushDeps,
   limits: ReturnType<typeof resolveMemoryWorkerLimits>,
-  options: { readonly fullReflectionRebuild?: boolean; readonly signal?: AbortSignal },
+  options: ObservationalFlushOptions,
 ): Promise<ObservationalFlushResult> {
   const config = deps.config;
   const workerSessionId = `memory.session:${session.id}`;
@@ -156,15 +174,23 @@ async function pass(
   const eligibleSources = eligibleObservationSources(pending);
   const eligibleTokens = eligibleObservationTokenCount(eligibleSources);
   const lastScannedId = pending.at(-1)?.id;
-  const droppedBefore = new Set(ledger.droppedObservationIds);
+  const removedBefore = new Set([...ledger.droppedObservationIds, ...Object.keys(ledger.tombstones ?? {})]);
+  const wmItemsBefore = new Set(ledger.wmItems.map((item) => item.id));
   const chunkOps: ChunkOp[] = [];
   try {
     return await passBody();
   } finally {
     if (deps.chunks) {
       const after = ledgerOf(deps.log.entries(session));
-      for (const id of after.droppedObservationIds) {
-        if (droppedBefore.has(id)) continue;
+      // WM referrers first, in the same transaction: a chunk a new WM item cites never reaches zero referrers.
+      for (const item of after.wmItems) {
+        if (wmItemsBefore.has(item.id)) continue;
+        for (const ref of item.chunkRefs ?? [])
+          chunkOps.push({ op: "ref", id: ref.id, by: { kind: "wm", id: item.id, sessionId: session.id } });
+      }
+      const removed = [...after.droppedObservationIds, ...Object.keys(after.tombstones ?? {})];
+      for (const id of new Set(removed)) {
+        if (removedBefore.has(id)) continue;
         const record = after.observations.find((item) => item.id === id);
         for (const ref of record?.chunkRefs ?? [])
           chunkOps.push({ op: "unref", id: ref.id, by: { kind: "stm", id, sessionId: session.id } });
@@ -175,7 +201,8 @@ async function pass(
 
   async function passBody(): Promise<ObservationalFlushResult> {
     let observations = 0;
-    let reflections = 0;
+    let wmItems = 0;
+    let processed = 0;
     let dropped = 0;
     let boundaries = 0;
     const seenBoundaries = new Set((ledger.boundaries ?? []).map(boundaryKey));
@@ -194,7 +221,8 @@ async function pass(
 
     const secrets = deps.secretsFor?.(session) ?? [];
     // Scope-blind (I1): the STM request carries the batch, the task state and an index of recent STM
-    // records — never the episode scope, a WM item (reflection) or an LTM note.
+    // records — never the episode scope, a WM item or an LTM note. WM and Rehearsal read `scope`.
+    const scope = deps.scopeFor?.(session);
     const recentEvents = () => activeObservations(ledgerOf(deps.log.entries(session)));
 
     if (pending.length && lastScannedId) {
@@ -248,40 +276,113 @@ async function pass(
     }
 
     const afterObservations = ledgerOf(deps.log.entries(session));
-    const uncovered = observationsUncoveredByReflection(
-      deps.log.entries(session),
-      afterObservations,
-      options.fullReflectionRebuild === true,
-    );
-    const uncoveredTokens = uncovered.reduce((sum, item) => sum + item.tokenCount, 0);
-    if (config.wm.enabled && uncovered.length && uncoveredTokens >= config.wm.observationTokens) {
-      const recorded = await runReflector({
-        client: deps.clientFor(session, "reflector"),
-        observations: uncovered,
-        reflections: activeReflections(afterObservations),
-        ...limits,
-        ...workerPrompt(config.wm),
-        secrets,
-        sessionId: workerSessionId,
-        signal: options.signal,
-      });
-      await deps.log.append(
-        session,
-        asJson({
-          type: REFLECTIONS_RECORDED,
-          reflections: recorded,
-          ...(recorded.length
-            ? {
-                consumedObservationIds: uncovered.map((item) => item.id),
-                supersededReflectionIds: activeReflections(afterObservations).map((item) => item.id),
-              }
-            : {}),
-          ...(afterObservations.latestObservationCoverageId === undefined
-            ? {}
-            : { coversUpToId: afterObservations.latestObservationCoverageId }),
-        }),
+    const surface = activeObservations(afterObservations);
+    const surfaceTokens = surface.reduce((sum, item) => sum + item.tokenCount, 0);
+    const boundaryCount = afterObservations.boundaries?.length ?? 0;
+    const newBoundary = boundaryCount > (afterObservations.wmBoundariesSeen ?? 0);
+    // After an attempt that did nothing, wait for a fresh trigger of new records instead of re-running every pass.
+    const sinceEmptyAttempt = observationTokensSinceEmptyWmAttempt(deps.log.entries(session));
+    const tokenTrigger =
+      surfaceTokens >= config.wm.triggerTokens && (sinceEmptyAttempt === undefined || sinceEmptyAttempt >= config.wm.triggerTokens);
+    // Re-judgment (plan 218 Task 4): the first model WM pass after a scope change is also sent the discarded records
+    // whose chunks still live, up to `wm.rejudgeTokens`, and may keep them back into WM.
+    const scopeChange =
+      config.wm.enabled && config.wm.policy === "model" && config.wm.rejudgeTokens > 0
+        ? pendingScopeChange(deps.log.entries(session))
+        : undefined;
+    if (config.wm.enabled && (surface.length || scopeChange) && (options.forceWm === true || tokenTrigger || newBoundary)) {
+      // The batch (gate M-1): the oldest records up to `wm.batchTokens`, and no more records than three quarters of the
+      // worker's call cap, so one model's output holds a verdict for each. The rest waits for the next pass.
+      let batch = wmBatch(surface, config.wm.batchTokens, Math.max(1, Math.floor(limits.maxToolCalls * 0.75)));
+      const record = (data: Omit<WmRecordedData, "type">) => deps.log.append(session, asJson({ type: WM_RECORDED, ...data }));
+      const rejudge = scopeChange
+        ? await rejudgeCandidates(afterObservations, config.wm.rejudgeTokens, session.id, deps.chunks)
+        : undefined;
+      // Protections (I5) and the target are code: the discard tool refuses a protected record, and a batch whose
+      // protected records alone exceed the target records `budget_unmet` instead of losing them.
+      let salience = salienceSignals(batch, entries);
+      let protections = protectedRecords(afterObservations, batch, { salience });
+      let targetTokens = wmTargetTokens(
+        batch.reduce((sum, item) => sum + item.tokenCount, 0),
+        config.wm.targetRatio,
       );
-      reflections = recorded.length;
+      let protectedTokens = protectedTokenCount(batch, protections);
+      let output: Awaited<ReturnType<typeof runWm>>;
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          output =
+            config.wm.policy === "deterministic"
+              ? deterministicWm({ records: batch, protections, salience, targetRatio: config.wm.targetRatio })
+              : await runWm({
+                  client: deps.clientFor(session, "wm"),
+                  records: batch,
+                  ledger: afterObservations,
+                  salience,
+                  protections,
+                  targetRatio: config.wm.targetRatio,
+                  ...(rejudge?.records.length ? { rejudge: rejudge.records } : {}),
+                  ...(scope ? { scope } : {}),
+                  ...(afterObservations.taskState ? { taskState: afterObservations.taskState } : {}),
+                  ...limits,
+                  ...workerPrompt(config.wm),
+                  secrets,
+                  sessionId: workerSessionId,
+                  signal: options.signal,
+                });
+        } catch (error) {
+          // A failed attempt is an empty one: it processes nothing, and the next attempt waits for new records.
+          if (!options.signal?.aborted) await record({ items: [], boundaries: boundaryCount });
+          throw error;
+        }
+        // Plan 218 Task 6 (gate M-2): a model call that spent its output limit before giving any verdict retries once on
+        // the older half of its batch; the rest stays on the STM surface for the next pass.
+        if (attempt > 0 || !output.endedAtOutputCap || output.verdicts.size > 0 || batch.length < 2) break;
+        batch = batch.slice(0, Math.ceil(batch.length / 2));
+        salience = salienceSignals(batch, entries);
+        protections = protectedRecords(afterObservations, batch, { salience });
+        targetTokens = wmTargetTokens(
+          batch.reduce((sum, item) => sum + item.tokenCount, 0),
+          config.wm.targetRatio,
+        );
+        protectedTokens = protectedTokenCount(batch, protections);
+      }
+      const byId = new Map(batch.map((item) => [item.id, item]));
+      // A re-judged record kept back is already tombstoned: it is not processed again, and its item is not compression.
+      const batchVerdicts = new Map([...output.verdicts].filter(([id]) => byId.has(id)));
+      const keptBack = [...output.verdicts].filter(([id]) => !byId.has(id));
+      const keptBackItemIds = new Set(keptBack.map(([, verdict]) => verdict.itemId));
+      const processedIds = [...batchVerdicts.keys()];
+      const compression = {
+        processedTokens: processedIds.reduce((sum, id) => sum + (byId.get(id)?.tokenCount ?? 0), 0),
+        itemTokens: output.items.filter((item) => !keptBackItemIds.has(item.id)).reduce((sum, item) => sum + item.tokenCount, 0),
+        targetTokens,
+      };
+      await record({
+        items: output.items,
+        ...(output.supersededItemIds.length ? { supersededItemIds: output.supersededItemIds } : {}),
+        ...(processedIds.length ? { processedIds, compression } : {}),
+        ...(processedIds.length && protectedTokens > targetTokens ? { budgetUnmet: { protectedTokens, targetTokens } } : {}),
+        ...(scopeChange && rejudge
+          ? {
+              rejudge: {
+                ...(scopeChange.hash ? { scopeHash: scopeChange.hash } : {}),
+                offered: rejudge.records.length,
+                kept: keptBack.map(([id]) => id),
+                chunkDropped: rejudge.chunkDropped,
+              } satisfies WmRejudge,
+            }
+          : {}),
+        boundaries: boundaryCount,
+      });
+      // Every processed record leaves the STM surface with its verdict as the reason; recall still finds it (I2).
+      const at = new Date().toISOString();
+      for (const [reason, ids] of tombstoneGroups(batchVerdicts))
+        await deps.log.append(
+          session,
+          asJson({ type: OBSERVATIONS_TOMBSTONED, observationIds: ids, reason, at } satisfies ObservationsTombstonedData),
+        );
+      wmItems = output.items.length;
+      processed = processedIds.length;
     }
 
     const active = activeObservations(ledgerOf(deps.log.entries(session)));
@@ -294,6 +395,8 @@ async function pass(
               client: deps.clientFor(session, "dropper"),
               observations: active,
               targetTokens: config.rehearsal.targetTokens,
+              ...(scope ? { scope } : {}),
+              ...(afterObservations.taskState ? { taskState: afterObservations.taskState } : {}),
               ...limits,
               ...workerPrompt(config.rehearsal),
               secrets,
@@ -315,7 +418,7 @@ async function pass(
       }
     }
 
-    return { observations, reflections, dropped, ...(boundaries ? { boundaries } : {}) };
+    return { observations, wmItems, processed, dropped, ...(boundaries ? { boundaries } : {}) };
   }
 }
 
@@ -368,6 +471,87 @@ function recordedBoundaries(
     if (entryId) boundaries.push({ reason: "task_state", entryId, recordId: record.taskState.id, at });
   }
   return boundaries;
+}
+
+/**
+ * The latest `scope.set` no WM pass has re-judged yet: one after the last `wm.recorded` carrying `rejudge`, whose hash
+ * differs from the hash that pass answered. Setting the same scope again re-judges nothing.
+ */
+export function pendingScopeChange(records: readonly JsonValue[]): { readonly hash?: string } | undefined {
+  for (let index = records.length - 1; index >= 0; index -= 1) {
+    const record = records[index];
+    if (typeof record !== "object" || record === null || Array.isArray(record)) continue;
+    if (record.type === WM_RECORDED && typeof record.rejudge === "object" && record.rejudge !== null) return undefined;
+    if (record.type !== SCOPE_SET) continue;
+    const hash = typeof record.hash === "string" ? record.hash : undefined;
+    const answered = lastRejudgedHash(records, index);
+    return answered !== undefined && answered === (hash ?? null) ? undefined : hash ? { hash } : {};
+  }
+  return undefined;
+}
+
+/** The scope hash the last re-judging WM pass before `end` answered: `null` after a clear, `undefined` when none ran. */
+function lastRejudgedHash(records: readonly JsonValue[], end: number): string | null | undefined {
+  for (let index = end - 1; index >= 0; index -= 1) {
+    const record = records[index];
+    if (typeof record !== "object" || record === null || Array.isArray(record) || record.type !== WM_RECORDED) continue;
+    const rejudge = record.rejudge;
+    if (typeof rejudge !== "object" || rejudge === null || Array.isArray(rejudge)) continue;
+    return typeof rejudge.scopeHash === "string" ? rejudge.scopeHash : null;
+  }
+  return undefined;
+}
+
+/**
+ * Discarded STM records a re-judgment may offer, newest tombstone first, up to `maxTokens`. A record whose chunks were
+ * all deleted is not offered and is named in `chunkDropped`; a record without chunks is offered on its own line. A chunk
+ * is live while this session holds a referrer for it (the store answers `get` per session).
+ */
+async function rejudgeCandidates(
+  ledger: ReturnType<typeof ledgerOf>,
+  maxTokens: number,
+  sessionId: string,
+  chunks: ChunkStoreHandle | undefined,
+): Promise<{ readonly records: readonly MemoryObservation[]; readonly chunkDropped: readonly string[] }> {
+  const tombstones = ledger.tombstones ?? {};
+  const byId = new Map(ledger.observations.map((record) => [record.id, record]));
+  const discarded = Object.entries(tombstones)
+    .filter(([id, tombstone]) => tombstone.reason.startsWith("wm discard") && byId.has(id))
+    .map(([id], index) => ({ record: byId.get(id)!, index }))
+    .sort((a, b) => b.index - a.index)
+    .map(({ record }) => record);
+  const records: MemoryObservation[] = [];
+  const chunkDropped: string[] = [];
+  let tokens = 0;
+  for (const record of discarded) {
+    if (tokens + record.tokenCount > maxTokens) continue;
+    const refs = record.chunkRefs ?? [];
+    if (refs.length) {
+      const live = chunks
+        ? await chunks.run(async (store) => {
+            for (const ref of refs) if (await store.get(ref.id, sessionId)) return true;
+            return false;
+          })
+        : false;
+      if (!live) {
+        chunkDropped.push(record.id);
+        continue;
+      }
+    }
+    records.push(record);
+    tokens += record.tokenCount;
+  }
+  return { records, chunkDropped };
+}
+
+/** Tombstone records for one WM pass, one per verdict reason: `wm keep <item>`, `wm summarize <item>`, `wm discard <reason>`. */
+function tombstoneGroups(verdicts: ReadonlyMap<string, WmRecordVerdict>): ReadonlyMap<string, readonly string[]> {
+  const groups = new Map<string, string[]>();
+  for (const [id, verdict] of verdicts) {
+    const reason = `wm ${verdict.verdict} ${verdict.verdict === "discard" ? verdict.reason : verdict.itemId}`;
+    groups.set(reason, [...(groups.get(reason) ?? []), id]);
+  }
+  return groups;
 }
 
 /** The configured instruction and thinking level a worker call carries, when set. */

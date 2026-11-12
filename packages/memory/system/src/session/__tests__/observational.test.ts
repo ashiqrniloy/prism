@@ -49,7 +49,7 @@ function observerProvider(state: WorkerState, options: { id?: string; fail?: boo
       const alreadyCalled = request.messages.some((message) => message.role === "tool");
       const prompt = request.messages.find((message) => message.role === "user")?.content[0];
       const text = prompt?.type === "text" ? prompt.text : "";
-      const sourceId = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(text)?.[1];
+      const sourceId = /\[[^\]]+\] \[([^\]]+)\] (?:user|assistant|tool|system):/.exec(text)?.[1];
       if (!alreadyCalled && sourceId) {
         yield providerToolCall(
           toolCallContent("c1", "record_event", {
@@ -321,11 +321,11 @@ describe("observational memory package", () => {
     assert.match(after.text, /1 active \/ 1 recorded observations/);
     const view = (await agent.commands.run("memory:session:view", {}, { session })) as {
       observations: number;
-      reflections: number;
+      wmItems: number;
       text: string;
     };
     assert.equal(view.observations, 1, "view renders the same ledger status counted");
-    assert.equal(view.reflections, 0);
+    assert.equal(view.wmItems, 0);
     assert.ok(view.text.length > 0, "view renders the observation text a person can read");
     const model = (await agent.commands.run("memory:session:model", { stm: "observer/om-model" }, { session })) as { stm: string };
     assert.equal(model.stm, "observer/om-model", "memory:session:model reports the STM worker it switched to");
@@ -354,7 +354,7 @@ describe("observational memory package", () => {
       enabled: true,
       contextMode: "none",
       observations: 0,
-      reflections: 0,
+      wmItems: 0,
       inFlight: false,
     });
     assert.equal(

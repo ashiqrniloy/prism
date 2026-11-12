@@ -6,19 +6,20 @@
  * attach surface, no host-side ledger plumbing, and the promotion path sees what the package wrote.
  * Plan 157 Further Action 1; the fold's `recordData` is what unwraps the log payload.
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { ModelProvider, ProviderRequest } from "@arnilo/prism";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import memorySystem, { foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory } from "../../index.js";
+import { createLongTermMemory, createMemory } from "../../index.js";
 
 const OBSERVATION_TEXT = "The user asked for a smaller retry budget.";
 const REFLECTION_TEXT = "Prefer the smallest retry budget.";
 
-/** One worker provider for both roles: the loop offers `record_event`, then `record_reflection`. */
+/** One worker provider for both roles: the loop offers `record_event`, then the WM verdict tools. */
 function workerProvider(): ModelProvider {
   return {
     id: "worker",
@@ -29,8 +30,9 @@ function workerProvider(): ModelProvider {
       const ids = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]);
       const names = new Set(request.tools?.map((tool) => tool.name) ?? []);
       if (!alreadyCalled && ids.length > 0) {
-        if (names.has("record_reflection")) {
-          yield providerToolCall(toolCallContent("c1", "record_reflection", { content: REFLECTION_TEXT, supportingObservationIds: ids }));
+        if (names.has("summarize")) {
+          const stmIds = [...text.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]!);
+          yield providerToolCall(toolCallContent("c1", "summarize", { stmIds, text: REFLECTION_TEXT, relevance: "high" }));
         } else if (names.has("record_event")) {
           yield providerToolCall(
             toolCallContent("c1", "record_event", {
@@ -64,7 +66,7 @@ describe("memory fabric observational source", () => {
         providerPackage("worker-provider", [workerProvider()]),
         memorySystem({
           stm: { model: "worker/om-model", triggerTokens: 1 },
-          wm: { model: "worker/om-model", observationTokens: 1 },
+          wm: { model: "worker/om-model", triggerTokens: 1 },
           context: { compactAt: { maxTokens: 999_999 } },
           worker: { maxTurns: 1 },
         }),
@@ -77,14 +79,14 @@ describe("memory fabric observational source", () => {
 
     // The pass runs in the background, so wait for the reflection it appends to the log.
     let ledger = foldObservationalMemoryLedger(await session.entries());
-    for (let attempt = 0; attempt < 100 && ledger.reflections.length === 0; attempt++) {
+    for (let attempt = 0; attempt < 100 && ledger.wmItems.length === 0; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 20));
       ledger = foldObservationalMemoryLedger(await session.entries());
     }
     assert.equal(ledger.observations.length > 0, true, "the branch fold reads the package's observation records");
-    assert.equal(ledger.reflections.length > 0, true, "the branch fold reads the package's reflection records");
+    assert.equal(ledger.wmItems.length > 0, true, "the branch fold reads the package's WM records");
     const observation = ledger.observations[0]!;
-    const reflection = ledger.reflections[0]!;
+    const reflection = ledger.wmItems[0]!;
     assert.equal(observation.description, OBSERVATION_TEXT);
 
     const memory = createMemory({
@@ -104,7 +106,7 @@ describe("memory fabric observational source", () => {
     // The episode view over an observation id was removed (plan 216 Task 7); the kind is reserved.
     await assert.rejects(fabric.remember({ kind: "episode", id: observation.id }), /episode_kind_not_available/);
 
-    await assert.rejects(fabric.remember({ kind: "fact", reflectionId: "c".repeat(12) }), /unknown observational memory reflection/);
+    await assert.rejects(fabric.remember({ kind: "fact", reflectionId: "c".repeat(12) }), /unknown session working-memory item/);
     await agent.dispose();
   });
 });

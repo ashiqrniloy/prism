@@ -7,9 +7,9 @@
  */
 import type { ContextBlock } from "@arnilo/prism";
 
-import { activeObservations, activeReflections, type ObservationalMemoryLedger } from "./ledger.js";
+import { activeObservations, activeWmItems, type ObservationalMemoryLedger } from "./ledger.js";
 import { renderObservationalMemory } from "./render.js";
-import type { MemoryObservation, MemoryReflection, MemoryTaskState } from "./types.js";
+import type { MemoryObservation, MemoryTaskState, MemoryWmItem } from "./types.js";
 
 export interface MemoryBlockOptions {
   readonly taskState?: MemoryTaskState;
@@ -22,16 +22,15 @@ export interface MemoryBlockOptions {
 
 export function observationalMemoryBlock(ledger: ObservationalMemoryLedger, options: MemoryBlockOptions = {}): readonly ContextBlock[] {
   const observations = activeObservations(ledger);
-  const reflections: readonly MemoryReflection[] = activeReflections(ledger);
-  return memoryBlocksFrom(reflections, observations, { ...options, taskState: ledger.taskState });
+  return memoryBlocksFrom(activeWmItems(ledger), observations, { ...options, taskState: ledger.taskState });
 }
 
 export function memoryBlocksFrom(
-  reflections: readonly MemoryReflection[],
+  wmItems: readonly MemoryWmItem[],
   observations: readonly MemoryObservation[],
   options: MemoryBlockOptions = {},
 ): readonly ContextBlock[] {
-  const content = renderObservationalMemory(reflections, observations, {
+  const content = renderObservationalMemory(wmItems, observations, {
     taskState: options.taskState,
     maxTaskStateBytes: options.maxTaskStateBytes,
     secrets: options.secrets ?? [],

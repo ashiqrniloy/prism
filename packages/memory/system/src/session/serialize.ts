@@ -14,7 +14,9 @@ export function serializeSessionEntry(entry: SessionEntry, secrets: readonly (st
     }
   }
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  const serialized = redactSecrets(`[${entry.timestamp}] [${entry.id}] ${entry.kind}: ${text}`, secrets);
+  // Plan 218 Task 4.1: a message line leads with its stored role, so the worker reads the speaker without parsing JSON.
+  const label = entry.kind === "message" && entry.message?.role ? entry.message.role : entry.kind;
+  const serialized = redactSecrets(`[${entry.timestamp}] [${entry.id}] ${label}: ${text}`, secrets);
   if (maxBytes !== undefined && Buffer.byteLength(serialized, "utf8") > maxBytes)
     throw new Error(`Observational memory source entry exceeds ${maxBytes} bytes`);
   return serialized;

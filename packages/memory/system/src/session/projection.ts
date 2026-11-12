@@ -1,28 +1,28 @@
 import type { SessionEntry } from "@arnilo/prism";
 import {
   activeObservations,
-  activeReflections,
+  activeWmItems,
   foldObservationalMemoryLedger,
   type ObservationalMemoryLedger,
   observationBlockedByInvalidation,
-  reflectionBlockedByInvalidation,
+  wmItemBlockedByInvalidation,
 } from "./ledger.js";
 import {
   FOLDED_MEMORY,
   type FoldedMemoryDetails,
   foldedMemoryFromEntry,
   isMemoryObservation,
-  isMemoryReflection,
+  isMemoryWmItem,
   type MemoryObservation,
-  type MemoryReflection,
   type MemoryTaskState,
+  type MemoryWmItem,
 } from "./types.js";
 
 export interface ObservationalMemoryProjection {
   readonly taskState?: MemoryTaskState;
   readonly full: ObservationalMemoryLedger;
   readonly observations: readonly MemoryObservation[];
-  readonly reflections: readonly MemoryReflection[];
+  readonly wmItems: readonly MemoryWmItem[];
   readonly droppedObservationIds: readonly string[];
   readonly folded?: FoldedMemoryDetails;
 }
@@ -47,22 +47,22 @@ export function buildObservationalMemoryProjection(
     full,
     ...(full.taskState ? { taskState: full.taskState } : {}),
     observations: activeObservations({ ...visible, droppedObservationIds }),
-    reflections: activeReflections(visible).filter((reflection) => !reflectionBlockedByInvalidation(reflection, invalidated)),
+    wmItems: activeWmItems(visible).filter((item) => !wmItemBlockedByInvalidation(item, invalidated)),
     droppedObservationIds,
     folded: latestFolded,
   };
 }
 
 export function createFoldedMemoryDetails(
-  projection: Pick<ObservationalMemoryProjection, "observations" | "reflections" | "droppedObservationIds">,
+  projection: Pick<ObservationalMemoryProjection, "observations" | "wmItems" | "droppedObservationIds">,
   fullFold = false,
 ): FoldedMemoryDetails {
   return {
     type: FOLDED_MEMORY,
-    version: 1,
+    version: 2,
     fullFold,
     observations: projection.observations,
-    reflections: projection.reflections,
+    wmItems: projection.wmItems,
     droppedObservationIds: projection.droppedObservationIds,
   };
 }
@@ -78,7 +78,7 @@ function latestFoldedMemory(entries: readonly SessionEntry[]): FoldedMemoryDetai
 function foldFromDetails(details: FoldedMemoryDetails): ObservationalMemoryLedger {
   return {
     observations: details.observations.filter(isMemoryObservation),
-    reflections: details.reflections.filter(isMemoryReflection),
+    wmItems: details.wmItems.filter(isMemoryWmItem),
     droppedObservationIds: (details.droppedObservationIds ?? []).filter((id): id is string => typeof id === "string"),
   };
 }

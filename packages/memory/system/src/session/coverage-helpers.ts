@@ -1,7 +1,7 @@
 import type { Message, SessionEntry } from "@arnilo/prism";
-import { activeObservations, type ObservationalMemoryLedger, recordData } from "./ledger.js";
+import { recordData } from "./ledger.js";
 import { estimateEntryTokens } from "./tokens.js";
-import { isMemoryObservation, isObservationsRecordedData, isReflectionsRecordedData, type MemoryObservation } from "./types.js";
+import { isMemoryObservation, isObservationsRecordedData, isWmRecordedData, type MemoryObservation } from "./types.js";
 
 const OBSERVATION_ELIGIBLE_ROLES = new Set<Message["role"]>(["user", "assistant", "tool"]);
 
@@ -23,29 +23,45 @@ export function eligibleObservationTokenCount(sources: readonly SessionEntry[]):
   return sources.reduce((sum, entry) => sum + estimateEntryTokens(entry), 0);
 }
 
-export function observationsUncoveredByReflection(
-  sources: readonly unknown[],
-  ledger: ObservationalMemoryLedger,
-  fullRebuild = false,
-): readonly MemoryObservation[] {
-  const active = activeObservations(ledger);
-  if (fullRebuild) return active;
+/**
+ * The WM batch (plan 218 Task 2): the oldest STM surface records up to `batchTokens` (at least one record, at most
+ * `maxRecords`), so the verdicts for one batch fit one model's output. The rest stays on the surface for the next pass.
+ */
+export function wmBatch(surface: readonly MemoryObservation[], batchTokens: number, maxRecords: number): readonly MemoryObservation[] {
+  const ordered = [...surface].sort((a, b) => timeOf(a) - timeOf(b));
+  const batch: MemoryObservation[] = [];
+  let tokens = 0;
+  for (const record of ordered) {
+    if (batch.length && (tokens + record.tokenCount > batchTokens || batch.length >= maxRecords)) break;
+    batch.push(record);
+    tokens += record.tokenCount;
+  }
+  return batch;
+}
 
-  let lastReflectionEntryIndex = -1;
+function timeOf(record: MemoryObservation): number {
+  const time = Date.parse(record.observedAt ?? record.timestamp);
+  return Number.isFinite(time) ? time : 0;
+}
+
+/**
+ * Tokens of STM records recorded since the last working-memory attempt that did nothing (a `wm.recorded` record with
+ * no item and no processed record: the model gave no verdict, or the pass failed). `undefined` when the last attempt did
+ * something or there was none. Plan 217 Task 6 (gate M-1 sitting 2): WM then waits for a fresh trigger's worth of
+ * records instead of re-running over the same ones every pass.
+ */
+export function observationTokensSinceEmptyWmAttempt(sources: readonly unknown[]): number | undefined {
+  let lastAttempt = -1;
   for (let index = 0; index < sources.length; index++) {
     const data = recordData(sources[index]!);
-    if (isReflectionsRecordedData(data) && data.reflections.length && data.consumedObservationIds === undefined)
-      lastReflectionEntryIndex = index;
+    if (isWmRecordedData(data)) lastAttempt = data.items.length || data.processedIds?.length ? -1 : index;
   }
-  if (lastReflectionEntryIndex < 0) return active;
-
-  const uncoveredIds = new Set<string>();
-  for (let index = lastReflectionEntryIndex + 1; index < sources.length; index++) {
+  if (lastAttempt < 0) return undefined;
+  let tokens = 0;
+  for (let index = lastAttempt + 1; index < sources.length; index++) {
     const data = recordData(sources[index]!);
     if (!isObservationsRecordedData(data)) continue;
-    for (const observation of data.observations) {
-      if (isMemoryObservation(observation)) uncoveredIds.add(observation.id);
-    }
+    for (const observation of data.observations) if (isMemoryObservation(observation)) tokens += observation.tokenCount;
   }
-  return active.filter((observation) => uncoveredIds.has(observation.id));
+  return tokens;
 }

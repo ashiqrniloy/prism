@@ -1,8 +1,8 @@
 /**
  * The package's session state and its ledger log.
  *
- * State (`prism.state.session("memory.session", …)`) holds the per-session toggle and the worker model
- * refs the `memory:session:model` command set. The ledger itself is append-only and lives in the
+ * State (`prism.state.session("memory.session", …)`) holds the per-session toggle, the worker model
+ * refs the `memory:session:model` command set, and the episode scope `memory:scope` set (`scope.ts`). The ledger itself is append-only and lives in the
  * session log (`prism.state.log("memory.session.ledger")`), so later records never replace earlier ones
  * and a fork carries the records up to the fork point.
  */
@@ -18,6 +18,8 @@ export interface ObservationalMemoryState {
   readonly enabled: boolean;
   readonly stmModel?: JsonValue;
   readonly wmModel?: JsonValue;
+  /** The episode scope as `scope.ts` stores it; `null` after `memory:scope { clear: true }`; absent when never set. */
+  readonly scope?: JsonValue;
 }
 
 export function initialObservationalMemoryState(enabled: boolean): JsonObject {
@@ -31,6 +33,7 @@ export function readObservationalMemoryState(value: JsonValue): ObservationalMem
     enabled: record.enabled === true,
     ...(record.stmModel === undefined || record.stmModel === null ? {} : { stmModel: record.stmModel }),
     ...(record.wmModel === undefined || record.wmModel === null ? {} : { wmModel: record.wmModel }),
+    ...(record.scope === undefined ? {} : { scope: record.scope }),
   };
 }
 
@@ -40,6 +43,7 @@ export function writeObservationalMemoryState(state: ObservationalMemoryState): 
     enabled: state.enabled,
     ...(state.stmModel === undefined ? {} : { stmModel: state.stmModel }),
     ...(state.wmModel === undefined ? {} : { wmModel: state.wmModel }),
+    ...(state.scope === undefined ? {} : { scope: state.scope }),
   };
 }
 
@@ -56,7 +60,7 @@ export function toStoredModelRef(ref: ModelRef): JsonValue {
   return JSON.parse(JSON.stringify(ref)) as JsonValue;
 }
 
-/** The ledger a session's log records fold to. A record that is not one of the three is skipped. */
+/** The ledger a session's log records fold to. A record that is not a ledger record (a `scope.set`) is skipped. */
 export function ledgerOf(records: readonly JsonValue[]): ObservationalMemoryLedger {
   return foldObservationalMemoryLedger(records);
 }

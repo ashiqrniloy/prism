@@ -21,6 +21,10 @@ import {
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider } from "@arnilo/prism/testing";
+import { createAttentionCompiler, createAttentionTruncationTrigger } from "@arnilo/prism-extensions/context-engineering";
+import { inspectHostComposition } from "@arnilo/prism-extensions/governance";
+import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-extensions/observability";
+import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-extensions/workflows";
 import {
   createCitationIntegrityScorer,
   defineDataset,
@@ -29,12 +33,8 @@ import {
   runExperiment,
   validateReleaseEvalManifest,
 } from "@arnilo/prism-hosts/evals";
-import { createAttentionCompiler, createAttentionTruncationTrigger } from "@arnilo/prism-extensions/context-engineering";
-import { inspectHostComposition } from "@arnilo/prism-extensions/governance";
-import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-extensions/observability";
-import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-extensions/workflows";
-import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-system/core";
 import memorySystem, { createLongTermMemory, createMemory, foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
+import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-system/core";
 import { resolveDevicePolicy } from "@arnilo/prism-tools/computer-use";
 import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools/work/connectors";
 
@@ -527,8 +527,8 @@ mark("VOICE OK");
 
 // --- R16 observational memory package + fabric reflection promotion ---
 const scopeStore = createMemorySessionStore();
-// One worker provider serves both roles: the loop offers `record_event` to the observer and
-// `record_reflection` to the reflector, and each prompt lists its inputs as `[id]`.
+// One worker provider serves both roles: the loop offers `record_event` to STM and the verdict tools
+// (`summarize` among them) to WM, and each prompt lists its inputs as `[id]`.
 const observerProvider = {
   id: "memory",
   async *generate(request) {
@@ -538,12 +538,13 @@ const observerProvider = {
     const sourceEntryIds = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]);
     const toolNames = new Set((request.tools ?? []).map((tool) => tool.name));
     if (!alreadyCalled && sourceEntryIds.length > 0) {
-      if (toolNames.has("record_reflection")) {
+      if (toolNames.has("summarize")) {
+        const stmIds = [...text.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]);
         yield providerToolCall({
           type: "tool_call",
           id: "c1",
-          name: "record_reflection",
-          arguments: { content: "Task one prefers the smallest retry budget.", supportingObservationIds: sourceEntryIds },
+          name: "summarize",
+          arguments: { stmIds, text: "Task one prefers the smallest retry budget.", relevance: "high" },
         });
       } else if (toolNames.has("record_event")) {
         yield providerToolCall({
@@ -564,7 +565,7 @@ const scopeAgent = await createAgent({
     providerPackage("memory", [observerProvider]),
     memorySystem({
       stm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
-      wm: { model: { provider: "memory", model: "worker" }, observationTokens: 1 },
+      wm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
       context: { compactAt: { maxTokens: 999_999 } },
       worker: { maxTurns: 1 },
     }),
@@ -586,12 +587,12 @@ assert.ok(typeof omView.text === "string" && omView.text.length > 0, "the ledger
 // The fabric folds the branch the package wrote to: `state.log` records reach it as `package_state`
 // entries, so promotion needs no 0.12 attach surface and no host-side seeding.
 let ledger = foldObservationalMemoryLedger(await scopeSession.entries());
-for (let attempt = 0; attempt < 100 && ledger.reflections.length === 0; attempt++) {
+for (let attempt = 0; attempt < 100 && ledger.wmItems.length === 0; attempt++) {
   await new Promise((resolve) => setTimeout(resolve, 20));
   ledger = foldObservationalMemoryLedger(await scopeSession.entries());
 }
 assert.ok(ledger.observations.length > 0, "the branch fold reads the package's observation records");
-assert.ok(ledger.reflections.length > 0, "the branch fold reads the package's reflection records");
+assert.ok(ledger.wmItems.length > 0, "the branch fold reads the package's WM records");
 const promotionMemory = createMemory({
   tenantId: "t1",
   resourceId: "r1",
@@ -599,9 +600,9 @@ const promotionMemory = createMemory({
   embedder: createHashEmbedder({ dimensions: 2 }),
 });
 const fabric = createLongTermMemory({ memory: promotionMemory, observational: { session: scopeSession } });
-const promoted = await fabric.remember({ kind: "procedure", reflectionId: ledger.reflections[0].id });
+const promoted = await fabric.remember({ kind: "procedure", reflectionId: ledger.wmItems[0].id });
 assert.equal(promoted.content, "Task one prefers the smallest retry budget.");
-assert.deepEqual(promoted.promotedFrom, { reflectionId: ledger.reflections[0].id });
+assert.deepEqual(promoted.promotedFrom, { reflectionId: ledger.wmItems[0].id });
 assert.equal((await fabric.recall("smallest retry budget", { kinds: ["procedure"] })).hits.length, 1);
 await assert.rejects(() => fabric.remember({ kind: "episode", id: ledger.observations[0].id }), { code: "episode_kind_not_available" });
 mark("R16 OK");

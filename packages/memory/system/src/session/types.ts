@@ -1,7 +1,8 @@
 import type { SessionEntry } from "@arnilo/prism";
 
 export const OBSERVATIONS_RECORDED = "memory.session.observations.recorded";
-export const REFLECTIONS_RECORDED = "memory.session.reflections.recorded";
+/** A working-memory pass (plan 218 Task 2): the items it added and the WM items it superseded by name. */
+export const WM_RECORDED = "memory.session.wm.recorded";
 export const OBSERVATIONS_DROPPED = "memory.session.observations.dropped";
 export const TASK_STATE_RECORDED = "memory.session.task_state.recorded";
 /** Habituation (plan 217 Task 3): an identical event repeated; the record carries the event's new absolute count. */
@@ -22,6 +23,8 @@ export const SESSION_COMPACTED = "memory.session.compacted";
 
 /** The record-type prefix the observational package wrote before the 2026-11-08 rename. */
 export const RETIRED_LEDGER_TYPE_PREFIX = "om.";
+/** The whole-log reflector's record type, retired with it by plan 218 Task 2 (WM items replace reflections). */
+export const RETIRED_REFLECTIONS_RECORDED = "memory.session.reflections.recorded";
 
 /**
  * A ledger record or folded-memory entry written under a retired `om.*` type. No reader is kept for
@@ -31,8 +34,11 @@ export class MemorySessionLedgerError extends Error {
   readonly code = "retired_ledger_type";
   constructor(readonly recordType: string) {
     super(
-      `Session memory: ledger record type "${recordType.slice(0, 64)}" was retired with @arnilo/prism-memory-observational. ` +
-        "Export the session with that package's om:view before upgrading, or start a new session; records now use memory.session.* types.",
+      recordType === RETIRED_REFLECTIONS_RECORDED || recordType === `${FOLDED_MEMORY}@1`
+        ? `Session memory: ledger record type "${recordType}" was retired with the whole-log reflector (plan 218); ` +
+            "working-memory items replace reflections. Export the session with memory:session:view before upgrading, or start a new session."
+        : `Session memory: ledger record type "${recordType.slice(0, 64)}" was retired with @arnilo/prism-memory-observational. ` +
+            "Export the session with that package's om:view before upgrading, or start a new session; records now use memory.session.* types.",
     );
     this.name = "MemorySessionLedgerError";
   }
@@ -42,7 +48,10 @@ export class MemorySessionLedgerError extends Error {
 export function assertNotRetiredLedgerRecord(value: unknown): void {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return;
   const type = (value as { readonly type?: unknown }).type;
-  if (typeof type === "string" && type.startsWith(RETIRED_LEDGER_TYPE_PREFIX)) throw new MemorySessionLedgerError(type);
+  if (typeof type === "string" && (type.startsWith(RETIRED_LEDGER_TYPE_PREFIX) || type === RETIRED_REFLECTIONS_RECORDED))
+    throw new MemorySessionLedgerError(type);
+  if (type === FOLDED_MEMORY && (value as { readonly version?: unknown }).version === 1)
+    throw new MemorySessionLedgerError(`${FOLDED_MEMORY}@1`);
 }
 
 export type MemoryId = string;
@@ -61,6 +70,13 @@ export const memoryEventKindValues: readonly MemoryEventKind[] = [
   "error",
   "statement",
 ];
+
+/**
+ * Whose content a record is (plan 218 Task 4.1), derived from the roles of the entries it cites, never set by a model.
+ * `mixed` is user and assistant content in one record; tool output beside one side counts as that side.
+ */
+export type MemoryAttribution = "user" | "assistant" | "tool" | "mixed";
+export const memoryAttributionValues: readonly MemoryAttribution[] = ["user", "assistant", "tool", "mixed"];
 
 /** A reference to one verbatim chunk in the chunk store; the text itself never lives on the branch. */
 export interface MemoryChunkRef {
@@ -88,6 +104,8 @@ export interface MemoryObservation {
   readonly referencedAt?: string;
   readonly relevance: MemoryRelevance;
   readonly sourceEntryIds: readonly string[];
+  /** Derived from the cited entries' roles (Task 4.1). Absent on records written before it. */
+  readonly attribution?: MemoryAttribution;
   readonly tokenCount: number;
 }
 
@@ -105,12 +123,37 @@ export interface TaskStateRecordedData {
   readonly taskState: MemoryTaskState;
 }
 
-export interface MemoryReflection {
+/** What a working-memory item is (plan 218 Task 2): a kept STM event, a summary of several, or a derived fact. */
+export type MemoryWmItemKind = "event" | "summary" | "fact";
+export const memoryWmItemKindValues: readonly MemoryWmItemKind[] = ["event", "summary", "fact"];
+
+/**
+ * One working-memory item. `citedIds` are the STM records (and, for a `fact`, the WM items) it rests on; `chunkRefs`
+ * are the chunks it holds a `wm` referrer for, inherited from what it cites and what it supersedes. `text` is one line.
+ */
+export interface MemoryWmItem {
   readonly id: MemoryId;
-  readonly content: string;
+  readonly kind: MemoryWmItemKind;
+  readonly text: string;
+  readonly relevance: MemoryRelevance;
+  readonly citedIds: readonly MemoryId[];
+  readonly chunkRefs?: readonly MemoryChunkRef[];
+  /** WM items this one replaced by name (`summarize` and `derive` only). */
+  readonly supersedes?: readonly MemoryId[];
+  /** Why a `keep` kept the record. */
+  readonly reason?: string;
+  /**
+   * The scope step the WM model said needs this item later (plan 218 Task 3). Marked, the item is protected: the
+   * records it cites are never discarded and Rehearsal keeps it.
+   */
+  readonly neededLater?: string;
   readonly observedFrom?: string;
   readonly observedTo?: string;
-  readonly supportingObservationIds: readonly MemoryId[];
+  /**
+   * Derived from what the item rests on (Task 4.1): `assistant` when it rests only on assistant proposals, `mixed` when
+   * on both user and assistant content. Absent when a source has none, or rests only on assistant actions.
+   */
+  readonly attribution?: MemoryAttribution;
   readonly tokenCount: number;
 }
 
@@ -120,12 +163,50 @@ export interface ObservationsRecordedData {
   readonly coversUpToId?: string;
 }
 
-export interface ReflectionsRecordedData {
-  readonly type: typeof REFLECTIONS_RECORDED;
-  readonly reflections: readonly unknown[];
-  readonly consumedObservationIds?: readonly string[];
-  readonly supersededReflectionIds?: readonly string[];
-  readonly coversUpToId?: string;
+/**
+ * One WM pass. `processedIds` are the STM records that received a verdict (each is also tombstoned); `boundaries` is
+ * how many boundary markers the ledger held when the pass ran, so a later marker is new to WM. A pass that recorded no
+ * item and processed no record (or failed) is an empty attempt: the next one waits for `wm.triggerTokens` of new records.
+ */
+export interface WmRecordedData {
+  readonly type: typeof WM_RECORDED;
+  readonly items: readonly unknown[];
+  readonly supersededItemIds?: readonly string[];
+  readonly processedIds?: readonly string[];
+  readonly boundaries?: number;
+  /**
+   * The pass's compression (plan 218 Task 3): `processedTokens` are the surface tokens of the records it gave a verdict,
+   * `itemTokens` those of the items it wrote, `targetTokens` is `wm.targetRatio` × the batch's tokens.
+   */
+  readonly compression?: WmCompression;
+  /** Present when the batch's protected records alone exceed the target: the pass discarded no more to meet it. */
+  readonly budgetUnmet?: WmBudgetUnmet;
+  /** Present on the first WM pass after a scope change (plan 218 Task 4): what it re-judged. */
+  readonly rejudge?: WmRejudge;
+}
+
+/**
+ * Re-judgment after a scope change (plan 218 Task 4). `scopeHash` is the scope it answered (absent after a clear),
+ * `offered` the discarded records it was sent, `kept` the ids it kept back into WM, and `chunkDropped` the discarded
+ * records it could not offer because every chunk they cited was deleted.
+ */
+export interface WmRejudge {
+  readonly scopeHash?: string;
+  readonly offered: number;
+  readonly kept: readonly string[];
+  readonly chunkDropped: readonly string[];
+}
+
+export interface WmCompression {
+  readonly processedTokens: number;
+  readonly itemTokens: number;
+  readonly targetTokens: number;
+}
+
+/** `budget_unmet` (plan 218 Task 3): the protected share of a WM batch alone exceeds `wm.targetRatio`'s target. */
+export interface WmBudgetUnmet {
+  readonly protectedTokens: number;
+  readonly targetTokens: number;
 }
 
 export interface ObservationsDroppedData {
@@ -182,10 +263,11 @@ export interface ObservationsTombstonedData extends MemoryTombstone {
 
 export interface FoldedMemoryDetails {
   readonly type: typeof FOLDED_MEMORY;
-  readonly version: 1;
+  /** 2 since plan 218 Task 2 (`wmItems` replaced `reflections`); a version 1 payload fails as a retired type. */
+  readonly version: 2;
   readonly fullFold: boolean;
   readonly observations: readonly unknown[];
-  readonly reflections: readonly unknown[];
+  readonly wmItems: readonly unknown[];
   readonly droppedObservationIds?: readonly string[];
 }
 
@@ -194,6 +276,11 @@ export const coverageTierValues = ["none", "partial", "full"] as const;
 
 export function isMemoryId(value: unknown): value is MemoryId {
   return typeof value === "string" && /^[a-f0-9]{12}$/.test(value);
+}
+
+/** An absent attribution is valid: records written before Task 4.1 carry none. */
+function isAttribution(value: unknown): boolean {
+  return value === undefined || (memoryAttributionValues as readonly unknown[]).includes(value);
 }
 
 export function isMemoryObservation(value: unknown): value is MemoryObservation {
@@ -212,21 +299,31 @@ export function isMemoryObservation(value: unknown): value is MemoryObservation 
     (value.referencedAt === undefined || isIsoDate(value.referencedAt)) &&
     isRelevance(value.relevance) &&
     isStringArray(value.sourceEntryIds) &&
+    isAttribution(value.attribution) &&
     isNonNegativeNumber(value.tokenCount)
   );
 }
 
-export function isMemoryReflection(value: unknown): value is MemoryReflection {
+export function isMemoryWmItem(value: unknown): value is MemoryWmItem {
   if (!isRecord(value)) return false;
   return (
     isMemoryId(value.id) &&
-    typeof value.content === "string" &&
-    value.content.length > 0 &&
-    !value.content.includes("\n") &&
+    typeof value.kind === "string" &&
+    (memoryWmItemKindValues as readonly string[]).includes(value.kind) &&
+    typeof value.text === "string" &&
+    value.text.length > 0 &&
+    !value.text.includes("\n") &&
+    isRelevance(value.relevance) &&
+    isStringArray(value.citedIds) &&
+    value.citedIds.length > 0 &&
+    value.citedIds.every(isMemoryId) &&
+    (value.chunkRefs === undefined || (Array.isArray(value.chunkRefs) && value.chunkRefs.every(isChunkRef))) &&
+    (value.supersedes === undefined || (isStringArray(value.supersedes) && value.supersedes.every(isMemoryId))) &&
+    (value.reason === undefined || typeof value.reason === "string") &&
+    (value.neededLater === undefined || (typeof value.neededLater === "string" && value.neededLater.length > 0)) &&
     (value.observedFrom === undefined || isIsoTime(value.observedFrom)) &&
     (value.observedTo === undefined || isIsoTime(value.observedTo)) &&
-    isStringArray(value.supportingObservationIds) &&
-    value.supportingObservationIds.every(isMemoryId) &&
+    isAttribution(value.attribution) &&
     isNonNegativeNumber(value.tokenCount)
   );
 }
@@ -240,17 +337,35 @@ export function isObservationsRecordedData(value: unknown): value is Observation
   );
 }
 
-export function isReflectionsRecordedData(value: unknown): value is ReflectionsRecordedData {
+export function isWmRecordedData(value: unknown): value is WmRecordedData {
   return (
     isRecord(value) &&
-    value.type === REFLECTIONS_RECORDED &&
-    Array.isArray(value.reflections) &&
-    (value.consumedObservationIds === undefined ||
-      (isStringArray(value.consumedObservationIds) && value.consumedObservationIds.every(isMemoryId))) &&
-    (value.supersededReflectionIds === undefined ||
-      (isStringArray(value.supersededReflectionIds) && value.supersededReflectionIds.every(isMemoryId))) &&
-    (value.coversUpToId === undefined || typeof value.coversUpToId === "string")
+    value.type === WM_RECORDED &&
+    Array.isArray(value.items) &&
+    (value.supersededItemIds === undefined || (isStringArray(value.supersededItemIds) && value.supersededItemIds.every(isMemoryId))) &&
+    (value.processedIds === undefined || (isStringArray(value.processedIds) && value.processedIds.every(isMemoryId))) &&
+    (value.boundaries === undefined || (Number.isSafeInteger(value.boundaries) && (value.boundaries as number) >= 0)) &&
+    (value.compression === undefined || isTokenRecord(value.compression, ["processedTokens", "itemTokens", "targetTokens"])) &&
+    (value.budgetUnmet === undefined || isTokenRecord(value.budgetUnmet, ["protectedTokens", "targetTokens"])) &&
+    (value.rejudge === undefined || isWmRejudge(value.rejudge))
   );
+}
+
+function isWmRejudge(value: unknown): value is WmRejudge {
+  return (
+    isRecord(value) &&
+    (value.scopeHash === undefined || typeof value.scopeHash === "string") &&
+    Number.isSafeInteger(value.offered) &&
+    (value.offered as number) >= 0 &&
+    isStringArray(value.kept) &&
+    value.kept.every(isMemoryId) &&
+    isStringArray(value.chunkDropped) &&
+    value.chunkDropped.every(isMemoryId)
+  );
+}
+
+function isTokenRecord(value: unknown, keys: readonly string[]): boolean {
+  return isRecord(value) && keys.every((key) => Number.isSafeInteger(value[key]) && (value[key] as number) >= 0);
 }
 
 export function isObservationsDroppedData(value: unknown): value is ObservationsDroppedData {
@@ -308,10 +423,10 @@ export function isFoldedMemoryDetails(value: unknown): value is FoldedMemoryDeta
   return (
     isRecord(value) &&
     value.type === FOLDED_MEMORY &&
-    value.version === 1 &&
+    value.version === 2 &&
     typeof value.fullFold === "boolean" &&
     Array.isArray(value.observations) &&
-    Array.isArray(value.reflections) &&
+    Array.isArray(value.wmItems) &&
     (value.droppedObservationIds === undefined || isStringArray(value.droppedObservationIds))
   );
 }

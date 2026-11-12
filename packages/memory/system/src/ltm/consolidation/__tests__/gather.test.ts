@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 import { type ContentBlock, createSessionEntry, type SessionEntry } from "@arnilo/prism";
 import {
   type MemoryObservation,
-  type MemoryReflection,
+  type MemoryWmItem,
   OBSERVATIONS_RECORDED,
-  REFLECTIONS_RECORDED,
   TASK_STATE_RECORDED,
+  WM_RECORDED,
 } from "@arnilo/prism-memory-system";
 import { CONSOLIDATION_PATTERNS, gatherConsolidationCandidates } from "../gather.js";
 
@@ -54,10 +54,12 @@ const lowObservation: MemoryObservation = {
   tokenCount: 6,
 };
 
-const reflection: MemoryReflection = {
+const reflection: MemoryWmItem = {
   id: "bbbbbbbbbbbb",
-  content: "Prefer an explicit timeout on every long command.",
-  supportingObservationIds: [observation.id],
+  kind: "summary",
+  text: "Prefer an explicit timeout on every long command.",
+  relevance: "medium",
+  citedIds: [observation.id],
   tokenCount: 9,
 };
 
@@ -74,7 +76,7 @@ describe("consolidation candidate gathering", () => {
       message("e1", "user", [text("hello")]),
       record("e2", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
       decisionsEntry("e3", ["Use Bun for scripts"]),
-      record("e4", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+      record("e4", { type: WM_RECORDED, items: [reflection] }),
     ];
     const gathered = gatherConsolidationCandidates(entries);
     assert.deepEqual(
@@ -85,21 +87,21 @@ describe("consolidation candidate gathering", () => {
     assert.ok(gathered[0]?.evidenceIds.includes("e3"));
     assert.equal(gathered[1]?.text, observation.description);
     assert.ok(gathered[1]?.evidenceIds.includes("e2"));
-    assert.equal(gathered[2]?.text, reflection.content);
+    assert.equal(gathered[2]?.text, reflection.text);
   });
 
   it("gather_skips_superseded_reflections_and_low_observations", () => {
-    const replacement: MemoryReflection = { ...reflection, id: "eeeeeeeeeeee", content: "Prefer short commands." };
+    const replacement: MemoryWmItem = { ...reflection, id: "eeeeeeeeeeee", text: "Prefer short commands." };
     const entries = [
       message("e1", "user", [text("hello")]),
       record("e2", { type: OBSERVATIONS_RECORDED, observations: [observation, lowObservation] }),
-      record("e3", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
-      record("e4", { type: REFLECTIONS_RECORDED, reflections: [replacement], supersededReflectionIds: [reflection.id] }),
+      record("e3", { type: WM_RECORDED, items: [reflection] }),
+      record("e4", { type: WM_RECORDED, items: [replacement], supersededItemIds: [reflection.id] }),
     ];
     const gathered = gatherConsolidationCandidates(entries);
     assert.deepEqual(
       gathered.map((candidate) => candidate.text),
-      [observation.description, replacement.content],
+      [observation.description, replacement.text],
     );
     assert.ok(!gathered.some((candidate) => candidate.text === lowObservation.description));
   });
@@ -157,7 +159,7 @@ describe("consolidation candidate gathering", () => {
       message("e3", "user", [text("No, that's wrong.")], "r2"),
       decisionsEntry("e4", ["Use Bun for scripts"]),
       record("e5", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
-      record("e6", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+      record("e6", { type: WM_RECORDED, items: [reflection] }),
     ];
     const gathered = gatherConsolidationCandidates(entries, { maxCandidates: 2 });
     assert.deepEqual(
@@ -172,7 +174,7 @@ describe("consolidation candidate gathering", () => {
     const entries = [
       message("e1", "user", [text("Always pass a timeout.")]),
       record("e2", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
-      record("e3", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+      record("e3", { type: WM_RECORDED, items: [reflection] }),
       message("e4", "user", [text("Never edit generated files.")]),
     ];
     const first = gatherConsolidationCandidates(entries, { cursor: "e1" });

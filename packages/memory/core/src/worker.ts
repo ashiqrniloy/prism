@@ -193,7 +193,22 @@ export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
 /** The error result of a call `onToolCallLimit: "refuse"` did not run. */
 export const MEMORY_WORKER_TOOL_CALL_LIMIT = "tool_call_limit";
 
-export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void> {
+/**
+ * The error result of a call to a tool name the worker was not given (plan 218 Task 1.1). It is refused in the same
+ * turn for every worker, whatever `onToolCallLimit` says, and counts toward the call limits.
+ */
+export const MEMORY_WORKER_UNKNOWN_TOOL = "unknown_tool";
+
+/** How a worker loop ended (plan 218 Task 6). */
+export interface MemoryWorkerLoopResult {
+  /**
+   * The last turn stopped on the model's output limit with no tool call: the model spent its output (often on
+   * reasoning) before writing anything. A caller may retry with less to do; the loop itself never does.
+   */
+  readonly endedAtOutputCap: boolean;
+}
+
+export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<MemoryWorkerLoopResult> {
   throwIfAborted(options.signal);
   const limits = resolveMemoryWorkerLimits(options);
   const secrets = options.secrets ?? [];
@@ -222,9 +237,17 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
 
   const tools = new Map(options.tools.map((tool) => [tool.name, tool]));
   const refuse = options.onToolCallLimit === "refuse";
+  // Plan 217 Task 6.1: a `provider/model` ref carries no description of its own, so the thinking level is mapped
+  // against the provider's description of the model (`client.resolve`), or nothing reaches the wire.
+  const thinkingModel = options.thinkingLevel ? ((await options.client.resolve?.()) ?? options.client.model) : options.client.model;
   let totalCalls = 0;
   for (let turn = 0; turn < limits.maxTurns; turn += 1) {
-    const calls: { readonly raw: ToolCallContent; readonly safe: ToolCallContent; readonly refused?: string }[] = [];
+    const calls: {
+      readonly raw: ToolCallContent;
+      readonly safe: ToolCallContent;
+      readonly refused?: string;
+      readonly refusedCode?: string;
+    }[] = [];
     let stopReason: string | undefined;
     try {
       throwIfAborted(options.signal);
@@ -236,7 +259,7 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
           // Model-aware adapter: stamped/heuristic family per model; non-reasoning
           // models get no invented field (omitted, not guessed).
           options: options.thinkingLevel
-            ? applyThinkingLevelForModel(options.providerOptions, options.thinkingLevel, options.client.model)
+            ? applyThinkingLevelForModel(options.providerOptions, options.thinkingLevel, thinkingModel)
             : options.providerOptions,
           signal: options.signal,
         },
@@ -263,18 +286,23 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
           if (!refuse) throw new MemoryWorkerLimitError(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
           refused = `total limit of ${limits.maxToolCalls} tool calls reached; this call was not run.`;
         }
-        const tool = tools.get(event.call.name);
-        if (!tool)
-          throw new MemoryWorkerError(
-            "unknown_tool",
-            `Unknown observational memory tool: ${truncateWorkerText(redactSecrets(event.call.name, secrets), limits.maxErrorBytes)}`,
-          );
         measure(event.call, limits.maxMessageBytes, "Observational memory tool call");
         measure(event.call.arguments, limits.maxArgumentBytes, "Observational memory tool arguments");
-        const safe = redactSecrets(event.call, secrets);
+        let safe = redactSecrets(event.call, secrets);
         measure(safe.arguments, limits.maxArgumentBytes, "Redacted observational memory tool arguments");
+        // Plan 218 Task 1.1: a name the worker was not given is refused with an `unknown_tool` result, not a failed
+        // pass, so the calls that were valid keep their effect. It counted toward the caps above.
+        let refusedCode = refused ? MEMORY_WORKER_TOOL_CALL_LIMIT : undefined;
+        if (!tools.has(event.call.name)) {
+          const name = truncateWorkerText(safe.name, limits.maxErrorBytes);
+          safe = { ...safe, name };
+          if (!refused) {
+            refusedCode = MEMORY_WORKER_UNKNOWN_TOOL;
+            refused = `${name} is not a tool here; tools: ${[...tools.keys()].join(", ")}`;
+          }
+        }
         messageSize({ role: "assistant", content: [...calls.map((call) => call.safe), safe] });
-        calls.push({ raw: event.call, safe, ...(refused ? { refused } : {}) });
+        calls.push({ raw: event.call, safe, ...(refused && refusedCode ? { refused, refusedCode } : {}) });
       }
     } catch (error) {
       throwIfAborted(options.signal);
@@ -282,12 +310,14 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
       throw new Error(safeWorkerError(error, secrets, limits.maxErrorBytes));
     }
 
-    if (!calls.length) return;
+    if (!calls.length) return { endedAtOutputCap: stopReason === "max_output_tokens" };
     addMessage({ role: "assistant", content: calls.map((call) => call.safe) });
     let clean = !calls.some((call) => call.refused) && stopReason !== "max_output_tokens";
     for (const call of calls) {
       if (call.refused) {
-        addMessage(toolResultMessage(call.safe, { error: { code: MEMORY_WORKER_TOOL_CALL_LIMIT, message: call.refused } }));
+        addMessage(
+          toolResultMessage(call.safe, { error: { code: call.refusedCode ?? MEMORY_WORKER_TOOL_CALL_LIMIT, message: call.refused } }),
+        );
         continue;
       }
       const tool = tools.get(call.raw.name)!;
@@ -315,9 +345,10 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
       addMessage(toolResultMessage(call.safe, safePayload));
     }
     // Past the total limit nothing more can run: the calls within the limits keep their effect and the loop ends.
-    if (refuse && totalCalls >= limits.maxToolCalls) return;
-    if (options.endAfterCleanTurn && clean) return;
+    if (refuse && totalCalls >= limits.maxToolCalls) return { endedAtOutputCap: false };
+    if (options.endAfterCleanTurn && clean) return { endedAtOutputCap: false };
   }
+  return { endedAtOutputCap: false };
 }
 
 function toolResultMessage(call: ToolCallContent, payload: { readonly result?: unknown; readonly error?: ToolResult["error"] }): Message {

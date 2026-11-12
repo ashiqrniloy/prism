@@ -29,8 +29,8 @@ import memorySystem, {
 import { createObservationalFlush, sourceBudget, stmBatchTargetBytes } from "../flush.js";
 import { serializeSourceBatches, serializeSourceEntries } from "../serialize.js";
 import { runDropper } from "../workers/dropper.js";
-import { runReflector } from "../workers/reflector.js";
 import { runStm } from "../workers/stm.js";
+import { runWm } from "../workers/wm.js";
 import { clientFor } from "./helpers.js";
 
 const SECRET = "sk-session-secret-4242";
@@ -67,7 +67,7 @@ function recordingObserver(requests: ProviderRequest[], options: { failOnCall?: 
       }
       const prompt = request.messages.find((message) => message.role === "user")?.content[0];
       const text = prompt?.type === "text" ? prompt.text : "";
-      const ids = [...text.matchAll(/\] \[([^\]]+)\] message:/g)].map((match) => match[1]!);
+      const ids = [...text.matchAll(/\] \[([^\]]+)\] (?:user|assistant|tool|system):/g)].map((match) => match[1]!);
       yield providerToolCall(
         toolCallContent(`c${requests.length}`, "record_event", {
           kind: "statement",
@@ -176,7 +176,7 @@ describe("memory-system session tiers", () => {
       provider,
       {
         stm: { triggerTokens: 1, instruction: "STM-RULE", thinkingLevel: "low" },
-        wm: { observationTokens: 1, instruction: "WM-RULE", thinkingLevel: "high" },
+        wm: { triggerTokens: 1, instruction: "WM-RULE", thinkingLevel: "high" },
         rehearsal: { targetTokens: 1, instruction: "REHEARSAL-RULE", thinkingLevel: "minimal" },
       },
       [SECRET],
@@ -213,7 +213,7 @@ describe("memory-system session tiers", () => {
     const requests: ProviderRequest[] = [];
     const { flush, session, data } = flushHarness(entries, recordingObserver(requests), {
       worker: { maxMessageBytes },
-      wm: { observationTokens: 1_000_000 },
+      wm: { triggerTokens: 1_000_000 },
       rehearsal: { targetTokens: 1_000_000 },
     });
     await flush.flush(session);
@@ -258,7 +258,7 @@ describe("memory-system session tiers", () => {
     const requests: ProviderRequest[] = [];
     const { flush, session, data } = flushHarness(backlog, recordingObserver(requests), {
       stm: { triggerTokens: 4_000 },
-      wm: { observationTokens: 1_000_000 },
+      wm: { triggerTokens: 1_000_000 },
       rehearsal: { targetTokens: 1_000_000 },
     });
     await flush.flush(session);
@@ -274,7 +274,7 @@ describe("memory-system session tiers", () => {
     const requests: ProviderRequest[] = [];
     const { flush, session, data } = flushHarness([big], recordingObserver(requests), {
       worker: { maxMessageBytes },
-      wm: { observationTokens: 1_000_000 },
+      wm: { triggerTokens: 1_000_000 },
       rehearsal: { targetTokens: 1_000_000 },
     });
     await flush.flush(session);
@@ -294,7 +294,7 @@ describe("memory-system session tiers", () => {
     // The second batch's first call fails (call 2: a clean recording turn ends a pass in one call, plan 217 Task 6).
     const { flush, session, data } = flushHarness(entries, recordingObserver(requests, { failOnCall: 2 }), {
       worker: { maxMessageBytes },
-      wm: { observationTokens: 1_000_000 },
+      wm: { triggerTokens: 1_000_000 },
       rehearsal: { targetTokens: 1_000_000 },
     });
     await expect(flush.flush(session)).rejects.toThrow(/observer batch failed/);
@@ -306,7 +306,7 @@ describe("memory-system session tiers", () => {
     // The next pass resumes after the recorded batch and reaches the end.
     const retry = flushHarness(entries, recordingObserver([]), {
       worker: { maxMessageBytes },
-      wm: { observationTokens: 1_000_000 },
+      wm: { triggerTokens: 1_000_000 },
       rehearsal: { targetTokens: 1_000_000 },
     });
     retry.data.push(...data);
@@ -350,15 +350,16 @@ describe("memory-system session tiers", () => {
       ),
       entries: [entry("e1", "hello")],
     });
-    await runReflector({
+    await runWm({
       ...base,
       client: clientFor(
         scripted([
-          toolCallContent("r1", "record_reflection", { content: "summary", supportingObservationIds: ["bbbbbbbbbbbb"] }),
-          toolCallContent("r2", "record_reflection", { content: "", supportingObservationIds: [observation.id] }),
+          toolCallContent("r1", "summarize", { stmIds: ["bbbbbbbbbbbb"], text: "summary", relevance: "low" }),
+          toolCallContent("r2", "summarize", { stmIds: [observation.id], text: " ", relevance: "low" }),
         ]),
       ),
-      observations: [observation],
+      records: [observation],
+      ledger: foldObservationalMemoryLedger([{ type: "memory.session.observations.recorded", observations: [observation] }]),
     });
     await runDropper({
       ...base,
@@ -372,7 +373,7 @@ describe("memory-system session tiers", () => {
       targetTokens: 1,
     });
     const text = JSON.stringify(results);
-    for (const reason of ["empty_content", "no_valid_ids", "unknown_id"]) expect(text).toContain(`"reason":"${reason}"`);
+    for (const reason of ["empty_text", "no_valid_ids", "unknown_id"]) expect(text).toContain(`"reason":"${reason}"`);
     expect(text).not.toContain('"ok":true');
     assert.equal(results.length, 7);
   });

@@ -56,17 +56,17 @@ describe("Lifecycle defect fixes (D4, D5, D13)", () => {
         data: {
           op: "append",
           value: {
-            type: "memory.session.reflections.recorded",
-            reflections: [
+            type: "memory.session.wm.recorded",
+            items: [
               {
                 id: "012345678901",
-                content: "Always prefer small retry budget.",
-                supportingObservationIds: [],
+                kind: "summary",
+                text: "Always prefer small retry budget.",
+                relevance: "medium",
+                citedIds: ["aaaaaaaaaaaa"],
                 tokenCount: 5,
               },
             ],
-            consumedObservationIds: [],
-            supersededReflectionIds: [],
           },
         },
       },
@@ -97,17 +97,17 @@ describe("Lifecycle defect fixes (D4, D5, D13)", () => {
         data: {
           op: "append",
           value: {
-            type: "memory.session.reflections.recorded",
-            reflections: [
+            type: "memory.session.wm.recorded",
+            items: [
               {
                 id: "012345678901",
-                content: "Always prefer small retry budget.",
-                supportingObservationIds: [],
+                kind: "summary",
+                text: "Always prefer small retry budget.",
+                relevance: "medium",
+                citedIds: ["aaaaaaaaaaaa"],
                 tokenCount: 5,
               },
             ],
-            consumedObservationIds: [],
-            supersededReflectionIds: [],
           },
         },
       },

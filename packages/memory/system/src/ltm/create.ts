@@ -10,11 +10,12 @@ import {
   MemoryValidationError,
   type MemoryVectorRecord,
   RECALL_OVERSAMPLE,
+  resolveMemoryWorkerLimits,
+  scanScopedMemoryContent,
 } from "@arnilo/prism-memory-system/core";
 import { createMemoryId } from "../session/ids.js";
 import { foldObservationalMemoryLedger } from "../session/ledger.js";
 import { isMemoryId } from "../session/types.js";
-import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
 import { type MemoryConsolidationPlan, mergeNoteMetadata, planMemoryConsolidation } from "./consolidate.js";
 import { ConsolidationExtractionError } from "./consolidation/extract.js";
 import {
@@ -49,7 +50,6 @@ import { createNoteNavigator } from "./navigation.js";
 import { registerMemoryFabricContext } from "./provider.js";
 import { createFabricRecall, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
 import { createScopeRecall, resolveScopePriors } from "./scope/recall.js";
-import { scanScopedMemoryContent } from "@arnilo/prism-memory-system/core";
 import { createFabricConversationSearch } from "./search.js";
 import { createLongTermMemoryTools } from "./tools.js";
 import {
@@ -374,10 +374,11 @@ export function createLongTermMemory(options: CreateMemoryFabricOptions): Memory
     }
     const entries = await observational.session.entries();
     const ledger = foldObservationalMemoryLedger(entries);
-    const reflection = ledger.reflections.find((item) => item.id === reflectionId);
-    if (reflection === undefined) throw new MemoryValidationError(`unknown observational memory reflection: ${reflectionId}`);
-    // The evidence a reflection still points at: observations a later pass consumed no longer resolve.
-    const support = new Set(reflection.supportingObservationIds);
+    // `reflectionId` names a working-memory item since plan 218 Task 2 (plan 219 retires this promotion path).
+    const reflection = ledger.wmItems.find((item) => item.id === reflectionId);
+    if (reflection === undefined) throw new MemoryValidationError(`unknown session working-memory item: ${reflectionId}`);
+    // The evidence the item still points at: STM records it cites.
+    const support = new Set(reflection.citedIds);
     const evidence = [
       ...new Set([
         ...(input.sourceEntryIds ?? []),
@@ -387,7 +388,7 @@ export function createLongTermMemory(options: CreateMemoryFabricOptions): Memory
     return rememberIndexed(
       kind,
       evidence.length === 0 ? input : { ...input, sourceEntryIds: evidence },
-      reflection.content,
+      reflection.text,
       undefined,
       writeOptions,
       { reflectionId },

@@ -30,9 +30,9 @@ import memorySystem, {
  * - **`ltm`** (`{ stm: false, ltm }`): long-term memory alone. The model writes a fact note with `memory.insert`; there
  *   are no session tiers, no `recall` tool, no `memory:session` command and no `compaction` slot claim.
  * - **`session`** (`{ stm, wm }`, the defaults): the session tiers with no cross-session store. A turn is observed and
- *   the observations are reflected; no `memory.*` tool and no `memory.ltm` service exist.
- * - **`stm`** (`{ stm, wm: false }`): an event log with verbatim recall. Observed, never reflected.
- * - **`full`** (every component): observed, reflected and rehearsed (today's dropper, the `lowest-relevance` policy so
+ *   working memory gives the events verdicts; no `memory.*` tool and no `memory.ltm` service exist.
+ * - **`stm`** (`{ stm, wm: false }`): an event log with verbatim recall. Observed, never given a WM verdict.
+ * - **`full`** (every component): observed, kept in working memory and rehearsed (today's dropper, the `lowest-relevance` policy so
  *   it needs no model call), plus a long-term note. `sleep` is on and still a no-op.
  *
  * For each profile the demo asserts which tools, commands, slot claim and capabilities the package holds, and reads the
@@ -48,7 +48,7 @@ const FACT = "The retry budget is capped at three attempts.";
 export type ProfileName = "ltm" | "session" | "stm" | "full";
 
 const STM = { model: "mock/observer", triggerTokens: 1 } as const;
-const WM = { model: "mock/reflector", observationTokens: 1 } as const;
+const WM = { model: "mock/reflector", triggerTokens: 1 } as const;
 
 /** The four profiles: documented recipes, not a config field. `root` is the long-term memory's directory. */
 function profileConfig(profile: ProfileName, root: string): MemorySystemConfig {
@@ -68,7 +68,7 @@ function profileConfig(profile: ProfileName, root: string): MemorySystemConfig {
 /** The observer: one `record_event` call sourced from the first entry its prompt lists. */
 function observe(request: ProviderRequest): ProviderEvent[] {
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];
-  const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] message:/.exec(prompt.text)?.[1] : undefined;
+  const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] (?:user|assistant|tool|system):/.exec(prompt.text)?.[1] : undefined;
   if (request.messages.some((message) => message.role === "tool") || !sourceId) return [providerDone()];
   return [
     providerToolCall(
@@ -78,13 +78,16 @@ function observe(request: ProviderRequest): ProviderEvent[] {
   ];
 }
 
-/** The reflector: one `record_reflection` call supported by the first observation id its prompt lists. */
+/**
+ * Working memory: one `derive` over the first STM record its prompt lists. A fact gives the record no verdict, so it
+ * stays on the STM surface and the `full` profile's rehearsal still has a record to drop.
+ */
 function reflect(request: ProviderRequest): ProviderEvent[] {
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];
-  const id = prompt?.type === "text" ? /\b([a-f0-9]{12})\b/.exec(prompt.text)?.[1] : undefined;
+  const id = prompt?.type === "text" ? /^- \[([a-f0-9]{12})\] \d{4}-/m.exec(prompt.text)?.[1] : undefined;
   if (request.messages.some((message) => message.role === "tool") || !id) return [providerDone()];
   return [
-    providerToolCall(toolCallContent("reflect-1", "record_reflection", { content: `Durable: ${FACT}`, supportingObservationIds: [id] })),
+    providerToolCall(toolCallContent("wm-1", "derive", { supportingIds: [id], text: `Durable: ${FACT}`, relevance: "high" })),
     providerDone(),
   ];
 }
@@ -112,14 +115,14 @@ export interface ProfileReport {
   readonly ltmService: boolean;
   readonly modelCalls: Readonly<Record<string, number>>;
   readonly observations: number;
-  readonly reflections: number;
+  readonly wmItems: number;
   readonly dropped: number;
   readonly facts: number;
 }
 
 interface SessionStatus {
   readonly observations: { readonly recorded: number; readonly dropped: number };
-  readonly reflections: { readonly recorded: number };
+  readonly wmItems: { readonly recorded: number };
   readonly inFlight: boolean;
 }
 
@@ -194,7 +197,7 @@ export async function runProfile(profile: ProfileName): Promise<ProfileReport> {
       ltmService: services.ltm !== undefined,
       modelCalls,
       observations: status?.observations.recorded ?? 0,
-      reflections: status?.reflections.recorded ?? 0,
+      wmItems: status?.wmItems.recorded ?? 0,
       dropped: status?.observations.dropped ?? 0,
       facts,
     };
@@ -219,9 +222,9 @@ export function checkProfile(report: ProfileReport): void {
   assert.equal(report.compactionOwner === PACKAGE, on("stm"), `${profile}: the compaction slot follows stm`);
   assert.equal(report.capabilities.includes("slot:compaction"), on("stm"), `${profile}: slot:compaction follows stm`);
   assert.equal(report.capabilities.includes("credentials"), on("ltm"), `${profile}: credentials follows ltm`);
-  // The passes: observed with stm, reflected only with wm, rehearsed (dropped) only with rehearsal.
+  // The passes: observed with stm, given WM verdicts only with wm, rehearsed (dropped) only with rehearsal.
   assert.equal(report.observations > 0, on("stm"), `${profile}: observations`);
-  assert.equal(report.reflections > 0, on("wm"), `${profile}: reflections`);
+  assert.equal(report.wmItems > 0, on("wm"), `${profile}: WM items`);
   assert.equal((report.modelCalls.reflector ?? 0) > 0, on("wm"), `${profile}: the reflector model is called only with wm`);
   assert.equal((report.modelCalls.observer ?? 0) > 0, on("stm"), `${profile}: the observer model is called only with stm`);
   assert.equal(report.dropped > 0, on("rehearsal"), `${profile}: rehearsal drops only when on`);
@@ -245,7 +248,7 @@ if (import.meta.main) {
         .join("+");
       console.log(
         `${report.profile.padEnd(7)} components ${components.padEnd(26)} tools ${String(report.tools.length).padStart(2)}  ` +
-          `observations ${report.observations}  reflections ${report.reflections}  dropped ${report.dropped}  facts ${report.facts}  ` +
+          `observations ${report.observations}  WM items ${report.wmItems}  dropped ${report.dropped}  facts ${report.facts}  ` +
           `slot ${report.compactionOwner === PACKAGE ? "claimed" : "not claimed"}  capabilities [${report.capabilities.join(", ")}]`,
       );
     }

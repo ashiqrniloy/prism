@@ -1,4 +1,4 @@
-import type { MemoryObservation, MemoryReflection } from "./types.js";
+import type { MemoryObservation, MemoryWmItem } from "./types.js";
 import { FOLDED_MEMORY } from "./types.js";
 
 export const HARD_MAX_RENDERED_MEMORY_BYTES = 256 * 1024;
@@ -13,14 +13,14 @@ const relevanceRank: Record<MemoryObservation["relevance"], number> = {
 
 export interface BoundedMemoryPayload {
   readonly observations: readonly MemoryObservation[];
-  readonly reflections: readonly MemoryReflection[];
+  readonly wmItems: readonly MemoryWmItem[];
   readonly droppedObservationIds: readonly string[];
   readonly fullFold: boolean;
 }
 
 export function boundMemoryPayload(
   observations: readonly MemoryObservation[],
-  reflections: readonly MemoryReflection[],
+  wmItems: readonly MemoryWmItem[],
   droppedObservationIds: readonly string[],
   maxObservationTokens: number,
   maxPayloadBytes: number,
@@ -34,7 +34,7 @@ export function boundMemoryPayload(
   while (
     kept.length &&
     (totalTokens > maxObservationTokens ||
-      foldedByteLength({ observations: kept, reflections, droppedObservationIds, fullFold }) > maxPayloadBytes)
+      foldedByteLength({ observations: kept, wmItems, droppedObservationIds, fullFold }) > maxPayloadBytes)
   ) {
     const drop = sorted.shift();
     if (!drop) break;
@@ -42,20 +42,20 @@ export function boundMemoryPayload(
     totalTokens -= drop.tokenCount;
     fullFold = true;
   }
-  if (foldedByteLength({ observations: kept, reflections, droppedObservationIds, fullFold }) > maxPayloadBytes) {
+  if (foldedByteLength({ observations: kept, wmItems, droppedObservationIds, fullFold }) > maxPayloadBytes) {
     throw new Error(`Observational memory folded payload exceeds ${maxPayloadBytes} bytes`);
   }
-  return { observations: kept, reflections, droppedObservationIds, fullFold };
+  return { observations: kept, wmItems, droppedObservationIds, fullFold };
 }
 
 function foldedByteLength(payload: BoundedMemoryPayload): number {
   return Buffer.byteLength(
     JSON.stringify({
       type: FOLDED_MEMORY,
-      version: 1,
+      version: 2,
       fullFold: payload.fullFold,
       observations: payload.observations,
-      reflections: payload.reflections,
+      wmItems: payload.wmItems,
       droppedObservationIds: payload.droppedObservationIds,
     }),
     "utf8",

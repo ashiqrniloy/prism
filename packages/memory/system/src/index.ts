@@ -35,6 +35,7 @@ import manifest from "../../package.json" with { type: "json" };
 import { memorySystemCapabilities, resolveMemorySystemComponents } from "./components.js";
 import { type MemorySystemConfig, memorySystemConfigSchema } from "./config.js";
 import { createMemorySystemService, MEMORY_SYSTEM_SERVICE } from "./service.js";
+import type { SessionTiers } from "./session/setup.js";
 
 // The library surface: the components, the `memory.system` service, the session tiers (ledger, render, config) and
 // long-term memory (notes, stores, recall, lifecycle, OKF bundles, the `memory.ltm` port).
@@ -67,8 +68,11 @@ export {
 export * from "./ltm/public.js";
 export {
   MEMORY_SYSTEM_SERVICE,
+  type MemorySystemRehearseOptions,
+  type MemorySystemScopeResult,
   type MemorySystemService,
   type MemorySystemStatus,
+  type MemorySystemWmPassResult,
 } from "./service.js";
 export * from "./session/exports.js";
 
@@ -93,7 +97,11 @@ const definition = definePackage<MemorySystemConfig>({
     // Composition first: a missing dependency fails before anything registers.
     const config = prism.config ?? {};
     const components = resolveMemorySystemComponents(config);
-    prism.services.provide(MEMORY_SYSTEM_SERVICE, createMemorySystemService(components));
+    let tiers: SessionTiers | undefined;
+    prism.services.provide(
+      MEMORY_SYSTEM_SERVICE,
+      createMemorySystemService(components, () => tiers),
+    );
     // Each component's code loads only when it is on. Long-term memory first: its hooks ran before the session tiers'
     // when the two were separate packages listed fabric-first, and the provider requests stay byte-identical (Task 5).
     if (components.ltm && typeof config.ltm === "object" && config.ltm !== null) {
@@ -102,7 +110,7 @@ const definition = definePackage<MemorySystemConfig>({
     }
     if (components.stm) {
       const { setupSessionTiers } = await import("./session/setup.js");
-      setupSessionTiers(prism, components);
+      tiers = setupSessionTiers(prism, components);
     }
   },
 });

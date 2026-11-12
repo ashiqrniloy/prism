@@ -4,23 +4,23 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  type AgentEvent,
   type Agent,
+  type AgentEvent,
+  createAgent,
+  definePackage,
   type ModelProvider,
   type PackageInstance,
   type ProviderRequest,
-  type Session,
-  SlotConflictError,
-  createAgent,
-  definePackage,
   providerDone,
   providerTextDelta,
   providerToolCall,
+  type Session,
+  SlotConflictError,
   toolCallContent,
 } from "@arnilo/prism";
 import memoryCompaction from "@arnilo/prism-extensions/compaction";
-import memorySystem from "@arnilo/prism-memory-system";
 import { sqliteStore } from "@arnilo/prism-extensions/store-sqlite";
+import memorySystem from "@arnilo/prism-memory-system";
 
 /**
  * Session memory (`@arnilo/prism-memory-system`'s session tiers), proved end to end over a durable
@@ -74,7 +74,8 @@ function demoProvider(recorder: Recorder): ModelProvider {
       }
       const answered = request.messages.some((message) => message.role === "tool");
       const prompt = request.messages.find((message) => message.role === "user")?.content[0];
-      const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] message:/.exec(prompt.text)?.[1] : undefined;
+      const sourceId =
+        prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] (?:user|assistant|tool|system):/.exec(prompt.text)?.[1] : undefined;
       if (!answered && sourceId) {
         yield providerToolCall(
           toolCallContent("observe-1", "record_event", {
@@ -134,7 +135,7 @@ type OmStatus = {
   readonly contextMode: "none" | "own-compaction" | "pinned";
   readonly stm: unknown;
   readonly observations: { readonly recorded: number; readonly active: number };
-  readonly reflections: { readonly recorded: number };
+  readonly wmItems: { readonly recorded: number };
 };
 
 /** Reads the package's own status command — the host's only view of memory state. */
@@ -185,7 +186,7 @@ type PhaseB = {
   readonly enabled: boolean;
   readonly observer: string;
   readonly observations: number;
-  readonly reflections: number;
+  readonly wmItems: number;
   readonly messageCount: number;
   readonly ledgerHasObservation: boolean;
   readonly recallVisible: boolean;
@@ -248,7 +249,7 @@ async function phaseA(script: string): Promise<Record<string, unknown>> {
     assert.equal(b.enabled, true, "the toggle survived the restart");
     assert.equal(b.observer, OBSERVER_MODEL, "the observer model is unchanged");
     assert.equal(b.observations >= 2, true, "the ledger still holds A's observations");
-    assert.equal(b.reflections, 0, "the reflector threshold was never crossed");
+    assert.equal(b.wmItems, 0, "the WM trigger was never crossed");
     assert.equal(b.ledgerHasObservation, true, "the rendered ledger carries the observation");
     assert.equal(b.recallVisible, true, "the toggled session is offered recall");
     assert.equal(b.messageCount, messageCount, "phase B sees the same messages");
@@ -294,7 +295,7 @@ async function phaseB(dir: string, sessionId: string, leafId: string): Promise<P
     enabled: status.enabled,
     observer: String(status.stm),
     observations: status.observations.recorded,
-    reflections: status.reflections.recorded,
+    wmItems: status.wmItems.recorded,
     messageCount,
     ledgerHasObservation: view.text.includes("OBSERVED-FACT"),
     recallVisible,

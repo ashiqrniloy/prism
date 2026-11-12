@@ -1,14 +1,16 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { SessionEntry } from "@arnilo/prism";
-import { foldObservationalMemoryLedger, type MemoryObservation, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "../../index.js";
+import { foldObservationalMemoryLedger, type MemoryObservation, OBSERVATIONS_RECORDED, WM_RECORDED } from "../../index.js";
 import {
   eligibleObservationSources,
   eligibleObservationTokenCount,
   isEligibleObservationSourceEntry,
-  observationsUncoveredByReflection,
+  observationTokensSinceEmptyWmAttempt,
   unscannedEntries,
+  wmBatch,
 } from "../coverage-helpers.js";
+import { activeObservations } from "../ledger.js";
 
 const obs: MemoryObservation = {
   id: "aaaaaaaaaaaa",
@@ -71,22 +73,37 @@ describe("observational memory coverage helpers", () => {
     );
   });
 
-  it("empty_reflection_does_not_advance_coverage", () => {
+  it("empty_wm_attempt_processes_nothing_and_waits_for_new_records", () => {
     const entries = [
       entry("m1", undefined, "message", { role: "user", content: [{ type: "text", text: "one" }] }),
       entry("o1", { type: OBSERVATIONS_RECORDED, observations: [obs], coversUpToId: "m1" }),
-      entry("r1", { type: REFLECTIONS_RECORDED, reflections: [], coversUpToId: "m1" }),
+      entry("r1", { type: WM_RECORDED, items: [] }),
       entry("m2", undefined, "message", { role: "user", content: [{ type: "text", text: "two" }] }),
       entry("o2", { type: OBSERVATIONS_RECORDED, observations: [obs2], coversUpToId: "m2" }),
     ];
     const ledger = foldObservationalMemoryLedger(entries);
     assert.deepEqual(
-      observationsUncoveredByReflection(entries, ledger).map((item) => item.id),
+      activeObservations(ledger).map((item) => item.id),
       [obs.id, obs2.id],
     );
+    assert.equal(observationTokensSinceEmptyWmAttempt(entries), obs2.tokenCount);
+    assert.equal(
+      observationTokensSinceEmptyWmAttempt([...entries, entry("r2", { type: WM_RECORDED, items: [], processedIds: [obs.id] })]),
+      undefined,
+    );
+  });
+
+  it("wm_batch_takes_the_oldest_records_up_to_the_budget", () => {
+    const older = { ...obs2, timestamp: "2026-06-19T00:00:00.000Z" };
     assert.deepEqual(
-      observationsUncoveredByReflection(entries, ledger, true).map((item) => item.id),
-      [obs.id, obs2.id],
+      wmBatch([obs, older], obs.tokenCount, 10).map((item) => item.id),
+      [older.id],
     );
+    // One record larger than the budget still travels alone, and the record cap holds.
+    assert.deepEqual(
+      wmBatch([obs, older], 1, 10).map((item) => item.id),
+      [older.id],
+    );
+    assert.equal(wmBatch([obs, older], 1_000, 1).length, 1);
   });
 });

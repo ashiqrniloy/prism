@@ -1,12 +1,12 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { type JsonObject, type ProviderRequest, providerDone, providerToolCall, type SessionEntry, toolCallContent } from "@arnilo/prism";
-import { foldObservationalMemoryLedger, type MemoryObservation } from "../../index.js";
+import { foldObservationalMemoryLedger, type MemoryObservation, OBSERVATIONS_RECORDED } from "../../index.js";
 import { observationalMemoryBlock } from "../context.js";
 import { renderObservationalMemory } from "../render.js";
 import { serializeSourceEntries } from "../serialize.js";
-import { runReflector } from "../workers/reflector.js";
 import { runStm } from "../workers/stm.js";
+import { runWm } from "../workers/wm.js";
 import { clientFor } from "./helpers.js";
 
 const first: SessionEntry = {
@@ -132,23 +132,25 @@ describe("OM temporal grounding and task state", () => {
     assert.match(text, /\[aaaaaaaaaaaa\] 09:12 \(high\)/);
     assert.match(text, /\(refers to 2026-10-18\)/);
   });
-  it("reflection_range_comes_from_evidence", async () => {
-    const reflections = await runReflector({
-      observations: [old, { ...old, id: "bbbbbbbbbbbb", observedAt: last.timestamp }],
+  it("wm_item_range_comes_from_evidence", async () => {
+    const records = [old, { ...old, id: "bbbbbbbbbbbb", observedAt: last.timestamp }];
+    const { items } = await runWm({
+      records,
+      ledger: foldObservationalMemoryLedger([{ type: OBSERVATIONS_RECORDED, observations: records }]),
       maxTurns: 1,
       client: clientFor({
         id: "mock",
         async *generate() {
           yield providerToolCall(
-            toolCallContent("c", "record_reflection", { content: "Deploy history", supportingObservationIds: [old.id, "bbbbbbbbbbbb"] }),
+            toolCallContent("c", "summarize", { stmIds: [old.id, "bbbbbbbbbbbb"], text: "Deploy history", relevance: "medium" }),
           );
           yield providerDone();
         },
       }),
     });
-    assert.equal(reflections[0]?.observedFrom, first.timestamp);
-    assert.equal(reflections[0]?.observedTo, last.timestamp);
-    assert.match(renderObservationalMemory(reflections, []), /2026-10-15.*2026-10-17/);
+    assert.equal(items[0]?.observedFrom, first.timestamp);
+    assert.equal(items[0]?.observedTo, last.timestamp);
+    assert.match(renderObservationalMemory(items, []), /2026-10-15.*2026-10-17/);
   });
 });
 
@@ -161,7 +163,7 @@ it("task_state_recall_withholds_revoked_sources_and_render_preserves_tail", asyn
   assert.match(recallObservationalMemory(entries, taskState.id).text, /Deploy/);
   assert.equal(recallObservationalMemory(entries, taskState.id, [], { invalidatedIds: ["m1"] }).reason, "revoked");
   const text = renderObservationalMemory(
-    [{ id: "bbbbbbbbbbbb", content: "x".repeat(1000), supportingObservationIds: [old.id], tokenCount: 250 }],
+    [{ id: "bbbbbbbbbbbb", kind: "summary", text: "x".repeat(1000), relevance: "medium", citedIds: [old.id], tokenCount: 250 }],
     [old],
     { taskState, maxBytes: 512 },
   );
@@ -185,7 +187,8 @@ it("flush_persists_supersession_and_latest_task_state_without_extra_model_call",
         data.push(value);
       },
     } as unknown as import("@arnilo/prism").SessionLog<import("@arnilo/prism").JsonValue>,
-    config: resolveMemorySystemConfig({ stm: { triggerTokens: 1 }, worker: { maxTurns: 1 } }),
+    // STM only: the task-state boundary this pass records would otherwise run WM (plan 218 Task 2).
+    config: resolveMemorySystemConfig({ stm: { triggerTokens: 1 }, worker: { maxTurns: 1 } }, { wm: false, rehearsal: false }),
     readState: () => ({ enabled: true }),
     onStatus: () => {},
     clientFor: () =>

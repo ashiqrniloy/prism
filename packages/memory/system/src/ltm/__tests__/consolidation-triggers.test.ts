@@ -22,11 +22,11 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import memorySystem, { foldObservationalMemoryLedger, type MemoryFabricConfig, WM_RECORDED } from "@arnilo/prism-memory-system";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
-import memorySystem, { foldObservationalMemoryLedger, type MemoryFabricConfig, REFLECTIONS_RECORDED } from "@arnilo/prism-memory-system";
-import { createMemory, createLongTermMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
-import { MEMORY_NOTE_METADATA_KEY } from "../types.js";
+import { createLongTermMemory, createMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
 import { resolvePromoteConfig } from "../promote.js";
+import { MEMORY_NOTE_METADATA_KEY } from "../types.js";
 
 const TIMESTAMP = "2026-01-01T00:00:00.000Z";
 const USER_TEXT = "Please keep the retry budget small.";
@@ -90,12 +90,13 @@ function scriptedProvider(counts: { recordNotes: number }): ModelProvider {
         yield providerToolCall(
           toolCallContent("o1", "record_event", { kind: "statement", description: USER_TEXT, relevance: "high", sourceEntryIds: ids }),
         );
-      } else if (!alreadyCalled && names.has("record_reflection") && ids.length > 0) {
-        yield providerToolCall(toolCallContent("r1", "record_reflection", { content: USER_TEXT, supportingObservationIds: ids }));
+      } else if (!alreadyCalled && names.has("summarize") && ids.length > 0) {
+        const stmIds = [...prompt.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]!);
+        yield providerToolCall(toolCallContent("r1", "summarize", { stmIds, text: USER_TEXT, relevance: "high" }));
       } else if (!alreadyCalled && names.has("record_notes") && prompt.includes("c1")) {
         counts.recordNotes += 1;
         yield providerToolCall(toolCallContent("n1", "record_notes", { notes: [NOTE] }));
-      } else if (!names.has("record_event") && !names.has("record_reflection") && !names.has("record_notes")) {
+      } else if (!names.has("record_event") && !names.has("summarize") && !names.has("record_notes")) {
         yield providerTextDelta("ok");
       }
       yield providerDone();
@@ -118,7 +119,7 @@ async function waitFor(check: () => Promise<boolean>, attempts = 200): Promise<v
 /** The session-tier half of the one `memorySystem` entry (the tiers and LTM are one package since plan 216 Task 5). */
 const SESSION_TIERS = {
   stm: { model: "scripted/om", triggerTokens: 1 },
-  wm: { model: "scripted/om", observationTokens: 1 },
+  wm: { model: "scripted/om", triggerTokens: 1 },
   context: { compactAt: { maxTokens: 999_999 } },
   worker: { maxTurns: 1 },
 } as const;
@@ -177,7 +178,7 @@ describe("consolidation triggers, command and host API (plan 188.3 Task 5)", () 
       counts: { recordNotes: 0 },
     });
     await h.session.run(USER_TEXT);
-    await waitFor(async () => foldObservationalMemoryLedger(await h.session.entries()).reflections.length > 0);
+    await waitFor(async () => foldObservationalMemoryLedger(await h.session.entries()).wmItems.length > 0);
     await h.session.run("continue");
     await waitFor(async () => {
       const status = await h.agent.commands.run("memory:status", {}, { session: h.session });
@@ -304,8 +305,8 @@ describe("consolidation triggers, command and host API (plan 188.3 Task 5)", () 
       timestamp: TIMESTAMP,
       kind: "custom",
       data: {
-        type: REFLECTIONS_RECORDED,
-        reflections: [{ id: reflectionId, content: "Retry budget", supportingObservationIds: [], tokenCount: 1 }],
+        type: WM_RECORDED,
+        items: [{ id: reflectionId, kind: "summary", text: "Retry budget", relevance: "medium", citedIds: [], tokenCount: 1 }],
         supersededReflectionIds: [reflectionId],
       },
     });
@@ -416,7 +417,7 @@ describe("consolidation triggers, command and host API (plan 188.3 Task 5)", () 
     const session = await agent.session({ id: "s1", create: true });
     await agent.commands.run("memory:session", {}, { session });
     await session.run(USER_TEXT);
-    await waitFor(async () => foldObservationalMemoryLedger(await session.entries()).reflections.length > 0);
+    await waitFor(async () => foldObservationalMemoryLedger(await session.entries()).wmItems.length > 0);
     await session.close();
 
     const reopened = await agent.session({ id: "s1", create: true });

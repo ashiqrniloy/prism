@@ -252,6 +252,7 @@ const SHARED_ROOT = [
   "HARD_MAX_WORKER_TOOL_CALLS_PER_TURN",
   "HARD_MAX_WORKER_TURNS",
   "MEMORY_WORKER_TOOL_CALL_LIMIT",
+  "MEMORY_WORKER_UNKNOWN_TOOL",
   "MemoryWorkerError",
   "MemoryWorkerLimitError",
   "gateScopedMemoryContent",

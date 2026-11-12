@@ -8,12 +8,12 @@ import {
   type SessionEntry,
 } from "@arnilo/prism";
 import { eligibleObservationSources, unscannedEntries } from "./coverage-helpers.js";
-import { activeObservations, activeReflections, foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
+import { activeObservations, activeWmItems, foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails, type ObservationalMemoryProjection } from "./projection.js";
 import { DEFAULT_KEEP_RECENT_ENTRIES, selectRecentMessageEntryIds } from "./recent-messages.js";
 import { renderObservationalMemory } from "./render.js";
-import type { MemoryObservation, MemoryReflection } from "./types.js";
+import type { MemoryObservation, MemoryWmItem } from "./types.js";
 
 export interface ObservationalMemoryCompactorOptions {
   readonly name?: string;
@@ -56,28 +56,28 @@ export function createObservationalMemoryCompactor(options: ObservationalMemoryC
       const source = fullFold
         ? {
             observations: fullActiveObservations,
-            reflections: activeReflections(projection.full),
+            wmItems: activeWmItems(projection.full),
             droppedObservationIds: projection.full.droppedObservationIds,
           }
         : {
             observations: projection.observations,
-            reflections: projection.reflections,
+            wmItems: projection.wmItems,
             droppedObservationIds: projection.droppedObservationIds,
           };
       const bounded = boundMemoryPayload(
         source.observations,
-        source.reflections,
+        source.wmItems,
         source.droppedObservationIds,
         maxTokens,
         HARD_MAX_FOLDED_PAYLOAD_BYTES,
       );
       const memory = {
         observations: bounded.observations,
-        reflections: bounded.reflections,
+        wmItems: bounded.wmItems,
         droppedObservationIds: bounded.droppedObservationIds,
       };
       const secrets = [...(options.secrets ?? []), ...(context.secrets ?? [])];
-      const summary = renderObservationalMemory(memory.reflections, memory.observations, {
+      const summary = renderObservationalMemory(memory.wmItems, memory.observations, {
         secrets,
         advertiseRecall: options.advertiseRecall,
         taskState: projection.full.taskState,
@@ -126,7 +126,7 @@ function visibleProjection(ledger: ObservationalMemoryLedger): ObservationalMemo
     full: ledger,
     ...(ledger.taskState ? { taskState: ledger.taskState } : {}),
     observations: activeObservations(ledger),
-    reflections: activeReflections(ledger),
+    wmItems: activeWmItems(ledger),
     droppedObservationIds: ledger.droppedObservationIds,
   };
 }
@@ -134,7 +134,7 @@ function visibleProjection(ledger: ObservationalMemoryLedger): ObservationalMemo
 function redactMemory(
   memory: {
     readonly observations: readonly MemoryObservation[];
-    readonly reflections: readonly MemoryReflection[];
+    readonly wmItems: readonly MemoryWmItem[];
     readonly droppedObservationIds: readonly string[];
   },
   fullFold: boolean,

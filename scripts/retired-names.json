@@ -10936,6 +10936,13 @@
       ]
     },
     {
+      "name": "MemoryReflection",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
       "name": "MemoryStoredCredentialStore",
       "from": [
         "@arnilo/prism-code"
@@ -14472,6 +14479,20 @@
     {
       "name": "reflectionBlockedByInvalidation",
       "from": [
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "REFLECTIONS_RECORDED",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "ReflectionsRecordedData",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
         "@arnilo/prism-memory"
       ]
     },

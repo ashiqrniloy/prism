@@ -65,7 +65,7 @@ export function createObservationalRecallTool(options: RecallToolOptions = {}): 
           return fail({ found: false, id, reason: "invalid_id", text: "Invalid memory id; expected 12 lowercase hex characters." });
         }
         const ledger = foldObservationalMemoryLedger(entries);
-        const refs = ledger.observations.find((item) => item.id === id)?.chunkRefs ?? [];
+        const refs = (ledger.observations.find((item) => item.id === id) ?? ledger.wmItems.find((item) => item.id === id))?.chunkRefs ?? [];
         let chunkTexts: RecallChunkTexts | undefined;
         if (refs.length && options.chunks) {
           const read = new Map<string, { readonly text: string } | undefined>();

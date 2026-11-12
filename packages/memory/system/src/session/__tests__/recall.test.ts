@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { SessionEntry } from "@arnilo/prism";
-import { type MemoryObservation, type MemoryReflection, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "../../index.js";
+import { type MemoryObservation, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "../../index.js";
 import { recallObservationalMemory, recallObservationalMemoryBranchPage } from "../recall.js";
 import { OBSERVATIONS_DROPPED } from "../types.js";
 
@@ -21,10 +21,12 @@ const observation: MemoryObservation = {
   sourceEntryIds: [source.id, "missing"],
   tokenCount: 5,
 };
-const reflection: MemoryReflection = {
+const reflection: MemoryWmItem = {
   id: "bbbbbbbbbbbb",
-  content: "Prefer minimal package-only changes.",
-  supportingObservationIds: [observation.id],
+  kind: "summary",
+  text: "Prefer minimal package-only changes.",
+  relevance: "medium",
+  citedIds: [observation.id],
   tokenCount: 5,
 };
 
@@ -50,24 +52,23 @@ describe("observational memory recall", () => {
     assert.doesNotMatch(result.text, /secret-value/);
   });
 
-  it("observational_memory_recall_reflection_returns_dropped_supporting_observations", () => {
+  it("observational_memory_recall_wm_item_returns_dropped_cited_records", () => {
     const result = recallObservationalMemory(
       [
         source,
         custom("o", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
-        custom("r", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+        custom("r", { type: WM_RECORDED, items: [reflection] }),
         custom("d", { type: OBSERVATIONS_DROPPED, observationIds: [observation.id] }),
       ],
       reflection.id,
     );
 
     assert.equal(result.found, true);
-    assert.equal(result.kind, "reflection");
+    assert.equal(result.kind, "wm_item");
     assert.deepEqual(
-      result.supportingObservations?.map((item) => item.id),
+      result.citedObservations?.map((item) => item.id),
       [observation.id],
     );
-    assert.deepEqual(result.droppedSupportingObservationIds, [observation.id]);
     assert.match(result.text, /\(dropped\)/);
     assert.deepEqual(
       result.sourceEntries?.map((entry) => entry.id),
@@ -75,31 +76,31 @@ describe("observational memory recall", () => {
     );
   });
 
-  it("observational_memory_recall_reflection_returns_supporting_observation_sources", () => {
+  it("observational_memory_recall_wm_item_returns_cited_record_sources", () => {
     const result = recallObservationalMemory(
       [
         source,
         custom("o", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
-        custom("r", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+        custom("r", { type: WM_RECORDED, items: [reflection] }),
       ],
       reflection.id,
     );
 
     assert.equal(result.found, true);
-    assert.equal(result.kind, "reflection");
+    assert.equal(result.kind, "wm_item");
     assert.deepEqual(
-      result.supportingObservations?.map((item) => item.id),
+      result.citedObservations?.map((item) => item.id),
       [observation.id],
     );
-    assert.match(result.text, /Supporting observations/);
+    assert.match(result.text, /Cited STM records/);
     assert.match(result.text, /Source evidence/);
   });
 
-  it("invalidated source withholds the reflection even after a compaction drop", () => {
+  it("invalidated source withholds the WM item even after a compaction drop", () => {
     const entries = [
       source,
       custom("o", { type: OBSERVATIONS_RECORDED, observations: [observation] }),
-      custom("r", { type: REFLECTIONS_RECORDED, reflections: [reflection] }),
+      custom("r", { type: WM_RECORDED, items: [reflection] }),
       custom("d", { type: OBSERVATIONS_DROPPED, observationIds: [observation.id] }),
     ];
     const dropped = recallObservationalMemory(entries, reflection.id, [], { invalidatedIds: ["m1"] });

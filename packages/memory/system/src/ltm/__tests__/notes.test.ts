@@ -1,10 +1,9 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { createSessionEntry, type SessionEntry } from "@arnilo/prism";
-import { type MemoryObservation, type MemoryReflection, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "@arnilo/prism-memory-system";
-import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
+import { type MemoryObservation, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "@arnilo/prism-memory-system";
+import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { MEMORY_NOTE_KINDS } from "../types.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
@@ -25,10 +24,12 @@ const observation: MemoryObservation = {
   tokenCount: 5,
 };
 
-const reflection: MemoryReflection = {
+const reflection: MemoryWmItem = {
   id: "bbbbbbbbbbbb",
-  content: "Prefer the smallest retry budget",
-  supportingObservationIds: [observation.id],
+  kind: "summary",
+  text: "Prefer the smallest retry budget",
+  relevance: "medium",
+  citedIds: [observation.id],
   tokenCount: 7,
 };
 
@@ -36,7 +37,7 @@ function ledgerEntries(): readonly SessionEntry[] {
   const base = { sessionId: "s1", timestamp: observation.timestamp, kind: "custom" as const };
   return [
     createSessionEntry({ id: "m1", ...base, data: { type: OBSERVATIONS_RECORDED, observations: [observation] } }),
-    createSessionEntry({ id: "m2", ...base, data: { type: REFLECTIONS_RECORDED, reflections: [reflection] } }),
+    createSessionEntry({ id: "m2", ...base, data: { type: WM_RECORDED, items: [reflection] } }),
   ];
 }
 
@@ -55,7 +56,7 @@ function packageLogEntries(): readonly SessionEntry[] {
   });
   return [
     createSessionEntry({ id: "m1", ...base, data: state({ type: OBSERVATIONS_RECORDED, observations: [observation] }) }),
-    createSessionEntry({ id: "m2", ...base, data: state({ type: REFLECTIONS_RECORDED, reflections: [reflection] }) }),
+    createSessionEntry({ id: "m2", ...base, data: state({ type: WM_RECORDED, items: [reflection] }) }),
   ];
 }
 
@@ -160,12 +161,12 @@ describe("memory fabric notes", () => {
 
     const note = await fabric.remember({ kind: "procedure", reflectionId: reflection.id, tags: ["promoted"] });
     assert.equal(note.kind, "procedure");
-    assert.equal(note.content, reflection.content);
+    assert.equal(note.content, reflection.text);
     assert.deepEqual(note.promotedFrom, { reflectionId: reflection.id });
     assert.deepEqual(note.tags, ["promoted"]);
     assert.equal(note.ingestedAt.length > 0, true);
     assert.equal((await vectors.getByThread(scope)).length, 1);
-    const { hits } = await fabric.recall(reflection.content, { kinds: ["procedure"] });
+    const { hits } = await fabric.recall(reflection.text, { kinds: ["procedure"] });
     assert.deepEqual(
       hits.map((hit) => hit.id),
       [note.id],
@@ -182,7 +183,7 @@ describe("memory fabric notes", () => {
     const fabric = createLongTermMemory({ memory, observational: { session: { entries: async () => packageLogEntries() } } });
 
     const note = await fabric.remember({ kind: "procedure", reflectionId: reflection.id });
-    assert.equal(note.content, reflection.content);
+    assert.equal(note.content, reflection.text);
     assert.deepEqual(note.promotedFrom, { reflectionId: reflection.id });
     assert.equal((await vectors.getByThread(scope)).length, 1);
   });

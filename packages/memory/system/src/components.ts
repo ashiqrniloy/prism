@@ -13,9 +13,17 @@ export type MemorySystemComponent = (typeof MEMORY_SYSTEM_COMPONENTS)[number];
 /** Which components are on for one package instance. */
 export type MemorySystemComponents = Readonly<Record<MemorySystemComponent, boolean>>;
 
-export type MemorySystemErrorCode = "memory_system_component_missing" | "not_available_yet";
+export type MemorySystemErrorCode =
+  | "memory_system_component_missing"
+  | "not_available_yet"
+  | "component_off"
+  | "scope_too_large"
+  | "scope_empty";
 
-/** A named memory-system failure: a component whose dependency is off, or a service method whose plan has not landed. */
+/**
+ * A named memory-system failure: a component whose dependency is off, a service method whose plan has not landed or
+ * whose component is off, or a refused episode scope.
+ */
 export class MemorySystemError extends Error {
   constructor(
     readonly code: MemorySystemErrorCode,
@@ -59,9 +67,10 @@ function missing(component: MemorySystemComponent, needs: MemorySystemComponent)
  */
 export function memorySystemCapabilities(components: MemorySystemComponents): readonly Capability[] {
   const capabilities = new Set<Capability>();
-  // The session tiers: worker model calls, the toggle and ledger, the background pass, the compaction slot.
+  // The session tiers: worker model calls, the toggle and ledger, the background pass, the compaction slot, and host UI
+  // (`memory:scope { path }` asks the host to resolve the file).
   if (components.stm)
-    for (const capability of ["models", "session-state", "background", "slot:compaction"] as const) capabilities.add(capability);
+    for (const capability of ["models", "session-state", "background", "slot:compaction", "host-ui"] as const) capabilities.add(capability);
   // Long-term memory: worker and decision model calls, its session state, background passes, store credentials, host UI.
   if (components.ltm)
     for (const capability of ["models", "session-state", "background", "credentials", "host-ui"] as const) capabilities.add(capability);

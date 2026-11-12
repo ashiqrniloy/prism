@@ -112,7 +112,7 @@ function curate(request: ProviderRequest): ProviderEvent[] {
 function observe(request: ProviderRequest): ProviderEvent[] {
   const answered = request.messages.some((message) => message.role === "tool");
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];
-  const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] message:/.exec(prompt.text)?.[1] : undefined;
+  const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] (?:user|assistant|tool|system):/.exec(prompt.text)?.[1] : undefined;
   if (answered || !sourceId) return [providerDone()];
   return [
     providerToolCall(

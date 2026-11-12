@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import type { Message, ModelProvider, ProviderEvent, ProviderRequest, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import {
-  MemoryWorkerError as ObservationalMemoryError,
+  MEMORY_WORKER_UNKNOWN_TOOL,
   MemoryWorkerLimitError as ObservationalMemoryLimitError,
   runMemoryWorkerLoop,
 } from "@arnilo/prism-memory-system/core";
-import { type MemoryObservation } from "../../index.js";
+import { foldObservationalMemoryLedger, type MemoryObservation, OBSERVATIONS_RECORDED } from "../../index.js";
 import { runDropper } from "../workers/dropper.js";
-import { runReflector } from "../workers/reflector.js";
 import { runStm } from "../workers/stm.js";
+import { runWm } from "../workers/wm.js";
 import { clientFor } from "./helpers.js";
 
 const source: SessionEntry = {
@@ -82,7 +82,7 @@ describe("observational memory workers", () => {
     assert.deepEqual(parameters?.required, ["kind", "description", "sourceEntryIds"]);
   });
 
-  it("reflector_records_reflections_with_valid_support_ids_and_coverage_context", async () => {
+  it("wm_records_items_only_for_ids_in_the_batch", async () => {
     const observation: MemoryObservation = {
       id: "aaaaaaaaaaaa",
       kind: "statement",
@@ -92,23 +92,28 @@ describe("observational memory workers", () => {
       sourceEntryIds: ["m1"],
       tokenCount: 3,
     };
-    const reflections = await runReflector({
-      observations: [observation],
+    const { items, verdicts } = await runWm({
+      records: [observation],
+      ledger: foldObservationalMemoryLedger([{ type: OBSERVATIONS_RECORDED, observations: [observation] }]),
       client: clientFor(
         provider([
           providerToolCall(
-            toolCallContent("c1", "record_reflection", {
-              content: "Keep it optional.",
-              supportingObservationIds: [observation.id, "bbbbbbbbbbbb"],
+            toolCallContent("c1", "summarize", {
+              stmIds: [observation.id, "bbbbbbbbbbbb"],
+              text: "Keep it optional.",
+              relevance: "medium",
             }),
           ),
+          providerToolCall(toolCallContent("c2", "keep", { stmId: observation.id, reason: "later steps need it" })),
           providerDone(),
         ]),
       ),
       maxTurns: 1,
     });
-    assert.equal(reflections.length, 1);
-    assert.deepEqual(reflections[0]?.supportingObservationIds, [observation.id]);
+    assert.equal(items.length, 1);
+    assert.equal(items[0]?.kind, "event");
+    assert.deepEqual(items[0]?.citedIds, [observation.id]);
+    assert.equal(verdicts.get(observation.id)?.verdict, "keep");
   });
 
   it("dropper_records_safe_drops_after_pool_pressure", async () => {
@@ -237,6 +242,36 @@ describe("observational memory workers", () => {
     assert.equal(cut, 2);
   });
 
+  it("memory_worker_thinking_level_reaches_the_request_through_resolve", async () => {
+    // Plan 217 Task 6.1: a `provider/model` client carries no description, so `thinkingLevel: "none"` mapped to
+    // nothing. The worker now maps it against `client.resolve()`, the provider's description of the model.
+    const seen: ProviderRequest[] = [];
+    const bare = { provider: "described", model: "thinker" };
+    const described = {
+      ...bare,
+      capabilities: { thinkingLevels: ["none", "low", "high"] },
+      compat: { thinkingFamily: "reasoning_effort", thinkingValues: [false, "low", "high"] },
+    };
+    const provider: ModelProvider = {
+      id: "described",
+      async *generate(request) {
+        seen.push(request);
+        yield providerDone();
+      },
+    };
+    const client = {
+      model: bare,
+      resolve: async () => described,
+      generate: (request: never) => provider.generate({ ...(request as object), model: bare } as never),
+    };
+    await runStm({ entries: [source], client: client as never, maxTurns: 1, thinkingLevel: "none" });
+    assert.deepEqual(seen[0]?.options?.compat, { reasoning_effort: "none" });
+    // Without `resolve` (a hand-built client), the bare model maps nothing, as before.
+    seen.length = 0;
+    await runStm({ entries: [source], client: { model: bare, generate: client.generate } as never, maxTurns: 1, thinkingLevel: "none" });
+    assert.equal(seen[0]?.options?.compat?.reasoning_effort, undefined);
+  });
+
   it("worker_loop_still_fails_on_the_limits_by_default", async () => {
     // Exact-call workers (the LTM extractor, the wiki curator) keep the fail-closed contract.
     const tool: ToolDefinition = {
@@ -270,18 +305,108 @@ describe("observational memory workers", () => {
     );
   });
 
-  it("rejects unknown and limit failures with typed errors", async () => {
-    await assert.rejects(
-      runStm({
-        entries: [source],
-        client: clientFor(provider([providerToolCall(toolCallContent("c1", "unknown", {})), providerDone()])),
-        maxTurns: 1,
+  it("unknown_tool_call_is_refused_and_valid_calls_keep_their_effect", async () => {
+    // Plan 218 Task 1.1: a garbled name (gate M-1: `record_rection`) is answered with an error result, not a failed pass.
+    const executed: string[] = [];
+    const tool: ToolDefinition = {
+      name: "note",
+      description: "note",
+      parameters: { type: "object" },
+      execute: (_args, context) => {
+        executed.push(context.toolCallId);
+        return { toolCallId: context.toolCallId, name: "note", value: { ok: true } };
+      },
+    };
+    const requests: Message[][] = [];
+    const secret = "sk-secret-0123456789";
+    await runMemoryWorkerLoop({
+      client: clientFor({
+        id: "mock",
+        async *generate(request: ProviderRequest) {
+          requests.push([...request.messages]);
+          if (requests.length === 1) {
+            yield providerToolCall(toolCallContent("n1", "note", {}));
+            yield providerToolCall(toolCallContent("u1", `not_${secret}_${"x".repeat(200)}`, {}));
+          }
+          yield providerDone();
+        },
       }),
-      (error: unknown) =>
-        error instanceof ObservationalMemoryError &&
-        error.code === "unknown_tool" &&
-        /Unknown observational memory tool/.test(error.message),
+      system: "s",
+      prompt: "p",
+      tools: [tool],
+      maxTurns: 2,
+      maxErrorBytes: 64,
+      secrets: [secret],
+    });
+    assert.deepEqual(executed, ["n1"], "the valid call ran and the unknown one did not");
+    assert.equal(requests.length, 2, "the pass continued to a second turn");
+    const results = requests[1]!.flatMap((message) => message.content).filter((part) => part.type === "tool_result");
+    assert.equal(results.length, 2);
+    const refused = results.find((part) => part.type === "tool_result" && part.toolCallId === "u1");
+    assert.ok(refused && refused.type === "tool_result");
+    assert.equal(refused.error?.code, MEMORY_WORKER_UNKNOWN_TOOL);
+    assert.match(refused.error?.message ?? "", /is not a tool here; tools: note$/);
+    const replayed = JSON.stringify(requests[1]);
+    assert.ok(!replayed.includes(secret), "the unknown name is redacted");
+    assert.ok(Buffer.byteLength(refused.name, "utf8") <= 64, "the unknown name is truncated");
+  });
+
+  it("unknown_tool_calls_count_toward_the_caps", async () => {
+    let requests = 0;
+    const client = clientFor({
+      id: "mock",
+      async *generate() {
+        requests += 1;
+        yield providerToolCall(toolCallContent(`u${requests}a`, "record_rection", {}));
+        yield providerToolCall(toolCallContent(`u${requests}b`, "record_rection", {}));
+        yield providerDone();
+      },
+    });
+    const tools: ToolDefinition[] = [
+      {
+        name: "note",
+        description: "note",
+        parameters: { type: "object" },
+        execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "note" }),
+      },
+    ];
+    await runMemoryWorkerLoop({ client, system: "s", prompt: "p", tools, maxTurns: 16, maxToolCalls: 4, onToolCallLimit: "refuse" });
+    assert.equal(requests, 2, "a refusing worker ends at maxToolCalls");
+    requests = 0;
+    await assert.rejects(
+      runMemoryWorkerLoop({ client, system: "s", prompt: "p", tools, maxTurns: 16, maxToolCalls: 4 }),
+      (error: unknown) => error instanceof ObservationalMemoryLimitError && /total tool calls/.test(error.message),
     );
+    assert.equal(requests, 3, "a fail-closed worker still fails past maxToolCalls");
+  });
+
+  it("all_unknown_turn_is_not_clean", async () => {
+    let requests = 0;
+    const recorded = await runStm({
+      entries: [source],
+      client: clientFor({
+        id: "mock",
+        async *generate() {
+          requests += 1;
+          if (requests === 1) yield providerToolCall(toolCallContent("u1", "record_evnt", {}));
+          else
+            yield providerToolCall(
+              toolCallContent("c1", "record_event", {
+                kind: "statement",
+                description: "User wants package-only memory.",
+                sourceEntryIds: ["m1"],
+              }),
+            );
+          yield providerDone();
+        },
+      }),
+      maxTurns: 4,
+    });
+    assert.equal(requests, 2, "the pass got another turn after the unknown call, then ended on the clean one");
+    assert.equal(recorded.length, 1);
+  });
+
+  it("rejects limit failures with typed errors", async () => {
     // The tool-call limits are no longer failures for STM (plan 217 Task 6): see stm_refuses_calls_past_the_limits.
     await assert.rejects(
       runStm({

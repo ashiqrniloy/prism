@@ -8,14 +8,14 @@
  */
 import type { ContentBlock, Message, SessionEntry } from "@arnilo/prism";
 import { DEFAULT_MAX_ENTRY_TEXT_CHARS } from "@arnilo/prism-memory-system/core";
-import { activeObservations, activeReflections, foldObservationalMemoryLedger, recordData } from "../../session/ledger.js";
+import { activeObservations, activeWmItems, foldObservationalMemoryLedger, recordData } from "../../session/ledger.js";
 import {
   foldedMemoryFromEntry,
   isMemoryObservation,
-  isMemoryReflection,
+  isMemoryWmItem,
   isObservationsRecordedData,
-  isReflectionsRecordedData,
   isTaskStateRecordedData,
+  isWmRecordedData,
   type MemoryObservation,
 } from "../../session/types.js";
 
@@ -182,14 +182,14 @@ export function gatherConsolidationCandidates(
   for (const observation of relevant)
     candidate("observation", observation.description, evidenceForObservation(observation, recordEntry), {});
 
-  // --- reflections that no later record superseded.
-  for (const reflection of activeReflections(ledger)) {
-    const evidence = reflection.supportingObservationIds.flatMap((id) => {
+  // --- working-memory items no later pass superseded (the `reflection` source until plan 219 retires gather).
+  for (const item of activeWmItems(ledger)) {
+    const evidence = item.citedIds.flatMap((id) => {
       const observation = observationsById.get(id);
       return observation === undefined ? [] : evidenceForObservation(observation, recordEntry);
     });
-    const recordId = recordEntry.get(reflection.id);
-    candidate("reflection", reflection.content, [...evidence, ...(recordId === undefined ? [] : [recordId])], {});
+    const recordId = recordEntry.get(item.id);
+    candidate("reflection", item.text, [...evidence, ...(recordId === undefined ? [] : [recordId])], {});
   }
 
   return SOURCE_PRIORITY.flatMap((source) => buckets[source]).slice(0, maxCandidates);
@@ -220,10 +220,10 @@ function recordEntryIds(tail: readonly SessionEntry[]): ReadonlyMap<string, stri
     const data = recordData(entry);
     const folded = foldedMemoryFromEntry(entry);
     if (isObservationsRecordedData(data)) remember(data.observations.filter(isMemoryObservation), entry.id);
-    if (isReflectionsRecordedData(data)) remember(data.reflections.filter(isMemoryReflection), entry.id);
+    if (isWmRecordedData(data)) remember(data.items.filter(isMemoryWmItem), entry.id);
     if (folded) {
       remember(folded.observations.filter(isMemoryObservation), entry.id);
-      remember(folded.reflections.filter(isMemoryReflection), entry.id);
+      remember(folded.wmItems.filter(isMemoryWmItem), entry.id);
     }
   }
   return recordEntry;

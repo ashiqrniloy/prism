@@ -4,15 +4,19 @@ import {
   createAgent,
   createMemorySessionStore,
   createSessionEntry,
+  type JsonValue,
   providerDone,
   providerTextDelta,
   type SessionEntry,
 } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
 import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
-import { type MemoryObservation, type MemoryReflection, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "../../index.js";
+import { type MemoryObservation, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "../../index.js";
+import { createObservationalMemoryCommands } from "../commands.js";
+import { createObservationalCompactor } from "../compactor.js";
+import { resolveMemorySystemConfig } from "../config.js";
 import { createObservationalMemoryCompactor } from "../strategy.js";
-import { FOLDED_MEMORY } from "../types.js";
+import { FOLDED_MEMORY, OBSERVATIONS_TOMBSTONED, TASK_STATE_RECORDED } from "../types.js";
 
 const model = { provider: "mock", model: "demo" };
 const now = "2026-06-20T00:00:00.000Z";
@@ -38,10 +42,12 @@ function memoryEntries(): readonly SessionEntry[] {
     sourceEntryIds: ["m1"],
     tokenCount: 5,
   };
-  const reflection: MemoryReflection = {
+  const reflection: MemoryWmItem = {
     id: "bbbbbbbbbbbb",
-    content: "Use package-only strategy",
-    supportingObservationIds: [observation.id],
+    kind: "summary",
+    text: "Use package-only strategy",
+    relevance: "medium",
+    citedIds: [observation.id],
     tokenCount: 4,
   };
   return [
@@ -60,7 +66,7 @@ function memoryEntries(): readonly SessionEntry[] {
       parentId: "om1",
       timestamp: now,
       kind: "custom",
-      data: { type: REFLECTIONS_RECORDED, reflections: [reflection], coversUpToId: "om1" },
+      data: { type: WM_RECORDED, items: [reflection], coversUpToId: "om1" },
     }),
     message("m2", "recent one"),
     message("m3", "recent two"),
@@ -169,4 +175,84 @@ it("om_compaction_summary_ends_with_current_task", async () => {
   const result = await createObservationalMemoryCompactor({ secrets: ["secret-token"] }).compact({ sessionId: "s1", entries });
   assert.match(result.summary, /## Current task[\s\S]*Ship it$/);
   assert.doesNotMatch(result.summary, /secret-token/);
+});
+
+it("compaction_renders_wm_then_stm_then_task_state_without_model_call", async () => {
+  const observation = (id: string, description: string): MemoryObservation => ({
+    id,
+    kind: "result",
+    description,
+    timestamp: now,
+    relevance: "medium",
+    sourceEntryIds: ["m1"],
+    tokenCount: 5,
+    chunkRefs: [{ id: `${id}chunkchunkch`, sourceEntryId: "m1", sha256: "0".repeat(64), bytes: 30 }],
+  });
+  const wmItem = (id: string, kind: MemoryWmItem["kind"], text: string): MemoryWmItem => ({
+    id,
+    kind,
+    text,
+    relevance: "medium",
+    citedIds: ["aaaaaaaaaaaa"],
+    tokenCount: 4,
+  });
+  // Recorded in the worst order: event, summary, fact.
+  const records = [
+    {
+      type: OBSERVATIONS_RECORDED,
+      observations: [observation("aaaaaaaaaaaa", "Tombstoned record"), observation("bbbbbbbbbbbb", "Unprocessed record")],
+      coversUpToId: "m2",
+    },
+    {
+      type: WM_RECORDED,
+      items: [
+        wmItem("cccccccccccc", "event", "An event item"),
+        wmItem("dddddddddddd", "summary", "A summary item"),
+        wmItem("eeeeeeeeeeee", "fact", "A fact item"),
+      ],
+      processedIds: ["aaaaaaaaaaaa"],
+    },
+    { type: OBSERVATIONS_TOMBSTONED, observationIds: ["aaaaaaaaaaaa"], reason: "wm keep cccccccccccc", at: now },
+    {
+      type: TASK_STATE_RECORDED,
+      taskState: { id: "ffffffffffff", goal: "Ship the probe", nextSteps: ["Run it"], sourceEntryIds: ["m1"] },
+    },
+  ] as unknown as JsonValue[];
+  const log = { entries: () => records, append: async (_session: unknown, value: JsonValue) => void records.push(value) };
+  const config = resolveMemorySystemConfig({ enabled: true, context: { recentMessages: 2 } });
+  let fallbackCalls = 0;
+  const compactor = createObservationalCompactor({
+    log: log as never,
+    config,
+    // No model client reaches the compactor; the kernel default is the only other path and must stay unused.
+    fallback: {
+      name: "fallback",
+      compact: () => {
+        fallbackCalls += 1;
+        return { summary: "", entries: [] };
+      },
+    },
+    isEnabled: () => true,
+  });
+  const entries = [message("m1", "first"), message("m2", "second"), message("m3", "recent one"), message("m4", "recent two")];
+  const session = { id: "s1", entries: async () => entries } as never;
+  const result = await compactor.compact({ sessionId: "s1", session, entries, trigger: "manual" });
+  assert.equal(fallbackCalls, 0);
+  const order = ["A fact item", "A summary item", "An event item", "## Observations", "Unprocessed record", "## Current task", "Run it"];
+  const at = order.map((text) => result.summary.indexOf(text));
+  assert.equal(at.includes(-1), false, `every part renders: ${JSON.stringify(at)}`);
+  assert.deepEqual(
+    [...at].sort((a, b) => a - b),
+    at,
+    "WM (fact, summary, event), then unprocessed STM, then the task state",
+  );
+  assert.doesNotMatch(result.summary, /Tombstoned record/, "a processed record is off the STM surface");
+  assert.doesNotMatch(result.summary, /chunkchunk/, "the summary never carries chunk ids or text, only the marker");
+  const data = result.entries?.[0]?.data as { keepEntryIds: string[] };
+  assert.deepEqual(data.keepEntryIds, ["m3", "m4"], "context.recentMessages stay verbatim");
+  // The same rendering function serves memory:session:view.
+  const view = createObservationalMemoryCommands({ log, config } as never).find((command) => command.name === "memory:session:view")!;
+  const viewed = (await view.run({}, { session } as never)) as { text: string };
+  const body = (text: string) => text.slice(text.indexOf("## Working memory"));
+  assert.equal(body(viewed.text), body(result.summary));
 });

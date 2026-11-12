@@ -8,6 +8,7 @@ export type {
   MemorySessionConfig,
   MemorySessionConfigInput,
   MemorySystemRehearsalPolicy,
+  MemorySystemWmPolicy,
   MemorySystemWorkerConfig,
   ResolvedMemorySystemConfig,
   ResolvedWorkerSettings,
@@ -21,7 +22,7 @@ export { createMemoryId } from "./ids.js";
 export type { ObservationalMemoryLedger } from "./ledger.js";
 export {
   activeObservations,
-  activeReflections,
+  activeWmItems,
   foldObservationalMemoryLedger,
 } from "./ledger.js";
 export type {
@@ -35,24 +36,31 @@ export type {
   RecentMessageWindowOptions,
 } from "./recent-messages.js";
 export { buildObservationalMemoryContextBlocks } from "./recent-messages.js";
+export type { EpisodeScope, ScopeSetData } from "./scope.js";
+export { SCOPE_SET } from "./scope.js";
 export type {
   BoundaryRecordedData,
   FoldedMemoryDetails,
+  MemoryAttribution,
   MemoryBoundary,
   MemoryBoundaryReason,
   MemoryChunkRef,
   MemoryEventKind,
   MemoryId,
   MemoryObservation,
-  MemoryReflection,
   MemoryRelevance,
   MemoryTaskState,
   MemoryTombstone,
+  MemoryWmItem,
+  MemoryWmItemKind,
   ObservationsRecordedData,
   ObservationsRepeatedData,
   ObservationsTombstonedData,
-  ReflectionsRecordedData,
   TaskStateRecordedData,
+  WmBudgetUnmet,
+  WmCompression,
+  WmRecordedData,
+  WmRejudge,
 } from "./types.js";
 export {
   BOUNDARY_RECORDED,
@@ -60,6 +68,6 @@ export {
   OBSERVATIONS_RECORDED,
   OBSERVATIONS_REPEATED,
   OBSERVATIONS_TOMBSTONED,
-  REFLECTIONS_RECORDED,
   TASK_STATE_RECORDED,
+  WM_RECORDED,
 } from "./types.js";

@@ -22,9 +22,10 @@ import { createObservationalMemoryCommands } from "./commands.js";
 import { createObservationalCompactor } from "./compactor.js";
 import { resolveCompactAtThreshold, resolveMemorySystemConfig } from "./config.js";
 import { createCompactionContextCache } from "./context-cache.js";
-import { createObservationalFlush, type ObservationalWorkerKind } from "./flush.js";
-import { activeObservations } from "./ledger.js";
+import { createObservationalFlush, type ObservationalFlushResult, type ObservationalWorkerKind } from "./flush.js";
+import { activeObservations, activeWmItems } from "./ledger.js";
 import { createObservationalRecallTool } from "./recall-tool.js";
+import { createScopeStore, type PreparedScope } from "./scope.js";
 import {
   initialObservationalMemoryState,
   ledgerOf,
@@ -35,7 +36,14 @@ import {
 } from "./state.js";
 import { SESSION_COMPACTED } from "./types.js";
 
-export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, components: MemorySystemComponents): void {
+/** What the session tiers hand the `memory.system` service. */
+export interface SessionTiers {
+  setScope(session: SessionContext, text: string): Promise<PreparedScope>;
+  /** Runs one WM pass now, below the trigger (`rehearse({ only: "wm" })`). `skipped` when a pass is in flight. */
+  runWm(session: SessionContext, signal?: AbortSignal): Promise<ObservationalFlushResult>;
+}
+
+export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, components: MemorySystemComponents): SessionTiers {
   const config = resolveMemorySystemConfig(prism.config ?? {}, components);
   const state = prism.state.session<JsonObject>(SESSION_STATE_KEY, initialObservationalMemoryState(config.enabled));
   const log = prism.state.log<JsonValue>(SESSION_LEDGER_KEY);
@@ -48,7 +56,7 @@ export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, compone
       enabled: read(session).enabled,
       contextMode: contextCache.mode(session),
       observations: ledger.observations.length,
-      reflections: ledger.reflections.length,
+      wmItems: ledger.wmItems.length,
       inFlight: extra.inFlight,
       ...(extra.lastError === undefined ? {} : { lastError: extra.lastError }),
     });
@@ -60,11 +68,21 @@ export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, compone
   // The chunk store opens at first use: nothing is opened until a pass stores a chunk or a fork carries refs.
   const chunks = createChunkStoreHandle(config.stm.chunkStore, () => prism.services.consume<ChunkStore>(MEMORY_CHUNK_STORE_SERVICE));
   prism.onDispose(() => chunks.close());
+  // The episode scope (plan 218 Task 1): set by `memory:scope`, `scope.text` or `memory.system.setScope()`; read by the
+  // WM and Rehearsal requests only.
+  const scope = createScopeStore({
+    state,
+    log,
+    maxBytes: config.scope.maxBytes,
+    ...(config.scope.text ? { fallback: config.scope.text } : {}),
+    secretsFor: (session) => secrets.get(session.id),
+  });
   const flush = createObservationalFlush({
     log,
     config,
     chunks,
     readState: read,
+    scopeFor: (session) => scope.get(session),
     secretsFor: (session) => secrets.get(session.id),
     clientFor: (session, kind) => clientFor(prism, config, read(session), session, kind),
     onStatus: status,
@@ -75,17 +93,18 @@ export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, compone
     prism.tools.register(createObservationalRecallTool({ chunks }), { when: (session) => read(session).enabled });
   }
 
-  // --- fork referrers (I3): a fork or resumed session adds its own referrer for every chunk its active records cite,
-  // so a drop in the parent cannot delete a chunk the child still holds. Queued now, so it precedes any later drop.
+  // --- fork referrers (I3): a fork or resumed session adds its own referrer for every chunk its active STM records and
+  // WM items cite, so a drop in the parent cannot delete a chunk the child still holds. Queued now, so it precedes any
+  // later drop.
   prism.hooks.on("session.opened", (event, context) => {
     const session = context.session;
     if (!session || event.restored !== true) return;
-    const ops: ChunkOp[] = activeObservations(ledgerOf(log.entries(session))).flatMap((record) =>
-      (record.chunkRefs ?? []).map((ref) => ({
-        op: "ref" as const,
-        id: ref.id,
-        by: { kind: "stm" as const, id: record.id, sessionId: session.id },
-      })),
+    const ledger = ledgerOf(log.entries(session));
+    const ops: ChunkOp[] = [
+      ...activeObservations(ledger).map((record) => ({ kind: "stm" as const, record })),
+      ...activeWmItems(ledger).map((record) => ({ kind: "wm" as const, record })),
+    ].flatMap(({ kind, record }) =>
+      (record.chunkRefs ?? []).map((ref) => ({ op: "ref" as const, id: ref.id, by: { kind, id: record.id, sessionId: session.id } })),
     );
     if (ops.length)
       void chunks
@@ -162,6 +181,7 @@ export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, compone
     state,
     config,
     flush,
+    scope,
     contextMode: async (session) => {
       await contextCache.blocks(session);
       return contextCache.mode(session);
@@ -170,6 +190,10 @@ export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, compone
   })) {
     prism.commands.register(command);
   }
+  return {
+    setScope: (session, text) => scope.set(session, text),
+    runWm: (session, signal) => flush.flush(session, { forceWm: true, ...(signal ? { signal } : {}) }),
+  };
 }
 
 /** Sessions whose secret set is kept; the oldest is forgotten past this many. */
@@ -204,7 +228,7 @@ function clientFor(
   const ref: ModelRef | undefined =
     kind === "observer"
       ? (storedModelRef(sessionState.stmModel) ?? config.stm.model)
-      : kind === "reflector"
+      : kind === "wm"
         ? (storedModelRef(sessionState.wmModel) ?? config.wm.model)
         : config.rehearsal.model;
   return prism.models.client(ref ?? session.model);

@@ -5,14 +5,17 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ContextDraft, HookContext } from "@arnilo/prism";
-import { createAgent, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 import { runPrefixStabilityConformance } from "@arnilo/prism/testing/prefix-stability-conformance";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import memorySystem, { createLongTermMemory, createMemory, exportMemoryOkf, importMemoryOkf } from "../../index.js";
+import { SESSION_LEDGER_KEY } from "../../session/state.js";
+import { WM_RECORDED } from "../../session/types.js";
 import { createFabricContext } from "../context.js";
 import { createFabricRules, DEFAULT_RULES_OPTIONS } from "../delivery/rules.js";
 import { createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, memoryRetractionVersion } from "../directory.js";
-import memorySystem, { createMemory, createLongTermMemory, exportMemoryOkf, importMemoryOkf } from "../../index.js";
 import { MEMORY_NOTE_METADATA_KEY } from "../types.js";
 
 // Plan 188.5 Task 4: the prompt-cache parity claim (plan 184) has to hold for the fabric's own blocks.
@@ -353,3 +356,94 @@ it("revalidation_abort_propagates", async () => {
   controller.abort();
   await assert.rejects(mine.projection.build({ messages: [] }, { sessionId: "s", signal: controller.signal } as HookContext));
 });
+
+// Plan 218 Task 4 (I7, M4): the session tiers change the prompt only at compaction. Between compactions newer material
+// stays in the transcript tail, so WM passes leave the prefix the provider caches byte-identical.
+it("prefix_identical_between_compactions_across_wm_passes", async () => {
+  const requests: ProviderRequest[] = [];
+  const store = createMemorySessionStore();
+  const main = {
+    id: "main",
+    async *generate(request: ProviderRequest) {
+      requests.push(request);
+      yield providerTextDelta("ok");
+      yield providerDone();
+    },
+  };
+  // One worker model: STM records one event per new message; WM keeps every record it is sent.
+  const worker = {
+    id: "worker",
+    async *generate(request: ProviderRequest) {
+      const prompt = request.messages.find((message) => message.role === "user")?.content[0];
+      const text = prompt?.type === "text" ? prompt.text : "";
+      if (!request.messages.some((message) => message.role === "tool")) {
+        if (request.tools?.some((tool) => tool.name === "record_event")) {
+          const sourceId = /\[[^\]]+\] \[([^\]]+)\] (?:user|assistant|tool|system):/.exec(text)?.[1];
+          if (sourceId)
+            yield providerToolCall(
+              toolCallContent("c1", "record_event", {
+                kind: "statement",
+                description: `Observed ${sourceId}`,
+                relevance: "high",
+                sourceEntryIds: [sourceId],
+              }),
+            );
+        } else if (request.tools?.some((tool) => tool.name === "keep")) {
+          const batch = text.slice(text.indexOf("## New STM records"));
+          for (const [index, match] of [...batch.matchAll(/^- \[([a-f0-9]{12})\]/gm)].entries())
+            yield providerToolCall(toolCallContent(`k${index}`, "keep", { stmId: match[1]!, reason: "needed" }));
+        }
+      }
+      yield providerDone();
+    },
+  };
+  const agent = await createAgent({
+    model: { provider: "main", model: "main-model", limits: { contextWindow: 1_000_000, maxOutputTokens: 0 } },
+    packages: [
+      providerPackage("main-provider", [main]),
+      providerPackage("worker-provider", [worker]),
+      memorySystem({
+        enabled: true,
+        stm: { model: "worker/w", triggerTokens: 1 },
+        wm: { model: "worker/w", triggerTokens: WM_TRIGGER_TOKENS },
+      }),
+    ],
+    slots: { store },
+  });
+  try {
+    const session = await agent.session({ id: "s", create: true });
+    for (let turn = 0; turn < 20; turn += 1) {
+      await session.run(`turn ${turn}`);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const entries = await store.list("s");
+    assert.equal(
+      entries.some((entry) => entry.kind === "compaction"),
+      false,
+      "no compaction ran",
+    );
+    const ledger = entries
+      .filter((entry) => entry.kind === "package_state")
+      .map((entry) => JSON.stringify(entry))
+      .join("\n");
+    const wmPasses = ledger.split(WM_RECORDED).length - 1;
+    assert.equal(wmPasses, 3, `three WM passes ran (ledger ${SESSION_LEDGER_KEY})`);
+    assert.equal((ledger.match(/"kind":"event"/g) ?? []).length, 18, "the passes kept 18 records as WM events");
+    assert.equal(requests.length, 20);
+    const blocks = (request: ProviderRequest) => JSON.stringify({ context: request.context ?? [], tools: request.tools ?? [] });
+    assert.equal(new Set(requests.map(blocks)).size, 1, "every turn sends the same context blocks and tools");
+    // The transcript only grows at its tail: each request's messages start with the previous request's, byte for byte.
+    for (let index = 1; index < requests.length; index += 1) {
+      const before = requests[index - 1]!.messages;
+      const after = requests[index]!.messages;
+      assert.ok(after.length > before.length, "newer material stays in the transcript tail");
+      assert.equal(JSON.stringify(after.slice(0, before.length)), JSON.stringify(before), `turn ${index} keeps the prefix`);
+    }
+    await session.close();
+  } finally {
+    await agent.dispose();
+  }
+});
+
+/** One 13-token STM event per turn: a pass every 6 turns, three in 20. */
+const WM_TRIGGER_TOKENS = 78;

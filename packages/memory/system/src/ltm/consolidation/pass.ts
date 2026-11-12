@@ -6,10 +6,9 @@
  * leaves the material for the next trigger.
  */
 import type { ModelClient, SecretRedactor, SessionEntry } from "@arnilo/prism";
-import { type Memory, type MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
-import { activeReflections, foldObservationalMemoryLedger, recordData } from "../../session/ledger.js";
+import { type Memory, type MemoryVectorRecord, type ResolvedMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
+import { activeWmItems, foldObservationalMemoryLedger, recordData } from "../../session/ledger.js";
 import { isTaskStateRecordedData } from "../../session/types.js";
-import { type ResolvedMemoryWorkerLimits } from "@arnilo/prism-memory-system/core";
 import type { FabricConsolidationReport, ResolvedPromoteConfig } from "../promote.js";
 import { type MemoryFabric, type MemoryFabricScopeBinding, type MemoryNoteScope, parseMemoryNoteMetadata } from "../types.js";
 import { type ConsolidationExtraction, type ExtractedNote, extractConsolidationNotes } from "./extract.js";
@@ -81,12 +80,12 @@ export interface ConsolidationPassResult {
 
 const PASS_CANDIDATE_LIMIT = 256;
 
-/** True when OM appended a reflection, superseded one, or a task-state decision after `cursor`. */
+/** True when WM appended an item, superseded one, or STM a task-state decision after `cursor`. */
 export function hasNewObservationalMaterial(entries: readonly SessionEntry[], cursor: string | undefined): boolean {
   const tail = entriesAfter(entries, cursor);
   const ledger = foldObservationalMemoryLedger(tail);
-  if (activeReflections(ledger).length > 0) return true;
-  if ((ledger.supersededReflectionIds?.length ?? 0) > 0) return true;
+  if (activeWmItems(ledger).length > 0) return true;
+  if ((ledger.supersededWmItemIds?.length ?? 0) > 0) return true;
   return tail.some((entry) => {
     const data = recordData(entry);
     return isTaskStateRecordedData(data) && (data.taskState.decisions?.length ?? 0) > 0;
@@ -167,8 +166,8 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
   const bindings = scopesOf(input);
   const retire: { readonly id: string; readonly level?: MemoryNoteScope }[] = [];
 
-  // A superseded reflection either retires its note or marks an edited verified note for re-extraction.
-  const superseded = new Set(ledger.supersededReflectionIds ?? []);
+  // A superseded WM item either retires the note promoted from it or marks an edited verified note for re-extraction.
+  const superseded = new Set(ledger.supersededWmItemIds ?? []);
   if (superseded.size > 0) {
     for (const binding of bindings) {
       const { supersededNotes } = await input.lifecycleFor(binding.memory).handleSupersededReflections(superseded, {

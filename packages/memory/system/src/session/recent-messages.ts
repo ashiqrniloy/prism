@@ -64,7 +64,7 @@ export function buildObservationalMemoryContextBlocks(
   const secrets = options.secrets ?? [];
   const blocks: ContextBlock[] = [];
   blocks.push(
-    ...memoryBlocksFrom(projection.reflections, projection.observations, {
+    ...memoryBlocksFrom(projection.wmItems, projection.observations, {
       secrets,
       advertiseRecall: options.advertiseRecall,
       taskState: projection.taskState,

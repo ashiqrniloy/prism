@@ -33,8 +33,15 @@ import {
   HARD_MAX_CHUNK_BYTES,
   HARD_MAX_CHUNKS_PER_EVENT,
 } from "../chunks.js";
+import { DEFAULT_SCOPE_MAX_BYTES, type EpisodeScope, HARD_MAX_SCOPE_BYTES, prepareScope } from "./scope.js";
 
 export const DEFAULT_STM_TRIGGER_TOKENS = 10_000;
+/**
+ * The reasoning level of the STM, WM and Rehearsal worker calls when a section names none (plan 218 Task 6, gate M-2):
+ * recording and judging records needs little reasoning, and a model's own default (`high` on some) spends the output
+ * limit before any verdict. A model without reasoning levels ignores it.
+ */
+export const DEFAULT_MEMORY_WORKER_THINKING_LEVEL = "low";
 /** Token budget of the recent-record index an STM request carries (plan 217 Task 1). */
 export const DEFAULT_STM_CONTEXT_TOKENS = 4_000;
 /** Active STM records habituation compares a new event against (plan 217 Task 3). */
@@ -42,7 +49,17 @@ export const DEFAULT_STM_HABITUATION_WINDOW = 50;
 export const HARD_MAX_STM_HABITUATION_WINDOW = 1_000;
 /** Minutes of silence before a user turn that make it an event boundary (plan 217 Task 3). */
 export const DEFAULT_STM_BOUNDARY_GAP_MINUTES = 10;
-export const DEFAULT_WM_OBSERVATION_TOKENS = 20_000;
+/** STM surface tokens (records WM has not given a verdict) that trigger a WM pass (plan 218 Task 2). */
+export const DEFAULT_WM_TRIGGER_TOKENS = 10_000;
+/**
+ * STM record tokens one WM pass is sent. Sized so a batch's verdicts (one tool call each, about 50 output tokens) fit one
+ * model's output cap and the worker's call limits: gate M-1 saw two answer models write nothing on about 22k tokens.
+ */
+export const DEFAULT_WM_BATCH_TOKENS = 3_000;
+/** The share of a batch's surface tokens WM's items aim at (plan 218 Task 3): pressure after relevance, never a cut of protected records. */
+export const DEFAULT_WM_TARGET_RATIO = 0.2;
+/** Tombstoned STM record tokens the first WM pass after a scope change is also sent for re-judgment (plan 218 Task 4). */
+export const DEFAULT_WM_REJUDGE_TOKENS = 8_000;
 export const DEFAULT_REHEARSAL_TARGET_TOKENS = 20_000;
 export const DEFAULT_CONTEXT_RECENT_MESSAGES = 8;
 export const DEFAULT_COMPACT_AT_RATIO = 0.6;
@@ -52,6 +69,8 @@ export const OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
 export const OBSERVATIONS_POOL_TARGET_TOKENS = 10_000;
 
 export type MemorySystemRehearsalPolicy = "model" | "lowest-relevance";
+/** `"model"` asks the WM model for verdicts; `"deterministic"` keeps protected records and outcomes and discards the lowest-relevance oldest to the target, with no call. */
+export type MemorySystemWmPolicy = "model" | "deterministic";
 
 /** Relative compaction gate: `ratio` of the model's input cap, capped by `maxTokens` when set. */
 export interface MemorySystemCompactAt {
@@ -69,7 +88,7 @@ export interface MemorySystemWorkerConfig {
   readonly model?: ModelRef;
   /** Text appended to the worker's default prompt. It cannot change the worker's tool set. */
   readonly instruction?: string;
-  /** Reasoning level for the worker's model calls (`none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`). */
+  /** Reasoning level for the worker's model calls (`none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`). Default `low`. */
   readonly thinkingLevel?: string;
 }
 
@@ -78,8 +97,8 @@ export interface MemorySystemWorkerConfig {
  * the package registers everything, stays off until `memory:session` turns it on, and runs its workers
  * on the session's own model.
  *
- * `stm` records events (plan 217); `wm` runs today's reflector and `rehearsal` today's dropper,
- * unchanged, until plans 218–219 redesign them.
+ * `stm` records events (plan 217); `wm` gives verdicts on them (plan 218); `rehearsal` runs today's dropper,
+ * unchanged, until plan 219 redesigns it.
  */
 export interface MemorySessionConfig {
   /** Starting value of the per-session toggle. Default `false`; `memory:session` flips it per session. */
@@ -114,8 +133,16 @@ export interface MemorySessionConfig {
     readonly boundaryGapMinutes?: number;
   };
   readonly wm?: MemorySystemWorkerConfig & {
-    /** Unreflected observation tokens that trigger a working-memory pass. Default 20_000. */
-    readonly observationTokens?: number;
+    /** STM surface tokens (records without a WM verdict) that trigger a working-memory pass. Default 10_000. */
+    readonly triggerTokens?: number;
+    /** STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass. Default 3_000. */
+    readonly batchTokens?: number;
+    /** Items' tokens over the processed records' tokens a pass aims at, as pressure (protected records are never cut). Default 0.2. */
+    readonly targetRatio?: number;
+    /** Tombstoned record tokens the first WM pass after a scope change re-judges (discarded records whose chunks still live). Default 8_000. */
+    readonly rejudgeTokens?: number;
+    /** `"model"` (default) or `"deterministic"` (no model call). */
+    readonly policy?: MemorySystemWmPolicy;
   };
   readonly rehearsal?: MemorySystemWorkerConfig & {
     /** Active-observation token budget rehearsal approaches. Default 20_000. */
@@ -141,6 +168,16 @@ export interface MemorySessionConfig {
   readonly worker?: MemoryWorkerLimitOptions;
   /** Expose the `recall` tool while the session's toggle is on. Default `true`. */
   readonly recall?: boolean;
+  /**
+   * The episode scope (plan 218 Task 1): what the current body of work must achieve, read by WM and Rehearsal only.
+   * `text` is every session's scope until `memory:scope` or `memory.system.setScope()` replaces or clears it.
+   */
+  readonly scope?: {
+    /** The starting scope text, redacted and bounded like a set. */
+    readonly text?: string;
+    /** Bytes one scope may take. Longer text fails with `scope_too_large`. Default 32_768, at most 49_152. */
+    readonly maxBytes?: number;
+  };
 }
 
 const memorySystemSchema: JsonSchema = {
@@ -242,14 +279,42 @@ const memorySystemSchema: JsonSchema = {
     wm: {
       type: "object",
       additionalProperties: false,
-      description: "Working-memory pass (today's reflector): what triggers it and which model runs it.",
+      description: "Working-memory pass: verdicts on STM records, what triggers it and which model runs it.",
       properties: {
         ...workerProperties("WM"),
-        observationTokens: {
+        triggerTokens: {
           type: "integer",
           minimum: 1,
-          default: DEFAULT_WM_OBSERVATION_TOKENS,
-          description: "Unreflected observation tokens that trigger a working-memory pass.",
+          default: DEFAULT_WM_TRIGGER_TOKENS,
+          description: "STM surface tokens (records without a WM verdict) that trigger a working-memory pass.",
+        },
+        batchTokens: {
+          type: "integer",
+          minimum: 1,
+          default: DEFAULT_WM_BATCH_TOKENS,
+          description: "STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass.",
+        },
+        targetRatio: {
+          type: "number",
+          minimum: 0.01,
+          maximum: 1,
+          default: DEFAULT_WM_TARGET_RATIO,
+          description:
+            "Items' tokens over the processed records' tokens a WM pass aims at: pressure after relevance; protected records are never cut.",
+        },
+        rejudgeTokens: {
+          type: "integer",
+          minimum: 0,
+          default: DEFAULT_WM_REJUDGE_TOKENS,
+          description:
+            "Tokens of discarded STM records (chunks still live) the first WM pass after a scope change is also sent, so it may keep them back; 0 turns re-judgment off.",
+        },
+        policy: {
+          type: "string",
+          enum: ["model", "deterministic"],
+          default: "model",
+          description:
+            '"model" asks the WM model; "deterministic" keeps protected records and outcomes and discards the lowest-relevance oldest to the target, with no model call.',
         },
       },
     },
@@ -404,6 +469,24 @@ const memorySystemSchema: JsonSchema = {
       default: true,
       description: "Expose the recall tool while the session's toggle is on.",
     },
+    scope: {
+      type: "object",
+      additionalProperties: false,
+      description: "The episode scope: what the current body of work must achieve. Read by WM and Rehearsal only, never STM.",
+      properties: {
+        text: {
+          type: "string",
+          description: "Every session's starting scope until memory:scope or memory.system.setScope() replaces or clears it.",
+        },
+        maxBytes: {
+          type: "integer",
+          minimum: 1,
+          maximum: HARD_MAX_SCOPE_BYTES,
+          default: DEFAULT_SCOPE_MAX_BYTES,
+          description: "Bytes one scope may take; longer text fails with scope_too_large and is never truncated.",
+        },
+      },
+    },
   },
 };
 
@@ -428,7 +511,8 @@ function workerProperties(label: string): Record<string, JsonSchema> {
     thinkingLevel: {
       type: "string",
       enum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
-      description: `Reasoning level for the ${label} worker's model calls.`,
+      default: DEFAULT_MEMORY_WORKER_THINKING_LEVEL,
+      description: `Reasoning level for the ${label} worker's model calls. Default low; a model without reasoning levels ignores it.`,
     },
   };
 }
@@ -441,7 +525,10 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "stm.habituation.windowEvents",
   "stm.boundaryGapMinutes",
   "stm.thinkingLevel",
-  "wm.observationTokens",
+  "wm.triggerTokens",
+  "wm.batchTokens",
+  "wm.targetRatio",
+  "wm.rejudgeTokens",
   "wm.thinkingLevel",
   "rehearsal.targetTokens",
   "rehearsal.thinkingLevel",
@@ -459,6 +546,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "worker.maxResultBytes",
   "worker.maxMessageBytes",
   "worker.maxErrorBytes",
+  "scope.maxBytes",
 ]);
 
 /** Tag every field with its stability tier; `validateJsonSchema` ignores the extension keyword. */
@@ -507,8 +595,15 @@ export interface ResolvedMemorySystemConfig {
     readonly boundaries: boolean;
     readonly boundaryGapMinutes: number;
   };
-  /** `enabled` is the `wm` component: off, no reflector pass runs. */
-  readonly wm: ResolvedWorkerSettings & { readonly enabled: boolean; readonly observationTokens: number };
+  /** `enabled` is the `wm` component: off, no WM pass runs. */
+  readonly wm: ResolvedWorkerSettings & {
+    readonly enabled: boolean;
+    readonly triggerTokens: number;
+    readonly batchTokens: number;
+    readonly targetRatio: number;
+    readonly rejudgeTokens: number;
+    readonly policy: MemorySystemWmPolicy;
+  };
   /** `enabled` is the `rehearsal` component: off, no dropper pass runs. */
   readonly rehearsal: ResolvedWorkerSettings & {
     readonly enabled: boolean;
@@ -517,6 +612,11 @@ export interface ResolvedMemorySystemConfig {
   };
   readonly context: { readonly recentMessages: number; readonly compactAt: ResolvedCompactAt; readonly trigger?: CompactionTrigger };
   readonly worker: MemoryWorkerLimitOptions;
+  /**
+   * The episode scope settings. `text` is the validated config scope; it is redacted again with the session's secret
+   * set on every worker call, since no secret set exists at load.
+   */
+  readonly scope: { readonly maxBytes: number; readonly text?: EpisodeScope };
 }
 
 export interface ResolvedCompactAt {
@@ -538,10 +638,21 @@ const RETIRED_CONFIG_KEYS: Readonly<Record<string, string>> = {
   dropper: "rehearsal",
 };
 
+/** Section keys plan 218 Task 2 retired, with their successors. */
+const RETIRED_SECTION_KEYS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  wm: { observationTokens: "wm.triggerTokens (STM surface tokens; default 10_000)" },
+};
+
 /** Fails closed on a retired key, naming its successor. */
 export function assertNoRetiredMemorySystemKeys(config: object): void {
   for (const [key, successor] of Object.entries(RETIRED_CONFIG_KEYS)) {
     if (key in config) throw new TypeError(`memory-system config: "${key}" was renamed; use "${successor}"`);
+  }
+  for (const [section, keys] of Object.entries(RETIRED_SECTION_KEYS)) {
+    const value = (config as Record<string, unknown>)[section];
+    if (typeof value !== "object" || value === null) continue;
+    for (const [key, successor] of Object.entries(keys))
+      if (key in value) throw new TypeError(`memory-system config: "${section}.${key}" was retired; use "${successor}"`);
   }
 }
 
@@ -549,7 +660,7 @@ function workerSettings(value: MemorySystemWorkerConfig | undefined): ResolvedWo
   return {
     ...(value?.model === undefined ? {} : { model: value.model }),
     ...(value?.instruction === undefined || value.instruction.trim() === "" ? {} : { instruction: value.instruction }),
-    ...(value?.thinkingLevel === undefined ? {} : { thinkingLevel: value.thinkingLevel }),
+    thinkingLevel: value?.thinkingLevel ?? DEFAULT_MEMORY_WORKER_THINKING_LEVEL,
   };
 }
 
@@ -575,10 +686,12 @@ export function resolveMemorySystemConfig(
     wm: section(input.wm),
     rehearsal: section(input.rehearsal),
   };
-  if (
-    (config.rehearsal?.targetTokens ?? DEFAULT_REHEARSAL_TARGET_TOKENS) < (config.wm?.observationTokens ?? DEFAULT_WM_OBSERVATION_TOKENS)
-  ) {
-    throw new Error("rehearsal.targetTokens must be >= wm.observationTokens");
+  if ((config.rehearsal?.targetTokens ?? DEFAULT_REHEARSAL_TARGET_TOKENS) < (config.wm?.triggerTokens ?? DEFAULT_WM_TRIGGER_TOKENS)) {
+    throw new Error("rehearsal.targetTokens must be >= wm.triggerTokens");
+  }
+  const targetRatio = config.wm?.targetRatio;
+  if (targetRatio !== undefined && !(Number.isFinite(targetRatio) && targetRatio >= 0.01 && targetRatio <= 1)) {
+    throw new Error("wm.targetRatio must be a number from 0.01 to 1");
   }
   return {
     enabled: config.enabled === true,
@@ -600,7 +713,11 @@ export function resolveMemorySystemConfig(
     wm: {
       ...workerSettings(config.wm),
       enabled: components.wm,
-      observationTokens: config.wm?.observationTokens ?? DEFAULT_WM_OBSERVATION_TOKENS,
+      triggerTokens: config.wm?.triggerTokens ?? DEFAULT_WM_TRIGGER_TOKENS,
+      batchTokens: config.wm?.batchTokens ?? DEFAULT_WM_BATCH_TOKENS,
+      targetRatio: config.wm?.targetRatio ?? DEFAULT_WM_TARGET_RATIO,
+      rejudgeTokens: config.wm?.rejudgeTokens ?? DEFAULT_WM_REJUDGE_TOKENS,
+      policy: config.wm?.policy === "deterministic" ? "deterministic" : "model",
     },
     rehearsal: {
       ...workerSettings(config.rehearsal),
@@ -615,7 +732,20 @@ export function resolveMemorySystemConfig(
       ...(config.context?.trigger === undefined ? {} : { trigger: assertCompactionTrigger(config.context.trigger) }),
     },
     worker: { ...config.worker },
+    scope: resolveScopeConfig(config.scope),
   };
+}
+
+/** A config scope over its cap fails the load with `scope_too_large`, like a set. */
+function resolveScopeConfig(input: MemorySessionConfig["scope"]): ResolvedMemorySystemConfig["scope"] {
+  const maxBytes = input?.maxBytes ?? DEFAULT_SCOPE_MAX_BYTES;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > HARD_MAX_SCOPE_BYTES)
+    throw new RangeError(`scope.maxBytes must be a positive integer at most ${HARD_MAX_SCOPE_BYTES}`);
+  if (input?.text === undefined || input.text.trim() === "") return { maxBytes };
+  // The config scope's time is fixed, so the stored hash and record are the same on every load.
+  const prepared = prepareScope(input.text, { maxBytes, at: "1970-01-01T00:00:00.000Z" });
+  if (!prepared.ok) throw new RangeError(`${prepared.reason}: ${prepared.text}`);
+  return { maxBytes, text: prepared.scope };
 }
 
 function resolveCompactAt(value: MemorySystemCompactAt | undefined): ResolvedCompactAt {

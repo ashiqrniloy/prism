@@ -5,41 +5,46 @@ import {
   foldedMemoryFromEntry,
   isBoundaryRecordedData,
   isMemoryObservation,
-  isMemoryReflection,
+  isMemoryWmItem,
   isObservationsDroppedData,
   isObservationsRecordedData,
   isObservationsRepeatedData,
   isObservationsTombstonedData,
-  isReflectionsRecordedData,
   isTaskStateRecordedData,
+  isWmRecordedData,
   type MemoryBoundary,
   type MemoryObservation,
-  type MemoryReflection,
   type MemoryTaskState,
   type MemoryTombstone,
+  type MemoryWmItem,
   type ObservationsDroppedData,
   type ObservationsRecordedData,
   type ObservationsRepeatedData,
   type ObservationsTombstonedData,
-  type ReflectionsRecordedData,
   type TaskStateRecordedData,
+  type WmBudgetUnmet,
+  type WmRecordedData,
 } from "./types.js";
 
 export interface ObservationalMemoryLedger {
   readonly taskState?: MemoryTaskState;
   readonly observations: readonly MemoryObservation[];
-  readonly reflections: readonly MemoryReflection[];
+  /** Every working-memory item recorded (plan 218 Task 2); `activeWmItems` leaves out the superseded ones. */
+  readonly wmItems: readonly MemoryWmItem[];
   readonly droppedObservationIds: readonly string[];
   /** Why each dropped record left: `superseded by <id>`, or `dropped` (rehearsal or compaction). Read by `recall`. */
   readonly dropReasons?: Readonly<Record<string, string>>;
-  /** Records whose surface was removed (plan 218's WM), by id. They leave the active set; `recall` still finds them. */
+  /** Records whose surface WM removed (each got a verdict), by id. They leave the active set; `recall` still finds them. */
   readonly tombstones?: Readonly<Record<string, MemoryTombstone>>;
   /** Event boundary markers in ledger order, one per `(reason, entryId)` (plan 217 Task 3; plan 218's WM trigger reads them). */
   readonly boundaries?: readonly MemoryBoundary[];
-  readonly consumedObservationIds?: readonly string[];
-  readonly supersededReflectionIds?: readonly string[];
+  /** WM items a later pass superseded by name. */
+  readonly supersededWmItemIds?: readonly string[];
+  /** Boundary markers the ledger held at the latest WM attempt; a marker past this count is new to WM. */
+  readonly wmBoundariesSeen?: number;
+  /** The latest WM pass that processed records, when its protected records alone exceeded its target (plan 218 Task 3). */
+  readonly budgetUnmet?: WmBudgetUnmet;
   readonly latestObservationCoverageId?: string;
-  readonly latestReflectionCoverageId?: string;
   readonly latestDropCoverageId?: string;
 }
 
@@ -48,7 +53,7 @@ export type ObservationalMemoryRecord =
   | TaskStateRecordedData
   | ObservationsRecordedData
   | ObservationsRepeatedData
-  | ReflectionsRecordedData
+  | WmRecordedData
   | ObservationsDroppedData
   | ObservationsTombstonedData
   | BoundaryRecordedData;
@@ -67,9 +72,8 @@ export type ObservationalMemoryLedgerSource = SessionEntry | ObservationalMemory
 
 export function foldObservationalMemoryLedger(sources: readonly unknown[]): ObservationalMemoryLedger {
   const observations = new Map<string, MemoryObservation>();
-  const reflections = new Map<string, MemoryReflection>();
+  const wmItems = new Map<string, MemoryWmItem>();
   const dropped = new Set<string>();
-  const consumed = new Set<string>();
   const superseded = new Set<string>();
   const repeats = new Map<string, { count: number; lastAt?: string }>();
   const boundaries = new Map<string, MemoryBoundary>();
@@ -77,8 +81,9 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
   const tombstones: Record<string, MemoryTombstone> = {};
   let taskState: MemoryTaskState | undefined;
   let latestObservationCoverageId: string | undefined;
-  let latestReflectionCoverageId: string | undefined;
   let latestDropCoverageId: string | undefined;
+  let wmBoundariesSeen: number | undefined;
+  let budgetUnmet: WmBudgetUnmet | undefined;
 
   for (const source of sources) {
     if (isSessionEntry(source)) {
@@ -86,8 +91,7 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
       if (folded) {
         for (const observation of folded.observations)
           if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
-        for (const reflection of folded.reflections)
-          if (isMemoryReflection(reflection) && !reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
+        for (const item of folded.wmItems) if (isMemoryWmItem(item) && !wmItems.has(item.id)) wmItems.set(item.id, item);
         for (const id of folded.droppedObservationIds ?? []) dropped.add(id);
       }
     }
@@ -99,15 +103,17 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
       for (const observation of data.observations)
         if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
       latestObservationCoverageId = data.coversUpToId ?? latestObservationCoverageId;
-    } else if (isReflectionsRecordedData(data)) {
-      for (const reflection of data.reflections)
-        if (isMemoryReflection(reflection) && !reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
-      if (data.reflections.some(isMemoryReflection)) {
-        for (const id of data.consumedObservationIds ?? []) consumed.add(id);
-        for (const id of data.supersededReflectionIds ?? []) superseded.add(id);
-        for (const reflection of data.reflections) if (isMemoryReflection(reflection)) superseded.delete(reflection.id);
+    } else if (isWmRecordedData(data)) {
+      // Incremental (I6): a pass adds items and supersedes only the items it names; it never replaces the set.
+      for (const id of data.supersededItemIds ?? []) superseded.add(id);
+      for (const item of data.items) {
+        if (!isMemoryWmItem(item)) continue;
+        if (!wmItems.has(item.id)) wmItems.set(item.id, item);
+        superseded.delete(item.id);
       }
-      latestReflectionCoverageId = data.coversUpToId ?? latestReflectionCoverageId;
+      wmBoundariesSeen = data.boundaries ?? wmBoundariesSeen;
+      // The latest pass that processed records decides; an empty attempt leaves the last verdict standing.
+      if (data.processedIds?.length) budgetUnmet = data.budgetUnmet;
     } else if (isObservationsDroppedData(data)) {
       for (const id of data.observationIds) {
         dropped.add(id);
@@ -143,15 +149,15 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
   return {
     observations: [...observations.values()],
     ...(boundaries.size ? { boundaries: [...boundaries.values()] } : {}),
-    reflections: [...reflections.values()],
+    wmItems: [...wmItems.values()],
     droppedObservationIds: [...dropped],
     ...(Object.keys(dropReasons).length ? { dropReasons } : {}),
     ...(Object.keys(tombstones).length ? { tombstones } : {}),
-    consumedObservationIds: [...consumed],
-    supersededReflectionIds: [...superseded],
+    supersededWmItemIds: [...superseded],
+    ...(wmBoundariesSeen === undefined ? {} : { wmBoundariesSeen }),
+    ...(budgetUnmet ? { budgetUnmet } : {}),
     ...(taskState ? { taskState } : {}),
     latestObservationCoverageId,
-    latestReflectionCoverageId,
     latestDropCoverageId,
   };
 }
@@ -185,8 +191,9 @@ function isSessionEntry(source: unknown): source is SessionEntry {
   return typeof (source as SessionEntry).kind === "string" && typeof (source as SessionEntry).id === "string";
 }
 
+/** The STM surface: records neither dropped nor tombstoned (a record WM has not given a verdict yet). */
 export function activeObservations(ledger: ObservationalMemoryLedger): readonly MemoryObservation[] {
-  const dropped = new Set([...ledger.droppedObservationIds, ...(ledger.consumedObservationIds ?? [])]);
+  const dropped = new Set(ledger.droppedObservationIds);
   const tombstones = ledger.tombstones ?? {};
   return ledger.observations.filter((observation) => !dropped.has(observation.id) && !Object.hasOwn(tombstones, observation.id));
 }
@@ -197,23 +204,23 @@ export function activeObservations(ledger: ObservationalMemoryLedger): readonly 
  */
 export function mergeObservationalMemoryLedgers(...ledgers: readonly ObservationalMemoryLedger[]): ObservationalMemoryLedger {
   const observations = new Map<string, MemoryObservation>();
-  const reflections = new Map<string, MemoryReflection>();
+  const wmItems = new Map<string, MemoryWmItem>();
   const dropped = new Set<string>();
-  const consumed = new Set<string>();
   const superseded = new Set<string>();
+  const tombstones: Record<string, MemoryTombstone> = {};
   for (const ledger of ledgers) {
     for (const observation of ledger.observations) if (!observations.has(observation.id)) observations.set(observation.id, observation);
-    for (const reflection of ledger.reflections) if (!reflections.has(reflection.id)) reflections.set(reflection.id, reflection);
+    for (const item of ledger.wmItems) if (!wmItems.has(item.id)) wmItems.set(item.id, item);
     for (const id of ledger.droppedObservationIds) dropped.add(id);
-    for (const id of ledger.consumedObservationIds ?? []) consumed.add(id);
-    for (const id of ledger.supersededReflectionIds ?? []) superseded.add(id);
+    for (const id of ledger.supersededWmItemIds ?? []) superseded.add(id);
+    for (const [id, tombstone] of Object.entries(ledger.tombstones ?? {})) tombstones[id] ??= tombstone;
   }
   return {
     observations: [...observations.values()],
-    reflections: [...reflections.values()],
+    wmItems: [...wmItems.values()],
     droppedObservationIds: [...dropped],
-    consumedObservationIds: [...consumed],
-    supersededReflectionIds: [...superseded],
+    ...(Object.keys(tombstones).length ? { tombstones } : {}),
+    supersededWmItemIds: [...superseded],
     ...(ledgers[0]?.taskState ? { taskState: ledgers[0].taskState } : {}),
   };
 }
@@ -226,15 +233,13 @@ export function observationBlockedByInvalidation(
   return observation.sourceEntryIds.some((id) => invalidated.has(id));
 }
 
-export function reflectionBlockedByInvalidation(
-  reflection: Pick<MemoryReflection, "id" | "supportingObservationIds">,
-  invalidated: ReadonlySet<string>,
-): boolean {
-  if (invalidated.has(reflection.id)) return true;
-  return reflection.supportingObservationIds.some((id) => invalidated.has(id));
+export function wmItemBlockedByInvalidation(item: Pick<MemoryWmItem, "id" | "citedIds">, invalidated: ReadonlySet<string>): boolean {
+  if (invalidated.has(item.id)) return true;
+  return item.citedIds.some((id) => invalidated.has(id));
 }
 
-export function activeReflections(ledger: ObservationalMemoryLedger): readonly MemoryReflection[] {
-  const superseded = new Set(ledger.supersededReflectionIds ?? []);
-  return ledger.reflections.filter((reflection) => !superseded.has(reflection.id));
+/** The WM surface: items no later pass superseded by name. */
+export function activeWmItems(ledger: ObservationalMemoryLedger): readonly MemoryWmItem[] {
+  const superseded = new Set(ledger.supersededWmItemIds ?? []);
+  return ledger.wmItems.filter((item) => !superseded.has(item.id));
 }

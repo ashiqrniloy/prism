@@ -18,7 +18,7 @@ work alone, and the [example](../../../examples/memory-and-wiki.ts) runs all thr
 | Component | Today (unchanged worker behaviour) | Redesigned by |
 | --- | --- | --- |
 | `stm` | the observer: records source-backed observations and the current task | plan 217 |
-| `wm` | the reflector: rewrites observations into reflections | plan 218 |
+| `wm` | working memory: one verdict per STM record (keep, summarize, discard) plus derived facts, incremental ([Working memory](#working-memory)) | plan 218 |
 | `rehearsal` | the dropper: trims the active pool to a budget | plan 219 |
 | `ltm` | the former fabric: typed notes, scopes, recall, consolidation, lifecycle ([Long-term memory](#long-term-memory)) | plans 219–220 |
 | `sleep` | nothing yet: a no-op component | plan 221 |
@@ -66,12 +66,13 @@ same check without an agent and throws `MemorySystemError`.
 **A component that is off loads and registers nothing:** no hook, tool, command, slot claim, service or model call, and
 its code is not imported. With `stm: false` the package does not claim the `compaction` slot; with `ltm: false` it
 registers no `memory.*` tool and no `memory.ltm` service. The package's capabilities are computed from the enabled
-components (the kernel's `capabilitiesFor`): `stm` declares `models`, `session-state`, `background` and
-`slot:compaction`; `ltm` declares `models`, `session-state`, `background`, `credentials` and `host-ui`.
+components (the kernel's `capabilitiesFor`): `stm` declares `models`, `session-state`, `background`,
+`slot:compaction` and `host-ui` (`memory:scope { path }` asks the host for the file's text); `ltm` declares `models`, `session-state`, `background`, `credentials` and `host-ui`.
 
 **The `memory.system` service** (`MEMORY_SYSTEM_SERVICE`) is provided whatever the components. `status()` returns
-`{ components }`, which components this instance runs. `setScope` and `endEpisode` (plan 218), `rehearse` (plan 219)
-and `sleep` (plan 221) are declared and reject with `MemorySystemError` `not_available_yet` until their plans land.
+`{ components }`, which components this instance runs. `setScope(session, text)` sets the episode scope
+([Episode scope](#episode-scope)). `endEpisode` (plan 218), `rehearse` (plan 219) and `sleep` (plan 221) are declared and
+reject with `MemorySystemError` `not_available_yet` until their plans land.
 
 ## Profiles
 
@@ -104,6 +105,15 @@ kernel's secret set, and a Postgres store's `connection` is an `env:`/`keyring:`
 The rest of this page describes the session tiers. Measurements below were taken under the package's
 former name, `@arnilo/prism-memory-observational` ("OM"), with the same worker behaviour.
 
+**Measured role (plan 217 gate M-1, 2026-11-12).** STM was compared with the pre-redesign observer
+(`OM-before`, pinned at `37ee1a24`) on paid Ollama Cloud, development partitions, with DeepSeek V4.1 Flash and MiMo V2.6
+Flash answering. S1, re-derivations per related task on the long-session coding family, is a **miss**: DeepSeek
+re-derived less with STM (+0.47 [−0.19, 1.16]), MiMo more (−0.34 [−0.69, −0.06]). S2, verbatim chunks, **passes**. S4,
+worker tokens STM / OM-before, **passes** at **0.615** in the worst cell (0.29–0.61 across the six). S3, answer accuracy,
+is decided at the held-out gate A. On LongMemEval-M and BEAM-1M (two questions per cell) both arms scored the same with
+DeepSeek; with MiMo STM lost two answers once WM's whole-log reflections hid an old value. Gate M-2 re-measures S1.
+The evidence is `docs/_evidence/memory-bench/memory-model/M-1/`.
+
 **Measured role (plan 202 Task 16, 2026-11-02).** OM (the session tiers) was the T0 tier: it observes the session and
 feeds fabric consolidation, while its in-session compression stays independent. On a seven-seed
 offline lifecycle suite (24 sessions per seed, zero model calls), OM plus fabric scored **0.732** task
@@ -133,7 +143,7 @@ With the toggle on:
 | STM pass | after a turn, once the unscanned eligible tokens reach `stm.triggerTokens` (or, with `stm.boundaries: true`, when the tail holds a user turn after an idle gap: at most one extra STM call per boundary) | one branch read, one STM call per batch of the unread tail (one batch unless the tail exceeds about twice `stm.triggerTokens`, at least 32 KB serialized, or half of `worker.maxMessageBytes`; only the latter cuts an entry), one ledger record per recorded batch; date prefixes add about 6 tokens per message, plus gap markers; task state and supersession use the same call |
 | Habituation and boundary markers | inside the STM pass; idle-gap markers on every pass that sees a new one | a string comparison per new event against at most `stm.habituation.windowEvents` records, one ledger record per repeat or marker, no model call |
 | Chunk store write | at the end of a pass that stored a chunk or dropped a record with chunks | one store transaction, no model call; a fork or resumed session adds its referrers in one more transaction when it opens ([Chunks](#chunks)) |
-| WM pass | in the same pass, once unreflected observations reach `wm.observationTokens` | one WM call, one ledger record |
+| WM pass | in the same pass, once the STM surface (records without a WM verdict) reaches `wm.triggerTokens`, or a boundary marker is new since the last WM attempt; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive (a new boundary still runs it) | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason, and one chunk-store transaction moving referrers ([Working memory](#working-memory)) |
 | Rehearsal pass | after the WM step (even if it records nothing), once the active pool exceeds `rehearsal.targetTokens` | one rehearsal call (or none with `policy: "lowest-relevance"`), one ledger record |
 | Context block | after foreign compaction only | pinned ledger in memory; one entry scan and log write per compaction, awaited before the next request; one reconciliation scan on reopen |
 | Compaction | first at the `compactAt`/`trigger` gate; then once per STM pass that advances coverage when this package owns the slot | the ledger already in memory, no model call |
@@ -149,15 +159,16 @@ carries the cut bytes, and observations may still cite the entry. A tail that fi
 same prompt as before.
 
 **Worker settings and secrets.** Each worker call carries its section's `instruction` (appended to
-the default prompt; it cannot change the worker's tools) and `thinkingLevel`, plus the session's
+the default prompt; it cannot change the worker's tools) and `thinkingLevel` (default `low`: recording and judging
+records needs little reasoning, and a model's own default can spend the output limit first), plus the session's
 secret set. Branch entries reach the package already redacted; the secret set the kernel hands the
 `compaction` slot is kept per session (bounded) and redacts every later worker prompt and error.
 Secrets never come from config text.
 
-**Worker tool results.** `record_event`, `record_task_state`, `record_reflection` and
-`drop_observations` answer `{ ok: false, reason }` whenever nothing was stored (`invalid_kind`,
-`empty_description`, `empty_content`, `no_valid_ids`, `unknown_id`, `invalid_event`, `invalid_task_state`,
-`invalid_reflection`), so the model can correct itself.
+**Worker tool results.** `record_event`, `record_task_state`, the WM tools (`keep`, `summarize`, `derive`, `discard`)
+and `drop_observations` answer `{ ok: false, reason }` whenever nothing was stored (`invalid_kind`,
+`empty_description`, `no_valid_ids`, `unknown_id`, `invalid_event`, `invalid_task_state`, and for WM
+`already_processed`, `empty_text`, `citation_outside_active_set`), so the model can correct itself.
 
 **Measured live worker cost per 10k source-message tokens** (one LongMemEval-S question, free
 OpenRouter route): observer **233,494 input / 3,287 output tokens**, reflector **1,702 / 358**,
@@ -174,7 +185,16 @@ trigger. One live question is a cost measurement, not a quality result.
 - `own-compaction`: the package's summary already contains the ledger, ending with `## Current task` when present. No duplicate context block is injected.
 - `pinned`: another slot owner compacted the session. The package captures a bounded ledger snapshot synchronously on successful completion, resolves the compaction entry, and persists `memory.session.context.pinned { coversUpToId, compactionEntryId, ledger }`. The next context build awaits that write. Later observation passes do not change the block.
 
-Prefix changes coincide with compaction. Failed and duplicate completion events do not repin.
+Prefix changes coincide with compaction (I7). Between compactions, STM, WM and rehearsal passes write only the ledger:
+newer material stays in the transcript tail, so the prefix bytes the provider caches stay identical across WM passes
+(`prefix_identical_between_compactions_across_wm_passes`: 20 turns, three WM passes, one prefix). Failed and duplicate
+completion events do not repin.
+
+The package's compaction (plan 218 Task 4, design §5.1) makes no model call. Its summary renders, in this order, the WM
+surface (facts, then summaries, then events), the STM surface not yet processed, then the task state, and keeps
+`context.recentMessages` (and any message STM has not covered) verbatim. Tombstoned records and chunk text never enter it:
+a record or item with chunks shows only the `[chunk]` marker. One function renders the summary, the pinned block and
+`memory:session:view`. Pinned mode under a foreign compaction owner is unchanged.
 Reopening reconciles the latest compaction once, using its persisted pin or the ledger records preceding it.
 The package records `memory.session.compacted { coversUpToId }` for its own compactions. Once that marker exists,
 new observation coverage triggers another own compaction, removing covered old messages while preserving
@@ -201,9 +221,13 @@ defaults below.
 | `stm.boundaries` | `false` | `true` runs an STM pass below `stm.triggerTokens` when a user turn follows an idle gap (one extra STM call per boundary); boundary markers are recorded either way |
 | `stm.boundaryGapMinutes` | `10` | Minutes of silence before a user turn that make it an event boundary (1 to 10,080) |
 | `stm.instruction`, `wm.instruction`, `rehearsal.instruction` | none | Text appended to that worker's default prompt; it cannot change the worker's tools |
-| `stm.thinkingLevel`, `wm.thinkingLevel`, `rehearsal.thinkingLevel` | none | Reasoning level for that worker's model calls (`none` … `max`) |
-| `wm.model` | the session's model | WM worker model (today's reflector) |
-| `wm.observationTokens` | `20000` | Unreflected observation tokens that trigger a WM pass |
+| `stm.thinkingLevel`, `wm.thinkingLevel`, `rehearsal.thinkingLevel` | `low` | Reasoning level for that worker's model calls (`none` … `max`). A model without reasoning levels ignores it; set a level to override |
+| `wm.model` | the session's model | WM worker model |
+| `wm.triggerTokens` | `10000` | STM surface tokens (records without a WM verdict) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
+| `wm.batchTokens` | `3000` | STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass |
+| `wm.targetRatio` | `0.2` | Items' tokens over the batch's tokens a WM pass aims at (0.01 to 1), as pressure after relevance; protected records are never cut ([Working memory](#working-memory)) |
+| `wm.rejudgeTokens` | `8000` | Tokens of discarded records (chunks still live) the first WM pass after a scope change is also sent to keep back; `0` turns re-judgment off ([Working memory](#working-memory)) |
+| `wm.policy` | `"model"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, outcomes and salient records and discards the lowest-relevance oldest to the target, with no model call |
 | `rehearsal.model` | the session's model | Rehearsal worker model (today's dropper) |
 | `rehearsal.targetTokens` | `20000` | Active-observation token budget rehearsal approaches |
 | `rehearsal.policy` | `"model"` | `"model"` asks the rehearsal model; `"lowest-relevance"` drops deterministically |
@@ -212,10 +236,13 @@ defaults below.
 | `worker.maxTaskStateBytes` | `2048` | Maximum UTF-8 text bytes in the replaced task state and rendered task section (hard ceiling 65536) |
 | `worker.*` | see `limits.ts` | Worker loop ceilings (`maxTurns`, `maxToolCalls`, byte caps) |
 | `recall` | `true` | Expose the `recall` tool while the session's toggle is on |
+| `scope.text` | none | Every session's starting episode scope, until `memory:scope` or `setScope` replaces or clears it ([Episode scope](#episode-scope)) |
+| `scope.maxBytes` | `32768` | Bytes one episode scope may take (at most 49,152); longer text fails with `scope_too_large` |
 
 `observer`, `reflector` and `dropper` were renamed `stm`, `wm` and `rehearsal` with no alias: config
-validation rejects them, and `resolveMemorySystemConfig` names the successor. `wm` and `rehearsal` run
-today's reflector and dropper until plans 218–219.
+validation rejects them, and `resolveMemorySystemConfig` names the successor. `wm.observationTokens` was retired with
+the whole-log reflector (plan 218 Task 2) the same way, naming `wm.triggerTokens`. `rehearsal` runs today's dropper
+until plan 219.
 
 Worker models resolve per call as: the per-session `memory:session:model` ref, else the config's, else the
 session's own model. The provider and its key come from the kernel (`prism.models.client`), so the
@@ -227,8 +254,9 @@ package holds no credential.
 | --- | --- |
 | `memory:session` | Toggles session memory for the session and emits `memory.session.status` |
 | `memory:session:model { stm?, wm? }` | Sets the per-session worker model refs. An unknown provider fails the command and leaves state unchanged |
-| `memory:session:status` | Counts, thresholds, `contextMode`, whether a pass is in flight, and the last pass error |
+| `memory:session:status` | Counts, thresholds, `contextMode`, whether a pass is in flight, the last pass error, the episode scope's hash and size (never its text), and `budgetUnmet` when the latest WM pass's protected records exceeded its target |
 | `memory:session:view` | Renders the session's ledger |
+| `memory:scope { text }`, `{ path }`, `{ clear: true }` | Sets or clears the session's episode scope ([Episode scope](#episode-scope)). Exactly one form; anything else answers `invalid_args` |
 
 ### Contributions
 
@@ -242,15 +270,16 @@ package holds no credential.
 - **`compaction.when`**: while the toggle is on, votes `{ compact: true }` past its gate (`min(ratio × model input cap, maxTokens)`) and `{ compact: false }` below it, so the kernel's `thresholdEntries` fallback does not override the package; with the toggle off it abstains (`undefined`) and the host's trigger still fires.
 - **`compaction` slot**: summarizes from the ledger instead of the raw transcript. With the toggle off
   for the session it delegates to `prism.slots.compaction.default`.
-- **`memory.session.status` event**: `{ enabled, contextMode, observations, reflections, inFlight, lastError? }` on toggle,
+- **`memory.session.status` event**: `{ enabled, contextMode, observations, wmItems, inFlight, lastError? }` on toggle,
   pass start, pass end, and pass failure.
 
 ### State
 
-- `prism.state.session("memory.session", …)`: the per-session `enabled` flag and the
-  `memory:session:model` refs (`stmModel`, `wmModel`). Carried by `fork()` and `clone()` like any session state.
+- `prism.state.session("memory.session", …)`: the per-session `enabled` flag, the
+  `memory:session:model` refs (`stmModel`, `wmModel`) and the episode scope (`scope`, redacted text with its hash; `null`
+  after a clear). Carried by `fork()` and `clone()` like any session state.
 - `prism.state.log("memory.session.ledger")`: append-only `memory.session.observations.recorded`,
-  `memory.session.reflections.recorded`, `memory.session.observations.dropped`, and
+  `memory.session.wm.recorded`, `memory.session.observations.tombstoned`, `memory.session.observations.dropped`, and
   `memory.session.task_state.recorded` records. Later records never replace earlier ones; a fork carries the
   records up to the fork point.
 
@@ -267,7 +296,7 @@ memory fabric's `observational` source, a host's own projection — folds the sa
 
 [Long-term memory](#long-term-memory) consumes the session ledger in its consolidation pass. With
 `memorySystem({ ltm: { promote: {} } })`, the extractor sees session observations,
-task-state decisions, and reflections in the session tail and writes accepted notes as candidates
+task-state decisions, and working-memory items in the session tail and writes accepted notes as candidates
 that earn trust by use. The old `promote.observational` flag was retired in plan 188.3; the current
 path is the ordinary `promote` object, and [Consolidation from sessions](#consolidation-from-sessions) records the measured result. This
 package needs no configuration for it.
@@ -293,8 +322,8 @@ own model, compaction from the ledger, the per-session toggle, a second process 
 
 ### Capabilities
 
-`models`, `session-state`, `background`, `slot:compaction` while `stm` is on; with `stm: false` none of them comes from
-the session tiers ([Configuration](#configuration)).
+`models`, `session-state`, `background`, `slot:compaction` and `host-ui` while `stm` is on; with `stm: false` none of
+them comes from the session tiers ([Configuration](#configuration)).
 
 ### Requirements
 
@@ -304,17 +333,72 @@ the session tiers ([Configuration](#configuration)).
 
 ### Ledger
 
-A successful reflection pass rewrites the active reflections and unreflected observations. Its append-only `memory.session.reflections.recorded` record lists `consumedObservationIds` and `supersededReflectionIds`; these fields are optional when reading older ledgers. Empty passes consume nothing. Inactive evidence remains in the ledger for `recall`, marked `(reflected)`, `(dropped)` or `(tombstoned: <reason>)`. Budget drops and consumption never hide a reflection; source invalidation still withholds it.
+A WM pass appends one `memory.session.wm.recorded` record (`WM_RECORDED`): `{ items, supersededItemIds?, processedIds?,
+boundaries, compression?, budgetUnmet?, rejudge? }`, then one `memory.session.observations.tombstoned` record per verdict reason (`wm keep <item>`, `wm
+summarize <item>`, `wm discard <finished|out-of-scope|superseded|duplicate|budget>`; `budget` is the deterministic policy's). The fold adds items and drops only the
+superseded ones it names; nothing replaces the WM set. A pass that recorded no item and processed no record (or failed)
+is an empty attempt. Inactive evidence remains in the ledger for `recall`, marked `(dropped)` or `(tombstoned:
+<reason>)`; source invalidation withholds a WM item that cites it.
 
-Rehearsal is a backstop after WM. `rehearsal.targetTokens` must be at least `wm.observationTokens`, so it cannot trim the pool below the WM trigger. Rendering removes the oldest observations before reflections when the byte budget is exceeded.
+The whole-log reflector's `memory.session.reflections.recorded` record and version 1 folded-memory payloads were retired
+with no reader: folding one throws `MemorySessionLedgerError` naming the way out (export with `memory:session:view`, or
+start a new session).
+
+Rehearsal is a backstop after WM. `rehearsal.targetTokens` must be at least `wm.triggerTokens`, so it cannot trim the pool below the WM trigger. Rendering removes the oldest observations before WM items when the byte budget is exceeded.
+
+Each episode-scope set or clear appends `memory.session.scope.set` (`SCOPE_SET`): `{ hash, bytes, at }`, or
+`{ bytes: 0, at, cleared: true }`. The record never holds the scope's text; the ledger fold skips it.
+
+### Episode scope
+
+The episode scope (plan 218) is a natural-language statement of what the current body of work must achieve, including
+its later planned steps, for example a plan document. WM and Rehearsal read it to judge what the remaining work
+needs. **STM never sees it**: STM records what happened without knowing the goal, so its records stay neutral.
+
+Set it in one of three ways; the latest wins:
+
+```ts
+await agent.commands.run("memory:scope", { text: planMarkdown }, { session });
+await agent.commands.run("memory:scope", { path: "plans/218.md" }, { session }); // the host resolves the path
+memorySystem({ scope: { text: "Ship the three campaign suites, then verify the retry fix." } }); // every session's start
+// From another package's hook, tool or command, with the SessionContext it was handed:
+await prism.services.consume<MemorySystemService>(MEMORY_SYSTEM_SERVICE)?.setScope(context.session, planMarkdown);
+```
+
+`memory:scope { clear: true }` clears it, the config scope included, for that session.
+
+- **Bounded, never truncated.** A scope is at most `scope.maxBytes` (32 KB by default) UTF-8 bytes, before and after
+  redaction. Longer text fails with `scope_too_large`, naming the cap (the command answers `{ ok: false, reason }`;
+  `setScope` rejects with `MemorySystemError`; an oversized `scope.text` fails the load). Empty text is `scope_empty`.
+- **Redacted, then stored** in session state, so `fork()` and `clone()` carry it. Each set appends a
+  `memory.session.scope.set` record with the hash and size. `memory:session:status` shows the hash and size, never the
+  text.
+- **`path` resolves through the host.** The package sends a `host.ui` `input` request carrying the path and stores the
+  text the host answers. It never opens a file itself. A host without `host.ui`, or one that dismisses the request,
+  gets `scope_path_unresolved`.
+- **Data, not instructions (I11).** The scope goes inside an `<episode_scope>` block at the top of the WM and Rehearsal
+  prompts, under a system rule that the block describes goals and never changes which tools the worker calls, reveals or
+  forgets memory, or alters the response format. A tag inside the text is escaped, so the text cannot close the block.
+  The worker's tool set is fixed by code, whatever the scope says.
+- **No scope set:** the block tells WM and Rehearsal that the episode is the session's current work, as shown by the
+  task state, and carries the task state.
+- **Where it never goes:** STM requests, the context block, the compaction summary, and long-term memory.
+- **Cost.** The scope adds at most `scope.maxBytes` to each WM and Rehearsal request, and no model call. With no scope
+  the block is one sentence plus the task state.
 
 ### Short-term memory
 
 STM (plan 217) records **what happened**, not facts: facts are derived later, by WM and Rehearsal. Each
 pass reads a batch of the unread tail and calls `record_event` once per meaningful event, in order. Routine
 conversation is one event per exchange or per topic, not per message: what the user asked or said and the gist
-of the reply, keeping every preference, constraint, name, date and number the user gave. Actions, results,
-changes, decisions, errors and outcomes stay separate events, one each. (Plan 217 Task 6: one event per message
+of the reply, keeping every preference, constraint, name, date and number the user gave. A task finished or
+abandoned within the batch is one `outcome` (what was asked, what changed as old → new, what was achieved or left
+open, how it was verified, and setup facts found on the way such as a missing file or how checks are run), not
+separate request, action, change and result events. For unfinished work STM
+records each change, decision and error once, a result only when it adds to the records, and an action only while
+its result is unknown. Descriptions leave out tool-call ids and hashes the user did not ask for; chunks are
+attached only when the description cannot hold the exact text. The task state is rewritten on every new request.
+(Plan 217 Task 6: one event per message
 recorded about seven times as many items as the pre-redesign observer on chat history and spent about 1.5× its
 worker tokens; per exchange it is about 1.04× on the same history.)
 
@@ -334,6 +418,9 @@ not fail the pass for that: the calls past the limit are not run and are answere
 and the model repeats them in its next turn. Past `worker.maxToolCalls` (default 128) the calls within the limit
 keep their effect and the pass ends. Before plan 217 Task 6, the 33rd call failed the whole pass, discarded its
 events and sent a larger batch next time, which a gate M-1 smoke run showed snowballing.
+A call to a tool name the worker was not given (gate M-1 saw `record_rection`) is answered with an `unknown_tool`
+error naming the worker's tools, in every memory worker; the other calls keep their effect, it counts toward both
+limits, and the pass goes on (plan 218 Task 1.1).
 
 A `description` is one self-contained line: a later model that sees only the description must be
 able to judge whether the event helps a new task. For example:
@@ -347,6 +434,24 @@ optional `chunkRefs` (id, source entry id, sha256, bytes of verbatim chunks kept
 The context block renders `- [id] HH:MM (relevance) kind: description`, with `×N` after the kind once an event
 repeated (`kind ×3: description`), and ` [chunk]` at the end when the record has chunks. The block never carries chunk
 text; `recall` reads it.
+
+**Speaker attribution (plan 218 Task 4.1).** Each new event stores `attribution: "user" | "assistant" | "tool" |
+"mixed"`, derived in `record_event` from the stored roles of the entries it cites; the model sets nothing, so message
+text cannot claim to be the user's. User and assistant entries together are `mixed`; tool output beside one side counts
+as that side; a non-message entry adds no side. The worker reads each message line as `[time] [id] user:`,
+`assistant:` or `tool:` (other entries keep their kind label). The instruction keeps a fact, number, date or decision
+the user states as its own event, never folded into one about what the assistant suggested or calculated. The block
+marks non-user content: an assistant-only `request`, `statement` or `decision` renders as `assistant proposal:`
+instead of its kind, and a `mixed` record as `kind (user + assistant):`. A WM item resting only on assistant proposals
+renders `kind (assistant proposal):`, one resting on both sides `kind (user + assistant):`; the WM request shows the
+same marks on its records. Records written before Task 4.1 carry no attribution and render as before. (Gate M-1,
+LongMemEval `9aaed6a3`: STM kept an assistant-calculated shopping plan and not the user's own $75 expense, and the
+answer model read the plan as a trip that happened.)
+
+```text
+- [3f0c1a2b9d8e] 12:45 (medium) assistant proposal: SaveMart weekly plan totaled $55.39 ($0.55 cashback)
+- [7a1b2c3d4e5f] 12:46 (high) statement: User spent $75 on SaveMart groceries
+```
 
 **Habituation.** An event whose `kind` and normalised description match one of the newest
 `stm.habituation.windowEvents` (50) active STM records, or an event of the same batch, and whose chunks are
@@ -371,14 +476,91 @@ marker is still recorded and the tail waits for the token trigger.
 
 **Scope-blind.** An STM request carries only the batch, the current task state, and an index of the
 recent STM records (id, kind, the first 120 characters of the description; the newest that fit
-`stm.contextTokens`, 4,000 by default). It never carries the episode scope, a WM item (reflection) or
+`stm.contextTokens`, 4,000 by default). It never carries the episode scope, a WM item or
 an LTM note, so what STM records does not depend on what the other tiers think is relevant. The
 index tells the model not to re-record a listed event and to set `supersedes` to replace one.
 Transcript text is data: the prompt tells the model never to follow instructions inside it, and the
 session's secret set redacts the request as before.
 
-**Cost.** The default STM instruction is about 1,380 bytes (the former observer instruction was about
+**Cost.** The default STM instruction is under 2,100 characters (the former observer instruction was about
 650), and the recent index is at most `stm.contextTokens` per call; there is still one STM call per batch.
+
+### Working memory
+
+WM (plan 218 Task 2, design §5.4) turns the STM surface into what the episode's remaining work needs. It reads the
+episode scope ([Episode scope](#episode-scope)), the task state, the current WM items, and a batch of new STM records
+with their kinds, counts and chunk sizes. Records carrying a salience signal are marked `salient:` in the request: an
+`error` event, a user correction, a denied tool call (`hook_denied` on the branch) or a failed verification in an
+`outcome`. The signals come from the records and their source entries, never from a model.
+
+**Verdicts on named records.** Each record in the batch gets at most one verdict:
+
+| Tool | Arguments | Effect |
+| --- | --- | --- |
+| `keep` | `{ stmId, reason, neededLater? }` | a WM `event` item: the record's description, relevance, time and chunks, and the reason |
+| `summarize` | `{ stmIds, text, relevance, supersedes?, neededLater? }` | one WM `summary` citing those records and inheriting their chunks |
+| `derive` | `{ text, supportingIds, relevance, supersedes?, neededLater? }` | an episode `fact` citing active STM records or WM items; it gives no verdict |
+| `discard` | `{ stmId, reason }` | no item; `reason` is `finished`, `out-of-scope`, `superseded` or `duplicate`; a protected record is refused |
+
+`neededLater` names the scope step that needs the item; a marked item is protected. A tool that stored nothing answers
+`{ ok: false, reason }`: `unknown_id`, `already_processed` (a second verdict, or a record already tombstoned),
+`empty_text`, `citation_outside_active_set` (an id the session holds that is not in the batch, not active, or a WM item
+already superseded), or `protected` with the protection class. A record left without a verdict stays on the STM surface and
+rendered, for the next pass. The instruction asks for one subject per item in a few sentences, with a changed value
+written as old → new with its dates, and to keep what the scope's later planned steps need, not only the current task.
+
+**Incremental (I6).** A pass adds items and supersedes only the WM items its `summarize` or `derive` calls name; it
+never replaces the WM set. Every processed record leaves the STM surface with a tombstone carrying its verdict and
+stays recallable by id. In the same chunk-store transaction, every chunk a new WM item cites gains a `wm` referrer and
+every tombstoned record's `stm` referrer is removed, so a chunk WM cites survives and an uncited one is deleted (I2–I3).
+A fork or resumed session adds its own `wm` referrers for the active items' chunks when it opens.
+
+**When it runs.** Once the STM surface reaches `wm.triggerTokens` (10,000), or when a boundary marker is new since the
+last WM attempt; no pass runs while one is in flight for the session. A pass sends at most `wm.batchTokens` (3,000) of
+the oldest records, and at most three quarters of `worker.maxToolCalls` records, so the verdicts fit one model's
+output: plan 217's gate M-1 saw two answer models write nothing when the whole log of about 22k tokens went in one
+call. A model call that stops on its output limit before giving any verdict (gate M-2: Muse Spark 1.3 spent the limit
+on reasoning in half its calls) retries once on the older half of the batch; the newer half waits for the next pass.
+After an attempt that still did nothing, or failed, WM waits for another `wm.triggerTokens` of new records. A host runs
+one pass now, below the trigger, with `memory.system.rehearse(session, { only: "wm" })`, which resolves
+`{ items, processed }` (or `skipped: "in_flight"`) and rejects with `component_off` when `stm` or `wm` is off.
+
+**Re-judgment after a scope change (plan 218 Task 4).** The first model WM pass after a `memory.session.scope.set` record
+whose hash differs from the one last re-judged (a set or a clear; setting the same scope again re-judges nothing) is also
+sent the records WM discarded earlier, newest tombstone first, up to `wm.rejudgeTokens` (8,000; 0 turns it off). Only
+records whose chunks still live are offered: a chunk is live while this session holds a referrer for it (a WM item, a fork
+restored into this session); a discarded record with no chunks is offered on its own line. `keep` may bring one back as a
+WM `event`, which takes a `wm` referrer for its chunks; any other verdict on it answers `already_processed`, and a record
+left alone stays tombstoned. The pass records `rejudge { scopeHash?, offered, kept, chunkDropped }` on its
+`wm.recorded` record; `chunkDropped` names the discarded records whose chunks were all deleted, so the loss is visible.
+A scope change does not trigger a pass by itself, and the deterministic policy does not re-judge.
+
+**Compression: the ratio is pressure (plan 218 Task 3).** The request states a target: the items a pass writes aim at
+`wm.targetRatio` (0.2) × the batch's tokens, after relevance, never by dropping what later work needs. Salient records
+are listed under "Keep first" in priority order (corrections, denials, errors, failed verifications). Protections (I5)
+are code in `protections.ts`, shared with plan 219's Rehearsal, not prompt text: `discard` refuses with `protected`
+
+- a `request` or `decision` the current task state was written from (`task_state`);
+- a record an active WM `fact` cites (`fact`);
+- an `error` no later passing `outcome` resolves (`unresolved_error`);
+- a question (`?`) the task state was written from while it lists open questions (`open_question`);
+- a record an active WM item marked `neededLater` cites (`needed_later`).
+
+A protected record may still be kept or summarized. When the batch's protected records alone exceed the target, the
+request says so, and the pass records `budgetUnmet { protectedTokens, targetTokens }`; nothing more is discarded to meet
+it. `memory:session:status` shows the latest pass's `budgetUnmet`, and each `wm.recorded` record carries `compression {
+processedTokens, itemTokens, targetTokens }` for the achieved ratio.
+
+**Deterministic policy.** `wm.policy: "deterministic"` makes no model call: it keeps protected records, outcomes and
+salient records as `event` items, summarises nothing, and discards the rest lowest relevance first, oldest first within
+a relevance, until the kept tokens reach the target (tombstone reason `wm discard budget`). It suits cost-capped hosts;
+its items are the records' own lines, so the achieved ratio is often above the target.
+
+**Cost.** One WM call per trigger crossing or new boundary (none with `wm.policy: "deterministic"`), its input bounded
+by `wm.batchTokens` plus the active WM items, the task state and the scope (at most `scope.maxBytes`), and, only on the
+first pass after a scope change, at most `wm.rejudgeTokens` of re-judged records. The target and
+protection marks add one short section and one word per protected record. The whole-log rewrite and its "consume
+everything sent" rule are gone.
 
 ### Chunks
 
@@ -430,15 +612,17 @@ Ran 35 tests across 3 files. 0 fail
 - **What it returns.** The kind, description, time (`lastAt` once repeated), count and source ids, then every chunk
   verbatim, read from the chunk store for the executing session. `detail: "full"` adds the raw source entries
   (`Source evidence:`), as recall returned by default before plan 217. The tool value carries `state`
-  (`active | dropped | reflected | tombstoned`), `chunks` (each ref with `text`, or `dropped`) and, with `full`,
+  (`active | dropped | tombstoned`), `chunks` (each ref with `text`, or `dropped`) and, with `full`,
   `sourceEntries`.
 - **Dropped chunks.** A chunk the session's store no longer holds reads `chunk dropped: <reason>`: `record superseded by
   <id>`, `record dropped` (rehearsal or compaction), `record tombstoned (<reason>)`, or, for an active record, no
   referrer in this session's store (the default in-memory store does not survive a restart).
 - **Tombstones.** A `memory.session.observations.tombstoned` record (`OBSERVATIONS_TOMBSTONED`: `observationIds`,
   `reason`, `at`) removes records from the surface: they leave the active set and the context block, and `recall`
-  still finds them by id with `state: "tombstoned"` and the reason. Plan 218's WM writes it; a tombstone does not
-  remove chunk referrers by itself.
+  still finds them by id with `state: "tombstoned"` and the reason. WM writes one for every record it gives a verdict,
+  in the same pass that moves the record's chunk referrers ([Working memory](#working-memory)).
+- **WM items.** `recall { id }` with a WM item id returns its kind, relevance, text, time span, the STM records it cites
+  (with their state), its chunks verbatim and the cited records' source entries (`kind: "wm_item"`, `superseded`).
 - **Session-bound.** An id this session's ledger does not hold answers `unknown_id`, with the same text as an id that
   never existed, so a forged id does not reveal whether another session has it. Chunks are read with the executing
   session's id, so a chunk only another session references reads as dropped.
@@ -453,7 +637,7 @@ using that message time. `record_event { kind, description, sourceEntryIds, rele
 supersedes? }` derives `observedAt` (and `lastAt`) from the latest source timestamp; `timestamp` remains the recording
 time. `referencedAt` accepts a valid `YYYY-MM-DD` date; invalid dates are discarded. A known
 `supersedes` id writes a drop record with `reason: "superseded"` and `supersededBy`; unknown ids are
-ignored and reported in the tool result without discarding the new event. Reflection date
+ignored and reported in the tool result without discarding the new event. WM item date
 ranges come from their evidence. Older observations without `observedAt` use `timestamp`.
 
 `record_task_state { goal, openQuestions?, decisions?, nextSteps? }` replaces the current task.
@@ -465,15 +649,15 @@ The STM worker reports these ledger records through `onRecord`; the package pers
 automatically, and the event array return value stays unchanged.
 
 The block asks the agent to cite memory ids and carries `metadata: { source: "memory.session", itemIds: [...] }`
-for the items actually rendered, in display order. Reflections appear first, observations by source
-date next, and the current task last:
+for the items actually rendered, in display order. WM items appear first (facts, summaries, then events), observations
+(the STM surface) by source date next, and the current task last:
 
 ```text
 # Session Memory
 Use these source-backed memories when relevant and cite the ids you rely on as [id]. To inspect evidence, call recall with an id; [chunk] marks a record whose verbatim source text recall returns. Do not guess ids.
 
-## Reflections
-- [112233445566] (2026-10-15T09:12:00.000Z – 2026-10-17T09:12:00.000Z) Deploy history
+## Working memory
+- [112233445566] (2026-10-15T09:12:00.000Z – 2026-10-17T09:12:00.000Z) (high) summary: Deploy moved Thursday → Friday (2026-10-17) [chunk]
 
 ## Observations
 ### 2026-10-15
@@ -610,7 +794,7 @@ the signals in the transcript itself, and returns ordered candidates
 | `correction` | user messages matching `patterns.correction` when the preceding turn is the assistant's; carries the corrected entry id and the note ids cited in that turn | `correction: 1` |
 | `decision` | `MemoryTaskState.decisions` in `om.task_state.recorded` records after the cursor | — |
 | `observation` | observations rated `high` or `critical` (`critical` first) | — |
-| `reflection` | reflections no later record superseded | — |
+| `reflection` | working-memory items no later WM pass superseded (the source keeps its name until plan 219 retires gather) | — |
 | `exchange` | not-yet-consolidated archived exchanges, read through scoped recall with the session tail as the query | `explicit: 1` support when the extractor's note cites it |
 
 An **exchange** candidate is added by the pass, not by `gatherConsolidationCandidates`: when
@@ -1468,9 +1652,9 @@ in-memory store), plus one bounded directory walk when `tools.root` is set. The 
 Off by default: `promote` absent or `false` makes no extractor call. Opt in with
 `promote: { minScore: 0.5, minTurnsBetween: 8 }` (see [triggers](#consolidation-triggers-cost-and-status)).
 A pass gathers session material (explicit statements, corrections, decisions, high-value
-observations, reflections), makes **one** extractor call (plus at most one shape-only repair), and
+observations, WM items), makes **one** extractor call (plus at most one shape-only repair), and
 writes only what survives the gate.
-There is no per-reflection promotion: a reflection is evidence, not a write.
+There is no per-item promotion: a WM item is evidence, not a write. `remember({ reflectionId })` names a WM item id since plan 218 Task 2; plan 219 retires that path.
 
 One write path serves tools and consolidation. Each accepted note goes through `remember` in its
 target scope, so write-time consolidation
@@ -1584,7 +1768,7 @@ The pass makes no model call, so the firing costs one claim write, one completio
 `input`) runs it for that resource only. A host that schedules with `Bun.cron` or systemd instead can call the same command directly
 with `agent.commands.run("memory:maintain", {}, { session })`.
 
-Superseded reflections retire their notes with supersedes semantics (`validTo` set, correction lineage
+Superseded WM items retire the notes promoted from them with supersedes semantics (`validTo` set, correction lineage
 kept, logged `superseded-by-om`). Verified notes edited after promotion (carrying correction lineage)
 are not retired; they are marked `reconsolidate: true` and counted in `memory:status`, then
 re-extracted by the next consolidation pass.
@@ -1661,7 +1845,7 @@ Three triggers, no timers:
 
 - **`turn.completed`** starts a `fabric.consolidate` background task only when at least
   `promote.minTurnsBetween` turns (default 8) have passed since the last pass **and** observational
-  memory recorded a new reflection, a supersession, or a task-state decision after the cursor. A turn
+  memory recorded a new WM item, a WM supersession, or a task-state decision after the cursor. A turn
   with no new OM material starts no task and makes no model call.
 - **`memory:consolidate`** and **`fabric.consolidate(session, { signal })`** run a pass now, regardless
   of `minTurnsBetween`. Run the command before `session.close()`:
@@ -2135,7 +2319,11 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `wm.model` | contract |
 | `wm.instruction` | contract |
 | `wm.thinkingLevel` | tuning |
-| `wm.observationTokens` | tuning |
+| `wm.triggerTokens` | tuning |
+| `wm.batchTokens` | tuning |
+| `wm.targetRatio` | tuning |
+| `wm.rejudgeTokens` | tuning |
+| `wm.policy` | contract |
 | `rehearsal` | contract |
 | `rehearsal.model` | contract |
 | `rehearsal.instruction` | contract |
@@ -2162,6 +2350,9 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `worker.maxMessageBytes` | tuning |
 | `worker.maxErrorBytes` | tuning |
 | `recall` | contract |
+| `scope` | contract |
+| `scope.text` | contract |
+| `scope.maxBytes` | tuning |
 | `sleep` | contract |
 | `ltm` | contract |
 | `ltm.preset` | contract |
@@ -2298,7 +2489,7 @@ removing a name is a deliberate API decision.
 
 - **Stable (API level 1).** The default package definition, `memorySystemConfigSchema`, `MemorySessionLedgerError`,
   `resolveMemorySystemConfig`, the ledger record names (`OBSERVATIONS_RECORDED`, `OBSERVATIONS_REPEATED`,
-  `REFLECTIONS_RECORDED`, `TASK_STATE_RECORDED`, `BOUNDARY_RECORDED`, `OBSERVATIONS_TOMBSTONED`), `foldObservationalMemoryLedger`, `activeObservations`, `activeReflections`,
+  `WM_RECORDED`, `TASK_STATE_RECORDED`, `BOUNDARY_RECORDED`, `OBSERVATIONS_TOMBSTONED`, `SCOPE_SET`), `foldObservationalMemoryLedger`, `activeObservations`, `activeWmItems`,
   `buildObservationalMemoryContextBlocks`, `createMemoryId`, the chunk store contract (`MEMORY_CHUNK_STORE_SERVICE`,
   `createSqliteChunkStore`, `SqliteChunkStore` and the `ChunkStore` types; [Chunks](#chunks)), and the config, ledger and
   record types. For long-term
@@ -2307,7 +2498,7 @@ removing a name is a deliberate API decision.
   `exportMemoryOkf`, `importMemoryOkf`, `runMemoryConformance`, `SCOPE_CLOCK_COUNTER` (a store's `scopeCounter` name),
   the read-only `MEMORY_LTM_SERVICE`, `createMemoryLtmPort`, `MAX_LTM_READ_IDS`, `MAX_LTM_PAGE` and their types,
   `CONVERSATIONAL_PRESET_REVISION`, `CODING_PRESET_REVISION`, and the config, status, report, note and store-adjacent types.
-- **Not exported.** The STM, WM and rehearsal workers (today's observer, reflector and dropper) and their prompts, tuning
+- **Not exported.** The STM, WM and rehearsal workers (rehearsal is today's dropper) and their prompts, tuning
   constants, the settings family, flush, commands, the recall tool and the compactor; the helpers the session tiers and
   long-term memory share (type guards, token estimates, recall paging), which long-term memory imports in-package.
   Long-term memory's prompts (`EPISODE_MERGE_SYSTEM` and the consolidation extractor prompts), tuning constants

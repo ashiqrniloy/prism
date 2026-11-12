@@ -5,13 +5,18 @@ import {
   resolveMemoryWorkerLimits,
   runMemoryWorkerLoop,
 } from "@arnilo/prism-memory-system/core";
-import { type MemoryObservation } from "../types.js";
+import { type EpisodeScope, renderScopeBlock, SCOPE_SYSTEM_RULE } from "../scope.js";
+import { type MemoryObservation, type MemoryTaskState } from "../types.js";
 
 export const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach the target token budget. Call drop_observations.";
 
 export interface RunDropperOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
   readonly targetTokens: number;
+  /** The episode scope, rendered as a delimited data block (I11). Absent, the block says the episode is the current work. */
+  readonly scope?: EpisodeScope;
+  /** The task state the no-scope block shows. */
+  readonly taskState?: MemoryTaskState;
   readonly client: ModelClient;
   readonly maxTurns: number;
   readonly instruction?: string;
@@ -75,10 +80,16 @@ export async function runDropper(options: RunDropperOptions): Promise<readonly s
     },
   };
   const limits = resolveMemoryWorkerLimits(options);
-  const prompt = joinWorkerText(observationLines(active), limits.maxMessageBytes, "Observational memory drop prompt");
-  const system = options.instruction
-    ? `${DEFAULT_DROPPER_INSTRUCTION}\n\nTarget tokens: ${options.targetTokens}.\n\n${options.instruction}`
-    : `${DEFAULT_DROPPER_INSTRUCTION}\n\nTarget tokens: ${options.targetTokens}.`;
+  const prompt = joinWorkerText(
+    [renderScopeBlock(options.scope, options.taskState), ...observationLines(active)],
+    limits.maxMessageBytes,
+    "Observational memory drop prompt",
+  );
+  const system = [
+    SCOPE_SYSTEM_RULE,
+    `${DEFAULT_DROPPER_INSTRUCTION}\n\nTarget tokens: ${options.targetTokens}.`,
+    ...(options.instruction ? [options.instruction] : []),
+  ].join("\n\n");
   await runMemoryWorkerLoop({
     ...options,
     system,

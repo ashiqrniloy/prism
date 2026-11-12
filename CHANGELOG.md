@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+- `@arnilo/prism-memory-system` (experimental): the STM, WM and Rehearsal workers default to `thinkingLevel: "low"` when their section names none (a model without reasoning levels ignores it), and a WM call that stops on its output limit before any verdict retries once on the older half of its batch. `@arnilo/prism-memory-system/core`'s `runMemoryWorkerLoop` now resolves `{ endedAtOutputCap }` (`MemoryWorkerLoopResult`). Plan 218 Task 6: on gate M-2, Muse Spark 1.3 spent the 4,096-token limit on reasoning in 7 of 15 WM calls.
+
+- `models.client(ref)` carries the provider's description of the model (plan 217 Task 6.1). `ModelClient` gains the optional `resolve()`: the model filled in from `ModelProvider.models()` (read once per provider per agent), with every field the ref sets winning; a ref naming the agent's configured model starts from the configured object. `generate` sends the resolved model. Before, a `"provider/model"` ref reached the provider as a bare `{ provider, model }`, so a side call's thinking level, and any provider mapping that reads `request.model.compat`, did nothing. Additive.
+
 - Remove the vulnerable transitive Zod 3 chain by targeting AG-UI 1.0.4, using its validator subpath and requiring patched Zod `^4.6.6` for protocol validation. AG-UI serving needs both peers; the renderer needs only the protocol core. Track the remote host's authored Bun declaration so clean CI typechecking matches local checks (plan 224 Task 10).
 
 - Prove the seven-bundle release from packed consumers, including stable and experimental manifest installs, registry smoke, dependency-ordered npm OIDC publishing, and the six-name bootstrap checklist (plan 224 Task 9).

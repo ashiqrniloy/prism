@@ -4,9 +4,9 @@ import type { SessionEntry } from "@arnilo/prism";
 import {
   foldObservationalMemoryLedger,
   type MemoryObservation,
-  type MemoryReflection,
+  type MemoryWmItem,
   OBSERVATIONS_RECORDED,
-  REFLECTIONS_RECORDED,
+  WM_RECORDED,
 } from "../../index.js";
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails } from "../projection.js";
 import { recallObservationalMemory } from "../recall.js";
@@ -22,10 +22,12 @@ const obs: MemoryObservation = {
   sourceEntryIds: ["m1"],
   tokenCount: 6,
 };
-const reflection: MemoryReflection = {
+const reflection: MemoryWmItem = {
   id: "bbbbbbbbbbbb",
-  content: "Keep implementation package-only.",
-  supportingObservationIds: [obs.id],
+  kind: "summary",
+  text: "Keep implementation package-only.",
+  relevance: "medium",
+  citedIds: [obs.id],
   tokenCount: 5,
 };
 
@@ -46,12 +48,12 @@ describe("observational memory ledger", () => {
       entry("x", { type: "other", observations: [obs] }),
       entry("o", { type: OBSERVATIONS_RECORDED, observations: [obs, { ...obs, id: "bad" }], coversUpToId: "m1" }),
       entry("dup", { type: OBSERVATIONS_RECORDED, observations: [{ ...obs, description: "changed" }] }),
-      entry("r", { type: REFLECTIONS_RECORDED, reflections: [reflection], coversUpToId: "o" }),
+      entry("r", { type: WM_RECORDED, items: [reflection], coversUpToId: "o" }),
       entry("d", { type: OBSERVATIONS_DROPPED, observationIds: [obs.id], coversUpToId: "r" }),
     ]);
 
     assert.equal(ledger.observations[0]?.description, obs.description);
-    assert.deepEqual(ledger.reflections, [reflection]);
+    assert.deepEqual(ledger.wmItems, [reflection]);
     assert.deepEqual(ledger.droppedObservationIds, [obs.id]);
     assert.equal(ledger.latestObservationCoverageId, "m1");
   });
@@ -77,13 +79,13 @@ describe("observational memory ledger", () => {
         package: "arnilo:prism-memory-system",
         key: "memory.session.ledger",
         op: "append",
-        value: { type: REFLECTIONS_RECORDED, reflections: [reflection], coversUpToId: "m1" },
+        value: { type: WM_RECORDED, items: [reflection], coversUpToId: "m1" },
       },
       "package_state",
     );
     const ledger = foldObservationalMemoryLedger([entry("m1", undefined, "message"), recorded, reflected]);
     assert.deepEqual(ledger.observations, [obs]);
-    assert.deepEqual(ledger.reflections, [reflection]);
+    assert.deepEqual(ledger.wmItems, [reflection]);
     assert.equal(ledger.latestObservationCoverageId, "m1");
 
     // A `set` state value is not a log record, even when it is shaped like one.
@@ -106,7 +108,7 @@ describe("observational memory ledger", () => {
   });
 
   it("observational_memory_projection_tracks_visible_full_and_folded_details", () => {
-    const folded = createFoldedMemoryDetails({ observations: [obs], reflections: [reflection], droppedObservationIds: [] }, true);
+    const folded = createFoldedMemoryDetails({ observations: [obs], wmItems: [reflection], droppedObservationIds: [] }, true);
     const projection = buildObservationalMemoryProjection([
       entry("m1", undefined, "message"),
       entry("c", { throughEntryId: "m1", memory: folded }, "compaction"),
@@ -115,10 +117,10 @@ describe("observational memory ledger", () => {
     assert.equal(projection.folded?.type, FOLDED_MEMORY);
     assert.equal(projection.folded?.fullFold, true);
     assert.deepEqual(projection.observations, [obs]);
-    assert.deepEqual(projection.full.reflections, [reflection]);
+    assert.deepEqual(projection.full.wmItems, [reflection]);
   });
 
-  it("observational_memory_render_includes_reflections_observations_and_recall_guidance", () => {
+  it("observational_memory_render_includes_wm_items_observations_and_recall_guidance", () => {
     const rendered = renderObservationalMemory([reflection], [obs], ["secret-value"]);
     assert.match(rendered, /call recall with an id/);
     assert.match(rendered, /\[bbbbbbbbbbbb\]/);
@@ -126,14 +128,14 @@ describe("observational memory ledger", () => {
     assert.doesNotMatch(rendered, /secret-value/);
   });
 
-  it("invalidated source ids drop observations, reflections, and recall content", () => {
+  it("invalidated source ids drop observations, WM items, and recall content", () => {
     const recorded = entry("o", { type: OBSERVATIONS_RECORDED, observations: [obs] });
-    const reflected = entry("r", { type: REFLECTIONS_RECORDED, reflections: [reflection] });
+    const reflected = entry("r", { type: WM_RECORDED, items: [reflection] });
     const projection = buildObservationalMemoryProjection([recorded, reflected], undefined, {
       invalidatedIds: ["m1"],
     });
     assert.deepEqual(projection.observations, []);
-    assert.deepEqual(projection.reflections, []);
+    assert.deepEqual(projection.wmItems, []);
     assert.ok(projection.droppedObservationIds.includes(obs.id));
     const recalled = recallObservationalMemory([recorded, reflected], obs.id, [], { invalidatedIds: ["m1"] });
     assert.equal(recalled.reason, "revoked");

@@ -1,7 +1,7 @@
 import type { JsonValue, SessionContext, SessionLog } from "@arnilo/prism";
 import type { ResolvedMemorySystemConfig } from "./config.js";
 import { observationalMemoryBlock } from "./context.js";
-import { activeObservations, activeReflections, type ObservationalMemoryLedger, recordData } from "./ledger.js";
+import { activeObservations, activeWmItems, type ObservationalMemoryLedger, recordData } from "./ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
 import { ledgerOf } from "./state.js";
 import { CONTEXT_PINNED } from "./types.js";
@@ -27,7 +27,7 @@ export function createCompactionContextCache(log: SessionLog<JsonValue>, config:
   const snapshot = (ledger: ObservationalMemoryLedger): ObservationalMemoryLedger => ({
     ...boundMemoryPayload(
       activeObservations(ledger),
-      activeReflections(ledger),
+      activeWmItems(ledger),
       [],
       config.rehearsal.targetTokens,
       HARD_MAX_FOLDED_PAYLOAD_BYTES,

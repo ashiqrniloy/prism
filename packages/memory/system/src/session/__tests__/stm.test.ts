@@ -21,8 +21,8 @@ import { gatherConsolidationCandidates } from "../../ltm/consolidation/gather.js
 import { recallObservationalMemory } from "../recall.js";
 import { renderObservationalMemory } from "../render.js";
 import { type MemoryObservation, memoryEventKindValues, OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED } from "../types.js";
-import { runReflector } from "../workers/reflector.js";
 import { DEFAULT_STM_INSTRUCTION, runStm, STM_INDEX_DESCRIPTION_CHARS } from "../workers/stm.js";
+import { runWm } from "../workers/wm.js";
 import { clientFor } from "./helpers.js";
 
 const source: SessionEntry = {
@@ -68,7 +68,16 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     // Plan 217 Task 6: conversation is coarse (one event per exchange or topic); work steps stay one event each.
     assert.match(DEFAULT_STM_INSTRUCTION, /Routine conversation is one event per exchange or per topic, not per message or sentence/);
     assert.match(DEFAULT_STM_INSTRUCTION, /keeping every preference, constraint, name, date and number the user gave/);
-    assert.match(DEFAULT_STM_INSTRUCTION, /Actions, results, changes, decisions, errors and outcomes stay separate events, one each/);
+    // Plan 217 Task 6 (sitting 1 content analysis): a finished task is one outcome, not request/action/change/result
+    // events that overlap; actions only while their result is unknown; no opaque ids; task state on every new request.
+    assert.match(DEFAULT_STM_INSTRUCTION, /A task finished or abandoned within the messages is one outcome event/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /a result only when it adds to the records, an action only while its result is unknown/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /Attach chunks only when the exact text matters later and the description cannot hold it/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /leave out tool-call ids and hashes unless the user asked for them/);
+    // Gate M-1 S1 re-run: a later task should not search again for what an earlier one found about the setup.
+    assert.match(DEFAULT_STM_INSTRUCTION, /setup facts found on the way \(a missing file, how checks are run\)/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /record_task_state whenever you record a new request/);
+    assert.ok(DEFAULT_STM_INSTRUCTION.length <= 2_100, "the instruction stays lean");
     assert.equal(DEFAULT_STM_INSTRUCTION.includes("coding"), false, "domain-neutral");
     const requests: ProviderRequest[] = [];
     await runStm({ entries: [source], client: clientFor(scripted(requests, [])), maxTurns: 1, instruction: "Prefer finance wording." });
@@ -93,7 +102,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
   });
 
   it("outcome_event_names_changes_and_verification", async () => {
-    assert.match(DEFAULT_STM_INSTRUCTION, /completes or is abandoned, record an outcome/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /finished or abandoned within the messages is one outcome event/);
     for (const part of ["what was asked", "what changed", "achieved or left open", "how it was verified"]) {
       assert.ok(DEFAULT_STM_INSTRUCTION.includes(part), `the outcome rule names "${part}"`);
     }
@@ -175,10 +184,11 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
               }),
             );
           }
-        } else if (names.has("record_reflection")) {
+        } else if (names.has("summarize")) {
           if (!answered) {
             reflected = true;
-            yield providerToolCall(toolCallContent("r1", "record_reflection", { content: `${WM} summary`, supportingObservationIds: ids }));
+            const stmIds = [...userText(request).matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]!);
+            yield providerToolCall(toolCallContent("r1", "summarize", { stmIds, text: `${WM} summary`, relevance: "medium" }));
           }
         } else if (!names.has("drop_observations")) {
           mainRequests.push(request);
@@ -207,7 +217,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
         memorySystem({
           enabled: true,
           stm: { model: "scripted/stm", triggerTokens: 1 },
-          wm: { model: "scripted/stm", observationTokens: 1 },
+          wm: { model: "scripted/stm", triggerTokens: 1 },
           context: { compactAt: { maxTokens: 999_999 } },
           worker: { maxTurns: 2 },
         }),
@@ -221,7 +231,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
         assert.ok(await check(), "background pass settled");
       };
       await session.run("What is the status?");
-      await waitFor(async () => reflected && foldObservationalMemoryLedger(await session.entries()).reflections.length > 0);
+      await waitFor(async () => reflected && foldObservationalMemoryLedger(await session.entries()).wmItems.length > 0);
       const before = stmRequests.length;
       await session.run("And now?");
       await waitFor(() => stmRequests.length > before);
@@ -243,10 +253,15 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     const outcome = { ...event("aaaaaaaaaaaa", "Fixed retry counter; 35 tests pass", 5, "outcome"), relevance: "high" as const };
     // Render: `kind: description`.
     assert.match(renderObservationalMemory([], [outcome]), /- \[aaaaaaaaaaaa\] 09:05 \(high\) outcome: Fixed retry counter/);
-    // WM (today's reflector) sees the kind and description.
+    // WM sees the kind and description.
     const requests: ProviderRequest[] = [];
-    await runReflector({ client: clientFor(scripted(requests, [])), observations: [outcome], maxTurns: 1 });
-    assert.match(userText(requests[0]!), /outcome: Fixed retry counter; 35 tests pass/);
+    await runWm({
+      client: clientFor(scripted(requests, [])),
+      records: [outcome],
+      ledger: foldObservationalMemoryLedger([{ type: OBSERVATIONS_RECORDED, observations: [outcome] }]),
+      maxTurns: 1,
+    });
+    assert.match(userText(requests[0]!), /outcome \(high\): Fixed retry counter; 35 tests pass/);
     // Recall shows the kind and description.
     const entries = [
       { ...source, id: "m0" },

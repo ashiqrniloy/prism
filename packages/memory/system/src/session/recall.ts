@@ -9,16 +9,16 @@ import {
   isMemoryId,
   type MemoryChunkRef,
   type MemoryObservation,
-  type MemoryReflection,
   type MemoryTaskState,
   type MemoryTombstone,
+  type MemoryWmItem,
 } from "./types.js";
 
-export type RecallKind = "observation" | "reflection" | "task_state";
+export type RecallKind = "observation" | "wm_item" | "task_state";
 export type RecallPageDirection = "forward" | "backward";
 export type RecallPageDetail = "summary" | "full";
-/** Where an STM record stands: on the surface, dropped, consumed by WM, or tombstoned (surface removed, still found). */
-export type RecallRecordState = "active" | "dropped" | "reflected" | "tombstoned";
+/** Where an STM record stands: on the surface, dropped, or tombstoned by a WM verdict (surface removed, still found). */
+export type RecallRecordState = "active" | "dropped" | "tombstoned";
 
 /** One chunk of a recalled STM record: its verbatim text, or why it is gone (`dropped`), or neither when not read. */
 export interface RecalledChunk extends MemoryChunkRef {
@@ -35,17 +35,18 @@ export interface MemoryRecallResult {
   readonly kind?: RecallKind;
   readonly observation?: MemoryObservation;
   readonly taskState?: MemoryTaskState;
-  readonly reflection?: MemoryReflection;
-  readonly supportingObservations?: readonly MemoryObservation[];
-  readonly droppedSupportingObservationIds?: readonly string[];
-  readonly missingSupportingObservationIds?: readonly string[];
+  readonly wmItem?: MemoryWmItem;
+  /** A WM item's state: on the WM surface, or superseded by a later item. */
+  readonly superseded?: boolean;
+  readonly citedObservations?: readonly MemoryObservation[];
+  readonly missingCitedIds?: readonly string[];
   readonly sourceEntries?: readonly SessionEntry[];
   readonly missingSourceEntryIds?: readonly string[];
   readonly dropped?: boolean;
   /** An STM record's state (plan 217 Task 4). */
   readonly state?: RecallRecordState;
   readonly tombstone?: MemoryTombstone;
-  /** An STM record's chunks, verbatim, or with the reason each one is gone. */
+  /** An STM record's or WM item's chunks, verbatim, or with the reason each one is gone. */
   readonly chunks?: readonly RecalledChunk[];
   readonly text: string;
   readonly reason?: "invalid_id" | "unknown_id" | "revoked";
@@ -90,7 +91,6 @@ export function recallObservationalMemory(
   const ledger = options?.ledger ?? foldObservationalMemoryLedger(entries);
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
   const dropped = new Set(ledger.droppedObservationIds);
-  const consumed = new Set(ledger.consumedObservationIds ?? []);
   const invalidated = new Set(options?.invalidatedIds ?? []);
   const taskState = ledger.taskState;
   if (taskState?.id === id) {
@@ -123,56 +123,56 @@ export function recallObservationalMemory(
         text: `Observation [${id}] withheld (revoked). sources: ${observation.sourceEntryIds.join(", ") || "none"}; time: ${observation.timestamp}.`,
       };
     }
-    const state: RecallRecordState = Object.hasOwn(ledger.tombstones ?? {}, id)
-      ? "tombstoned"
-      : dropped.has(id)
-        ? "dropped"
-        : consumed.has(id)
-          ? "reflected"
-          : "active";
-    return recallObservation(id, observation, entryById, state, consumed.has(id), ledger, secrets, options);
+    const state: RecallRecordState = Object.hasOwn(ledger.tombstones ?? {}, id) ? "tombstoned" : dropped.has(id) ? "dropped" : "active";
+    return recallObservation(id, observation, entryById, state, ledger, secrets, options);
   }
 
-  const reflection = ledger.reflections.find((item) => item.id === id);
-  if (reflection) {
+  const wmItem = ledger.wmItems.find((item) => item.id === id);
+  if (wmItem) {
     const observationById = new Map(ledger.observations.map((item) => [item.id, item]));
-    // Invalidation always wins over a compaction drop: a dropped observation whose source was revoked still withholds the reflection.
+    // Invalidation always wins: an item citing a revoked record (or a record whose source was revoked) is withheld.
     const revoked =
       invalidated.has(id) ||
-      reflection.supportingObservationIds.some(
-        (obsId) =>
-          invalidated.has(obsId) || (observationById.get(obsId)?.sourceEntryIds.some((sourceId) => invalidated.has(sourceId)) ?? false),
+      wmItem.citedIds.some(
+        (cited) =>
+          invalidated.has(cited) || (observationById.get(cited)?.sourceEntryIds.some((sourceId) => invalidated.has(sourceId)) ?? false),
       );
     if (revoked) {
       return {
         found: true,
         id,
-        kind: "reflection",
+        kind: "wm_item",
         dropped: true,
         reason: "revoked",
-        text: `Reflection [${id}] withheld (revoked). supporting: ${reflection.supportingObservationIds.join(", ") || "none"}.`,
+        text: `WM item [${id}] withheld (revoked). cites: ${wmItem.citedIds.join(", ") || "none"}.`,
       };
     }
-    const supportingObservations = reflection.supportingObservationIds.flatMap((obsId) => {
-      const item = observationById.get(obsId);
-      return item ? [item] : [];
-    });
-    const droppedSupportingObservationIds = reflection.supportingObservationIds.filter((obsId) => dropped.has(obsId));
-    const missingSupportingObservationIds = reflection.supportingObservationIds.filter((obsId) => !observationById.has(obsId));
-    const sourceIds = new Set(supportingObservations.flatMap((item) => item.sourceEntryIds));
+    const wmIds = new Set(ledger.wmItems.map((item) => item.id));
+    const citedObservations = wmItem.citedIds.flatMap((cited) => observationById.get(cited) ?? []);
+    const missingCitedIds = wmItem.citedIds.filter((cited) => !observationById.has(cited) && !wmIds.has(cited));
+    const superseded = (ledger.supersededWmItemIds ?? []).includes(id);
+    const sourceIds = new Set(citedObservations.flatMap((item) => item.sourceEntryIds));
     const sourceEntries = [...sourceIds].flatMap((sourceId) => entryById.get(sourceId) ?? []);
-    const missingSourceEntryIds = [...sourceIds].filter((sourceId) => !entryById.has(sourceId));
+    const chunks = recalledChunks(wmItem.chunkRefs ?? [], options, secrets, () =>
+      superseded
+        ? "WM item superseded"
+        : "no referrer in this session's chunk store (the store was not kept across a restart, or the chunk was deleted)",
+    );
     const text = [
-      `Reflection [${id}]: ${reflection.content}`,
-      "",
-      "Supporting observations:",
-      ...supportingObservations.map(
-        (item) =>
-          `- [${item.id}]${dropped.has(item.id) ? " (dropped)" : ""}${consumed.has(item.id) ? " (reflected)" : ""} ${item.kind}: ${item.description}`,
-      ),
-      ...(missingSupportingObservationIds.length
-        ? ["", `Missing supporting observations: ${missingSupportingObservationIds.join(", ")}`]
+      `WM item [${id}]${superseded ? " (superseded)" : ""}: ${wmItem.kind} (${wmItem.relevance}): ${wmItem.text}`,
+      ...(wmItem.observedFrom
+        ? [`time: ${wmItem.observedFrom}${wmItem.observedTo && wmItem.observedTo !== wmItem.observedFrom ? ` – ${wmItem.observedTo}` : ""}`]
         : []),
+      ...(wmItem.reason ? [`kept because: ${wmItem.reason}`] : []),
+      "",
+      "Cited STM records:",
+      ...citedObservations.map((item) => {
+        const tombstone = ledger.tombstones?.[item.id];
+        return `- [${item.id}]${dropped.has(item.id) ? " (dropped)" : tombstone ? ` (tombstoned: ${tombstone.reason})` : ""} ${item.kind}: ${item.description}`;
+      }),
+      ...wmItem.citedIds.filter((cited) => wmIds.has(cited)).map((cited) => `- [${cited}] WM item`),
+      ...(missingCitedIds.length ? ["", `Missing cited ids: ${missingCitedIds.join(", ")}`] : []),
+      ...chunkLines(chunks),
       "",
       "Source evidence:",
       serializeSourceEntries(sourceEntries, secrets) || "none",
@@ -180,14 +180,15 @@ export function recallObservationalMemory(
     return {
       found: true,
       id,
-      kind: "reflection",
-      reflection,
-      supportingObservations,
-      droppedSupportingObservationIds,
-      missingSupportingObservationIds,
+      kind: "wm_item",
+      wmItem,
+      superseded,
+      citedObservations,
+      missingCitedIds,
       sourceEntries,
-      missingSourceEntryIds,
-      text,
+      missingSourceEntryIds: [...sourceIds].filter((sourceId) => !entryById.has(sourceId)),
+      ...(chunks.length ? { chunks } : {}),
+      text: redactSecrets(text, secrets),
     };
   }
 
@@ -281,42 +282,22 @@ function recallObservation(
   observation: MemoryObservation,
   entryById: Map<string, SessionEntry>,
   state: RecallRecordState,
-  reflected: boolean,
   ledger: ObservationalMemoryLedger,
   secrets: readonly (string | undefined)[],
   options: RecallMemoryOptions | undefined,
 ): MemoryRecallResult {
   const full = options?.detail === "full";
   const tombstone = state === "tombstoned" ? ledger.tombstones?.[id] : undefined;
-  const chunks = (observation.chunkRefs ?? []).map((ref): RecalledChunk => {
-    if (!options?.chunkTexts) return ref;
-    const stored = options.chunkTexts.get(ref.id);
-    if (stored) return { ...ref, text: redactSecrets(stored.text, secrets) };
-    return { ...ref, dropped: chunkDropReason(id, state, ledger, tombstone) };
-  });
+  const chunks = recalledChunks(observation.chunkRefs ?? [], options, secrets, () => chunkDropReason(id, state, ledger, tombstone));
   const sourceEntries = observation.sourceEntryIds.flatMap((sourceId) => entryById.get(sourceId) ?? []);
   const missingSourceEntryIds = observation.sourceEntryIds.filter((sourceId) => !entryById.has(sourceId));
   const count = observation.count ?? 1;
-  const stateLabel =
-    (state === "tombstoned" ? ` (tombstoned: ${tombstone?.reason ?? "unknown"})` : state === "dropped" ? " (dropped)" : "") +
-    (reflected ? " (reflected)" : "");
+  const stateLabel = state === "tombstoned" ? ` (tombstoned: ${tombstone?.reason ?? "unknown"})` : state === "dropped" ? " (dropped)" : "";
   const text = [
     `Observation [${id}]${stateLabel}: ${observation.kind}${count > 1 ? ` ×${count}` : ""}: ${observation.description}`,
     `time: ${observation.observedAt ?? observation.timestamp}${count > 1 && observation.lastAt ? `; last seen ${observation.lastAt}` : ""}${observation.referencedAt ? `; refers to ${observation.referencedAt}` : ""}`,
     `sources: ${observation.sourceEntryIds.join(", ") || "none"}`,
-    ...(chunks.length
-      ? [
-          "",
-          "Chunks:",
-          ...chunks.map((chunk) =>
-            chunk.text !== undefined
-              ? `[chunk ${chunk.id}] from ${chunk.sourceEntryId}, ${chunk.bytes} bytes:\n${chunk.text}`
-              : chunk.dropped !== undefined
-                ? `[chunk ${chunk.id}] from ${chunk.sourceEntryId}: chunk dropped: ${chunk.dropped}`
-                : `[chunk ${chunk.id}] from ${chunk.sourceEntryId}, ${chunk.bytes} bytes (not read)`,
-          ),
-        ]
-      : []),
+    ...chunkLines(chunks),
     ...(full ? ["", "Source evidence:", serializeSourceEntries(sourceEntries, secrets) || "none"] : []),
   ].join("\n");
   return {
@@ -344,4 +325,33 @@ function chunkDropReason(
   if (state === "dropped") return `record ${ledger.dropReasons?.[id] ?? "dropped"}`;
   if (state === "tombstoned") return `record tombstoned (${tombstone?.reason ?? "unknown"})`;
   return "no referrer in this session's chunk store (the store was not kept across a restart, or the chunk was deleted)";
+}
+
+function recalledChunks(
+  refs: readonly MemoryChunkRef[],
+  options: RecallMemoryOptions | undefined,
+  secrets: readonly (string | undefined)[],
+  dropReason: () => string,
+): readonly RecalledChunk[] {
+  return refs.map((ref): RecalledChunk => {
+    if (!options?.chunkTexts) return ref;
+    const stored = options.chunkTexts.get(ref.id);
+    if (stored) return { ...ref, text: redactSecrets(stored.text, secrets) };
+    return { ...ref, dropped: dropReason() };
+  });
+}
+
+function chunkLines(chunks: readonly RecalledChunk[]): readonly string[] {
+  if (!chunks.length) return [];
+  return [
+    "",
+    "Chunks:",
+    ...chunks.map((chunk) =>
+      chunk.text !== undefined
+        ? `[chunk ${chunk.id}] from ${chunk.sourceEntryId}, ${chunk.bytes} bytes:\n${chunk.text}`
+        : chunk.dropped !== undefined
+          ? `[chunk ${chunk.id}] from ${chunk.sourceEntryId}: chunk dropped: ${chunk.dropped}`
+          : `[chunk ${chunk.id}] from ${chunk.sourceEntryId}, ${chunk.bytes} bytes (not read)`,
+    ),
+  ];
 }
