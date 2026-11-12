@@ -4,17 +4,17 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { providerDone, providerToolCall, toolCallContent, validateJsonSchema } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import {
-  createMemory,
   createLongTermMemory,
+  createMemory,
+  foldObservationalMemoryLedger,
   memoryFabricConfigSchema,
   parseMemoryNoteMetadata,
   resolveMemoryFabricConfig,
 } from "@arnilo/prism-memory-system";
+import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import { createScopeClock } from "../../../packages/memory/system/src/ltm/lifecycle/clock.ts";
 import { isMemoryNoteValidAt } from "../../../packages/memory/system/src/ltm/types.ts";
-import { foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
 import { parseVariantSpecs } from "../variants.mjs";
 import { args, CACHE, hash, loadLedgers, validateLedger } from "./io.mjs";
 
@@ -353,7 +353,7 @@ export async function replayLedgers({
       let historicalReflections;
       let result;
       if (everyReflection) {
-        const reflections = foldObservationalMemoryLedger(entries).reflections;
+        const reflections = foldObservationalMemoryLedger(entries).wmItems;
         for (const reflection of reflections) await fabric.remember({ kind: "fact", reflectionId: reflection.id });
         historicalReflections = reflections.length;
         result = { reason: "historical-every-reflection" };

@@ -8,22 +8,22 @@
   "arm": "memory-off",
   "model": "ollama-cloud/mimo-v2.6-flash",
   "partition": "dev",
-  "sourceRevision": "stm-80628d4163771d7813b9045096ce9885",
-  "protocol": "4d6e03bec4e3ff16da2113981e75b6a88d7e2ada7bd84a6375bab14ba3440864",
+  "sourceRevision": "stm-716a3b968914da60949397df46a711bd",
+  "protocol": "2fe98fb422244a2af1b829b07e6af3ed5d87ce7cdc688b955cd2f4dd68e47ec7",
   "maxInputTokens": 30000000,
   "usageSource": "wire-proxy",
   "status": "completed",
-  "inputTokens": 1030478,
-  "cacheReadTokens": 318336,
-  "outputTokens": 34194,
+  "inputTokens": 2742842,
+  "cacheReadTokens": 816640,
+  "outputTokens": 93845,
   "usageComplete": false,
-  "usageMissingExchanges": 28,
+  "usageMissingExchanges": 79,
   "report": {
     "kind": "long-session-report-v1",
     "family": "long-session",
     "mode": "live",
     "partition": "dev",
-    "partitionIdsHash": "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730",
+    "partitionIdsHash": "949b2ae2d5202e65251ab90ca3904c4d8a615fb501699126761c5ae0f527999c",
     "metric": "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
     "arms": [
       "memory-off"
@@ -32,13 +32,25 @@
       "ls10",
       "ls7",
       "ls11",
-      "ls1"
+      "ls1",
+      "ls15",
+      "ls12",
+      "ls19",
+      "ls14",
+      "ls18",
+      "ls17",
+      "ls21",
+      "ls13",
+      "ls23",
+      "ls22",
+      "ls16",
+      "ls20"
     ],
     "summary": {
       "memory-off": {
-        "relatedTasks": 8,
-        "rederivationsPerRelatedTask": 1.25,
-        "successRate": 0.875
+        "relatedTasks": 32,
+        "rederivationsPerRelatedTask": 2.03125,
+        "successRate": 0.6875
       }
     },
     "rows": {
@@ -60,7 +72,7 @@
           "arm": "memory-off",
           "pair": "config",
           "rederivations": 1,
-          "toolCalls": 4,
+          "toolCalls": 3,
           "success": true,
           "sourceSucceeded": true,
           "status": "completed"
@@ -70,8 +82,8 @@
           "persona": "ls7",
           "arm": "memory-off",
           "pair": "rename",
-          "rederivations": 1,
-          "toolCalls": 4,
+          "rederivations": 2,
+          "toolCalls": 6,
           "success": true,
           "sourceSucceeded": true,
           "status": "completed"
@@ -81,7 +93,73 @@
           "persona": "ls7",
           "arm": "memory-off",
           "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls11",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls11",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 3,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "memory-off",
+          "pair": "config",
           "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls15",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 2,
+          "toolCalls": 5,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls15",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
           "toolCalls": 5,
           "success": true,
           "sourceSucceeded": true,
@@ -89,31 +167,152 @@
         },
         {
           "family": "long-session",
-          "persona": "ls11",
+          "persona": "ls12",
           "arm": "memory-off",
           "pair": "rename",
-          "rederivations": 1,
-          "toolCalls": 4,
-          "success": true,
-          "sourceSucceeded": true,
-          "status": "completed"
-        },
-        {
-          "family": "long-session",
-          "persona": "ls11",
-          "arm": "memory-off",
-          "pair": "config",
           "rederivations": 3,
-          "toolCalls": 3,
+          "toolCalls": 5,
           "success": false,
           "sourceSucceeded": true,
           "status": "completed"
         },
         {
           "family": "long-session",
-          "persona": "ls1",
+          "persona": "ls12",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 3,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls19",
           "arm": "memory-off",
           "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls19",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 1,
+          "toolCalls": 2,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls14",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls14",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 2,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "failed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls18",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 3,
+          "toolCalls": 6,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls18",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls17",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls17",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls21",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 10,
+          "toolCalls": 24,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "failed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls21",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 4,
+          "toolCalls": 5,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls13",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls13",
+          "arm": "memory-off",
+          "pair": "config",
           "rederivations": 1,
           "toolCalls": 4,
           "success": true,
@@ -122,14 +321,91 @@
         },
         {
           "family": "long-session",
-          "persona": "ls1",
+          "persona": "ls23",
           "arm": "memory-off",
-          "pair": "config",
-          "rederivations": 1,
+          "pair": "rename",
+          "rederivations": 0,
           "toolCalls": 4,
           "success": true,
           "sourceSucceeded": true,
           "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls23",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls22",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls22",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls16",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls16",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 5,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls20",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 2,
+          "toolCalls": 5,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls20",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 24,
+          "toolCalls": 24,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "failed"
         }
       ]
     },
@@ -143,11 +419,11 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 19,
-          "inputTokens": 116584,
-          "outputTokens": 1826
+          "calls": 21,
+          "inputTokens": 119147,
+          "outputTokens": 1541
         },
-        "eligibleTokens": 12838,
+        "eligibleTokens": 12736,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -179,11 +455,11 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 21,
-          "inputTokens": 126405,
-          "outputTokens": 2384
+          "calls": 17,
+          "inputTokens": 104921,
+          "outputTokens": 1865
         },
-        "eligibleTokens": 12876,
+        "eligibleTokens": 13803,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -216,10 +492,10 @@
         },
         "main": {
           "calls": 18,
-          "inputTokens": 122902,
-          "outputTokens": 2699
+          "inputTokens": 121234,
+          "outputTokens": 2107
         },
-        "eligibleTokens": 12975,
+        "eligibleTokens": 12721,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -251,11 +527,11 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 20,
-          "inputTokens": 127435,
-          "outputTokens": 2424
+          "calls": 21,
+          "inputTokens": 132490,
+          "outputTokens": 2703
         },
-        "eligibleTokens": 13763,
+        "eligibleTokens": 14972,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -277,8 +553,446 @@
             "status": "completed"
           }
         }
+      },
+      {
+        "persona": "ls15",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 17,
+          "inputTokens": 112035,
+          "outputTokens": 6164
+        },
+        "eligibleTokens": 17198,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls12",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 18,
+          "inputTokens": 106130,
+          "outputTokens": 1882
+        },
+        "eligibleTokens": 13612,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls19",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 20,
+          "inputTokens": 121221,
+          "outputTokens": 2755
+        },
+        "eligibleTokens": 14137,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls14",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 18,
+          "inputTokens": 103163,
+          "outputTokens": 7309
+        },
+        "eligibleTokens": 15389,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          }
+        }
+      },
+      {
+        "persona": "ls18",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 17,
+          "inputTokens": 109150,
+          "outputTokens": 6087
+        },
+        "eligibleTokens": 16509,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls17",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 17,
+          "inputTokens": 121944,
+          "outputTokens": 2065
+        },
+        "eligibleTokens": 13782,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls21",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 15,
+          "inputTokens": 96901,
+          "outputTokens": 10648
+        },
+        "eligibleTokens": 16512,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          },
+          "task4": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls13",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 119014,
+          "outputTokens": 2044
+        },
+        "eligibleTokens": 13942,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls23",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 20,
+          "inputTokens": 122005,
+          "outputTokens": 1965
+        },
+        "eligibleTokens": 12780,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls22",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 18,
+          "inputTokens": 123587,
+          "outputTokens": 1752
+        },
+        "eligibleTokens": 13614,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls16",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 122117,
+          "outputTokens": 2920
+        },
+        "eligibleTokens": 14173,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls20",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 15,
+          "inputTokens": 81737,
+          "outputTokens": 5844
+        },
+        "eligibleTokens": 16256,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "failed",
+            "code": "ERR_PRISM_RUN_LIMIT"
+          }
+        }
       }
     ],
-    "wallMs": 96134
+    "wallMs": 598088
   }
 }

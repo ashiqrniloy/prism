@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "kind": "memory-model-long-session-annotations",
-  "note": "Hand-written once (plan 217 Task 5) and hashed in index.json. `sources` and `chunks[].source` name fixture steps: `<turn>:user`, `<turn>:reply`, `<call>` (the tool result) or `<call>:call` (the assistant's tool call). An event is emitted in the STM batch that holds its last source. `supersedes` names an earlier event id.",
+  "note": "Hand-written once (plan 217 Task 5) and hashed in index.json. `sources` and `chunks[].source` name fixture steps: `<turn>:user`, `<turn>:reply`, `<call>` (the tool result) or `<call>:call` (the assistant's tool call). An event is emitted in the STM batch that holds its last source. `supersedes` names an earlier event id. Plan 218 Task 5 added turns t7b-t8c (attribution, re-plan, protected items, tight target) and the WM `expected` keys (`laterSteps` and `replan` name the plan steps that read an event).",
   "events": [
     { "id": "e001", "kind": "request", "relevance": "low", "description": "User asked to look around the ledgerkit repo before starting", "sources": ["t0:user"] },
     { "id": "e002", "kind": "result", "relevance": "medium", "description": "ledgerkit layout: pnpm 9.12.0 TypeScript project (package.json scripts dev/test=vitest/typecheck/lint/docs:check), src/, test/, docs/, config/, build.log; last commit a71d0e4", "sources": ["c001", "c002", "c004", "c006"], "chunks": [{ "source": "c002", "text": "\"test\": \"vitest run\"," }] },
@@ -65,7 +65,17 @@
 
     { "id": "e701", "kind": "request", "relevance": "medium", "description": "User asked for plan step 7: summarise build.log for the release notes", "sources": ["t7:user"] },
     { "id": "e702", "kind": "result", "relevance": "high", "description": "build.log (148230 bytes): ledgerkit 0.4.0 release build emitted 1200 chunks, 3.4 MB, in 41.7s with 0 warnings", "sources": ["c701", "c703"], "chunks": [{ "source": "c703", "text": "[build] done in 41.7s: 1200 chunks, 3.4 MB" }] },
-    { "id": "e703", "kind": "outcome", "relevance": "high", "description": "Step 7 done: release-note summary of build.log (1200 chunks, 3.4 MB, 41.7s, 0 warnings); verified by tail -n 2 build.log", "sources": ["c703", "t7:reply"] }
+    { "id": "e703", "kind": "outcome", "relevance": "high", "description": "Step 7 done: release-note summary of build.log (1200 chunks, 3.4 MB, 41.7s, 0 warnings); verified by tail -n 2 build.log", "sources": ["c703", "t7:reply"] },
+    { "id": "e801", "kind": "statement", "relevance": "medium", "description": "Proposed a 25-minute publish window (build 42s, CI about 12 minutes, npm publish 3 minutes, 10 minutes of slack)", "sources": ["t7b:reply"] },
+    { "id": "e802", "kind": "statement", "relevance": "high", "description": "User booked a 40-minute publish window with release ops, starting 16:00 UTC", "sources": ["t7c:user"] },
+    { "id": "e811", "kind": "request", "relevance": "high", "description": "User re-planned: new step 8 adds a Quality line to docs/release-notes.md (files pnpm lint checked in step 2, how parseLedgerRow splits a row); step 9 runs the docs link check", "sources": ["t8a:user"] },
+    { "id": "e812", "kind": "change", "relevance": "medium", "description": "docs/release-notes.md gains a Quality line: pnpm lint checked 24 files (no problems); rows split on commas", "sources": ["c801"] },
+    { "id": "e813", "kind": "outcome", "relevance": "high", "description": "Step 8 done: docs/release-notes.md Quality line (pnpm lint checked 24 files, no problems; rows split on commas); verified by reading docs/release-notes.md", "sources": ["c802", "t8a:reply"] },
+    { "id": "e814", "kind": "statement", "relevance": "high", "description": "User correction: the Quality line belongs under the Build heading of docs/release-notes.md, not at the end", "sources": ["t8b:user"] },
+    { "id": "e815", "kind": "change", "relevance": "medium", "description": "Moved the Quality line under the Build heading in docs/release-notes.md", "sources": ["c803", "t8b:reply"] },
+    { "id": "e816", "kind": "request", "relevance": "medium", "description": "User asked for plan step 9: run the docs link check", "sources": ["t8c:user"] },
+    { "id": "e817", "kind": "error", "relevance": "high", "description": "pnpm docs:check failed: docs/release-notes.md:4 broken link #quality (no such heading)", "sources": ["c804"], "chunks": [{ "source": "c804", "text": "docs/release-notes.md:4: broken link #quality (no such heading)" }] },
+    { "id": "e818", "kind": "statement", "relevance": "high", "description": "Open question for the user: rename the #quality anchor to #build, or add a Quality heading?", "sources": ["t8c:reply"] }
   ],
   "taskStates": [
     { "turn": "t1", "source": "t1:user", "goal": "ledgerkit 0.4 plan, step 1: rename parseRow to parseLedgerRow", "nextSteps": ["step 2: strict mode and --strict"] },
@@ -74,7 +84,9 @@
     { "turn": "t4", "source": "t4:user", "goal": "ledgerkit 0.4 plan, step 4: commit, push and wait for CI", "nextSteps": ["step 5: export command"] },
     { "turn": "t5", "source": "t5:user", "goal": "ledgerkit 0.4 plan, step 5: export command with strict parsing", "nextSteps": ["step 6: docs/server.md port"] },
     { "turn": "t6", "source": "t6:user", "goal": "ledgerkit 0.4 plan, step 6: docs/server.md states port 9090", "nextSteps": ["step 7: summarise build.log"] },
-    { "turn": "t7", "source": "t7:user", "goal": "ledgerkit 0.4 plan, step 7: summarise build.log for the release notes" }
+    { "turn": "t7", "source": "t7:user", "goal": "ledgerkit 0.4 plan, step 7: summarise build.log for the release notes" },
+    { "turn": "t8a", "source": "t8a:user", "goal": "ledgerkit 0.4 re-plan, step 8: Quality line in docs/release-notes.md", "nextSteps": ["step 9: docs link check"] },
+    { "turn": "t8c", "source": "t8c:reply", "goal": "ledgerkit 0.4 re-plan, step 9: docs link check", "openQuestions": ["rename the #quality anchor to #build, or add a Quality heading?"] }
   ],
   "tasks": [
     { "id": "T1", "outcome": "e109", "changes": ["parseLedgerRow", "src/parse.ts", "src/cli.ts", "src/import.ts", "test/parse.test.ts", "README.md"], "verification": ["pnpm test", "41 pass"], "targets": ["src/parse.ts", "parseLedgerRow", "src/cli.ts", "src/import.ts", "src/index.ts", "test/parse.test.ts", "README.md"] },
@@ -83,13 +95,15 @@
     { "id": "T4", "outcome": "e411", "changes": ["3f9c2ab"], "verification": ["CI run 4812", "success"], "targets": ["3f9c2ab", "4812"] },
     { "id": "T5", "outcome": "e512", "changes": ["src/commands/export.ts", "exportCommand", "strict: true"], "verification": ["test/export.test.ts", "51 pass", "CI run 4813"], "targets": ["src/commands/export.ts", "exportCommand", "test/export.test.ts", "8e21d4c"] },
     { "id": "T6", "outcome": "e605", "changes": ["docs/server.md", "docs/deploy.md", "9090"], "verification": ["pnpm docs:check", "grep"], "targets": ["docs/server.md", "docs/deploy.md"] },
-    { "id": "T7", "outcome": "e703", "changes": ["release-note summary"], "verification": ["tail -n 2 build.log"], "targets": [] }
+    { "id": "T7", "outcome": "e703", "changes": ["release-note summary"], "verification": ["tail -n 2 build.log"], "targets": [] },
+    { "id": "T8", "outcome": "e813", "changes": ["docs/release-notes.md", "Quality line", "24 files", "commas"], "verification": ["reading docs/release-notes.md"], "targets": ["docs/release-notes.md"] }
   ],
   "related": [
     { "a": "T1", "b": "T2", "rederivations": ["c201"] },
     { "a": "T1", "b": "T5", "rederivations": ["c501"] },
     { "a": "T2", "b": "T5", "rederivations": [] },
-    { "a": "T3", "b": "T6", "rederivations": [] }
+    { "a": "T3", "b": "T6", "rederivations": [] },
+    { "a": "T2", "b": "T8", "rederivations": [] }
   ],
   "expected": {
     "habituated": [
@@ -104,6 +118,17 @@
       { "event": "e104", "why": "code read" }
     ],
     "secretEvent": "e303",
-    "oversizedCall": "c702"
+    "oversizedCall": "c702",
+    "scope": { "setAt": "t1", "text": "plan", "replanAt": "t8a", "replanText": "replan" },
+    "laterSteps": [
+      { "event": "e203", "step": 5, "recordedAt": "t2" },
+      { "event": "e302", "step": 6, "recordedAt": "t3" },
+      { "event": "e304", "step": 6, "recordedAt": "t3" }
+    ],
+    "replan": { "turn": "t8a", "step": 8, "needs": ["e206", "e104"], "restored": "e206", "chunkDropped": "e104" },
+    "protected": { "task_state": "e811", "fact": "e106", "unresolved_error": "e817", "open_question": "e818" },
+    "tightTarget": { "turns": ["t8a", "t8b", "t8c"], "targetRatio": 0.05, "correction": "e814" },
+    "attribution": { "proposal": "e801", "userFigure": "e802" },
+    "knowledgeUpdate": { "event": "e601", "old": "8080", "new": "9090", "neighbours": ["e602", "e603", "e604", "e605"] }
   }
 }

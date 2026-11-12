@@ -63,6 +63,17 @@ export const M1_MODELS = Object.freeze([
   { key: "large", provider: C1_PROVIDER, model: "deepseek-v4.1-flash", family: "deepseek", small: false },
   { key: "small", provider: C1_PROVIDER, model: "mimo-v2.6-flash", family: "mimo", small: true },
 ]);
+/**
+ * The S1 replication models (owner, 2026-11-11: "Let's run on two different models from ollama cloud now. GLM-5.3-flash
+ * and Minimax m3.1 flash. And see what happens to S1"): the long-session family only, all three arms, sitting 5. Their
+ * S1 and family S4 cells are reported beside the gate rows (`evidence.replication`); the M-1 verdicts stay on M1_MODELS.
+ */
+export const M1_REPLICATION_MODELS = Object.freeze([
+  { key: "glm", provider: C1_PROVIDER, model: "glm-5.3-flash", family: "glm", small: false },
+  { key: "minimax", provider: C1_PROVIDER, model: "minimax-m3.1-flash", family: "minimax", small: true },
+]);
+/** Every answer route the gate may call: the gate models and the replication models. */
+export const M1_ANSWER_MODELS = Object.freeze([...M1_MODELS, ...M1_REPLICATION_MODELS]);
 export const M1_JUDGES = Object.freeze([`${C1_PROVIDER}/gpt-oss:120b`, `${C1_PROVIDER}/gemma4:31b`]);
 /** Arms: the config each runs and the tree it runs from. */
 export const M1_ARMS = Object.freeze([
@@ -203,6 +214,7 @@ export const M1_SITTINGS = Object.freeze({
   2: ["small.STM.longmemeval-m", "small.OM-before.longmemeval-m", "small.STM.beam-1m"],
   3: ["small.OM-before.beam-1m", "large.STM.longmemeval-m", "large.OM-before.longmemeval-m"],
   4: ["large.STM.beam-1m", "large.OM-before.beam-1m"],
+  5: M1_REPLICATION_MODELS.flatMap((model) => M1_ARMS.map((arm) => `${model.key}.${arm.id}.${M1_FAMILY}`)),
 });
 
 /**
@@ -214,6 +226,7 @@ export function m1Jobs({ worktree = M1_WORKTREE } = {}) {
   const models = [...M1_MODELS].sort((a, b) => Number(b.small) - Number(a.small));
   const jobs = [];
   for (const model of models) for (const arm of M1_ARMS) jobs.push(m1LongSessionJob(model, arm, { worktree }));
+  for (const model of M1_REPLICATION_MODELS) for (const arm of M1_ARMS) jobs.push(m1LongSessionJob(model, arm, { worktree }));
   for (const model of models)
     for (const suite of M1_SUITES)
       for (const id of M1_WORKER_ARMS)
@@ -330,6 +343,7 @@ export async function buildM1Manifest({ root = ".", worktree = M1_WORKTREE } = {
     summaryPath: `${M1_RUNS}/execution-run.json`,
     models: {
       answers: M1_MODELS.map((model) => ({ key: model.key, ref: refOf(model), family: model.family, small: model.small })),
+      replication: M1_REPLICATION_MODELS.map((model) => ({ key: model.key, ref: refOf(model), family: model.family, scope: M1_FAMILY })),
       judges: [...M1_JUDGES],
       worker: "each arm's answer model (as in gate C-1): the STM / observer, reflector and dropper calls go to the answer route",
       judgesDoNotAnswer: true,
@@ -339,7 +353,7 @@ export async function buildM1Manifest({ root = ".", worktree = M1_WORKTREE } = {
       provider: C1_PROVIDER,
       plan: "Ollama Cloud Pro ($60 included a month, 3 concurrent requests)",
       reserveUsd: 1.5,
-      paidAnswers: M1_MODELS.map((model) => refOf(model)),
+      paidAnswers: M1_ANSWER_MODELS.map((model) => refOf(model)),
       paidJudges: [...M1_JUDGES],
       paidFallbacks: [],
     },
@@ -382,6 +396,9 @@ export function assertM1Gate(gate, manifest) {
   if (!gate || typeof gate !== "object") refuse("no gate record");
   if (gate.kind !== "memory-model-owner-gate" || gate.plan !== M1_PLAN || gate.gate !== M1_GATE_ID)
     refuse("the record is not plan 217 gate M-1");
+  // Plan 218 Task 5: a closed gate never runs again; its records keep the criteria hash it ran on.
+  if (gate.closed)
+    refuse(`gate M-1 was closed by the ${gate.closed.by ?? "owner"} on ${gate.closed.at ?? "an unrecorded date"}; it does not run again`);
   if (gate.approved !== true || gate.approvedBy !== "owner")
     refuse("the gate is not approved by the owner (the run starts only on the owner's word)");
   if (typeof gate.text !== "string" || !gate.text.trim()) refuse("the gate carries no owner text");
@@ -392,7 +409,7 @@ export function assertM1Gate(gate, manifest) {
   if (JSON.stringify(gate.partitions) !== JSON.stringify([M1_PARTITION])) refuse("gate M-1 lists the dev partition only");
   if (gate.budget?.provider !== C1_PROVIDER || gate.budget?.billing !== "paid-allowance")
     refuse("the budget is not the Ollama Cloud allowance");
-  const routes = new Set([...M1_MODELS.map((model) => refOf(model)), ...M1_JUDGES]);
+  const routes = new Set([...M1_ANSWER_MODELS.map((model) => refOf(model)), ...M1_JUDGES]);
   const named = [...Object.values(gate.models?.answers ?? {}), ...(gate.models?.judges ?? [])];
   if (!named.length || named.some((ref) => !routes.has(ref))) refuse("the gate names a route outside the gate M-1 models");
   if (named.some((ref) => /openrouter\/.*free|:free$/.test(ref))) refuse("never openrouter/free");
@@ -486,7 +503,7 @@ export async function preflightM1(manifest, options = {}) {
   const refs = [
     ...new Set(manifest.jobs.flatMap((job) => [`${job.provider}/${job.model}`, ...(job.judges ? job.judges.split(",") : [])])),
   ].sort();
-  const allowed = new Set([...M1_MODELS.map((model) => refOf(model)), ...M1_JUDGES]);
+  const allowed = new Set([...M1_ANSWER_MODELS.map((model) => refOf(model)), ...M1_JUDGES]);
   const foreign = refs.filter((ref) => !allowed.has(ref));
   if (foreign.length) throw new Error(`M1Preflight: ${foreign.join(", ")} is not a gate M-1 route`);
   for (const id of Object.keys(manifest.fixtures)) assertMemoryModelFixture(id);
@@ -744,6 +761,40 @@ export function buildM1Evidence({ reports, manifest, probes, justification = nul
         unit: "per 10k eligible tokens",
       });
   }
+  // The replication models: S1 and the family S4 cell on the long-session family, beside the rows, never in a verdict.
+  const replication = {};
+  for (const { key: model } of M1_REPLICATION_MODELS) {
+    const omJob = get(model, "OM-before", M1_FAMILY);
+    const stmJob = get(model, "STM", M1_FAMILY);
+    const offJob = get(model, "memory-off", M1_FAMILY);
+    const arms = Object.fromEntries(
+      [
+        ["OM-before", omJob],
+        ["STM", stmJob],
+        ["memory-off", offJob],
+      ].map(([arm, job]) => [
+        arm,
+        {
+          status: job?.status ?? "missing",
+          rederivationsPerRelatedTask: job?.report?.summary?.[arm]?.rederivationsPerRelatedTask ?? null,
+          successRate: job?.report?.summary?.[arm]?.successRate ?? null,
+          inputTokens: job?.inputTokens ?? null,
+        },
+      ]),
+    );
+    if (!completed(omJob) || !completed(stmJob)) {
+      replication[model] = { cell: "missing", arms };
+      continue;
+    }
+    const pair = m1RederivationPair(omJob, stmJob, { iterations });
+    const family = m1FamilyWorkerTokens(omJob, stmJob);
+    replication[model] = {
+      cell: pair.n ? "paired" : "not-computable",
+      arms,
+      ...(pair.n ? { S1: pair } : {}),
+      ...(family?.ratio == null ? {} : { S4: { stm: family.stmPer10kEligible, om: family.omPer10kEligible, ratio: family.ratio } }),
+    };
+  }
   const recall = probes?.probes?.find((probe) => probe.id === "stm.recall-verbatim");
   const expectedCells = models.length * (M1_SUITES.length + 1);
   const s4Complete = s4.length === expectedCells;
@@ -792,6 +843,7 @@ export function buildM1Evidence({ reports, manifest, probes, justification = nul
     cells,
     rows,
     performance,
+    replication,
   };
 }
 

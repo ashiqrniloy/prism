@@ -41,7 +41,11 @@ export const LONG_SESSION_PERSONA_COUNT = LONG_SESSION_BASE_COUNT + LONG_SESSION
 /** Personas per partition: [dev, heldout-a, heldout-b]. */
 export const LONG_SESSION_STRATA = Object.freeze({ "long-session-coding": [4, 4, 4] });
 export const LONG_SESSION_SEED = "prism-217-long-session";
-export const LONG_SESSION_ARMS = Object.freeze(["memory-off", "STM", "OM-before"]);
+/**
+ * Plan 217's arms, plus gate M-2's (plan 218 Task 6): `WM` (the session profile, no scope on this family since it has
+ * no plan) and `STM-only` (deterministic WM), so plan 217's S1 miss is re-measured on the same family.
+ */
+export const LONG_SESSION_ARMS = Object.freeze(["memory-off", "STM", "OM-before", "WM", "STM-only"]);
 export const LONG_SESSION_REPORT_KIND = "long-session-report-v1";
 /** The provider-view budget every arm shares: the memory system's gate, and the kernel's entry gate without it. */
 export const LONG_SESSION_CONTEXT = Object.freeze({ maxTokens: 6_000, thresholdEntries: 12, keepRecentEntries: 6 });
@@ -58,15 +62,21 @@ export const longSessionExtensionIds = () =>
     hex(`${LONG_SESSION_SEED}:${a}`).localeCompare(hex(`${LONG_SESSION_SEED}:${b}`)),
   );
 
-/** Label-blind draw: ids ordered by `SHA-256(seed + ":" + id)`; it reads ids only. Throws when the stratum is short. */
-export function drawLongSessionPartitions(ids = longSessionPersonaIds()) {
+/**
+ * Label-blind draw: ids ordered by `SHA-256(seed + ":" + id)`; it reads ids only. Throws when the stratum is short.
+ * Plan 218 Task 5's re-plan family draws with its own seed and stratum.
+ */
+export function drawLongSessionPartitions(
+  ids = longSessionPersonaIds(),
+  { seed = LONG_SESSION_SEED, strata = LONG_SESSION_STRATA, name = "LongSessionDraw" } = {},
+) {
   const unique = [...new Set(ids.map(String))];
   const abilities = Object.fromEntries(ROBUSTNESS_PARTITIONS.map((partition) => [partition, {}]));
   const residualPool = {};
-  for (const [stratum, sizes] of Object.entries(LONG_SESSION_STRATA)) {
+  for (const [stratum, sizes] of Object.entries(strata)) {
     const needed = sizes.reduce((sum, size) => sum + size, 0);
-    if (unique.length < needed) throw new Error(`LongSessionDraw: ${stratum} has ${unique.length} of ${needed}`);
-    const ordered = [...unique].sort((a, b) => hex(`${LONG_SESSION_SEED}:${a}`).localeCompare(hex(`${LONG_SESSION_SEED}:${b}`)));
+    if (unique.length < needed) throw new Error(`${name}: ${stratum} has ${unique.length} of ${needed}`);
+    const ordered = [...unique].sort((a, b) => hex(`${seed}:${a}`).localeCompare(hex(`${seed}:${b}`)));
     let start = 0;
     ROBUSTNESS_PARTITIONS.forEach((partition, index) => {
       abilities[partition][stratum] = ordered.slice(start, start + sizes[index]);
@@ -74,7 +84,7 @@ export function drawLongSessionPartitions(ids = longSessionPersonaIds()) {
     });
     residualPool[stratum] = unique.length - needed;
   }
-  return { seed: LONG_SESSION_SEED, abilities, residualPool, idsHash: robustnessIdsHash(abilities) };
+  return { seed, abilities, residualPool, idsHash: robustnessIdsHash(abilities) };
 }
 
 export function longSessionPartitionFile() {
@@ -116,35 +126,8 @@ export function createLongSessionPersona(index) {
   if (!Number.isSafeInteger(index) || index < 0 || index >= LONG_SESSION_PERSONA_COUNT)
     throw new Error("LongSessionArguments: persona index out of range");
   const id = `ls${index}`;
-  const seed = (key) => hex(`${LONG_SESSION_SEED}/${id}/${key}`);
-  const word = WORDS[Number.parseInt(seed("word").slice(0, 8), 16) % WORDS.length];
-  const Word = word[0].toUpperCase() + word.slice(1);
-  const moduleBase = `${word}-${seed("module").slice(0, 4)}`;
-  const modulePath = `src/${moduleBase}.ts`;
-  const from = `format${Word}${seed("from").slice(0, 4)}`;
-  const to = `render${Word}${seed("to").slice(0, 4)}`;
-  const configPath = `config/${seed("config").slice(0, 6)}.json`;
-  const key = `retry_${seed("key").slice(0, 4)}`;
-  const before = 2 + (Number.parseInt(seed("before").slice(0, 4), 16) % 4);
-  const after = before + 3 + (Number.parseInt(seed("after").slice(0, 4), 16) % 5);
-  const log = (name, count, fail) =>
-    Array.from(
-      { length: count },
-      (_, i) =>
-        `[${name}] step ${i + 1}/${count}: ${fail(i) ? "FAILED" : "ok"} ${seed(`${name}${i}`).slice(0, 24)} ${i % 7 === 3 ? "warning: deprecated option" : ""}`,
-    ).join("\n");
-  const files = {
-    "README.md": `# ${word} service\n\nRun the tests with the run_tests tool.\n`,
-    [modulePath]: `export function ${from}(cents: number): string {\n  return (cents / 100).toFixed(2);\n}\n`,
-    "src/cli.ts": `import { ${from} } from "./${moduleBase}";\n\nexport function main(args: string[]): string {\n  return ${from}(Number(args[0] ?? 0));\n}\n`,
-    [`test/${moduleBase}.test.ts`]: `import { ${from} } from "../src/${moduleBase}";\n\ntest("formats cents", () => expect(${from}(1234)).toBe("12.34"));\n`,
-    [configPath]: `${JSON.stringify({ timeout_ms: 5000, [key]: before }, null, 2)}\n`,
-  };
-  // The large logs come in four parts, so a filler task spans more entries than the kernel keeps recent.
-  for (let part = 1; part <= 4; part++) {
-    files[`logs/build-${part}.log`] = log(`build${part}`, 105, () => false);
-    files[`logs/deploy-${part}.log`] = log(`deploy${part}`, 105, (i) => i % 37 === 11);
-  }
+  const { word, files, labels } = codingProject(id, LONG_SESSION_SEED);
+  const { to, before, after } = labels;
   const tasks = [
     {
       // Plan 217 Task 6: the prompt names neither the function nor its module, so task 3 depends on what the agent found.
@@ -181,13 +164,55 @@ export function createLongSessionPersona(index) {
     family: LONG_SESSION_FAMILY,
     files,
     tasks,
-    pairs: [
-      { id: "rename", a: "task1", b: "task3", targets: [modulePath, moduleBase, from, to] },
-      { id: "config", a: "task4", b: "task6", targets: [configPath, key] },
-    ],
+    pairs: longSessionPairs(labels),
     // Hidden labels for the checks; never in a prompt the agent reads before its own task names them.
-    labels: { modulePath, moduleBase, from, to, configPath, key, before, after },
+    labels,
   };
+}
+
+/** The related pairs: task 3 reads what task 1 renamed, task 6 what task 4 changed. */
+export function longSessionPairs({ modulePath, moduleBase, from, to, configPath, key }) {
+  return [
+    { id: "rename", a: "task1", b: "task3", targets: [modulePath, moduleBase, from, to] },
+    { id: "config", a: "task4", b: "task6", targets: [configPath, key] },
+  ];
+}
+
+/**
+ * A persona's project: seeded names (the hidden labels) and files. A function of `(id, seedRoot)` only, so the
+ * long-session personas are unchanged and the re-plan family (plan 218 Task 5) draws its own from its seed.
+ */
+export function codingProject(id, seedRoot) {
+  const seed = (key) => hex(`${seedRoot}/${id}/${key}`);
+  const word = WORDS[Number.parseInt(seed("word").slice(0, 8), 16) % WORDS.length];
+  const Word = word[0].toUpperCase() + word.slice(1);
+  const moduleBase = `${word}-${seed("module").slice(0, 4)}`;
+  const modulePath = `src/${moduleBase}.ts`;
+  const from = `format${Word}${seed("from").slice(0, 4)}`;
+  const to = `render${Word}${seed("to").slice(0, 4)}`;
+  const configPath = `config/${seed("config").slice(0, 6)}.json`;
+  const key = `retry_${seed("key").slice(0, 4)}`;
+  const before = 2 + (Number.parseInt(seed("before").slice(0, 4), 16) % 4);
+  const after = before + 3 + (Number.parseInt(seed("after").slice(0, 4), 16) % 5);
+  const log = (name, count, fail) =>
+    Array.from(
+      { length: count },
+      (_, i) =>
+        `[${name}] step ${i + 1}/${count}: ${fail(i) ? "FAILED" : "ok"} ${seed(`${name}${i}`).slice(0, 24)} ${i % 7 === 3 ? "warning: deprecated option" : ""}`,
+    ).join("\n");
+  const files = {
+    "README.md": `# ${word} service\n\nRun the tests with the run_tests tool.\n`,
+    [modulePath]: `export function ${from}(cents: number): string {\n  return (cents / 100).toFixed(2);\n}\n`,
+    "src/cli.ts": `import { ${from} } from "./${moduleBase}";\n\nexport function main(args: string[]): string {\n  return ${from}(Number(args[0] ?? 0));\n}\n`,
+    [`test/${moduleBase}.test.ts`]: `import { ${from} } from "../src/${moduleBase}";\n\ntest("formats cents", () => expect(${from}(1234)).toBe("12.34"));\n`,
+    [configPath]: `${JSON.stringify({ timeout_ms: 5000, [key]: before }, null, 2)}\n`,
+  };
+  // The large logs come in four parts, so a filler task spans more entries than the kernel keeps recent.
+  for (let part = 1; part <= 4; part++) {
+    files[`logs/build-${part}.log`] = log(`build${part}`, 105, () => false);
+    files[`logs/deploy-${part}.log`] = log(`deploy${part}`, 105, (i) => i % 37 === 11);
+  }
+  return { word, files, labels: { modulePath, moduleBase, from, to, configPath, key, before, after } };
 }
 
 /** Which task checks pass on the files as they are (`run_tests` and the grader). */
@@ -447,7 +472,7 @@ function mockStep(request) {
     if (!did("run_tests")) return { call: ["run_tests", {}] };
     return { text: `Task 4 done: set \`${key}\` to ${after} in ${path}; tests pass.` };
   }
-  if (/config file and the key you changed in task 4/.test(task)) {
+  if (/config file and the key you changed in task \d/.test(task)) {
     let known = /set `(\w+)` to (\d+) in (config\/[\w.-]+?\.json)/.exec(visible);
     if (!known) {
       if (!did("grep")) return { call: ["grep", { pattern: "timeout_ms" }] };
@@ -504,7 +529,8 @@ export function longSessionWorkerMock() {
     async *generate(request) {
       const tools = (request.tools ?? []).map((tool) => tool.name);
       const shape = tools.includes("record_event") ? "event" : tools.includes("record_observation") ? "observation" : null;
-      if (!shape || request.messages.some((message) => message.role === "tool")) {
+      const wm = tools.includes("keep");
+      if ((!shape && !wm) || request.messages.some((message) => message.role === "tool")) {
         yield providerDone();
         return;
       }
@@ -513,8 +539,15 @@ export function longSessionWorkerMock() {
         .map((m) => plain(m.content))
         .join("\n");
       let n = 0;
+      if (wm) {
+        // Plan 218 Task 5: the offline WM keeps every record it is sent, and every earlier-discarded one re-judged.
+        for (const match of prompt.matchAll(/^- \[([0-9a-f]{12})\] /gm))
+          yield providerToolCall(toolCallContent(`k${++n}`, "keep", { stmId: match[1], reason: "kept offline" }));
+        yield providerDone();
+        return;
+      }
       for (const line of prompt.split("\n")) {
-        const match = /^\[[^\]]+\] \[([^\]]+)\] message: (\{"role":"(user|assistant)".*)$/.exec(line);
+        const match = /^\[[^\]]+\] \[([^\]]+)\] (?:message|user|assistant): (\{"role":"(user|assistant)".*)$/.exec(line);
         if (!match) continue;
         let message;
         try {
@@ -562,6 +595,19 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
       }),
     ];
   }
+  // Plan 218 Task 5 (gate M-2): `WM` is the session profile with WM on (the host sets the scope); `STM-only` is plan
+  // 217's STM with the deterministic WM policy and no scope.
+  if (arm === "WM" || arm === "STM-only") {
+    const { default: memorySystem } = await import("@arnilo/prism-memory-system");
+    return [
+      memorySystem({
+        enabled: true,
+        stm: { model: workerModel, triggerTokens: 1_000, ...stmOverrides },
+        wm: arm === "WM" ? { model: workerModel } : { policy: "deterministic" },
+        context: { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+      }),
+    ];
+  }
   if (arm === "OM-before") {
     let observational;
     try {
@@ -583,9 +629,42 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
   throw new Error(`LongSessionArguments: unknown arm ${arm}`);
 }
 
-/** The session-memory worker tools of both trees: STM (`record_event`), the pre-216 observer, reflector and dropper. */
-export const LONG_SESSION_WORKER_TOOLS = Object.freeze(["record_event", "record_observation", "record_reflection", "drop_observations"]);
+/**
+ * The session-memory worker tools of both trees: STM (`record_event`), WM (`summarize`, offered with every WM verdict tool
+ * since plan 218 Task 2), the pre-216 observer and reflector, and the dropper.
+ */
+export const LONG_SESSION_WORKER_TOOLS = Object.freeze([
+  "record_event",
+  "summarize",
+  "record_observation",
+  "record_reflection",
+  "drop_observations",
+]);
 const estimate = (chars) => Math.ceil(chars / 4);
+/** WM's verdict tools that write an item (plan 218 Task 2); `discard` writes none. */
+export const LONG_SESSION_WM_ITEM_TOOLS = Object.freeze(["keep", "summarize", "derive"]);
+const WM_RECORDED_TYPE = "memory.session.wm.recorded";
+
+/**
+ * Plan 218 Task 6 (gate M-2): a persona-arm's WM passes and compactions from its session log: passes, items per pass,
+ * `budget_unmet` passes and the achieved ratio (item tokens / processed tokens) of each pass that compressed. Counts
+ * only; absent on a tree whose session has no `entries()`.
+ */
+export function longSessionWmStats(entries) {
+  const passes = entries.flatMap((entry) => {
+    const value = entry.data?.op === "append" ? entry.data.value : undefined;
+    return value?.type === WM_RECORDED_TYPE ? [value] : [];
+  });
+  return {
+    compactions: entries.filter((entry) => entry.kind === "compaction").length,
+    passes: passes.length,
+    items: passes.map((pass) => (Array.isArray(pass.items) ? pass.items.length : 0)),
+    budgetUnmet: passes.filter((pass) => pass.budgetUnmet).length,
+    ratios: passes
+      .filter((pass) => pass.compression?.processedTokens > 0 && !pass.budgetUnmet)
+      .map((pass) => Math.round((pass.compression.itemTokens / pass.compression.processedTokens) * 10_000) / 10_000),
+  };
+}
 
 /**
  * Wrap the arm's providers so worker calls are counted apart from the main agent's (S4), and the main agent's output
@@ -598,8 +677,11 @@ export function meteredLongSessionProviders(providers, meter, log) {
       const worker = (request.tools ?? []).some((tool) => LONG_SESSION_WORKER_TOOLS.includes(tool.name));
       const row = worker ? meter.worker : meter.main;
       row.calls++;
+      // Plan 218 Task 6 (gate M-2): a WM call (its verdict tools carry `summarize`) records its stop reason and items.
+      const wm = meter.wm && (request.tools ?? []).some((tool) => tool.name === "summarize") ? { items: 0 } : null;
       let outputChars = 0;
       let usage;
+      let stopReason;
       // The consumer stops reading at `done`, so the tally runs in `finally`, not after the loop.
       try {
         for await (const chunk of provider.generate(request)) {
@@ -607,12 +689,25 @@ export function meteredLongSessionProviders(providers, meter, log) {
           else if (chunk.type === "tool_call") outputChars += JSON.stringify(chunk.call?.arguments ?? {}).length;
           else if (chunk.type === "tool_call_delta") outputChars += chunk.argumentsText?.length ?? 0;
           else if (chunk.type === "usage" || chunk.type === "done") usage = chunk.usage ?? usage;
+          if (chunk.type === "tool_call" && wm && LONG_SESSION_WM_ITEM_TOOLS.includes(chunk.call?.name)) wm.items++;
+          if (chunk.type === "done") stopReason = chunk.stopReason;
           yield chunk;
         }
       } finally {
         row.inputTokens += usage?.inputTokens ?? estimate(JSON.stringify(request.messages ?? []).length);
         row.outputTokens += usage?.outputTokens ?? estimate(outputChars);
+        row.cacheReadTokens = (row.cacheReadTokens ?? 0) + (usage?.cacheReadTokens ?? 0);
         if (!worker) log.eligibleChars = (log.eligibleChars ?? 0) + outputChars;
+        if (wm) {
+          const reason = stopReason ?? "unknown";
+          meter.wm.calls++;
+          meter.wm.items += wm.items;
+          meter.wm.stopReasons[reason] = (meter.wm.stopReasons[reason] ?? 0) + 1;
+          if (reason === "max_output_tokens") {
+            meter.wm.capStops++;
+            if (!wm.items) meter.wm.capNoItem++;
+          }
+        }
       }
     },
   }));
@@ -635,6 +730,7 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
   const meter = {
     worker: { calls: 0, inputTokens: 0, outputTokens: 0 },
     main: { calls: 0, inputTokens: 0, outputTokens: 0 },
+    ...(arm === "WM" || arm === "STM-only" ? { wm: { calls: 0, items: 0, capStops: 0, capNoItem: 0, stopReasons: {} } } : {}),
   };
   const chunkMeter = arm === "STM" ? { bytes: 0, peakBytes: 0, chunks: 0, puts: 0, deletes: 0 } : null;
   const agent = await createAgent({
@@ -661,12 +757,15 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
     },
   });
   const tasks = {};
+  let wmStats = null;
   try {
     const session = await agent.session({ id: `${persona.id}-${arm}`, create: true });
     for (const task of persona.tasks) {
       log.task = task.id;
       log.started.add(task.id);
       log.eligibleChars += task.prompt.length;
+      // Plan 218 Task 5: a turn that carries a plan hands it to the WM arm as the episode scope, as a host would.
+      if (task.scope && arm === "WM") await agent.commands.run("memory:scope", { text: task.scope }, { session });
       const result = await session.run(task.prompt);
       tasks[task.id] = {
         status: result?.status ?? "unknown",
@@ -674,6 +773,7 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
         calls: log.calls.filter((call) => call.task === task.id).length,
       };
     }
+    if (typeof session.entries === "function") wmStats = longSessionWmStats(await session.entries());
     await session.close();
   } finally {
     await agent.dispose();
@@ -687,6 +787,8 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
     main: { ...meter.main },
     eligibleTokens: estimate(log.eligibleChars),
     chunkStorePeakBytes: chunkMeter ? chunkMeter.peakBytes : null,
+    ...(meter.wm ? { wmCalls: { ...meter.wm } } : {}),
+    ...(wmStats ? { session: wmStats } : {}),
     tasks: Object.fromEntries(
       Object.entries(tasks).map(([id, task]) => [id, { status: task.status, ...(task.code ? { code: task.code } : {}) }]),
     ),
@@ -694,7 +796,7 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
   return persona.pairs.map((pair) => {
     const calls = log.calls.filter((call) => call.task === pair.b);
     return {
-      family: LONG_SESSION_FAMILY,
+      family: persona.family,
       persona: persona.id,
       arm,
       pair: pair.id,
@@ -721,14 +823,28 @@ export function longSessionFaults(usageRows) {
 
 const mean = (values) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null);
 
-/** Run the family on one partition. Offline replaces the answer and STM models with request-driven mocks. */
-export async function runLongSession({ partition = "dev", arms, personaLimit, offline = false, providers, model, checkpoint } = {}) {
+/**
+ * Run a family on one partition: `long-session` (plan 217) or `re-plan` (plan 218 Task 5, `./re-plan.mjs`). Offline
+ * replaces the answer and session-memory models with request-driven mocks.
+ */
+export async function runLongSession({
+  family = LONG_SESSION_FAMILY,
+  partition = "dev",
+  arms,
+  personaLimit,
+  offline = false,
+  providers,
+  model,
+  checkpoint,
+} = {}) {
   if (!offline && (!providers || !model)) throw new Error("LongSessionArguments: live runs pass providers and model");
-  const file = await longSessionPartitions();
+  const spec = await familySpec(family);
+  const file = await spec.partitions();
   const ids = Object.values(file.abilities[partition] ?? {}).flat();
   if (!ids.length) throw new Error(`LongSessionArguments: no partition ${partition}`);
-  const chosenArms = arms ?? (offline ? ["memory-off", "STM"] : [...LONG_SESSION_ARMS]);
-  const personas = ids.slice(0, personaLimit ?? ids.length).map((id) => createLongSessionPersona(Number(id.slice(2))));
+  const chosenArms = arms ?? (offline ? spec.offlineArms : [...spec.arms]);
+  for (const arm of chosenArms) if (!spec.arms.includes(arm)) throw new Error(`LongSessionArguments: ${family} has no arm ${arm}`);
+  const personas = ids.slice(0, personaLimit ?? ids.length).map((id) => spec.persona(id));
   const temp = await mkdtemp(join(tmpdir(), "prism-long-session-"));
   const started = performance.now();
   const rows = {};
@@ -776,11 +892,11 @@ export async function runLongSession({ partition = "dev", arms, personaLimit, of
   );
   return {
     kind: LONG_SESSION_REPORT_KIND,
-    family: LONG_SESSION_FAMILY,
+    family,
     mode: offline ? "offline" : "live",
     partition,
     partitionIdsHash: file.idsHash,
-    metric: "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
+    metric: spec.metric,
     arms: chosenArms,
     personas: personas.map((persona) => persona.id),
     summary,
@@ -788,6 +904,29 @@ export async function runLongSession({ partition = "dev", arms, personaLimit, of
     usage,
     wallMs: Math.round(performance.now() - started),
   };
+}
+
+/** The families this runner drives: partitions, persona builder, arms and the reported metric. */
+async function familySpec(family) {
+  if (family === LONG_SESSION_FAMILY)
+    return {
+      partitions: longSessionPartitions,
+      persona: (id) => createLongSessionPersona(Number(id.slice(2))),
+      arms: LONG_SESSION_ARMS,
+      offlineArms: ["memory-off", "STM"],
+      metric: "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
+    };
+  if (family === "re-plan") {
+    const rePlan = await import("./re-plan.mjs");
+    return {
+      partitions: rePlan.rePlanPartitions,
+      persona: (id) => rePlan.createRePlanPersona(Number(id.slice(2))),
+      arms: rePlan.RE_PLAN_ARMS,
+      offlineArms: ["memory-off", "WM"],
+      metric: rePlan.RE_PLAN_METRIC,
+    };
+  }
+  throw new Error(`LongSessionArguments: unknown family ${family}`);
 }
 
 if (import.meta.main && process.argv.includes("--write-partitions")) {

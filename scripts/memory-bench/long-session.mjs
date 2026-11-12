@@ -44,7 +44,7 @@ export function expandOutput(call) {
 }
 
 /**
- * Load, verify and expand the fixture. `{plan}` in a user turn becomes the plan text and `{secret}` (in outputs and
+ * Load, verify and expand the fixture. `{plan}` and `{replan}` in a user turn become the plan texts and `{secret}` (in outputs and
  * chunk texts) the seeded fake secret.
  */
 export function loadLongSessionFixture(dir = LONG_SESSION_DIR) {
@@ -56,7 +56,8 @@ export function loadLongSessionFixture(dir = LONG_SESSION_DIR) {
   const session = JSON.parse(readFileSync(join(dir, "session.json"), "utf8"));
   const annotations = JSON.parse(readFileSync(join(dir, "annotations.json"), "utf8"));
   const secret = session.seededSecret;
-  const fill = (text) => text.replaceAll("{secret}", secret).replaceAll("{plan}", session.plan.join("\n"));
+  const replan = (session.replan ?? []).join("\n");
+  const fill = (text) => text.replaceAll("{secret}", secret).replaceAll("{plan}", session.plan.join("\n")).replaceAll("{replan}", replan);
   const turns = session.turns.map((turn) => ({
     ...turn,
     user: fill(turn.user),
@@ -78,6 +79,8 @@ export function loadLongSessionFixture(dir = LONG_SESSION_DIR) {
     hashes,
     secret,
     plan: session.plan.join("\n"),
+    /** Plan 218 Task 5: the re-planned scope a mid-episode turn hands over (`expected.replan`). */
+    replan,
     turns,
     calls,
     events,

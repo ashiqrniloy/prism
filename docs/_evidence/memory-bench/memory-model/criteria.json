@@ -4,7 +4,7 @@
   "task": 2,
   "file": "scripts/memory-bench/memory-model-criteria.json",
   "frozen": "2026-11-08",
-  "memoryModelCriteriaHash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
+  "memoryModelCriteriaHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
   "pins": {
     "robustness-criteria.json": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
     "three-tier-criteria.json": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
@@ -34,6 +34,22 @@
       "task": 6,
       "date": "2026-11-10",
       "reason": "owner decision m1DevPersonas: long-session dev partition extended to 16 personas; fixture hash updated; no row changes"
+    },
+    {
+      "previousHash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
+      "hash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1",
+      "plan": "224",
+      "task": 8,
+      "date": "2026-11-11",
+      "reason": "package rename in two prose fields (@arnilo/prism-wiki -> @arnilo/prism-knowledge/wiki), recorded by plan 217 Task 6; no row changes"
+    },
+    {
+      "previousHash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1",
+      "hash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+      "plan": 218,
+      "task": 5,
+      "date": "2026-11-12",
+      "reason": "fixture hashes: long-session-replay extended (re-plan, protected items, tight target, attribution) and the re-plan family's partition file frozen; closed gate M-1 keeps 1a768299...; no row changes"
     }
   ],
   "rule": "An amendment (plan 219.1's retrieval-set hashes and fitted thresholds) adds an `amendments` entry with `previousHash` to the criteria file, then replaces memoryModelCriteriaHash here and appends {previousHash, hash, plan, task, date} to `amendments`. No row changes."

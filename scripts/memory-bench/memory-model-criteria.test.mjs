@@ -8,10 +8,12 @@ import { memoryModelReport } from "./acceptance-report.mjs";
 import {
   assertMemoryModelFixture,
   assertMemoryModelPin,
+  closedGateCriteriaHash,
   frozenMemoryModelHash,
   MEMORY_MODEL_CRITERIA,
   MEMORY_MODEL_ROW_IDS,
   memoryModelCriteriaHash,
+  memoryModelCriteriaHashes,
   memoryModelGateVerdict,
   memoryModelManifestPin,
   memoryModelVerdict,
@@ -277,7 +279,11 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
     writeFileSync(path, JSON.stringify(value));
     return path;
   };
-  const pin = memoryModelManifestPin();
+  // Gate M-1 is closed (owner, 2026-11-12): its evidence reads the criteria hash it ran on, never the current one.
+  const closed = repoJson("docs/_evidence/memory-bench/217/gates/owner-gate-m1.json");
+  assert.equal(closed.closed.by, "owner");
+  const pin = { ...memoryModelManifestPin(), memoryModelCriteriaHash: closed.memoryModelCriteriaHash };
+  assert.ok(memoryModelCriteriaHashes().includes(pin.memoryModelCriteriaHash), "a hash the amendment log held");
   const rows = {
     S1: { tests: { "vs-om-before": ci(1) } },
     S2: { tests: { "byte-equal": { value: 1 }, "other-tool-runs": { value: 0 } } },
@@ -287,7 +293,13 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
   const good = write("good.json", { ...pin, gate: "M-1", partition: "dev", rows });
   const report = await memoryModelReport({ gate: "M-1", partition: "dev", evidencePath: good });
   assert.equal(report.status, "pass");
-  assert.equal(report.memoryModelCriteriaHash, pin.memoryModelCriteriaHash);
+  assert.equal(report.memoryModelCriteriaHash, closed.memoryModelCriteriaHash);
+  const current = write("current.json", { ...memoryModelManifestPin(), gate: "M-1", partition: "dev", rows });
+  await assert.rejects(memoryModelReport({ gate: "M-1", evidencePath: current }), /pins a different/);
+  await assert.rejects(memoryModelReport({ gate: "M-1", build: true }), /gate M-1 is closed; its evidence is not rebuilt/);
+  assert.equal(closedGateCriteriaHash({ ...closed, closed: undefined }), null, "an open gate reads the current hash");
+  assert.throws(() => closedGateCriteriaHash({ ...closed, memoryModelCriteriaHash: "0".repeat(64) }), /never held/);
+  assert.throws(() => closedGateCriteriaHash({ ...closed, closed: { at: "2026-11-12" } }), /without the owner's date/);
   const unpinned = write("unpinned.json", { gate: "M-1", partition: "dev", rows });
   await assert.rejects(memoryModelReport({ gate: "M-1", evidencePath: unpinned }), /does not pin/);
   const heldOut = write("heldout.json", { ...pin, gate: "M-1", partition: "heldout-a", rows });
@@ -301,11 +313,42 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
 
 test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   // Plan 217 Task 6: the two fixtures gate M-1 reads are hashed by the first amendment; removing it restores the frozen file.
-  const [first, second, third] = MEMORY_MODEL_CRITERIA.amendments;
+  const [first, second, third, fourth, fifth] = MEMORY_MODEL_CRITERIA.amendments;
   assert.equal(first.plan, 217);
+  // Amendment 5 (plan 218 Task 5): the plan 217 fixture hash and an unhashed re-plan family rebuild amendment 4's file.
+  const unextended = (c) => {
+    c.fixtures.index.find((entry) => entry.id === "long-session-replay").hash =
+      "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3";
+    const rePlan = c.fixtures.index.find((entry) => entry.id === "re-plan");
+    rePlan.hash = null;
+    delete rePlan.hashOf;
+  };
+  const afterFourth = edited((c) => {
+    c.amendments = c.amendments.slice(0, 4);
+    unextended(c);
+  });
+  assert.equal(fifth.plan, 218);
+  assert.equal(memoryModelCriteriaHash(afterFourth), fifth.previousHash);
+  assert.deepEqual(afterFourth.rows, MEMORY_MODEL_CRITERIA.rows);
+  // Amendment 4 (plan 224's package rename in two prose fields): the old names rebuild amendment 3's file.
+  const unrenamed = (c) => {
+    unextended(c);
+    c.ownerDecisions.memoryModel.decision = c.ownerDecisions.memoryModel.decision.replace(
+      "@arnilo/prism-knowledge/wiki",
+      "@arnilo/prism-wiki",
+    );
+    c.wiki.mappingRule = c.wiki.mappingRule.replace("@arnilo/prism-knowledge/wiki", "@arnilo/prism-wiki");
+  };
+  const afterThird = edited((c) => {
+    c.amendments = c.amendments.slice(0, 3);
+    unrenamed(c);
+  });
+  assert.equal(memoryModelCriteriaHash(afterThird), fourth.previousHash);
+  assert.deepEqual(afterThird.rows, MEMORY_MODEL_CRITERIA.rows);
   // Amendment 3 (owner decision m1DevPersonas): restoring the 12-persona partition hash rebuilds amendment 2's file.
   const afterSecond = edited((c) => {
     c.amendments = c.amendments.slice(0, 2);
+    unrenamed(c);
     delete c.ownerDecisions.m1DevPersonas;
     c.fixtures.index.find((entry) => entry.id === "long-session").hash = "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674";
   });
@@ -314,6 +357,7 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   // Amendment 2 (owner decision m1S3Deferred): removing the deferral rebuilds amendment 1's file.
   const afterFirst = edited((c) => {
     c.amendments = c.amendments.slice(0, 1);
+    unrenamed(c);
     delete c.gates["M-1"].deferred;
     delete c.ownerDecisions.m1S3Deferred;
     delete c.ownerDecisions.m1DevPersonas;
@@ -323,6 +367,7 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   assert.deepEqual(afterFirst.rows, MEMORY_MODEL_CRITERIA.rows);
   const before = edited((c) => {
     delete c.amendments;
+    unrenamed(c);
     delete c.gates["M-1"].deferred;
     delete c.ownerDecisions.m1S3Deferred;
     delete c.ownerDecisions.m1DevPersonas;
@@ -376,5 +421,6 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   );
   assert.match(assertMemoryModelFixture("long-session"), /^[0-9a-f]{64}$/);
   assert.match(assertMemoryModelFixture("long-session-replay"), /^[0-9a-f]{64}$/);
-  assert.throws(() => assertMemoryModelFixture("re-plan"), /has no hash yet/);
+  assert.match(assertMemoryModelFixture("re-plan"), /^[0-9a-f]{64}$/);
+  assert.throws(() => assertMemoryModelFixture("recurring-failure"), /has no hash yet/);
 });

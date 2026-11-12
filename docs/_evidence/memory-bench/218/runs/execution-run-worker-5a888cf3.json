@@ -1,0 +1,109 @@
+{
+  "kind": "218-m2-run",
+  "journal": {
+    "campaignId": "campaign-407377d0382f",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 8242419,
+    "attempts": [
+      {
+        "attemptId": "218-m2.deepseek.WM.re-plan@1",
+        "jobId": "218-m2.deepseek.WM.re-plan",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 15500000,
+        "confirmedInputTokens": 1052674
+      },
+      {
+        "attemptId": "218-m2.deepseek.STM-only.re-plan@1",
+        "jobId": "218-m2.deepseek.STM-only.re-plan",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 15500000,
+        "confirmedInputTokens": 1073994
+      },
+      {
+        "attemptId": "218-m2.deepseek.OM-before.re-plan@1",
+        "jobId": "218-m2.deepseek.OM-before.re-plan",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 15500000,
+        "confirmedInputTokens": 1993570
+      },
+      {
+        "attemptId": "218-m2.muse.WM.re-plan@1",
+        "jobId": "218-m2.muse.WM.re-plan",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 15500000,
+        "confirmedInputTokens": 1215860
+      },
+      {
+        "attemptId": "218-m2.muse.STM-only.re-plan@1",
+        "jobId": "218-m2.muse.STM-only.re-plan",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 15500000,
+        "confirmedInputTokens": 1267459
+      },
+      {
+        "attemptId": "218-m2.muse.OM-before.re-plan@1",
+        "jobId": "218-m2.muse.OM-before.re-plan",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 15500000,
+        "confirmedInputTokens": 1638862
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "218-m2.deepseek.WM.re-plan",
+      "attemptId": "218-m2.deepseek.WM.re-plan@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1052674
+    },
+    {
+      "id": "218-m2.deepseek.STM-only.re-plan",
+      "attemptId": "218-m2.deepseek.STM-only.re-plan@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1073994
+    },
+    {
+      "id": "218-m2.deepseek.OM-before.re-plan",
+      "attemptId": "218-m2.deepseek.OM-before.re-plan@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1993570
+    },
+    {
+      "id": "218-m2.muse.WM.re-plan",
+      "attemptId": "218-m2.muse.WM.re-plan@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1215860
+    },
+    {
+      "id": "218-m2.muse.STM-only.re-plan",
+      "attemptId": "218-m2.muse.STM-only.re-plan@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1267459
+    },
+    {
+      "id": "218-m2.muse.OM-before.re-plan",
+      "attemptId": "218-m2.muse.OM-before.re-plan@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1638862
+    }
+  ]
+}

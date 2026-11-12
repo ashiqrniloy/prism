@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-10T07:58:13.912Z",
+  "generatedAt": "2026-11-11T12:34:44.775Z",
   "kind": "217-m1-gate-manifest",
   "schemaVersion": 1,
   "plan": 217,
@@ -9,7 +9,7 @@
   "status": "approved",
   "executable": true,
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
-  "memoryModelCriteriaHash": "9ed0adf03609287da27442612b02d55f0290e75df86d504a66ee7ec08cf896ce",
+  "memoryModelCriteriaHash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1",
   "rows": [
     "S1",
     "S2",
@@ -17,7 +17,7 @@
     "S4"
   ],
   "fixtures": {
-    "long-session": "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674",
+    "long-session": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d",
     "long-session-replay": "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3"
   },
   "baselines": {
@@ -30,13 +30,13 @@
       "worktree": ".cache/memory-bench/216/om-before"
     }
   },
-  "productHash": "80628d4163771d7813b9045096ce98856e21e4c4f09714074f8d1b06d8ceda92",
+  "productHash": "716a3b968914da60949397df46a711bd386802efe38a8ec5cad9669c25ee9733",
   "productPaths": [
     "packages/memory/system/src",
     "packages/memory/core/src",
     "src"
   ],
-  "harnessHash": "780f17fb142a2ac83ae3529e9e8cf20666c6c389a58aca4eadcdcff322492d4f",
+  "harnessHash": "4662cfe2801449734f8563a9a6300705b0f45d0f7eb41a4a24fc543f87d3e0d5",
   "harnessPaths": [
     "scripts/memory-bench/replay.mjs",
     "scripts/memory-bench/run.mjs",
@@ -48,8 +48,8 @@
     "scripts/memory-bench/work-outcome-long-session.json"
   ],
   "productRevision": {
-    "STM": "stm-80628d4163771d7813b9045096ce9885",
-    "memory-off": "stm-80628d4163771d7813b9045096ce9885",
+    "STM": "stm-716a3b968914da60949397df46a711bd",
+    "memory-off": "stm-716a3b968914da60949397df46a711bd",
     "OM-before": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510"
   },
   "provider": "ollama-cloud",
@@ -145,7 +145,7 @@
     },
     "long-session": {
       "partition": "dev",
-      "fixtureHash": "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674"
+      "fixtureHash": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d"
     }
   },
   "arms": [
@@ -270,13 +270,13 @@
       "sitting": 1
     }
   ],
-  "manifestHash": "6f6b983da58d4ea77bcd1b328b1d98d52387121accb64efb172cc7df011d5282",
+  "manifestHash": "33d3573b8ecdc2d07a43bede827c37c06943503801d4ae628d2e1e4dd826aaba",
   "worker": "35966323",
   "executionManifestPath": "docs/_evidence/memory-bench/217/runs/execution-manifest-worker-35966323.json",
   "outputPrefix": "run-217-m1",
   "gate": {
     "path": "docs/_evidence/memory-bench/217/gates/owner-gate-m1.json",
-    "manifestHash": "6f6b983da58d4ea77bcd1b328b1d98d52387121accb64efb172cc7df011d5282",
+    "manifestHash": "33d3573b8ecdc2d07a43bede827c37c06943503801d4ae628d2e1e4dd826aaba",
     "approvedAt": "2026-11-10"
   }
 }

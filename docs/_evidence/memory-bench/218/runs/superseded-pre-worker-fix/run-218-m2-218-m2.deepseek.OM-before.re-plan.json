@@ -1,0 +1,346 @@
+{
+  "kind": "217-long-session-job",
+  "plan": 218,
+  "task": 6,
+  "gate": "M-2",
+  "family": "re-plan",
+  "repeat": 1,
+  "jobId": "218-m2.deepseek.OM-before.re-plan",
+  "attemptId": "218-m2.deepseek.OM-before.re-plan@1",
+  "arm": "OM-before",
+  "model": "opencode-go/deepseek-v4.1-flash",
+  "partition": "dev",
+  "sourceRevision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+  "protocol": "b65a6654df98822c9b0e934d1b0b7f7c484af2c6f58f157fa33afbfb4577e3a4",
+  "maxInputTokens": 15000000,
+  "usageSource": "wire-proxy",
+  "status": "completed",
+  "inputTokens": 1993570,
+  "cacheReadTokens": 1293184,
+  "outputTokens": 111132,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "report": {
+    "kind": "long-session-report-v1",
+    "family": "re-plan",
+    "mode": "live",
+    "partition": "dev",
+    "partitionIdsHash": "216687cab2621c10777ff8ecf226b52729badcb3429fae7c1146490323d16bce",
+    "metric": "M1: task success on the tasks after a mid-episode re-plan (re-derivations reported beside it)",
+    "arms": [
+      "OM-before"
+    ],
+    "personas": [
+      "rp0",
+      "rp5",
+      "rp4",
+      "rp11"
+    ],
+    "summary": {
+      "OM-before": {
+        "relatedTasks": 8,
+        "rederivationsPerRelatedTask": 1,
+        "successRate": 1
+      }
+    },
+    "rows": {
+      "OM-before": [
+        {
+          "family": "re-plan",
+          "persona": "rp0",
+          "arm": "OM-before",
+          "pair": "rename",
+          "rederivations": 2,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp0",
+          "arm": "OM-before",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp5",
+          "arm": "OM-before",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp5",
+          "arm": "OM-before",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp4",
+          "arm": "OM-before",
+          "pair": "rename",
+          "rederivations": 5,
+          "toolCalls": 8,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp4",
+          "arm": "OM-before",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp11",
+          "arm": "OM-before",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp11",
+          "arm": "OM-before",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        }
+      ]
+    },
+    "usage": [
+      {
+        "persona": "rp0",
+        "arm": "OM-before",
+        "worker": {
+          "calls": 22,
+          "inputTokens": 196690,
+          "outputTokens": 21174,
+          "cacheReadTokens": 109312
+        },
+        "main": {
+          "calls": 37,
+          "inputTokens": 313250,
+          "outputTokens": 10482,
+          "cacheReadTokens": 216320
+        },
+        "eligibleTokens": 18574,
+        "chunkStorePeakBytes": null,
+        "session": {
+          "compactions": 16,
+          "passes": 0,
+          "items": [],
+          "budgetUnmet": 0,
+          "ratios": []
+        },
+        "tasks": {
+          "plan": {
+            "status": "stopped"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "rp5",
+        "arm": "OM-before",
+        "worker": {
+          "calls": 18,
+          "inputTokens": 158121,
+          "outputTokens": 13856,
+          "cacheReadTokens": 95104
+        },
+        "main": {
+          "calls": 34,
+          "inputTokens": 317687,
+          "outputTokens": 7642,
+          "cacheReadTokens": 221568
+        },
+        "eligibleTokens": 18269,
+        "chunkStorePeakBytes": null,
+        "session": {
+          "compactions": 16,
+          "passes": 0,
+          "items": [],
+          "budgetUnmet": 0,
+          "ratios": []
+        },
+        "tasks": {
+          "plan": {
+            "status": "stopped"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "rp4",
+        "arm": "OM-before",
+        "worker": {
+          "calls": 19,
+          "inputTokens": 139630,
+          "outputTokens": 15435,
+          "cacheReadTokens": 80512
+        },
+        "main": {
+          "calls": 39,
+          "inputTokens": 263890,
+          "outputTokens": 6579,
+          "cacheReadTokens": 207360
+        },
+        "eligibleTokens": 14092,
+        "chunkStorePeakBytes": null,
+        "session": {
+          "compactions": 12,
+          "passes": 0,
+          "items": [],
+          "budgetUnmet": 0,
+          "ratios": []
+        },
+        "tasks": {
+          "plan": {
+            "status": "stopped"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "rp11",
+        "arm": "OM-before",
+        "worker": {
+          "calls": 26,
+          "inputTokens": 219700,
+          "outputTokens": 19791,
+          "cacheReadTokens": 125568
+        },
+        "main": {
+          "calls": 41,
+          "inputTokens": 365343,
+          "outputTokens": 7616,
+          "cacheReadTokens": 235520
+        },
+        "eligibleTokens": 23927,
+        "chunkStorePeakBytes": null,
+        "session": {
+          "compactions": 21,
+          "passes": 0,
+          "items": [],
+          "budgetUnmet": 0,
+          "ratios": []
+        },
+        "tasks": {
+          "plan": {
+            "status": "stopped"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "wallMs": 1038850
+  }
+}

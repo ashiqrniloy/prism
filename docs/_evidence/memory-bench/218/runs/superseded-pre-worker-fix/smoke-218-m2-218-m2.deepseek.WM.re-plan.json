@@ -1,0 +1,146 @@
+{
+  "kind": "217-long-session-job",
+  "plan": 218,
+  "task": 6,
+  "gate": "M-2",
+  "family": "re-plan",
+  "repeat": 1,
+  "jobId": "218-m2.deepseek.WM.re-plan",
+  "attemptId": "218-m2.deepseek.WM.re-plan@1",
+  "arm": "WM",
+  "model": "opencode-go/deepseek-v4.1-flash",
+  "partition": "dev",
+  "sourceRevision": "wm-240f011a1320b41adf7df65897ffd7e5",
+  "protocol": "e0063f66fb7df829d9de8031939af4584819368daccae88f9bd8ef970ddd8b18",
+  "maxInputTokens": 15000000,
+  "usageSource": "wire-proxy",
+  "status": "completed",
+  "inputTokens": 300485,
+  "cacheReadTokens": 106496,
+  "outputTokens": 36495,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "report": {
+    "kind": "long-session-report-v1",
+    "family": "re-plan",
+    "mode": "live",
+    "partition": "dev",
+    "partitionIdsHash": "216687cab2621c10777ff8ecf226b52729badcb3429fae7c1146490323d16bce",
+    "metric": "M1: task success on the tasks after a mid-episode re-plan (re-derivations reported beside it)",
+    "arms": [
+      "WM"
+    ],
+    "personas": [
+      "rp0"
+    ],
+    "summary": {
+      "WM": {
+        "relatedTasks": 2,
+        "rederivationsPerRelatedTask": 0.5,
+        "successRate": 1
+      }
+    },
+    "rows": {
+      "WM": [
+        {
+          "family": "re-plan",
+          "persona": "rp0",
+          "arm": "WM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp0",
+          "arm": "WM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        }
+      ]
+    },
+    "usage": [
+      {
+        "persona": "rp0",
+        "arm": "WM",
+        "worker": {
+          "calls": 17,
+          "inputTokens": 80847,
+          "outputTokens": 24447,
+          "cacheReadTokens": 14336
+        },
+        "main": {
+          "calls": 40,
+          "inputTokens": 215378,
+          "outputTokens": 7952,
+          "cacheReadTokens": 92160
+        },
+        "eligibleTokens": 18978,
+        "chunkStorePeakBytes": null,
+        "wmCalls": {
+          "calls": 7,
+          "items": 15,
+          "capStops": 0,
+          "capNoItem": 0,
+          "stopReasons": {
+            "tool_calls": 6,
+            "end_turn": 1,
+            "unknown": 1
+          }
+        },
+        "session": {
+          "compactions": 11,
+          "passes": 6,
+          "items": [
+            2,
+            2,
+            2,
+            3,
+            2,
+            4
+          ],
+          "budgetUnmet": 3,
+          "ratios": [
+            0.6271,
+            0.6304,
+            0.6313
+          ]
+        },
+        "tasks": {
+          "plan": {
+            "status": "completed"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "wallMs": 364214
+  }
+}

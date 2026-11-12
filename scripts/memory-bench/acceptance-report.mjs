@@ -995,19 +995,26 @@ async function main210() {
 export async function memoryModelReport({ gate, partition, evidencePath, write = false, build = false } = {}) {
   const { existsSync } = await import("node:fs");
   const { mkdir } = await import("node:fs/promises");
-  const { memoryModelGateVerdict } = await import("./robustness.mjs");
+  const { closedGateCriteriaHash, MEMORY_MODEL_CRITERIA, memoryModelGateVerdict } = await import("./robustness.mjs");
   if (!gate) throw new Error("MemoryBenchArguments: --plan memory-model needs --gate <M-1|M-2|M-3|M-T|M-4|M-5|A>");
+  // Plan 218 Task 5: a closed gate's evidence reads the criteria hash it ran on, and is never rebuilt.
+  const ownerRecord = new URL(`../../${MEMORY_MODEL_CRITERIA.gates[gate]?.record ?? ""}`, import.meta.url);
+  const closed = existsSync(ownerRecord) ? closedGateCriteriaHash(JSON.parse(await readFile(ownerRecord, "utf8"))) : null;
+  if (build && closed) throw new Error(`MemoryBenchArguments: gate ${gate} is closed; its evidence is not rebuilt`);
   // Plan 217 Task 6: `--build` computes gate M-1's evidence from its run reports (stm-gate.mjs), never by hand.
+  // Plan 218 Task 6: gate M-2's builder is wm-gate.mjs.
   if (build) {
-    if (gate !== "M-1") throw new Error(`MemoryBenchArguments: --build is gate M-1's (plan 217); gate ${gate} has no builder yet`);
-    if (evidencePath) throw new Error("MemoryBenchArguments: --build writes M-1/evidence.json; it takes no --evidence");
-    await (await import("./stm-gate.mjs")).writeM1Evidence();
+    if (!["M-1", "M-2"].includes(gate))
+      throw new Error(`MemoryBenchArguments: --build is gate M-1's (plan 217) or M-2's (plan 218); gate ${gate} has no builder yet`);
+    if (evidencePath) throw new Error(`MemoryBenchArguments: --build writes ${gate}/evidence.json; it takes no --evidence`);
+    if (gate === "M-1") await (await import("./stm-gate.mjs")).writeM1Evidence();
+    else await (await import("./wm-gate.mjs")).writeM2Evidence();
   }
   const directory = new URL(`../../docs/_evidence/memory-bench/memory-model/${gate}/`, import.meta.url);
   const path = evidencePath ?? new URL("evidence.json", directory);
   if (evidencePath && !existsSync(path)) throw new Error(`MemoryBenchArguments: evidence file ${evidencePath} does not exist`);
   const evidence = existsSync(path) ? JSON.parse(await readFile(path, "utf8")) : null;
-  const verdict = memoryModelGateVerdict(gate, evidence, { partition });
+  const verdict = memoryModelGateVerdict(gate, evidence, { partition, ...(closed ? { expected: closed } : {}) });
   if (write) {
     await mkdir(directory, { recursive: true });
     await writeFile(new URL("verdicts.json", directory), `${JSON.stringify(verdict, null, 2)}\n`);

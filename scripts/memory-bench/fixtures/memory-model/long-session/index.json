@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "kind": "memory-model-long-session-index",
-  "note": "Plan 217 Task 5. sha256 of the hand-written fixture files; loadLongSessionFixture refuses a file that does not match.",
+  "note": "Plan 217 Task 5; extended and re-pinned by plan 218 Task 5. sha256 of the hand-written fixture files; loadLongSessionFixture refuses a file that does not match.",
   "sha256": {
-    "session.json": "c38e325c7d35e801757ef50758305fe958c92e94779038ae280ad109afd246ca",
-    "annotations.json": "60cd45d06720c5109906c0483199f534305f4e5773a6d0b28938f97403eee506"
+    "session.json": "f032f75c3c6c3bc632e91d9f7d2686729857ec90f0037ab7256d66a6725a1d5c",
+    "annotations.json": "3aa64aa6d3d53d3367f4b84c65b802ec503fe004f832c6370643f19f43619a3a"
   }
 }

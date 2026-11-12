@@ -1,0 +1,992 @@
+{
+  "kind": "217-long-session-job",
+  "plan": 217,
+  "task": 6,
+  "gate": "M-1",
+  "jobId": "217-m1.large.STM.long-session",
+  "attemptId": "217-m1.large.STM.long-session@1",
+  "arm": "STM",
+  "model": "ollama-cloud/deepseek-v4.1-flash",
+  "partition": "dev",
+  "sourceRevision": "stm-c56069be60853dddbb13c18f0a774de0",
+  "protocol": "31c56bb4eefe8b324b9bc2f09de63faa8eedf188281fe6d27d08c2577229514f",
+  "maxInputTokens": 30000000,
+  "usageSource": "wire-proxy",
+  "status": "completed",
+  "inputTokens": 10198047,
+  "cacheReadTokens": 5414912,
+  "outputTokens": 744639,
+  "usageComplete": false,
+  "usageMissingExchanges": 39,
+  "report": {
+    "kind": "long-session-report-v1",
+    "family": "long-session",
+    "mode": "live",
+    "partition": "dev",
+    "partitionIdsHash": "949b2ae2d5202e65251ab90ca3904c4d8a615fb501699126761c5ae0f527999c",
+    "metric": "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
+    "arms": [
+      "STM"
+    ],
+    "personas": [
+      "ls10",
+      "ls7",
+      "ls11",
+      "ls1",
+      "ls15",
+      "ls12",
+      "ls19",
+      "ls14",
+      "ls18",
+      "ls17",
+      "ls21",
+      "ls13",
+      "ls23",
+      "ls22",
+      "ls16",
+      "ls20"
+    ],
+    "summary": {
+      "STM": {
+        "relatedTasks": 32,
+        "rederivationsPerRelatedTask": 0.5,
+        "successRate": 1
+      }
+    },
+    "rows": {
+      "STM": [
+        {
+          "family": "long-session",
+          "persona": "ls10",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 6,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls10",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls7",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls7",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls11",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls11",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 5,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls15",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls15",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls12",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls12",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls19",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls19",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls14",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls14",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls18",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 5,
+          "toolCalls": 8,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls18",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 6,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls17",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 2,
+          "toolCalls": 7,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls17",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls21",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls21",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls13",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls13",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls23",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 5,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls23",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls22",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 3,
+          "toolCalls": 8,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls22",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls16",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 5,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls16",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls20",
+          "arm": "STM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 5,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls20",
+          "arm": "STM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        }
+      ]
+    },
+    "usage": [
+      {
+        "persona": "ls10",
+        "arm": "STM",
+        "worker": {
+          "calls": 10,
+          "inputTokens": 83080,
+          "outputTokens": 14682
+        },
+        "main": {
+          "calls": 30,
+          "inputTokens": 184573,
+          "outputTokens": 5726
+        },
+        "eligibleTokens": 15798,
+        "chunkStorePeakBytes": 321,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "stopped"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls7",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 80235,
+          "outputTokens": 9873
+        },
+        "main": {
+          "calls": 25,
+          "inputTokens": 149654,
+          "outputTokens": 4097
+        },
+        "eligibleTokens": 15080,
+        "chunkStorePeakBytes": 345,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls11",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 55833,
+          "outputTokens": 9527
+        },
+        "main": {
+          "calls": 25,
+          "inputTokens": 145239,
+          "outputTokens": 4347
+        },
+        "eligibleTokens": 15085,
+        "chunkStorePeakBytes": 685,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls1",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 64027,
+          "outputTokens": 9621
+        },
+        "main": {
+          "calls": 26,
+          "inputTokens": 149737,
+          "outputTokens": 4813
+        },
+        "eligibleTokens": 15700,
+        "chunkStorePeakBytes": 192,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls15",
+        "arm": "STM",
+        "worker": {
+          "calls": 6,
+          "inputTokens": 47662,
+          "outputTokens": 7655
+        },
+        "main": {
+          "calls": 22,
+          "inputTokens": 134139,
+          "outputTokens": 4546
+        },
+        "eligibleTokens": 13640,
+        "chunkStorePeakBytes": 861,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls12",
+        "arm": "STM",
+        "worker": {
+          "calls": 8,
+          "inputTokens": 57775,
+          "outputTokens": 10386
+        },
+        "main": {
+          "calls": 26,
+          "inputTokens": 132160,
+          "outputTokens": 3796
+        },
+        "eligibleTokens": 15324,
+        "chunkStorePeakBytes": 644,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls19",
+        "arm": "STM",
+        "worker": {
+          "calls": 4,
+          "inputTokens": 40907,
+          "outputTokens": 5119
+        },
+        "main": {
+          "calls": 24,
+          "inputTokens": 138448,
+          "outputTokens": 3491
+        },
+        "eligibleTokens": 15346,
+        "chunkStorePeakBytes": 152,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls14",
+        "arm": "STM",
+        "worker": {
+          "calls": 8,
+          "inputTokens": 71481,
+          "outputTokens": 11554
+        },
+        "main": {
+          "calls": 24,
+          "inputTokens": 144977,
+          "outputTokens": 4820
+        },
+        "eligibleTokens": 15883,
+        "chunkStorePeakBytes": 221,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls18",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 54127,
+          "outputTokens": 10447
+        },
+        "main": {
+          "calls": 34,
+          "inputTokens": 173165,
+          "outputTokens": 5227
+        },
+        "eligibleTokens": 17038,
+        "chunkStorePeakBytes": 510,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls17",
+        "arm": "STM",
+        "worker": {
+          "calls": 10,
+          "inputTokens": 80653,
+          "outputTokens": 15515
+        },
+        "main": {
+          "calls": 31,
+          "inputTokens": 168837,
+          "outputTokens": 5914
+        },
+        "eligibleTokens": 16359,
+        "chunkStorePeakBytes": 642,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls21",
+        "arm": "STM",
+        "worker": {
+          "calls": 6,
+          "inputTokens": 46985,
+          "outputTokens": 7717
+        },
+        "main": {
+          "calls": 28,
+          "inputTokens": 150820,
+          "outputTokens": 4869
+        },
+        "eligibleTokens": 15911,
+        "chunkStorePeakBytes": 75,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls13",
+        "arm": "STM",
+        "worker": {
+          "calls": 9,
+          "inputTokens": 58556,
+          "outputTokens": 10065
+        },
+        "main": {
+          "calls": 26,
+          "inputTokens": 162391,
+          "outputTokens": 6086
+        },
+        "eligibleTokens": 15665,
+        "chunkStorePeakBytes": 135,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls23",
+        "arm": "STM",
+        "worker": {
+          "calls": 7,
+          "inputTokens": 64997,
+          "outputTokens": 10751
+        },
+        "main": {
+          "calls": 29,
+          "inputTokens": 178812,
+          "outputTokens": 5628
+        },
+        "eligibleTokens": 15618,
+        "chunkStorePeakBytes": 191,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls22",
+        "arm": "STM",
+        "worker": {
+          "calls": 9,
+          "inputTokens": 73960,
+          "outputTokens": 13306
+        },
+        "main": {
+          "calls": 33,
+          "inputTokens": 170816,
+          "outputTokens": 4626
+        },
+        "eligibleTokens": 16542,
+        "chunkStorePeakBytes": 426,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls16",
+        "arm": "STM",
+        "worker": {
+          "calls": 5,
+          "inputTokens": 42314,
+          "outputTokens": 9821
+        },
+        "main": {
+          "calls": 26,
+          "inputTokens": 131198,
+          "outputTokens": 3832
+        },
+        "eligibleTokens": 13662,
+        "chunkStorePeakBytes": 140,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls20",
+        "arm": "STM",
+        "worker": {
+          "calls": 5,
+          "inputTokens": 45919,
+          "outputTokens": 9063
+        },
+        "main": {
+          "calls": 24,
+          "inputTokens": 141670,
+          "outputTokens": 4598
+        },
+        "eligibleTokens": 15569,
+        "chunkStorePeakBytes": 370,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "wallMs": 1155701
+  }
+}

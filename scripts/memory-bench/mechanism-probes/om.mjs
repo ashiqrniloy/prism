@@ -6,14 +6,14 @@ const ids = (text) => [...new Set(text.match(/\b[0-9a-f]{12}\b/g) ?? [])];
 
 /**
  * One agent with the real observational package. The worker answers whichever OM tool its request
- * offers: an observation per prompt entry, a reflection over shown observations, a drop, a task state.
+ * offers: an observation per prompt entry, a WM summary over the records it is sent (plan 218 Task 2), a drop, a task state.
  */
 export async function omAgent({ config = {}, mainCalls = [], compaction, mainModel, reflect = true } = {}) {
   const { prism, testing } = await packages();
   const om = await import("@arnilo/prism-memory-system");
   const ev = await events();
   const requests = [];
-  const workerCalls = { record_event: 0, record_reflection: 0, drop_observations: 0, record_task_state: 0 };
+  const workerCalls = { record_event: 0, summarize: 0, drop_observations: 0, record_task_state: 0 };
   const queue = [...mainCalls];
   const main = await responder(
     "mock",
@@ -34,7 +34,7 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
     const tools = (request.tools ?? []).map((tool) => tool.name);
     const text = receivedText({ messages: request.messages });
     if (tools.includes("record_event")) {
-      const source = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(text)?.[1];
+      const source = /\[[^\]]+\] \[([^\]]+)\] (?:message|user|assistant|tool|system):/.exec(text)?.[1];
       workerCalls.record_event++;
       if (tools.includes("record_task_state") && /task/.test(text)) workerCalls.record_task_state++;
       return source
@@ -62,15 +62,12 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
           ]
         : ev.say("");
     }
-    if (tools.includes("record_reflection")) {
-      workerCalls.record_reflection++;
+    if (tools.includes("summarize")) {
+      workerCalls.summarize++;
       if (!reflect) return ev.say("");
-      const shown = ids(text);
-      return shown.length
-        ? ev.call("record_reflection", {
-            content: "The user is migrating the staging cluster",
-            supportingObservationIds: shown.slice(0, 2),
-          })
+      const sent = [...text.matchAll(/^- \[([0-9a-f]{12})\] \d{4}-/gm)].map((match) => match[1]);
+      return sent.length
+        ? ev.call("summarize", { stmIds: sent.slice(0, 2), text: "The user is migrating the staging cluster", relevance: "high" })
         : ev.say("");
     }
     if (tools.includes("drop_observations")) {
@@ -153,29 +150,29 @@ export const probes = [
   {
     id: "om.reflector",
     async run() {
-      const arm = async (observationTokens) => {
+      // Plan 218 Task 2: a new boundary (the task state the worker records) also runs WM, so the off arm turns WM off
+      // rather than raising its trigger.
+      const arm = async (on) => {
         const h = await omAgent({
           // Plan 216: `reflector` → `wm`, `dropper` → `rehearsal` (inert here, as before), which needs `ltm` on (Task 6).
-          config: {
-            wm: { model: OM_MODEL, observationTokens },
-            rehearsal: { targetTokens: 2_000_000, policy: "lowest-relevance" },
-            ltm: {},
-          },
+          config: on
+            ? { wm: { model: OM_MODEL, triggerTokens: 1 }, rehearsal: { targetTokens: 2_000_000, policy: "lowest-relevance" }, ltm: {} }
+            : { wm: false, rehearsal: false, ltm: {} },
         });
         try {
           await h.run("Where does the staging cluster run?");
           await h.run("And the failover?");
           const status = await h.status();
-          return { reflections: status.reflections.recorded, view: (await h.view()).text };
+          return { reflections: status.wmItems?.recorded ?? 0, view: (await h.view()).text };
         } finally {
           await h.close();
         }
       };
-      const on = await arm(1);
-      const off = await arm(1_000_000);
+      const on = await arm(true);
+      const off = await arm(false);
       return {
         surface: "rendered-om-block",
-        property: "past reflector.observationTokens the reflector condenses observations into a reflection that the rendered block shows",
+        property: "past wm.triggerTokens WM summarizes the STM records it is sent into a WM item that the rendered block shows",
         fires: on.reflections,
         reaches: digest(on.view) !== digest(off.view),
         correct: on.reflections >= 1 && /migrating the staging cluster/.test(on.view) && off.reflections === 0,
@@ -193,7 +190,7 @@ export const probes = [
           reflect: false,
           config: {
             // Plan 216: `reflector` → `wm`, `dropper` → `rehearsal`, which needs `ltm` on (Task 6).
-            wm: { model: OM_MODEL, observationTokens: targetTokens },
+            wm: { model: OM_MODEL, triggerTokens: targetTokens },
             rehearsal: { model: OM_MODEL, targetTokens, policy: "model" },
             ltm: {},
           },
@@ -227,7 +224,7 @@ export const probes = [
         const h = await omAgent({
           reflect: false,
           config: {
-            wm: { model: OM_MODEL, observationTokens: targetTokens },
+            wm: { model: OM_MODEL, triggerTokens: targetTokens },
             rehearsal: { targetTokens, policy: "lowest-relevance" },
             ltm: {},
           },

@@ -82,8 +82,8 @@ function candidatesFrom(ledgers) {
               e.message?.content
                 ?.flatMap((b) => (b.type === "text" ? [b.text] : (b.content ?? []).filter((b) => b.type === "text").map((b) => b.text)))
                 .join("\n") ??
-              (e.data?.observations ?? e.data?.reflections ?? e.data?.taskState?.decisions ?? [])
-                .map((v) => (typeof v === "string" ? v : (v.description ?? v.content)))
+              (e.data?.observations ?? e.data?.items ?? e.data?.reflections ?? e.data?.taskState?.decisions ?? [])
+                .map((v) => (typeof v === "string" ? v : (v.description ?? v.text ?? v.content)))
                 .join("\n"),
           )
           .join("\n")

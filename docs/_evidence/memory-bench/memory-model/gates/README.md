@@ -57,6 +57,10 @@ Rules:
   lists `heldout-b` in an amendment.
 - **Pins.** `assertMemoryModelPin()` refuses a record, manifest or evidence file whose `memoryModelCriteriaHash`
   is not the frozen hash; at gate A it also refuses any of the four criteria hashes that differ.
+- **Closed gates** (plan 218 Task 5). When the owner closes a gate, its record gains `closed { at, by: "owner", text }`.
+  A closed gate never runs again (`assertM1Gate` refuses it). Its evidence keeps the hash it ran on after a later
+  amendment moves the frozen one: `closedGateCriteriaHash()` accepts that hash only when the amendment log in
+  `../criteria.json` held it. Gate M-1 has been closed since 2026-11-12.
 - **Amendments** record the owner's words for any change of budget, model or cap, with the date. A change of row,
   threshold or partition is not an amendment; it is a new owner decision that changes the criteria file.
 - **Misses.** A miss is reported as a miss with per-row evidence and goes to the owner before the next plan

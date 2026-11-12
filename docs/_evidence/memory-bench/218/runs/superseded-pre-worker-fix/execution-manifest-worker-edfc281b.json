@@ -1,0 +1,450 @@
+{
+  "generatedAt": "2026-11-12T16:16:57.018Z",
+  "kind": "218-m2-gate-manifest",
+  "schemaVersion": 1,
+  "plan": 218,
+  "task": 6,
+  "gateId": "M-2",
+  "partition": "dev",
+  "status": "approved",
+  "executable": true,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "memoryModelCriteriaHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+  "rows": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5"
+  ],
+  "fixtures": {
+    "long-session": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d",
+    "long-session-replay": "50a496470d0a9ac90b77e1f3656b558069cadc28bcd24797b91112fa3a8c06cb",
+    "re-plan": "822f3823b20cb447c7961b7176fb43e2b036a1d5d7f732138b00190e71bf1c51"
+  },
+  "probes": {
+    "path": "docs/_evidence/memory-bench/218/wm-probes.json",
+    "sha256": "74df30c84a90ac3b1a5a9188ef13b8fbcdc7dd849b3bf8ef18bc52ca527766e6",
+    "fixture": {
+      "sha256": {
+        "session.json": "f032f75c3c6c3bc632e91d9f7d2686729857ec90f0037ab7256d66a6725a1d5c",
+        "annotations.json": "3aa64aa6d3d53d3367f4b84c65b802ec503fe004f832c6370643f19f43619a3a"
+      },
+      "messageEntries": 222,
+      "tasks": 8,
+      "events": 66
+    }
+  },
+  "baselines": {
+    "omBefore": {
+      "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+      "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc",
+      "productPaths": [
+        "packages/memory/observational/src"
+      ],
+      "worktree": ".cache/memory-bench/216/om-before"
+    }
+  },
+  "productHash": "240f011a1320b41adf7df65897ffd7e557b7e9c33f86e4c26fa661f51b000ff7",
+  "productPaths": [
+    "packages/memory/system/src",
+    "packages/memory/core/src",
+    "src"
+  ],
+  "productExcludes": "test files: __tests__/ directories and *.test.* (owner, 2026-11-12)",
+  "harnessHash": "fefed1e99176e0628dd5c25155295377454f85a67a63c6eaa27c41b1a4349a3c",
+  "harnessPaths": [
+    "scripts/memory-bench/replay.mjs",
+    "scripts/memory-bench/run.mjs",
+    "scripts/memory-bench/ablations.mjs",
+    "scripts/memory-bench/datasets.mjs",
+    "scripts/memory-bench/chunk-meter.mjs",
+    "scripts/memory-bench/long-session.mjs",
+    "scripts/memory-bench/work-outcome/long-session.mjs",
+    "scripts/memory-bench/work-outcome/long-session-live.mjs",
+    "scripts/memory-bench/work-outcome/re-plan.mjs",
+    "scripts/memory-bench/work-outcome-long-session.json",
+    "scripts/memory-bench/work-outcome-re-plan.json"
+  ],
+  "productRevision": {
+    "WM": "wm-240f011a1320b41adf7df65897ffd7e5",
+    "STM-only": "wm-240f011a1320b41adf7df65897ffd7e5",
+    "OM-before": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510"
+  },
+  "provider": "opencode-go",
+  "model": "218-m2-panel",
+  "ceiling": 1000000000000,
+  "journalPath": ".cache/memory-bench/218/journal-worker-edfc281b.json",
+  "summaryPath": "docs/_evidence/memory-bench/218/runs/execution-run-worker-edfc281b.json",
+  "models": {
+    "answers": [
+      {
+        "key": "deepseek",
+        "ref": "opencode-go/deepseek-v4.1-flash",
+        "family": "deepseek"
+      },
+      {
+        "key": "muse",
+        "ref": "opencode-go/muse-spark-1.3-contributor",
+        "family": "muse"
+      }
+    ],
+    "s1": {
+      "key": "mimo",
+      "ref": "opencode-go/mimo-v2.6-flash",
+      "scope": "long-session",
+      "repeats": 3
+    },
+    "judges": [
+      "opencode-go/qwen3.8-flash",
+      "opencode-go/minimax-m3.1-flash"
+    ],
+    "worker": "each arm's answer model: STM, WM and the pre-216 observer calls go to the answer route",
+    "judgesDoNotAnswer": true
+  },
+  "billing": {
+    "mode": "subscription",
+    "provider": "opencode-go",
+    "plan": "OpenCode Go subscription (rolling usage windows; a spent window is waited out)",
+    "paidAnswers": [
+      "opencode-go/deepseek-v4.1-flash",
+      "opencode-go/muse-spark-1.3-contributor",
+      "opencode-go/mimo-v2.6-flash"
+    ],
+    "paidJudges": [
+      "opencode-go/qwen3.8-flash",
+      "opencode-go/minimax-m3.1-flash"
+    ],
+    "paidFallbacks": []
+  },
+  "interruptions": "429s, spent usage windows, empty replies, timeouts and dropped sockets are re-run from the job's answer/judge (or persona) checkpoints after a cooldown and never count against its attempts; a question that errors fails the job (--strict-questions) instead of being scored",
+  "caps": {
+    "maxInputTokens": {
+      "re-plan": 15000000,
+      "long-session": 40000000,
+      "beam-1m": 60000000,
+      "longmemeval-m": 60000000
+    },
+    "wallTimeCapHours": {
+      "re-plan": 24,
+      "long-session": 24,
+      "suite": 72
+    },
+    "concurrency": 1,
+    "maxOutputTokens": 8192,
+    "journalCeiling": 1000000000000
+  },
+  "estimate": {
+    "jobs": 29,
+    "inputTokens": 248000000,
+    "basis": "gate M-1 run reports (217/runs): family jobs 3-14M input tokens on 16 personas, STM suite jobs 3.8-5.5M on two questions",
+    "billing": "OpenCode Go subscription usage windows"
+  },
+  "sittings": {
+    "1": "re-plan",
+    "2": "s1",
+    "3": "suites",
+    "4": "long-session"
+  },
+  "cohort": {
+    "longmemeval-m": {
+      "partition": "dev",
+      "questions": 4,
+      "of": 50,
+      "idsHash": "80f5ded49f8ebe8ad09948d879d048849c8a0d6a168f2a532acd6ad9dba4bab5",
+      "underpowered": true
+    },
+    "beam-1m": {
+      "partition": "dev",
+      "questions": 4,
+      "of": 40,
+      "idsHash": "9ee618b8ed072b2ecf541fcf48737328aa2211d6d510583b222a6e3ae9562f55",
+      "underpowered": true
+    },
+    "re-plan": {
+      "partition": "dev",
+      "fixtureHash": "822f3823b20cb447c7961b7176fb43e2b036a1d5d7f732138b00190e71bf1c51"
+    },
+    "long-session": {
+      "partition": "dev",
+      "fixtureHash": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d"
+    }
+  },
+  "arms": [
+    {
+      "id": "WM",
+      "config": "om",
+      "tree": "current",
+      "wmScope": true,
+      "ablate": [],
+      "base": null
+    },
+    {
+      "id": "STM-only",
+      "config": "om",
+      "tree": "current",
+      "wmScope": false,
+      "ablate": [
+        "session.wm.policy=deterministic"
+      ],
+      "base": "WM"
+    },
+    {
+      "id": "OM-before",
+      "config": "om",
+      "tree": "om-before",
+      "wmScope": false,
+      "ablate": [],
+      "base": "WM"
+    }
+  ],
+  "pairing": "every arm is paired with WM on identical items: the same question ids (suites), personas and repeat (families), answer model, judges and flags; an item one arm did not finish is reported unpaired, never imputed",
+  "caveats": [
+    "STM-only's deterministic WM policy discards a changed value to meet the target (probe wm.knowledge-update): it protects no supersedes record",
+    "M5 reads 4 questions per suite and model: underpowered, a screen; the QA decision stays at gate A"
+  ],
+  "results": [],
+  "jobs": [
+    {
+      "id": "218-m2.deepseek.WM.longmemeval-m",
+      "kind": "robustness",
+      "family": "218-m2.deepseek.longmemeval-m",
+      "role": "WM",
+      "arm": "WM",
+      "model_key": "deepseek",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "deepseek-v4.1-flash",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "wmScope": true,
+      "answersDir": ".cache/memory-bench/218/deepseek/WM/longmemeval-m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/deepseek/WM/longmemeval-m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.deepseek.STM-only.longmemeval-m",
+      "kind": "robustness",
+      "family": "218-m2.deepseek.longmemeval-m",
+      "role": "STM-only",
+      "arm": "STM-only",
+      "model_key": "deepseek",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "deepseek-v4.1-flash",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "ablate": [
+        "session.wm.policy=deterministic"
+      ],
+      "answersDir": ".cache/memory-bench/218/deepseek/STM-only/longmemeval-m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/deepseek/STM-only/longmemeval-m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.deepseek.WM.beam-1m",
+      "kind": "robustness",
+      "family": "218-m2.deepseek.beam-1m",
+      "role": "WM",
+      "arm": "WM",
+      "model_key": "deepseek",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "deepseek-v4.1-flash",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "wmScope": true,
+      "answersDir": ".cache/memory-bench/218/deepseek/WM/beam-1m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/deepseek/WM/beam-1m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.deepseek.STM-only.beam-1m",
+      "kind": "robustness",
+      "family": "218-m2.deepseek.beam-1m",
+      "role": "STM-only",
+      "arm": "STM-only",
+      "model_key": "deepseek",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "deepseek-v4.1-flash",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "ablate": [
+        "session.wm.policy=deterministic"
+      ],
+      "answersDir": ".cache/memory-bench/218/deepseek/STM-only/beam-1m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/deepseek/STM-only/beam-1m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.muse.WM.longmemeval-m",
+      "kind": "robustness",
+      "family": "218-m2.muse.longmemeval-m",
+      "role": "WM",
+      "arm": "WM",
+      "model_key": "muse",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "muse-spark-1.3-contributor",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "wmScope": true,
+      "answersDir": ".cache/memory-bench/218/muse/WM/longmemeval-m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/muse/WM/longmemeval-m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.muse.STM-only.longmemeval-m",
+      "kind": "robustness",
+      "family": "218-m2.muse.longmemeval-m",
+      "role": "STM-only",
+      "arm": "STM-only",
+      "model_key": "muse",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "muse-spark-1.3-contributor",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "ablate": [
+        "session.wm.policy=deterministic"
+      ],
+      "answersDir": ".cache/memory-bench/218/muse/STM-only/longmemeval-m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/muse/STM-only/longmemeval-m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.muse.WM.beam-1m",
+      "kind": "robustness",
+      "family": "218-m2.muse.beam-1m",
+      "role": "WM",
+      "arm": "WM",
+      "model_key": "muse",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "muse-spark-1.3-contributor",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "wmScope": true,
+      "answersDir": ".cache/memory-bench/218/muse/WM/beam-1m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/muse/WM/beam-1m/judge",
+      "sitting": 3
+    },
+    {
+      "id": "218-m2.muse.STM-only.beam-1m",
+      "kind": "robustness",
+      "family": "218-m2.muse.beam-1m",
+      "role": "STM-only",
+      "arm": "STM-only",
+      "model_key": "muse",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "opencode-go",
+      "model": "muse-spark-1.3-contributor",
+      "judges": "opencode-go/qwen3.8-flash,opencode-go/minimax-m3.1-flash",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 60000000,
+      "maxOutputTokens": 8192,
+      "maxQuestions": 4,
+      "concurrency": 1,
+      "wallTimeCapHours": 72,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "ablate": [
+        "session.wm.policy=deterministic"
+      ],
+      "answersDir": ".cache/memory-bench/218/muse/STM-only/beam-1m/answers",
+      "judgeCacheDir": ".cache/memory-bench/218/muse/STM-only/beam-1m/judge",
+      "sitting": 3
+    }
+  ],
+  "manifestHash": "189219f2411172dbf11d1f056143d10f65c3c36b57150b79a0914487e64ff02a",
+  "worker": "edfc281b",
+  "executionManifestPath": "docs/_evidence/memory-bench/218/runs/execution-manifest-worker-edfc281b.json",
+  "outputPrefix": "run-218-m2",
+  "gate": {
+    "path": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json",
+    "manifestHash": "189219f2411172dbf11d1f056143d10f65c3c36b57150b79a0914487e64ff02a",
+    "approvedAt": "2026-11-12"
+  }
+}

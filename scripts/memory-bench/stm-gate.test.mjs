@@ -87,9 +87,18 @@ function allReports({ stmCorrect, stmWorker = 1000, stmRederivations = () => 0 }
 
 test("gate_m1_arms_paired_on_identical_items", async () => {
   const jobs = m1Jobs();
-  // The family: 2 models x 3 arms; the S4 suite sample: 2 models x 2 suites x {STM, OM-before}.
-  assert.equal(jobs.length, 2 * 3 + 2 * 2 * 2);
+  // The family: 2 models x 3 arms; the S4 suite sample: 2 models x 2 suites x {STM, OM-before}; the S1 replication:
+  // 2 more models x 3 arms on the family only, in sitting 5.
+  assert.equal(jobs.length, 2 * 3 + 2 * 2 * 2 + 2 * 3);
   assertM1Paired(jobs);
+  const replication = jobs.filter((job) => ["glm", "minimax"].includes(job.model_key));
+  assert.deepEqual([...new Set(replication.map((job) => job.model))].sort(), ["glm-5.3-flash", "minimax-m3.1-flash"]);
+  assert.ok(replication.every((job) => job.suite === "long-session" && job.sitting === 5 && job.subset === "dev"));
+  // Replication reports stay out of the gate rows: with none of them, S1 still reads the gate models only.
+  const evidence = buildM1Evidence({ reports: new Map(), manifest: { jobs, baselines: { omBefore: {} } }, probes: null, iterations: 10 });
+  assert.deepEqual(Object.keys(evidence.replication).sort(), ["glm", "minimax"]);
+  assert.ok(Object.values(evidence.replication).every((cell) => cell.cell === "missing"));
+  assert.ok(!Object.keys(evidence.cells).some((key) => /^(glm|minimax)\./.test(key)));
   // Every (model, suite) group holds the three arms, alike in everything but the arm and its tree.
   for (const model of ["small", "large"])
     for (const suite of ["longmemeval-m", "beam-1m", "long-session"]) {
@@ -203,9 +212,15 @@ test("om_before_runs_from_pinned_pre_216_revision", async () => {
     () => assertM1Gate({ ...record, approved: true, models: { ...record.models, answers: { large: "ollama-cloud/beam" } } }, manifest),
     /outside the gate M-1 models/,
   );
-  // The committed record either refuses (not approved) or binds this exact manifest.
+  // A closed gate never runs again (plan 218 Task 5), whatever its manifest.
+  assert.throws(
+    () => assertM1Gate({ ...record, approved: true, closed: { at: "2026-11-12", by: "owner" } }, manifest),
+    /closed by the owner on 2026-11-12/,
+  );
+  // The committed record refuses (not approved, or closed) or binds this exact manifest.
   const committed = JSON.parse(readFileSync("docs/_evidence/memory-bench/217/gates/owner-gate-m1.json", "utf8"));
-  if (committed.approved) assert.equal((await buildExecutableM1Manifest()).executable, true);
+  if (committed.closed) await assert.rejects(buildExecutableM1Manifest(), /it does not run again/);
+  else if (committed.approved) assert.equal((await buildExecutableM1Manifest()).executable, true);
   else await assert.rejects(buildExecutableM1Manifest(), /not approved by the owner/);
 });
 

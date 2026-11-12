@@ -16,7 +16,7 @@ export const VARIANT_PATHS = {
   // baseline reproduces 188.8 post-fix instead of the 4000/12/0.2 delivery 188.9 Task 5 shipped.
   "fabric.delivery=188.8": [`${fabric}config.ts`, `${fabric}context.ts`],
   "fabric.keyWeight=off": ["packages/memory/core/src/sqlite/index.ts"],
-  "om.dates=off": [`${om}serialize.ts`, `${om}render.ts`, `${om}workers/reflector.ts`],
+  "om.dates=off": [`${om}serialize.ts`, `${om}render.ts`, `${om}workers/wm.ts`],
   "om.taskState=off": [`${om}workers/stm.ts`, `${om}render.ts`],
   "om.replaceOnReflect=off": [`${om}flush.ts`],
   "fabric.crossSourceDedup=off": [`${fabric}context.ts`],
@@ -165,20 +165,44 @@ export function transformVariantSource(path, source, input = []) {
   if (active("fabric.keyWeight=off")) replace("-bm25(semantic_memory_fts, 1.0, 3.0)", "-bm25(semantic_memory_fts, 1.0, 1.0)");
   if (active("om.dates=off")) {
     if (path === `${om}serialize.ts`) {
-      replace("`[${entry.timestamp}] [${entry.id}] ${entry.kind}: ${text}`", "`[${entry.id}] ${entry.kind}: ${text}`");
+      // Plan 218 Task 4.1: message lines lead with their role (`label`); before it, the kind.
+      replaceEither(
+        ["`[${entry.timestamp}] [${entry.id}] ${label}: ${text}`", "`[${entry.timestamp}] [${entry.id}] ${entry.kind}: ${text}`"],
+        source.includes("${label}: ${text}") ? "`[${entry.id}] ${label}: ${text}`" : "`[${entry.id}] ${entry.kind}: ${text}`",
+      );
       replaceEither(
         ["if (elapsed < 600_000) return undefined;", "if (elapsed >= 600_000) {"],
         source.includes("if (elapsed < 600_000) return undefined;") ? "return undefined;" : "if (false && elapsed >= 600_000) {",
       );
     } else if (path === `${om}render.ts`) {
-      replace('${item.observedFrom && item.observedTo ? `(${item.observedFrom} – ${item.observedTo}) ` : ""}', "");
+      // Plan 218 Task 2 moved the WM item span into `renderWmItem`.
+      replaceEither(
+        [
+          'const span = item.observedFrom && item.observedTo ? `(${item.observedFrom} – ${item.observedTo}) ` : "";',
+          '${item.observedFrom && item.observedTo ? `(${item.observedFrom} – ${item.observedTo}) ` : ""}',
+        ],
+        source.includes("const span = item.observedFrom") ? 'const span = "";' : "",
+      );
       replace(
         "if (date.slice(0, 10) !== previousDate) lines.push(`### ${date.slice(0, 10)}`);",
         "if (false) lines.push(`### ${date.slice(0, 10)}`);",
       );
       replace("${date.slice(11, 16)} (${item.relevance})", "(${item.relevance})");
       replace('${item.referencedAt ? ` (refers to ${item.referencedAt})` : ""}', "");
-    } else replace("${item.observedAt ?? item.timestamp} ${item.kind}: ${item.description}", "${item.kind}: ${item.description}");
+    } else
+      replaceEither(
+        [
+          "${record.observedAt ?? record.timestamp} ${attributionLabel(record.kind, record.attribution, isAssistantProposal(record))}${count}",
+          "${record.observedAt ?? record.timestamp} ${record.kind}${count}",
+          "${item.observedAt ?? item.timestamp} ${item.kind}: ${item.description}",
+        ],
+        // Plan 218 Task 4.1 added the speaker mark to the WM record line.
+        source.includes("${attributionLabel(record.kind, record.attribution, isAssistantProposal(record))}${count}")
+          ? "${attributionLabel(record.kind, record.attribution, isAssistantProposal(record))}${count}"
+          : source.includes("${record.observedAt ?? record.timestamp} ${record.kind}${count}")
+            ? "${record.kind}${count}"
+            : "${item.kind}: ${item.description}",
+      );
   }
   if (active("om.taskState=off")) {
     if (path === `${om}render.ts`) replace("const task = options.taskState;", "const task = undefined;");
@@ -188,7 +212,9 @@ export function transformVariantSource(path, source, input = []) {
       replace("tools: [tool, taskTool],", "tools: [tool],");
     }
   }
-  if (active("om.replaceOnReflect=off")) {
+  // Plan 218 Task 2 removed the whole-log replacement this arm switches off: WM never replaces its set, so on the
+  // current source (no `consumedObservationIds` anchor) the arm is already in effect and changes nothing.
+  if (active("om.replaceOnReflect=off") && source.includes("consumedObservationIds: uncovered.map((item) => item.id),")) {
     replace("consumedObservationIds: uncovered.map((item) => item.id),", "");
     replace("supersededReflectionIds: activeReflections(afterObservations).map((item) => item.id),", "");
   }
@@ -212,13 +238,16 @@ export function transformVariantSource(path, source, input = []) {
         const entries = await session.entries();
         const ledger = foldObservationalMemoryLedger(entries);
         const writer = createLongTermMemory({...options, observational: {session}});
-        const report = {pass: randomUUID(), at: new Date().toISOString(), candidates: ledger.reflections.length, extracted: ledger.reflections.length, accepted: 0,
+        // Plan 218 Task 2 renamed reflections to WM items (\`wmItems\`, \`text\`); a pinned older revision keeps the old names.
+        const items = ledger.wmItems ?? ledger.reflections;
+        const report = {pass: randomUUID(), at: new Date().toISOString(), candidates: items.length, extracted: items.length, accepted: 0,
           rejected: {score: 0, ephemeral: 0, derivable: 0, trust: 0, secret: 0}, written: 0, updated: 0, exceptions: 0, retired: 0, modelCalls: 0};
-        for (const reflection of ledger.reflections) {
+        for (const reflection of items) {
           consolidateOptions.signal?.throwIfAborted();
-          if (!scanScopedMemoryContent(reflection.content).ok) {report.rejected.trust++; continue;}
-          if (redactor !== undefined && redactor.redact(reflection.content) !== reflection.content) {report.rejected.secret++; continue;}
-          const id = createMemoryId(reflection.content, [session.id, reflection.id]);
+          const content = reflection.text ?? reflection.content;
+          if (!scanScopedMemoryContent(content).ok) {report.rejected.trust++; continue;}
+          if (redactor !== undefined && redactor.redact(content) !== content) {report.rejected.secret++; continue;}
+          const id = createMemoryId(content, [session.id, reflection.id]);
           if (await memory.getEntry(id, consolidateOptions.signal === undefined ? {} : {signal: consolidateOptions.signal})) continue;
           await writer.remember({kind: "fact", id, reflectionId: reflection.id}, {generatedBy: "promotion", sessionId: session.id, ...(consolidateOptions.signal === undefined ? {} : {signal: consolidateOptions.signal})});
           report.accepted++;
@@ -341,7 +370,16 @@ export function benchmarkCalendarClock(): number {
     replace("          if (top < RECALL_NO_MATCH_CONFIDENCE) {", "          if (hits.length < 0) {");
   }
   if (active("ontology.pointer=off")) replace("            if (!conceptInPlay(record, terms, touched)) continue;", "            continue;");
-  if (active("om.reflector=off"))
+  // Plan 218 Task 4: the WM pass also runs for a pending scope-change re-judgment.
+  if (active("om.reflector=off") && source.includes("if (config.wm.enabled && (surface.length || scopeChange) && "))
+    replace("if (config.wm.enabled && (surface.length || scopeChange) && ", "if (surface.length < 0 && ");
+  // Plan 218 Task 2: the WM pass gates on the STM surface (records without a verdict).
+  else if (active("om.reflector=off") && source.includes("if (config.wm.enabled && surface.length && "))
+    replace("if (config.wm.enabled && surface.length && ", "if (surface.length < 0 && ");
+  // Plan 217 Task 6 split the WM condition over lines (the backoff after an empty attempt).
+  else if (active("om.reflector=off") && source.includes("      config.wm.enabled &&\n      uncovered.length &&\n"))
+    replace("      config.wm.enabled &&\n      uncovered.length &&\n", "      uncovered.length < 0 &&\n");
+  else if (active("om.reflector=off"))
     replaceEither(
       [
         // Plan 216 Task 6 gated the pass on the `wm` component; the older anchors keep historical revisions building.

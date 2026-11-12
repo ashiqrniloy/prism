@@ -1,0 +1,718 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-11-12T07:52:50.514Z",
+  "suite": "beam-1m",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "om",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "ollama-cloud",
+  "model": "deepseek-v4.1-flash",
+  "judge": "ollama-cloud/gpt-oss:120b",
+  "judgePanel": [
+    "ollama-cloud/gpt-oss:120b",
+    "ollama-cloud/gemma4:31b"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-1m.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 66156374,
+    "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/1M-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "normalization": {
+    "version": "beam-source-annotations-v1",
+    "sourceHash": "9817eae4665624c91c90824b9819a1913c1ff7fde9ecaec3c751b6de601dd43b"
+  },
+  "maxInputTokens": 600000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "stm-b40a7a58443c9b8b0d3303bb37da8049",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8,
+    "answerInstruction": "beam-published-answer-v1",
+    "finalTurnAnswer": "final-turn-answer-v4"
+  },
+  "memoryConfig": {
+    "observational": {
+      "enabled": true,
+      "recall": true,
+      "stm": {
+        "triggerTokens": 10000,
+        "contextTokens": 4000,
+        "maxChunksPerEvent": 2,
+        "maxChunkBytes": 4096,
+        "chunkStore": "memory",
+        "habituation": {
+          "windowEvents": 50
+        },
+        "boundaries": false,
+        "boundaryGapMinutes": 10
+      },
+      "wm": {
+        "enabled": true,
+        "observationTokens": 20000
+      },
+      "rehearsal": {
+        "enabled": true,
+        "targetTokens": 20000,
+        "policy": "model"
+      },
+      "context": {
+        "recentMessages": 8,
+        "compactAt": {
+          "ratio": 0.6
+        }
+      },
+      "worker": {}
+    },
+    "fabric": null
+  },
+  "inputTokens": 3761997,
+  "cacheReadTokens": 595168,
+  "cacheWriteTokens": 0,
+  "outputTokens": 635486,
+  "calls": {
+    "observer": 144,
+    "reflector": 4,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 4,
+    "judgeAttempts": 4,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 4,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "workerErrors": [],
+  "workerUsage": {
+    "observer": {
+      "calls": 144,
+      "inputTokens": 3522674,
+      "outputTokens": 601468
+    },
+    "reflector": {
+      "calls": 4,
+      "inputTokens": 175347,
+      "outputTokens": 32768
+    },
+    "dropper": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  },
+  "turns": 2,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "217-m1.large.STM.beam-1m@1",
+  "measurementVersion": "product-phases-delivery-v3",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "5b66b4d4fee78cc8968282c1caf2bbe01d543af78543a768debb1b23709a6180",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "15:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-15",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1570603.8,
+        "answer": 2627.6,
+        "evaluation": 1384.3
+      },
+      "answerKey": "db0fd59bf7080cf79d8bb12c8788c0e8e2843c80373e2d4632f46f63b6fcb0d0",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "chunkStorePeakBytes": 2042,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 1010347,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "15:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-15",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1321850.1,
+        "answer": 2867.7,
+        "evaluation": 2024.1
+      },
+      "answerKey": "406d0745391e6d593a63cf659c5a0b6c34c399a64aae392f60b593cb77af2bcd",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "chunkStorePeakBytes": 2125,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 1010347,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "15:s1-r29",
+              "surfaced": false
+            },
+            {
+              "id": "15:s1-r94",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    }
+  ],
+  "status": "partial",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "selectedQuestionIds": [
+    "15:abstention:0",
+    "10:abstention:1",
+    "21:abstention:0",
+    "31:abstention:0",
+    "15:contradiction_resolution:1",
+    "21:contradiction_resolution:0",
+    "26:contradiction_resolution:1",
+    "20:contradiction_resolution:1",
+    "28:event_ordering:1",
+    "12:event_ordering:0",
+    "1:event_ordering:1",
+    "34:event_ordering:0",
+    "34:information_extraction:0",
+    "10:information_extraction:0",
+    "25:information_extraction:0",
+    "17:information_extraction:0",
+    "7:instruction_following:1",
+    "12:instruction_following:0",
+    "16:instruction_following:1",
+    "19:instruction_following:0",
+    "24:knowledge_update:0",
+    "22:knowledge_update:0",
+    "3:knowledge_update:1",
+    "29:knowledge_update:1",
+    "23:multi_session_reasoning:0",
+    "25:multi_session_reasoning:0",
+    "26:multi_session_reasoning:1",
+    "15:multi_session_reasoning:1",
+    "12:preference_following:1",
+    "29:preference_following:0",
+    "10:preference_following:0",
+    "4:preference_following:1",
+    "32:summarization:0",
+    "1:summarization:1",
+    "18:summarization:0",
+    "10:summarization:0",
+    "12:temporal_reasoning:1",
+    "7:temporal_reasoning:0",
+    "25:temporal_reasoning:0",
+    "30:temporal_reasoning:1"
+  ],
+  "runPathFingerprint": "1df3e815429d2b8ba1c6a5293516b9d19f3679a78ed9c0907a2705aba8200185",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 3760681,
+      "cacheReadTokens": 595072,
+      "cacheWriteTokens": 0,
+      "outputTokens": 634876,
+      "exchanges": 150,
+      "complete": true,
+      "measured": null,
+      "cold": null,
+      "warm": null,
+      "inputWarm": null,
+      "inputCold": null
+    },
+    "product-extract": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "evaluation": {
+      "inputTokens": 1316,
+      "cacheReadTokens": 96,
+      "cacheWriteTokens": 0,
+      "outputTokens": 610,
+      "exchanges": 4,
+      "complete": true,
+      "measured": 0.000544,
+      "cold": 0.000557,
+      "warm": 0.000544,
+      "inputWarm": 0.000178,
+      "inputCold": 0.000192
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 3761997,
+      "cacheReadTokens": 595168,
+      "cacheWriteTokens": 0,
+      "outputTokens": 635486,
+      "exchanges": 154,
+      "measured": null
+    }
+  },
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 154,
+  "sourceMessageTokens": 2020694,
+  "timing": {
+    "wallMs": 2914105,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 2,
+      "wallMs": {
+        "p50": 1326751.2,
+        "p95": 1574641.1,
+        "mean": 1450696.2
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 2,
+        "wallMs": {
+          "p50": 1321850.1,
+          "p95": 1570603.8,
+          "mean": 1446227
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 2,
+        "wallMs": {
+          "p50": 2627.6,
+          "p95": 2867.7,
+          "mean": 2747.6
+        }
+      },
+      "evaluation": {
+        "n": 2,
+        "wallMs": {
+          "p50": 1384.3,
+          "p95": 2024.1,
+          "mean": 1704.2
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 612.4,
+          "p95": 1407.6,
+          "mean": 849.8
+        },
+        "totalMs": {
+          "p50": 612.4,
+          "p95": 1407.6,
+          "mean": 849.8
+        }
+      },
+      "observer": {
+        "calls": 144,
+        "firstByteMs": {
+          "p50": 905.1,
+          "p95": 3251.6,
+          "mean": 1319.5
+        },
+        "totalMs": {
+          "p50": 17020.2,
+          "p95": 40170.5,
+          "mean": 18873.9
+        }
+      },
+      "reflector": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 1223.4,
+          "p95": 1646.2,
+          "mean": 1278.4
+        },
+        "totalMs": {
+          "p50": 42092.6,
+          "p95": 51088.9,
+          "mean": 42540.1
+        }
+      },
+      "solver": {
+        "calls": 2,
+        "firstByteMs": {
+          "p50": 957.6,
+          "p95": 1071.3,
+          "mean": 1014.5
+        },
+        "totalMs": {
+          "p50": 2456.6,
+          "p95": 2704.5,
+          "mean": 2580.6
+        }
+      }
+    },
+    "calls": 154
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "abstention": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.15820533615523882,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "unpriced",
+    "measured": null,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 3760681,
+      "cacheReadTokens": 595072,
+      "cacheWriteTokens": 0,
+      "outputTokens": 634876,
+      "exchanges": 150,
+      "complete": true,
+      "measured": null,
+      "cold": null,
+      "warm": null,
+      "inputWarm": null,
+      "inputCold": null
+    },
+    "evaluation": {
+      "inputTokens": 1316,
+      "cacheReadTokens": 96,
+      "cacheWriteTokens": 0,
+      "outputTokens": 610,
+      "exchanges": 4,
+      "complete": true,
+      "measured": 0.000544,
+      "cold": 0.000557,
+      "warm": 0.000544,
+      "inputWarm": 0.000178,
+      "inputCold": 0.000192
+    }
+  },
+  "judgeAgreement": {
+    "n": 2,
+    "judges": {
+      "ollama-cloud/gpt-oss:120b": {
+        "scored": 2,
+        "agreementWithPanel": 1
+      },
+      "ollama-cloud/gemma4:31b": {
+        "scored": 2,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "ollama-cloud/gpt-oss:120b",
+        "b": "ollama-cloud/gemma4:31b",
+        "n": 2,
+        "agreement": 1,
+        "kappa": 1
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "correct": 1,
+    "unknown_gap": 1
+  }
+}

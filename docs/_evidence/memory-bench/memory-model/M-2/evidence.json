@@ -1,0 +1,536 @@
+{
+  "kind": "218-m2-evidence",
+  "schemaVersion": 1,
+  "gate": "M-2",
+  "plan": 218,
+  "partition": "dev",
+  "memoryModelCriteriaHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "manifestHash": "189219f2411172dbf11d1f056143d10f65c3c36b57150b79a0914487e64ff02a",
+  "fixtures": {
+    "long-session": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d",
+    "long-session-replay": "50a496470d0a9ac90b77e1f3656b558069cadc28bcd24797b91112fa3a8c06cb",
+    "re-plan": "822f3823b20cb447c7961b7176fb43e2b036a1d5d7f732138b00190e71bf1c51"
+  },
+  "omBefore": {
+    "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc"
+  },
+  "productHash": "240f011a1320b41adf7df65897ffd7e557b7e9c33f86e4c26fa661f51b000ff7",
+  "caveats": [
+    "STM-only's deterministic WM policy discards a changed value to meet the target (probe wm.knowledge-update): it protects no supersedes record",
+    "M5 reads 4 questions per suite and model: underpowered, a screen; the QA decision stays at gate A"
+  ],
+  "cells": {
+    "deepseek.re-plan.vs-stm-only": "paired",
+    "deepseek.re-plan.vs-om-before": "paired",
+    "deepseek.suites": "missing",
+    "muse.re-plan.vs-stm-only": "paired",
+    "muse.re-plan.vs-om-before": "paired",
+    "muse.suites": "missing"
+  },
+  "rows": {
+    "M1": {
+      "tests": {
+        "vs-stm-only": {
+          "models": [
+            {
+              "model": "deepseek",
+              "n": 8,
+              "clusters": 4,
+              "repeats": 1,
+              "unpaired": {
+                "base": 0,
+                "candidate": 0
+              },
+              "baseMean": 100,
+              "candidateMean": 100,
+              "estimate": 0,
+              "ciLow": 0,
+              "ciHigh": 0
+            },
+            {
+              "model": "muse",
+              "n": 8,
+              "clusters": 4,
+              "repeats": 1,
+              "unpaired": {
+                "base": 0,
+                "candidate": 0
+              },
+              "baseMean": 87.5,
+              "candidateMean": 100,
+              "estimate": 12.5,
+              "ciLow": 0,
+              "ciHigh": 37.5
+            }
+          ]
+        },
+        "vs-om-before": {
+          "models": [
+            {
+              "model": "deepseek",
+              "n": 8,
+              "clusters": 4,
+              "repeats": 1,
+              "unpaired": {
+                "base": 0,
+                "candidate": 0
+              },
+              "baseMean": 100,
+              "candidateMean": 100,
+              "estimate": 0,
+              "ciLow": 0,
+              "ciHigh": 0
+            },
+            {
+              "model": "muse",
+              "n": 8,
+              "clusters": 4,
+              "repeats": 1,
+              "unpaired": {
+                "base": 0,
+                "candidate": 0
+              },
+              "baseMean": 87.5,
+              "candidateMean": 100,
+              "estimate": 12.5,
+              "ciLow": 0,
+              "ciHigh": 37.5
+            }
+          ]
+        }
+      }
+    },
+    "M2": {
+      "source": "docs/_evidence/memory-bench/218/wm-probes.json",
+      "tests": {
+        "loss": {
+          "value": 0,
+          "refused": 14
+        }
+      }
+    },
+    "M3": {
+      "source": "docs/_evidence/memory-bench/218/wm-probes.json",
+      "tests": {
+        "ratio": {
+          "value": 0.228,
+          "target": 0.2,
+          "eligiblePasses": 8
+        }
+      }
+    },
+    "M4": {
+      "source": "docs/_evidence/memory-bench/218/wm-probes.json",
+      "tests": {
+        "prefix": {
+          "value": "byte-identical",
+          "breaksWithoutCompaction": 0,
+          "compactions": 45
+        }
+      }
+    },
+    "M5": {
+      "tests": {},
+      "cells": []
+    }
+  },
+  "m1Rederivations": {
+    "vs-stm-only": [
+      {
+        "model": "deepseek",
+        "n": 8,
+        "clusters": 4,
+        "repeats": 1,
+        "unpaired": {
+          "base": 0,
+          "candidate": 0
+        },
+        "baseMean": 0.625,
+        "candidateMean": 0.125,
+        "estimate": 0.5,
+        "ciLow": 0,
+        "ciHigh": 1.13
+      },
+      {
+        "model": "muse",
+        "n": 8,
+        "clusters": 4,
+        "repeats": 1,
+        "unpaired": {
+          "base": 0,
+          "candidate": 0
+        },
+        "baseMean": 2.25,
+        "candidateMean": 0.75,
+        "estimate": 1.5,
+        "ciLow": -1.87,
+        "ciHigh": 6.63
+      }
+    ],
+    "vs-om-before": [
+      {
+        "model": "deepseek",
+        "n": 8,
+        "clusters": 4,
+        "repeats": 1,
+        "unpaired": {
+          "base": 0,
+          "candidate": 0
+        },
+        "baseMean": 1,
+        "candidateMean": 0.125,
+        "estimate": 0.88,
+        "ciLow": 0.13,
+        "ciHigh": 2
+      },
+      {
+        "model": "muse",
+        "n": 8,
+        "clusters": 4,
+        "repeats": 1,
+        "unpaired": {
+          "base": 0,
+          "candidate": 0
+        },
+        "baseMean": 1.125,
+        "candidateMean": 0.75,
+        "estimate": 0.38,
+        "ciLow": -1.75,
+        "ciHigh": 2.63
+      }
+    ]
+  },
+  "s1": {
+    "model": "mimo",
+    "repeats": 3,
+    "plan217": {
+      "estimate": -0.34,
+      "ciLow": -0.69,
+      "ciHigh": -0.06
+    },
+    "WM - OM-before": {
+      "status": "missing"
+    },
+    "STM-only - OM-before": {
+      "status": "missing"
+    },
+    "result": "missing"
+  },
+  "wmOutputCap": {
+    "deepseek": {
+      "calls": 27,
+      "capStops": 1,
+      "capNoItem": 0,
+      "items": 62
+    },
+    "muse": {
+      "calls": 15,
+      "capStops": 7,
+      "capNoItem": 7,
+      "items": 14
+    },
+    "mimo": null
+  },
+  "performance": {
+    "deepseek": {
+      "re-plan": {
+        "WM": {
+          "status": "completed",
+          "personas": 4,
+          "workerCalls": 60,
+          "workerTokensPer10kEligible": 62311.3,
+          "wmCalls": 27,
+          "wmCapStops": 1,
+          "wmCapNoItem": 0,
+          "wmItems": 62,
+          "wmPasses": 22,
+          "itemsPerPass": 2.64,
+          "budgetUnmetShare": 0.4545,
+          "ratio": {
+            "n": 12,
+            "median": 0.6308,
+            "p10": 0.3806,
+            "p90": 0.8755,
+            "max": 1.04
+          },
+          "compactions": 41,
+          "cachedInputShare": 0.4512,
+          "inputTokens": 1052674,
+          "successRate": 1,
+          "rederivationsPerRelatedTask": 0.125
+        },
+        "STM-only": {
+          "status": "completed",
+          "personas": 4,
+          "workerCalls": 35,
+          "workerTokensPer10kEligible": 40701.4,
+          "wmCalls": 0,
+          "wmCapStops": 0,
+          "wmCapNoItem": 0,
+          "wmItems": 0,
+          "wmPasses": 29,
+          "itemsPerPass": 1.55,
+          "budgetUnmetShare": 0.5172,
+          "ratio": {
+            "n": 14,
+            "median": 0.2693,
+            "p10": 0,
+            "p90": 0.5069,
+            "max": 0.6556
+          },
+          "compactions": 48,
+          "cachedInputShare": 0.5048,
+          "inputTokens": 1073994,
+          "successRate": 1,
+          "rederivationsPerRelatedTask": 0.625
+        },
+        "OM-before": {
+          "status": "completed",
+          "personas": 4,
+          "workerCalls": 85,
+          "workerTokensPer10kEligible": 104779.1,
+          "wmPasses": 0,
+          "itemsPerPass": null,
+          "budgetUnmetShare": null,
+          "ratio": null,
+          "compactions": 65,
+          "cachedInputShare": 0.654,
+          "inputTokens": 1993570,
+          "successRate": 1,
+          "rederivationsPerRelatedTask": 1
+        }
+      },
+      "suites": {
+        "longmemeval-m": {
+          "STM-only": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          },
+          "WM": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          }
+        },
+        "beam-1m": {
+          "STM-only": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          },
+          "WM": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          }
+        }
+      },
+      "long-session": {
+        "WM": {
+          "status": "missing"
+        },
+        "STM-only": {
+          "status": "missing"
+        },
+        "OM-before": {
+          "status": "missing"
+        }
+      }
+    },
+    "muse": {
+      "re-plan": {
+        "WM": {
+          "status": "completed",
+          "personas": 4,
+          "workerCalls": 47,
+          "workerTokensPer10kEligible": 84165.5,
+          "wmCalls": 15,
+          "wmCapStops": 7,
+          "wmCapNoItem": 7,
+          "wmItems": 14,
+          "wmPasses": 15,
+          "itemsPerPass": 0.93,
+          "budgetUnmetShare": 0.3333,
+          "ratio": {
+            "n": 3,
+            "median": 0.324,
+            "p10": 0,
+            "p90": 1,
+            "max": 1
+          },
+          "compactions": 50,
+          "cachedInputShare": 0.5522,
+          "inputTokens": 1215860,
+          "successRate": 1,
+          "rederivationsPerRelatedTask": 0.75
+        },
+        "STM-only": {
+          "status": "completed",
+          "personas": 4,
+          "workerCalls": 39,
+          "workerTokensPer10kEligible": 73007.9,
+          "wmCalls": 0,
+          "wmCapStops": 0,
+          "wmCapNoItem": 0,
+          "wmItems": 0,
+          "wmPasses": 15,
+          "itemsPerPass": 1.07,
+          "budgetUnmetShare": 0.2667,
+          "ratio": {
+            "n": 11,
+            "median": 0.3957,
+            "p10": 0,
+            "p90": 1,
+            "max": 1
+          },
+          "compactions": 62,
+          "cachedInputShare": 0.5695,
+          "inputTokens": 1267459,
+          "successRate": 0.875,
+          "rederivationsPerRelatedTask": 2.25
+        },
+        "OM-before": {
+          "status": "completed",
+          "personas": 4,
+          "workerCalls": 61,
+          "workerTokensPer10kEligible": 118138,
+          "wmPasses": 0,
+          "itemsPerPass": null,
+          "budgetUnmetShare": null,
+          "ratio": null,
+          "compactions": 53,
+          "cachedInputShare": 0.692,
+          "inputTokens": 1638862,
+          "successRate": 0.875,
+          "rederivationsPerRelatedTask": 1.125
+        }
+      },
+      "suites": {
+        "longmemeval-m": {
+          "STM-only": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          },
+          "WM": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          }
+        },
+        "beam-1m": {
+          "STM-only": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          },
+          "WM": {
+            "status": "missing",
+            "questions": 0,
+            "workerTokensPerQuestion": null,
+            "wmCalls": null,
+            "cachedInputShare": null,
+            "inputTokens": null,
+            "costUsd": null,
+            "p95AnswerMs": null
+          }
+        }
+      },
+      "long-session": {
+        "WM": {
+          "status": "missing"
+        },
+        "STM-only": {
+          "status": "missing"
+        },
+        "OM-before": {
+          "status": "missing"
+        }
+      }
+    },
+    "mimo": {
+      "long-session": {
+        "WM": [
+          {
+            "repeat": 1,
+            "status": "missing"
+          },
+          {
+            "repeat": 2,
+            "status": "missing"
+          },
+          {
+            "repeat": 3,
+            "status": "missing"
+          }
+        ],
+        "STM-only": [
+          {
+            "repeat": 1,
+            "status": "missing"
+          },
+          {
+            "repeat": 2,
+            "status": "missing"
+          },
+          {
+            "repeat": 3,
+            "status": "missing"
+          }
+        ],
+        "OM-before": [
+          {
+            "repeat": 1,
+            "status": "missing"
+          },
+          {
+            "repeat": 2,
+            "status": "missing"
+          },
+          {
+            "repeat": 3,
+            "status": "missing"
+          }
+        ]
+      }
+    }
+  }
+}

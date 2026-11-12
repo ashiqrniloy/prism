@@ -315,9 +315,38 @@ export function incrementalAttemptUsage(report, prior) {
 
 /** Per-mode evidence, journal, manifest and gate rules. 188.8 reuses 188.7's journal machinery. */
 /** The owner-gated development screens: free routes plus named paid models, re-run from checkpoint on transient faults. */
-const SCREEN_MODES = new Set(["screen208", "screen209", "campaign210", "gateM1"]);
+const SCREEN_MODES = new Set(["screen208", "screen209", "campaign210", "gateM1", "gateM2"]);
 
 function runSpec(mode) {
+  // Plan 218 Task 6: gate M-2 (WM against STM-only and the pinned pre-redesign observer), the OpenCode Go subscription.
+  if (mode === "gateM2") {
+    let built;
+    const m2 = () => import("./wm-gate.mjs");
+    return {
+      evidence: "docs/_evidence/memory-bench/218/runs",
+      logs: ".cache/memory-bench/218/logs",
+      outputPrefix: process.env.PRISM_MEMORY_BENCH_218_SMOKE === "1" ? "smoke-218-m2" : "run-218-m2",
+      summaryPath: "docs/_evidence/memory-bench/218/runs/execution-run.json",
+      journalPath: ".cache/memory-bench/218/journal.json",
+      summaryKind: "218-m2-run",
+      timeout: "432000s",
+      maxAttempts: 3,
+      freeRouteRetries: true,
+      build: async () => {
+        built = await (await m2()).buildExecutableM2Manifest();
+        return built;
+      },
+      preflight: async (manifest) => (await m2()).preflightM2(manifest),
+      write: async () => {
+        const { M2_EXECUTION_MANIFEST, M2_RUNS } = await m2();
+        await mkdir(M2_RUNS, { recursive: true });
+        await writeFile(
+          built.executionManifestPath ?? M2_EXECUTION_MANIFEST,
+          `${JSON.stringify({ generatedAt: new Date().toISOString(), ...built, results: [] }, null, 2)}\n`,
+        );
+      },
+    };
+  }
   // Plan 217 Task 6: gate M-1 (STM against the pinned pre-redesign observer), paid Ollama Cloud under the allowance.
   if (mode === "gateM1") {
     let built;
@@ -1104,6 +1133,18 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           "--state-dir",
           resolve(job.stateDir),
           ...(job.personaLimit ? ["--personas", String(job.personaLimit)] : []),
+          // Plan 218 Task 6 (gate M-2): the family, the gate and the repeat; gate M-1's jobs pass none of them.
+          ...(job.gate && job.gate !== "M-1"
+            ? [
+                "--gate",
+                job.gate,
+                "--family",
+                job.workFamily ?? job.suite,
+                "--repeat",
+                String(job.repeat ?? 1),
+                ...(job.maxOutputTokens ? ["--max-output-tokens", String(job.maxOutputTokens)] : []),
+              ]
+            : []),
         ];
       // Plan 209 Task 6: a work-outcome job is its own child (`work-outcome/live.mjs`), under the same journal.
       if (job.kind === "work-outcome")
@@ -1143,6 +1184,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       if (job.finalTurnAnswer) argv.push("--final-turn-answer");
       if (job.maintainBeforeAnswer) argv.push("--maintain-before-answer");
       if (job.strictQuestions) argv.push("--strict-questions");
+      if (job.wmScope) argv.push("--wm-scope");
       const writeOnly = producers.has(job.id);
       if (profile && !writeOnly) {
         argv.push(
@@ -1305,6 +1347,9 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         maxInputTokens: maxInput,
       });
       await saveJournal(journalPath, journal);
+      // This job's own attempt. With --parallel-arms, a sibling reserves after it, so the journal's last attempt is not
+      // this one (gate M-2 sitting 1): its cause would decide this job's retry, pause or halt.
+      const ownAttempt = () => journal.attempts.find((item) => item.attemptId === attempt.attemptId);
       const variants = historicalVariants(job.ablate ?? []);
       // Provenance is local work: resolve it before the reservation so a network error cannot
       // strand a reserved attempt.
@@ -1400,7 +1445,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
                 ? "transient"
                 : (permanent ?? report.failure?.message ?? null),
           usageComplete: report.usageComplete !== false,
-          charged: attemptCharge(journal.attempts.at(-1)),
+          charged: attemptCharge(ownAttempt()),
         });
       } else {
         // Reserve, do not refund: a child can spend before it writes any report.
@@ -1427,7 +1472,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         await saveJournal(journalPath, journal);
         return { halt: true };
       }
-      if (journal.attempts.at(-1)?.cause === "quota-daily") {
+      if (ownAttempt()?.cause === "quota-daily") {
         // A daily cap reopens once: halt, keep the attempt out of the attempt budget, and let a
         // rerun continue from the answers/judge checkpoints the finished questions already wrote.
         journal.status = "quota-daily";
@@ -1445,7 +1490,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         console.error(`halt ${attempt.attemptId}: daily free-model cap reached; resume after ${journal.resumeAfter}`);
         return { halt: true };
       }
-      if (journal.attempts.at(-1)?.cause === "quota-window") {
+      if (ownAttempt()?.cause === "quota-window") {
         if (mode === "baseline202") {
           journal.status = "quota-unavailable";
           await recordBaselineQuota(attempt.attemptId);
@@ -1465,7 +1510,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         }
         return;
       }
-      if (journal.attempts.at(-1)?.cause === "transient") {
+      if (ownAttempt()?.cause === "transient") {
         const count = journal.attempts.filter((item) => item.jobId === job.id && item.cause === "transient").length;
         if (count > (spec.freeRouteRetries ? FREE_ROUTE_RETRY_LIMIT : transientRetryLimit())) {
           console.error(`give up ${attempt.attemptId}: ${count} transient failures`);
@@ -1481,7 +1526,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         return runJob(job);
       }
-      console.log(`end ${attempt.attemptId}; charged=${attemptCharge(journal.attempts.at(-1))}; remaining=${availableTokens(journal)}`);
+      console.log(`end ${attempt.attemptId}; charged=${attemptCharge(ownAttempt())}; remaining=${availableTokens(journal)}`);
       await saveJournal(journalPath, journal);
     };
     await runArmPool(orderJobs(manifest.jobs), parallelArms, runJob);
@@ -1525,13 +1570,15 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
 if (import.meta.main) {
   const planArg = process.argv.includes("--plan") ? process.argv[process.argv.indexOf("--plan") + 1] : undefined;
   const gateArg = process.argv.includes("--gate") ? process.argv[process.argv.indexOf("--gate") + 1] : undefined;
-  if (planArg === "memory-model" && gateArg !== "M-1") {
-    console.error(`MemoryBenchArguments: --plan memory-model supports --gate M-1 only (got ${gateArg ?? "none"})`);
+  if (planArg === "memory-model" && !["M-1", "M-2"].includes(gateArg)) {
+    console.error(`MemoryBenchArguments: --plan memory-model supports --gate M-1 or M-2 (got ${gateArg ?? "none"})`);
     process.exit(1);
   }
   const mode =
     planArg === "memory-model"
-      ? "gateM1"
+      ? gateArg === "M-2"
+        ? "gateM2"
+        : "gateM1"
       : planArg === "210"
         ? "campaign210"
         : planArg === "208"
@@ -1622,6 +1669,22 @@ if (import.meta.main) {
     if (process.argv.includes("--manifest")) {
       const manifest = await writeM1Manifest();
       console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${M1_MANIFEST}`);
+      process.exit(0);
+    }
+  }
+  if (mode === "gateM2") {
+    // Plan 218 Task 6: gate M-2 reads the development partition only; held-out reads are gate A's (plan 223).
+    const { assertM2Partition, writeM2Manifest, M2_MANIFEST } = await import("./wm-gate.mjs");
+    const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+    try {
+      assertM2Partition(partition);
+    } catch (error) {
+      console.error(`${error.name}: ${error.message}`);
+      process.exit(1);
+    }
+    if (process.argv.includes("--manifest")) {
+      const manifest = await writeM2Manifest();
+      console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${M2_MANIFEST}`);
       process.exit(0);
     }
   }

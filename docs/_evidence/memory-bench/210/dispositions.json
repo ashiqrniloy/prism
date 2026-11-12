@@ -13,6 +13,14 @@
     {
       "feature": "kind.episode",
       "disposition": "removed by plan 216 Task 7 (the episode view; the kind name stays reserved for plan 219)"
+    },
+    {
+      "feature": "om.observer",
+      "disposition": "replaced by the STM worker (plan 217 Task 2); gate M-1 (2026-11-12): S1 miss (MiMo), S2 pass, S3 deferred to gate A, S4 0.615; kept as the default, S1 re-measured at gate M-2 (plan 218 Task 6)"
+    },
+    {
+      "feature": "om.task-state",
+      "disposition": "carried into STM as record_task_state (plan 217 Task 2); measured inside gate M-1's STM arm, no separate verdict"
     }
   ]
 }

@@ -18,7 +18,11 @@
       },
       "wm": {
         "enabled": true,
-        "observationTokens": 20000
+        "triggerTokens": 10000,
+        "batchTokens": 3000,
+        "targetRatio": 0.2,
+        "rejudgeTokens": 8000,
+        "policy": "model"
       },
       "rehearsal": {
         "enabled": true,
@@ -31,7 +35,10 @@
           "ratio": 0.6
         }
       },
-      "worker": {}
+      "worker": {},
+      "scope": {
+        "maxBytes": 32768
+      }
     },
     "fabric": {
       "enabled": true,

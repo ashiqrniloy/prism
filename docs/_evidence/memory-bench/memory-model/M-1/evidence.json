@@ -1,0 +1,428 @@
+{
+  "kind": "217-m1-evidence",
+  "schemaVersion": 1,
+  "gate": "M-1",
+  "plan": 217,
+  "partition": "dev",
+  "memoryModelCriteriaHash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "manifestHash": "2331a1cf853b00d223b0e6605bd3c719f1e0cdcabb908c98b0a8f31487d61e40",
+  "fixtures": {
+    "long-session": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d",
+    "long-session-replay": "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3"
+  },
+  "omBefore": {
+    "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc"
+  },
+  "productHash": "b40a7a58443c9b8b0d3303bb37da80491cf4c57a5de77d6146c121e194cc300c",
+  "cells": {
+    "large.longmemeval-m": "paired",
+    "large.beam-1m": "paired",
+    "large.long-session": "paired",
+    "small.longmemeval-m": "paired",
+    "small.beam-1m": "paired",
+    "small.long-session": "paired"
+  },
+  "rows": {
+    "S1": {
+      "tests": {
+        "vs-om-before": {
+          "models": [
+            {
+              "model": "large",
+              "n": 32,
+              "clusters": 16,
+              "omMean": 1.375,
+              "stmMean": 0.9063,
+              "estimate": 0.4688,
+              "ciLow": -0.1875,
+              "ciHigh": 1.1563,
+              "successRate": {
+                "om": 1,
+                "stm": 1
+              }
+            },
+            {
+              "model": "small",
+              "n": 32,
+              "clusters": 16,
+              "omMean": 0.0313,
+              "stmMean": 0.375,
+              "estimate": -0.3437,
+              "ciLow": -0.6875,
+              "ciHigh": -0.0625,
+              "successRate": {
+                "om": 1,
+                "stm": 1
+              }
+            }
+          ]
+        }
+      }
+    },
+    "S2": {
+      "source": "docs/_evidence/memory-bench/217/stm-probes.json",
+      "tests": {
+        "byte-equal": {
+          "value": 1,
+          "chunks": 2
+        },
+        "other-tool-runs": {
+          "value": 0
+        }
+      }
+    },
+    "S3": {
+      "deferred": {
+        "to": "A",
+        "decision": "m1S3Deferred"
+      },
+      "diagnostic": {
+        "cells": [
+          {
+            "model": "large",
+            "suite": "longmemeval-m",
+            "n": 2,
+            "clusters": 2,
+            "unpaired": {
+              "base": 0,
+              "arm": 0
+            },
+            "estimate": 0,
+            "ciLow": 0,
+            "ciHigh": 0
+          },
+          {
+            "model": "large",
+            "suite": "beam-1m",
+            "n": 2,
+            "clusters": 1,
+            "unpaired": {
+              "base": 0,
+              "arm": 0
+            },
+            "estimate": 0,
+            "ciLow": 0,
+            "ciHigh": 0
+          },
+          {
+            "model": "small",
+            "suite": "longmemeval-m",
+            "n": 2,
+            "clusters": 2,
+            "unpaired": {
+              "base": 0,
+              "arm": 0
+            },
+            "estimate": -50,
+            "ciLow": -100,
+            "ciHigh": 0
+          },
+          {
+            "model": "small",
+            "suite": "beam-1m",
+            "n": 2,
+            "clusters": 1,
+            "unpaired": {
+              "base": 0,
+              "arm": 0
+            },
+            "estimate": -50,
+            "ciLow": -50,
+            "ciHigh": -50
+          }
+        ],
+        "coverage": {}
+      }
+    },
+    "S4": {
+      "tests": {
+        "token-ratio": {
+          "value": 0.6148,
+          "rule": "the largest STM / OM-before ratio over every (answer model, scope) cell",
+          "cells": [
+            {
+              "model": "large",
+              "scope": "longmemeval-m",
+              "stm": 3114118.5,
+              "om": 10918560.5,
+              "ratio": 0.2852
+            },
+            {
+              "model": "large",
+              "scope": "beam-1m",
+              "stm": 2166128.5,
+              "om": 5783103.5,
+              "ratio": 0.3746
+            },
+            {
+              "model": "large",
+              "scope": "long-session",
+              "stm": 43007.7,
+              "om": 88835.8,
+              "ratio": 0.4841,
+              "unit": "per 10k eligible tokens"
+            },
+            {
+              "model": "small",
+              "scope": "longmemeval-m",
+              "stm": 2957572,
+              "om": 5654923,
+              "ratio": 0.523
+            },
+            {
+              "model": "small",
+              "scope": "beam-1m",
+              "stm": 2046639,
+              "om": 3328764,
+              "ratio": 0.6148
+            },
+            {
+              "model": "small",
+              "scope": "long-session",
+              "stm": 39618.4,
+              "om": 68879.5,
+              "ratio": 0.5752,
+              "unit": "per 10k eligible tokens"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "performance": {
+    "large": {
+      "longmemeval-m": {
+        "STM": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 241,
+          "workerTokens": 6228237,
+          "workerTokensPerQuestion": 3114118.5,
+          "inputTokens": 5475055,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": 2643,
+          "costUsd": null,
+          "p95AnswerMs": 4444.2
+        },
+        "OM-before": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 828,
+          "workerTokens": 21837121,
+          "workerTokensPerQuestion": 10918560.5,
+          "inputTokens": 19658288,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": null,
+          "costUsd": null,
+          "p95AnswerMs": 39823.8
+        }
+      },
+      "beam-1m": {
+        "STM": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 148,
+          "workerTokens": 4332257,
+          "workerTokensPerQuestion": 2166128.5,
+          "inputTokens": 3761997,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": 2125,
+          "costUsd": null,
+          "p95AnswerMs": 2867.7
+        },
+        "OM-before": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 99,
+          "workerTokens": 11566207,
+          "workerTokensPerQuestion": 5783103.5,
+          "inputTokens": 11423306,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": null,
+          "costUsd": null,
+          "p95AnswerMs": 1645.5
+        }
+      },
+      "long-session": {
+        "OM-before": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 1.375,
+          "successRate": 1,
+          "inputTokens": 6870441
+        },
+        "STM": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 0.90625,
+          "successRate": 1,
+          "inputTokens": 13638723
+        },
+        "memory-off": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 2.15625,
+          "successRate": 0.5,
+          "inputTokens": 1799984
+        }
+      }
+    },
+    "small": {
+      "longmemeval-m": {
+        "STM": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 256,
+          "workerTokens": 5915144,
+          "workerTokensPerQuestion": 2957572,
+          "inputTokens": 5474406,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": 3356,
+          "costUsd": null,
+          "p95AnswerMs": 2822.6
+        },
+        "OM-before": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 475,
+          "workerTokens": 11309846,
+          "workerTokensPerQuestion": 5654923,
+          "inputTokens": 10934238,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": null,
+          "costUsd": null,
+          "p95AnswerMs": 3182
+        }
+      },
+      "beam-1m": {
+        "STM": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 149,
+          "workerTokens": 4093278,
+          "workerTokensPerQuestion": 2046639,
+          "inputTokens": 3821989,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": 3371,
+          "costUsd": null,
+          "p95AnswerMs": 5908.1
+        },
+        "OM-before": {
+          "status": "partial",
+          "questions": 2,
+          "workerCalls": 51,
+          "workerTokens": 6657528,
+          "workerTokensPerQuestion": 3328764,
+          "inputTokens": 6810874,
+          "contextBlockBytesPerQuestion": 0,
+          "chunkStorePeakBytes": null,
+          "costUsd": null,
+          "p95AnswerMs": 3003
+        }
+      },
+      "long-session": {
+        "OM-before": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 0.03125,
+          "successRate": 1,
+          "inputTokens": 5304761
+        },
+        "STM": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 0.375,
+          "successRate": 1,
+          "inputTokens": 11732386
+        },
+        "memory-off": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 2.03125,
+          "successRate": 0.6875,
+          "inputTokens": 2742842
+        }
+      }
+    }
+  },
+  "replication": {
+    "glm": {
+      "cell": "paired",
+      "arms": {
+        "OM-before": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 0,
+          "successRate": 1,
+          "inputTokens": 3434266
+        },
+        "STM": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 0,
+          "successRate": 1,
+          "inputTokens": 2928876
+        },
+        "memory-off": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 0.75,
+          "successRate": 1,
+          "inputTokens": 1487320
+        }
+      },
+      "S1": {
+        "n": 32,
+        "clusters": 16,
+        "omMean": 0,
+        "stmMean": 0,
+        "estimate": 0,
+        "ciLow": 0,
+        "ciHigh": 0,
+        "successRate": {
+          "om": 1,
+          "stm": 1
+        }
+      },
+      "S4": {
+        "stm": 46832.9,
+        "om": 77518.8,
+        "ratio": 0.6041
+      }
+    },
+    "minimax": {
+      "cell": "paired",
+      "arms": {
+        "OM-before": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 2.4375,
+          "successRate": 1,
+          "inputTokens": 6865578
+        },
+        "STM": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 2.34375,
+          "successRate": 0.96875,
+          "inputTokens": 4732215
+        },
+        "memory-off": {
+          "status": "completed",
+          "rederivationsPerRelatedTask": 2.40625,
+          "successRate": 0.46875,
+          "inputTokens": 1103872
+        }
+      },
+      "S1": {
+        "n": 32,
+        "clusters": 16,
+        "omMean": 2.4375,
+        "stmMean": 2.3438,
+        "estimate": 0.0938,
+        "ciLow": -0.875,
+        "ciHigh": 1,
+        "successRate": {
+          "om": 1,
+          "stm": 0.9688
+        }
+      },
+      "S4": {
+        "stm": 62052.1,
+        "om": 107296.4,
+        "ratio": 0.5783
+      }
+    }
+  }
+}

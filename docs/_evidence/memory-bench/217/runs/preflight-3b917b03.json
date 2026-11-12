@@ -1,0 +1,20 @@
+{
+  "kind": "217-m1-preflight",
+  "checkedAt": "2026-11-12T07:08:16.673Z",
+  "refs": [
+    "ollama-cloud/deepseek-v4.1-flash",
+    "ollama-cloud/gemma4:31b",
+    "ollama-cloud/gpt-oss:120b",
+    "ollama-cloud/mimo-v2.6-flash"
+  ],
+  "worktree": {
+    "worktree": ".cache/memory-bench/216/om-before",
+    "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc",
+    "harness": "b9e95d88eb14d5b50361ce3d56f7c398581d83ca456c91fb76a13101160a4049"
+  },
+  "balance": {
+    "includedUsd": 7.73992,
+    "periodUntil": "2026-12-07T20:57:27Z"
+  }
+}

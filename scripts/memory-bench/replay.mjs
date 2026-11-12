@@ -15,15 +15,15 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createHashEmbedder, lexicalTerms } from "@arnilo/prism-memory-system/core";
-import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
+import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-knowledge/rag";
 import memorySystem, {
   createLongTermMemory,
   createMemory,
   parseMemoryNoteMetadata,
   resolveMemoryFabricConfig,
 } from "@arnilo/prism-memory-system";
-import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-knowledge/rag";
+import { createHashEmbedder, lexicalTerms } from "@arnilo/prism-memory-system/core";
+import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
 import { parseNoteFile } from "../../packages/memory/core/src/fabric/okf.ts";
 import { scanScopedMemoryContent } from "../../packages/memory/core/src/trust.ts";
 import {
@@ -640,7 +640,7 @@ export function mockProvider(state) {
           .filter((message) => message.role === "user")
           .map((message) => textOf(message.content))
           .join("\n");
-        const id = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(text)?.[1];
+        const id = /\[[^\]]+\] \[([^\]]+)\] (?:message|user|assistant|tool|system):/.exec(text)?.[1];
         if (id)
           yield providerToolCall(
             toolCallContent("synthetic-observation", "record_event", {
@@ -725,11 +725,14 @@ export function mockCuratorEdits(request) {
   }
   return [{ op: "add_claim", text: claim(evidence[0]), cites: [evidence[0].id] }];
 }
+/** WM's verdict tools that write an item (plan 218 Task 2); `discard` writes none. */
+export const WM_ITEM_TOOLS = Object.freeze(["keep", "summarize", "derive"]);
 function workerKind(request) {
   const names = request.tools?.map((tool) => tool.name) ?? [];
   // `record_observation` is the pinned OM-before baseline's STM tool (plan 217 Task 6 runs it from the pre-216 source).
   if (names.includes("record_event") || names.includes("record_observation")) return "observer";
-  if (names.includes("record_reflection")) return "reflector";
+  // `summarize` is one of WM's verdict tools (plan 218 Task 2); `record_reflection` is the pre-218 reflector's.
+  if (names.includes("summarize") || names.includes("record_reflection")) return "reflector";
   if (names.includes("drop_observations")) return "dropper";
 }
 /** The consolidation extractor: the one model call the product write side makes (`xc`). */
@@ -788,6 +791,9 @@ export function measuredProvider(provider, state) {
         }
         // Per-call latency by role (plan 188.9 Task 3): first delta is the time to first byte.
         const handle = state.timing?.begin();
+        // Plan 218 Task 6 (gate M-2): each WM call's stop reason and the items it wrote, so a pass that ends at the
+        // output cap with no item is counted. Created on first use, so no other report changes shape.
+        const wm = kind === "reflector" && (request.tools ?? []).some((tool) => tool.name === "summarize") ? { items: 0 } : null;
         try {
           for await (const chunk of provider.generate({
             ...request,
@@ -811,6 +817,19 @@ export function measuredProvider(provider, state) {
                 if (typeof chunk.usage?.[field] === "number") stats[key] += chunk.usage[field];
             }
             // Plan 202 Task 16: OM worker cost is its own ledger, not the product answer's.
+            if (wm && chunk.type === "tool_call" && WM_ITEM_TOOLS.includes(chunk.call?.name)) wm.items++;
+            if (wm && chunk.type === "done") {
+              state.wmCalls ??= { calls: 0, items: 0, capStops: 0, capNoItem: 0, stopReasons: {} };
+              const stats = state.wmCalls;
+              const reason = chunk.stopReason ?? "unknown";
+              stats.calls++;
+              stats.items += wm.items;
+              stats.stopReasons[reason] = (stats.stopReasons[reason] ?? 0) + 1;
+              if (reason === "max_output_tokens") {
+                stats.capStops++;
+                if (!wm.items) stats.capNoItem++;
+              }
+            }
             if (kind && chunk.type === "done") {
               const usage = state.workerUsage[kind];
               if (typeof chunk.usage?.inputTokens === "number") usage.inputTokens += chunk.usage.inputTokens;

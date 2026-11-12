@@ -4,7 +4,7 @@
     "campaignId": "campaign-a38df35ae51d",
     "status": "finished",
     "ceiling": 1000000000000,
-    "spend": 154773669,
+    "spend": 183000000,
     "attempts": [
       {
         "attemptId": "217-m1.small.memory-off.long-session@1",
@@ -12,7 +12,7 @@
         "status": "completed",
         "usageComplete": false,
         "reservedInputTokens": 30500000,
-        "confirmedInputTokens": 1030478
+        "confirmedInputTokens": 2742842
       },
       {
         "attemptId": "217-m1.small.STM.long-session@1",
@@ -20,15 +20,15 @@
         "status": "completed",
         "usageComplete": false,
         "reservedInputTokens": 30500000,
-        "confirmedInputTokens": 2280112
+        "confirmedInputTokens": 5685106
       },
       {
         "attemptId": "217-m1.small.OM-before.long-session@1",
         "jobId": "217-m1.small.OM-before.long-session",
         "status": "completed",
-        "usageComplete": true,
+        "usageComplete": false,
         "reservedInputTokens": 30500000,
-        "confirmedInputTokens": 2273669
+        "confirmedInputTokens": 5304761
       },
       {
         "attemptId": "217-m1.large.memory-off.long-session@1",
@@ -36,7 +36,7 @@
         "status": "completed",
         "usageComplete": false,
         "reservedInputTokens": 30500000,
-        "confirmedInputTokens": 552479
+        "confirmedInputTokens": 1799984
       },
       {
         "attemptId": "217-m1.large.STM.long-session@1",
@@ -44,7 +44,7 @@
         "status": "completed",
         "usageComplete": false,
         "reservedInputTokens": 30500000,
-        "confirmedInputTokens": 2936983
+        "confirmedInputTokens": 6795885
       },
       {
         "attemptId": "217-m1.large.OM-before.long-session@1",
@@ -52,11 +52,19 @@
         "status": "completed",
         "usageComplete": false,
         "reservedInputTokens": 30500000,
-        "confirmedInputTokens": 2745494
+        "confirmedInputTokens": 6870441
       }
     ]
   },
   "results": [
+    {
+      "id": "217-m1.small.OM-before.long-session",
+      "attemptId": "217-m1.small.OM-before.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
     {
       "id": "217-m1.small.memory-off.long-session",
       "attemptId": "217-m1.small.memory-off.long-session@1",
@@ -74,14 +82,6 @@
       "charged": 30500000
     },
     {
-      "id": "217-m1.small.OM-before.long-session",
-      "attemptId": "217-m1.small.OM-before.long-session@1",
-      "status": "completed",
-      "cause": null,
-      "usageComplete": true,
-      "charged": 2273669
-    },
-    {
       "id": "217-m1.large.memory-off.long-session",
       "attemptId": "217-m1.large.memory-off.long-session@1",
       "status": "completed",
@@ -90,16 +90,16 @@
       "charged": 30500000
     },
     {
-      "id": "217-m1.large.STM.long-session",
-      "attemptId": "217-m1.large.STM.long-session@1",
+      "id": "217-m1.large.OM-before.long-session",
+      "attemptId": "217-m1.large.OM-before.long-session@1",
       "status": "completed",
       "cause": null,
       "usageComplete": false,
       "charged": 30500000
     },
     {
-      "id": "217-m1.large.OM-before.long-session",
-      "attemptId": "217-m1.large.OM-before.long-session@1",
+      "id": "217-m1.large.STM.long-session",
+      "attemptId": "217-m1.large.STM.long-session@1",
       "status": "completed",
       "cause": null,
       "usageComplete": false,

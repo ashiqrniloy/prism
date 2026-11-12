@@ -196,6 +196,11 @@ export function parseArgs(argv) {
       options.finalTurnAnswer = true;
       continue;
     }
+    // Plan 218 Task 6 (gate M-2): the session arms hand WM the suite's task framing as the episode scope.
+    if (argv[i] === "--wm-scope") {
+      options.wmScope = true;
+      continue;
+    }
     // Plan 210 Task 5: run `memory:maintain` once between ingest and the answer (the maintain-then-answer arm).
     if (argv[i] === "--maintain-before-answer") {
       options.maintainBeforeAnswer = true;
@@ -950,6 +955,7 @@ export async function runBench(input = {}) {
       ...(options.finalTurnAnswer && !coding ? { finalTurnAnswer: FINAL_TURN_ANSWER_VERSION } : {}),
       ...(options.stripSupersessionHints ? { stripSupersessionHints: STRIP_SUPERSESSION_VERSION } : {}),
       ...(options.maintainBeforeAnswer ? { maintainBeforeAnswer: 1 } : {}),
+      ...(options.wmScope ? { wmScope: 1 } : {}),
     },
     memoryConfig: resolvedMemoryConfigs(options.memoryConfigs),
     inputTokens: 0,
@@ -1706,6 +1712,7 @@ export async function runBench(input = {}) {
         await account();
         if (coding) report.metrics = summarizeCoding(options.suite, report.results);
         report.workerUsage = state.workerUsage ?? report.workerUsage;
+        if (state.wmCalls) report.wmCalls = state.wmCalls;
         report.workerErrors = state.workerErrors ?? [];
         report.sourceMessageTokens = report.results.reduce((sum, row) => sum + (row.sourceMessageTokens ?? 0), 0);
         if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
@@ -1815,6 +1822,7 @@ export async function runBench(input = {}) {
   }
   if (coding) report.metrics = summarizeCoding(options.suite, report.results);
   report.workerUsage = state.workerUsage ?? report.workerUsage;
+  if (state.wmCalls) report.wmCalls = state.wmCalls;
   report.workerErrors = state.workerErrors ?? [];
   report.sourceMessageTokens = report.results.reduce((sum, row) => sum + (row.sourceMessageTokens ?? 0), 0);
   // An answer-only checkpoint is not a score; it exists to be judged in its own phase.

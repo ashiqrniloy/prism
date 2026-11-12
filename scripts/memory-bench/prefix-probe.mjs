@@ -247,18 +247,20 @@ async function runPrefixProbe() {
                   "turn.completed",
                   async (_event, context) => {
                     if (turn !== 5 && turn !== 8) return;
+                    // WM items (plan 218 Task 2 replaced reflections); each cites one STM record id.
+                    const wmItem = (id, text, tokenCount) => ({
+                      id,
+                      kind: "summary",
+                      text,
+                      relevance: "medium",
+                      citedIds: ["aaaaaaaaaaaa"],
+                      tokenCount,
+                    });
                     await log.append(context.session, {
-                      type: "memory.session.reflections.recorded",
-                      reflections: [
-                        {
-                          id: turn === 5 ? "cccccccccccc" : "dddddddddddd",
-                          content: turn === 5 ? SECOND : "retry budget stays small",
-                          tokenCount: 8,
-                          supportingObservationIds: [],
-                        },
-                        ...(turn === 8
-                          ? [{ id: "eeeeeeeeeeee", content: "orchard keys stay in storage", tokenCount: 7, supportingObservationIds: [] }]
-                          : []),
+                      type: "memory.session.wm.recorded",
+                      items: [
+                        wmItem(turn === 5 ? "cccccccccccc" : "dddddddddddd", turn === 5 ? SECOND : "retry budget stays small", 8),
+                        ...(turn === 8 ? [wmItem("eeeeeeeeeeee", "orchard keys stay in storage", 7)] : []),
                       ],
                     });
                   },

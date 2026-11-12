@@ -80,7 +80,9 @@ export async function captureSession(tree) {
       capture("worker")(request);
       const called = request.messages.some((message) => message.role === "tool");
       const prompt = request.messages.find((message) => message.role === "user")?.content[0];
-      const sourceId = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(prompt?.type === "text" ? prompt.text : "")?.[1];
+      const sourceId = /\[[^\]]+\] \[([^\]]+)\] (?:message|user|assistant|tool|system):/.exec(
+        prompt?.type === "text" ? prompt.text : "",
+      )?.[1];
       if (!called && sourceId)
         yield kernel.providerToolCall(
           kernel.toolCallContent("c1", "record_observation", {
@@ -128,7 +130,8 @@ export async function captureSession(tree) {
       crossed: final.tokens.activeObservationPool > final.thresholds.targetTokens,
       dropped: final.observations.dropped,
     },
-    finalStatus: { contextMode: final.contextMode ?? null, observations: final.observations, reflections: final.reflections },
+    // Plan 218 Task 2 renamed the status count to `wmItems`; a pinned older revision still answers `reflections`.
+    finalStatus: { contextMode: final.contextMode ?? null, observations: final.observations, wmItems: final.wmItems ?? final.reflections },
   };
 }
 

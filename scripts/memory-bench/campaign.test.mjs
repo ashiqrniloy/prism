@@ -283,3 +283,13 @@ test("interrupted_attempts_cost_only_wall_time_on_retrying_routes", () => {
   assert.equal(retryUncounted(retrying, { status: "failed", cause: "answer-error" }), false);
   assert.equal(retryUncounted({}, { status: "abandoned" }), false);
 });
+
+// Plan 218 Task 6 (gate M-2 sitting 1): with --parallel-arms a sibling reserves after a job, so the journal's last
+// attempt is not the job's own. Its retry, pause, halt and charge must read the job's own attempt.
+test("parallel_jobs_read_their_own_attempt_not_the_journals_last", async () => {
+  const source = await Bun.file(new URL("./campaign.mjs", import.meta.url)).text();
+  assert.equal((source.match(/journal\.attempts\.at\(-1\)/g) ?? []).length, 0);
+  assert.match(source, /const ownAttempt = \(\) => journal\.attempts\.find\(\(item\) => item\.attemptId === attempt\.attemptId\)/);
+  for (const cause of ["quota-daily", "quota-window", "transient"])
+    assert.match(source, new RegExp(`ownAttempt\\(\\)\\?\\.cause === "${cause}"`));
+});

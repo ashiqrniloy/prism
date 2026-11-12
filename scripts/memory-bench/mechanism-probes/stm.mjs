@@ -44,7 +44,7 @@ export function batchSteps(text, fx = longSession()) {
   const replies = new Map(fx.turns.map((turn) => [turn.reply, `${turn.id}:reply`]));
   const steps = new Map();
   for (const line of text.split("\n")) {
-    const match = /^\[[^\]]+\] \[([^\]]+)\] message: (.*)$/.exec(line);
+    const match = /^\[[^\]]+\] \[([^\]]+)\] (?:message|user|assistant|tool|system): (.*)$/.exec(line);
     if (!match) continue;
     const [, entryId, body] = match;
     const role = /^\{"role":"(\w+)"/.exec(body)?.[1];
@@ -199,9 +199,11 @@ function sentinelTiers(prism) {
 
 /**
  * Replay the fixture through one agent. `config` overlays the memory-system options; `chunkStore` is provided as the
- * `memory.chunks` service; `sentinels` adds the scope/LTM blocks and a WM reflection carrying a sentinel.
+ * `memory.chunks` service; `sentinels` adds the scope/LTM blocks and a WM reflection carrying a sentinel. Plan 218
+ * Task 5: `wmWorker` answers WM requests (`config.wm` then configures WM, on by default with it), and `beforeTurn`
+ * runs before a turn with the harness (to set the episode scope with `memory:scope`).
  */
-export async function replayLongSession({ config = {}, chunkStore, sentinels = false, secrets = true, turns } = {}) {
+export async function replayLongSession({ config = {}, chunkStore, sentinels = false, secrets = true, turns, wmWorker, beforeTurn } = {}) {
   const { prism, testing } = await packages();
   const memory = await import("@arnilo/prism-memory-system");
   const fx = longSession();
@@ -228,38 +230,58 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
       return call ? ev.call(call.tool, call.args, call.id) : ev.say(current.reply);
     },
     (request) =>
-      mainRequests.push(
-        structuredClone({ context: request.context, messages: request.messages, tools: request.tools?.map((t) => t.name) }),
-      ),
+      mainRequests.push({
+        ...structuredClone({ context: request.context, messages: request.messages, tools: request.tools?.map((t) => t.name) }),
+        compactions: compactionCount.n,
+      }),
   );
   const worker = await responder("worker", (request) => {
     const tools = (request.tools ?? []).map((tool) => tool.name);
     const kind = tools.includes("record_event")
       ? "stm"
-      : tools.includes("record_reflection")
+      : tools.includes("summarize")
         ? "wm"
         : tools.includes("drop_observations")
           ? "rehearsal"
           : "other";
     workerRequests.push({ kind, text: JSON.stringify({ system: request.system, messages: request.messages }) });
     if (kind === "stm") return stm(request);
+    if (kind === "wm" && wmWorker) return wmWorker(request, { testing, ev });
     if (kind === "wm" && sentinels && !request.messages.some((message) => message.role === "tool")) {
-      const ids = [...receivedText({ messages: request.messages }).matchAll(/\[([0-9a-f]{12})\]/g)].map((m) => m[1]);
+      const ids = [...receivedText({ messages: request.messages }).matchAll(/^- \[([0-9a-f]{12})\] \d{4}-/gm)].map((m) => m[1]);
       return ids.length
-        ? ev.call("record_reflection", { content: `${WM_SENTINEL} summary`, supportingObservationIds: ids.slice(0, 2) })
+        ? ev.call("summarize", { stmIds: ids.slice(0, 2), text: `${WM_SENTINEL} summary`, relevance: "medium" })
         : ev.say("");
     }
     return ev.say("");
   });
   const failures = [];
   const active = new Set();
+  // Completed compactions so far, stamped on each main request: a prompt prefix may change only across one (plan 218 M4).
+  const compactionCount = { n: 0 };
+  const compactionCounter = prism.definePackage({
+    name: "@probe/compaction-counter",
+    version: "0.0.0",
+    requires: { api: 1 },
+    setup(api) {
+      api.hooks.on("compaction.completed", (event) => {
+        if (!event.error) compactionCount.n += 1;
+      });
+    },
+  })();
   const memoryConfig = {
     enabled: true,
     stm: { model: STM_MODEL, triggerTokens: 1, ...(config.stm ?? {}) },
-    wm: sentinels ? { model: STM_MODEL, observationTokens: 1 } : false,
+    wm: wmWorker
+      ? config.wm === false
+        ? false
+        : { model: STM_MODEL, triggerTokens: 1, ...(config.wm ?? {}) }
+      : sentinels
+        ? { model: STM_MODEL, triggerTokens: 1 }
+        : false,
     context: { compactAt: { maxTokens: 9_999_999 }, ...(config.context ?? {}) },
     worker: { maxTurns: 2, ...(config.worker ?? {}) },
-    ...Object.fromEntries(Object.entries(config).filter(([key]) => !["stm", "context", "worker"].includes(key))),
+    ...Object.fromEntries(Object.entries(config).filter(([key]) => !["stm", "wm", "context", "worker"].includes(key))),
   };
   const extra = [];
   if (chunkStore)
@@ -276,7 +298,7 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
   if (sentinels) extra.push(sentinelTiers(prism));
   const agent = await prism.createAgent({
     model: { provider: "mock", model: "main", limits: { contextWindow: 10_000_000, maxOutputTokens: 0 } },
-    packages: [main, worker, fixtureTools(prism, fx, toolLog), ...extra, memory.default(memoryConfig)],
+    packages: [main, worker, fixtureTools(prism, fx, toolLog), compactionCounter, ...extra, memory.default(memoryConfig)],
     slots: { store: prism.createMemorySessionStore() },
     limits: RUN_LIMITS,
   });
@@ -317,8 +339,10 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
     await settle();
     turnMarks[turn.id].stmAfter = passes();
   };
+  const harness = { agent, session, settle, mainRequests, workerRequests };
   for (const [index, turn] of fx.turns.entries()) {
     if (turns && !turns.includes(turn.id)) continue;
+    await beforeTurn?.(turn, harness);
     await runTurn(turn);
     // The kernel hands the compaction slot the run's secret set; the memory system keeps it for later passes.
     if (index === 0 && secrets) {
@@ -499,7 +523,7 @@ export const probes = [
           return Boolean(record) && named(task.changes) && named(task.verification);
         });
         const boundaries = (ledger.boundaries ?? []).filter((item) => item.reason === "outcome").length;
-        const instruction = h.stmRequests().every((request) => /record an outcome: what was asked, what changed/.test(request.text));
+        const instruction = h.stmRequests().every((request) => /is one outcome event: what was asked, what changed/.test(request.text));
         return {
           surface: "ledger",
           property: "every task of the long-session fixture ends with an outcome event that names what changed and how it was verified",
@@ -575,7 +599,7 @@ export const probes = [
         const stm = h.stmRequests();
         const leaks = stm.filter((request) => [SCOPE_SENTINEL, LTM_SENTINEL, WM_SENTINEL].some((s) => request.text.includes(s)));
         const scopeLive = h.mainRequests.some((request) => JSON.stringify(request).includes(SCOPE_SENTINEL));
-        const wmLive = (await h.ledger()).reflections.some((item) => item.content.includes(WM_SENTINEL));
+        const wmLive = (await h.ledger()).wmItems.some((item) => item.text.includes(WM_SENTINEL));
         return {
           surface: "worker-request",
           property:

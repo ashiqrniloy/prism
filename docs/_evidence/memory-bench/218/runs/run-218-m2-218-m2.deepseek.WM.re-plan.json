@@ -1,0 +1,429 @@
+{
+  "kind": "217-long-session-job",
+  "plan": 218,
+  "task": 6,
+  "gate": "M-2",
+  "family": "re-plan",
+  "repeat": 1,
+  "jobId": "218-m2.deepseek.WM.re-plan",
+  "attemptId": "218-m2.deepseek.WM.re-plan@1",
+  "arm": "WM",
+  "model": "opencode-go/deepseek-v4.1-flash",
+  "partition": "dev",
+  "sourceRevision": "wm-e7e100f15d11d1b84bfd58f56caf5d1f",
+  "protocol": "47400844ff5c3549accd2f3c408420807f1d2fb19d5fe95805985afad5c081f9",
+  "maxInputTokens": 15000000,
+  "usageSource": "wire-proxy",
+  "status": "completed",
+  "inputTokens": 2266417,
+  "cacheReadTokens": 1006336,
+  "outputTokens": 246333,
+  "usageComplete": false,
+  "usageMissingExchanges": 1,
+  "report": {
+    "kind": "long-session-report-v1",
+    "family": "re-plan",
+    "mode": "live",
+    "partition": "dev",
+    "partitionIdsHash": "216687cab2621c10777ff8ecf226b52729badcb3429fae7c1146490323d16bce",
+    "metric": "M1: task success on the tasks after a mid-episode re-plan (re-derivations reported beside it)",
+    "arms": [
+      "WM"
+    ],
+    "personas": [
+      "rp0",
+      "rp5",
+      "rp4",
+      "rp11"
+    ],
+    "summary": {
+      "WM": {
+        "relatedTasks": 8,
+        "rederivationsPerRelatedTask": 0.125,
+        "successRate": 1
+      }
+    },
+    "rows": {
+      "WM": [
+        {
+          "family": "re-plan",
+          "persona": "rp0",
+          "arm": "WM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp0",
+          "arm": "WM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp5",
+          "arm": "WM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp5",
+          "arm": "WM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp4",
+          "arm": "WM",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp4",
+          "arm": "WM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp11",
+          "arm": "WM",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "re-plan",
+          "persona": "rp11",
+          "arm": "WM",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        }
+      ]
+    },
+    "usage": [
+      {
+        "persona": "rp0",
+        "arm": "WM",
+        "worker": {
+          "calls": 20,
+          "inputTokens": 96745,
+          "outputTokens": 24803,
+          "cacheReadTokens": 29184
+        },
+        "main": {
+          "calls": 38,
+          "inputTokens": 229466,
+          "outputTokens": 7174,
+          "cacheReadTokens": 131840
+        },
+        "eligibleTokens": 20698,
+        "chunkStorePeakBytes": null,
+        "wmCalls": {
+          "calls": 9,
+          "items": 22,
+          "capStops": 0,
+          "capNoItem": 0,
+          "stopReasons": {
+            "tool_calls": 8,
+            "end_turn": 1,
+            "unknown": 1
+          }
+        },
+        "session": {
+          "compactions": 14,
+          "passes": 6,
+          "items": [
+            3,
+            3,
+            2,
+            2,
+            5,
+            4
+          ],
+          "budgetUnmet": 3,
+          "ratios": [
+            0.9058,
+            0.5942,
+            0.2656
+          ]
+        },
+        "tasks": {
+          "plan": {
+            "status": "stopped"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "rp5",
+        "arm": "WM",
+        "worker": {
+          "calls": 16,
+          "inputTokens": 79358,
+          "outputTokens": 18099,
+          "cacheReadTokens": 15872
+        },
+        "main": {
+          "calls": 39,
+          "inputTokens": 207269,
+          "outputTokens": 7136,
+          "cacheReadTokens": 98944
+        },
+        "eligibleTokens": 17031,
+        "chunkStorePeakBytes": null,
+        "wmCalls": {
+          "calls": 6,
+          "items": 14,
+          "capStops": 0,
+          "capNoItem": 0,
+          "stopReasons": {
+            "tool_calls": 6,
+            "unknown": 1
+          }
+        },
+        "session": {
+          "compactions": 9,
+          "passes": 6,
+          "items": [
+            2,
+            2,
+            3,
+            2,
+            2,
+            3
+          ],
+          "budgetUnmet": 4,
+          "ratios": [
+            0.5392,
+            0.697
+          ]
+        },
+        "tasks": {
+          "plan": {
+            "status": "completed"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "stopped"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "rp4",
+        "arm": "WM",
+        "worker": {
+          "calls": 12,
+          "inputTokens": 65127,
+          "outputTokens": 14814,
+          "cacheReadTokens": 6400
+        },
+        "main": {
+          "calls": 31,
+          "inputTokens": 191738,
+          "outputTokens": 6687,
+          "cacheReadTokens": 119168
+        },
+        "eligibleTokens": 15817,
+        "chunkStorePeakBytes": null,
+        "wmCalls": {
+          "calls": 5,
+          "items": 11,
+          "capStops": 0,
+          "capNoItem": 0,
+          "stopReasons": {
+            "tool_calls": 5
+          }
+        },
+        "session": {
+          "compactions": 11,
+          "passes": 4,
+          "items": [
+            1,
+            2,
+            3,
+            3
+          ],
+          "budgetUnmet": 2,
+          "ratios": [
+            0.8104,
+            0.5951
+          ]
+        },
+        "tasks": {
+          "plan": {
+            "status": "completed"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "rp11",
+        "arm": "WM",
+        "worker": {
+          "calls": 22,
+          "inputTokens": 103192,
+          "outputTokens": 24578,
+          "cacheReadTokens": 12800
+        },
+        "main": {
+          "calls": 42,
+          "inputTokens": 236160,
+          "outputTokens": 8360,
+          "cacheReadTokens": 117376
+        },
+        "eligibleTokens": 18618,
+        "chunkStorePeakBytes": null,
+        "wmCalls": {
+          "calls": 10,
+          "items": 16,
+          "capStops": 0,
+          "capNoItem": 0,
+          "stopReasons": {
+            "tool_calls": 9,
+            "end_turn": 1
+          }
+        },
+        "session": {
+          "compactions": 12,
+          "passes": 9,
+          "items": [
+            2,
+            2,
+            2,
+            1,
+            3,
+            2,
+            1,
+            2,
+            1
+          ],
+          "budgetUnmet": 6,
+          "ratios": [
+            0.6719,
+            0.587,
+            0.9073
+          ]
+        },
+        "tasks": {
+          "plan": {
+            "status": "completed"
+          },
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "stopped"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "replan": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "wallMs": 919500
+  }
+}

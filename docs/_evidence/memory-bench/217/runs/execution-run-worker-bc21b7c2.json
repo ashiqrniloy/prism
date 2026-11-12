@@ -1,0 +1,78 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-1160bb2252bf",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 1408310874,
+    "attempts": [
+      {
+        "attemptId": "217-m1.small.OM-before.beam-1m@1",
+        "jobId": "217-m1.small.OM-before.beam-1m",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 600500000,
+        "confirmedInputTokens": 600500000
+      },
+      {
+        "attemptId": "217-m1.large.STM.longmemeval-m@1",
+        "jobId": "217-m1.large.STM.longmemeval-m",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 400500000,
+        "confirmedInputTokens": 5588026
+      },
+      {
+        "attemptId": "217-m1.large.OM-before.longmemeval-m@1",
+        "jobId": "217-m1.large.OM-before.longmemeval-m",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 400500000,
+        "confirmedInputTokens": 19658288
+      },
+      {
+        "attemptId": "217-m1.small.OM-before.beam-1m@2",
+        "jobId": "217-m1.small.OM-before.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 600500000,
+        "confirmedInputTokens": 6810874
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.small.OM-before.beam-1m",
+      "attemptId": "217-m1.small.OM-before.beam-1m@1",
+      "status": "setup-failure",
+      "exit": 1
+    },
+    {
+      "id": "217-m1.small.OM-before.beam-1m",
+      "attemptId": "217-m1.small.OM-before.beam-1m@2",
+      "answersDir": ".cache/memory-bench/217/small/OM-before/beam-1m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 6810874
+    },
+    {
+      "id": "217-m1.large.STM.longmemeval-m",
+      "attemptId": "217-m1.large.STM.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/217/large/STM/longmemeval-m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 6810874
+    },
+    {
+      "id": "217-m1.large.OM-before.longmemeval-m",
+      "attemptId": "217-m1.large.OM-before.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/217/large/OM-before/longmemeval-m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 6810874
+    }
+  ]
+}

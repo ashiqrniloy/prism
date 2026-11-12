@@ -4,6 +4,7 @@
  *
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --offline [--partition dev] [--output report.json]
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family long-session --offline   # plan 217 Task 5 (S1)
+ *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family re-plan --offline        # plan 218 Task 5 (M1)
  *
  * Every session is one `runScenario` (plan 200) over a fresh `createAgent`, driven by the evals user simulator and
  * graded by `createStateMatchScorer` plus the scripted checks in `metrics.mjs`. A persona's sessions share one
@@ -832,9 +833,10 @@ function parseArgs(argv) {
 if (import.meta.main) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    if (options.family === "long-session") {
-      // Plan 217 Task 5: the long-session family (S1). Its live runs are gate M-1's (plan 217 Task 6).
-      if (!options.offline) throw new Error("MemoryBenchGate: live long-session runs go through the gate M-1 campaign (plan 217 Task 6)");
+    if (options.family === "long-session" || options.family === "re-plan") {
+      // Plan 217 Task 5: the long-session family (S1); plan 218 Task 5: the re-plan family (M1). Their live runs go
+      // through the gate campaigns (gate M-1, plan 217 Task 6; gate M-2, plan 218 Task 6).
+      if (!options.offline) throw new Error(`MemoryBenchGate: live ${options.family} runs go through the gate campaign (gate M-1 or M-2)`);
       const { runLongSession } = await import("./long-session.mjs");
       const report = await runLongSession(options);
       if (options.output) await writeFile(options.output, `${JSON.stringify(report, null, 2)}\n`);

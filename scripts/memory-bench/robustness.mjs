@@ -479,6 +479,32 @@ export function frozenMemoryModelHash(record = readRepoJson(MEMORY_MODEL_CRITERI
   return hash;
 }
 
+/**
+ * Plan 218 Task 5: every hash the criteria record's amendment log has held, oldest first, ending with the current one.
+ * Amendments change no row, threshold or partition rule, so a record pinning one of them still reads these criteria.
+ */
+export function memoryModelCriteriaHashes(record = readRepoJson(MEMORY_MODEL_CRITERIA_RECORD)) {
+  const hashes = [];
+  for (const amendment of record?.amendments ?? [])
+    for (const hash of [amendment.previousHash, amendment.hash]) if (hash && !hashes.includes(hash)) hashes.push(hash);
+  if (record?.memoryModelCriteriaHash && !hashes.includes(record.memoryModelCriteriaHash)) hashes.push(record.memoryModelCriteriaHash);
+  return hashes;
+}
+
+/**
+ * Plan 218 Task 5: the criteria hash a closed gate's records read. A gate the owner closed (`closed` on its owner-gate
+ * record) keeps the hash it ran on when a later amendment moves the current one; that hash must be in the amendment
+ * log. An open gate gets `null` and reads the current hash.
+ */
+export function closedGateCriteriaHash(gateRecord, record = readRepoJson(MEMORY_MODEL_CRITERIA_RECORD)) {
+  if (!gateRecord?.closed) return null;
+  if (gateRecord.closed.by !== "owner" || !gateRecord.closed.at)
+    throw new Error(`MemoryModelCriteria: gate ${gateRecord.gate} is closed without the owner's date`);
+  if (!memoryModelCriteriaHashes(record).includes(gateRecord.memoryModelCriteriaHash))
+    throw new Error(`MemoryModelCriteria: closed gate ${gateRecord.gate} pins a criteria hash the amendment log never held`);
+  return gateRecord.memoryModelCriteriaHash;
+}
+
 /** The hashes every memory-model manifest, evidence file and report carries. */
 export function memoryModelManifestPin({ gate } = {}) {
   const pin = { criteriaHash: robustnessCriteriaHash(), memoryModelCriteriaHash: frozenMemoryModelHash() };

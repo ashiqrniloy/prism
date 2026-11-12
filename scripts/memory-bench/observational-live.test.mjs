@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 import { createOpenCodeGoProvider, openCodeGoModels } from "@arnilo/prism-ai/opencode-go";
 
 import { runStm } from "../../packages/memory/system/src/session/workers/stm.ts";
-import { runReflector } from "../../packages/memory/system/src/session/workers/reflector.ts";
+import { foldObservationalMemoryLedger } from "../../packages/memory/system/src/session/ledger.ts";
+import { runWm } from "../../packages/memory/system/src/session/workers/wm.ts";
 
 const enabled = process.env.PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS === "1";
 const modelId = process.env.PRISM_LIVE_OPENCODE_GO_CHAT_MODEL ?? "mimo-v2.5";
@@ -60,14 +61,16 @@ test.skipIf(!enabled)(
     assert.ok(observations.length > 0, "the observer recorded a source-backed observation");
     assert.ok(observations[0]?.sourceEntryIds.includes(source.id), "the observation cites its source");
 
+    // Plan 218 Task 2: WM gives verdicts on the recorded events.
     const reflector = liveClient();
-    await runReflector({
-      observations,
+    await runWm({
+      records: observations,
+      ledger: foldObservationalMemoryLedger([{ type: "memory.session.observations.recorded", observations }]),
       client: reflector.client,
       maxTurns: 4,
       sessionId: "live-om",
     });
-    assert.ok(reflector.calls() > 0, "the reflector reached the live provider");
+    assert.ok(reflector.calls() > 0, "WM reached the live provider");
   },
   180_000,
 );

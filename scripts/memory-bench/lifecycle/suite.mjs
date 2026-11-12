@@ -224,7 +224,7 @@ export function lifecycleMock(state) {
       const called = (name) => completed.some((c) => c.name === name);
       let call;
       if (names.includes("record_event")) {
-        const source = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(goal)?.[1];
+        const source = /\[[^\]]+\] \[([^\]]+)\] (?:message|user|assistant|tool|system):/.exec(goal)?.[1];
         if (source && !messages.some((m) => m.role === "tool"))
           call = ["record_event", { kind: "statement", description: goal, sourceEntryIds: [source], relevance: "high" }];
       } else if (names.includes("record_notes")) {

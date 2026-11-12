@@ -168,3 +168,11 @@ memory work were already uncommitted, the base is the actual pre-edit working-tr
 that state. The report records this method, both product/harness/supporting hashes, and the unchanged HEAD.
 The final prefix suite has **27 pass / 0 fail**. This attests only the package move; it does not reverse the
 historical plan 202/216 differences above, refresh paid evidence, or authorize mixing historical screen cells.
+
+Plan 218 Task 4 (2026-11-12) re-attested the session-tier work: **54/54 provider requests are byte-identical** for
+`preset-r1` and `passive-only`, deterministic on both trees. The base is a worktree of HEAD `c65c9123`
+(`.cache/memory-bench/218/base`, shared harness), so the comparison covers plan 217 and plan 218 Tasks 1–4 together,
+all uncommitted at the time; the answer paths do not load the session tiers. The equivalence file is now
+[218/equivalence.json](../../218/equivalence.json) (post product `c505719c…`). The prefix suite has **28 pass / 0 fail**:
+the new `prefix_identical_between_compactions_across_wm_passes` pins the session tiers' prefix across three WM passes
+between compactions (I7, M4).

@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "kind": "218-task5-wm-probes",
+  "plan": "218",
+  "task": "5",
+  "note": "Offline, deterministic WM mechanism probes on the long-session fixture: scripted main, STM and WM models, real memory system. Counts, hashes and verdicts only.",
+  "fixture": {
+    "sha256": {
+      "session.json": "f032f75c3c6c3bc632e91d9f7d2686729857ec90f0037ab7256d66a6725a1d5c",
+      "annotations.json": "3aa64aa6d3d53d3367f4b84c65b802ec503fe004f832c6370643f19f43619a3a"
+    },
+    "messageEntries": 222,
+    "tasks": 8,
+    "events": 66
+  },
+  "summary": {
+    "probes": 10,
+    "verdicts": {
+      "works": 10
+    },
+    "errors": 0
+  },
+  "errors": [],
+  "probes": [
+    {
+      "id": "wm.attribution",
+      "fires": 2,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "the user's stated figure is an STM event of its own attributed to the user; the assistant's estimate is attributed to the assistant, rendered as an assistant proposal, and its WM item keeps the mark",
+      "onSha256": "8716233e0fa599e679cd36a7d41c8c72bbca5d6a00f277a740dbc363a17d403b",
+      "offSha256": "552e95269e500bdaf01cb049ba8537b3c5ffcf05b1c3986be6a69a5f345c8de4",
+      "counts": {
+        "proposal": "assistant",
+        "figure": "user",
+        "separate": true,
+        "proposalItem": "assistant",
+        "figureItem": "user",
+        "proposalLine": true,
+        "renderedMark": true
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.incremental",
+      "fires": 55,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "every WM pass adds items and supersedes only the items a summarize or derive call named; the WM set is never replaced",
+      "onSha256": "5b0a5c1ca8428afea2e3689486bedd547f43ec9917fcedd6659d6f0abce9bfe0",
+      "offSha256": "8f6451e3b121ebf0fb40697f181deaccf3c59efe5d6a042d5ebdb6b48907a9bb",
+      "counts": {
+        "passes": 55,
+        "items": 38,
+        "superseded": 1,
+        "unnamedSupersedes": 0,
+        "shrinks": 0,
+        "duplicatesAfterTombstone": 11
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.knowledge-update",
+      "fires": 1,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "a value the user changed (old and new, dated) stays a WM item of its own after a model WM pass that summarises the records around it",
+      "onSha256": "c87ef7698c2e17509bdaf66e09ccc903fd9166d8657d2ce5b293461143a19c18",
+      "offSha256": "de66d2860f30ee1b8e30b6dcbce53a0596bd4da0cddddfe244b381376cc9dec2",
+      "counts": {
+        "model": {
+          "kept": true,
+          "dated": true,
+          "summarisedNeighbours": true,
+          "swallowed": 0
+        },
+        "deterministic": {
+          "kept": false,
+          "dated": true,
+          "summarisedNeighbours": false,
+          "swallowed": 0
+        }
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.later-steps",
+      "fires": 3,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "a record a later plan step reads (step N+2 and beyond) is kept as a WM event marked neededLater by the pass at step N, and stays active through the later passes",
+      "onSha256": "5808f367e803a08bd4f2d5d7cc1a82e8b0e3afdda34ecb8649feaaf832cb7ce4",
+      "offSha256": "33c1e9277d0220390bc1cb5e07c8d56742e4cc76deaa605c2562b7f1c1bd7afe",
+      "counts": {
+        "laterSteps": 3,
+        "keptWithScope": 3,
+        "keptWithoutScope": 0
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.prefix-stable",
+      "fires": 31,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "request",
+      "property": "between compactions every main-model request repeats the previous one's context and messages byte for byte, across WM passes; the prefix changes only across a compaction",
+      "onSha256": "45358294a8f0d6429aa90b0749fdec9ea7da291daa720ad64e41be2d8d08e6f9",
+      "offSha256": "72cfbe677a6dfa640f9136a21cb9e9af371ffbdfa33ada86507edfa6a2513e1f",
+      "counts": {
+        "requests": 111,
+        "wmPassesBeforeFirstCompaction": 31,
+        "requestsBeforeFirstCompaction": 65,
+        "compactions": 45,
+        "prefixBreaks": 45,
+        "breaksWithoutCompaction": 0
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.protected",
+      "fires": 14,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "the discard tool refuses every protected record (task state, fact, unresolved error, open question) and none is lost; a batch whose protected share exceeds the target records budget_unmet",
+      "onSha256": "84bccfa91afac65db4952265168bf0a11e05254da24907da2fe8d4076ef6b954",
+      "offSha256": "1fa852e6c4387f4a5023b05adc549b6b5212d41fab293215e07041f8f1b1ce78",
+      "counts": {
+        "refused": 14,
+        "lost": 0,
+        "classes": {
+          "task_state": 8,
+          "fact": 1,
+          "unresolved_error": 4,
+          "open_question": 1
+        },
+        "expectedClasses": 4,
+        "budgetUnmetPasses": 14,
+        "neededLaterReachable": false
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.referrer-delete",
+      "fires": 2,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "chunk-store",
+      "property": "a chunk is deleted only when its last referrer goes; a chunk an active WM item cites survives its STM record's tombstone",
+      "onSha256": "fb1a5c17b43f015bfdc7ea03414152372c3dac232d5f9e47834426c0d697bb38",
+      "offSha256": "163c8ae364d6f08e40cf3afd480fb479380c5ed3bc75f622ce923cc02f7e77ea",
+      "counts": {
+        "deletes": 2,
+        "unrefDeletes": 2,
+        "wmCitedChunks": 9,
+        "citedDead": 0
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.rejudge",
+      "fires": 24,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "after a scope change that adds a step needing an earlier-discarded record, the next WM pass is offered it and keeps it back into WM; a discarded record whose chunk died is reported as chunk dropped",
+      "onSha256": "92cbb62edc3883713b9c651a86c788d44fcf8f87adae836510a410f17dddcaab",
+      "offSha256": "6590fd96b5ccafb485e4e47e4d1182d9f95770ca977cca130e04467b6914d78f",
+      "counts": {
+        "offered": 24,
+        "restored": true,
+        "chunkDropped": true,
+        "restoredWithoutRejudge": false
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.scope-blind-stm",
+      "fires": 53,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "worker-request",
+      "property": "no STM request carries the episode scope; every WM request after the scope is set carries it inside <episode_scope>; an injecting scope leaves the WM tool calls unchanged",
+      "onSha256": "87a635bd883ece3421ef23d0c0a72561cceea2a3d6f83596fb7149247a389da8",
+      "offSha256": "5581af3879aa6fb5e4e1a198d3ad0bf56950637d5ea6b24fb1599e93d96c9fa7",
+      "counts": {
+        "stmRequests": 110,
+        "wmRequests": 55,
+        "wmWithScope": 53,
+        "stmLeaks": 0,
+        "injectionCallsEqual": true,
+        "injectedOutsideBlock": 0
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.target-ratio",
+      "fires": 11,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "over WM passes whose protected share is below the target, the median achieved ratio (item tokens / processed tokens) is at most wm.targetRatio + 0.1; a user correction survives a tight target",
+      "onSha256": "15dc3a4954e82e3df829fd120939e2c3d03ae8b67cae242ea07fbfc23e81d791",
+      "offSha256": "c7c94de1520f1447b8f72b767dfd23d838a1dcb7cd824aa80812db1b1e688755",
+      "counts": {
+        "passes": 11,
+        "eligiblePasses": 8,
+        "budgetUnmetPasses": 3,
+        "target": 0.2,
+        "medianRatio": 0.228,
+        "meanRatio": 0.269,
+        "maxRatio": 0.547,
+        "correctionSurvivesModel": true,
+        "correctionSurvivesDeterministic": true
+      },
+      "group": "wm"
+    }
+  ],
+  "durationSeconds": 34
+}

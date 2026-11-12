@@ -1,0 +1,283 @@
+{
+  "generatedAt": "2026-11-11T21:34:03.812Z",
+  "kind": "217-m1-gate-manifest",
+  "schemaVersion": 1,
+  "plan": 217,
+  "task": 6,
+  "gateId": "M-1",
+  "partition": "dev",
+  "status": "approved",
+  "executable": true,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "memoryModelCriteriaHash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1",
+  "rows": [
+    "S1",
+    "S2",
+    "S3",
+    "S4"
+  ],
+  "fixtures": {
+    "long-session": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d",
+    "long-session-replay": "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3"
+  },
+  "baselines": {
+    "omBefore": {
+      "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+      "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc",
+      "productPaths": [
+        "packages/memory/observational/src"
+      ],
+      "worktree": ".cache/memory-bench/216/om-before"
+    }
+  },
+  "productHash": "3a714f4cff8ff350e38bad94898204c70b1b8a757af0613d8c569da344f8ea51",
+  "productPaths": [
+    "packages/memory/system/src",
+    "packages/memory/core/src",
+    "src"
+  ],
+  "harnessHash": "4662cfe2801449734f8563a9a6300705b0f45d0f7eb41a4a24fc543f87d3e0d5",
+  "harnessPaths": [
+    "scripts/memory-bench/replay.mjs",
+    "scripts/memory-bench/run.mjs",
+    "scripts/memory-bench/datasets.mjs",
+    "scripts/memory-bench/chunk-meter.mjs",
+    "scripts/memory-bench/long-session.mjs",
+    "scripts/memory-bench/work-outcome/long-session.mjs",
+    "scripts/memory-bench/work-outcome/long-session-live.mjs",
+    "scripts/memory-bench/work-outcome-long-session.json"
+  ],
+  "productRevision": {
+    "STM": "stm-3a714f4cff8ff350e38bad94898204c7",
+    "memory-off": "stm-3a714f4cff8ff350e38bad94898204c7",
+    "OM-before": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510"
+  },
+  "provider": "ollama-cloud",
+  "model": "217-m1-panel",
+  "ceiling": 1000000000000,
+  "journalPath": ".cache/memory-bench/217/journal-worker-bc21b7c2.json",
+  "summaryPath": "docs/_evidence/memory-bench/217/runs/execution-run-worker-bc21b7c2.json",
+  "models": {
+    "answers": [
+      {
+        "key": "large",
+        "ref": "ollama-cloud/deepseek-v4.1-flash",
+        "family": "deepseek",
+        "small": false
+      },
+      {
+        "key": "small",
+        "ref": "ollama-cloud/mimo-v2.6-flash",
+        "family": "mimo",
+        "small": true
+      }
+    ],
+    "replication": [
+      {
+        "key": "glm",
+        "ref": "ollama-cloud/glm-5.3-flash",
+        "family": "glm",
+        "scope": "long-session"
+      },
+      {
+        "key": "minimax",
+        "ref": "ollama-cloud/minimax-m3.1-flash",
+        "family": "minimax",
+        "scope": "long-session"
+      }
+    ],
+    "judges": [
+      "ollama-cloud/gpt-oss:120b",
+      "ollama-cloud/gemma4:31b"
+    ],
+    "worker": "each arm's answer model (as in gate C-1): the STM / observer, reflector and dropper calls go to the answer route",
+    "judgesDoNotAnswer": true
+  },
+  "billing": {
+    "mode": "paid-allowance",
+    "provider": "ollama-cloud",
+    "plan": "Ollama Cloud Pro ($60 included a month, 3 concurrent requests)",
+    "reserveUsd": 1.5,
+    "paidAnswers": [
+      "ollama-cloud/deepseek-v4.1-flash",
+      "ollama-cloud/mimo-v2.6-flash",
+      "ollama-cloud/glm-5.3-flash",
+      "ollama-cloud/minimax-m3.1-flash"
+    ],
+    "paidJudges": [
+      "ollama-cloud/gpt-oss:120b",
+      "ollama-cloud/gemma4:31b"
+    ],
+    "paidFallbacks": []
+  },
+  "interruptions": "429s, closed usage windows (waited out from /api/balance's resets_at), quota windows, empty replies, timeouts and dropped sockets are re-run from the job's answer/judge (or persona) checkpoints after a cooldown and never count against its attempts; a spent allowance halts the campaign, which resumes from its journal next period; a question that errors fails the job (--strict-questions) instead of being scored",
+  "caps": {
+    "maxInputTokens": {
+      "beam-1m": 600000000,
+      "longmemeval-m": 400000000,
+      "memory-off": 25000000,
+      "long-session": 30000000
+    },
+    "wallTimeCapHours": {
+      "worker": 120,
+      "memory-off": 24,
+      "long-session": 24
+    },
+    "concurrency": 2,
+    "maxOutputTokens": 8192,
+    "journalCeiling": 1000000000000
+  },
+  "estimate": {
+    "sample": {
+      "questionsPerSuiteAndArm": 2,
+      "historyTokensPerQuestion": {
+        "longmemeval-m": 1212826,
+        "beam-1m": 1000000
+      }
+    },
+    "inputTokens": 102283301,
+    "usd": 6,
+    "wall": "run 1 about 1.5 h; runs 2-4 about 2.5 h each (16k history tokens a minute per stream, three streams)",
+    "basis": {
+      "tokensPerQuestion": {
+        "beam-1m": 10000000,
+        "longmemeval-m": 5000000
+      },
+      "longSessionTokensPerJob": 2000000,
+      "usdPerMillion": 0.0585,
+      "rateSource": "Ollama /api/usage, 2026-11-09 (the smoke and the diagnostics): $1.57 for 26.8M input tokens, output included"
+    }
+  },
+  "cohort": {
+    "longmemeval-m": {
+      "partition": "dev",
+      "questions": 50,
+      "idsHash": "80f5ded49f8ebe8ad09948d879d048849c8a0d6a168f2a532acd6ad9dba4bab5"
+    },
+    "beam-1m": {
+      "partition": "dev",
+      "questions": 40,
+      "idsHash": "9ee618b8ed072b2ecf541fcf48737328aa2211d6d510583b222a6e3ae9562f55"
+    },
+    "long-session": {
+      "partition": "dev",
+      "fixtureHash": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d"
+    }
+  },
+  "arms": [
+    {
+      "id": "memory-off",
+      "config": "none",
+      "tree": "current",
+      "base": "OM-before"
+    },
+    {
+      "id": "STM",
+      "config": "om",
+      "tree": "current",
+      "base": "OM-before"
+    },
+    {
+      "id": "OM-before",
+      "config": "om",
+      "tree": "om-before",
+      "base": null
+    }
+  ],
+  "pairing": "every arm is paired with OM-before on identical items: the same question ids (suites) or personas (family), answer model, judges and flags; an item one arm did not finish is reported unpaired, never imputed",
+  "results": [],
+  "jobs": [
+    {
+      "id": "217-m1.small.OM-before.beam-1m",
+      "kind": "robustness",
+      "family": "217-m1.small.beam-1m",
+      "role": "OM-before",
+      "arm": "OM-before",
+      "model_key": "small",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "ollama-cloud",
+      "model": "mimo-v2.6-flash",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 600000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 1,
+      "wallTimeCapHours": 120,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/217/small/OM-before/beam-1m/answers",
+      "judgeCacheDir": ".cache/memory-bench/217/small/OM-before/beam-1m/judge",
+      "cwd": ".cache/memory-bench/216/om-before",
+      "maxQuestions": 2,
+      "sitting": 3
+    },
+    {
+      "id": "217-m1.large.STM.longmemeval-m",
+      "kind": "robustness",
+      "family": "217-m1.large.longmemeval-m",
+      "role": "STM",
+      "arm": "STM",
+      "model_key": "large",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "ollama-cloud",
+      "model": "deepseek-v4.1-flash",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 400000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 1,
+      "wallTimeCapHours": 120,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/217/large/STM/longmemeval-m/answers",
+      "judgeCacheDir": ".cache/memory-bench/217/large/STM/longmemeval-m/judge",
+      "maxQuestions": 2,
+      "sitting": 3
+    },
+    {
+      "id": "217-m1.large.OM-before.longmemeval-m",
+      "kind": "robustness",
+      "family": "217-m1.large.longmemeval-m",
+      "role": "OM-before",
+      "arm": "OM-before",
+      "model_key": "large",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "config": "om",
+      "provider": "ollama-cloud",
+      "model": "deepseek-v4.1-flash",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 400000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 1,
+      "wallTimeCapHours": 120,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/217/large/OM-before/longmemeval-m/answers",
+      "judgeCacheDir": ".cache/memory-bench/217/large/OM-before/longmemeval-m/judge",
+      "cwd": ".cache/memory-bench/216/om-before",
+      "maxQuestions": 2,
+      "sitting": 3
+    }
+  ],
+  "manifestHash": "a8575c37056d679d38f11e1cca64f07e15df5fd6ee798e8bc8858db317a959bb",
+  "worker": "bc21b7c2",
+  "executionManifestPath": "docs/_evidence/memory-bench/217/runs/execution-manifest-worker-bc21b7c2.json",
+  "outputPrefix": "run-217-m1",
+  "gate": {
+    "path": "docs/_evidence/memory-bench/217/gates/owner-gate-m1.json",
+    "manifestHash": "a8575c37056d679d38f11e1cca64f07e15df5fd6ee798e8bc8858db317a959bb",
+    "approvedAt": "2026-11-11"
+  }
+}

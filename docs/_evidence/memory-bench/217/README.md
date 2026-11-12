@@ -8,14 +8,23 @@ scores and hashes only, never question, gold, chunk or transcript text. The rows
 | File | What it is |
 | --- | --- |
 | `stm-probes.json` | Task 5. The eight offline STM mechanism probes on the long-session fixture. All eight read `works`. S2 is read from `stm.recall-verbatim`. |
-| `gates/owner-gate-m1.json` | Task 6. The gate M-1 record: budget, models, arms, partitions, caps, and the manifest hash it binds. `approved: false` until the owner gives the start word. |
+| `gates/owner-gate-m1.json` | Task 6. The gate M-1 record: budget, models, arms, partitions, caps, and the manifest hash it binds. Each sitting started on the owner's word. |
 | `runs/` | Task 6. The campaign's reports (`run-217-m1-<job>.json`), execution manifest, preflight and run summary. Written by the paid run. |
 | `s4-justification.md` | Task 6, only if S4's worker-token ratio exceeds 1.25: the written justification the row allows. |
 
 The manifest is `../memory-model/M-1/manifest.json`. The evidence and verdicts are `../memory-model/M-1/evidence.json`
 and `verdicts.json`, from `acceptance-report.mjs --plan memory-model --gate M-1 --build --write`.
 
-## Gate M-1 status (2026-11-09)
+## Gate M-1 result (2026-11-12)
+
+**Run and closed (owner: "Let's accept and close task 6", 2026-11-12).** Verdicts on the development partition:
+S1 **miss** (DeepSeek +0.47 [−0.19, 1.16], MiMo −0.34 [−0.69, −0.06]), S2 **pass**, S3 **deferred** to gate A, S4
+**pass** (0.615). Replication on GLM-5.3 Flash and MiniMax M3.1 Flash is outside the verdict (`evidence.replication`).
+Every amendment and the owner's words for each sitting are in `gates/owner-gate-m1.json`; reports replaced by a
+product change are in `runs/superseded-*/`. Plan 217 Task 6 has the full notes; the carried work is in plan 218
+(Tasks 1.1, 2, 4.1, 5 and 6), plans 219, 219.1 and 221, and gate A (plan 223 Task 2).
+
+## Gate M-1 status before the run (2026-11-09)
 
 **Ready, not run.** The owner chose to build the machinery now and run the full development cohort later, on the
 owner's word ("Build now, run full later"; models "C-1 roles"). On 2026-11-09, $37.03 of the $60 Ollama Cloud

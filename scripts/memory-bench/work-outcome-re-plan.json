@@ -1,0 +1,43 @@
+{
+  "seed": "prism-218-re-plan",
+  "draw": "SHA-256(\"prism-218-re-plan:\" + id), ascending inside the family stratum",
+  "source": "work-outcome/re-plan.mjs (project-owned synthetic generator); ids only",
+  "strata": {
+    "re-plan-coding": [
+      4,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; dev is plan 218 Task 6's gate M-2; heldout-a and heldout-b belong to the memory model's gate A",
+  "residualPool": {
+    "re-plan-coding": 0
+  },
+  "idsHash": "216687cab2621c10777ff8ecf226b52729badcb3429fae7c1146490323d16bce",
+  "abilities": {
+    "dev": {
+      "re-plan-coding": [
+        "rp0",
+        "rp5",
+        "rp4",
+        "rp11"
+      ]
+    },
+    "heldout-a": {
+      "re-plan-coding": [
+        "rp10",
+        "rp6",
+        "rp8",
+        "rp2"
+      ]
+    },
+    "heldout-b": {
+      "re-plan-coding": [
+        "rp7",
+        "rp9",
+        "rp3",
+        "rp1"
+      ]
+    }
+  }
+}

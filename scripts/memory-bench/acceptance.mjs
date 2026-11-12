@@ -303,12 +303,14 @@ export function assertAcceptance1888Manifest(manifest) {
 }
 
 /** sha256 over every file under the given repo-relative directories, sorted by path. */
-export async function sourceFingerprint(paths, root = ".") {
+export async function sourceFingerprint(paths, root = ".", { exclude } = {}) {
   const digest = createHash("sha256");
   const files = [];
+  // `exclude(relativePath)` leaves a file out (plan 218 gate M-2: test files, owner decision 2026-11-12).
   const walk = async (dir) => {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);
+      if (exclude?.(relative(root, path), entry.isDirectory())) continue;
       if (entry.isDirectory()) await walk(path);
       else if (entry.isFile()) files.push(path);
     }

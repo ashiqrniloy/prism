@@ -242,11 +242,11 @@ Not kept, fixed or removed here. Each destination plan writes its final disposit
 | `ontology.claim-lint` | transferred | plan 216 | moves with the wiki; stays safety-proven | pending |
 | `ontology.source-ingest` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
 | `ontology.coding-o6` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
-| `om.observer` | transferred | plan 217 | short-term memory | pending |
+| `om.observer` | transferred | plan 217 | short-term memory | replaced by the STM worker (plan 217 Task 2); gate M-1 (2026-11-12): S1 miss (MiMo), S2 pass, S3 deferred to gate A, S4 0.615; kept as the default, S1 re-measured at gate M-2 (plan 218 Task 6) |
 | `om.reflector` | transferred | plan 218 | working memory | pending |
 | `om.dropper-model` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
 | `om.dropper-lowest-relevance` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
-| `om.task-state` | transferred | plan 217 | short-term memory | pending |
+| `om.task-state` | transferred | plan 217 | short-term memory | carried into STM as record_task_state (plan 217 Task 2); measured inside gate M-1's STM arm, no separate verdict |
 | `om.compaction` | transferred | plan 218 | working memory | pending |
 | `om.recall-tool` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
 | `om.pinned-context` | transferred | plan 218 | working memory | pending |

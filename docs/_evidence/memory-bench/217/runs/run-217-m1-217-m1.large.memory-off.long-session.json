@@ -8,22 +8,22 @@
   "arm": "memory-off",
   "model": "ollama-cloud/deepseek-v4.1-flash",
   "partition": "dev",
-  "sourceRevision": "stm-80628d4163771d7813b9045096ce9885",
-  "protocol": "6ac85f009451a1928c5ed622fc474aa604658b6f7fc2441f394118022bb7915e",
+  "sourceRevision": "stm-716a3b968914da60949397df46a711bd",
+  "protocol": "be2b5b0bdb6d2807f661d8dfb799b4b6ecd919100cfbf55a87400d166e5c3413",
   "maxInputTokens": 30000000,
   "usageSource": "wire-proxy",
   "status": "completed",
-  "inputTokens": 552479,
-  "cacheReadTokens": 145920,
-  "outputTokens": 27253,
+  "inputTokens": 1799984,
+  "cacheReadTokens": 555648,
+  "outputTokens": 82621,
   "usageComplete": false,
-  "usageMissingExchanges": 44,
+  "usageMissingExchanges": 129,
   "report": {
     "kind": "long-session-report-v1",
     "family": "long-session",
     "mode": "live",
     "partition": "dev",
-    "partitionIdsHash": "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730",
+    "partitionIdsHash": "949b2ae2d5202e65251ab90ca3904c4d8a615fb501699126761c5ae0f527999c",
     "metric": "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
     "arms": [
       "memory-off"
@@ -32,13 +32,25 @@
       "ls10",
       "ls7",
       "ls11",
-      "ls1"
+      "ls1",
+      "ls15",
+      "ls12",
+      "ls19",
+      "ls14",
+      "ls18",
+      "ls17",
+      "ls21",
+      "ls13",
+      "ls23",
+      "ls22",
+      "ls16",
+      "ls20"
     ],
     "summary": {
       "memory-off": {
-        "relatedTasks": 8,
-        "rederivationsPerRelatedTask": 0.75,
-        "successRate": 0.875
+        "relatedTasks": 32,
+        "rederivationsPerRelatedTask": 2.15625,
+        "successRate": 0.5
       }
     },
     "rows": {
@@ -48,9 +60,9 @@
           "persona": "ls10",
           "arm": "memory-off",
           "pair": "rename",
-          "rederivations": 1,
-          "toolCalls": 4,
-          "success": true,
+          "rederivations": 3,
+          "toolCalls": 5,
+          "success": false,
           "sourceSucceeded": true,
           "status": "completed"
         },
@@ -59,10 +71,10 @@
           "persona": "ls10",
           "arm": "memory-off",
           "pair": "config",
-          "rederivations": 0,
-          "toolCalls": 3,
-          "success": true,
-          "sourceSucceeded": true,
+          "rederivations": 7,
+          "toolCalls": 7,
+          "success": false,
+          "sourceSucceeded": false,
           "status": "completed"
         },
         {
@@ -70,9 +82,9 @@
           "persona": "ls7",
           "arm": "memory-off",
           "pair": "rename",
-          "rederivations": 0,
+          "rederivations": 2,
           "toolCalls": 4,
-          "success": true,
+          "success": false,
           "sourceSucceeded": true,
           "status": "completed"
         },
@@ -81,37 +93,15 @@
           "persona": "ls7",
           "arm": "memory-off",
           "pair": "config",
-          "rederivations": 1,
-          "toolCalls": 3,
-          "success": true,
-          "sourceSucceeded": true,
+          "rederivations": 4,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": false,
           "status": "completed"
         },
         {
           "family": "long-session",
           "persona": "ls11",
-          "arm": "memory-off",
-          "pair": "rename",
-          "rederivations": 0,
-          "toolCalls": 3,
-          "success": true,
-          "sourceSucceeded": true,
-          "status": "completed"
-        },
-        {
-          "family": "long-session",
-          "persona": "ls11",
-          "arm": "memory-off",
-          "pair": "config",
-          "rederivations": 0,
-          "toolCalls": 3,
-          "success": true,
-          "sourceSucceeded": true,
-          "status": "completed"
-        },
-        {
-          "family": "long-session",
-          "persona": "ls1",
           "arm": "memory-off",
           "pair": "rename",
           "rederivations": 1,
@@ -122,13 +112,299 @@
         },
         {
           "family": "long-session",
+          "persona": "ls11",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
           "persona": "ls1",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 3,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls1",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 5,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls15",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 2,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls15",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls12",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls12",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 5,
+          "toolCalls": 5,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls19",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 4,
+          "toolCalls": 5,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls19",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 6,
+          "toolCalls": 8,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls14",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls14",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 1,
+          "toolCalls": 3,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls18",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls18",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls17",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls17",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 4,
+          "toolCalls": 5,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls21",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls21",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 3,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls13",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls13",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 3,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls23",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls23",
           "arm": "memory-off",
           "pair": "config",
           "rederivations": 3,
           "toolCalls": 4,
           "success": false,
           "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls22",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls22",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 2,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": false,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls16",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls16",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 3,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls20",
+          "arm": "memory-off",
+          "pair": "rename",
+          "rederivations": 1,
+          "toolCalls": 4,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls20",
+          "arm": "memory-off",
+          "pair": "config",
+          "rederivations": 3,
+          "toolCalls": 4,
+          "success": false,
+          "sourceSucceeded": true,
           "status": "completed"
         }
       ]
@@ -143,11 +419,11 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 19,
-          "inputTokens": 85854,
-          "outputTokens": 2730
+          "calls": 18,
+          "inputTokens": 65385,
+          "outputTokens": 5289
         },
-        "eligibleTokens": 12902,
+        "eligibleTokens": 11739,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -179,11 +455,11 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 23,
-          "inputTokens": 75571,
-          "outputTokens": 2523
+          "calls": 20,
+          "inputTokens": 95601,
+          "outputTokens": 4488
         },
-        "eligibleTokens": 14311,
+        "eligibleTokens": 12908,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -215,11 +491,11 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 21,
-          "inputTokens": 88219,
-          "outputTokens": 3120
+          "calls": 20,
+          "inputTokens": 103291,
+          "outputTokens": 3634
         },
-        "eligibleTokens": 14273,
+        "eligibleTokens": 13175,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -251,11 +527,443 @@
           "outputTokens": 0
         },
         "main": {
-          "calls": 21,
-          "inputTokens": 92413,
-          "outputTokens": 3226
+          "calls": 19,
+          "inputTokens": 81662,
+          "outputTokens": 3621
         },
-        "eligibleTokens": 14421,
+        "eligibleTokens": 14326,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls15",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 19,
+          "inputTokens": 95427,
+          "outputTokens": 2944
+        },
+        "eligibleTokens": 14955,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls12",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 22,
+          "inputTokens": 109092,
+          "outputTokens": 3022
+        },
+        "eligibleTokens": 14118,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls19",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 17,
+          "inputTokens": 65651,
+          "outputTokens": 3093
+        },
+        "eligibleTokens": 14201,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls14",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 23,
+          "inputTokens": 118504,
+          "outputTokens": 4057
+        },
+        "eligibleTokens": 14178,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls18",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 105229,
+          "outputTokens": 4066
+        },
+        "eligibleTokens": 15258,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls17",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 79064,
+          "outputTokens": 2818
+        },
+        "eligibleTokens": 14298,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls21",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 20,
+          "inputTokens": 81903,
+          "outputTokens": 2564
+        },
+        "eligibleTokens": 14133,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls13",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 20,
+          "inputTokens": 105117,
+          "outputTokens": 3594
+        },
+        "eligibleTokens": 13302,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls23",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 103852,
+          "outputTokens": 3182
+        },
+        "eligibleTokens": 15110,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls22",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 20,
+          "inputTokens": 103218,
+          "outputTokens": 3220
+        },
+        "eligibleTokens": 13045,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls16",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 107751,
+          "outputTokens": 2525
+        },
+        "eligibleTokens": 12713,
+        "chunkStorePeakBytes": null,
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      },
+      {
+        "persona": "ls20",
+        "arm": "memory-off",
+        "worker": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "main": {
+          "calls": 19,
+          "inputTokens": 77190,
+          "outputTokens": 3251
+        },
+        "eligibleTokens": 13131,
         "chunkStorePeakBytes": null,
         "tasks": {
           "task1": {
@@ -279,6 +987,6 @@
         }
       }
     ],
-    "wallMs": 114546
+    "wallMs": 558443
   }
 }

@@ -1,0 +1,109 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-ca6dd851e774",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 155934266,
+    "attempts": [
+      {
+        "attemptId": "217-m1.glm.memory-off.long-session@1",
+        "jobId": "217-m1.glm.memory-off.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 1487320
+      },
+      {
+        "attemptId": "217-m1.glm.STM.long-session@1",
+        "jobId": "217-m1.glm.STM.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 2928876
+      },
+      {
+        "attemptId": "217-m1.glm.OM-before.long-session@1",
+        "jobId": "217-m1.glm.OM-before.long-session",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 3434266
+      },
+      {
+        "attemptId": "217-m1.minimax.memory-off.long-session@1",
+        "jobId": "217-m1.minimax.memory-off.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 1103872
+      },
+      {
+        "attemptId": "217-m1.minimax.STM.long-session@1",
+        "jobId": "217-m1.minimax.STM.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 4732215
+      },
+      {
+        "attemptId": "217-m1.minimax.OM-before.long-session@1",
+        "jobId": "217-m1.minimax.OM-before.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 6865578
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.glm.memory-off.long-session",
+      "attemptId": "217-m1.glm.memory-off.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.glm.STM.long-session",
+      "attemptId": "217-m1.glm.STM.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.minimax.memory-off.long-session",
+      "attemptId": "217-m1.minimax.memory-off.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.glm.OM-before.long-session",
+      "attemptId": "217-m1.glm.OM-before.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.minimax.STM.long-session",
+      "attemptId": "217-m1.minimax.STM.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.minimax.OM-before.long-session",
+      "attemptId": "217-m1.minimax.OM-before.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    }
+  ]
+}

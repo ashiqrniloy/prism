@@ -1,0 +1,771 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-11-12T07:08:16.790Z",
+  "suite": "beam-1m",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "om",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "ollama-cloud",
+  "model": "mimo-v2.6-flash",
+  "judge": "ollama-cloud/gpt-oss:120b",
+  "judgePanel": [
+    "ollama-cloud/gpt-oss:120b",
+    "ollama-cloud/gemma4:31b"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-1m.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 66156374,
+    "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/1M-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "normalization": {
+    "version": "beam-source-annotations-v1",
+    "sourceHash": "9817eae4665624c91c90824b9819a1913c1ff7fde9ecaec3c751b6de601dd43b"
+  },
+  "maxInputTokens": 600000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "stm-b40a7a58443c9b8b0d3303bb37da8049",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8,
+    "answerInstruction": "beam-published-answer-v1",
+    "finalTurnAnswer": "final-turn-answer-v4"
+  },
+  "memoryConfig": {
+    "observational": {
+      "enabled": true,
+      "recall": true,
+      "stm": {
+        "triggerTokens": 10000,
+        "contextTokens": 4000,
+        "maxChunksPerEvent": 2,
+        "maxChunkBytes": 4096,
+        "chunkStore": "memory",
+        "habituation": {
+          "windowEvents": 50
+        },
+        "boundaries": false,
+        "boundaryGapMinutes": 10
+      },
+      "wm": {
+        "enabled": true,
+        "observationTokens": 20000
+      },
+      "rehearsal": {
+        "enabled": true,
+        "targetTokens": 20000,
+        "policy": "model"
+      },
+      "context": {
+        "recentMessages": 8,
+        "compactAt": {
+          "ratio": 0.6
+        }
+      },
+      "worker": {}
+    },
+    "fabric": null
+  },
+  "inputTokens": 3821989,
+  "cacheReadTokens": 848096,
+  "cacheWriteTokens": 0,
+  "outputTokens": 480392,
+  "calls": {
+    "observer": 146,
+    "reflector": 3,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 4,
+    "judgeAttempts": 4,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 4,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "workerErrors": [
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Unknown observational memory tool: record_rection</parameter"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    },
+    {
+      "phase": "ingest",
+      "message": "Observational memory worker failed"
+    }
+  ],
+  "workerUsage": {
+    "observer": {
+      "calls": 146,
+      "inputTokens": 3539103,
+      "outputTokens": 464428
+    },
+    "reflector": {
+      "calls": 3,
+      "inputTokens": 78687,
+      "outputTokens": 11060
+    },
+    "dropper": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  },
+  "turns": 2,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "217-m1.small.STM.beam-1m@1",
+  "measurementVersion": "product-phases-delivery-v3",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "d77cacbd632ec21360d91f7df510164a27a5579addec5a24330b8a2a486569ce",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "15:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-15",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1208687.7,
+        "answer": 5908.1,
+        "evaluation": 1700.3
+      },
+      "answerKey": "738c8b75ab7f33b03d0caebe44021cf669397d4713f00e7ae96c369f5825bd55",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "chunkStorePeakBytes": 2172,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 1010347,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "abstention_error"
+    },
+    {
+      "id": "15:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-15",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1326537.2,
+        "answer": 2864.4,
+        "evaluation": 2275.7
+      },
+      "answerKey": "fef579dff0ef7aa0dfe3fc699e73fe0705c790089ef335280d4581d722680242",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "chunkStorePeakBytes": 3371,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 1010347,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "15:s1-r29",
+              "surfaced": false
+            },
+            {
+              "id": "15:s1-r94",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    }
+  ],
+  "status": "partial",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "selectedQuestionIds": [
+    "15:abstention:0",
+    "10:abstention:1",
+    "21:abstention:0",
+    "31:abstention:0",
+    "15:contradiction_resolution:1",
+    "21:contradiction_resolution:0",
+    "26:contradiction_resolution:1",
+    "20:contradiction_resolution:1",
+    "28:event_ordering:1",
+    "12:event_ordering:0",
+    "1:event_ordering:1",
+    "34:event_ordering:0",
+    "34:information_extraction:0",
+    "10:information_extraction:0",
+    "25:information_extraction:0",
+    "17:information_extraction:0",
+    "7:instruction_following:1",
+    "12:instruction_following:0",
+    "16:instruction_following:1",
+    "19:instruction_following:0",
+    "24:knowledge_update:0",
+    "22:knowledge_update:0",
+    "3:knowledge_update:1",
+    "29:knowledge_update:1",
+    "23:multi_session_reasoning:0",
+    "25:multi_session_reasoning:0",
+    "26:multi_session_reasoning:1",
+    "15:multi_session_reasoning:1",
+    "12:preference_following:1",
+    "29:preference_following:0",
+    "10:preference_following:0",
+    "4:preference_following:1",
+    "32:summarization:0",
+    "1:summarization:1",
+    "18:summarization:0",
+    "10:summarization:0",
+    "12:temporal_reasoning:1",
+    "7:temporal_reasoning:0",
+    "25:temporal_reasoning:0",
+    "30:temporal_reasoning:1"
+  ],
+  "runPathFingerprint": "3e65e70a513c73d2b21bd4a6ce390a323bba6d524f43a93a8d7e037f35cf4c72",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 3820100,
+      "cacheReadTokens": 848000,
+      "cacheWriteTokens": 0,
+      "outputTokens": 480015,
+      "exchanges": 151,
+      "complete": false,
+      "measured": null,
+      "cold": null,
+      "warm": null,
+      "inputWarm": null,
+      "inputCold": null
+    },
+    "product-extract": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "evaluation": {
+      "inputTokens": 1889,
+      "cacheReadTokens": 96,
+      "cacheWriteTokens": 0,
+      "outputTokens": 377,
+      "exchanges": 4,
+      "complete": true,
+      "measured": 0.000485,
+      "cold": 0.000499,
+      "warm": 0.000485,
+      "inputWarm": 0.000261,
+      "inputCold": 0.000274
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 3821989,
+      "cacheReadTokens": 848096,
+      "cacheWriteTokens": 0,
+      "outputTokens": 480392,
+      "exchanges": 155,
+      "measured": null
+    }
+  },
+  "usageComplete": false,
+  "usageMissingExchanges": 12,
+  "wireExchanges": 155,
+  "sourceMessageTokens": 2020694,
+  "timing": {
+    "wallMs": 2670848.3,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 2,
+      "wallMs": {
+        "p50": 1324244.5,
+        "p95": 1331693.2,
+        "mean": 1327968.9
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 2,
+        "wallMs": {
+          "p50": 1208687.7,
+          "p95": 1326537.2,
+          "mean": 1267612.5
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 2,
+        "wallMs": {
+          "p50": 2864.4,
+          "p95": 5908.1,
+          "mean": 4386.3
+        }
+      },
+      "evaluation": {
+        "n": 2,
+        "wallMs": {
+          "p50": 1700.3,
+          "p95": 2275.7,
+          "mean": 1988
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 845.7,
+          "p95": 1427.1,
+          "mean": 992
+        },
+        "totalMs": {
+          "p50": 845.7,
+          "p95": 1427.1,
+          "mean": 992
+        }
+      },
+      "observer": {
+        "calls": 146,
+        "firstByteMs": {
+          "p50": 909.3,
+          "p95": 1988.5,
+          "mean": 1017
+        },
+        "totalMs": {
+          "p50": 17122.6,
+          "p95": 32073.6,
+          "mean": 17581.2
+        }
+      },
+      "reflector": {
+        "calls": 3,
+        "firstByteMs": {
+          "p50": 1090.8,
+          "p95": 1099.5,
+          "mean": 975.5
+        },
+        "totalMs": {
+          "p50": 19596.8,
+          "p95": 36316.2,
+          "mean": 22987.1
+        }
+      },
+      "solver": {
+        "calls": 2,
+        "firstByteMs": {
+          "p50": 1097.2,
+          "p95": 3368.4,
+          "mean": 2232.8
+        },
+        "totalMs": {
+          "p50": 2705.5,
+          "p95": 5706.9,
+          "mean": 4206.2
+        }
+      }
+    },
+    "calls": 155
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "abstention": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.2218991211120702,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "unpriced",
+    "measured": null,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 3820100,
+      "cacheReadTokens": 848000,
+      "cacheWriteTokens": 0,
+      "outputTokens": 480015,
+      "exchanges": 151,
+      "complete": false,
+      "measured": null,
+      "cold": null,
+      "warm": null,
+      "inputWarm": null,
+      "inputCold": null
+    },
+    "evaluation": {
+      "inputTokens": 1889,
+      "cacheReadTokens": 96,
+      "cacheWriteTokens": 0,
+      "outputTokens": 377,
+      "exchanges": 4,
+      "complete": true,
+      "measured": 0.000485,
+      "cold": 0.000499,
+      "warm": 0.000485,
+      "inputWarm": 0.000261,
+      "inputCold": 0.000274
+    }
+  },
+  "judgeAgreement": {
+    "n": 2,
+    "judges": {
+      "ollama-cloud/gpt-oss:120b": {
+        "scored": 2,
+        "agreementWithPanel": 1
+      },
+      "ollama-cloud/gemma4:31b": {
+        "scored": 2,
+        "agreementWithPanel": 0.5
+      }
+    },
+    "pairs": [
+      {
+        "a": "ollama-cloud/gpt-oss:120b",
+        "b": "ollama-cloud/gemma4:31b",
+        "n": 2,
+        "agreement": 0.5,
+        "kappa": 0
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "abstention_error": 1,
+    "unknown_gap": 1
+  }
+}

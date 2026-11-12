@@ -1,0 +1,47 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-9304fc46a67f",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 15272721,
+    "attempts": [
+      {
+        "attemptId": "217-m1.large.STM.beam-1m@1",
+        "jobId": "217-m1.large.STM.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 600500000,
+        "confirmedInputTokens": 3849415
+      },
+      {
+        "attemptId": "217-m1.large.OM-before.beam-1m@1",
+        "jobId": "217-m1.large.OM-before.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 600500000,
+        "confirmedInputTokens": 11423306
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.large.OM-before.beam-1m",
+      "attemptId": "217-m1.large.OM-before.beam-1m@1",
+      "answersDir": ".cache/memory-bench/217/large/OM-before/beam-1m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 11423306
+    },
+    {
+      "id": "217-m1.large.STM.beam-1m",
+      "attemptId": "217-m1.large.STM.beam-1m@1",
+      "answersDir": ".cache/memory-bench/217/large/STM/beam-1m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 11423306
+    }
+  ]
+}

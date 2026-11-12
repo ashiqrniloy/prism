@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { createSessionEntry } from "@arnilo/prism";
-import { OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, TASK_STATE_RECORDED } from "@arnilo/prism-memory-system";
+import { OBSERVATIONS_RECORDED, TASK_STATE_RECORDED, WM_RECORDED } from "@arnilo/prism-memory-system";
 import { args, hash, writeLedger } from "./io.mjs";
 
 export function synthLedgers({ personas = 4, projects = 3, sessions = 8, seed = 7 } = {}) {
@@ -65,9 +65,17 @@ export function synthLedgers({ personas = 4, projects = 3, sessions = 8, seed = 
                       ],
                     }
                   : {
-                      type: REFLECTIONS_RECORDED,
-                      reflections: [
-                        { id: hash(id).slice(0, 12), content: text, supportingObservationIds: [], tokenCount: Math.ceil(text.length / 4) },
+                      // Plan 218 Task 2: WM items replaced reflections; an item cites at least one STM record id.
+                      type: WM_RECORDED,
+                      items: [
+                        {
+                          id: hash(id).slice(0, 12),
+                          kind: "summary",
+                          text,
+                          relevance: "medium",
+                          citedIds: [hash(`${id}-stm`).slice(0, 12)],
+                          tokenCount: Math.ceil(text.length / 4),
+                        },
                       ],
                     };
             entries.push(createSessionEntry({ id: `${id}-message`, sessionId, timestamp, kind: "custom", data }));

@@ -99,7 +99,7 @@ test("metered_providers_count_usage_when_the_consumer_stops_at_done", async () =
     async *generate() {
       yield { type: "content_delta", content: { type: "text", text: "hello" } };
       yield { type: "usage", usage: { inputTokens: 40, outputTokens: 7 } };
-      yield { type: "done", usage: { inputTokens: 40, outputTokens: 7 } };
+      yield { type: "done", usage: { inputTokens: 40, outputTokens: 7, cacheReadTokens: 30 } };
       yield { type: "content_delta", content: { type: "text", text: "never read" } };
     },
   };
@@ -107,10 +107,11 @@ test("metered_providers_count_usage_when_the_consumer_stops_at_done", async () =
   const log = { eligibleChars: 0 };
   const [metered] = meteredLongSessionProviders([provider], meter, log);
   for await (const chunk of metered.generate({ messages: [], tools: [] })) if (chunk.type === "done") break;
-  assert.deepEqual(meter.main, { calls: 1, inputTokens: 40, outputTokens: 7 });
+  // Plan 218 Task 6: cached input is counted per row (gate M-2's cached-input share).
+  assert.deepEqual(meter.main, { calls: 1, inputTokens: 40, outputTokens: 7, cacheReadTokens: 30 });
   assert.equal(log.eligibleChars, 5);
   for await (const chunk of metered.generate({ messages: [], tools: [{ name: "record_event" }] })) if (chunk.type === "done") break;
-  assert.deepEqual(meter.worker, { calls: 1, inputTokens: 40, outputTokens: 7 });
+  assert.deepEqual(meter.worker, { calls: 1, inputTokens: 40, outputTokens: 7, cacheReadTokens: 30 });
 });
 
 test("project_grep_searches_the_root_and_directories", async () => {

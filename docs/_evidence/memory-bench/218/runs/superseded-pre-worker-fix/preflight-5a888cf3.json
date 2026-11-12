@@ -1,0 +1,14 @@
+{
+  "kind": "218-m2-preflight",
+  "checkedAt": "2026-11-12T14:46:19.376Z",
+  "refs": [
+    "opencode-go/deepseek-v4.1-flash",
+    "opencode-go/muse-spark-1.3-contributor"
+  ],
+  "worktree": {
+    "worktree": ".cache/memory-bench/216/om-before",
+    "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc",
+    "harness": "dfc3e58aa17baf5f768c3d17c960f703d4e71af694763d1f87063c139c4f2f13"
+  }
+}

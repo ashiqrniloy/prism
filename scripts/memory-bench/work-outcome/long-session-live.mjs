@@ -19,8 +19,16 @@ import { LONG_SESSION_ARMS, longSessionFaults, runLongSession } from "./long-ses
 
 export const LONG_SESSION_LIVE_KIND = "217-long-session-job";
 
+/** The gates that run this child, with their plan and the families they may name. */
+export const LONG_SESSION_LIVE_GATES = Object.freeze({
+  "M-1": { plan: 217, families: ["long-session"] },
+  // Plan 218 Task 6: the re-plan family (M1) and the long-session family's S1 re-measure, with repeats.
+  "M-2": { plan: 218, families: ["long-session", "re-plan"] },
+});
+const LIVE_ARMS = new Set([...LONG_SESSION_ARMS, "WM", "STM-only"]);
+
 export function parseLongSessionLiveArgs(argv) {
-  const options = { partition: "dev" };
+  const options = { partition: "dev", family: "long-session", gate: "M-1", repeat: 1 };
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
     const next = () => argv[++index];
@@ -32,15 +40,30 @@ export function parseLongSessionLiveArgs(argv) {
     else if (arg === "--output") options.output = next();
     else if (arg === "--state-dir") options.stateDir = next();
     else if (arg === "--personas") options.personaLimit = Number(next());
+    else if (arg === "--family") options.family = next();
+    else if (arg === "--gate") options.gate = next();
+    else if (arg === "--repeat") options.repeat = Number(next());
+    // Plan 218 Task 6: gate M-2 passes its manifest's output limit (8,192); gate M-1 ran at 4,096.
+    else if (arg === "--max-output-tokens") options.maxOutputTokens = Number(next());
     // The campaign passes its previous attempt's report; this job resumes from its persona checkpoints instead.
     else if (arg === "--resume") next();
     else throw new Error(`MemoryBenchArguments: unknown flag ${arg}`);
   }
   for (const key of ["job", "model", "arm", "output", "stateDir"])
     if (!options[key]) throw new Error(`MemoryBenchArguments: --${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} is required`);
-  if (!LONG_SESSION_ARMS.includes(options.arm)) throw new Error(`MemoryBenchArguments: unknown long-session arm ${options.arm}`);
-  // Gate M-1 is a development gate: the held-out partitions belong to gate A (plan 223).
-  if (options.partition !== "dev") throw new Error(`MemoryBenchGate: gate M-1 reads the dev partition only, not ${options.partition}`);
+  if (!LIVE_ARMS.has(options.arm)) throw new Error(`MemoryBenchArguments: unknown long-session arm ${options.arm}`);
+  const gate = LONG_SESSION_LIVE_GATES[options.gate];
+  if (!gate) throw new Error(`MemoryBenchArguments: unknown gate ${options.gate}`);
+  if (!gate.families.includes(options.family))
+    throw new Error(`MemoryBenchArguments: gate ${options.gate} runs no ${options.family} family`);
+  if (!Number.isSafeInteger(options.repeat) || options.repeat < 1)
+    throw new Error("MemoryBenchArguments: --repeat must be a positive integer");
+  options.maxOutputTokens ??= 4096;
+  if (!Number.isSafeInteger(options.maxOutputTokens) || options.maxOutputTokens < 1)
+    throw new Error("MemoryBenchArguments: --max-output-tokens must be a positive integer");
+  // Gates M-1 and M-2 are development gates: the held-out partitions belong to gate A (plan 223).
+  if (options.partition !== "dev")
+    throw new Error(`MemoryBenchGate: gate ${options.gate} reads the dev partition only, not ${options.partition}`);
   if (!Number.isSafeInteger(options.maxInputTokens) || options.maxInputTokens < 1)
     throw new Error("MemoryBenchArguments: --max-input-tokens must be a positive integer");
   return options;
@@ -109,18 +132,24 @@ export async function runLongSessionLiveJob(options) {
     if (usage.inputTokens >= options.maxInputTokens) throw new Error("LongSessionTokenCeiling");
   };
   const sourceRevision = process.env.PRISM_MEMORY_BENCH_SOURCE ?? null;
+  // Gate M-1's protocol is unchanged; a later gate's family and repeat are part of it, so repeats never share checkpoints.
   const protocol = stableHash({
     kind: LONG_SESSION_LIVE_KIND,
     model: options.model,
     arm: options.arm,
     partition: options.partition,
     sourceRevision,
+    ...(options.gate === "M-1"
+      ? {}
+      : { gate: options.gate, family: options.family, repeat: options.repeat, maxOutputTokens: options.maxOutputTokens }),
   });
   const base = {
     kind: LONG_SESSION_LIVE_KIND,
-    plan: 217,
+    plan: LONG_SESSION_LIVE_GATES[options.gate].plan,
     task: 6,
-    gate: "M-1",
+    gate: options.gate,
+    family: options.family,
+    repeat: options.repeat,
     jobId: options.job,
     attemptId: reserved.attempt.attemptId,
     arm: options.arm,
@@ -133,8 +162,9 @@ export async function runLongSessionLiveJob(options) {
   };
   const write = (body) => writeFile(options.output, `${JSON.stringify(body, null, 2)}\n`);
   try {
-    answer = await liveProviders([refOf(options.model)], wire, { beforeAttempt: account, maxOutputTokens: 4096 });
+    answer = await liveProviders([refOf(options.model)], wire, { beforeAttempt: account, maxOutputTokens: options.maxOutputTokens });
     const report = await runLongSession({
+      family: options.family,
       partition: options.partition,
       arms: [options.arm],
       offline: false,

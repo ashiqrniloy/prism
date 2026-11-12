@@ -1,0 +1,30 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-c8e86510b67d",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 4334164,
+    "attempts": [
+      {
+        "attemptId": "217-m1.small.OM-before.beam-1m@1",
+        "jobId": "217-m1.small.OM-before.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 600500000,
+        "confirmedInputTokens": 4334164
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.small.OM-before.beam-1m",
+      "attemptId": "217-m1.small.OM-before.beam-1m@1",
+      "answersDir": ".cache/memory-bench/217/small/OM-before/beam-1m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 4334164
+    }
+  ]
+}

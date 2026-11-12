@@ -97,22 +97,27 @@ all-required evidence coverage per ability. The file also holds:
   step in `docs/_evidence/memory-bench/memory-model/baselines.json`);
 - the retrieval-set construction rules and the threshold-fit rule (plan 219.1 adds the set hashes by amendment);
 - the fixture index with each fixture's owner plan (plan 217 Task 6's amendment adds the `long-session-replay` and
-  `long-session` hashes; `assertMemoryModelFixture()` refuses a gate read of an unhashed or drifted fixture);
+  `long-session` hashes, plan 218 Task 5's moves `long-session-replay` and adds `re-plan`;
+  `assertMemoryModelFixture()` refuses a gate read of an unhashed or drifted fixture);
 - R1's threshold, fixed with `power.mjs`.
 
 The frozen hash is recorded in `docs/_evidence/memory-bench/memory-model/criteria.json`; `frozenMemoryModelHash()`
 refuses a file that does not hash to it, and `assertMemoryModelPin()` refuses a manifest or evidence file that does
-not pin it. Gate records follow `docs/_evidence/memory-bench/memory-model/gates/README.md`.
+not pin it. Gate records follow `docs/_evidence/memory-bench/memory-model/gates/README.md`. A gate the owner closed
+(`closed { at, by: "owner", text }` on its owner-gate record; gate M-1 since 2026-11-12) never runs again, and its
+evidence keeps the hash it ran on: `closedGateCriteriaHash()` accepts it only when the amendment log held it
+(`memoryModelCriteriaHashes()`), and `acceptance-report.mjs --build` refuses to rebuild it.
 
 ```sh
 timeout 60 bun scripts/memory-bench/robustness.mjs --verify-criteria memory-model-criteria.json
-timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --partition dev --gate M-1   # reads <gate>/evidence.json or --evidence; --write saves verdicts.json; --build (M-1) computes the evidence from the run reports
+timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --partition dev --gate M-1   # reads <gate>/evidence.json or --evidence; --write saves verdicts.json; --build (M-1, M-2) computes the evidence from the run reports
 ```
 
 ### Long-session fixture and STM probes (plan 217 Task 5)
 
 `fixtures/memory-model/long-session/` is the fixture index's offline long-session coding replay: ledgerkit 0.4, seven
-plan tasks over 14 user turns, 88 tool calls and 204 message entries. `session.json` holds the turns (a plan whose
+plan tasks over 14 user turns, 88 tool calls and 204 message entries; plan 218 Task 5 added five turns (19 turns, 92
+calls, 222 entries; see the WM probes below). `session.json` holds the turns (a plan whose
 later steps depend on earlier ones, related task pairs, a 29 KB verbose test log, a code read, a preference stated
 once, a fact superseded after a 45-minute idle gap, eight identical CI polls, three identical test failures, a seeded
 fake secret and a 118 KB read as the oversized tail). `annotations.json` holds the hand-written expected STM events,
@@ -171,6 +176,72 @@ gate M-1's (`work-outcome/long-session-live.mjs`, a campaign child), and `OM-bef
 timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family long-session --offline [--partition dev] [--output report.json]
 ```
 
+### WM probes and the re-plan family (plan 218 Task 5)
+
+Plan 218 Task 5 extended the long-session fixture with five turns before the closing one: an assistant estimate
+followed by the user's real figure (`t7b`, `t7c`); a re-plan that adds step 8, which reads two records discarded
+under the first plan (`t8a`); a user correction (`t8b`); and a failing check left open with a question (`t8c`).
+`annotations.json` gained the matching events and task states, task `T8`, and the WM keys under `expected`
+(`scope`, `laterSteps`, `replan`, `protected`, `tightTarget`, `attribution`, `knowledgeUpdate`). `session.json`
+holds the re-plan text as `replan` (`{replan}` in a turn).
+
+`mechanism-probes/wm.mjs` uses the same replay and adds a scripted WM worker. The worker reads only what the package
+sends: the `<episode_scope>` block, the task state, the target, the salience list and the record lines. It follows
+the scope. A record that a remaining plan step reads is kept with `neededLater`. Protected records are kept. The
+other high-relevance records and outcomes become one summary sized to the stated target, and the rest is discarded.
+The probes set the plan as the scope before `t1` and the re-plan before `t8a`, through `memory:scope`.
+
+```sh
+timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only wm --out docs/_evidence/memory-bench/218/wm-probes.json
+```
+
+| Probe | Checks |
+|---|---|
+| `wm.scope-blind-stm` | no STM request carries the scope. Every WM request after the set carries it inside `<episode_scope>`. An injecting scope leaves the WM calls unchanged and stays inside the block |
+| `wm.later-steps` | a record that steps 5 and 6 read is a WM event marked `neededLater` after the step 2–3 passes. Without a scope it is not kept |
+| `wm.protected` (M2) | a WM model that discards everything loses no protected record (task state, fact, unresolved error, open question), and the protected share records `budget_unmet` |
+| `wm.target-ratio` (M3) | at the default trigger, the median achieved ratio over passes without `budget_unmet` is at most `wm.targetRatio` + 0.1. A correction survives a 0.05 target, with the model and with the deterministic policy |
+| `wm.prefix-stable` (M4) | every main request repeats the previous context and messages byte for byte, except across a compaction (31 WM passes before the first one) |
+| `wm.rejudge` | after the re-plan, the next pass is offered the discarded lint result (no chunks) and keeps it with `neededLater: step 8`. The code read whose chunk died at its discard is in `chunkDropped`. With `rejudgeTokens: 0` nothing comes back |
+| `wm.incremental` | a pass adds items and supersedes only the items a call named; the WM set never shrinks otherwise |
+| `wm.referrer-delete` | a chunk is deleted only by its last referrer. Every chunk an active WM item cites is live |
+| `wm.attribution` | the user's figure is its own `user` event, and the estimate is an `assistant` proposal in the WM request and in `memory:session:view`. The WM item keeps the mark |
+| `wm.knowledge-update` | the port change (8080 → 9090, dated) stays an item of its own after a pass that summarises its neighbours |
+
+Measured on the fixture (`docs/_evidence/memory-bench/218/wm-probes.json`; about 35 s, deterministic):
+
+- median ratio 0.228 (target 0.2) over 8 of 11 passes;
+- 14 protected refusals, 0 lost;
+- 45 compactions, each one a prefix break, and no break without a compaction;
+- 11 records STM recorded again after WM had tombstoned the first copy (polling, mostly: STM's habituation sees only
+  the surface).
+
+Two classes of protection are not shown by the probes:
+
+- `needed_later` cannot occur on a batch record. An item marked `neededLater` cites only records that already have a
+  verdict, and `derive` makes a `fact`, which protects first. The class matters for plan 219's Rehearsal
+  (`isProtectedWmItem`).
+- The deterministic policy protects no changed value: it discards the port change down to the target. It is reported
+  in `wm.knowledge-update`, not gated.
+
+`work-outcome/re-plan.mjs` is the live re-plan family (M1). Each of its 12 personas (`rp0`–`rp11`) uses the
+long-session project generator under its own seed. The session runs as follows:
+
+1. The plan is handed over (steps 1–4 discover a function to rename and a config key to raise; step 5 needs neither).
+2. Steps 1–4 run.
+3. The re-plan arrives: step 5 is dropped, and new steps 5 and 6 read what steps 1 and 3 found.
+4. The new steps run.
+
+M1 is task success on those two tasks (`longSessionChecks`), with re-derivations reported beside it. The `WM` arm
+receives each plan as the episode scope before its turn. The partitions (`work-outcome-re-plan.json`, 4 / 4 / 4) are
+drawn label-blind by `SHA-256("prism-218-re-plan:" + id)`, and the criteria pin the file. `runLongSession({ family:
+"re-plan" })` runs the arms `memory-off`, `WM`, `STM-only` (deterministic WM, no scope) and `OM-before`. Live runs
+are gate M-2's (plan 218 Task 6).
+
+```sh
+timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family re-plan --offline [--partition dev] [--output report.json]
+```
+
 ### Gate M-1: STM against the pinned pre-redesign observer (plan 217 Task 6, paid)
 
 `stm-gate.mjs` holds gate M-1's jobs, manifest, gate check, preflight and evidence (rows S1–S4). It runs on the
@@ -220,6 +291,67 @@ manifest hash. Any harness or product edit changes that hash, so it means a new 
 `PRISM_MEMORY_BENCH_217_SMOKE=1` runs two questions (one persona) per job in its own journal;
 `PRISM_MEMORY_BENCH_217_JOBS=<id substrings>` runs a subset. Long runs go in a `systemd-run --user` unit, as gate C-1's
 did.
+
+### Gate M-2: WM against STM-only and the pinned pre-redesign observer (plan 218 Task 6, paid)
+
+`wm-gate.mjs` holds gate M-2's jobs, manifest, gate check, preflight and evidence (rows M1–M5). It uses the gate M-1
+machinery on the development partitions, with three arms:
+
+- `WM`: the `session` profile (STM + WM). The re-plan family hands WM each plan as the episode scope before its turn.
+  The QA suites give it the suite's task framing (`run.mjs --wm-scope`, `ablations.mjs` `SUITE_SCOPES`). The
+  long-session family has no plan, so it runs without a scope;
+- `STM-only`: STM with `wm.policy: "deterministic"` (`--ablate session.wm.policy=deterministic`) and no scope. The
+  deterministic policy keeps protected, outcome and salient records only, so it can discard a changed value (probe
+  `wm.knowledge-update`). The evidence carries this caveat beside the arm;
+- `OM-before`: the pinned pre-216 observer, from the worktree. Preflight also copies `re-plan.mjs` and its partition
+  file into the worktree. Gate M-1's OM-before rows ran on Ollama Cloud routes, so they do not pair with this gate's
+  routes, and the arm runs again here.
+
+The measured roles (owner, 2026-11-12) are OpenCode Go routes:
+
+- answers: `deepseek-v4.1-flash` and `muse-spark-1.3-contributor`;
+- plan 217's S1 re-measure: `mimo-v2.6-flash`;
+- judges, which never answer: `qwen3.8-flash` and `minimax-m3.1-flash`.
+
+The worker is each arm's answer model. The 29 jobs run in four sittings (`M2_SITTINGS`; `PRISM_MEMORY_BENCH_218_SITTING`
+picks one):
+
+1. the `re-plan` family (M1), two models × three arms;
+2. the S1 re-measure, the `long-session` family on MiMo, three arms × three repeats (`--repeat`, part of the checkpoint
+   protocol);
+3. M5's QA sample, `WM` and `STM-only` on the first 4 dev questions per suite and model (`M2_SUITE_QUESTIONS`; owner:
+   small sample, flagged underpowered, the QA decision stays at gate A);
+4. the `long-session` family on the two gate models (cost rows only).
+
+The product fingerprint leaves out test files (`__tests__/`, `*.test.*`; owner decision, 2026-11-12). A test-only
+commit no longer refuses a sitting.
+
+| Row | Computed from |
+|---|---|
+| M1 | re-plan reports: task success (points) on the two tasks after the re-plan, `WM − STM-only` (non-inferior) and `WM − OM-before` (gain), paired by persona and pair, clustered by persona |
+| M2–M4 | `218/wm-probes.json` (offline, Task 5): protected-item loss, median achieved ratio against the target, prefix bytes between compactions. `assertM2OfflineRows` refuses the paid run unless all ten WM probes read `works` and these rows pass |
+| M5 | suite reports: `WM − STM-only` accuracy pooled over both suites per model, with WM's evidence coverage per ability; `underpowered: true` |
+
+Beside the rows, the evidence carries:
+
+- `s1`: `WM − OM-before` and `STM-only − OM-before` re-derivations per related task on MiMo, paired over repeats, named
+  against plan 217's row. Per-persona rows appear when both intervals lie below zero;
+- `wmOutputCap`: WM calls, stops at the output cap, and cap stops that wrote no item, per answer model. These come from
+  `wmCalls` in the suite reports and the family usage rows;
+- `performance`: per arm, worker tokens per 10k eligible tokens, items per WM pass, the `budget_unmet` share, the
+  achieved-ratio distribution, compactions, cached-input share, cost and p95. The family figures come from
+  `longSessionWmStats` over each persona's session log.
+
+```sh
+timeout 300 bun scripts/memory-bench/campaign.mjs --plan memory-model --gate M-2 --partition dev --manifest   # memory-model/M-2/manifest.json
+set -a; source ~/.config/prism/live.env; set +a
+PRISM_MEMORY_BENCH_218_SITTING=1 timeout 86400 bun scripts/memory-bench/campaign.mjs --plan memory-model --gate M-2 --partition dev --parallel-arms 3
+timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --gate M-2 --partition dev --build --write
+```
+
+The campaign refuses to start unless `218/gates/owner-gate-m2.json` is approved and binds the current manifest hash.
+`PRISM_MEMORY_BENCH_218_SMOKE=1` runs one persona or one question per job in its own journal.
+`PRISM_MEMORY_BENCH_218_JOBS=<id substrings>` runs a subset.
 
 Plan 208 Task 2's claim-support audit is `ontology-audit.mjs`. It samples model-written, cited concept claims
 (seeded, stratified by suite and subject size, at most 200 per arm and model; human-written claims are excluded) and asks

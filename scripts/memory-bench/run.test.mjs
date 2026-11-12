@@ -268,7 +268,7 @@ function truncatingProvider(state, onAnswer, onIngest) {
     id: "mock",
     async *generate(request) {
       const names = request.tools?.map((tool) => tool.name) ?? [];
-      const worker = names.some((name) => ["record_event", "record_reflection", "drop_observations"].includes(name));
+      const worker = names.some((name) => ["record_event", "summarize", "record_reflection", "drop_observations"].includes(name));
       if (!worker) {
         const answerAttempt = first ? 1 : 2;
         onAnswer?.(request, answerAttempt);
@@ -345,7 +345,7 @@ test("two_rate_limited_answers_fork_from_the_forked_session_leaf", async () => {
     id: "mock",
     async *generate(request) {
       const names = request.tools?.map((tool) => tool.name) ?? [];
-      const worker = names.some((name) => ["record_event", "record_reflection", "drop_observations"].includes(name));
+      const worker = names.some((name) => ["record_event", "summarize", "record_reflection", "drop_observations"].includes(name));
       if (!worker && answers < 2) {
         answers++;
         yield providerError(new Error("Chat stream ended without completion evidence ([DONE]: missing, finish_reason: missing)"));

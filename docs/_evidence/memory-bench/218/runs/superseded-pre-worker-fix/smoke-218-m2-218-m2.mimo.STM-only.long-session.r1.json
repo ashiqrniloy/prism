@@ -1,0 +1,128 @@
+{
+  "kind": "217-long-session-job",
+  "plan": 218,
+  "task": 6,
+  "gate": "M-2",
+  "family": "long-session",
+  "repeat": 1,
+  "jobId": "218-m2.mimo.STM-only.long-session.r1",
+  "attemptId": "218-m2.mimo.STM-only.long-session.r1@1",
+  "arm": "STM-only",
+  "model": "opencode-go/mimo-v2.6-flash",
+  "partition": "dev",
+  "sourceRevision": "wm-240f011a1320b41adf7df65897ffd7e5",
+  "protocol": "e6d07b8773ff7cdf68eec817c9423cb14b44fe8c89331eb7dddf603fb8256d76",
+  "maxInputTokens": 40000000,
+  "usageSource": "wire-proxy",
+  "status": "completed",
+  "inputTokens": 189621,
+  "cacheReadTokens": 105984,
+  "outputTokens": 5242,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "report": {
+    "kind": "long-session-report-v1",
+    "family": "long-session",
+    "mode": "live",
+    "partition": "dev",
+    "partitionIdsHash": "949b2ae2d5202e65251ab90ca3904c4d8a615fb501699126761c5ae0f527999c",
+    "metric": "S1: grep/read_file calls in a related task whose target names something the earlier task changed",
+    "arms": [
+      "STM-only"
+    ],
+    "personas": [
+      "ls10"
+    ],
+    "summary": {
+      "STM-only": {
+        "relatedTasks": 2,
+        "rederivationsPerRelatedTask": 0,
+        "successRate": 1
+      }
+    },
+    "rows": {
+      "STM-only": [
+        {
+          "family": "long-session",
+          "persona": "ls10",
+          "arm": "STM-only",
+          "pair": "rename",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        },
+        {
+          "family": "long-session",
+          "persona": "ls10",
+          "arm": "STM-only",
+          "pair": "config",
+          "rederivations": 0,
+          "toolCalls": 2,
+          "success": true,
+          "sourceSucceeded": true,
+          "status": "completed"
+        }
+      ]
+    },
+    "usage": [
+      {
+        "persona": "ls10",
+        "arm": "STM-only",
+        "worker": {
+          "calls": 4,
+          "inputTokens": 26528,
+          "outputTokens": 1710,
+          "cacheReadTokens": 1024
+        },
+        "main": {
+          "calls": 21,
+          "inputTokens": 143019,
+          "outputTokens": 2284,
+          "cacheReadTokens": 103936
+        },
+        "eligibleTokens": 13209,
+        "chunkStorePeakBytes": null,
+        "wmCalls": {
+          "calls": 0,
+          "items": 0,
+          "capStops": 0,
+          "capNoItem": 0,
+          "stopReasons": {}
+        },
+        "session": {
+          "compactions": 9,
+          "passes": 2,
+          "items": [
+            1,
+            1
+          ],
+          "budgetUnmet": 2,
+          "ratios": []
+        },
+        "tasks": {
+          "task1": {
+            "status": "completed"
+          },
+          "task2": {
+            "status": "completed"
+          },
+          "task3": {
+            "status": "completed"
+          },
+          "task4": {
+            "status": "completed"
+          },
+          "task5": {
+            "status": "completed"
+          },
+          "task6": {
+            "status": "completed"
+          }
+        }
+      }
+    ],
+    "wallMs": 149669
+  }
+}

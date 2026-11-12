@@ -1,0 +1,45 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-ce8ca4c40d3c",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 61000000,
+    "attempts": [
+      {
+        "attemptId": "217-m1.small.STM.long-session@1",
+        "jobId": "217-m1.small.STM.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 11732386
+      },
+      {
+        "attemptId": "217-m1.large.STM.long-session@1",
+        "jobId": "217-m1.large.STM.long-session",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 30500000,
+        "confirmedInputTokens": 13638723
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.small.STM.long-session",
+      "attemptId": "217-m1.small.STM.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    },
+    {
+      "id": "217-m1.large.STM.long-session",
+      "attemptId": "217-m1.large.STM.long-session@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 30500000
+    }
+  ]
+}

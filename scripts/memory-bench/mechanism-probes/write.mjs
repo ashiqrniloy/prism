@@ -19,7 +19,7 @@ const NOTE = (text, extra = {}) => ({
   ...extra,
 });
 
-/** A host package that appends OM reflections to the session ledger, as observational memory would. */
+/** A host package that appends WM items to the session ledger, as working memory would (plan 218 Task 2). */
 async function reflections(items) {
   const { prism } = await packages();
   return prism.definePackage({
@@ -33,7 +33,7 @@ async function reflections(items) {
         "turn.completed",
         async (_event, context) => {
           if (items.length === 0) return;
-          await log.append(context.session, { type: "memory.session.reflections.recorded", reflections: items.splice(0) });
+          await log.append(context.session, { type: "memory.session.wm.recorded", items: items.splice(0) });
         },
         { priority: 100 },
       );
@@ -186,7 +186,14 @@ export const probes = [
     id: "write.om-promotion",
     async run(root) {
       const reflection = () => [
-        { id: "cccccccccccc", content: "orchard keys stay in the shed", tokenCount: 7, supportingObservationIds: [] },
+        {
+          id: "cccccccccccc",
+          kind: "summary",
+          text: "orchard keys stay in the shed",
+          relevance: "medium",
+          citedIds: ["aaaaaaaaaaaa"],
+          tokenCount: 7,
+        },
       ];
       const on = await promotionArm(join(root, "on"), { promote: true, ledger: reflection(), text: "ok thanks" });
       const off = await promotionArm(join(root, "off"), { promote: true, text: "ok thanks" });

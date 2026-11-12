@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "kind": "memory-model-owner-gate",
+  "gate": "M-2",
+  "plan": 218,
+  "approved": true,
+  "approvedAt": "2026-11-12",
+  "approvedBy": "owner",
+  "status": "approved: re-run of sittings 1-4 after the worker fix",
+  "text": "\"Complete Task 6: Gate M-2 — live WM efficacy (paid), and plan end ... For the live paid run, use deepseek-v4.1-flash and Muse Spark Contributor 1.3. If you need more models, confirm with me\"; \"Use Opencode go as the provider\" (owner start word, 2026-11-12). Judges: \"Use Qwen 3.8 flash and GPT 6 luna as judges from Opencode Go\", then \"Replace GPT 6 luna with Minimax m3.1 flash as one of the judges\". S1 on MiMo: \"Add MiMo for S1 (Recommended)\". M5 sample: \"Small sample, flagged (Recommended)\". Fingerprint: \"Exclude test files (Recommended)\" (owner, 2026-11-12).",
+  "startRule": "the campaign refuses to start while approved is false; a changed manifest is a refusal, not a re-approval",
+  "ownerDecisions": {
+    "provider": "opencode-go for every route (not the gate C-1 Ollama Cloud roles)",
+    "m2ProductFingerprint": "the product fingerprint leaves out test files (__tests__/ directories and *.test.*), so a test-only commit no longer refuses a sitting (plan 217's proposal, adopted 2026-11-12)",
+    "m5Sample": "4 dev questions per suite, model and arm; M5 is reported underpowered and the QA decision stays at gate A",
+    "s1Model": "mimo-v2.6-flash on the long-session family only, 3 repeats of WM, STM-only and OM-before",
+    "omBeforeRerun": "gate M-1's OM-before rows ran on Ollama Cloud routes, so they do not pair with these routes; OM-before re-runs from the pinned worktree on identical items"
+  },
+  "budget": {
+    "billing": "subscription",
+    "provider": "opencode-go",
+    "capUsd": null,
+    "allowance": "OpenCode Go subscription with rolling usage windows; a spent window is waited out from the job's checkpoints and costs wall time only",
+    "estimate": {
+      "jobs": 29,
+      "inputTokens": 248000000,
+      "basis": "gate M-1 run reports (217/runs): family jobs 3-14M input tokens on 16 personas, STM suite jobs 3.8-5.5M on two questions",
+      "billing": "OpenCode Go subscription usage windows"
+    }
+  },
+  "models": {
+    "answers": {
+      "deepseek": "opencode-go/deepseek-v4.1-flash",
+      "muse": "opencode-go/muse-spark-1.3-contributor"
+    },
+    "s1": "opencode-go/mimo-v2.6-flash",
+    "judges": [
+      "opencode-go/qwen3.8-flash",
+      "opencode-go/minimax-m3.1-flash"
+    ],
+    "worker": "each arm's answer model (STM, WM and the pre-216 observer calls go to the answer route)",
+    "decider": null
+  },
+  "arms": [
+    "WM",
+    "STM-only",
+    "OM-before"
+  ],
+  "partitions": [
+    "dev"
+  ],
+  "families": [
+    "re-plan",
+    "long-session"
+  ],
+  "suites": [
+    "beam-1m",
+    "longmemeval-m"
+  ],
+  "caps": {
+    "maxInputTokens": {
+      "re-plan": 15000000,
+      "long-session": 40000000,
+      "beam-1m": 60000000,
+      "longmemeval-m": 60000000
+    },
+    "wallTimeCapHours": {
+      "re-plan": 24,
+      "long-session": 24,
+      "suite": 72
+    },
+    "concurrency": 1,
+    "maxOutputTokens": 8192,
+    "journalCeiling": 1000000000000
+  },
+  "sittings": {
+    "1": "re-plan",
+    "2": "s1",
+    "3": "suites",
+    "4": "long-session"
+  },
+  "manifest": "docs/_evidence/memory-bench/memory-model/M-2/manifest.json",
+  "manifestHash": "3e1d68dcdd8bf82b2bcc6cebb6c2ccba91f1a648625ece7cbf892e4b747185b8",
+  "memoryModelCriteriaHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "omBefore": {
+    "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc",
+    "productPaths": [
+      "packages/memory/observational/src"
+    ],
+    "worktree": ".cache/memory-bench/216/om-before"
+  },
+  "amendments": [
+    {
+      "date": "2026-11-12",
+      "text": "\"I think before starting later job, we should already investigate the findings so far to see obvious issues that we can fix\"; then: \"Product default + retry (Recommended)\", \"Report miss + diagnostic (Recommended)\", \"Stop it now (Recommended)\" (owner, 2026-11-12)",
+      "change": "after sitting 1 (re-plan) and part of sitting 2: memory workers (STM, WM, Rehearsal) default to thinkingLevel low, and a WM call that stops on its output limit before any verdict retries once on the older half of its batch (product hash moved); the family child runs at the manifest's 8,192 output limit (gate M-1 ran 4,096); the campaign reads each job's own journal attempt under --parallel-arms (it read the last reserved one); M1 keeps its frozen row and reports re-derivations beside it. Pre-fix reports moved to runs/superseded-pre-worker-fix/; every sitting re-runs on this manifest.",
+      "manifestHash": "3e1d68dcdd8bf82b2bcc6cebb6c2ccba91f1a648625ece7cbf892e4b747185b8"
+    }
+  ]
+}

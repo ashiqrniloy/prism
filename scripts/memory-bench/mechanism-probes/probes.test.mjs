@@ -184,6 +184,43 @@ test("long_session_fixture_is_hashed_and_has_its_shape", async () => {
       fixture.events.some((event) => event.id === task.outcome && event.kind === "outcome"),
       task.id,
     );
+  // Plan 218 Task 5: the WM segments.
+  const byId = new Map(fixture.events.map((event) => [event.id, event]));
+  const { expected } = fixture;
+  assert.ok(fixture.replan.includes(`${expected.replan.step}. `), "the re-plan adds a step");
+  assert.ok(!fixture.plan.includes(`\n${expected.replan.step}. `), "the added step is not in the first plan");
+  assert.ok(
+    fixture.turns.some((turn) => turn.id === expected.scope.replanAt && turn.user.includes(fixture.replan)),
+    "a mid-episode re-plan turn",
+  );
+  assert.ok(byId.get(expected.replan.restored).chunks.length === 0, "the restored record has no chunks (its description is the evidence)");
+  assert.ok(byId.get(expected.replan.chunkDropped).chunks.length === 1, "the chunk-dropped record had a chunk");
+  for (const row of expected.laterSteps)
+    assert.ok(
+      fixture.plan.split("\n").some((line) => line.startsWith(`${row.step}. `)),
+      `step ${row.step} is planned`,
+    );
+  assert.deepEqual(Object.keys(expected.protected).sort(), ["fact", "open_question", "task_state", "unresolved_error"]);
+  assert.equal(byId.get(expected.protected.unresolved_error).kind, "error");
+  assert.ok(byId.get(expected.protected.open_question).description.includes("?"));
+  assert.ok(
+    fixture.taskStates.some((state) => state.openQuestions?.length),
+    "a task state with an open question",
+  );
+  assert.ok(expected.tightTarget.targetRatio < 0.2 && /correction/i.test(byId.get(expected.tightTarget.correction).description));
+  const proposal = byId.get(expected.attribution.proposal);
+  const figure = byId.get(expected.attribution.userFigure);
+  assert.ok(
+    proposal.sources.every((source) => source.endsWith(":reply")),
+    "the proposal cites only the assistant",
+  );
+  assert.ok(
+    figure.sources.every((source) => source.endsWith(":user")),
+    "the real figure cites only the user",
+  );
+  assert.ok(/\d/.test(proposal.description) && /\d/.test(figure.description), "both carry numbers");
+  const update = byId.get(expected.knowledgeUpdate.event);
+  assert.ok(update.description.includes(expected.knowledgeUpdate.old) && update.description.includes(expected.knowledgeUpdate.new));
 });
 
 test("stm_long_session_probe_covers_probes_1_to_7", async () => {
@@ -208,6 +245,77 @@ test("stm_long_session_probe_covers_probes_1_to_7", async () => {
   assert.equal(typeof cost.counts.stm.outputPer10k, "number");
   assert.ok(cost.counts.stm.chunkShareOfCovered < 0.25);
 }, 600_000);
+
+/** Plan 218 Task 5: the WM probes (1-8 of the plan, plus attribution and the knowledge update). */
+const WM_PROBE_IDS = [
+  "wm.scope-blind-stm",
+  "wm.later-steps",
+  "wm.protected",
+  "wm.target-ratio",
+  "wm.prefix-stable",
+  "wm.rejudge",
+  "wm.incremental",
+  "wm.referrer-delete",
+  "wm.attribution",
+  "wm.knowledge-update",
+];
+
+test("wm_probe_covers_probes_1_to_8", async () => {
+  const probes = await loadProbes(["wm"]);
+  assert.deepEqual(
+    probes.map((probe) => probe.id),
+    WM_PROBE_IDS,
+  );
+  const started = performance.now();
+  const { rows, errors } = await runProbes(probes);
+  assert.deepEqual(errors, []);
+  for (const row of rows) assert.equal(row.verdict, "works", `${row.id}: ${JSON.stringify(row.counts)}`);
+  assert.ok(performance.now() - started < 600_000, "the WM probes run in under 10 minutes");
+  const counts = Object.fromEntries(rows.map((row) => [row.id, row.counts]));
+  assert.equal(counts["wm.protected"].lost, 0, "M2: protected-item loss is 0");
+  assert.equal(counts["wm.protected"].expectedClasses, 4);
+  assert.ok(counts["wm.target-ratio"].medianRatio <= counts["wm.target-ratio"].target + 0.1, "M3");
+  assert.equal(counts["wm.prefix-stable"].breaksWithoutCompaction, 0, "M4");
+  assert.equal(counts["wm.incremental"].unnamedSupersedes, 0);
+  const { loadLongSessionFixture } = await import("../long-session.mjs");
+  const fixture = loadLongSessionFixture();
+  const text = JSON.stringify(rows);
+  for (const fragment of ["parseLedgerRow", "ledgerkit", "config/server.json", "EPISODE-SCOPE", fixture.secret])
+    assert.ok(!text.includes(fragment), fragment);
+}, 600_000);
+
+test("wm_prompt_parser_reads_what_the_package_renders", async () => {
+  const { parseWmPrompt, remainingSteps } = await import("./wm.mjs");
+  const prompt = [
+    "<episode_scope>",
+    "# Plan",
+    "1-7. Done: earlier steps.",
+    "8. Add a line.",
+    "9. Run the check.",
+    "</episode_scope>",
+    '## Current task\n{"goal":"re-plan, step 8: a line"}',
+    "## Working memory items",
+    "- [aaaaaaaaaaaa] event (high) cites bbbbbbbbbbbb: kept",
+    "## Target\nThese records hold 90 tokens; aim for items totalling at most 18 tokens (ratio 0.2).",
+    "## Keep first (salience order: correction, denial, error, failed_verification)\ncccccccccccc",
+    "## New STM records (2; give each at most one verdict)",
+    "- [cccccccccccc] 2026-01-01T00:00:00.000Z statement (high) salient: correction: User correction: no",
+    "- [dddddddddddd] 2026-01-01T00:00:00.000Z assistant proposal (medium) protected: task_state: Proposed 25 minutes",
+  ].join("\n");
+  const parsed = parseWmPrompt(prompt);
+  assert.equal(parsed.target, 18);
+  assert.deepEqual(parsed.keepFirst, ["cccccccccccc"]);
+  assert.deepEqual(
+    parsed.records.map((record) => [record.id, record.label, record.salient, record.protection]),
+    [
+      ["cccccccccccc", "statement", ["correction"], null],
+      ["dddddddddddd", "assistant proposal", [], "task_state"],
+    ],
+  );
+  assert.equal(parsed.items[0].cites[0], "bbbbbbbbbbbb");
+  assert.deepEqual([...remainingSteps(parsed.scope, parsed.taskGoal)], [8, 9]);
+  assert.deepEqual([...remainingSteps(parsed.scope, "step 9")], [9]);
+});
 
 test("fixture_seeded_secret_redacted_in_chunks", async () => {
   const { replayLongSession } = await import("./stm.mjs");

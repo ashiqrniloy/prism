@@ -4,10 +4,15 @@
   "gate": "M-1",
   "plan": 217,
   "approved": true,
-  "approvedAt": "2026-11-10",
+  "approvedAt": "2026-11-11",
   "approvedBy": "owner",
-  "status": "approved: sittings 1-4 (family on 16 dev personas; S4 suite sample)",
-  "text": "Gate M-1 budget question (2026-11-09; $37.03 of the $60 allowance left until 2026-12-07, full dev cohort estimated at about $90-110): \"Build now, run full later\" (build and test all the machinery and the manifest now, write the gate record with the full dev cohort, start the paid run only on the owner later word). Models: \"C-1 roles (Recommended)\". Start word: \"Go ahead and do the live run. You can use ollama cloud for testing with gemma4:31b, GPT-OSS-120B, Mimo-2.6-flash, deepseek-v4.1-flash\" (owner start word, 2026-11-09). Scope: \"Let us do run 1-4 and go with option B\" (owner, 2026-11-10).",
+  "status": "approved: runs complete; S1 miss reported to the owner",
+  "closed": {
+    "at": "2026-11-12",
+    "by": "owner",
+    "text": "\"Let's accept and close task 6. But I need to make sure they are addressed in a later plan.\" (owner, 2026-11-12; plan 217 Task 6). Recorded by plan 218 Task 5: the gate never runs again and its records keep memoryModelCriteriaHash 1a768299... when a later amendment moves the current hash."
+  },
+  "text": "Gate M-1 budget question (2026-11-09; $37.03 of the $60 allowance left until 2026-12-07, full dev cohort estimated at about $90-110): \"Build now, run full later\" (build and test all the machinery and the manifest now, write the gate record with the full dev cohort, start the paid run only on the owner later word). Models: \"C-1 roles (Recommended)\". Start word: \"Go ahead and do the live run. You can use ollama cloud for testing with gemma4:31b, GPT-OSS-120B, Mimo-2.6-flash, deepseek-v4.1-flash\" (owner start word, 2026-11-09). Scope: \"Let us do run 1-4 and go with option B\" (owner, 2026-11-10). S1 re-run: \"Let's implement the prompt changes and then run S1 again\" (owner, 2026-11-11). Sittings 2-4: \"go ahead with sittings 2-4\" (owner, 2026-11-11). Sittings 3-4: \"Start sitting 3 and 4\" (owner, 2026-11-12).",
   "startRule": "the campaign refuses to start while approved is false; the owner start word sets approved, approvedAt and appends it to text, and a changed manifest is a refusal, not a re-approval",
   "budget": {
     "billing": "paid-allowance",
@@ -47,7 +52,11 @@
     ],
     "simulators": {},
     "worker": "each arm answer model (STM / observer, reflector and dropper calls go to the answer route)",
-    "decider": null
+    "decider": null,
+    "replication": {
+      "glm": "ollama-cloud/glm-5.3-flash",
+      "minimax": "ollama-cloud/minimax-m3.1-flash"
+    }
   },
   "arms": [
     "STM",
@@ -79,8 +88,8 @@
     "journalCeiling": 1000000000000
   },
   "manifest": "docs/_evidence/memory-bench/memory-model/M-1/manifest.json",
-  "manifestHash": "7d225777fe138bf444b00db3bca5e8b88e8df8cd269fc73e49c0e633bc43982b",
-  "memoryModelCriteriaHash": "57feb5ed2b7f4f7b59b1d485d7bdbaf4464b794f74be5bcfd7baf474bccd3ad8",
+  "manifestHash": "2331a1cf853b00d223b0e6605bd3c719f1e0cdcabb908c98b0a8f31487d61e40",
+  "memoryModelCriteriaHash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1",
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
   "omBefore": {
     "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
@@ -126,12 +135,61 @@
       "text": "\"Let us do 3 first and see if there are any issues. Once 3 is done, I would do 1 and 2 together\" (owner, 2026-11-10)",
       "change": "criteria amendment 3 (m1DevPersonas, hash 57feb5ed...): the family dev partition grows to 16 personas (ls12-ls23 added, held-out unchanged); sitting 1 re-runs the family on 16 personas (the 4 earlier personas resume from their checkpoints), then sittings 2-4 run the S4 suite sample",
       "manifestHash": "7d225777fe138bf444b00db3bca5e8b88e8df8cd269fc73e49c0e633bc43982b"
+    },
+    {
+      "date": "2026-11-11",
+      "text": "\"We wait till the restructure is done\"; \"Do the kernel task first. Restructure has also landed.\" (owner, 2026-11-10/11)",
+      "change": "resume of the approved sittings 1-4 on the restructured tree (plan 224 seven bundles): manifest regenerated (moved paths, Task 6.1 kernel ModelClient.resolve and the worker thinking-level mapping; the arms keep the default thinking level), criteria amendment 4 (plan 224 package rename in prose, hash 1a768299...)",
+      "manifestHash": "33d3573b8ecdc2d07a43bede827c37c06943503801d4ae628d2e1e4dd826aaba"
+    },
+    {
+      "date": "2026-11-11",
+      "text": "\"Let's implement the prompt changes ... and then run S1 again. While doing the prompt changes, make sure that STM instructions do not get too bloated\" (owner, 2026-11-11)",
+      "change": "STM default instruction revised from the sitting 1 content analysis (a finished task is one outcome; a result only when it adds to the records; an action only while its result is unknown; changes as old -> new; no tool-call ids or unrequested hashes; chunks only when the description cannot hold the text; task state on every new request; 1,815 -> 2,099 characters, capped at 2,100 by a test). The product hash also moved with the unrelated kernel commits ac072fd5, fb8f430c and 68bae178 (src/manifest/install.ts, not on the agent run path). Sitting 1 re-runs the two STM family jobs only; the sitting 1 OM-before and memory-off reports stand (neither runs the STM instruction); the old STM reports move to runs/superseded-s1-stm-prompt-v1/. Sittings 2-4 wait for the owner's word after the S1 re-run.",
+      "manifestHash": "f8cf96c9c7b8a32fbd4b7be2df2ecceb58071d02dd53b6cb7c0bbec50e828bd6"
+    },
+    {
+      "date": "2026-11-11",
+      "text": "\"Let's do the second first and rerun S1. We gotta solve the issue that mimo was facing\" (owner, 2026-11-11)",
+      "change": "STM default instruction: a finished task's outcome keeps setup facts found on the way (a missing file, how checks are run), so a later task does not search again; wording trimmed to stay at 2,089 characters. Diagnosis of the MiMo S1 regression: persona ls1 run three times per arm gave STM 0/0/7 and OM-before 1/0/4 re-derivations on the rename pair, so the test-runner search is MiMo variance in both arms; the paid run's 44 came from one such search repeating to the run limit. Sitting 1's STM family jobs re-run again; the previous STM reports move to runs/superseded-s1-stm-prompt-v2/.",
+      "manifestHash": "c2562fb24228261b7c2320a237a5b6cb01b2bead4a87a11823b3876cf5cdfb1b"
+    },
+    {
+      "date": "2026-11-11",
+      "text": "\"Let's run on two different models from ollama cloud now. GLM-5.3-flash and Minimax m3.1 flash. And see what happens to S1\" (owner, 2026-11-11)",
+      "change": "S1 replication: sitting 5 runs the long-session family (memory-off, STM, OM-before, dev partition) with ollama-cloud/glm-5.3-flash and ollama-cloud/minimax-m3.1-flash as answer and worker models; their S1 and family S4 cells go to evidence.replication, beside the rows, and never into the M-1 verdicts, which stay on DeepSeek V4.1 Flash and MiMo V2.6 Flash",
+      "manifestHash": "f1719a400005893425e4520124155087e8ac89806a0901c8882b7ac21de3f0c3"
+    },
+    {
+      "date": "2026-11-11",
+      "text": "\"go ahead with sittings 2-4\" (owner, 2026-11-11)",
+      "change": "sittings 2-4 (the S4 suite sample on DeepSeek V4.1 Flash and MiMo V2.6 Flash) start on the unchanged manifest",
+      "manifestHash": "f1719a400005893425e4520124155087e8ac89806a0901c8882b7ac21de3f0c3"
+    },
+    {
+      "date": "2026-11-12",
+      "text": "\"Before sitting 3-4, I would like to investigate the issues with STM and see if we find anything that we should fix before moving ahead\"; \"Do all three and then rerun sitting 2\" (owner, 2026-11-12)",
+      "change": "Working memory (WM) fixes from the sitting 2 investigation: (A) a WM pass ends after a clean turn; (B) after a WM attempt that records nothing or fails, WM waits for another wm.observationTokens of new records; (C) the WM instruction asks for one short subject per reflection (about 300 characters at most) with changed values as old -> new, instead of rewriting the whole log into theme paragraphs. The product hash also moved with commit 14ebf5d5 (src/__tests__/release.test.ts, not on the run path), which refused sittings 3-4 on 2026-11-12. Sitting 2's STM jobs re-run; its OM-before job stands (pinned tree, answers cached by the pinned revision); the previous STM reports move to runs/superseded-s2-wm-v1/. Sittings 1 and 5 keep their reports: on the long-session family WM's 20k-token threshold is rarely reached.",
+      "manifestHash": "a8575c37056d679d38f11e1cca64f07e15df5fd6ee798e8bc8858db317a959bb"
+    },
+    {
+      "date": "2026-11-12",
+      "text": "\"Add that as a task in 218. Start sitting 3 and 4\" (owner, 2026-11-12)",
+      "change": "sittings 3-4 (MiMo OM-before BEAM; DeepSeek LongMemEval and BEAM, STM and OM-before) start on the unchanged manifest",
+      "manifestHash": "a8575c37056d679d38f11e1cca64f07e15df5fd6ee798e8bc8858db317a959bb"
+    },
+    {
+      "date": "2026-11-12",
+      "text": "\"Let's do this Recommended: go back to the old WM instruction but keep fixes A and B, and make WM refuse calls past the per-turn limit instead of failing the pass. Then re-run the four STM benchmark jobs (about $2, roughly 1.5 hours) and build the evidence. The one-subject reflection format, batching WM's input, and consuming only covered records would move to plan 218 Task 2.\" (owner, 2026-11-12)",
+      "change": "WM restored: fix C's one-subject instruction is reverted to the pre-redesign instruction (on about 22k tokens of records MiMo thought through its 8,192 output tokens or passed the 32-call turn limit, so sittings 2 (re-run), 3 and 4 STM suite jobs wrote no reflections); fixes A and B stay; a WM pass refuses calls past the per-turn limit instead of failing. The four STM suite jobs (small and large x LongMemEval-M and BEAM-1M) re-run; their previous reports move to runs/superseded-s34-wm-v2/. OM-before jobs and the long-session family stand. Live check: MiMo writes 20 reflections on 22k tokens; DeepSeek V4.1 Flash writes none at any thinking level within 8,192 output tokens, as in OM-before (89 calls, each 8,192 output tokens, on LongMemEval-M).",
+      "manifestHash": "2331a1cf853b00d223b0e6605bd3c719f1e0cdcabb908c98b0a8f31487d61e40"
     }
   ],
   "sittings": {
     "1": "long-session family, both models, three arms (S1, the family S4 cells), about 1.5 h",
     "2": "S4 suite sample: small LME STM and OM-before, small BEAM STM (--parallel-arms 3), about 2.5 h",
     "3": "small BEAM OM-before, large LME STM and OM-before, about 2.5 h",
-    "4": "large BEAM STM and OM-before, about 2.5 h"
+    "4": "large BEAM STM and OM-before, about 2.5 h",
+    "5": "S1 replication: long-session family with GLM-5.3 Flash and MiniMax M3.1 Flash, three arms each"
   }
 }

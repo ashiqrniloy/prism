@@ -202,7 +202,7 @@ test("recorded_om_ids_remain_valid_and_shared_scope_identity_survives", () =>
     for (const ledger of recorded) {
       const folded = foldObservationalMemoryLedger(ledger.entries);
       assert.ok(folded.observations.length > 0);
-      assert.ok(folded.reflections.length > 0);
+      assert.ok(folded.wmItems.length > 0);
       assert.ok(folded.taskState);
     }
   }));

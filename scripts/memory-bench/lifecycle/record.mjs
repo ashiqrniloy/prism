@@ -36,6 +36,11 @@ export async function recordLedger({
     "supportingObservationIds",
     "supersededReflectionIds",
     "consumedObservationIds",
+    // WM records (plan 218 Task 2).
+    "citedIds",
+    "supersededItemIds",
+    "processedIds",
+    "supersedes",
     "observationIds",
     "supersededBy",
     "toolCallId",

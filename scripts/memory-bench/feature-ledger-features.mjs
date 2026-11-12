@@ -1273,8 +1273,9 @@ export const FEATURES = [
     config: ["om:wm.*"],
     defaultRef: "observational.wm",
     cost: {
-      modelCalls: "1 pass per reflector.observationTokens (20k)",
-      writes: "reflection records",
+      // Plan 218 Task 2: verdicts on named STM records replaced the whole-log reflector.
+      modelCalls: "1 pass per wm.triggerTokens (10k) of STM surface or new boundary, at most wm.batchTokens (3k) sent",
+      writes: "wm.recorded and tombstone records",
       tokens: "1.29 reflector calls per arm (offline mock)",
     },
     roles: ["accuracy", "cost"],
@@ -1369,6 +1370,28 @@ export const FEATURES = [
     statusBasis: "No row.",
   },
   {
+    id: "om.episode-scope",
+    group: "om",
+    name: "Episode scope (memory:scope, scope.text, memory.system.setScope): read by WM and Rehearsal only",
+    owner: OM,
+    config: ["om:scope", "om:scope.text", "om:scope.maxBytes"],
+    commands: ["memory:scope"],
+    defaultRef: "observational.scope",
+    cost: {
+      modelCalls: "0 extra",
+      writes: "1 state entry + 1 ledger record per set",
+      tokens: "at most scope.maxBytes per WM and Rehearsal request",
+    },
+    roles: ["accuracy", "safety"],
+    evidence: [],
+    tests: [
+      t("packages/memory/system/src/session/__tests__/scope.test.ts", "scope_reaches_wm_and_rehearsal_only"),
+      t("packages/memory/system/src/session/__tests__/scope.test.ts", "scope_injection_probe_changes_no_tool_call"),
+    ],
+    status: "unmeasured",
+    statusBasis: "Plan 218 Task 1 landed the mechanism; gate M-2 (plan 218 Task 6) measures WM with the scope.",
+  },
+  {
     id: "om.pinned-context",
     group: "om",
     name: "OM pinned context mode (context.build renders only the pinned ledger)",
@@ -1414,7 +1437,7 @@ export const FEATURES = [
     roles: ["safety"],
     evidence: [],
     tests: [
-      t(`${OT}/workers.test.ts`, "rejects unknown and limit failures with typed errors"),
+      t(`${OT}/workers.test.ts`, "rejects limit failures with typed errors"),
       t(`${OT}/workers.test.ts`, "redacts bounded provider errors, tool failures, and replayed tool results"),
     ],
     status: "safety-proven",

@@ -27,35 +27,37 @@
       "identical": true
     }
   ],
-  "harness": "per-tree",
+  "harness": "shared",
   "base": {
-    "commit": "c8d97b33606ceaae0fc2a4a3f8a3275b62d27743",
+    "commit": "c65c91232864ce4ccadd39d3e396e3a32c87df49",
     "productPaths": [
       "packages/memory/system/src/ltm"
     ],
-    "productHash": "3d37b564dda9533ed0ddd895ffe4e95420640b654fd9fc8f2d949ce17b88aeda",
-    "harnessHash": "f10d7d0cf0ae8c38b55b81a875e7c6dc20354d882bf5aaccf9469e24b554173c",
+    "productHash": "f8a42112c4b5c4bbc0d7f5d3ec07767cfd269148367ff2814077a2dc2f0207c3",
+    "harnessHash": "2862ebca68455c48867306888f3db2c86069bd3f670a7ad95dac02bcdb6c9497",
     "supportingPaths": [
       "src",
       "packages/memory/core/src",
       "packages/memory/system/src"
     ],
-    "supportingHash": "0ab3efbada19750d8920e2972fc0d1db20db7ccb40f7575fea4c690e6a029e59"
+    "supportingHash": "2d0a26625866dcbdd8c7557bbcad0bea0ecccc2738796f305ac87a90b780a2cb",
+    "screenProductHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+    "isScreenProduct": false
   },
   "post": {
-    "commit": "c8d97b33606ceaae0fc2a4a3f8a3275b62d27743",
+    "commit": "c65c91232864ce4ccadd39d3e396e3a32c87df49",
     "productPaths": [
       "packages/memory/system/src/ltm"
     ],
-    "productHash": "6c665c1071bf6a673cacfbe96b9ae80cf2c146a25a9ca719b6703595c0ce9c23",
-    "harnessHash": "57ce6861be8c36fba849b86224867f71c63410919aee7f49af5a4caa7bba19fe",
+    "productHash": "c505719c38e1405e2ddf2c4becfe8d9313db57f250e8a1b8f56b5df09d6c0278",
+    "harnessHash": "2862ebca68455c48867306888f3db2c86069bd3f670a7ad95dac02bcdb6c9497",
     "supportingPaths": [
       "src",
       "packages/memory/core/src",
       "packages/memory/system/src"
     ],
-    "supportingHash": "7c41d09cccb2007f31901821c16610aaf9922bb59078aae9a7742f65b6135bf3"
+    "supportingHash": "3890068989bc42543384116b714de42eec78ad35fdbdbe488b198043c9c103bc"
   },
-  "policy": "Plan 224 Task 9: two deterministic captures immediately before whole-tree formatting and two immediately after on the same dirty checkout. Actual answer-phase request bytes are identical. No committed pre-task base, historical screen refresh, paid run or evidence merge is claimed.",
-  "sha256": "087c79af3e61f810612b1cf01503bb5a7aaa0f9858e66e027d0f3dbf5b4abd79"
+  "policy": "Compares every answer-phase provider request on the pre-change tree and this tree, byte for byte.",
+  "sha256": "bfaad1eae7f1dc70f5a49d2696e2a098074380e0c7d252cd9e629995e642e109"
 }

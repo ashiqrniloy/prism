@@ -1,0 +1,64 @@
+{
+  "kind": "217-m1-run",
+  "journal": {
+    "campaignId": "campaign-612da3dc9b99",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 23798578,
+    "attempts": [
+      {
+        "attemptId": "217-m1.small.STM.longmemeval-m@1",
+        "jobId": "217-m1.small.STM.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 400500000,
+        "confirmedInputTokens": 8968080
+      },
+      {
+        "attemptId": "217-m1.small.OM-before.longmemeval-m@1",
+        "jobId": "217-m1.small.OM-before.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 400500000,
+        "confirmedInputTokens": 10934238
+      },
+      {
+        "attemptId": "217-m1.small.STM.beam-1m@1",
+        "jobId": "217-m1.small.STM.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 600500000,
+        "confirmedInputTokens": 3896260
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "217-m1.small.STM.beam-1m",
+      "attemptId": "217-m1.small.STM.beam-1m@1",
+      "answersDir": ".cache/memory-bench/217/small/STM/beam-1m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3896260
+    },
+    {
+      "id": "217-m1.small.OM-before.longmemeval-m",
+      "attemptId": "217-m1.small.OM-before.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/217/small/OM-before/longmemeval-m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3896260
+    },
+    {
+      "id": "217-m1.small.STM.longmemeval-m",
+      "attemptId": "217-m1.small.STM.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/217/small/STM/longmemeval-m/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3896260
+    }
+  ]
+}
