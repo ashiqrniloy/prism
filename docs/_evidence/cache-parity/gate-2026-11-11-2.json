@@ -1,0 +1,91 @@
+{
+  "schema": "cache-parity-gate/1",
+  "date": "2026-11-11",
+  "cells": [
+    "commandcode/chat",
+    "commandcode/responses",
+    "commandcode/messages",
+    "ollama-cloud/chat"
+  ],
+  "prismCommit": "24f589be",
+  "pi": "1.5.2",
+  "strict": true,
+  "gate": {
+    "pass": true,
+    "failures": []
+  },
+  "attempts": [
+    {
+      "id": "commandcode/chat",
+      "attempt": 0,
+      "verdict": "pass",
+      "requests": {
+        "used": 49,
+        "ceiling": 120,
+        "perRun": 20
+      }
+    },
+    {
+      "id": "commandcode/responses",
+      "attempt": 0,
+      "verdict": "pass",
+      "requests": {
+        "used": 44,
+        "ceiling": 120,
+        "perRun": 20
+      }
+    },
+    {
+      "id": "commandcode/messages",
+      "attempt": 0,
+      "verdict": "pass",
+      "requests": {
+        "used": 31,
+        "ceiling": 120,
+        "perRun": 20
+      }
+    },
+    {
+      "id": "ollama-cloud/chat",
+      "attempt": 0,
+      "verdict": "pass",
+      "requests": {
+        "used": 55,
+        "ceiling": 120,
+        "perRun": 20
+      }
+    }
+  ],
+  "finals": [
+    {
+      "id": "commandcode/chat",
+      "verdict": "pass"
+    },
+    {
+      "id": "commandcode/responses",
+      "verdict": "pass"
+    },
+    {
+      "id": "commandcode/messages",
+      "verdict": "pass"
+    },
+    {
+      "id": "ollama-cloud/chat",
+      "verdict": "pass"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "hyper/chat+messages",
+      "reason": "no Hyper credits (402); deferred to after 0.13.0 (owner, 2026-11-08)"
+    },
+    {
+      "id": "opencode-go/chat+messages",
+      "reason": "monthly limit reached (429) and mimo-v2.5 deprecated; deferred to after 0.13.0 (owner, 2026-11-08)"
+    },
+    {
+      "id": "openrouter/anthropic",
+      "reason": "unmeasurable: needs owner authorization and PRISM_LIVE_OPENROUTER_PAID=1; deferred to after 0.13.0"
+    }
+  ]
+}

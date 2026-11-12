@@ -1,11 +1,11 @@
 # Live matrix report
 
-- generated: 2026-11-11T11:06:06.273Z
+- generated: 2026-11-11T12:00:05.751Z
 - env file: /home/arn/.config/prism/live.env
-- filter: providers/opencode-go
+- filter: release/cache-parity
 - mode: strict (skips fail the run)
 - totals: 1 ran, 0 skipped, 0 failed, 0 planned
 
 | suite | status | ms | detail |
 |---|---|---|---|
-| providers/opencode-go | ran | 66438 | PRISM_LIVE_OPENCODE_GO_CHAT_MODEL=mimo-v2.6-flash, PRISM_LIVE_OPENCODE_GO_MESSAGES_MODEL=qwen3.7-plus |
+| release/cache-parity | ran | 402671 | PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL=minimax/minimax-m3.1-flash, PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL=gpt-5.6-luna, PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL=claude-haiku-5-5, PRISM_LIVE_PARITY_OLLAMA_MODEL=gemma4:31b |
