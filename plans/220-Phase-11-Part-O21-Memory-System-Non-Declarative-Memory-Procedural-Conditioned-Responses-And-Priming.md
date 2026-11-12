@@ -2,6 +2,8 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
+> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. They are replaced by external, outcome-scored suites: Compact-Bench (session tiers and compaction), MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep). Plan 218.1 Task 1 re-scopes the criteria rows to match; this plan's text is amended below. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
+
 ## Objectives
 
 - Add the non-declarative half of LTM (design §5.6.2). This is memory that changes the agent's behaviour without the agent asking for it:
@@ -388,7 +390,7 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
       - `+all`;
       - `RT` itself.
 
-      They run on the W1, W4 and `recurring-failure` families and on `beam-1m` and `longmemeval-m` (L4).
+      They run on the W1, W4 and `recurring-failure` families, on STATE-Bench's Agent Learning Track (pass@1 and pass^5, development partition), and on Compact-Bench retention and MemoryArena as the L4 non-regression check. Amended 2026-11-12 by plan 218.1, replacing `beam-1m` and `longmemeval-m`.
     - Functional: **Verdicts.** L1–L4 come from `acceptance-report.mjs --plan memory-model --gate M-4`; the offline rows must pass first. A miss goes to the owner before plan 221, and one fix round is allowed.
     - Functional: **Plan 210 transfers.** `kind.procedure`, `retrieval.decay-per-kind`, `delivery.passive-tail`, `delivery.standing-rules`, `delivery.rule-capture` and `lessons` get their final disposition in `docs/_evidence/memory-bench/210/decisions.md`. The four delivery and working-agent rows replace plan 210's cancelled wave 2 arms `tools-only`, `rules-add` and the W legs. Each is measured as a leave-one-out arm inside `+all` on the W1, W2 and W4 families, added to this gate's arms.
     - Functional: **Plan end.** Compromises, Further Actions, and the backlog hand-off.

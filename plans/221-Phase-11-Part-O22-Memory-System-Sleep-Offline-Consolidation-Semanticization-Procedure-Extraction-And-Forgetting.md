@@ -2,6 +2,8 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
+> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. They are replaced by external, outcome-scored suites: Compact-Bench (session tiers and compaction), MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep). Plan 218.1 Task 1 re-scopes the criteria rows to match; this plan's text is amended below. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
+
 ## Objectives
 
 - Add **Sleep**, the offline consolidation pass (design §5.7).
@@ -327,8 +329,10 @@ The ontology's curator pass is **not** a Sleep job: the ontology belongs to the 
 
       They run on:
       - live multi-session lifecycles on the work-outcome families (W1–W4) and the `recurring-failure` family;
-      - `longmemeval-m` multi-session;
-      - `beam-1m` (Z1).
+      - MemoryArena's development partition, run across sessions with a sleep every 3 sessions;
+      - STATE-Bench's Agent Learning Track (Z1).
+
+      Amended 2026-11-12 by plan 218.1, replacing `longmemeval-m` multi-session and `beam-1m`.
 
       Z2 uses the claim-support panel on semanticized notes (calibrated in plan 222 if available; otherwise assistant labels as development evidence, repeated in plan 223). Z3 is the growth simulation with live write sides. Z4 is cost against the gate's stated budget.
     - Functional: **Verdicts.** Z1–Z4 come from `acceptance-report.mjs --plan memory-model --gate M-5`. A miss goes to the owner before plan 222, and one fix round is allowed.

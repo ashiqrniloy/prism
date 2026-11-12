@@ -2,6 +2,8 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
+> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. They are replaced by external, outcome-scored suites: Compact-Bench (session tiers and compaction), MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep). Plan 218.1 Task 1 re-scopes the criteria rows to match; this plan's text is amended below. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
+
 ## Objectives
 
 - Finish the wiki as a knowledge package outside memory (owner, 2026-11-08: "It should be part of the wiki and not memory"). Plan 216 Task 3 moved the ontology out of the fabric. This plan settles the wiki on the *final* long-term memory:
@@ -143,7 +145,7 @@ This implements the wiki half of roadmap Phase 11 "Memory model" ("the ontology 
 - [ ] Task 3: Gate K-1 — the wiki's development screen (paid), the ontology rows' disposition, and plan end
   - Acceptance Criteria:
     - Functional: **Gate record.** `docs/_evidence/memory-bench/222/gates/owner-gate-k1.json` gives the budget (including Task 2's share), the models (C-1's paid roles unless the owner names others; never `openrouter/free`), the arms, partitions and caps. The run starts on the owner's word.
-    - Functional: **Arms**, moved from plan 210 wave 3 and re-expressed for the wiki outside memory, on development partitions (`memoryagentbench-cr`, `beam-1m`, `locomo`) and the work-outcome families for O8:
+    - Functional: **Arms**, moved from plan 210 wave 3 and re-expressed for the wiki outside memory, on development partitions (`memoryagentbench-cr`, MemoryArena, `locomo`; amended 2026-11-12 by plan 218.1, MemoryArena replacing `beam-1m`) and the work-outcome families for O8:
       - `ltm` (plan 221's `full` without the wiki): the base, playing `P`;
       - `ltm+wiki`: the reference, playing `P+O`;
       - `trigger-co-read-loo` and `trigger-accumulation-loo` (wiki triggers);

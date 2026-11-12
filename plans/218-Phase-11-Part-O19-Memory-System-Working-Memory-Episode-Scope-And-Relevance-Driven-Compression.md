@@ -2,6 +2,8 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
+> **Amended 2026-11-12 (owner, benchmark decision):** `beam-1m` and `longmemeval-m` leave every memory-model gate, and [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) replaces them with external outcome suites before Task 6 resumes. Gate M-2's M5 reads Compact-Bench recurring-detail retention instead of QA accuracy. Mentions of the two suites in executed tasks are the record of what ran.
+
 ## Objectives
 
 - Add the **episode scope**: a natural-language statement of what the current body of work must achieve, including its later planned steps (for example a plan document). The host or user sets it; WM and Rehearsal read it; STM never does (design §5.3).
@@ -450,7 +452,7 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
     - `stm_instruction_keeps_user_facts_apart_from_assistant_plans`: the instruction holds the rule and stays within 2,100 characters.
     - `wm_item_keeps_assistant_attribution`: a WM item built only from assistant-attributed events keeps the mark.
     - Probe (Task 5 `wm.mjs`, added row; the fixture segment is Task 5's too): on the fixture segment, the user's figure is an event of its own with `attribution: "user"`, and the assistant's plan carries `assistant`.
-    - Live check (Task 6): gate M-2's LongMemEval sample includes `9aaed6a3`; its STM records hold the user's $75 fact as a `user` event (local diagnostic, ids and counts only in evidence).
+    - Live check (Task 6; dropped 2026-11-12 with LongMemEval, plan 218.1): gate M-2's LongMemEval sample includes `9aaed6a3`; its STM records hold the user's $75 fact as a `user` event (local diagnostic, ids and counts only in evidence).
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — the rendered memory block marks assistant proposals; the record gains an optional derived field.
     - Docs pages to create/edit:
@@ -586,7 +588,7 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
       - `STM-only`: plan 217's STM with `wm.policy: "deterministic"` and no scope (amended 2026-11-12, Task 3: the deterministic policy also keeps salient records, and the report says so);
       - `OM-before`: plan 217's recorded rows, not rerun.
 
-      They run on the `re-plan` and `long-session` families, `beam-1m` and `longmemeval-m`. The QA suites take the suite's task framing as the scope. (Amended 2026-11-12, Task 5:)
+      They run on the `re-plan` and `long-session` families and on Compact-Bench's recurring-detail retention track (dev partition; amended 2026-11-12, plan 218.1: `beam-1m` and `longmemeval-m` removed, and with them the suite task-framing scope). (Amended 2026-11-12, Task 5:)
       - the `re-plan` family runs through `runLongSession({ family: "re-plan" })` and needs live job wiring like `long-session-live.mjs`;
       - the `WM` arm sets each plan as the scope before its turn;
       - `STM-only`'s deterministic policy discards a changed value to meet the target (`wm.knowledge-update`), and the report says so beside the arm's numbers.
@@ -632,6 +634,36 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
       - the evidence README; the README's measured-role paragraph.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (in progress, 2026-11-12; paused by the owner, resumes after plan 218.1):
+    - **Built.**
+      - `wm-gate.mjs` holds gate M-2's jobs, manifest, owner gate, preflight and evidence: M1, M2–M4 from the probes, M5, the carried S1 re-measure, WM output-cap counts and cost rows.
+      - `campaign.mjs` and `acceptance-report.mjs` take `--gate M-2`.
+      - The live family child takes `--family`, `--repeat`, `--gate` and `--max-output-tokens`.
+      - Tests: `wm-gate.test.mjs` (`gate_m2_arms_paired_on_identical_items`, `m2_offline_rows_pass_before_paid_run`, `m2_verdicts_computed_from_memory_model_criteria_only`).
+      - The product fingerprint leaves out test files (owner decision).
+    - **Owner decisions.**
+      - Provider OpenCode Go. Answer models `deepseek-v4.1-flash` and `muse-spark-1.3-contributor`; MiMo V2.6 Flash for the S1 re-measure.
+      - Judges `qwen3.8-flash` and `minimax-m3.1-flash`.
+      - M5 at 4 questions per suite, flagged underpowered (superseded by plan 218.1).
+    - **Sitting 1 (re-plan family) findings, before the fix.**
+      - Every arm reached 87.5–100% task success after the re-plan, so M1's gain test against OM-before cannot pass on this fixture; it reads miss on a ceiling. The owner kept the frozen row, and the paired re-derivations are reported beside it (`m1Rederivations`).
+      - DeepSeek re-derivations per task: WM 0.125, STM-only 0.625, OM-before 1.0. WM against OM-before: 0.88 [0.13, 2.0].
+      - Muse Spark 1.3 ended 7 of 15 WM calls at the output cap with no verdict. Its reasoning spent the 4,096-token limit (82–100% of the capped output).
+    - **Product fix (owner: "Product default + retry").**
+      - STM, WM and Rehearsal workers default to `thinkingLevel: "low"`.
+      - A WM call that stops on its output limit with no verdict retries once on the older half of its batch (`MemoryWorkerLoopResult.endedAtOutputCap`).
+      - Tests in `session/__tests__/wm.test.ts`. Probes unchanged and byte-identical.
+      - After the fix, Muse WM ended 0 of 21 calls at the cap. Muse STM-only re-derivations fell from 2.25 to 0.375.
+    - **Harness fixes.**
+      - The family child ran every call at 4,096 output tokens; it now runs at the manifest's 8,192.
+      - `campaign.mjs` read the journal's last attempt instead of the job's own under `--parallel-arms`, which could skip a retry or pause (`parallel_jobs_read_their_own_attempt_not_the_journals_last`).
+      - Executable-manifest journals are keyed by the manifest hash, so a re-bound gate starts a fresh journal.
+    - **Stopped.** The suite jobs proved impractical: about 11 GB per longmemeval-m replay, and over 1.75 h for one Muse question before the fix. The owner stopped the run and replaced the QA suites (plan 218.1).
+      - Pre-fix reports are in `docs/_evidence/memory-bench/218/runs/superseded-pre-worker-fix/`.
+      - Post-fix sitting 1 has five of six jobs; Muse OM-before was stopped mid-run.
+    - **Baseline diff (worker fix):**
+      - `@arnilo/prism-memory-system`: `./core#MemoryWorkerLoopResult` added, and `runMemoryWorkerLoop` returns it (experimental, not gated).
+      - The regeneration also recorded earlier, unbaselined changes: plan 218 Tasks 1–4.1 (`EpisodeScope`, `MemoryWmItem`, `MemoryAttribution`, the scope service methods, the reflector types removed) and plan 217 Task 6.1 (`ModelClient.resolve?()` in the kernel baseline).
 
 ## Verification (whole plan)
 

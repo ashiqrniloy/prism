@@ -1535,7 +1535,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Priority: P2
 - Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
 - Compromise: S3 was deferred to gate A and the suite cells ran two questions each.
-- Implications: the LongMemEval-M and BEAM-1M cells are an S4 sample and a direction only; gate A reads both held-out partitions with no subsetting.
+- Implications: the LongMemEval-M and BEAM-1M cells are an S4 sample and a direction only. Amended 2026-11-12 (plan 218.1): the QA suites leave the memory-model gates; S3 becomes Compact-Bench task preservation, held out whole and read only at gate A.
 
 ## Replace the whole-log WM reflector with verdicts on named items and batched input
 - Section: Compromises Made
@@ -1549,14 +1549,14 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Priority: P3
 - Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
 - Compromise: the M-1 product fingerprint counts test files, so a release-test commit refused sittings 3–4.
-- Implications: unrelated test commits force a gate amendment; plan 218 Task 6 proposes the change for the owner to decide.
+- Implications: unrelated test commits force a gate amendment; plan 218 Task 6 proposes the change for the owner to decide. Resolved 2026-11-12: the owner adopted it for gate M-2 (`wm-gate.mjs` `m2ProductFingerprint`).
 
 ## Check OM-before BEAM reports for overflow before reading S4
 - Section: Compromises Made
 - Priority: P3
 - Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
 - Compromise: the pinned OM-before observer is not fixed; one of two MiMo BEAM runs overflowed its message budget.
-- Implications: a re-run of OM-before on BEAM can understate its worker tokens; read its error counts first.
+- Implications: a re-run of OM-before on BEAM can understate its worker tokens; read its error counts first. Amended 2026-11-12 (plan 218.1): BEAM is no longer re-run for any memory-model gate; this applies only when reading gate M-1's recorded S4 cells.
 
 ## Memory worker refuses an unknown tool name
 - Section: Further Actions

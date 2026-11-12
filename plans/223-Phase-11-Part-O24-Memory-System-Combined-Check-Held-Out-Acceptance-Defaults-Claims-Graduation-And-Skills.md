@@ -2,6 +2,8 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
+> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. They are replaced by external, outcome-scored suites: Compact-Bench (session tiers and compaction), MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep). Plan 218.1 Task 1 re-scopes the criteria rows to match; this plan's text is amended below. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
+
 ## Objectives
 
 - Accept the rebuilt memory system and the wiki **once**, on held-out partitions, and set what ships from the verdicts. This is the work plan 210 Tasks 8 (the freeze), 9, 10 and 11 carried until 2026-11-08, re-pointed at the final product.
@@ -95,7 +97,13 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
       - the judge panel calibrated in plan 222, with repeats on the 100-item subset.
 
       O3 and R3 are repeated with a person's labels. Plan 202's safety gate (Task 14, with the wiki probes) and growth criterion (Task 15) re-run on the frozen product.
-    - Functional: **Plan 202 Task 5 hand-off (2026-11-01, carried).** The robustness arms include `heldout-a` of `longmemeval-m` and `beam-1m` with no subsetting. A manifest that omits either one, or samples it, is refused even under budget pressure.
+    - Functional: **Held-out external suites (amended 2026-11-12 by plan 218.1, replacing plan 202 Task 5's hand-off of `heldout-a` of `longmemeval-m` and `beam-1m`).** The acceptance arms include, with no subsetting:
+      - Compact-Bench's whole task-preservation track, never read by a development gate (S3);
+      - `heldout-a` of Compact-Bench retention (M5, L4);
+      - `heldout-a` of MemoryArena (R5, L4, Z1);
+      - `heldout-a` of STATE-Bench's Agent Learning Track (Z1).
+
+      A manifest that omits or samples any of them is refused, even under budget pressure. Plan 202's robustness claims over `longmemeval-m` and `beam-1m` are not re-run; their 0.13.0 evidence stays as history.
     - Functional: **One manifest** pins:
       - the product hash;
       - `robustness-criteria.json`, `three-tier-criteria.json`, `work-outcome-criteria.json` and `memory-model-criteria.json`, with every hash verified.
@@ -131,7 +139,7 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
   - Test Cases to Write:
     - `one_manifest_pins_four_criteria_hashes_and_the_freeze_hash`.
     - `acceptance_refuses_criteria_or_product_drift`.
-    - `acceptance_202_refuses_missing_or_sampled_longmemeval_m_or_beam_1m`.
+    - `acceptance_refuses_missing_or_sampled_external_heldout_suites` (replaces `acceptance_202_refuses_missing_or_sampled_longmemeval_m_or_beam_1m`, plan 218.1).
     - `verdict_rows_match_each_criteria_file`.
     - `small_model_rows_present`.
     - `human_labels_used_for_o3_and_r3`.

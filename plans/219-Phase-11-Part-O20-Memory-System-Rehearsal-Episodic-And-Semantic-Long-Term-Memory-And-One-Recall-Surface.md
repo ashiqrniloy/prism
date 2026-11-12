@@ -2,6 +2,8 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
+> **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. They are replaced by external, outcome-scored suites: Compact-Bench (session tiers and compaction), MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep). Plan 218.1 Task 1 re-scopes the criteria rows to match; this plan's text is amended below. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
+
 ## Objectives
 
 - Turn today's dropper into **Rehearsal**, the only door into long-term memory (design §5.5):
@@ -400,8 +402,8 @@ No version bump and no publish.
       They run on:
       - the work-outcome suite (W1–W3, both families);
       - a live multi-session lifecycle on the `long-session` family run across sessions;
-      - `longmemeval-m` (multi-session and temporal strata);
-      - `beam-1m`.
+      - MemoryArena's development partition, scored by process score and success rate (R5); amended 2026-11-12 by plan 218.1, replacing `longmemeval-m` (multi-session and temporal strata) and `beam-1m`;
+      - LoCoMo's temporal stratum (R6).
     - Functional: **Verdicts.** R1–R6 come from `acceptance-report.mjs --plan memory-model --gate M-3`. R5 and R6 report all-required evidence coverage per ability beside accuracy (plan 216 Task 2).
       - R3 uses the claim-support panel. If plan 222's calibration has not run yet, R3 is computed with assistant labels as development evidence, and plan 223 repeats it with a person's labels.
       - R4 runs plan 202's safety suite live on `full-r`.
