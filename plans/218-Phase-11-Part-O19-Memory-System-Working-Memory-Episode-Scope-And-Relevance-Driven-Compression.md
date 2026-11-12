@@ -2,7 +2,7 @@
 
 > **Amended 2026-11-10 (plan 224 Task 2):** package names follow the seven-bundle map of roadmap Part 3 — `@arnilo/prism-memory-system` (the bundle root `.` and its `/core` subpath) and `@arnilo/prism-knowledge/{wiki, rag}`. Directories do not change, so read every name below as that specifier once plan 224 Task 8 lands.
 
-> **Amended 2026-11-12 (owner, benchmark decision):** `beam-1m` and `longmemeval-m` leave every memory-model gate, and [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) replaces them with a lean external screen on Compact-Bench before Task 6 resumes (about $6–12, half a day of runs, OpenCode Go only). Gate M-2's M5 reads that screen (retention on 30 sessions, outcome on 22 repair tasks) instead of QA accuracy. Mentions of the two suites in executed tasks are the record of what ran.
+> **Amended 2026-11-12 (owner, benchmark decision):** `beam-1m` and `longmemeval-m` leave every memory-model gate, and [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) replaces them with a lean external screen on Compact-Bench before Task 6 resumes (about $6–10, half a day of runs, OpenCode Go only; MiniMax M3.1 Flash continues after compaction). Gate M-2's M5 reads that screen (retention on 30 sessions, outcome on 22 repair tasks) instead of QA accuracy. Mentions of the two suites in executed tasks are the record of what ran.
 
 ## Objectives
 
