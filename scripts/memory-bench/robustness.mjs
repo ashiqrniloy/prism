@@ -311,7 +311,9 @@ export const MEMORY_MODEL_ROW_IDS = Object.freeze(
     ["Z", 4],
   ].flatMap(([prefix, count]) => Array.from({ length: count }, (_, index) => `${prefix}${index + 1}`)),
 );
-const MEMORY_MODEL_QA_ROWS = ["S3", "M5", "R5", "R6", "T7", "L4", "Z1"];
+const MEMORY_MODEL_QA_ROWS = ["R5", "R6", "T7", "L4", "Z1"];
+/** Plan 218.1 Task 1 (owner, 2026-11-12): suites no row or gate may name again. */
+const MEMORY_MODEL_REMOVED_SUITES = ["beam-1m", "longmemeval-m"];
 const MEMORY_MODEL_RETRIEVAL_SETS = ["paraphrase", "non-english", "parity", "abstention"];
 const MEMORY_MODEL_ACCEPTANCE_FILES = [
   "robustness-criteria.json",
@@ -380,6 +382,12 @@ export function verifyMemoryModelCriteria(value = MEMORY_MODEL_CRITERIA, files =
         fail(`row ${id} test ${test.id} has no value`);
       if (test.kind === "anyGainNoneRegress" && !test.metrics?.length) fail(`row ${id} test ${test.id} names no metrics`);
     }
+    for (const suite of row.scope.suites ?? [])
+      if (MEMORY_MODEL_REMOVED_SUITES.includes(suite)) fail(`row ${id} reads removed suite ${suite} (owner decision qaSuitesRemoved)`);
+    // Plan 218.1 Task 1: a row whose suite is not yet adopted names the owner decision that left it waiting.
+    const awaiting = row.scope.awaitingSuite;
+    if (awaiting !== undefined && (!awaiting?.for || !value.ownerDecisions?.[awaiting.decision]?.decision))
+      fail(`row ${id} awaits a suite without an owner decision`);
   }
   for (const [gate, entry] of Object.entries(gates)) {
     if (gate === "rule" || gate === "K-1") continue;
@@ -417,9 +425,12 @@ export function verifyMemoryModelCriteria(value = MEMORY_MODEL_CRITERIA, files =
   if (sets.thresholdFit?.set !== "abstention" || sets.thresholdFit.falseAbstentionWeight !== 2 || !sets.thresholdFit.rule)
     fail("the threshold-fit rule must be pinned");
   const amendments = value.amendments ?? [];
-  for (const amendment of amendments)
+  for (const amendment of amendments) {
     if (!/^[0-9a-f]{64}$/.test(amendment?.previousHash ?? "") || !amendment.date || !amendment.reason)
       fail("an amendment needs a previousHash, a date and a reason");
+    if (amendment.decision !== undefined && !value.ownerDecisions[amendment.decision]?.decision)
+      fail(`an amendment names owner decision ${amendment.decision}, which is not recorded`);
+  }
   const filled = Object.values(sets.hashes ?? {}).some((hash) => hash !== null) || sets.thresholds !== null;
   if (filled && !amendments.length) fail("retrieval-set hashes and thresholds are added only by an amendment");
   const index = value.fixtures?.index ?? [];
@@ -432,8 +443,19 @@ export function verifyMemoryModelCriteria(value = MEMORY_MODEL_CRITERIA, files =
       fail(`fixture ${entry.id} needs a sha256 hash and the file it hashes`);
   if (index.some((entry) => entry.hash) && !amendments.length) fail("fixture hashes are added only by an amendment");
   for (const name of MEMORY_MODEL_RETRIEVAL_SETS) if (!fixtureIds.has(name)) fail(`retrieval set ${name} is not in the fixture index`);
-  for (const [id, row] of Object.entries(rows))
+  for (const [id, row] of Object.entries(rows)) {
     for (const fixture of row.scope.fixtures ?? []) if (!fixtureIds.has(fixture)) fail(`row ${id} reads unindexed fixture ${fixture}`);
+    for (const fixture of row.scope.external ?? [])
+      if (index.find((entry) => entry.id === fixture)?.kind !== "external") fail(`row ${id} reads unindexed external suite ${fixture}`);
+  }
+  // Plan 218.1: an external suite's hash comes with the upstream code revision, dataset revision and SHA256SUMS hash.
+  for (const entry of index)
+    if (
+      entry.kind === "external" &&
+      entry.hash &&
+      !(entry.codeRevision && entry.datasetRevision && /^[0-9a-f]{64}$/.test(entry.sha256sums ?? ""))
+    )
+      fail(`external suite ${entry.id} needs its code revision, dataset revision and SHA256SUMS hash`);
 
   const wiki = value.wiki ?? {};
   if (wiki.criteriaFile !== "scripts/memory-bench/three-tier-criteria.json" || wiki.criteriaHash !== current["three-tier-criteria.json"])
@@ -481,7 +503,8 @@ export function frozenMemoryModelHash(record = readRepoJson(MEMORY_MODEL_CRITERI
 
 /**
  * Plan 218 Task 5: every hash the criteria record's amendment log has held, oldest first, ending with the current one.
- * Amendments change no row, threshold or partition rule, so a record pinning one of them still reads these criteria.
+ * A closed gate's record pins one of them. Amendment 6 (plan 218.1, an owner decision) re-scoped rows without changing
+ * a threshold, test kind or comparator, so gate M-1's closed record still reads its rows under these criteria.
  */
 export function memoryModelCriteriaHashes(record = readRepoJson(MEMORY_MODEL_CRITERIA_RECORD)) {
   const hashes = [];
@@ -639,6 +662,8 @@ export function memoryModelVerdict(rowId, evidence, value = MEMORY_MODEL_CRITERI
       Object.values(coverage).length > 0 &&
       Object.values(coverage).every((v) => typeof v === "number"));
   if (qa) tests.push({ id: "evidence-coverage", pass: coverageReported ? true : null });
+  // Plan 218.1 Task 1: a row waiting for a suite the owner has not adopted is `missing`, whatever its evidence says.
+  if (row.scope.awaitingSuite) tests.push({ id: "suite-adopted", pass: null });
   const status = tests.some((test) => test.pass === false) ? "miss" : tests.some((test) => test.pass === null) ? "missing" : "pass";
   return { row: rowId, gate: row.gate, status, tests };
 }

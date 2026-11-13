@@ -580,7 +580,16 @@ export function longSessionWorkerMock() {
  * the worker is the mock route `worker/stm`; live it is the arm's answer model (as in the robustness suites). The STM
  * arm's chunk store is metered (gate M-1's chunk bytes at peak); the pinned tree has no chunks.
  */
-async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter, stmOverrides = {} } = {}) {
+export async function armMemory(
+  arm,
+  {
+    workerModel = LONG_SESSION_STM_MODEL,
+    chunkMeter,
+    stmOverrides = {},
+    // Plan 218.1 Task 2: Compact-Bench replays one long history and compacts once at the end, so it passes its own gate.
+    context = { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+  } = {},
+) {
   if (arm === "memory-off") return [];
   if (arm === "STM") {
     const { default: memorySystem } = await import("@arnilo/prism-memory-system");
@@ -591,7 +600,7 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
         enabled: true,
         stm: { model: workerModel, triggerTokens: 1_000, ...stmOverrides },
         wm: false,
-        context: { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+        context,
       }),
     ];
   }
@@ -604,7 +613,7 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
         enabled: true,
         stm: { model: workerModel, triggerTokens: 1_000, ...stmOverrides },
         wm: arm === "WM" ? { model: workerModel } : { policy: "deterministic" },
-        context: { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+        context,
       }),
     ];
   }
@@ -622,7 +631,7 @@ async function armMemory(arm, { workerModel = LONG_SESSION_STM_MODEL, chunkMeter
       observational.default({
         enabled: true,
         observer: { model: workerModel, messageTokens: 1_000 },
-        context: { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+        context,
       }),
     ];
   }

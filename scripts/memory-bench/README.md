@@ -90,8 +90,26 @@ Plan 216 Task 2's memory-model criteria are in `memory-model-criteria.json`, fro
 208's `three-tier-criteria.json`, referenced by hash with `P+O` mapped to `ltm+wiki`, never copied) and A (plan 223's
 held-out acceptance, which pins the robustness, three-tier, work-outcome and memory-model hashes). Each row is typed
 tests (`gain`, `nonInferior`, `exact`, `atMost`, …) so `memoryModelVerdict()` computes it with no hand-set value.
-A missing measurement is `missing`, never a pass, and every QA row (S3, M5, R5, R6, T7, L4, Z1) also needs
-all-required evidence coverage per ability. The file also holds:
+A missing measurement is `missing`, never a pass, and every QA row (R5, R6, T7, L4, Z1) also needs
+all-required evidence coverage per ability.
+
+Amendment 6 (plan 218.1 Task 1, owner decision `qaSuitesRemoved`, 2026-11-12) took `beam-1m` and `longmemeval-m`
+out of every row and gate; the verifier refuses a row that names either again. It re-scoped rows without changing a
+threshold, test kind or comparator (record: `docs/_evidence/memory-bench/memory-model/benchmark-decision-2026-11-12.json`):
+
+| Row | Reads now |
+|---|---|
+| M5 | Compact-Bench retention (`compact-bench-retention`), WM vs STM-only, non-inferior; the outcome screen (`compact-bench-outcome`) reported beside it |
+| S3 | the lean screen's outcome arms, reported once (candidate `STM-only`); its held-out reading waits for a new outcome set |
+| S4 | the long-session family plus the screen's retention sessions |
+| R6 | LoCoMo temporal only |
+| T1, T2 | Compact-Bench retention details as gold, plus LoCoMo |
+| R5, T7, L4, Z1 | `scope.awaitingSuite` (MemoryArena or STATE-Bench, when adopted) |
+
+A row with `scope.awaitingSuite` gets a `suite-adopted` test that is always unmeasured, so it reads `missing`, never
+`pass`, until an amendment adopts its suite. S3 and M5 left `qaRows`. The two Compact-Bench entries are `external`
+fixtures: amendment 7 (plan 218.1 Task 2, 2026-11-13) added their code revision, dataset revision, `SHA256SUMS` hash
+and the draw file's hash (`6fb271e6…` → `9bdc8924…`), and the verifier refuses an external hash without all four. The file also holds:
 
 - the "before" baselines: `P` (plan 210's slimmed product hash) and `OM-before` (pinned at plan 216 Task 4's first
   step in `docs/_evidence/memory-bench/memory-model/baselines.json`);
@@ -441,6 +459,38 @@ dataset/answer/memory text are never written to reports.
 The benchmark-only Python requirements are PyArrow 23.0.1 for the pinned Parquet
 artifact and NLTK 3.9.2 for LoCoMo's Porter-stemmed F1. No corpus downloads are
 needed. No kernel or memory package depends on either library.
+
+### External suite: Compact-Bench (plan 218.1 Task 2)
+
+[Compact-Bench](https://github.com/cai-jianfeng/compact-bench) (arXiv 2610.31710, Apache-2.0) scores what compaction
+costs a coding agent: recurring-detail **retention** (literal string match of annotated details, no model) and **task
+preservation** (a frozen SWE-bench repair continued from the full history, PRE, or from the summary only, POST, judged
+by its FAIL_TO_PASS tests). The harness is in `external/compact-bench/`:
+
+| File | Role |
+|---|---|
+| `fetch.mjs` | Clones upstream at commit `9dd9a3f5…` and downloads the dataset at revision `ff20521e…` into `~/.cache/prism/compact-bench/` (about 200 MB), every file checked against `SHA256SUMS`, whose own hash is pinned (`94a7c697…`). A mismatch is refused; a branch name is not a pin. |
+| `draw.mjs` | The frozen draw `work-outcome-compact-bench.json`: 30 of the 146 retention sessions (largest-remainder share per `client`, then ascending `SHA-256("prism-218.1-compact-bench:" + sample_id)`; only `sample_id` and `client` are read) and the 22 validated outcome instances (`e1/prepass24.txt` minus the two excluded pytest instances). `--check` re-draws and compares byte for byte. |
+| `adapter.mjs` | Prism as the summarizer: the history in upstream's own transcript view (`transcript()` for retention, `build_transcript()` for outcome, the same caps the LLM summarizers get) is replayed as turns through a session with the arm's memory (`armMemory` from the long-session family: `memory-off`, `OM-before`, `STM-only`, `WM`); a local scripted model plays the recorded assistant lines, so only the memory worker is a model. No automatic compaction; one `session.compact()` at the end; S is the next request as the model sees it: memory block (context blocks and summary messages, uncapped) then the kept messages as upstream lines. The block alone and the STM chunk text (reachable through `recall`) are scored beside S, never added to it. |
+| `seam.py` | Run with `python3 -I`. `retention` scores S records with upstream's `e2_score.compress_one` (its `summarize` replaced by the record's S); `task` runs upstream's `run.py` task track and writes each `prism-*` model's S to the summary cache `e1_xb` reads first, so PRE, POST and the tests stay upstream's (one round only; a missing S is refused); `self-check` asserts the pinned seams exist. |
+| `passthrough.mjs` | Loopback-only server for upstream's Messages (`CB_MESSAGES_URL`) and Chat (`CB_CHAT_URL`) calls to OpenCode Go: accepts only the local placeholder key, sends the real key from the environment (Messages: `x-api-key` and bearer; Chat: bearer), adds `x-opencode-session`, sets `thinking: {type: "disabled"}` on the continuation agent's (`minimax-m3.1-flash`) Messages requests, and forwards through the wire proxy, which records exchanges and usage. 403 to a non-loopback peer. |
+
+Offline (no paid call):
+
+```sh
+bun scripts/memory-bench/external/compact-bench/fetch.mjs            # clone + download, every file verified
+bun scripts/memory-bench/external/compact-bench/draw.mjs --check
+bun scripts/memory-bench/external/compact-bench/adapter.mjs --offline  # 30 sessions x memory-off, STM-only, WM on mock workers
+# upstream's model-free tracks, from the checkout, against the verified mirror:
+CB_DATA_MIRROR=~/.cache/prism/compact-bench/data-ff20521e6a2293ba74317efb076f0c338ca5fb6b \
+  python3 -I run.py --track retention --baseline-only --output ~/.cache/prism/compact-bench/results
+```
+
+Validated 2026-11-13: `anchor_index` retention 79.1% over 146 sessions and production-chain retention 15.7% at the
+first boundary, both the paper's figures; the transcript port equals upstream's on all 181 histories; the offline
+replay of the 30 sessions on three arms takes 18 s (OM-before runs from the gate M-2 worktree). The mock worker's
+recalls check the pipeline and are not measurements. Task environments (per-instance repository archives and virtual
+environments) need several GB and are built only by the paid screen (plan 218.1 Task 3).
 
 ## Measurement repair protocol
 

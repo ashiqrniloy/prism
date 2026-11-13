@@ -1,0 +1,118 @@
+{
+  "kind": "memory-benchmark-owner-decision",
+  "date": "2026-11-12",
+  "decision": "qaSuitesRemoved",
+  "plan": "218.1",
+  "task": 1,
+  "by": "owner",
+  "context": "Given after plan 218 Task 6's first sitting of gate M-2 (paid run stopped). The decision was given in conversation; the owner's verbatim words were not captured in the repository, so `text` is the wording recorded in plan 218.1 and the commits d893b07f, 2202efb7 and b61c57aa.",
+  "text": [
+    "Remove beam-1m and longmemeval-m from every memory-model gate. They measure question answering over imported chat logs, not the work Prism's memory does: keeping a coding agent's progress across compaction. At about 1M tokens a question they cannot reach a sample size that decides anything (gate M-1: 2 questions per cell; gate M-2: 4).",
+    "Prefer external benchmarks over self-designed ones; a test we design is likely biased.",
+    "Keep cost and time small at this stage: one lean Compact-Bench screen (retention on 30 sessions, outcome on 22 repair tasks), OpenCode Go only, about $6-10 and half a day of runs; defer the second model, held-out partitions, long-term memory suites and the full gate A.",
+    "Claude Code is not used for any benchmark call: its system prompt would be part of what is measured.",
+    "The continuation agent is minimax-m3.1-flash on OpenCode Go's native Messages route."
+  ],
+  "survey": [
+    {
+      "benchmark": "Compact-Bench",
+      "source": "arXiv 2610.31710; https://github.com/cai-jianfeng/compact-bench; https://huggingface.co/datasets/caijanfeng/compact-bench",
+      "licence": "Apache-2.0",
+      "verdict": "adopt",
+      "why": "scores what compaction costs a coding agent: task preservation (frozen SWE-bench repairs continued from PRE or POST, judged by FAIL_TO_PASS tests, redo_reads counted; 35 tasks, 22 validated) and recurring-detail retention (146 sessions, 9,330 details, literal match, no model); five production compaction prompts and the anchor_index regex reference"
+    },
+    {
+      "benchmark": "MemoryArena",
+      "source": "ICML 2026",
+      "licence": "data CC-BY-4.0, code licence not stated",
+      "verdict": "deferred",
+      "why": "declarative long-term memory across interdependent sessions; for plans 219+"
+    },
+    {
+      "benchmark": "STATE-Bench Agent Learning Track",
+      "source": "Microsoft",
+      "licence": "MIT",
+      "verdict": "deferred",
+      "why": "cross-task learning with deterministic state checks; for plans 220-221"
+    },
+    {
+      "benchmark": "LoCoBench-Agent",
+      "source": "Salesforce",
+      "licence": "Apache-2.0",
+      "verdict": "reject",
+      "why": "heuristic metrics (locobench/evaluation/bias_free_evaluator.py): retention counts words such as 'previously' plus vocabulary overlap, floored at 0.3; task completion self-reported; no tests run"
+    },
+    {
+      "benchmark": "CompactionBench",
+      "source": "Microsoft Research",
+      "licence": null,
+      "verdict": "watch",
+      "why": "repeated compaction plus prefix-cache reuse; no code or data found"
+    },
+    {
+      "benchmark": "DolphinBench (Mem0), Letta Context-Bench",
+      "source": "vendors",
+      "licence": null,
+      "verdict": "not adopted",
+      "why": "vendor-authored by memory-product companies"
+    }
+  ],
+  "mapping": {
+    "M5": {
+      "was": "QA accuracy, WM vs STM-only (beam-1m, longmemeval-m)",
+      "becomes": "the lean screen: Compact-Bench retention, WM vs STM-only, non-inferior, with the outcome screen beside it (plan 218.1 Task 3)"
+    },
+    "S3": {
+      "was": "QA accuracy, STM vs OM-before (deferred to gate A)",
+      "becomes": "the lean screen's outcome arms (STM in STM-only), reported once; the held-out S3 waits for a new held-out outcome set (awaitingSuite)"
+    },
+    "S4": {
+      "was": "worker tokens per 10k over the suites + long-session",
+      "becomes": "long-session plus the screen's retention sessions"
+    },
+    "R5": {
+      "was": "multi-session QA on longmemeval-m",
+      "becomes": "awaitingSuite: MemoryArena or STATE-Bench; missing until adopted"
+    },
+    "T7": {
+      "was": "QA per ability over LME + BEAM + LoCoMo",
+      "becomes": "awaitingSuite: MemoryArena or STATE-Bench; missing until adopted"
+    },
+    "L4": {
+      "was": "QA on beam-1m and longmemeval-m",
+      "becomes": "awaitingSuite: MemoryArena or STATE-Bench; missing until adopted"
+    },
+    "Z1": {
+      "was": "W1-W4 plus multi-session QA on the two suites",
+      "becomes": "W1-W4 live families; multi-session QA awaitingSuite (MemoryArena or STATE-Bench); missing until adopted"
+    },
+    "R6": {
+      "was": "temporal QA over LME + BEAM + LoCoMo",
+      "becomes": "LoCoMo temporal only"
+    },
+    "T1": {
+      "was": "retrieval coverage over LME + BEAM + LoCoMo ingest",
+      "becomes": "Compact-Bench retention details as gold, plus LoCoMo"
+    },
+    "T2": {
+      "was": "candidate recall@32 over LME + BEAM + LoCoMo ingest",
+      "becomes": "Compact-Bench retention details as gold, plus LoCoMo"
+    }
+  },
+  "unchanged": "thresholds, test kinds, comparators, partitions and statistics; locomo and memoryagentbench-cr stay where plans 219.1 and 222 use them until the owner decides",
+  "deferred": [
+    "a second answer model on the screen",
+    "Compact-Bench retention held-out partitions",
+    "a new held-out outcome set for gate A's S3",
+    "MemoryArena (R5, T7, L4, Z1) for plans 219+",
+    "STATE-Bench's Agent Learning Track for plans 220-221",
+    "the owner's call on locomo and memoryagentbench-cr"
+  ],
+  "criteria": {
+    "file": "scripts/memory-bench/memory-model-criteria.json",
+    "amendment": 6,
+    "previousHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+    "hash": "6fb271e63287476faa15cc275cfea014539ee182468d98aa0b216d3638fafa2e",
+    "closedGateM1Hash": "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1"
+  }
+}

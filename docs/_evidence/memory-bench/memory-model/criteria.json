@@ -4,7 +4,7 @@
   "task": 2,
   "file": "scripts/memory-bench/memory-model-criteria.json",
   "frozen": "2026-11-08",
-  "memoryModelCriteriaHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+  "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
   "pins": {
     "robustness-criteria.json": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
     "three-tier-criteria.json": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
@@ -50,7 +50,25 @@
       "task": 5,
       "date": "2026-11-12",
       "reason": "fixture hashes: long-session-replay extended (re-plan, protected items, tight target, attribution) and the re-plan family's partition file frozen; closed gate M-1 keeps 1a768299...; no row changes"
+    },
+    {
+      "previousHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+      "hash": "6fb271e63287476faa15cc275cfea014539ee182468d98aa0b216d3638fafa2e",
+      "plan": "218.1",
+      "task": 1,
+      "date": "2026-11-12",
+      "kind": "owner-decision",
+      "decision": "qaSuitesRemoved",
+      "reason": "owner benchmark decision (benchmark-decision-2026-11-12.json): beam-1m and longmemeval-m leave every row and gate; S3, S4, M5, R5, R6, T1, T2, T7, L4, Z1 re-scoped (thresholds, test kinds and comparators unchanged); qaRows drops S3 and M5; two Compact-Bench fixtures indexed unhashed; closed gate M-1 keeps 1a768299..."
+    },
+    {
+      "previousHash": "6fb271e63287476faa15cc275cfea014539ee182468d98aa0b216d3638fafa2e",
+      "hash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+      "plan": "218.1",
+      "task": 2,
+      "date": "2026-11-13",
+      "reason": "fixture pins: compact-bench-retention and compact-bench-outcome get upstream code 9dd9a3f5..., dataset revision ff20521e..., SHA256SUMS 94a7c697... and the hash of the frozen draw work-outcome-compact-bench.json (e38d844d...); closed gate M-1 keeps 1a768299...; no row changes"
     }
   ],
-  "rule": "An amendment (plan 219.1's retrieval-set hashes and fitted thresholds) adds an `amendments` entry with `previousHash` to the criteria file, then replaces memoryModelCriteriaHash here and appends {previousHash, hash, plan, task, date} to `amendments`. No row changes."
+  "rule": "An amendment adds an `amendments` entry with `previousHash` to the criteria file, then replaces memoryModelCriteriaHash here and appends {previousHash, hash, plan, task, date} to `amendments`. Amendments add hashes or fitted values and change no row, except by a recorded owner decision (`kind` owner-decision, `decision`), as amendment 6 does."
 }

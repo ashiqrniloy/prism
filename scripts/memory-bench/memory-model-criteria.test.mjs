@@ -30,6 +30,42 @@ const edited = (edit) => {
   edit(copy);
   return copy;
 };
+const QA_SUITES = ["beam-1m", "longmemeval-m"];
+const LME_BEAM_LOCOMO = ["longmemeval-m", "beam-1m", "locomo"];
+/** Amendment 7 (plan 218.1 Task 2) undone: the two Compact-Bench fixtures back to their unhashed slots. */
+const beforeSeventh = (c) => {
+  c.amendments = c.amendments.slice(0, 6);
+  for (const entry of c.fixtures.index)
+    if (entry.kind === "external") Object.assign(entry, { codeRevision: null, datasetRevision: null, sha256sums: null, hash: null });
+};
+/** Amendment 6 (plan 218.1 Task 1) undone (after 7): the rows, qaRows and fixtures amendment 5's file held. */
+const beforeSixth = (c) => {
+  c.amendments = c.amendments.slice(0, 5);
+  c.hashRule = c.hashRule.replace(
+    "; a row changes only by an owner decision recorded in `ownerDecisions` and named by its amendment (`kind` owner-decision, `decision`).",
+    ".",
+  );
+  delete c.ownerDecisions.qaSuitesRemoved;
+  delete c.arms["PRE / claude-code-prompt / codex-prompt / anchor_index"];
+  const { rows } = c;
+  rows.S3.metric = "QA accuracy";
+  rows.S3.arms.candidate = "STM";
+  rows.S3.scope = { suites: [...QA_SUITES] };
+  delete rows.S3.report;
+  rows.S4.scope = { suites: [...QA_SUITES], live: ["long-session"] };
+  rows.M5.metric = "QA accuracy";
+  rows.M5.scope = { suites: [...QA_SUITES] };
+  delete rows.M5.report;
+  rows.R5.metric = "multi-session QA accuracy (longmemeval-m multi-session ability)";
+  rows.R5.scope = { suites: ["longmemeval-m"], abilities: ["multi-session"] };
+  rows.R6.scope = { suites: [...LME_BEAM_LOCOMO], abilities: ["temporal-reasoning", "temporal_reasoning", "temporal"] };
+  for (const id of ["T1", "T2"]) rows[id].scope = { offline: ["exchange-ingest", "full-r-snapshots"], suites: [...LME_BEAM_LOCOMO] };
+  rows.T7.scope = { suites: [...LME_BEAM_LOCOMO] };
+  rows.L4.scope = { suites: [...QA_SUITES] };
+  rows.Z1.scope = { live: ["work-outcome", "recurring-failure", "multi-session-lifecycle"], suites: ["longmemeval-m", "beam-1m"] };
+  c.qaRows = ["S3", "M5", "R5", "R6", "T7", "L4", "Z1"];
+  c.fixtures.index = c.fixtures.index.filter((entry) => entry.kind !== "external");
+};
 const ci = (ciLow, ciHigh = ciLow + 4) => ({
   models: [
     { model: "large", ciLow, ciHigh },
@@ -154,11 +190,9 @@ test("baselines_om_before_and_p_resolve_to_recorded_revisions", () => {
 });
 
 test("every_qa_row_reports_evidence_coverage_beside_accuracy", () => {
-  assert.deepEqual(MEMORY_MODEL_CRITERIA.qaRows, ["S3", "M5", "R5", "R6", "T7", "L4", "Z1"]);
+  assert.deepEqual(MEMORY_MODEL_CRITERIA.qaRows, ["R5", "R6", "T7", "L4", "Z1"]);
   assert.throws(() => verifyMemoryModelCriteria(edited((c) => c.qaRows.pop())), /QA rows must be/);
   const passing = {
-    S3: { tests: { "vs-om-before": ci(-1) } },
-    M5: { tests: { "vs-stm-only": ci(-1) } },
     R5: { tests: { "vs-p": ci(-1) } },
     R6: { tests: { "vs-p": ci(1) } },
     T7: {
@@ -179,8 +213,14 @@ test("every_qa_row_reports_evidence_coverage_beside_accuracy", () => {
   };
   for (const [row, evidence] of Object.entries(passing)) {
     assert.equal(memoryModelVerdict(row, evidence).status, "missing", `${row} without coverage`);
-    assert.equal(memoryModelVerdict(row, { ...evidence, coverage: { "multi-session": 0.61 } }).status, "pass", `${row} with coverage`);
+    const covered = memoryModelVerdict(row, { ...evidence, coverage: { "multi-session": 0.61 } });
+    assert.equal(covered.tests.find((t) => t.id === "evidence-coverage").pass, true, `${row} coverage counted`);
+    // Rows awaiting an adopted suite (amendment 6) stay `missing` even with coverage.
+    const awaiting = Boolean(MEMORY_MODEL_CRITERIA.rows[row].scope.awaitingSuite);
+    assert.equal(covered.status, awaiting ? "missing" : "pass", `${row} with coverage`);
   }
+  // S3 and M5 left the QA rows with amendment 6: M5 is Compact-Bench retention and needs no coverage.
+  assert.equal(memoryModelVerdict("M5", { tests: { "vs-stm-only": ci(-1) } }).status, "pass");
   // A non-QA row needs no coverage.
   assert.equal(memoryModelVerdict("M2", { tests: { loss: { value: 0 } } }).status, "pass");
 });
@@ -313,10 +353,19 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
 
 test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   // Plan 217 Task 6: the two fixtures gate M-1 reads are hashed by the first amendment; removing it restores the frozen file.
-  const [first, second, third, fourth, fifth] = MEMORY_MODEL_CRITERIA.amendments;
+  const [first, second, third, fourth, fifth, sixth, seventh] = MEMORY_MODEL_CRITERIA.amendments;
+  const rowsBeforeSixth = edited(beforeSixth).rows;
+  // Amendment 7 (plan 218.1 Task 2): the Compact-Bench pins and draw hash, no row change.
+  assert.deepEqual([seventh.plan, seventh.task, seventh.kind], ["218.1", 2, undefined]);
+  assert.equal(memoryModelCriteriaHash(edited(beforeSeventh)), seventh.previousHash);
+  assert.deepEqual(edited(beforeSeventh).rows, MEMORY_MODEL_CRITERIA.rows);
+  // Amendment 6 (plan 218.1, owner decision qaSuitesRemoved) is the only one that changes rows.
+  assert.equal(sixth.decision, "qaSuitesRemoved");
+  assert.equal(memoryModelCriteriaHash(edited(beforeSixth)), sixth.previousHash);
   assert.equal(first.plan, 217);
   // Amendment 5 (plan 218 Task 5): the plan 217 fixture hash and an unhashed re-plan family rebuild amendment 4's file.
   const unextended = (c) => {
+    beforeSixth(c);
     c.fixtures.index.find((entry) => entry.id === "long-session-replay").hash =
       "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3";
     const rePlan = c.fixtures.index.find((entry) => entry.id === "re-plan");
@@ -324,12 +373,12 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
     delete rePlan.hashOf;
   };
   const afterFourth = edited((c) => {
-    c.amendments = c.amendments.slice(0, 4);
     unextended(c);
+    c.amendments = c.amendments.slice(0, 4);
   });
   assert.equal(fifth.plan, 218);
   assert.equal(memoryModelCriteriaHash(afterFourth), fifth.previousHash);
-  assert.deepEqual(afterFourth.rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(afterFourth.rows, rowsBeforeSixth);
   // Amendment 4 (plan 224's package rename in two prose fields): the old names rebuild amendment 3's file.
   const unrenamed = (c) => {
     unextended(c);
@@ -340,34 +389,34 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
     c.wiki.mappingRule = c.wiki.mappingRule.replace("@arnilo/prism-knowledge/wiki", "@arnilo/prism-wiki");
   };
   const afterThird = edited((c) => {
-    c.amendments = c.amendments.slice(0, 3);
     unrenamed(c);
+    c.amendments = c.amendments.slice(0, 3);
   });
   assert.equal(memoryModelCriteriaHash(afterThird), fourth.previousHash);
-  assert.deepEqual(afterThird.rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(afterThird.rows, rowsBeforeSixth);
   // Amendment 3 (owner decision m1DevPersonas): restoring the 12-persona partition hash rebuilds amendment 2's file.
   const afterSecond = edited((c) => {
-    c.amendments = c.amendments.slice(0, 2);
     unrenamed(c);
+    c.amendments = c.amendments.slice(0, 2);
     delete c.ownerDecisions.m1DevPersonas;
     c.fixtures.index.find((entry) => entry.id === "long-session").hash = "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674";
   });
   assert.equal(memoryModelCriteriaHash(afterSecond), third.previousHash);
-  assert.deepEqual(afterSecond.rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(afterSecond.rows, rowsBeforeSixth);
   // Amendment 2 (owner decision m1S3Deferred): removing the deferral rebuilds amendment 1's file.
   const afterFirst = edited((c) => {
-    c.amendments = c.amendments.slice(0, 1);
     unrenamed(c);
+    c.amendments = c.amendments.slice(0, 1);
     delete c.gates["M-1"].deferred;
     delete c.ownerDecisions.m1S3Deferred;
     delete c.ownerDecisions.m1DevPersonas;
     c.fixtures.index.find((entry) => entry.id === "long-session").hash = "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674";
   });
   assert.equal(memoryModelCriteriaHash(afterFirst), second.previousHash);
-  assert.deepEqual(afterFirst.rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(afterFirst.rows, rowsBeforeSixth);
   const before = edited((c) => {
-    delete c.amendments;
     unrenamed(c);
+    delete c.amendments;
     delete c.gates["M-1"].deferred;
     delete c.ownerDecisions.m1S3Deferred;
     delete c.ownerDecisions.m1DevPersonas;
@@ -378,7 +427,7 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
       }
   });
   assert.equal(memoryModelCriteriaHash(before), first.previousHash);
-  assert.deepEqual(before.rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(before.rows, rowsBeforeSixth);
   assert.throws(
     () =>
       verifyMemoryModelCriteria(
@@ -423,4 +472,101 @@ test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   assert.match(assertMemoryModelFixture("long-session-replay"), /^[0-9a-f]{64}$/);
   assert.match(assertMemoryModelFixture("re-plan"), /^[0-9a-f]{64}$/);
   assert.throws(() => assertMemoryModelFixture("recurring-failure"), /has no hash yet/);
+});
+
+test("amendment_6_removes_beam_and_longmemeval_from_every_row", () => {
+  const removed = new Set(QA_SUITES);
+  for (const [id, row] of Object.entries(MEMORY_MODEL_CRITERIA.rows))
+    assert.ok(!JSON.stringify(row).match(/beam-1m|longmemeval-m/), `${id} still names a removed suite`);
+  for (const [gate, entry] of Object.entries(MEMORY_MODEL_CRITERIA.gates))
+    if (gate !== "rule") assert.ok(!JSON.stringify(entry).match(/beam-1m|longmemeval-m/), `gate ${gate} names a removed suite`);
+  const sixth = MEMORY_MODEL_CRITERIA.amendments[5];
+  assert.deepEqual([sixth.plan, sixth.task, sixth.kind, sixth.decision], ["218.1", 1, "owner-decision", "qaSuitesRemoved"]);
+  // The re-scope keeps every threshold, test kind and comparator.
+  const before = edited(beforeSixth).rows;
+  for (const [id, row] of Object.entries(MEMORY_MODEL_CRITERIA.rows)) {
+    assert.deepEqual(row.tests, before[id].tests, `${id} tests`);
+    assert.deepEqual(row.arms.vs, before[id].arms.vs, `${id} comparators`);
+  }
+  assert.equal(MEMORY_MODEL_CRITERIA.rows.M5.scope.external[0], "compact-bench-retention");
+  assert.deepEqual(MEMORY_MODEL_CRITERIA.rows.R6.scope.suites, ["locomo"]);
+  for (const id of ["T1", "T2"]) assert.deepEqual(MEMORY_MODEL_CRITERIA.rows[id].scope.suites, ["locomo"]);
+  // The verifier refuses a removed suite, an unindexed external suite, an awaiting row without a decision,
+  // and an external hash without its upstream pins.
+  for (const suite of removed)
+    assert.throws(() => verifyMemoryModelCriteria(edited((c) => (c.rows.R6.scope.suites = [suite]))), /reads removed suite/);
+  assert.throws(() => verifyMemoryModelCriteria(edited((c) => (c.rows.M5.scope.external = ["nowhere"]))), /unindexed external suite/);
+  assert.throws(
+    () => verifyMemoryModelCriteria(edited((c) => (c.rows.R5.scope.awaitingSuite.decision = "none"))),
+    /without an owner decision/,
+  );
+  assert.throws(() => verifyMemoryModelCriteria(edited((c) => (c.amendments[5].decision = "none"))), /not recorded/);
+  assert.throws(
+    () => verifyMemoryModelCriteria(edited((c) => (c.fixtures.index.find((e) => e.id === "compact-bench-retention").codeRevision = null))),
+    /code revision, dataset revision and SHA256SUMS/,
+  );
+  const owner = repoJson("docs/_evidence/memory-bench/memory-model/benchmark-decision-2026-11-12.json");
+  assert.equal(owner.decision, "qaSuitesRemoved");
+  assert.deepEqual(Object.keys(owner.mapping).sort(), ["L4", "M5", "R5", "R6", "S3", "S4", "T1", "T2", "T7", "Z1"]);
+  for (const id of Object.keys(owner.mapping)) assert.ok(MEMORY_MODEL_CRITERIA.rows[id], id);
+});
+
+test("deferred_rows_read_missing_not_pass", () => {
+  const awaiting = Object.entries(MEMORY_MODEL_CRITERIA.rows)
+    .filter(([, row]) => row.scope.awaitingSuite)
+    .map(([id]) => id);
+  assert.deepEqual(awaiting, ["S3", "R5", "T7", "L4", "Z1"]);
+  const coverage = { "multi-session": 0.9 };
+  const perfect = {
+    S3: { tests: { "vs-om-before": ci(5) } },
+    R5: { tests: { "vs-p": ci(5) }, coverage },
+    T7: {
+      tests: { abilities: { metrics: { "multi-session": ci(5), temporal: ci(5), "event-ordering": ci(5), "knowledge-update": ci(5) } } },
+      coverage,
+    },
+    L4: { tests: { qa: ci(5) }, coverage },
+    Z1: { tests: { "cross-session": { metrics: { W1: ci(5), W2: ci(5), W3: ci(5), W4: ci(5), "multi-session-qa": ci(5) } } }, coverage },
+  };
+  for (const [id, evidence] of Object.entries(perfect)) {
+    const verdict = memoryModelVerdict(id, evidence);
+    assert.equal(verdict.status, "missing", `${id} never passes before its suite is adopted`);
+    assert.equal(verdict.tests.find((t) => t.id === "suite-adopted").pass, null);
+  }
+  // A miss is still a miss.
+  assert.equal(memoryModelVerdict("L4", { tests: { qa: ci(-9) }, coverage }).status, "miss");
+  // Gate A, which reads S3, R5, L4 and Z1, cannot pass while they wait.
+  const rows = Object.fromEntries(MEMORY_MODEL_CRITERIA.gates.A.rows.map((id) => [id, perfect[id] ?? {}]));
+  const verdict = memoryModelGateVerdict("A", { ...memoryModelManifestPin({ gate: "A" }), gate: "A", partition: "heldout-a", rows });
+  assert.notEqual(verdict.status, "pass");
+  for (const id of ["S3", "R5", "L4", "Z1"]) assert.equal(verdict.rows.find((row) => row.row === id).status, "missing");
+});
+
+test("closed_gate_m1_still_reads_its_own_hash", () => {
+  const closed = repoJson("docs/_evidence/memory-bench/217/gates/owner-gate-m1.json");
+  const record = repoJson(RECORD);
+  assert.equal(closedGateCriteriaHash(closed), "1a768299afae8790c1015ceacf33c199b94698e145f0d695a201ba2317fb64e1");
+  assert.notEqual(record.memoryModelCriteriaHash, closed.memoryModelCriteriaHash);
+  const hashes = memoryModelCriteriaHashes();
+  assert.equal(hashes.at(-1), frozenMemoryModelHash());
+  assert.equal(record.amendments.at(-2).previousHash, "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e");
+  assert.equal(record.amendments.at(-1).previousHash, record.amendments.at(-2).hash);
+  assert.equal(record.amendments.at(-1).hash, record.memoryModelCriteriaHash);
+  // Gate M-1's verdict under its closed hash is unchanged: S3 deferred to A, S1/S2/S4 decide it.
+  const verdict = memoryModelGateVerdict(
+    "M-1",
+    {
+      ...memoryModelManifestPin(),
+      memoryModelCriteriaHash: closed.memoryModelCriteriaHash,
+      gate: "M-1",
+      partition: "dev",
+      rows: {
+        S1: { tests: { "vs-om-before": ci(0.5) } },
+        S2: { tests: { "byte-equal": { value: 1 }, "other-tool-runs": { value: 0 } } },
+        S4: { tests: { "token-ratio": { value: 1.1 } } },
+      },
+    },
+    { partition: "dev", expected: closed.memoryModelCriteriaHash },
+  );
+  assert.equal(verdict.status, "pass");
+  assert.equal(verdict.rows.find((row) => row.row === "S3").status, "deferred");
 });

@@ -1,0 +1,115 @@
+{
+  "kind": "compact-bench-draw-v1",
+  "plan": "218.1",
+  "task": 2,
+  "seed": "prism-218.1-compact-bench",
+  "upstream": {
+    "code": "https://github.com/cai-jianfeng/compact-bench",
+    "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+    "data": "https://huggingface.co/datasets/caijanfeng/compact-bench",
+    "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b",
+    "sha256sums": "94a7c6975d773538ca7122313fa21015fdc13b82fadbc33afc9cfbd08bb620fc"
+  },
+  "retention": {
+    "suite": "compact-bench-retention",
+    "source": {
+      "file": "e2/sessions.jsonl",
+      "sha256": "5137e63af45513c1b8b7d40960735a8e545e887299ea422562443f58a97d4c09",
+      "sessions": 146
+    },
+    "draw": "largest-remainder share of 30 per client; inside a client, ascending SHA-256(\"prism-218.1-compact-bench:\" + sample_id); only sample_id and client are read",
+    "clients": {
+      "claude-code": 50,
+      "fake-claude-code": 1,
+      "fake-kimi-cli": 2,
+      "hertz": 1,
+      "kilocode": 2,
+      "kimi-code-cli": 73,
+      "opencode": 14,
+      "other": 3
+    },
+    "n": 30,
+    "strata": {
+      "claude-code": [
+        "yi-bc03e7147140af-18",
+        "yi-acf07db34e5b44-5",
+        "yi-f0e51db5adad49-13",
+        "yi-4f286447b13821-11",
+        "yi-fdfd5d7cfea54e-19",
+        "yi-f741e73e4952fa-20",
+        "yi-45d5c4044c5c34-7",
+        "yi-3c0a51fbf8f153-13",
+        "yi-10250d80aaa2e3-6",
+        "yi-176b7280c584a8-7"
+      ],
+      "fake-kimi-cli": [
+        "yi-815a09e57702b9-8"
+      ],
+      "kimi-code-cli": [
+        "yi-cid:037648d488-15",
+        "yi-cid:8268853942-8",
+        "yi-cid:bc7e2ed07c-7",
+        "yi-cid:60e15a99f3-5",
+        "yi-cid:f20620b306-8",
+        "yi-cid:831105efd0-6",
+        "yi-cid:0e8d7b584e-7",
+        "yi-cid:2a1631d3c3-11",
+        "yi-cid:fc9b273351-5",
+        "yi-cid:b68de122a3-9",
+        "yi-cid:5420afe3fb-6",
+        "yi-cid:7d26dba332-11",
+        "yi-cid:e8983a72b3-6",
+        "yi-cid:d9d427365c-5",
+        "yi-cid:8313307ede-14"
+      ],
+      "opencode": [
+        "yi-648218f10633b9-20",
+        "yi-f1917d616839a5-5",
+        "yi-37aed568ac6123-9"
+      ],
+      "other": [
+        "yi-cid:3ea34cbc33-21"
+      ]
+    },
+    "idsHash": "6bef39c301d07a24e5077efe17ce1893c7986e8cad722bae8363b73b1b3e7c68"
+  },
+  "outcome": {
+    "suite": "compact-bench-outcome",
+    "source": {
+      "file": "e1/prepass24.txt",
+      "sha256": "a9e3583a49d023c2d7be9806e8dbf0ae5e413c63e88058546f92ae728abe46e8",
+      "cohort": 24
+    },
+    "excluded": [
+      "pytest-dev__pytest-10051",
+      "pytest-dev__pytest-7236"
+    ],
+    "note": "upstream's historical PRE-pass cohort; the screen recomputes PRE in its own run and reports any instance whose PRE fails",
+    "n": 22,
+    "instances": [
+      "pallets__flask-5014",
+      "psf__requests-5414",
+      "pydata__xarray-3677",
+      "pydata__xarray-4629",
+      "pydata__xarray-6721",
+      "pylint-dev__pylint-6903",
+      "pytest-dev__pytest-10081",
+      "pytest-dev__pytest-5631",
+      "pytest-dev__pytest-5809",
+      "pytest-dev__pytest-6202",
+      "pytest-dev__pytest-7205",
+      "pytest-dev__pytest-7432",
+      "pytest-dev__pytest-7490",
+      "pytest-dev__pytest-7521",
+      "pytest-dev__pytest-7571",
+      "pytest-dev__pytest-7982",
+      "pytest-dev__pytest-8399",
+      "sphinx-doc__sphinx-9230",
+      "sphinx-doc__sphinx-9591",
+      "sympy__sympy-12481",
+      "sympy__sympy-13480",
+      "sympy__sympy-13551"
+    ],
+    "idsHash": "d7e89ad414e1b0cbc9c3e7200f7d8a8c57e820f9e2a6ac642035d1b97651c49e"
+  }
+}

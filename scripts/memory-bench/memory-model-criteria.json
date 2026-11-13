@@ -3,7 +3,7 @@
   "plan": 216,
   "task": 2,
   "frozen": "2026-11-08",
-  "hashRule": "sha256 over canonical JSON of this file, exposed by memoryModelCriteriaHash() in robustness.mjs and checked by verifyMemoryModelCriteria(); docs/_evidence/memory-bench/memory-model/criteria.json records the frozen hash, every memory-model gate manifest, evidence file and report pins it, and assertMemoryModelPin refuses drift. A change after freezing is an amendment (`amendments` with `previousHash`, the cleanup-criteria.json convention) that adds hashes or fitted values and changes no row.",
+  "hashRule": "sha256 over canonical JSON of this file, exposed by memoryModelCriteriaHash() in robustness.mjs and checked by verifyMemoryModelCriteria(); docs/_evidence/memory-bench/memory-model/criteria.json records the frozen hash, every memory-model gate manifest, evidence file and report pins it, and assertMemoryModelPin refuses drift. A change after freezing is an amendment (`amendments` with `previousHash`, the cleanup-criteria.json convention) that adds hashes or fitted values and changes no row; a row changes only by an owner decision recorded in `ownerDecisions` and named by its amendment (`kind` owner-decision, `decision`).",
   "ownerDecisions": {
     "memoryModel": {
       "date": "2026-11-08",
@@ -34,6 +34,11 @@
       "date": "2026-11-10",
       "decision": "gate M-1 defers row S3 (QA accuracy, non-inferior to OM-before) to gate A, which reads S3 on the held-out partition under the same row; M-1 is decided by S1, S2 and S4",
       "reason": "Owner, 2026-11-10: \"Let's do run 1-4 and go with option B\". Gate C-1's paired arms on these dev cohorts (40-50 questions) had 95% intervals of about +/-7 to +/-13 points, so S3's lower bound of -2 cannot be resolved at development size, and the full cohort costs about $110 and 5 days at the account's concurrency."
+    },
+    "qaSuitesRemoved": {
+      "date": "2026-11-12",
+      "decision": "beam-1m and longmemeval-m leave every row and gate. M5 reads the lean Compact-Bench screen (retention, WM vs STM-only, with the outcome screen beside it); S3 reads the screen's outcome arms once and its held-out reading waits for a new outcome set; S4 reads the long-session family plus the screen's retention sessions; R6 reads LoCoMo temporal only; T1 and T2 take Compact-Bench retention details as gold plus LoCoMo; R5, T7, L4 and Z1 wait for MemoryArena or STATE-Bench (scope.awaitingSuite) and read `missing` until one is adopted",
+      "reason": "Owner, 2026-11-12, after gate M-2's first sitting: the two suites measure question answering over imported chat logs, not keeping a coding agent's progress across compaction, and at about 1M tokens a question they cannot reach a deciding sample (M-1: 2 questions per cell; M-2: 4). Record: docs/_evidence/memory-bench/memory-model/benchmark-decision-2026-11-12.json; plan 218.1."
     }
   },
   "pins": {
@@ -92,7 +97,8 @@
     "full-r": "the plan 219 product: stm + wm + rehearsal + ltm; store snapshots kept for plan 219.1",
     "RT": "plan 219.1's retrieval at the stage under test (RT, RT-cues, RT-time, RT-context, RT-assoc, RT-modes, RT-meta)",
     "+procedural / +triggers / +priming / +all": "plan 220's add-one arms over RT (procedural memory, conditioned triggers, priming) and all three",
-    "no-sleep": "plan 221's `full` (plan 220's +all with a sleep every 3 sessions) without Sleep"
+    "no-sleep": "plan 221's `full` (plan 220's +all with a sleep every 3 sessions) without Sleep",
+    "PRE / claude-code-prompt / codex-prompt / anchor_index": "Compact-Bench references (plan 218.1): the continuation from the full history, the Claude Code and Codex compaction prompts run on the gate's summarizer, and upstream's regex reference; reported beside the arms, never a row's candidate"
   },
   "baselines": {
     "record": "docs/_evidence/memory-bench/memory-model/baselines.json",
@@ -123,7 +129,7 @@
     "A": { "plan": 223, "component": "Acceptance", "record": "docs/_evidence/memory-bench/223/gates/owner-gate-a.json", "rows": ["S1", "S3", "M1", "M5", "R2", "R5", "R6", "L1", "L2", "L3", "L4", "Z1"] },
     "rule": "Each gate starts only on the owner's word, recorded in the gate's record (gates.<gate>.record) before the first job. A miss is reported as a miss and goes to the owner with per-row evidence; one fix round on development partitions is allowed, with its own amended gate."
   },
-  "qaRows": ["S3", "M5", "R5", "R6", "T7", "L4", "Z1"],
+  "qaRows": ["R5", "R6", "T7", "L4", "Z1"],
   "evidenceCoverage": {
     "metric": "all-required evidence coverage per ability",
     "rule": "every QA row reports it beside accuracy for every ability; a QA row without it is `missing`, never a pass"
@@ -147,9 +153,10 @@
     },
     "S3": {
       "gate": "M-1", "component": "STM",
-      "metric": "QA accuracy", "unit": "points", "direction": "higher",
-      "arms": { "candidate": "STM", "vs": ["OM-before"] },
-      "scope": { "suites": ["beam-1m", "longmemeval-m"] },
+      "metric": "coding-task outcome after compaction: POST pass share (the repository's FAIL_TO_PASS tests) on Compact-Bench task preservation", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "STM-only", "vs": ["OM-before"] },
+      "scope": { "external": ["compact-bench-outcome"], "awaitingSuite": { "for": "gate A's held-out reading: a new held-out outcome set (the 22 validated tasks are read by the lean screen)", "decision": "qaSuitesRemoved" } },
+      "report": "the lean screen (plan 218.1 Task 3) reports its outcome arms once as S3's development reading; never a gate verdict",
       "tests": [{ "id": "vs-om-before", "vs": "OM-before", "kind": "nonInferior" }]
     },
     "S4": {
@@ -157,7 +164,7 @@
       "metric": "worker tokens per 10k eligible tokens, relative to OM-before",
       "unit": "ratio", "direction": "lower",
       "arms": { "candidate": "STM", "vs": ["OM-before"] },
-      "scope": { "suites": ["beam-1m", "longmemeval-m"], "live": ["long-session"] },
+      "scope": { "external": ["compact-bench-retention"], "live": ["long-session"] },
       "tests": [{ "id": "token-ratio", "vs": "OM-before", "kind": "atMostOrJustified", "value": 1.25 }]
     },
     "M1": {
@@ -193,9 +200,10 @@
     },
     "M5": {
       "gate": "M-2", "component": "WM",
-      "metric": "QA accuracy", "unit": "points", "direction": "higher",
+      "metric": "Compact-Bench recurring-detail retention (annotated details retained by literal string match, no model), paired per session", "unit": "points", "direction": "higher",
       "arms": { "candidate": "WM", "vs": ["STM-only"] },
-      "scope": { "suites": ["beam-1m", "longmemeval-m"] },
+      "scope": { "external": ["compact-bench-retention"] },
+      "report": "the outcome screen (compact-bench-outcome: POST pass counts, redo_reads, discordant pairs) is reported beside it; the ship rule is pre-registered in gate M-2's record (plan 218.1 Task 3)",
       "tests": [{ "id": "vs-stm-only", "vs": "STM-only", "kind": "nonInferior" }]
     },
     "R1": {
@@ -236,23 +244,23 @@
     },
     "R5": {
       "gate": "M-3", "component": "Rehearsal",
-      "metric": "multi-session QA accuracy (longmemeval-m multi-session ability)", "unit": "points", "direction": "higher",
+      "metric": "multi-session QA accuracy", "unit": "points", "direction": "higher",
       "arms": { "candidate": "full-r", "vs": ["P"] },
-      "scope": { "suites": ["longmemeval-m"], "abilities": ["multi-session"] },
+      "scope": { "awaitingSuite": { "for": "MemoryArena or STATE-Bench, when adopted", "decision": "qaSuitesRemoved" } },
       "tests": [{ "id": "vs-p", "vs": "P", "kind": "nonInferior" }]
     },
     "R6": {
       "gate": "M-3", "component": "Rehearsal",
       "metric": "QA accuracy on the temporal-reasoning ability strata", "unit": "points", "direction": "higher",
       "arms": { "candidate": "full-r", "vs": ["P"] },
-      "scope": { "suites": ["longmemeval-m", "beam-1m", "locomo"], "abilities": ["temporal-reasoning", "temporal_reasoning", "temporal"] },
+      "scope": { "suites": ["locomo"], "abilities": ["temporal"] },
       "tests": [{ "id": "vs-p", "vs": "P", "kind": "gain" }]
     },
     "T1": {
       "gate": "M-T", "component": "Retrieval",
       "metric": "all-required evidence coverage of the shown result, per ability (offline; question as query; fine gold)", "unit": "points", "direction": "higher",
       "arms": { "candidate": "RT", "vs": ["full-r", "P"] },
-      "scope": { "offline": ["exchange-ingest", "full-r-snapshots"], "suites": ["longmemeval-m", "beam-1m", "locomo"] },
+      "scope": { "offline": ["exchange-ingest", "full-r-snapshots"], "external": ["compact-bench-retention"], "suites": ["locomo"] },
       "tests": [
         { "id": "vs-full-r", "vs": "full-r", "kind": "pooledGainNoAbilityBelow", "points": 2 },
         { "id": "vs-p", "vs": "P", "kind": "pooledGainNoAbilityBelow", "points": 2 }
@@ -262,7 +270,7 @@
       "gate": "M-T", "component": "Retrieval",
       "metric": "candidate recall@32", "unit": "points", "direction": "higher",
       "arms": { "candidate": "RT", "vs": ["full-r", "P"] },
-      "scope": { "offline": ["exchange-ingest", "full-r-snapshots"], "suites": ["longmemeval-m", "beam-1m", "locomo"] },
+      "scope": { "offline": ["exchange-ingest", "full-r-snapshots"], "external": ["compact-bench-retention"], "suites": ["locomo"] },
       "tests": [
         { "id": "vs-full-r", "vs": "full-r", "kind": "nonInferior" },
         { "id": "vs-p", "vs": "P", "kind": "nonInferior" }
@@ -306,7 +314,7 @@
       "gate": "M-T", "component": "Retrieval",
       "metric": "QA accuracy per ability, with all-required evidence coverage; leave-one-out per stage", "unit": "points", "direction": "higher",
       "arms": { "candidate": "RT", "vs": ["full-r"] },
-      "scope": { "suites": ["longmemeval-m", "beam-1m", "locomo"] },
+      "scope": { "awaitingSuite": { "for": "MemoryArena or STATE-Bench, when adopted", "decision": "qaSuitesRemoved" } },
       "tests": [{ "id": "abilities", "vs": "full-r", "kind": "anyGainNoneRegress", "metrics": ["multi-session", "temporal", "event-ordering", "knowledge-update"], "noneRegressOver": "every ability reported" }]
     },
     "T8": {
@@ -352,14 +360,14 @@
       "gate": "M-4", "component": "Non-declarative",
       "metric": "QA accuracy", "unit": "points", "direction": "higher",
       "arms": { "candidate": "+all", "vs": ["RT"] },
-      "scope": { "suites": ["beam-1m", "longmemeval-m"] },
+      "scope": { "awaitingSuite": { "for": "MemoryArena or STATE-Bench, when adopted", "decision": "qaSuitesRemoved" } },
       "tests": [{ "id": "qa", "vs": "RT", "kind": "nonInferior" }]
     },
     "Z1": {
       "gate": "M-5", "component": "Sleep",
       "metric": "cross-session W1-W4 and multi-session QA over a multi-session lifecycle", "unit": "points", "direction": "higher",
       "arms": { "candidate": "full", "vs": ["no-sleep"] },
-      "scope": { "live": ["work-outcome", "recurring-failure", "multi-session-lifecycle"], "suites": ["longmemeval-m", "beam-1m"] },
+      "scope": { "live": ["work-outcome", "recurring-failure", "multi-session-lifecycle"], "awaitingSuite": { "for": "multi-session-qa: MemoryArena or STATE-Bench, when adopted", "decision": "qaSuitesRemoved" } },
       "tests": [{ "id": "cross-session", "vs": "no-sleep", "kind": "anyGainNoneRegress", "metrics": ["W1", "W2", "W3", "W4", "multi-session-qa"] }]
     },
     "Z2": {
@@ -442,7 +450,9 @@
       { "id": "non-english", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.non-english", "hash": null },
       { "id": "parity", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.parity", "hash": null },
       { "id": "abstention", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.abstention", "hash": null },
-      { "id": "full-r-snapshots", "kind": "offline", "plan": 219, "spec": "plan 219's full-r store snapshots, kept locally (bench cache), hashes in evidence", "hash": null }
+      { "id": "full-r-snapshots", "kind": "offline", "plan": 219, "spec": "plan 219's full-r store snapshots, kept locally (bench cache), hashes in evidence", "hash": null },
+      { "id": "compact-bench-retention", "kind": "external", "plan": "218.1", "spec": "Compact-Bench recurring-detail retention (Apache-2.0): 30 of the 146 sessions drawn label-blind (seed prism-218.1-compact-bench, stratified by client) and frozen", "upstream": { "code": "https://github.com/cai-jianfeng/compact-bench", "data": "https://huggingface.co/datasets/caijanfeng/compact-bench" }, "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5", "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b", "sha256sums": "94a7c6975d773538ca7122313fa21015fdc13b82fadbc33afc9cfbd08bb620fc", "hash": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af", "hashOf": "scripts/memory-bench/work-outcome-compact-bench.json" },
+      { "id": "compact-bench-outcome", "kind": "external", "plan": "218.1", "spec": "Compact-Bench task preservation: the 22 validated SWE-bench repairs (upstream's PRE-pass set minus the two excluded pytest instances), listed by id in the same frozen draw file", "upstream": { "code": "https://github.com/cai-jianfeng/compact-bench", "data": "https://huggingface.co/datasets/caijanfeng/compact-bench" }, "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5", "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b", "sha256sums": "94a7c6975d773538ca7122313fa21015fdc13b82fadbc33afc9cfbd08bb620fc", "hash": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af", "hashOf": "scripts/memory-bench/work-outcome-compact-bench.json" }
     ]
   },
   "gateRecord": {
@@ -490,6 +500,22 @@
       "plan": 218,
       "task": 5,
       "reason": "fixtures.rule: plan 218 extends long-session-replay (its extendedBy entry: the re-plan, protected items, a tight target, an attribution segment; index.json re-pinned, so its hash moves) and freezes the re-plan family's partition file (work-outcome-re-plan.json), both before gate M-2 reads them. Closed gate M-1 keeps the hash it ran on (closedGateCriteriaHash; owner-gate-m1.json records the owner's 2026-11-12 close). No row, threshold or partition rule changes."
+    },
+    {
+      "previousHash": "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e",
+      "date": "2026-11-12",
+      "plan": "218.1",
+      "task": 1,
+      "kind": "owner-decision",
+      "decision": "qaSuitesRemoved",
+      "reason": "ownerDecisions.qaSuitesRemoved: beam-1m and longmemeval-m leave every row and gate. Rows re-scoped: S3 (outcome after compaction, candidate STM-only; held-out reading awaits a new set), S4 (scope), M5 (Compact-Bench retention), R5/T7/L4/Z1 (awaitingSuite, read `missing`), R6 (LoCoMo temporal), T1/T2 (Compact-Bench retention gold plus LoCoMo); qaRows drops S3 and M5; the two Compact-Bench fixtures enter the index unhashed (plan 218.1 Task 2 pins revisions and hashes by amendment). Thresholds, test kinds, comparators, partitions and statistics are unchanged. Closed gate M-1 keeps 1a768299... (closedGateCriteriaHash)."
+    },
+    {
+      "previousHash": "6fb271e63287476faa15cc275cfea014539ee182468d98aa0b216d3638fafa2e",
+      "date": "2026-11-13",
+      "plan": "218.1",
+      "task": 2,
+      "reason": "fixtures.rule: the two Compact-Bench suites get their pins before gate M-2 reads them: upstream code 9dd9a3f5... (cai-jianfeng/compact-bench), dataset revision ff20521e... (caijanfeng/compact-bench) and its SHA256SUMS hash 94a7c697..., and the sha256 of the frozen draw file work-outcome-compact-bench.json (30 retention sessions drawn label-blind by client, the 22 validated outcome instances). Closed gate M-1 keeps 1a768299... (closedGateCriteriaHash). No row, threshold or partition rule changes."
     }
   ]
 }

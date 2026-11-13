@@ -1,7 +1,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { memoryModelGateVerdict } from "./robustness.mjs";
+import { memoryModelGateVerdict, memoryModelManifestPin } from "./robustness.mjs";
 import {
   assertM2Gate,
   assertM2OfflineRows,
@@ -243,8 +243,11 @@ test("m2_verdicts_computed_from_memory_model_criteria_only", () => {
   assert.deepEqual(stats, { compactions: 1, passes: 2, items: [2, 0], budgetUnmet: 1, ratios: [0.2] });
 });
 
-/** The evidence pins whatever the current criteria hash is; buildM2Evidence takes it from the manifest. */
+/**
+ * The evidence pins whatever the current criteria hash is. Plan 218.1 Task 1: the committed M-2 manifest is the paused
+ * sitting's (it pins amendment 5's hash) until plan 218.1 Task 3 rebuilds it, so the pin is computed, not read.
+ */
 function pinOf() {
-  const manifest = JSON.parse(readFileSync("docs/_evidence/memory-bench/memory-model/M-2/manifest.json", "utf8"));
-  return { memoryModelCriteriaHash: manifest.memoryModelCriteriaHash, criteriaHash: manifest.criteriaHash };
+  const { memoryModelCriteriaHash, criteriaHash } = memoryModelManifestPin();
+  return { memoryModelCriteriaHash, criteriaHash };
 }
