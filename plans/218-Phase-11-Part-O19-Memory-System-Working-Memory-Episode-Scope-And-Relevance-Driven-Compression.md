@@ -4,6 +4,8 @@
 
 > **Amended 2026-11-12 (owner, benchmark decision):** `beam-1m` and `longmemeval-m` leave every memory-model gate, and [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) replaces them with a lean external screen on Compact-Bench before Task 6 resumes (about $6–10, half a day of runs, OpenCode Go only; MiniMax M3.1 Flash continues after compaction). Gate M-2's M5 reads that screen (retention on 30 sessions, outcome on 22 repair tasks) instead of QA accuracy. Mentions of the two suites in executed tasks are the record of what ran.
 
+> **Amended 2026-11-13 (owner, memory evaluation; design §14):** Task 6 resumes after [plan 218.2](218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md), on the product that plan leaves, with two baseline arms, a family at the shipped triggers, a whole-run cost row and a default rule fixed before the run.
+
 ## Objectives
 
 - Add the **episode scope**: a natural-language statement of what the current body of work must achieve, including its later planned steps (for example a plan document). The host or user sets it; WM and Rehearsal read it; STM never does (design §5.3).
@@ -581,6 +583,17 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
       `bun test --timeout=0 scripts/memory-bench`: 552 pass, 2 fail, both recorded since Task 1: the feature ledger's 17 fabric-config problems, and the Task 5 fixture's `git archive` of the removed `packages/memory/fabric` path. The third, `om_before_runs_from_pinned_pre_216_revision`, now passes. Not run: the safety suite and the package suites, since no package code changed (whole-plan verification).
 
 - [ ] Task 6: Gate M-2 — live WM efficacy (paid), and plan end
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
+    - **Order.** Task 6 resumes after plan 218.2 Task 9 and plan 218.1 Task 3. The manifest is rebuilt on the new product hash, and every arm of the new product re-runs on it; reports from before plan 218.2 move to `runs/superseded-pre-218.2/`.
+    - **Baseline arms** (plan 218.2 Task 8), on the `re-plan` and `long-session` families beside `WM`, `STM-only` and `OM-before`: `memory-off`, `fold` (tool-result folding, no memory package) and `llm-summary` (one summary call per compaction). They are reported comparators. They change no row; M1's frozen row stays.
+    - **The shipped triggers.** The families above run `stm.triggerTokens: 1_000` on sessions of about 20K eligible tokens. The `long-horizon` family (plan 218.2 Task 8) runs `memory-off`, `fold`, `llm-summary`, `STM-only` and `WM` at the package defaults on sessions of at least 150,000 eligible tokens. It runs only after its `--estimate` is in the gate record and the owner approves the spend; if the owner declines, the report says the default configuration is unmeasured.
+    - **Whole-run cost.** Every arm reports whole-run tokens per successful task (main model and workers) beside the worker-token figures.
+    - **Default rule, written into the gate record and approved by the owner before the run:**
+      - WM with the model policy is the session default only if, on the `long-horizon` family, it beats `STM-only` on task success or on re-derivations per related task (interval lower bound above 0 on some model, and no model with an upper bound below 0);
+      - otherwise the deterministic WM policy is the default: the same memory, with no WM model call;
+      - if the `session` profile beats neither `fold` nor `llm-summary` on success or re-derivations, or matches them only at more whole-run tokens per successful task, the finding goes to the owner before plan 219 starts;
+      - every decision here is on development data and is confirmed or reversed at gate A (plan 223 Task 2).
+    - Tests added: `gate_m2_reports_baseline_arms_without_changing_a_row`; `gate_m2_default_rule_is_fixed_in_the_gate_record_before_the_run`; `long_horizon_job_refused_without_an_approved_estimate`.
   - Acceptance Criteria:
     - Functional: **Gate record.** `docs/_evidence/memory-bench/218/gates/owner-gate-m2.json` gives the budget, the models (C-1's paid roles unless the owner names others; never `openrouter/free`), the arms, partitions and caps. The run starts on the owner's word.
     - Functional: **Arms** (development partitions):

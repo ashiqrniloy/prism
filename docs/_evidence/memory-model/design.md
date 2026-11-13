@@ -4,6 +4,9 @@
 the memory layer be rebuilt along these lines. Plans 216–223, with 219.1 inserted for retrieval, implement it (§11). This document is the design record
 those plans cite. It is not a package page: each package README documents the contract as it lands.
 
+**Amended 2026-11-13** after an evaluation of the design and of the STM and WM evidence (§14). The amendment adds
+invariants I16 and I17, narrows I9, and inserts plan 218.2.
+
 **Supersedes:**
 
 - the "episodic memory" redesign of plan 210 Tasks 7.1–7.6 (2026-11-08). The name *episodic* now belongs to a
@@ -151,7 +154,8 @@ These are checked by tests in the plans that build each part.
   superseded. A semantic note is superseded on correction, with lineage.
 - **I9 — LTM writes earn trust.** Rehearsal and Sleep write `candidate` notes. They pass the existing write gates
   (trust scan, redaction, scope and consent rules, provenance stamp). Candidates are verified by use and never
-  injected passively before then.
+  injected passively before then, except through the bounded probation channel (amended 2026-11-13, §14 finding 5):
+  a few scope-relevant candidates, marked unverified, in the tail only.
 - **I10 — Learned non-declarative memory is escalate-only.** A learned trigger or sensitization can remind, suggest
   or require approval. It can never grant a permission, skip an approval or deny a tool on its own authority. Host
   policy bounds every response.
@@ -170,6 +174,12 @@ These are checked by tests in the plans that build each part.
 - **I15 — The association index is derived and disposable.** It holds note ids, analyzed entity terms, and edges from
   links, provenance and episode membership. It holds no concept, claim or schema, so the ontology stays in the wiki.
   Dropping it changes ranking only.
+- **I16 — A durable statement reaches Rehearsal whatever WM decided** (added 2026-11-13, §14 finding 1). STM marks a
+  user constraint or preference `durable` without seeing the scope. WM may remove it from the surface for the
+  episode; Rehearsal is still shown it, and decides against the project.
+- **I17 — A removed record is findable by a query** (added 2026-11-13, §14 finding 2). Recall searches the
+  descriptions of this session's STM and WM records, tombstones included. An id is not the only way back to a
+  record the surface no longer shows.
 
 ## 5. Components
 
@@ -625,6 +635,8 @@ a written justification.
 | 216 | Foundation: criteria pre-registered; the ontology extracted into the wiki; one memory package (moves); partial-use components; working kind and episode view retired |
 | 217 | STM |
 | 218 | Episode scope and WM |
+| 218.1 | The lean external screen that replaces the two QA suites (owner, 2026-11-12) |
+| 218.2 | Session-tier hardening for small workers, and the baseline arms (§14; inserted 2026-11-13) |
 | 219 | Rehearsal, stored episodic and semantic LTM writes (with retrieval cues), one recall surface, reconsolidation |
 | 219.1 | Retrieval: one analyzer and scorer across stores, bounded activation, query cues, association index, recall modes, metamemory (§5.11) |
 | 220 | Procedural memory, skill graduation, conditioned responses, priming, sensitization |
@@ -684,6 +696,10 @@ lexical (§5.11).
 
 **Decided in plan 216 Task 1 (owner, 2026-11-08):** `@arnilo/prism-memory-system` (`packages/memory/system`), `@arnilo/prism-wiki` (`packages/knowledge/wiki`), and RAG renamed `@arnilo/prism-rag`.
 
+**Owner, 2026-11-13: the memory evaluation.** After an evaluation of plans 219 and later and of the STM and WM
+evidence: "all the 8 points … I want to cover. Add them as amendments in existing plans and if required create new
+tasks and plans." §14 records the findings and where each is handled.
+
 ## 13. References
 
 **Cognitive science**
@@ -696,6 +712,7 @@ lexical (§5.11).
 - Squire (2004), the declarative and non-declarative taxonomy (procedural, priming, classical conditioning,
   non-associative learning).
 - Craik & Lockhart (1972), levels of processing (maintenance vs elaborative rehearsal).
+- Craik & Watkins (1973), maintenance rehearsal does not by itself transfer items into long-term memory.
 - McClelland, McNaughton & O'Reilly (1995), complementary learning systems.
 - Bjork & Bjork (1992), storage and retrieval strength, already in `fabric/src/lifecycle/strength.ts`.
 - Nader et al. (2000), reconsolidation.
@@ -730,3 +747,36 @@ lexical (§5.11).
 - Mem-α, RL-trained memory construction over core, episodic and semantic memory (arXiv 2509.25911).
 - ACE, Agentic Context Engineering, on context collapse and brevity bias in iterative rewriting.
 - CoALA, cognitive architectures for language agents.
+- Lindenbauer et al., *The Complexity Trap* (2025): observation masking against LLM summarisation for coding agents.
+
+## 14. Amendment, 2026-11-13: the memory evaluation
+
+The design and the gate M-1 and M-2 evidence were reviewed against the research literature and for how the design
+holds up when the memory worker is a small model. Eight findings were accepted by the owner. The design keeps its
+shape; what changes is one ordering flaw, one reachability gap, how much is asked of a small worker, and what the
+gates compare against.
+
+| # | Finding | Change | Plan |
+|---|---|---|---|
+| 1 | A goal-directed filter sits in front of the only door into LTM: WM discards a record as out of scope for the episode, and Rehearsal saw WM items only. A preference stated off-topic never reached a judgment against the project | STM marks user constraints and preferences `durable`, scope-blind. Rehearsal is shown the durable records WM discarded, and decides each (I16) | 218.2 Task 2; 219 Task 2 |
+| 2 | A discard was unreachable in practice: recall was by id, and a tombstone is not rendered | Query recall over the session tiers, tombstones included; one line in the memory block names the discarded count (I17) | 218.2 Task 7; 219 Task 4 |
+| 3 | WM asks a small worker the hardest question (what later steps will need, against a scope of up to 32 KB) in a format of one call and one 12-character id per record | One `judge` call over ordinals; records code already protects are settled before the model is asked; a scope digest for long scopes. Each ships only if a replay of the workers shows a gain | 218.2 Tasks 5, 6 |
+| 4 | Protections and salience were coarser than they read: task-state protection meant "same batch", user constraints were unprotected, any later success resolved every error, and English patterns read "fixed the failing test" as a failure | STM records `status`, `corrects`, `durable` and `resolves`; protections follow those links | 218.2 Tasks 2, 3 |
+| 5 | Trust by use could not start: candidates were never delivered, verification needed two cited uses, and the predecessor measured 0 | A bounded probation channel in the tail; use counted from Rehearsal's judgment of overlapping passed outcomes, without a citation (I9 narrowed) | 219 Task 5; 220 Task 2; 221 Task 4 |
+| 6 | Evidence coverage depended on the worker predicting what would matter | Chunks by rule for errors, failed checks and durable statements, inside the existing chunk budget | 218.2 Task 4 |
+| 7 | The gates lacked the cheap baselines the literature finds strong, ran at lowered triggers on short sessions, and counted worker tokens only | `fold` and `llm-summary` arms from two shipped packages; a `long-horizon` family at the shipped triggers; whole-run tokens per successful task; default rules fixed before each run | 218.2 Task 8; 218 Task 6; 218.1 Task 3; 223 Tasks 2, 3 |
+| 8 | Plans 220 and 221 add eight mechanisms on a trust loop not yet shown to turn, each needing a live gate at sample sizes that could not separate WM from STM-only | Conditioned responses, sensitization, exemplar priming and Sleep's trigger job are built only if R1 passes at gate M-3; otherwise they move past 0.13.0 | 219 Task 7; 220 Tasks 4–8; 221 Task 5 |
+
+**Also recorded:**
+
+- **Worker models are tiered by stakes.** STM runs on every batch and is extraction, which a small model does under a
+  tight schema. Rehearsal and Sleep run rarely and write what persists. Each has its own model setting, and gate M-3
+  measures a tiered arm (plan 219 Task 7).
+- **What the evidence supported on 2026-11-13.** Memory against none: task success 0.5–0.69 → 1.0 (gate M-1). The new
+  STM against the old observer: cheaper (0.29–0.61× the worker tokens); continuity unresolved on the large model and
+  worse on the small one (S1, MiMo −0.34 [−0.69, −0.06]). WM against STM-only: unresolved on 8 tasks. After the
+  thinking-level fix of gate M-2, Muse ended 0 of 21 WM calls at the output cap, so finding 3's format change has to
+  win on measurement.
+- **Order.** 218.1 Task 3 Step 1 (the probe) → 218.2 → 218.1 Task 3 re-probe and Step 2 → 218 Task 6 → 219 → 219.1 →
+  220 → 221 → 222 → 223.
+

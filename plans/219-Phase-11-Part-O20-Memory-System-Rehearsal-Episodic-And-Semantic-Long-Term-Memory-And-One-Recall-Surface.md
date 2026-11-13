@@ -4,6 +4,8 @@
 
 > **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. Plan 218.1 runs a lean external screen on Compact-Bench for the session tiers. MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep) are the chosen replacements below, but their adoption is **deferred** (owner, 2026-11-12: cost and time); their rows read `missing` until an adoption task runs before this plan's gate. Plan 218.1 Task 1 re-scopes the criteria rows to match. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
 
+> **Amended 2026-11-13 (owner, memory evaluation; design §14):** four changes. Rehearsal also reads the durable records WM discarded, so a goal-directed filter no longer sits alone in front of the only door into LTM (Task 2). Query recall reaches this session's records, tombstones included (Task 4). Candidates get a bounded probation channel and use is counted without a citation, so trust by use can start (Task 5). Gate M-3 gains leave-one-out and tiered-model arms and decides how much of plans 220–221 is built (Task 7). [plan 218.2](218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md) lands the STM fields and the session query these rely on.
+
 ## Objectives
 
 - Turn today's dropper into **Rehearsal**, the only door into long-term memory (design §5.5):
@@ -98,6 +100,14 @@ No version bump and no publish.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 2: The Rehearsal pass
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
+    - **Why.** WM discards a record as `out-of-scope` for the episode, and this task's input was WM items only. A preference or constraint the user states off the current topic was therefore dropped before anything judged it against the project (design I16).
+    - **Input gains the discarded durable records.** STM records WM tombstoned since the last Rehearsal that carry `durable` (plan 218.2 Task 2), or are a `decision` or `outcome` discarded as `out-of-scope`. They are index lines only (id, kind, time, description, discard reason), newest first, up to `rehearsal.discardedTokens` (default 4,000). Rehearsal may cite them in `write_note` and `write_episode`. It does not bring them back into WM.
+    - **Their chunks wait for the judgment.** When WM discards a `durable` record, its chunks gain a `rehearsal-pending` referrer in the same chunk transaction, removed after the next Rehearsal pass, so a note can cite the user's exact words. The cap above bounds what is held.
+    - **An explicit decision at episode end.** Each `durable` user record is either written, or skipped with `skip { stmId, reason: "ephemeral" | "duplicate" | "already-known" }`. A record left undecided is counted (`durable_undecided`) in the pass report; it does not fail the pass.
+    - **Verdict format.** `retain` and `release` use the format plan 218.2 Task 5 selected (one call over ordinals if `judge` won). Writes stay one call each.
+    - **Worker model.** `rehearsal.model` is its own setting, apart from `stm.model` and `wm.model`. The README states the sizing trade-off: Rehearsal runs once per episode and writes what persists, so it is the worker where a stronger model costs least and matters most.
+    - Tests added: `off_topic_preference_discarded_by_wm_reaches_rehearsal_and_is_written`; `discarded_records_input_is_index_only_and_capped`; `durable_record_chunk_survives_until_rehearsal_judges_it`; `durable_record_gets_written_or_skipped_or_is_counted_undecided`.
   - Acceptance Criteria:
     - Functional: **Triggers:**
       1. `memory:episode:end`, or `memory.system.endEpisode(session)`: one pass judged against the project, then `memory.session.episode.ended` is recorded, and a new scope may start the next episode;
@@ -246,6 +256,14 @@ No version bump and no publish.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 4: One recall surface — `memory.recall` across tiers
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria replace "Query recall searches LTM only" below:
+    - **Why.** Session ids are reachable only from the rendered surface, and a record WM discarded is no longer rendered, so the agent had no way to ask for it (design I17).
+    - **The session query moves here.** Plan 218.2 Task 7 adds `query` to the session `recall` tool. When this task retires that tool, `memory.recall { query }` keeps the path:
+      - with the session tiers on, the result shows the LTM hits, then a separate "this session" section of at most 3 matching STM or WM lines, tombstones included, each with its state;
+      - `tier: "session"` searches the session tiers only, and is the only query path under an `ltm: false` profile;
+      - session lines never enter LTM ranking, fusion or confidence.
+    - The memory block's line naming the discarded count (plan 218.2 Task 7) points at `memory.recall`.
+    - Test renamed: `query_recall_never_ranks_session_tier_items` becomes `session_matches_show_in_their_own_section_and_never_in_ltm_ranking`. Test added: `tier_session_query_finds_a_tombstoned_record_under_ltm_false`.
   - Acceptance Criteria:
     - Functional: **Session ids.**
       - `memory.recall { ids: [...] }` resolves STM ids, WM ids and tombstones (with their reason) and returns chunk text verbatim. `chunk dropped: <reason>` appears when the backing is gone.
@@ -296,6 +314,18 @@ No version bump and no publish.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 5: Reconsolidation and verification by use
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below, and amend I9:
+    - **Why.** A candidate is never delivered passively, and it is verified only by `[id]` citations in two sessions. Promotion under the same rule measured a use-verified share of 0 (plan 202 Task 16). Procedures, skill proposals and Sleep's writes all wait on that loop.
+    - **Probation channel** (`ltm.delivery.probation`, default on; `false` turns it off):
+      - at episode start, at most `maxNotes` (2) candidates whose relevance to the scope clears the recall confidence floor are delivered once per session in the tail, inside the untrusted envelope, marked `unverified`, within `budgetTokens` (200);
+      - only candidates written by Rehearsal or Sleep in the same project or user scope, past the trust scan, not flagged and not quarantined;
+      - never in the cached prefix, the standing rules or the scope pre-activation block, which stay verified-only;
+      - I9 now reads: a candidate is delivered passively only through this channel.
+    - **Use without a citation.** For each note delivered or recalled in the episode, the package lists the `status: "passed"` outcomes that share its cue entities (paths, symbols, commands). Rehearsal's `strengthen` on such a note counts as that session's use even when the agent wrote no `[id]`. Code proposes the pairing; Rehearsal decides.
+    - **Harm ends probation.** A probation note followed by a user correction (`corrects`) or a failed outcome on the same entities is offered to Rehearsal for `flag`; a flagged candidate leaves the channel.
+    - **Measurement.** R1 is reported by channel (recalled, probation). Gate M-3 runs the leave-one-out `full-r-noprobation`. The safety suite (R4) runs with probation on, with a seeded poisoned candidate that must never be delivered.
+    - **Cost.** At most 200 tail tokens per episode start and one bounded query; stated in the README with the setting that avoids it.
+    - Tests added: `probation_delivers_at_most_two_marked_candidates_in_the_tail_only`; `flagged_or_untrusted_candidate_never_enters_probation`; `strengthen_after_overlapping_passed_outcome_counts_as_use_without_citation`; `correction_after_probation_note_offers_flag_and_ends_probation`; `prefix_blocks_stay_verified_only`.
   - Acceptance Criteria:
     - Functional: **`recalled` events.** When the agent cites (`[id]`) an LTM note that was delivered or recalled in this session, STM records a `recalled` event citing the note id. The citation tracker already detects the citation; no model call is needed.
     - Functional: **Rehearsal acts on recalled notes.** Its input includes the recalled notes, with the episode evidence around each use. For each it may:
@@ -392,6 +422,18 @@ No version bump and no publish.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 7: Gate M-3 — live Rehearsal efficacy, the F4 diagnosis, the fact-extraction disposition (paid), and plan end
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
+    - **Arms added**, on the multi-session lifecycle and the work-outcome families only (not the external suite), to bound cost:
+      - `full-r-nodurable`: Rehearsal without the discarded durable records (Task 2);
+      - `full-r-noprobation`: no probation channel (Task 5);
+      - `full-r-tiered`: STM and WM on the small worker, Rehearsal on a stronger model the owner names in the gate record. It is reported, and it decides the README's worker-model guidance in plan 223 Task 3;
+      - `fold` (plan 218.2 Task 8) on the work-outcome families.
+    - **The simple baseline is named.** `session` (LTM written only by the agent) is the agent-managed-memory baseline. `full-r` must beat it on R2; a tie goes to the owner as a finding against Rehearsal's cost.
+    - **Whole-run tokens per successful task** are reported per arm.
+    - **Checkpoint for plans 220 and 221** (finding 8), recorded in `owner-gate-m3.json` with R1's value:
+      - R1 passes: plans 220 and 221 run as written;
+      - R1 misses or is `missing`: plan 220 Tasks 4 and 6, Task 5's exemplar priming and plan 221 Task 5's trigger job are deferred as those plans' amendments describe. The mechanisms that feed on verified notes are not built on a trust loop that does not turn.
+    - Tests added: `gate_m3_leave_one_out_arms_paired_on_identical_items`; `gate_m3_records_the_r1_checkpoint_for_plans_220_and_221`.
   - Acceptance Criteria:
     - Functional: **Gate record.** `docs/_evidence/memory-bench/219/gates/owner-gate-m3.json` gives the budget, the models (C-1's paid roles unless the owner names others; never `openrouter/free`), the arms, partitions and caps. The run starts on the owner's word.
     - Functional: **Arms** (development partitions):

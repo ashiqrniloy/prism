@@ -4,6 +4,8 @@
 
 > **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. Plan 218.1 runs a lean external screen on Compact-Bench for the session tiers. MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep) are the chosen replacements below, but their adoption is **deferred** (owner, 2026-11-12: cost and time); their rows read `missing` until an adoption task runs before this plan's gate. Plan 218.1 Task 1 re-scopes the criteria rows to match. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
 
+> **Amended 2026-11-13 (owner, memory evaluation; design §14):** procedural memory, skill graduation and scope pre-activation are built first. Conditioned responses (Task 4), sensitization (Task 6) and exemplar priming (part of Task 5) are built only if R1 passed at gate M-3 (plan 219 Task 7's checkpoint): each feeds on verified notes, and each needs its own live gate at sample sizes that could not separate WM from STM-only. If R1 did not pass, they move to the post-0.13.0 memory track.
+
 ## Objectives
 
 - Add the non-declarative half of LTM (design §5.6.2). This is memory that changes the agent's behaviour without the agent asking for it:
@@ -71,6 +73,9 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 2: Procedural memory
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); this criterion adds to the ones below:
+    - **A candidate procedure can be used.** Delivery by cue stays verified-only, which left a new procedure reachable only by an explicit typed recall. A candidate procedure whose `when` matches the context is shown once per session as a pointer line (`[id] unverified procedure: <title> — memory.read id`), never its body, inside plan 219 Task 5's probation budget. A read followed by a `status: "passed"` outcome counts as a use and increments `successes`.
+    - Test added: `matching_candidate_procedure_is_offered_as_a_pointer_and_a_read_then_pass_counts_as_use`.
   - Acceptance Criteria:
     - Functional: **Shape.** `kind: "procedure"` gains `when` (context: a task type, path globs, a tool, or a scope phrase), `steps` (1–12 lines), `preconditions?`, `evidence` (1–8 note or episode ids, as for lessons), `successes`, `failures` and `lastUsedAt`. The text form stays valid. An older procedure note reads unchanged.
     - Functional: **Writers:**
@@ -174,6 +179,10 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 4: Conditioned responses — escalate-only triggers with acquisition and extinction
+  - Amended 2026-11-13 (owner, memory evaluation; design §14): **conditional on R1.**
+    - This task starts only if `owner-gate-m3.json` records R1 as `pass`.
+    - Otherwise it is not built in this plan. The executor marks it `Deferred by the 2026-11-13 amendment (R1 <value>)`, writes a P2 backlog entry for the post-0.13.0 memory track, and records the criteria amendment that lists row L2 as `deferred` under an owner decision (`l2Deferred`, the `m1S3Deferred` convention), so gates M-4 and A do not read an unbuilt mechanism as a miss.
+    - Until then, a user's "whenever X, do Y" keeps reaching the agent as a standing rule through rule capture, as today.
   - Acceptance Criteria:
     - Functional: **Shape.** `kind: "trigger"`: `{ cue: { on: "tool.call" | "tool.result" | "user-turn" | "path", match }, response: "remind" | "suggest" | "require-approval", text, strength, pairings, misses, evidence, origin }`. The `match` forms are:
       - a tool name plus an argument pattern (literal or bounded glob, never an arbitrary regex);
@@ -242,6 +251,9 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 5: Priming — scope pre-activation, exemplar priming, and one delivery config
+  - Amended 2026-11-13 (owner, memory evaluation; design §14):
+    - Scope pre-activation and the one delivery config are built as written. The pre-activation block stays verified-only; candidates reach the agent only through plan 219 Task 5's probation channel in the tail.
+    - **Exemplar priming is conditional on R1**, as Task 4 is. If R1 did not pass, `priming.exemplar` is not built and goes to the same backlog entry.
   - Acceptance Criteria:
     - Functional: **One config.** `ltm.delivery.priming` gathers the existing priming mechanisms under one documented section, with their fields moved (no alias): directory, standing rules, path cues and the passive tail. The recency prior R stays a term of plan 219.1's activation (`ltm.retrieval.terms.retrieval`). `ltm.delivery.priming: false` turns all the delivery mechanisms off and sets the `priming` activation term to 0.
     - Functional: **Priming as activation.** Notes in the scope pre-activation block, and the exemplar episode, get plan 219.1's `priming` activation term for the epoch. Query recall therefore favours what the episode primed, inside the band (I13), with no extra query.
@@ -295,6 +307,7 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 6: Sensitization — temporary caution after a severe failure
+  - Amended 2026-11-13 (owner, memory evaluation; design §14): **conditional on R1 and on Task 4**, since its response raises the level of Task 4's triggers. If Task 4 is deferred, this task is deferred with it, in the same backlog entry.
   - Acceptance Criteria:
     - Functional: **Severe failures**, from STM events and kernel events with no model call:
       - an approval denial (`decision.resolved` deny);
@@ -336,6 +349,7 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 7: Offline probes and live families for non-declarative memory
+  - Amended 2026-11-13 (owner, memory evaluation; design §14): the probes, the `recurring-failure` family and the fixture extensions for triggers, sensitization and exemplar priming are built only if Tasks 4 and 6 were. The procedural probes and the W1 and W4 families do not depend on them.
   - Acceptance Criteria:
     - Functional: **Probes** (`mechanism-probes/non-declarative.mjs`) on the multi-session fixture extended with repeated failures, a "whenever" statement, a severe failure and repeated successful procedures:
       1. procedures are cued once on a match, and outcomes update their counts;
@@ -381,6 +395,9 @@ Plan 210's transferred rows `kind.procedure` and `retrieval.decay-per-kind` are 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 8: Gate M-4 — live non-declarative efficacy (paid), and plan end
+  - Amended 2026-11-13 (owner, memory evaluation; design §14):
+    - The arms for deferred mechanisms are dropped from the gate record. L1 and L3 are measured; L2 reads `deferred` if Task 4 was deferred; L4 is unchanged.
+    - `fold` (plan 218.2 Task 8) runs on the work-outcome families as the cheap baseline, and every arm reports whole-run tokens per successful task.
   - Acceptance Criteria:
     - Functional: **Gate record.** `docs/_evidence/memory-bench/220/gates/owner-gate-m4.json` gives the budget, the models (C-1's paid roles unless the owner names others; never `openrouter/free`), the arms, partitions and caps. The run starts on the owner's word.
     - Functional: **Arms** (development partitions), each with plan 219.1's `RT` (plan 219's `full-r` plus the retrieval changes) as the base:

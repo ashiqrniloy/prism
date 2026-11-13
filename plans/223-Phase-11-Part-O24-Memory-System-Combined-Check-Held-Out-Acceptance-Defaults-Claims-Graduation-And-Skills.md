@@ -4,6 +4,8 @@
 
 > **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. Plan 218.1 runs a lean external screen on Compact-Bench for the session tiers. MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep) are the chosen replacements below, but their adoption is **deferred** (owner, 2026-11-12: cost and time); their rows read `missing` until an adoption task runs before this plan's gate. Plan 218.1 Task 1 re-scopes the criteria rows to match. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
 
+> **Amended 2026-11-13 (owner, memory evaluation; design §14):** gate A reads the cheap baseline arms once with everything else, defaults and claims follow rules fixed before the read, and a mechanism deferred by the R1 checkpoint is listed as not shipped. [plan 218.2](218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md) builds the arms.
+
 ## Objectives
 
 - Accept the rebuilt memory system and the wiki **once**, on held-out partitions, and set what ships from the verdicts. This is the work plan 210 Tasks 8 (the freeze), 9, 10 and 11 carried until 2026-11-08, re-pointed at the final product.
@@ -26,6 +28,8 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
 ## Tasks
 
 - [ ] Task 1: Combined development check and product freeze (from plan 210 Task 8, dropped there 2026-11-08)
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); this criterion adds to the ones below:
+    - The bisection also covers plan 218.2's product changes (the STM fields, content protections, automatic chunks, the WM verdict format, the session query) and plan 219 Task 5's probation channel, each as one step.
   - Acceptance Criteria:
     - Functional: **Offline suites pass on the full product (`stm` + `wm` + `rehearsal` + `ltm` + `sleep`, with the wiki):**
       - the memory suites and the wiki suites;
@@ -80,6 +84,11 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 2: The one held-out acceptance (gate A, paid; from plan 210 Task 9, re-pointed)
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
+    - **Baseline arms in the one read.** The held-out families are also run on `memory-off`, `fold` and `llm-summary` for the session-tier rows, and on `session` (LTM written only by the agent) for the Rehearsal rows. They are part of the single read of `heldout-a`; no partition is read twice for them.
+    - **The shipped triggers.** The held-out `long-horizon` sessions run at the package defaults. A row measured only at lowered triggers is reported as such and backs no default.
+    - **Whole-run tokens per successful task** are reported per arm beside every row.
+    - Rows deferred by the R1 checkpoint (plan 219 Task 7; plan 220's `l2Deferred`) read `deferred`, not `missing`.
   - Acceptance Criteria:
     - Functional: **The candidate** is Task 1's frozen product. The arms are:
 
@@ -151,6 +160,11 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 3: Preset revision, defaults and claims (from plan 210 Task 10, re-pointed)
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
+    - **WM default.** It follows gate M-2's rule (plan 218 Task 6) as the held-out read confirms or reverses it: the model policy, or the deterministic policy.
+    - **No claim against a cheaper baseline without the interval.** The README says the session tiers beat `fold` or `llm-summary` only where the held-out interval supports it. Where it does not, the README states the measured parity and the whole-run cost of each, and the profile that avoids the cost.
+    - **Worker-model guidance** comes from the `full-r-tiered` arm and plan 219.1 Task 2's cue-quality reading: which workers may run on a small model, and which should not.
+    - **Deferred mechanisms** (conditioned responses, sensitization, exemplar priming, Sleep's trigger job, when the checkpoint deferred them) are listed as not shipped in 0.13.0, with their backlog entry.
   - Acceptance Criteria:
     - Functional: **Preset revision (plan 202 rules, carried).**
       - If gate A passes **better-than-full-context** or **robust**, `CONVERSATIONAL_PRESET_REVISION` becomes 2, and `conversational` resolves to the accepted candidate.

@@ -4,6 +4,8 @@
 
 > **Amended 2026-11-12 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md)):** `beam-1m` and `longmemeval-m` leave every memory-model gate. They are QA over imported chat logs, not this product's work, and at about 1M tokens a question they cannot reach a deciding sample. Plan 218.1 runs a lean external screen on Compact-Bench for the session tiers. MemoryArena (declarative LTM across sessions) and STATE-Bench's Agent Learning Track (procedural learning and Sleep) are the chosen replacements below, but their adoption is **deferred** (owner, 2026-11-12: cost and time); their rows read `missing` until an adoption task runs before this plan's gate. Plan 218.1 Task 1 re-scopes the criteria rows to match. `locomo` and `memoryagentbench-cr` stay until the owner decides on them.
 
+> **Amended 2026-11-13 (owner, memory evaluation; design §14):** Sleep's trigger job is built only if plan 220 built triggers (Task 5). Sleep's writes enter the probation channel of plan 219 Task 5, so they can earn trust (Task 4). `sleep.model` is its own setting.
+
 ## Objectives
 
 - Add **Sleep**, the offline consolidation pass (design §5.7).
@@ -76,6 +78,8 @@ The ontology's curator pass is **not** a Sleep job: the ontology belongs to the 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 2: The Sleep runner, and the forgetting job (`memory:maintain` folded in)
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); this criterion adds to the ones below:
+    - `sleep.model` is its own setting, apart from the session workers'. Sleep runs offline and writes what persists, so the README gives it the same sizing note as Rehearsal (plan 219 Task 2). If plan 219 Task 7 kept the `full-r-tiered` arm, gate M-5 runs Sleep on that arm's stronger model as well and reports both.
   - Acceptance Criteria:
     - Functional: **Entry points.**
       - `memory:sleep { scopes?, jobs?, maxModelCalls?, maxMillis? }` and `memory.system.sleep(options)`.
@@ -184,6 +188,8 @@ The ontology's curator pass is **not** a Sleep job: the ontology belongs to the 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 4: The semanticization job — episodes to semantic knowledge
+  - Amended 2026-11-13 (owner, memory evaluation; design §14); this criterion adds to the ones below:
+    - Sleep's candidates are eligible for plan 219 Task 5's probation channel under the same limits and trust rules as Rehearsal's. Without it, a semanticized fact could only be verified by an explicit recall that nothing prompts. Z2 reports the use-verified share of Sleep's writes by channel.
   - Acceptance Criteria:
     - Functional: **Selection.** Episodes and facts written since the cursor are clustered lexically, by shared files, keywords and subject keys. A cluster where the same claim recurs across ≥ `sleep.semanticize.minEpisodes` (3) episodes in ≥ 2 sessions is a candidate.
     - Functional: **Write.**
@@ -227,6 +233,9 @@ The ontology's curator pass is **not** a Sleep job: the ontology belongs to the 
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 5: Procedure extraction, trigger acquisition and extinction, and skill proposals
+  - Amended 2026-11-13 (owner, memory evaluation; design §14):
+    - Procedure extraction and skill proposals are built as written.
+    - **The trigger acquisition and extinction job is conditional**: it is built only if plan 220 Task 4 was. If that task was deferred, this part is deferred with it in the same backlog entry, and Task 6's probes and Task 7's arms drop the trigger cases.
   - Acceptance Criteria:
     - Functional: **Procedures.**
       - Successful episodes (`outcome: done`) sharing a task type or file area, ≥ `sleep.procedures.minEpisodes` (3), are clustered.
