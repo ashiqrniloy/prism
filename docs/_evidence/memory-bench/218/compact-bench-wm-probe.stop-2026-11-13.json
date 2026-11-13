@@ -1,0 +1,185 @@
+{
+  "kind": "compact-bench-wm-probe-v1",
+  "plan": "218.1",
+  "task": 3,
+  "step": 1,
+  "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+  "rule": {
+    "suite": "compact-bench-retention",
+    "sessions": 30,
+    "arm": "WM",
+    "armConfig": "gate M-2's armMemory WM arm (stm.triggerTokens 1,000; WM defaults: triggerTokens 10,000, batchTokens 3,000); no trigger changed for the probe",
+    "worker": "opencode-go/muse-spark-1.3-contributor",
+    "engagement": "a session engages WM when it records at least one WM pass that writes at least one item",
+    "threshold": 15,
+    "branches": {
+      "A": "engaged >= 15: Step 2 runs the four-arm retention screen (memory-off, OM-before, STM-only, WM, plus references)",
+      "B": "engaged < 15: Step 2 runs the reduced STM screen (memory-off, OM-before, session, plus references); M5 stays missing; the owner decides the WM default"
+    },
+    "stop": "the input-token ceiling is hit or the worker fails on more than 3 sessions: no branch, the finding goes to the owner",
+    "maxInputTokens": 8000000,
+    "maxFailedSessions": 3,
+    "scoring": "none: S is discarded unread and never scored"
+  },
+  "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+  "draw": {
+    "file": "scripts/memory-bench/work-outcome-compact-bench.json",
+    "sha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
+    "retentionIdsHash": "6bef39c301d07a24e5077efe17ce1893c7986e8cad722bae8363b73b1b3e7c68"
+  },
+  "upstream": {
+    "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+    "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b"
+  },
+  "startedAt": "2026-11-12T19:48:55.000Z",
+  "finishedAt": "2026-11-12T20:55:33.963Z",
+  "verdict": {
+    "branch": "stop",
+    "reason": "worker failed on 4 sessions"
+  },
+  "summary": {
+    "sessions": 4,
+    "failed": 4,
+    "engaged": 4,
+    "wmPasses": 8,
+    "wmItems": 21,
+    "budgetUnmet": 1,
+    "stmEvents": 106,
+    "engagedViewCharsMin": 75974,
+    "worker": {
+      "inputTokens": 423198,
+      "outputTokens": 195725,
+      "cacheReadTokens": 76396
+    },
+    "costEstimateUsd": 0.027508,
+    "costBasis": "input tokens x $0.065 per 1M (the plan's all-in Muse rate; OpenCode Go bills a subscription)"
+  },
+  "failed": [
+    {
+      "id": "yi-bc03e7147140af-18",
+      "error": "Error",
+      "message": "CompactBenchAdapter: the memory worker did not settle"
+    },
+    {
+      "id": "yi-176b7280c584a8-7",
+      "error": "Error",
+      "message": "CompactBenchAdapter: the memory worker did not settle"
+    },
+    {
+      "id": "yi-45d5c4044c5c34-7",
+      "error": "Error",
+      "message": "CompactBenchAdapter: the memory worker did not settle"
+    },
+    {
+      "id": "yi-f741e73e4952fa-20",
+      "error": "Error",
+      "message": "CompactBenchAdapter: the memory worker did not settle"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "yi-4f286447b13821-11",
+      "viewChars": 75974,
+      "turns": 30,
+      "stm": {
+        "passes": 7,
+        "events": 24
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          4
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 4750,
+      "blockChars": 3875,
+      "worker": {
+        "inputTokens": 92530,
+        "outputTokens": 50811,
+        "cacheReadTokens": 18425
+      }
+    },
+    {
+      "id": "yi-f0e51db5adad49-13",
+      "viewChars": 133338,
+      "turns": 61,
+      "stm": {
+        "passes": 9,
+        "events": 33
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          1,
+          4
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 12700,
+      "blockChars": 9711,
+      "worker": {
+        "inputTokens": 118098,
+        "outputTokens": 49869,
+        "cacheReadTokens": 14683
+      }
+    },
+    {
+      "id": "yi-10250d80aaa2e3-6",
+      "viewChars": 114022,
+      "turns": 21,
+      "stm": {
+        "passes": 10,
+        "events": 31
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          5
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 6998,
+      "blockChars": 4023,
+      "worker": {
+        "inputTokens": 117739,
+        "outputTokens": 53767,
+        "cacheReadTokens": 22973
+      }
+    },
+    {
+      "id": "yi-acf07db34e5b44-5",
+      "viewChars": 102088,
+      "turns": 14,
+      "stm": {
+        "passes": 8,
+        "events": 18
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          1
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 8711,
+      "blockChars": 5971,
+      "worker": {
+        "inputTokens": 94831,
+        "outputTokens": 41278,
+        "cacheReadTokens": 20315
+      }
+    }
+  ]
+}

@@ -98,5 +98,57 @@
       "change": "after sitting 1 (re-plan) and part of sitting 2: memory workers (STM, WM, Rehearsal) default to thinkingLevel low, and a WM call that stops on its output limit before any verdict retries once on the older half of its batch (product hash moved); the family child runs at the manifest's 8,192 output limit (gate M-1 ran 4,096); the campaign reads each job's own journal attempt under --parallel-arms (it read the last reserved one); M1 keeps its frozen row and reports re-derivations beside it. Pre-fix reports moved to runs/superseded-pre-worker-fix/; every sitting re-runs on this manifest.",
       "manifestHash": "3e1d68dcdd8bf82b2bcc6cebb6c2ccba91f1a648625ece7cbf892e4b747185b8"
     }
-  ]
+  ],
+  "compactBenchWmProbe": {
+    "plan": "218.1",
+    "task": 3,
+    "step": 1,
+    "approved": true,
+    "approvedAt": "2026-11-13",
+    "approvedBy": "owner",
+    "text": "\"yes, amend Task 3 with the WM probe gate first\"; \"15 of 30 is fine, run the WM probe\"; then, after the first live session projected about 4.75M input tokens against the 5M ceiling: \"Go with option 1\" (raise the ceiling to 8M input tokens; engagement definition and threshold unchanged) (owner, 2026-11-13); then, after the first full run stopped on four settle timeouts: \"Do the fixes and relaunch\" (owner, 2026-11-13)",
+    "amendments": [
+      {
+        "date": "2026-11-13",
+        "change": "maxInputTokens 5,000,000 -> 8,000,000 before the full run (session 1 of the smoke run: 92,530 input / 50,811 output tokens on 75,974 view characters; projected ~4.75M input, ~2.6M output, ~8 h for 30 sessions). Only the safety stop changed; nothing had been scored.",
+        "previousRuleHash": "9509348af319853699bb268ef4b1e95ebb33b0b2353ba355dbf3b84cea57016e"
+      }
+    ],
+    "rule": {
+      "suite": "compact-bench-retention",
+      "sessions": 30,
+      "arm": "WM",
+      "armConfig": "gate M-2's armMemory WM arm (stm.triggerTokens 1,000; WM defaults: triggerTokens 10,000, batchTokens 3,000); no trigger changed for the probe",
+      "worker": "opencode-go/muse-spark-1.3-contributor",
+      "engagement": "a session engages WM when it records at least one WM pass that writes at least one item",
+      "threshold": 15,
+      "branches": {
+        "A": "engaged >= 15: Step 2 runs the four-arm retention screen (memory-off, OM-before, STM-only, WM, plus references)",
+        "B": "engaged < 15: Step 2 runs the reduced STM screen (memory-off, OM-before, session, plus references); M5 stays missing; the owner decides the WM default"
+      },
+      "stop": "the input-token ceiling is hit or the worker fails on more than 3 sessions: no branch, the finding goes to the owner",
+      "maxInputTokens": 8000000,
+      "maxFailedSessions": 3,
+      "scoring": "none: S is discarded unread and never scored"
+    },
+    "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+    "drawSha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
+    "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+    "note": "Step 1 only. Step 2 (the branch the probe selects) and the opt-in outcome check each need their own owner approval in this record before any spend. This section does not re-approve the paused gate M-2 sitting (manifestHash above).",
+    "relaunches": [
+      {
+        "date": "2026-11-13",
+        "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+        "ruleChanged": false,
+        "previousRun": "docs/_evidence/memory-bench/218/compact-bench-wm-probe.stop-2026-11-13.json (verdict stop: 4 failed of 8 sessions run; all 5 finished sessions engaged)",
+        "cause": "harness: the adapter's 10-minute settle deadline expired on the four largest sessions while all 99 worker requests returned 200; not a worker failure",
+        "fixes": [
+          "WM_PROBE_SETTLE_MS 45 minutes per session (a harness limit outside the rule)",
+          "failed sessions' worker tokens and the whole wire log now count in the evidence totals and cost estimate"
+        ],
+        "resume": "the 5 finished sessions are reused from checkpoints; the 4 timed-out sessions are retried; the failure cap counts this run only",
+        "result": "2026-11-13: 30 of 30 engaged, rule names Branch A; 0 failed; spent 4,762,429 input tokens (~$0.31). Pre-218.2 reading: Step 2 waits for the re-probe after plan 218.2 Task 9 (plan 218.1 Task 3 amendment)."
+      }
+    ]
+  }
 }

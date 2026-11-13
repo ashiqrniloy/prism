@@ -1,0 +1,838 @@
+{
+  "kind": "compact-bench-wm-probe-v1",
+  "plan": "218.1",
+  "task": 3,
+  "step": 1,
+  "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+  "rule": {
+    "suite": "compact-bench-retention",
+    "sessions": 30,
+    "arm": "WM",
+    "armConfig": "gate M-2's armMemory WM arm (stm.triggerTokens 1,000; WM defaults: triggerTokens 10,000, batchTokens 3,000); no trigger changed for the probe",
+    "worker": "opencode-go/muse-spark-1.3-contributor",
+    "engagement": "a session engages WM when it records at least one WM pass that writes at least one item",
+    "threshold": 15,
+    "branches": {
+      "A": "engaged >= 15: Step 2 runs the four-arm retention screen (memory-off, OM-before, STM-only, WM, plus references)",
+      "B": "engaged < 15: Step 2 runs the reduced STM screen (memory-off, OM-before, session, plus references); M5 stays missing; the owner decides the WM default"
+    },
+    "stop": "the input-token ceiling is hit or the worker fails on more than 3 sessions: no branch, the finding goes to the owner",
+    "maxInputTokens": 8000000,
+    "maxFailedSessions": 3,
+    "scoring": "none: S is discarded unread and never scored"
+  },
+  "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+  "draw": {
+    "file": "scripts/memory-bench/work-outcome-compact-bench.json",
+    "sha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
+    "retentionIdsHash": "6bef39c301d07a24e5077efe17ce1893c7986e8cad722bae8363b73b1b3e7c68"
+  },
+  "upstream": {
+    "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+    "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b"
+  },
+  "startedAt": "2026-11-13T08:32:06.662Z",
+  "finishedAt": "2026-11-13T12:06:20.661Z",
+  "verdict": {
+    "branch": "A",
+    "engaged": 30,
+    "of": 30
+  },
+  "summary": {
+    "sessions": 30,
+    "failed": 0,
+    "engaged": 30,
+    "wmPasses": 46,
+    "wmItems": 117,
+    "budgetUnmet": 9,
+    "stmEvents": 911,
+    "engagedViewCharsMin": 13100,
+    "worker": {
+      "inputTokens": 4050331,
+      "outputTokens": 1676208,
+      "cacheReadTokens": 601886
+    },
+    "failedWorker": {
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0
+    },
+    "spent": {
+      "inputTokens": 4762429,
+      "outputTokens": 1962063,
+      "cacheReadTokens": 742554
+    },
+    "spentBasis": "the wire log of every attempt under this rule (failed and retried sessions included) plus finished sessions carried from an earlier log",
+    "costEstimateUsd": 0.309558,
+    "costBasis": "input tokens x $0.065 per 1M (the plan's all-in Muse rate; OpenCode Go bills a subscription)"
+  },
+  "failed": [],
+  "sessions": [
+    {
+      "id": "yi-4f286447b13821-11",
+      "viewChars": 75974,
+      "turns": 30,
+      "stm": {
+        "passes": 7,
+        "events": 24
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          4
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 4750,
+      "blockChars": 3875,
+      "worker": {
+        "inputTokens": 92530,
+        "outputTokens": 50811,
+        "cacheReadTokens": 18425
+      }
+    },
+    {
+      "id": "yi-bc03e7147140af-18",
+      "viewChars": 250000,
+      "turns": 104,
+      "stm": {
+        "passes": 20,
+        "events": 47
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 15222,
+      "blockChars": 13500,
+      "worker": {
+        "inputTokens": 280160,
+        "outputTokens": 106702,
+        "cacheReadTokens": 56231
+      }
+    },
+    {
+      "id": "yi-f0e51db5adad49-13",
+      "viewChars": 133338,
+      "turns": 61,
+      "stm": {
+        "passes": 9,
+        "events": 33
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          1,
+          4
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 12700,
+      "blockChars": 9711,
+      "worker": {
+        "inputTokens": 118098,
+        "outputTokens": 49869,
+        "cacheReadTokens": 14683
+      }
+    },
+    {
+      "id": "yi-10250d80aaa2e3-6",
+      "viewChars": 114022,
+      "turns": 21,
+      "stm": {
+        "passes": 10,
+        "events": 31
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          5
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 6998,
+      "blockChars": 4023,
+      "worker": {
+        "inputTokens": 117739,
+        "outputTokens": 53767,
+        "cacheReadTokens": 22973
+      }
+    },
+    {
+      "id": "yi-176b7280c584a8-7",
+      "viewChars": 236679,
+      "turns": 191,
+      "stm": {
+        "passes": 19,
+        "events": 95
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          1,
+          4
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 20884,
+      "blockChars": 19492,
+      "worker": {
+        "inputTokens": 277099,
+        "outputTokens": 127684,
+        "cacheReadTokens": 45366
+      }
+    },
+    {
+      "id": "yi-acf07db34e5b44-5",
+      "viewChars": 102088,
+      "turns": 14,
+      "stm": {
+        "passes": 8,
+        "events": 18
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          1
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 8711,
+      "blockChars": 5971,
+      "worker": {
+        "inputTokens": 94831,
+        "outputTokens": 41278,
+        "cacheReadTokens": 20315
+      }
+    },
+    {
+      "id": "yi-45d5c4044c5c34-7",
+      "viewChars": 184776,
+      "turns": 26,
+      "stm": {
+        "passes": 21,
+        "events": 50
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          1,
+          3
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 8976,
+      "blockChars": 5865,
+      "worker": {
+        "inputTokens": 250253,
+        "outputTokens": 90487,
+        "cacheReadTokens": 33688
+      }
+    },
+    {
+      "id": "yi-f741e73e4952fa-20",
+      "viewChars": 121009,
+      "turns": 50,
+      "stm": {
+        "passes": 14,
+        "events": 34
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          3
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 5911,
+      "blockChars": 3582,
+      "worker": {
+        "inputTokens": 163753,
+        "outputTokens": 76815,
+        "cacheReadTokens": 20112
+      }
+    },
+    {
+      "id": "yi-3c0a51fbf8f153-13",
+      "viewChars": 144769,
+      "turns": 42,
+      "stm": {
+        "passes": 11,
+        "events": 34
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          7
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 8065,
+      "blockChars": 5208,
+      "worker": {
+        "inputTokens": 137157,
+        "outputTokens": 62052,
+        "cacheReadTokens": 13885
+      }
+    },
+    {
+      "id": "yi-fdfd5d7cfea54e-19",
+      "viewChars": 83877,
+      "turns": 54,
+      "stm": {
+        "passes": 8,
+        "events": 26
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 12312,
+      "blockChars": 10914,
+      "worker": {
+        "inputTokens": 96374,
+        "outputTokens": 46234,
+        "cacheReadTokens": 9977
+      }
+    },
+    {
+      "id": "yi-815a09e57702b9-8",
+      "viewChars": 104713,
+      "turns": 31,
+      "stm": {
+        "passes": 9,
+        "events": 28
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          3,
+          1
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 7401,
+      "blockChars": 6124,
+      "worker": {
+        "inputTokens": 105344,
+        "outputTokens": 45712,
+        "cacheReadTokens": 10986
+      }
+    },
+    {
+      "id": "yi-cid:831105efd0-6",
+      "viewChars": 56547,
+      "turns": 20,
+      "stm": {
+        "passes": 5,
+        "events": 8
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          3
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 7035,
+      "blockChars": 3036,
+      "worker": {
+        "inputTokens": 51926,
+        "outputTokens": 23444,
+        "cacheReadTokens": 4405
+      }
+    },
+    {
+      "id": "yi-cid:fc9b273351-5",
+      "viewChars": 13100,
+      "turns": 6,
+      "stm": {
+        "passes": 2,
+        "events": 2
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 4866,
+      "blockChars": 820,
+      "worker": {
+        "inputTokens": 11528,
+        "outputTokens": 5124,
+        "cacheReadTokens": 339
+      }
+    },
+    {
+      "id": "yi-cid:5420afe3fb-6",
+      "viewChars": 97730,
+      "turns": 4,
+      "stm": {
+        "passes": 9,
+        "events": 16
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 10915,
+      "blockChars": 6293,
+      "worker": {
+        "inputTokens": 93439,
+        "outputTokens": 31034,
+        "cacheReadTokens": 20187
+      }
+    },
+    {
+      "id": "yi-cid:0e8d7b584e-7",
+      "viewChars": 80970,
+      "turns": 5,
+      "stm": {
+        "passes": 6,
+        "events": 10
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          2
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 16113,
+      "blockChars": 1874,
+      "worker": {
+        "inputTokens": 73559,
+        "outputTokens": 28668,
+        "cacheReadTokens": 11731
+      }
+    },
+    {
+      "id": "yi-cid:d9d427365c-5",
+      "viewChars": 196983,
+      "turns": 30,
+      "stm": {
+        "passes": 15,
+        "events": 35
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          6
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 13468,
+      "blockChars": 7444,
+      "worker": {
+        "inputTokens": 170561,
+        "outputTokens": 62973,
+        "cacheReadTokens": 29185
+      }
+    },
+    {
+      "id": "yi-cid:60e15a99f3-5",
+      "viewChars": 43685,
+      "turns": 10,
+      "stm": {
+        "passes": 4,
+        "events": 11
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          2
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 3635,
+      "blockChars": 1776,
+      "worker": {
+        "inputTokens": 41465,
+        "outputTokens": 18825,
+        "cacheReadTokens": 3125
+      }
+    },
+    {
+      "id": "yi-cid:7d26dba332-11",
+      "viewChars": 250000,
+      "turns": 71,
+      "stm": {
+        "passes": 20,
+        "events": 68
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          8
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 14901,
+      "blockChars": 9159,
+      "worker": {
+        "inputTokens": 253010,
+        "outputTokens": 119039,
+        "cacheReadTokens": 42761
+      }
+    },
+    {
+      "id": "yi-cid:b68de122a3-9",
+      "viewChars": 32932,
+      "turns": 7,
+      "stm": {
+        "passes": 3,
+        "events": 6
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 4341,
+      "blockChars": 938,
+      "worker": {
+        "inputTokens": 27575,
+        "outputTokens": 11564,
+        "cacheReadTokens": 1619
+      }
+    },
+    {
+      "id": "yi-cid:2a1631d3c3-11",
+      "viewChars": 208738,
+      "turns": 9,
+      "stm": {
+        "passes": 18,
+        "events": 40
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 17441,
+      "blockChars": 14552,
+      "worker": {
+        "inputTokens": 190741,
+        "outputTokens": 56185,
+        "cacheReadTokens": 23922
+      }
+    },
+    {
+      "id": "yi-cid:f20620b306-8",
+      "viewChars": 42283,
+      "turns": 9,
+      "stm": {
+        "passes": 4,
+        "events": 10
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 7114,
+      "blockChars": 1519,
+      "worker": {
+        "inputTokens": 34496,
+        "outputTokens": 16229,
+        "cacheReadTokens": 2899
+      }
+    },
+    {
+      "id": "yi-cid:037648d488-15",
+      "viewChars": 231807,
+      "turns": 17,
+      "stm": {
+        "passes": 18,
+        "events": 38
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 18946,
+      "blockChars": 15295,
+      "worker": {
+        "inputTokens": 197776,
+        "outputTokens": 70181,
+        "cacheReadTokens": 22228
+      }
+    },
+    {
+      "id": "yi-cid:8313307ede-14",
+      "viewChars": 67955,
+      "turns": 5,
+      "stm": {
+        "passes": 6,
+        "events": 11
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 5252,
+      "blockChars": 2179,
+      "worker": {
+        "inputTokens": 59672,
+        "outputTokens": 18746,
+        "cacheReadTokens": 6039
+      }
+    },
+    {
+      "id": "yi-cid:bc7e2ed07c-7",
+      "viewChars": 73201,
+      "turns": 18,
+      "stm": {
+        "passes": 6,
+        "events": 20
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          5,
+          1
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 11132,
+      "blockChars": 3345,
+      "worker": {
+        "inputTokens": 77969,
+        "outputTokens": 36938,
+        "cacheReadTokens": 17913
+      }
+    },
+    {
+      "id": "yi-cid:e8983a72b3-6",
+      "viewChars": 79527,
+      "turns": 5,
+      "stm": {
+        "passes": 7,
+        "events": 9
+      },
+      "wm": {
+        "passes": 1,
+        "items": [
+          2
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 7046,
+      "blockChars": 1880,
+      "worker": {
+        "inputTokens": 65998,
+        "outputTokens": 21436,
+        "cacheReadTokens": 7304
+      }
+    },
+    {
+      "id": "yi-cid:8268853942-8",
+      "viewChars": 233202,
+      "turns": 70,
+      "stm": {
+        "passes": 18,
+        "events": 56
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          3,
+          1
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 24986,
+      "blockChars": 19639,
+      "worker": {
+        "inputTokens": 214598,
+        "outputTokens": 94186,
+        "cacheReadTokens": 25458
+      }
+    },
+    {
+      "id": "yi-37aed568ac6123-9",
+      "viewChars": 111138,
+      "turns": 32,
+      "stm": {
+        "passes": 12,
+        "events": 30
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          4
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 4702,
+      "blockChars": 3532,
+      "worker": {
+        "inputTokens": 143618,
+        "outputTokens": 50417,
+        "cacheReadTokens": 11483
+      }
+    },
+    {
+      "id": "yi-648218f10633b9-20",
+      "viewChars": 232564,
+      "turns": 37,
+      "stm": {
+        "passes": 20,
+        "events": 41
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          1,
+          6
+        ],
+        "budgetUnmet": 1,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 6326,
+      "blockChars": 5157,
+      "worker": {
+        "inputTokens": 266777,
+        "outputTokens": 121539,
+        "cacheReadTokens": 53144
+      }
+    },
+    {
+      "id": "yi-f1917d616839a5-5",
+      "viewChars": 250000,
+      "turns": 39,
+      "stm": {
+        "passes": 21,
+        "events": 63
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          2,
+          6
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 14189,
+      "blockChars": 13293,
+      "worker": {
+        "inputTokens": 269035,
+        "outputTokens": 103205,
+        "cacheReadTokens": 37641
+      }
+    },
+    {
+      "id": "yi-cid:3ea34cbc33-21",
+      "viewChars": 46812,
+      "turns": 7,
+      "stm": {
+        "passes": 5,
+        "events": 17
+      },
+      "wm": {
+        "passes": 2,
+        "items": [
+          3,
+          1
+        ],
+        "budgetUnmet": 0,
+        "compactions": 1
+      },
+      "engaged": true,
+      "sChars": 4394,
+      "blockChars": 2012,
+      "worker": {
+        "inputTokens": 73250,
+        "outputTokens": 35064,
+        "cacheReadTokens": 13862
+      }
+    }
+  ]
+}
