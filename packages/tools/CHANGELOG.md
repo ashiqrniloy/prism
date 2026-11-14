@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.1] - 2026-11-12
+
+### ./coding
+
+#### Fixed
+
+- **`workspace.worktree.create({ sessionId })` keeps one live worktree per session.** Creating a worktree for a session that already holds one now fails with the new code `workspace_session_bound` and creates nothing. Previously a second record was created, and `bound(sessionId)` and tool routing became ambiguous. Two concurrent creates for one session bind once. `worktree.rebind` refuses a session that already holds a different worktree with the same code. Reuse the held worktree through `bound(sessionId)`, or dispose it first.
+
 ## [Unreleased]
 
 Consolidated seven tool packages into `@arnilo/prism-tools` with explicit subpaths.

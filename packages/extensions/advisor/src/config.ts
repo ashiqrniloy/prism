@@ -20,6 +20,15 @@ export interface AdvisorValidateConfig {
   readonly maxRounds?: number;
   /** Overrides the advisor's context slice for the validator. */
   readonly context?: AdvisorContextConfig;
+  /**
+   * What the validator is shown of the worker's own account. Both default to `true` (the 0.13.0 behaviour).
+   * `transcript: false` drops the CONVERSATION section (model engine); `finalAnswer: false` drops FINAL ANSWER
+   * from the model prompt and from the child brief. With both off, the validator sees only the task, the
+   * criteria and the evidence from `advisorPackage({ validate: { evidence } })`.
+   */
+  readonly inputs?: { readonly transcript?: boolean; readonly finalAnswer?: boolean };
+  /** Budget for all evidence text in one validation. Default 48,000, capped at 120,000. */
+  readonly evidenceMaxChars?: number;
 }
 
 export interface AdvisorConfig {
@@ -136,6 +145,12 @@ export const advisorConfigSchema = {
         onError: { type: "string", enum: ["continue", "end"] },
         maxRounds: { type: "integer", minimum: 1 },
         context: contextSchema,
+        inputs: {
+          type: "object",
+          properties: { transcript: { type: "boolean" }, finalAnswer: { type: "boolean" } },
+          additionalProperties: false,
+        },
+        evidenceMaxChars: { type: "integer", minimum: 1 },
       },
       additionalProperties: false,
     },

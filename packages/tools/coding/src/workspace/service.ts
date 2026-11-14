@@ -59,7 +59,8 @@ export interface WorkspaceWorktreeCreate {
   readonly base?: string;
   /**
    * Binds this worktree to a session for tool routing (plan 165 Task 7). A sandboxed service
-   * refuses the binding: the routed tools would leave the sandbox root.
+   * refuses the binding: the routed tools would leave the sandbox root. A session holds at most one
+   * live worktree: creating another for it fails with `workspace_session_bound` (use `bound(sessionId)`).
    */
   readonly sessionId?: string;
 }
@@ -204,6 +205,8 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
 
   const emitter = createCodingLifecycleEmitter(options.onEvent === undefined ? {} : { onEvent: options.onEvent });
   const records = new Map<string, WorktreeRecord>();
+  /** Sessions with a create or rebind in flight, so two concurrent calls cannot both bind one session. */
+  const binding = new Set<string>();
   const ops = new Map<string, Promise<GitOperations>>();
   let identityPromise: Promise<{ name: string; email: string } | undefined> | undefined;
   let mainPath: string | undefined;
@@ -306,6 +309,34 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
         "a sandboxed run cannot bind a worktree to a session: routed tool paths would leave the sandbox root",
       );
     }
+    if (request.sessionId === undefined) return await createRecord(request);
+    const sessionId = request.sessionId;
+    assertSessionFree(sessionId);
+    binding.add(sessionId);
+    try {
+      return await createRecord(request);
+    } finally {
+      binding.delete(sessionId);
+    }
+  }
+
+  /** One live worktree per session: a second one would make `bound()` and tool routing ambiguous. */
+  function assertSessionFree(sessionId: string, path?: string): void {
+    const held = liveFor(sessionId);
+    if (binding.has(sessionId) || (held !== undefined && held.path !== path)) {
+      throw new WorkspaceServiceError(
+        "workspace_session_bound",
+        `session ${sessionId} already holds a worktree; reuse it through bound(), or dispose it first`,
+      );
+    }
+  }
+
+  function liveFor(sessionId: string): WorktreeRecord | undefined {
+    for (const record of records.values()) if (record.sessionId === sessionId && !record.disposed) return record;
+    return undefined;
+  }
+
+  async function createRecord(request: WorkspaceWorktreeCreate): Promise<WorkspaceWorktree> {
     if (records.size >= maxWorktrees) {
       throw new WorkspaceServiceError("workspace_limit", `at most ${maxWorktrees} worktrees may be active at once`);
     }
@@ -351,6 +382,16 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
       if (held.sessionId === request.sessionId && !held.disposed) return handle(held);
       throw new WorkspaceServiceError("workspace_unknown", `worktree ${path} is already held for another session`);
     }
+    assertSessionFree(request.sessionId, path);
+    binding.add(request.sessionId);
+    try {
+      return await adopt(request, path);
+    } finally {
+      binding.delete(request.sessionId);
+    }
+  }
+
+  async function adopt(request: WorkspaceWorktreeRebind, path: string): Promise<WorkspaceWorktree> {
     const repo = await gitFor(root);
     const listed = await repo.worktree({ action: "list" });
     const entry = listed.worktrees.find((worktree) => resolve(worktree.path) === path);
@@ -397,10 +438,8 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
   }
 
   function bound(sessionId: string): WorkspaceWorktree | undefined {
-    for (const record of records.values()) {
-      if (record.sessionId === sessionId && !record.disposed) return handle(record);
-    }
-    return undefined;
+    const record = liveFor(sessionId);
+    return record === undefined ? undefined : handle(record);
   }
 
   async function disposeWorktree(record: WorktreeRecord, force: boolean): Promise<void> {

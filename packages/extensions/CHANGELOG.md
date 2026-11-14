@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.13.1] - 2026-11-12
+
+### ./advisor
+
+#### Added
+
+- **Independent completion validation.** `validateCompletion({ model, task, criteria?, evidence?, evidenceMaxChars?, signal? })` validates with one tool-less model call whose prompt holds only the task, the criteria and evidence blocks the host assembles (for example a worktree diff and a check log). It reads no session, history or final answer, so a workflow `gateNode` can judge the change instead of the worker's claim. The result is `complete`, `incomplete` with a bounded `missing` list, or `error` with a closed reason code (`model_error`, `unparseable_verdict`, `task_unavailable`, `invalid_input`). It fails closed: there is no `complete` without a parsed verdict.
+- **The `advisor` service.** `validateCompletion` resolves a `ModelRef` through the agent and defaults to the advisor's model.
+- **Evidence is bounded.** All blocks share 48,000 characters by default, with a hard cap of 120,000, and at most 16 blocks are accepted. A cut block, or a block the host marks `truncated`, is labelled in the prompt. The task and the criteria are each capped at 16,000 characters.
+- **`validate.inputs: { transcript?, finalAnswer? }`** removes the `CONVERSATION` and `FINAL ANSWER` sections from the in-run validator. `finalAnswer: false` also removes `FINAL ANSWER` from the child engine's brief.
+- **`validate.evidenceMaxChars`** sets the in-run evidence budget.
+- **`advisorPackage({ ..., validate: { evidence } })`** takes a host evidence source `(payload, session) => ValidationEvidence[]`. A throwing source is the `error` reason `evidence_failed`.
+- The defaults are unchanged: `inputs` defaults to `true/true`, and the default prompt is byte-identical to 0.13.0.
+
+### ./workflows
+
+#### Added
+
+- `agentNode({ worktree: { branch?, base? } })` names the branch and the start commit of a new worktree. Each is a string or a function of the node context. An invalid literal branch throws `WorkflowDefinitionError`. A function result that is not a valid branch fails the node with `invalid_worktree_branch` (`invalid_worktree_base` for `base`) before anything is created.
+
+#### Fixed
+
+- **Behaviour fix: `agentNode` reuses the worktree its session already holds.** Before this fix, every execution called `workspace.worktree.create`, including a gate back edge or a retry with a supplied `session`. The retry started from `HEAD` in a new worktree and lost the previous attempt's work. It also left two live worktrees bound to one session and spent `maxWorktrees`. Now an execution whose session holds a live worktree (`workspace.worktree.bound(session.id)`) continues in it, so `create` runs once per session and the `agent.file` diff covers every attempt. A held worktree on a different branch than `worktree.branch` fails with `worktree_branch_mismatch`. Nodes without a supplied session still get one fresh worktree per fresh session, and `resumeWorkflow` still rebinds the recorded worktree. An admission-refused (`profile_busy`) run disposes only a worktree it created itself.
+
 ## [Unreleased]
 
 Consolidated eighteen extension packages into exported subpaths.

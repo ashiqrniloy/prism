@@ -432,3 +432,57 @@ describe("workspace service config", () => {
     assert.equal(await reject({ path: wt.path, sessionId: "s" }), "workspace_unknown", "a disposed worktree is gone");
   });
 });
+
+describe("one worktree per session", () => {
+  it("create_twice_for_one_session_is_workspace_session_bound", async () => {
+    const fx = await fixture();
+    const workspace = await service(fx);
+    const wt = await workspace.worktree.create({ sessionId: "s-1" });
+    assert.equal(await code(await workspace.worktree.create({ sessionId: "s-1" }).catch((e) => e)), "workspace_session_bound");
+    assert.equal(workspace.worktree.bound("s-1")?.path, wt.path, "bound() stays unambiguous");
+    const listed = await git(fx.repo, ["worktree", "list", "--porcelain"]);
+    assert.equal(listed.split("\n").filter((line) => line.startsWith("worktree ")).length, 2, "main tree plus one worktree");
+    // Disposing frees the session for a new worktree.
+    await wt.dispose({ force: true });
+    const next = await workspace.worktree.create({ sessionId: "s-1" });
+    assert.equal(workspace.worktree.bound("s-1")?.path, next.path);
+    await next.dispose({ force: true });
+  });
+
+  it("concurrent_creates_for_one_session_bind_once", async () => {
+    const fx = await fixture();
+    const workspace = await service(fx);
+    const results = await Promise.allSettled([
+      workspace.worktree.create({ sessionId: "s-1" }),
+      workspace.worktree.create({ sessionId: "s-1" }),
+    ]);
+    const made = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+    const refused = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+    assert.equal(made.length, 1);
+    assert.equal(await code(refused[0]), "workspace_session_bound");
+    await made[0]?.dispose({ force: true });
+  });
+
+  it("rebind_refuses_a_session_that_holds_another_worktree", async () => {
+    const fx = await fixture();
+    const first = await service(fx);
+    const left = await first.worktree.create({ sessionId: "s-old" });
+    const second = await service(fx);
+    const held = await second.worktree.create({ sessionId: "s-1" });
+    assert.equal(
+      await code(await second.worktree.rebind({ path: left.path, sessionId: "s-1" }).catch((e) => e)),
+      "workspace_session_bound",
+    );
+    await held.dispose({ force: true });
+    await left.dispose({ force: true });
+  });
+
+  it("named_branch_shows_in_git_worktree_list", async () => {
+    const fx = await fixture();
+    const workspace = await service(fx);
+    const wt = await workspace.worktree.create({ sessionId: "s-1", branch: "factory/t1", base: "HEAD" });
+    assert.equal(wt.branch, "factory/t1");
+    assert.match(await git(fx.repo, ["worktree", "list"]), /\[factory\/t1\]/);
+    await wt.dispose({ force: true });
+  });
+});

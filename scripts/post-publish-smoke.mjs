@@ -71,7 +71,13 @@ if (local) {
   mkdirSync(consumer);
   writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "prism-post-publish-smoke", private: true, type: "module" }));
   const byName = loadRelease(root).byName;
-  specs = PACKAGES.map((pkg) => `${pkg}@${byName.get(pkg).experimental ? "experimental" : resolvedVersion}`);
+  // An independent-line bundle installs its own manifest version; `--version` pins the kernel line.
+  const specFor = (pkg) => {
+    const entry = byName.get(pkg);
+    if (entry.experimental) return "experimental";
+    return entry.independent ? entry.manifest.version : resolvedVersion;
+  };
+  specs = PACKAGES.map((pkg) => `${pkg}@${specFor(pkg)}`);
 }
 console.log(`post-publish smoke: ${local ? "local tarballs" : "registry"} — ${specs.join(" ")}`);
 

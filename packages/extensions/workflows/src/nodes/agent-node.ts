@@ -4,11 +4,12 @@ import { type RuntimeNodeState, suspend } from "../run/main.js";
 import { WORKFLOWS_SERVICE, type WorkflowRuntime } from "../services.js";
 import type { AgentNodeDefinition, RunWorkflowOptions, WorkflowNodeContext, WorkflowTransitionChannel } from "../types.js";
 import { toAgentInput } from "./agent-input.js";
+import { baseProblem, branchNameProblem } from "./worktree-ref.js";
 
 /** The `workspace` service members an agent node uses; structural so this package imports no tool package. */
 interface WorkspaceLike {
   readonly worktree: {
-    create(request: { sessionId: string }): Promise<{
+    create(request: { sessionId: string; branch?: string; base?: string }): Promise<{
       readonly path: string;
       readonly branch: string;
       dispose(options?: { force?: boolean }): Promise<void>;
@@ -66,7 +67,8 @@ export async function executeAgentNode(
       );
     }
   }
-  // Set only by `resumeWorkflow` for a node the process died inside; a retry in one run opens a new session.
+  // Set only by `resumeWorkflow` for a node the process died inside. A retry in one run opens a new session,
+  // unless `node.session` supplies one; then the worktree that session holds is reused below.
   const priorSessionId = durable?.nodeState.resumeSession ? durable.nodeState.sessionId : undefined;
   const priorWorktree = durable?.nodeState.resumeSession ? durable.nodeState.worktree : undefined;
   if (durable) durable.nodeState.resumeSession = false;
@@ -85,6 +87,7 @@ export async function executeAgentNode(
   activeSessions.set(ctx.nodeId, session);
   const stopObserve = bus.observeAgentNode({ nodeId: ctx.nodeId, session });
   let worktree: WorktreeHandle | undefined;
+  let createdHere = false;
   try {
     if (workspace) {
       if (priorWorktree) {
@@ -104,7 +107,22 @@ export async function executeAgentNode(
         }
         worktree = bound;
       } else {
-        worktree = await workspace.worktree.create({ sessionId: session.id });
+        const request = worktreeRequest(node, ctx);
+        // A session that already holds a live worktree (a supplied session on a back edge or a retry) continues
+        // in it, so the attempt sees the work the last one left. Only a session with none gets a new worktree.
+        const held = workspace.worktree.bound?.(session.id);
+        if (held) {
+          if (request.branch !== undefined && held.branch !== request.branch) {
+            throw new WorkflowRuntimeError(
+              `Agent node "${ctx.nodeId}" session ${session.id} already works on branch ${held.branch}, not ${request.branch}`,
+              "worktree_branch_mismatch",
+            );
+          }
+          worktree = held;
+        } else {
+          worktree = await workspace.worktree.create({ sessionId: session.id, ...request });
+          createdHere = true;
+        }
       }
     }
     if (durable) {
@@ -141,7 +159,7 @@ export async function executeAgentNode(
       // A failed child fails the node, carrying the child's error code (a driver's `profile_busy` is how `fanOut`
       // paces items). A run refused at admission did no work, so its worktree is released, not kept.
       const code = typeof runResult.error?.code === "string" ? runResult.error.code : "child_run_failed";
-      if (code === "profile_busy" && worktree) await worktree.dispose({ force: true }).catch(() => undefined);
+      if (code === "profile_busy" && worktree && createdHere) await worktree.dispose({ force: true }).catch(() => undefined);
       throw new WorkflowRuntimeError(`Agent node "${ctx.nodeId}" child run failed: ${runResult.error?.message ?? "unknown error"}`, code);
     }
     let output = node.output
@@ -167,6 +185,23 @@ export async function executeAgentNode(
     const dispose = typeof node.worktree === "object" ? node.worktree.dispose : "keep";
     if (worktree && dispose === "dispose") await worktree.dispose({ force: true }).catch(() => undefined);
   }
+}
+
+/** The node's `branch` and `base` for a new worktree, resolved and checked; fails closed on a bad name. */
+function worktreeRequest(node: AgentNodeDefinition, ctx: WorkflowNodeContext): { branch?: string; base?: string } {
+  if (typeof node.worktree !== "object") return {};
+  const pick = (value: string | ((ctx: WorkflowNodeContext) => string) | undefined) => (typeof value === "function" ? value(ctx) : value);
+  const branch = pick(node.worktree.branch);
+  const base = pick(node.worktree.base);
+  const branchProblem = branch === undefined ? undefined : branchNameProblem(branch);
+  if (branchProblem !== undefined) {
+    throw new WorkflowRuntimeError(`Agent node "${ctx.nodeId}" worktree.branch ${branchProblem}`, "invalid_worktree_branch");
+  }
+  const baseIssue = base === undefined ? undefined : baseProblem(base);
+  if (baseIssue !== undefined) {
+    throw new WorkflowRuntimeError(`Agent node "${ctx.nodeId}" worktree.base ${baseIssue}`, "invalid_worktree_base");
+  }
+  return { ...(branch === undefined ? {} : { branch }), ...(base === undefined ? {} : { base }) };
 }
 
 /**

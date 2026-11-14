@@ -131,8 +131,21 @@ export interface WorkflowNodeBase {
 
 export type NodeIdempotency = "rerun" | "resume-session" | "fail";
 
-/** Worktree policy of an `agentNode`: `true` is `{ dispose: "keep" }`. */
-export type AgentNodeWorktree = boolean | { readonly dispose?: "keep" | "dispose" };
+/**
+ * Worktree policy of an `agentNode`: `true` is `{ dispose: "keep" }`. A node whose session already holds a live worktree (a supplied
+ * `session` on a back edge or a retry, or a durable resume) continues in that worktree; only a session with
+ * none gets a new one, created from `base` on `branch`.
+ */
+export type AgentNodeWorktree =
+  | boolean
+  | {
+      /** `"keep"` (default) leaves the worktree for the next attempt or a merge; `"dispose"` removes it after every execution. */
+      readonly dispose?: "keep" | "dispose";
+      /** Branch for a new worktree; default `prism/<short id>`. Checked as a git branch name (`invalid_worktree_branch`). */
+      readonly branch?: string | ((ctx: WorkflowNodeContext) => string);
+      /** Commit-ish a new worktree starts at; default `HEAD`. */
+      readonly base?: string | ((ctx: WorkflowNodeContext) => string);
+    };
 
 /** Where an `agentNode` worktree is recorded for the merge gate. */
 export interface AgentNodeWorktreeOutput {

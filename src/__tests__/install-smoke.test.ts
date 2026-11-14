@@ -9,6 +9,9 @@ import { loadRelease } from "../../scripts/release.mjs";
 const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 // Plan 066 lockstep bump: all manifests carry the 0.5.1 cut.
 const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-ai";
+/** A bundle on its own version line packs under its own manifest version, not the kernel's. */
+const bundleVersion = (dir: string): string =>
+  (JSON.parse(readFileSync(new URL(`../../packages/${dir}/package.json`, import.meta.url), "utf8")) as { version: string }).version;
 
 import { afterAll as after, beforeAll as before, describe, it, setDefaultTimeout } from "bun:test";
 
@@ -1019,13 +1022,13 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // Plan 152 Task 8: the provider family workspace is deleted, so no family tarball is packed;
     // the work umbrella still is.
-    assert.ok(result.tarballNames.includes(`arnilo-prism-tools-${ROOT_VERSION}.tgz`), "missing tools-work tarball");
+    assert.ok(result.tarballNames.includes(`arnilo-prism-tools-${bundleVersion("tools")}.tgz`), "missing tools-work tarball");
     assert.ok(
       !result.tarballNames.some((name) => name.startsWith("arnilo-prism-providers-")),
       "the retired @arnilo/prism-providers workspace must not pack a tarball",
     );
     assert.ok(
-      result.tarballNames.includes(`${PROVIDER_TARBALL_SAMPLE}-${ROOT_VERSION}.tgz`),
+      result.tarballNames.includes(`${PROVIDER_TARBALL_SAMPLE}-${bundleVersion("providers")}.tgz`),
       `missing standalone provider tarball ${PROVIDER_TARBALL_SAMPLE}`,
     );
   });
