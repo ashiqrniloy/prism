@@ -74,9 +74,9 @@ A driver loop reports vendor activity through `run.observe`. Tool activity emits
 | `background.started` | `{ package?, name, taskId }` | A `SessionContext.background` task started. |
 | `background.completed` | `{ package?, name, taskId, durationMs }` | The task finished. |
 | `background.failed` | `{ package?, name, taskId, reason, error? }` | The task failed or `close()` aborted it. |
-| `hook.error` | `{ hook, owner, error }` | A hook threw. The run continues; `owner` is kernel-set. |
+| `hook.error` | `{ hook, owner, error }` | A hook threw. The run continues; `owner` is kernel-set. Delivered to the session whose dispatch raised it, and to no other session; one raised outside any session reaches `agent.subscribe()` only. |
 | `package.status` | `{ package, level, message, at }` | A package called `status.note`. Agent-scoped and redacted. |
-| `package.event` | `{ package, name, data? }` | A package emitted a namespaced event, e.g. `memory.session.status`. Kernel modules use `package: "kernel"` until their owning phase gives them a dedicated name. |
+| `package.event` | `{ package, name, data? }` | A package emitted a namespaced event, e.g. `memory.session.status`. Kernel modules use `package: "kernel"` until their owning phase gives them a dedicated name. A handler's `ctx.emit` is delivered like `hook.error`: to the session that dispatched the hook only, or to `agent.subscribe()` when no session did. Kernel events: `history.repaired` `{ count, callIds }` (a run's provider view answered tool calls the branch never answered; ids only); `model.call` `{ package, provider, model, outcome, latencyMs, usage? }` (one per model call a package made through `models.client`; delivered to the session passed in `generate(..., { session })`, else to `agent.subscribe()`; no message content). |
 
 ## Outputs
 

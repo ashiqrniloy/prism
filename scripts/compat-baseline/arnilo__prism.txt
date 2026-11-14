@@ -211,7 +211,7 @@
 . HARD_RUN_LIMITS	const HARD_RUN_LIMITS: Readonly<{ maxRequestBytes: number; maxResponseBytes: number; }>
 . HOOK_CATALOG	const HOOK_CATALOG: Readonly<Record<HookName, HookCatalogEntry>>
 . HookCatalog	type HookCatalog = NamedHookCatalog & ObserveCatalog
-. HookContext	interface HookContext { readonly emit: (name: string, data: JsonValue) => void; readonly reject: (reason: string) => HookRejection; readonly runId: string; readonly session?: SessionContext; readonly sessionId: string; readonly signal?: AbortSignal; }
+. HookContext	interface HookContext { readonly call?: (request: ProviderRequest) => AsyncIterable<ProviderEvent>; readonly emit: (name: string, data: JsonValue) => void; readonly reject: (reason: string) => HookRejection; readonly runId: string; readonly session?: SessionContext; readonly sessionId: string; readonly signal?: AbortSignal; }
 . HookDecision	type HookDecision<N extends DecideHookName> = NonNullable<HookResult<N>>
 . HookError	class HookError extends Error { constructor(message: string, options: { readonly owner: string; readonly hook: string; readonly code?: string; }); readonly code: string; readonly hook: string; readonly owner: string; }
 . HookHandler	type HookHandler<N extends HookName> = HookCatalog[N]
@@ -285,8 +285,9 @@
 . MigrationQuery	interface MigrationQuery extends PersistenceQuery { readonly fromAppliedAt?: string; readonly name?: string; readonly toAppliedAt?: string; readonly version?: string; }
 . MigrationRecord	interface MigrationRecord { readonly appliedAt: string; readonly appliedBy?: string; readonly checksum?: string; readonly id: string; readonly metadata?: Readonly<Record<string, unknown>>; readonly name: string; readonly version: string; }
 . ModelCacheCapabilities	interface ModelCacheCapabilities { readonly explicitBreakpoints?: boolean; readonly kind?: PromptCacheKind; readonly longRetention?: boolean; readonly maxBreakpoints?: number; readonly maxKeyLength?: number; readonly minCacheableTokens?: number; }
+. ModelCallOptions	interface ModelCallOptions { readonly session?: SessionContext; }
 . ModelCapabilities	interface ModelCapabilities { readonly decisions?: boolean; readonly embeddings?: boolean; readonly input?: readonly string[]; readonly output?: readonly string[]; readonly reasoning?: boolean; readonly streaming?: boolean; readonly structuredOutput?: boolean | "json_schema"; readonly thinkingLevels?: readonly string[]; readonly toolCallStrictness?: "strict" | "lenient"; readonly tools?: boolean; }
-. ModelClient	interface ModelClient { generate(request: Omit<ProviderRequest, "model">): AsyncIterable<ProviderEvent>; readonly model: ModelConfig; resolve?(): Promise<ModelConfig>; }
+. ModelClient	interface ModelClient { generate(request: Omit<ProviderRequest, "model">, options?: ModelCallOptions): AsyncIterable<ProviderEvent>; readonly model: ModelConfig; resolve?(): Promise<ModelConfig>; }
 . ModelConfig	interface ModelConfig { readonly cache?: ModelCacheCapabilities; readonly capabilities?: ModelCapabilities; readonly compat?: JsonObject; readonly cost?: ModelCost; readonly displayName?: string; readonly limits?: ModelLimits; readonly metadata?: Readonly<Record<string, unknown>>; readonly model: string; readonly parameters?: Readonly<Record<string, unknown>>; readonly provider: string; }
 . ModelCost	interface ModelCost { readonly cacheRead?: number; readonly cacheWrite?: number; readonly currency?: string; readonly input?: number; readonly output?: number; readonly unit?: string; }
 . ModelDiscovery	interface ModelDiscovery { listModels(options?: ModelDiscoveryOptions): Promise<ModelDiscoveryResult>; }
@@ -354,7 +355,7 @@
 . ProviderFailureClass	type ProviderFailureClass = "quota" | "auth" | "rate_limited" | "transient" | "permanent" | "context_overflow" | "unknown"
 . ProviderRegistry	interface ProviderRegistry { get(id: string): ModelProvider | undefined; list(): readonly ModelProvider[]; register(provider: ModelProvider): void; resolve(model: Pick<ModelConfig, "provider"> | string): ModelProvider; unregister(id: string): boolean; }
 . ProviderRegistryOptions	interface ProviderRegistryOptions extends DuplicateRegistrationOptions {}
-. ProviderRequest	interface ProviderRequest { readonly context?: readonly ContextBlock[]; readonly messages: readonly Message[]; readonly metadata?: Readonly<Record<string, unknown>>; readonly model: ModelSpec; readonly options?: ProviderRequestOptions; readonly signal?: AbortSignal; readonly tools?: readonly ToolDefinition[]; }
+. ProviderRequest	interface ProviderRequest { readonly context?: readonly ContextBlock[]; readonly messages: readonly Message[]; readonly metadata?: Readonly<Record<string, unknown>>; readonly model: ModelSpec; readonly options?: ProviderRequestOptions; readonly origin?: { readonly kind: "package"; readonly package: string; }; readonly signal?: AbortSignal; readonly tools?: readonly ToolDefinition[]; }
 . ProviderRequestOptions	interface ProviderRequestOptions { readonly cache?: PromptCacheHints; readonly cacheKey?: string; readonly cacheRetention?: CacheRetention; readonly compat?: JsonObject; readonly continuation?: { readonly cursor: string; }; readonly extra?: JsonObject; readonly headers?: Readonly<Record<string, string>>; readonly sessionId?: string; readonly structuredOutput?: StructuredOutputOptions; }
 . ProviderResolver	type ProviderResolver = (model: ModelConfig) => ModelProvider | undefined
 . ProviderStopReason	type ProviderStopReason = "end_turn" | "tool_calls" | "max_output_tokens" | "content_filter" | "abort" | "provider_error" | "unknown"
@@ -555,7 +556,7 @@
 . Usage	interface Usage { readonly cacheReadTokens?: number; readonly cacheWriteTokens?: number; readonly confidence?: TokenEstimateConfidence; readonly cost?: number; readonly currency?: string; readonly estimated?: boolean; readonly inputTokens?: number; readonly metadata?: JsonObject; readonly outputTokens?: number; readonly totalTokens?: number; }
 . UsageQuery	interface UsageQuery extends PersistenceQuery, OwnershipScope { readonly attempt?: number; readonly entryId?: string; readonly fromRecordedAt?: string; readonly runId?: string; readonly scope?: UsageScope; readonly sessionId?: string; readonly toRecordedAt?: string; readonly turn?: number; }
 . UsageRecord	interface UsageRecord extends OwnershipScope { readonly attempt?: number; readonly entryId?: string; readonly id: string; readonly metadata?: Readonly<Record<string, unknown>>; readonly recordedAt: string; readonly runId?: string; readonly scope: UsageScope; readonly sessionId: string; readonly turn?: number; readonly usage: Usage; }
-. UsageScope	type UsageScope = "provider_turn" | "run_total"
+. UsageScope	type UsageScope = "provider_turn" | "run_total" | "package_call"
 . VideoContent	interface VideoContent { readonly data?: string; readonly durationMs?: number; readonly fps?: number; readonly mediaType?: string; readonly metadata?: Readonly<Record<string, unknown>>; readonly name?: string; readonly resourceUri?: string; readonly type: "video"; readonly url?: string; }
 . agentFingerprint	function agentFingerprint(agent: Agent, revision: string): string
 . applyRestoredSkillBodies	function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[]
@@ -699,7 +700,7 @@
 . trimTrailingSlashes	function trimTrailingSlashes(value: string): string
 . validateJsonSchema	function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult
 . validateLoadedSkillBodies	function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[]
-. version	const version = "0.13.0"
+. version	const version = "0.13.1"
 . waitForRetry	function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 . withContextBlocks	function withContextBlocks(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft | undefined
 ./artifacts ARTIFACT_BODY_ERROR_CODES	const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_${ArtifactBodyErrorCode}`>>
@@ -1168,6 +1169,7 @@
 ./testing SystemOneLiveScenariosOptions	interface SystemOneLiveScenariosOptions { readonly baseUrl?: string; readonly decideTestName?: string; readonly fetch?: typeof fetch; readonly model: string | ModelConfig; readonly provider: ModelProvider | PackageInstance | ((options?: { fetch?: typeof fetch; }) => ModelProvider | PackageInstance | Promise<ModelProvider | PackageInstance>); readonly reachabilityCheck?: boolean | ((baseUrl: string) => Promise<{ reachable: boolean; reason?: string; }>); readonly secretEnv?: string | readonly string[]; readonly secrets?: readonly string[]; readonly skipUnless?: () => string | false; readonly title?: string; }
 ./testing assertAgentEventSourceConforms	function assertAgentEventSourceConforms(factory: AgentEventSourceConformanceFactory): Promise<void>
 ./testing assertPersistenceSearchQueryParity	function assertPersistenceSearchQueryParity(store: SessionStore & ProductionPersistenceStore): Promise<void>
+./testing assertToolRoundSettlement	function assertToolRoundSettlement(strategy: LoopStrategy): Promise<void>
 ./testing bindManifestInstance	function bindManifestInstance(definition: PackageDefinition<any>, config: Readonly<Record<string, unknown>> | undefined, options: { readonly optional: boolean; readonly source: PackageSource; }): PackageInstance
 ./testing checkLayaServerReachable	function checkLayaServerReachable(baseUrl: string): Promise<{ reachable: boolean; reason?: string; }>
 ./testing createMemoryAgentEventSource	function createMemoryAgentEventSource(options?: AgentEventSourceOptions): AgentEventSource

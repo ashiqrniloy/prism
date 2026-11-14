@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "prismVersion": "0.13.0",
-  "contentHash": "fbfb2db980043952efe5f334532e72096e866d8b64a66af591fd659685af17f7",
+  "prismVersion": "0.13.1",
+  "contentHash": "c1f62d4ba1fa4b2bec419b01600d533887a29df009e8056fec5d0221c8eca3bd",
   "examples": [
     {"path":"examples/acp.ts","title":"acp","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/approval","@arnilo/prism-hosts/acp","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/advisor.ts","title":"Advisor Demo (plan 191 Task 8).","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/advisor","@arnilo/prism/provider-kit"],"requiresEnv":[],"needsCredentials":false},
@@ -93,7 +93,7 @@
     {"path":"examples/session-memory.ts","title":"Names its source entry, so each turn's pass records its own event (an identical one would habituate).","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/compaction","@arnilo/prism-extensions/store-sqlite","@arnilo/prism-memory-system"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/session-search.ts","title":"Workspace session search over stored sessions (plan 095). One query API covers the indexed","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/store-jsonl","@arnilo/prism-extensions/store-sqlite"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/session.ts","title":"A second turn through `run` returns the RunResult.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
-    {"path":"examples/side-call.ts","title":"side-call","gate":"executed","imports":["@arnilo/prism","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
+    {"path":"examples/side-call.ts","title":"Passing the tool's session runs the call on the hook plane and charges it to this run's limits.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/signal-agent.ts","title":"Explicit, externally supervised signal-cli composition.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-hosts/channels/signal"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/skills-progressive-disclosure.ts","title":"Many-skill catalog under budget, then load one body on demand (no live provider).","gate":"executed","imports":["@arnilo/prism"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/skills.ts","title":"Skill registry with progressive disclosure: skills activate by name and may","gate":"executed","imports":["@arnilo/prism"],"requiresEnv":[],"needsCredentials":false},

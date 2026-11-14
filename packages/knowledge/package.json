@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-knowledge",
-  "version": "0.13.0-experimental.0",
+  "version": "0.13.0-experimental.1",
   "description": "Experimental Prism knowledge bundle. Import each capability through its published entrypoint.",
   "type": "module",
   "exports": {
@@ -45,7 +45,7 @@
     }
   },
   "dependencies": {
-    "@arnilo/prism-memory-system": "0.13.0-experimental.0"
+    "@arnilo/prism-memory-system": "0.13.0-experimental.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

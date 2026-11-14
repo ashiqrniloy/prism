@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition, Usage } from "@arnilo/prism";
+import type { JsonObject, JsonValue, SessionContext, SsrfPolicy, ToolArgumentValidator, ToolDefinition, Usage } from "@arnilo/prism";
 
 import type { DomainPolicy } from "./domains.js";
 
@@ -174,7 +174,12 @@ export interface PromptAnswer {
 }
 /** Opt-in `fetch.prompt` support: one bounded, tool-free model call over the page. */
 export interface PromptFetch {
-  answer(page: WebDocument, question: string, options?: { readonly signal?: AbortSignal }): Promise<PromptAnswer>;
+  /** `session` charges the answering model call to the run that fetched the page (plan 225 Task 5). */
+  answer(
+    page: WebDocument,
+    question: string,
+    options?: { readonly signal?: AbortSignal; readonly session?: SessionContext },
+  ): Promise<PromptAnswer>;
 }
 export interface WebToolsOptions {
   readonly search?: WebSearchAdapter;

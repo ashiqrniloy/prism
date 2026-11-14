@@ -34,6 +34,12 @@ export interface HookContext {
   readonly reject: (reason: string) => HookRejection;
   /** The session, bound to the registering owner. Absent when the bus is not bound to a session. */
   readonly session?: SessionContext;
+  /**
+   * `model.call` dispatches only: streams one provider turn for ANY model, straight to its provider. It runs no
+   * `model.request` or `model.call` hook and is not charged to the run, so a router can try several models without
+   * re-entering itself. The enclosing call accounts for it. Callable more than once.
+   */
+  readonly call?: (request: ProviderRequest) => AsyncIterable<ProviderEvent>;
 }
 
 export type ObserveHook<P> = (payload: P, context: HookContext) => void | Promise<void>;
@@ -262,15 +268,18 @@ export interface HookBus {
     name: N,
     payload: HookPayload<N>,
     terminal: (value: HookPayload<N>) => Promise<HookResult<N>>,
+    identity?: { readonly sessionId?: string; readonly runId?: string },
+    call?: HookContext["call"],
   ): Promise<HookResult<N>>;
   /** Removes every registration an owner holds and returns how many. Used to unwind and dispose a package. */
   removeOwner(owner: string): number;
   /**
    * A view of this bus whose handlers receive `context.session`, bound to the registering owner so a
    * package's `session.background(...)` is checked against that package's capabilities. It shares
-   * registrations with this bus.
+   * registrations with this bus. `onEvent` receives every event a handler raises through this view
+   * (`ctx.emit`, `hook.error`), so the binding session, and no other, gets them.
    */
-  bound(sessionFor: (owner: string) => SessionContext): HookBus;
+  bound(sessionFor: (owner: string) => SessionContext, onEvent: (event: AgentEvent) => void): HookBus;
   registrations(): readonly HookRegistrationInfo[];
   /** Whether any handler is registered for `name`. Allocation-free, unlike {@link registrations}. */
   has(name: HookName): boolean;
@@ -278,6 +287,6 @@ export interface HookBus {
 
 export interface HookBusOptions {
   readonly secrets?: readonly (string | undefined)[];
-  /** Sink for `hook.error` events (observe throws and `onError: "ignore"`). */
+  /** Sink for events raised through the unbound bus (no session): `hook.error` and `ctx.emit`. */
   readonly onEvent?: (event: AgentEvent) => void;
 }

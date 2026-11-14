@@ -578,7 +578,12 @@ assert.equal(beforeToggle.enabled, false, "the package is off until the session 
 await scopeSession.run("start observational-memory journey");
 await scopeAgent.commands.run("memory:session", {}, { session: scopeSession });
 await scopeSession.run("second turn the observer can see");
-const omStatus = await scopeAgent.commands.run("memory:session:status", {}, { session: scopeSession });
+// The worker pass runs after the turn; read the status once it has settled.
+let omStatus = await scopeAgent.commands.run("memory:session:status", {}, { session: scopeSession });
+for (let attempt = 0; attempt < 100 && omStatus.inFlight === true; attempt++) {
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  omStatus = await scopeAgent.commands.run("memory:session:status", {}, { session: scopeSession });
+}
 assert.equal(omStatus.enabled, true, "the toggle sticks to the session");
 assert.ok((omStatus.observations?.recorded ?? 0) > 0, "the observer recorded an observation");
 const omView = await scopeAgent.commands.run("memory:session:view", {}, { session: scopeSession });

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-tools",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "description": "Prism coding, web, browser, research, OpenAPI, computer-use and work tools. Import each package through its subpath.",
   "type": "module",
   "engines": {

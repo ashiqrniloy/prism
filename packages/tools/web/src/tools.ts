@@ -83,7 +83,10 @@ export function createWebTools(options: WebToolsOptions): readonly ToolDefinitio
         });
         if (question !== undefined) {
           // One extra model call, outside the run's usage; the answer is still derived from the page.
-          const answer = await options.prompt!.answer(page, question, { signal: context.signal });
+          const answer = await options.prompt!.answer(page, question, {
+            signal: context.signal,
+            ...(context.session === undefined ? {} : { session: context.session }),
+          });
           return result(
             context,
             "web_fetch",

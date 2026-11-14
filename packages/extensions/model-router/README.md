@@ -45,9 +45,10 @@ const agent = await createAgent({
 The router registers an `around` handler on the catalog hook `model.call`:
 - Each turn resolves an eligible candidate through `createModelRouter().resolve()`.
 - If the resolved candidate belongs to the run's active provider, execution calls `next({ ...request, model })`.
-- If the resolved candidate is on a different provider, execution skips `next` and routes via `prism.models.client(candidate).generate(request)`.
+- If the resolved candidate is on a different provider, execution skips `next` and routes through `context.call(request)`, the unhooked and unmetered onward call a `model.call` handler gets, so routing never re-enters `model.call`.
 - If a candidate errors before emitting any output event (`message_start`, `content_delta`, `tool_call_delta`), the router records the failure, updates circuit state, releases the reservation, and falls through to the next eligible candidate. An error occurring after output has begun is treated as the turn's error and does not trigger fallback.
 - Budgets reserve capacity atomically at admission and commit on turn completion based on actual usage. Aborted runs release their reservations.
+- A package's own model call (`request.origin.kind === "package"`, a compactor's or advisor's summary) is metered like a turn (budgets, rate limits, circuit state) but never rerouted: its only candidate is the model the package asked for, with no fallbacks.
 - Every candidate decision emits a `package.event` named `router.decision` recording the candidate, outcome, and attempt index.
 
 ## Performance and Fallback Cost

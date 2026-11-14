@@ -4,6 +4,7 @@ import {
   type AgentEvent,
   createAgent,
   createMemorySessionStore,
+  definePackage,
   type LoopStrategy,
   type ModelProvider,
   type ProviderEvent,
@@ -331,6 +332,86 @@ describe("model router package", () => {
     assert.equal(decisions[0].outcome, "selected");
     assert.equal(decisions[0].attempt, 1);
 
+    await agent.dispose();
+  });
+});
+
+describe("model router and package model calls (plan 225 Task 5)", () => {
+  it("router_onward_call_does_not_reenter_model_call", async () => {
+    let outer = 0;
+    const agent = await createAgent({
+      id: "agent-no-reentry",
+      model: { provider: "mock-a", model: "m1" },
+      slots: { store: createMemorySessionStore() },
+      // Runs first (priority 100), so it wraps the router and counts every `model.call` dispatch.
+      hooks: (hooks) => {
+        hooks.on(
+          "model.call",
+          async (request, next) => {
+            outer += 1;
+            return next(request);
+          },
+          { priority: 100 },
+        );
+      },
+      packages: [
+        providerPackage("pkg-a", [mockProvider("mock-a")]),
+        providerPackage("pkg-b", [mockProvider("mock-b", { text: "from provider B" })]),
+        modelRouter({ candidates: ["mock-b/m2"], select: "ordered" }),
+      ],
+    });
+    const session = await agent.session({ id: "s-reentry", create: true });
+    const run = await session.run("route across providers");
+    assert.equal(run.text, "from provider B");
+    assert.equal(outer, 1, "the cross-provider route fires model.call once");
+    await agent.dispose();
+  });
+
+  it("router_budget_counts_package_calls_and_keeps_their_model", async () => {
+    const seen: string[] = [];
+    const recording: ModelProvider = {
+      id: "mock-b",
+      async *generate(request) {
+        seen.push(`${request.model.provider}/${request.model.model}`);
+        yield providerTextDelta("side");
+        yield providerDone({ inputTokens: 1, outputTokens: 1, totalTokens: 2 });
+      },
+    };
+    let client: import("@arnilo/prism").ModelClient | undefined;
+    const side = definePackage<any>({
+      name: "@acme/side",
+      version: "1.0.0",
+      requires: { api: 1 },
+      capabilities: ["models"],
+      setup: ({ models }: any) => {
+        client = models.client("mock-b/chosen");
+      },
+    });
+    const agent = await createAgent({
+      id: "agent-package-call",
+      model: { provider: "mock-a", model: "m1" },
+      slots: { store: createMemorySessionStore() },
+      packages: [
+        providerPackage("pkg-a", [mockProvider("mock-a")]),
+        providerPackage("pkg-b", [recording]),
+        modelRouter({ candidates: ["mock-a/m1", "mock-b/other"], select: "ordered" }),
+        side,
+      ],
+    });
+    const events: AgentEvent[] = [];
+    void (async () => {
+      for await (const event of agent.subscribe()) events.push(event);
+    })().catch(() => undefined);
+    assert.ok(client, "the package captured the models client");
+    for await (const _event of client.generate({ messages: [] }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(seen, ["mock-b/chosen"], "the package's model is kept, not rerouted to a candidate");
+    const decisions = events.filter((event) => event.type === "package.event" && event.name === "router.decision");
+    assert.ok(decisions.length >= 1, "the router resolved and recorded the package call");
+    assert.deepEqual(
+      decisions.map((event) => (event as { data: { candidate?: { model?: string } } }).data.candidate?.model),
+      Array(decisions.length).fill("chosen"),
+    );
     await agent.dispose();
   });
 });

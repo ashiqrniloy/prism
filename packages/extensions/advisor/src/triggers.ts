@@ -29,6 +29,7 @@ export function registerBeforeTools(prism: PackageAPI<AdvisorConfig>, runtime: A
       const answer = await generateText(runtime.client, consultPrompt(runtime.instructions, transcript, question), {
         maxChars: runtime.adviceMaxChars,
         ...(context.signal === undefined ? {} : { signal: context.signal }),
+        ...(context.session === undefined ? {} : { session: context.session }),
       });
       const verdict = parseAdviceVerdict(answer.text, runtime.adviceMaxChars);
       if (verdict === undefined) {
@@ -71,6 +72,7 @@ export function registerBeforeFinish(prism: PackageAPI<AdvisorConfig>, runtime: 
       const answer = await generateText(runtime.client, consultPrompt(runtime.instructions, transcript, question), {
         maxChars: runtime.adviceMaxChars,
         ...(context.signal === undefined ? {} : { signal: context.signal }),
+        ...(context.session === undefined ? {} : { session: context.session }),
       });
       const verdict = parseAdviceVerdict(answer.text, runtime.adviceMaxChars);
       if (verdict === undefined) {

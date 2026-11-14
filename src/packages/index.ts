@@ -9,6 +9,7 @@ export {
 export { type JsonSchema, type SchemaError, type SchemaErrorRule, type SchemaResult, SECRET_REF, validateJsonSchema } from "./schema.js";
 export { definePackage } from "./define.js";
 export type {
+  ModelCallOptions,
   ModelClient,
   PackageAPI,
   PackageCommand,

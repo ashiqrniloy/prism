@@ -136,10 +136,22 @@ export function buildValidationPrompt(sections: PromptSections): string {
 }
 
 /** One model call, no tools, parsed fail closed. */
-async function judge(client: ModelClient, prompt: string, maxChars: number, signal: AbortSignal | undefined): Promise<ValidationResult> {
+async function judge(
+  client: ModelClient,
+  prompt: string,
+  maxChars: number,
+  signal: AbortSignal | undefined,
+  session?: SessionContext,
+): Promise<ValidationResult> {
   let text: string;
   try {
-    text = (await generateText(client, prompt, { maxChars, ...(signal === undefined ? {} : { signal }) })).text;
+    text = (
+      await generateText(client, prompt, {
+        maxChars,
+        ...(signal === undefined ? {} : { signal }),
+        ...(session === undefined ? {} : { session }),
+      })
+    ).text;
   } catch {
     return { verdict: "error", reasonCode: CODE.model };
   }
@@ -152,8 +164,9 @@ async function validateWithModel(
   runtime: AdvisorRuntime,
   sections: PromptSections,
   signal: AbortSignal | undefined,
+  session?: SessionContext,
 ): Promise<ValidationResult> {
-  return judge(runtime.client, buildValidationPrompt(sections), runtime.adviceMaxChars, signal);
+  return judge(runtime.client, buildValidationPrompt(sections), runtime.adviceMaxChars, signal, session);
 }
 
 /** Input to the standalone validation: host text and host evidence only. Nothing is read from a session. */
@@ -311,6 +324,7 @@ export function registerValidation(
               evidence,
             },
             signal,
+            hook.session,
           );
     return settle(result);
 

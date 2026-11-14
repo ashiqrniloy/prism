@@ -58,7 +58,7 @@ export function createCurator(deps: CuratorDeps): Curator {
       declined,
       lease,
       ...(deps.now === undefined ? {} : { now: deps.now() }),
-      ...(session === undefined ? {} : { sessionId: session.id }),
+      ...(session === undefined ? {} : { sessionId: session.id, session }),
       ...(signal === undefined ? {} : { signal }),
     });
     starts.unshift(report.at);

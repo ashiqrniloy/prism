@@ -54,7 +54,8 @@ test("session_manual_compact_with_llm_strategy_appends_compaction_entry", async 
   ).session({ id: "s1", create: true });
   await session.run("old");
   await session.run("new");
-  const events = take(session.subscribe(), 2);
+  // started, the summary call's kernel `model.call` package event (plan 225 Task 5), completed.
+  const events = take(session.subscribe(), 3);
 
   const result = await session.compact();
 

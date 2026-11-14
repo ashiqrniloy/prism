@@ -27,6 +27,7 @@ import { jsonEqual } from "../../hooks/json.js";
 import type { AgentInput } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
 import type { AskRequest, AskResolution, LoopStrategy, RunTurnOptions } from "../../loop/index.js";
+import { packageEventFor } from "../../hooks/emit.js";
 import { createRunController } from "../../loop/index.js";
 import { applyRequestTransforms } from "../../loop/request-draft.js";
 import { applyDefaultProviderRequestOptions } from "../../provider-kit/provider-request-policy.js";
@@ -41,7 +42,7 @@ import { clampTurnToolNames, createToolRegistry, resolveToolEffects, selectRunTo
 import { bridgeAbort, createUsageAccumulator, inputToMessages, isDurableLoop, isSteerSoftInterrupt, throwIfAborted } from "../helpers.js";
 import { assignedLoop, tryAgentRuntime } from "../runtime-registry.js";
 import { cleanupRun, persistDurable, persistSucceeded } from "./persist.js";
-import { generateWithRetry, recordProviderUsage } from "./provider-round.js";
+import { generateWithRetry, recordPackageCallUsage, recordProviderUsage } from "./provider-round.js";
 import {
   bindChargeToolRound,
   bindDispatchToolCall,
@@ -321,7 +322,13 @@ async function assembleRoundContext(params: {
   };
   await session.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, session.activeRedactor));
 
-  await session.rebuildHistory();
+  const repairedCalls = await session.rebuildHistory();
+  // One event per run, after `run.started`: the provider view answered calls the branch never did.
+  if (repairedCalls.length > 0) {
+    session.emit(
+      packageEventFor("kernel", session.id, runId, "history.repaired", { count: repairedCalls.length, callIds: [...repairedCalls] }),
+    );
+  }
   const { tools: listed } = activeTools(session.agent);
   const selected = selectRunTools(listed, options.tools?.only, resumed?.state?.toolNames);
   session.activeToolNames = selected.grant;
@@ -738,6 +745,10 @@ export async function executeRun(
       limits,
       runUsage,
     });
+    // From here a package's model call that passes this session is charged to this run (plan 225 Task 5).
+    session.activePackageUsage = async (callModel, callUsage, callRequest) => {
+      await recordPackageCallUsage(ctx, callModel, callUsage, callRequest);
+    };
 
     await replayDurableNestedAndPending(ctx);
 

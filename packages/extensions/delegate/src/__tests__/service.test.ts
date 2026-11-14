@@ -76,6 +76,16 @@ function contextOf(session: Session): SessionContext {
 }
 
 describe("delegate service", () => {
+  it("delegate_sync_child_turns_are_charged_to_the_parent_run", async () => {
+    // Plan 225 Task 5: the child's provider bridge carries the delegating session, so a synchronous child's turn is
+    // part of the parent's run usage (two parent turns of 2 tokens plus one child turn of 2).
+    const agent = await build({ reviewer: { inherit: [] } });
+    const session = await agent.session();
+    const result = await session.run("delegate the reviewer");
+    assert.equal(result.status, "completed");
+    assert.equal(result.usage?.totalTokens, 6, "both parent turns and the child's turn");
+  });
+
   it("delegate_service_runs_configured_child", async () => {
     const agent = await build({ reviewer: { inherit: [] } });
     const session = await agent.session();

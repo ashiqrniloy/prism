@@ -56,6 +56,25 @@ missing annotation never widens what a policy allows.
 
 What the model sees for a finished tool call is the `tool_result` payload: text output arrives as text, a `value` arrives as JSON, an error arrives as its `message` (with `is_error` on Anthropic Messages), and an image output arrives as an image block there while OpenAI Chat Completions receives it in a follow-up user message.
 
+### A call always has a result
+
+Every tool call of an assistant message has exactly one tool result in the branch once its round ends,
+however the round ends: a limit breach, an abort, the tool-round ceiling, a throwing `tool.call` handler
+or `tool.result` transform, a dispose, or a custom loop that drops the round's calls. A call that never
+started gets `error.code: "tool_call_not_dispatched"`; the call whose failure ended the round keeps that
+failure's name, message and code. Each synthetic result emits one `tool.completed { status: "blocked",
+reason: <its error code> }`. The one exception is a call staged for approval (`approvalPending`), which
+`session.resume` settles with its real result.
+
+A branch written before this guarantee (0.13.0, or a process that died mid-round) can hold calls no result
+answers. When history is rebuilt for a run, `checkout` or compaction, the provider view answers each such
+call with a synthetic result, `error.code: "tool_call_interrupted"`, directly after the call. The store is
+not written and `session.messages()` still shows the stored branch. The synthetic rows are a pure function
+of the branch, so a cached prefix stays valid. The run emits one `package.event` `history.repaired`
+(`{ count, callIds }`, ids only) after `run.started`. A resume leaves the calls its suspension owns alone;
+a fresh `run()` on a suspended session repairs them too, because starting it abandons the suspension.
+Provider-hosted calls are never settled or repaired.
+
 ### Untrusted external results
 
 A result whose `metadata.trust` is `UNTRUSTED_EXTERNAL_TRUST` (`"untrusted_external"`) is wrapped once, by the kernel, when the message is built — so the stored transcript, folded/compacted text, and every codec carry the same bytes:

@@ -3,7 +3,7 @@
  * `package.json` by a test and by the lockstep bump in `scripts/release.mjs`. The kernel does not
  * read `package.json` at runtime: it imports no `node:fs`.
  */
-export const KERNEL_VERSION = "0.13.0";
+export const KERNEL_VERSION = "0.13.1";
 
 /**
  * The kernel API level a package's `requires.api` is checked against. Bumped only for a breaking

@@ -219,3 +219,30 @@ export async function loopConformance(input: LoopStrategy | LoopConformanceOptio
     await pump.catch(() => {});
   }
 }
+
+/**
+ * Settlement conformance (plan 225 Task 4): every tool call of an assistant message has a result in the
+ * branch once its round ends, however the round ends. Runs one scenario on `strategy`: a turn of three
+ * calls under `maxToolCalls: 1`, so the round breaches its limit on the second call. Throws, naming the
+ * unanswered call ids, when the strategy leaves any call without a result.
+ */
+export async function assertToolRoundSettlement(strategy: LoopStrategy): Promise<void> {
+  const provider: ModelProvider = {
+    id: "mock",
+    async *generate() {
+      for (const id of ["settle-1", "settle-2", "settle-3"]) yield { type: "tool_call" as const, call: toolCallContent(id, "echo", {}) };
+      yield providerDone();
+    },
+  };
+  const { session, agent } = await loopConformance({ loop: strategy, provider, probe: false, limits: { maxToolCalls: 1 } });
+  const messages = await session.messages();
+  await agent.dispose();
+  const answered = new Set<string>();
+  for (const message of messages) for (const block of message.content) if (block.type === "tool_result") answered.add(block.toolCallId);
+  const unanswered: string[] = [];
+  for (const message of messages) {
+    if (message.role !== "assistant") continue;
+    for (const block of message.content) if (block.type === "tool_call" && !answered.has(block.id)) unanswered.push(block.id);
+  }
+  if (unanswered.length > 0) throw new Error(`Loop "${strategy.name}" left tool calls without a result: ${unanswered.join(", ")}`);
+}

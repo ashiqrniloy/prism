@@ -781,7 +781,12 @@ export interface ToolCallRecord extends OwnershipScope {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export type UsageScope = "provider_turn" | "run_total";
+/**
+ * `package_call` is the final usage of a model call a package made inside a run (`models.client` with a `session`).
+ * It is separate from `provider_turn` so a host that sums only run turns is unchanged; add it to a sum that should
+ * count side calls.
+ */
+export type UsageScope = "provider_turn" | "run_total" | "package_call";
 
 /** Stored usage row. `scope` prevents provider-turn and aggregate totals from being summed together. */
 export interface UsageRecord extends OwnershipScope {

@@ -1,6 +1,18 @@
 export { defaultLoop } from "./default-loop.js";
-export { dispatchableToolCalls, dispatchToolCallsInOrder, type ToolDispatchContext, throwIfAborted } from "./dispatch.js";
-export { type AskRequest, type AskResolution, createRunController, type RunControllerInternals } from "./run-controller.js";
+export {
+  dispatchableToolCalls,
+  dispatchToolCallsInOrder,
+  isRunControlError,
+  type ToolDispatchContext,
+  throwIfAborted,
+} from "./dispatch.js";
+export {
+  type AskRequest,
+  type AskResolution,
+  createRunController,
+  type RunControllerInternals,
+  settleOutstandingToolCalls,
+} from "./run-controller.js";
 export type {
   ExternalActivity,
   ExternalAskSupport,

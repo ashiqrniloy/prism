@@ -27,6 +27,7 @@ export {
 } from "./driver-conformance.js";
 export { createScriptedHostUi, type ScriptedAnswer, type ScriptedHostUi } from "./host-ui.js";
 export {
+  assertToolRoundSettlement,
   echoTool,
   type LoopConformanceOptions,
   type LoopConformanceResult,

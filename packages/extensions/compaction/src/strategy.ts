@@ -161,7 +161,11 @@ async function runSummaryProvider(
   request = applyDefaultProviderRequestOptions(request, { sessionId: context.sessionId });
 
   try {
-    for await (const event of client.generate({ messages: request.messages, options: request.options, signal: providerSignal })) {
+    // The slot owner's session view (when it has one) charges the summary to the run that compacts (plan 225 Task 5).
+    for await (const event of client.generate(
+      { messages: request.messages, options: request.options, signal: providerSignal },
+      context.session === undefined ? undefined : { session: context.session },
+    )) {
       throwIfAborted(context.signal);
       eventCount += 1;
       if (eventCount > maxChars + 1024) throw new Error("Summarization failed: provider event limit exceeded");

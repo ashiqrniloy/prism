@@ -133,7 +133,7 @@
 ./context-engineering HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
 ./context-engineering MAX_FOLD_FRONTIER_IDS	const MAX_FOLD_FRONTIER_IDS = 4096
 ./context-engineering MAX_LEDGER_BODIES	const MAX_LEDGER_BODIES = 64
-./context-engineering ModelSummarizeOptions	interface ModelSummarizeOptions { readonly client: { generate(request: { readonly messages: readonly Message[]; readonly signal?: AbortSignal; }): AsyncIterable<{ readonly type: string; readonly content?: { readonly type: string; readonly text?: string; }; readonly error?: unknown; }>; }; readonly instruction?: string; readonly maxSummaryBytes: number; }
+./context-engineering ModelSummarizeOptions	interface ModelSummarizeOptions { readonly client: { generate(request: { readonly messages: readonly Message[]; readonly signal?: AbortSignal; }, options?: { readonly session?: SessionContext; }): AsyncIterable<{ readonly type: string; readonly content?: { readonly type: string; readonly text?: string; }; readonly error?: unknown; }>; }; readonly instruction?: string; readonly maxSummaryBytes: number; readonly session?: SessionContext; }
 ./context-engineering MutableToolSearchState	type MutableToolSearchState = { -readonly [K in keyof ToolSearchState]: ToolSearchState[K]; }
 ./context-engineering PersistedAttentionFoldLedger	interface PersistedAttentionFoldLedger { readonly bodies: readonly { readonly id: string; readonly body: string; }[]; readonly v: 1; }
 ./context-engineering PersistedAttentionStickyFrontier	interface PersistedAttentionStickyFrontier { readonly thinking: readonly string[]; readonly toolCallIds: readonly string[]; readonly v: 1; }

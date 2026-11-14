@@ -72,7 +72,7 @@ describe("retired observational package name (plan 216 Task 4)", () => {
       /^packages\/memory\/system\/src\/session\/types\.ts$/,
       /^packages\/memory\/system\/README\.md$/,
       /^packages\/memory\/system\/src\/session\/__tests__\/memory-system\.test\.ts$/, // negative controls for the retired commands
-      /^scripts\/memory-bench\/(session-replay\.mjs|preservation\.test\.mjs|work-outcome\/long-session\.mjs)$/, // replay of the pinned pre-216 product
+      /^scripts\/memory-bench\/(session-replay\.mjs|preservation\.test\.mjs|work-outcome\/long-session\.mjs|external\/compact-bench\/adapter\.mjs)$/, // replay of the pinned pre-216 product
       /^scripts\/memory-bench\/(cleanup-criteria|memory-model-criteria)\.json$/,
     ];
     const hits: string[] = [];

@@ -124,7 +124,7 @@ report into a `context.omissions` package event.
 ## Cost, security, and failure behavior
 
 - **No model call by default.** `fold.summarize: "truncate"` is deterministic. `{ model }` adds one
-  call per newly folded result (never per turn). Tool search adds no model call. Attention may
+  call per newly folded result (never per turn), charged to the run that folds it. Package side calls (a fold or compaction summary) are not the run's request, so the accounting handler skips them. Tool search adds no model call. Attention may
   request compaction, and each compaction costs whatever the `compaction` slot owner costs.
 - **One pass per turn per configured stage.** No stage configured means no handler and no pass.
 - **The store keeps the full transcript.** Every stage rewrites a clone of `draft.messages`; the

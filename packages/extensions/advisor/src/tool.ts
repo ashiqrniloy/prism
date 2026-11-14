@@ -41,6 +41,7 @@ export function createAdviseTool(prism: PackageAPI<AdvisorConfig>, runtime: Advi
         const answer = await generateText(runtime.client, consultPrompt(runtime.instructions, transcript, args.question), {
           maxChars: runtime.adviceMaxChars,
           ...(context.signal === undefined ? {} : { signal: context.signal }),
+          ...(context.session === undefined ? {} : { session: context.session }),
         });
         prism.events.emit(
           "advisor.consult",

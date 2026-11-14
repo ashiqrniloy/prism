@@ -1,4 +1,4 @@
-import type { Message } from "@arnilo/prism";
+import type { Message, SessionContext } from "@arnilo/prism";
 import { estimateTextBytes, estimateTextTokens } from "@arnilo/prism";
 
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2;
@@ -313,12 +313,17 @@ export function truncateSummarize(input: ToolResultFoldInput): string {
 export interface ModelSummarizeOptions {
   /** Resolved by the package through `prism.models.client(fold.summarize.model)`. */
   readonly client: {
-    generate(request: { readonly messages: readonly Message[]; readonly signal?: AbortSignal }): AsyncIterable<{
+    generate(
+      request: { readonly messages: readonly Message[]; readonly signal?: AbortSignal },
+      options?: { readonly session?: SessionContext },
+    ): AsyncIterable<{
       readonly type: string;
       readonly content?: { readonly type: string; readonly text?: string };
       readonly error?: unknown;
     }>;
   };
+  /** The session the fold runs in: the summary call is charged to its active run (plan 225 Task 5). */
+  readonly session?: SessionContext;
   /** Byte cap on the summary; the provider stream is aborted once it is reached. */
   readonly maxSummaryBytes: number;
   /** Prepended to the payload. Default {@link DEFAULT_FOLD_SUMMARY_INSTRUCTION}. */
@@ -338,11 +343,14 @@ export function createModelSummarize(options: ModelSummarizeOptions): (input: To
   return async (input) => {
     const parts: string[] = [];
     let retainedBytes = 0;
-    for await (const event of options.client.generate({
-      messages: [
-        { role: "user", content: [{ type: "text", text: `${instruction}\n\n${input.toolName} (${input.toolCallId}):\n${input.text}` }] },
-      ],
-    })) {
+    for await (const event of options.client.generate(
+      {
+        messages: [
+          { role: "user", content: [{ type: "text", text: `${instruction}\n\n${input.toolName} (${input.toolCallId}):\n${input.text}` }] },
+        ],
+      },
+      options.session === undefined ? undefined : { session: options.session },
+    )) {
       if (event.type === "error") throw new Error("tool result fold: provider error");
       if (event.type !== "content_delta" || event.content?.type !== "text" || typeof event.content.text !== "string") continue;
       parts.push(event.content.text);

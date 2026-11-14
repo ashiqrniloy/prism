@@ -11,10 +11,16 @@ export interface ToolDispatchContext {
   isToolCallExclusive?(call: ToolCallContent): boolean;
   /** Persist one transcript row. The caller owns history insertion. */
   appendMessage(message: Message): Promise<void>;
+  /** Called once for each synthetic result the seam writes, so the caller can emit its `tool.completed`. */
+  settled?(result: ToolResult): void;
 }
 
 export function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Agent run aborted");
+}
+
+function isDisposeAbort(signal: AbortSignal): boolean {
+  return signal.aborted && (signal.reason as { code?: unknown } | null | undefined)?.code === "agent_disposed";
 }
 
 /** Calls the host must dispatch. Provider-hosted calls were executed server-side. */
@@ -28,16 +34,35 @@ export async function dispatchToolCallsInOrder(
   ctx: ToolDispatchContext,
 ): Promise<readonly ToolResult[]> {
   if (calls.length === 0) return [];
-  await ctx.chargeToolRound?.(calls);
+  try {
+    await ctx.chargeToolRound?.(calls);
+  } catch (error) {
+    // The round charge runs before any call: nothing was dispatched, so every call is answered.
+    await settleUnanswered(calls, 0, undefined, ctx, []);
+    throw error;
+  }
   const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call)) ? 1 : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));
   if (concurrency === 1) {
     const serial: ToolResult[] = [];
-    for (const call of calls) {
-      const result = await ctx.dispatchToolCall(call);
-      serial.push(result);
-      await appendToolResultMessage(result, ctx);
+    // `answered` calls have a result persisted; `running` is the call whose dispatch is in flight.
+    let answered = 0;
+    let running = -1;
+    try {
+      for (const call of calls) {
+        // A dispose abort is answered per call (`agent_disposed` denials, plan 177 Task 5), not thrown.
+        if (!isDisposeAbort(ctx.signal)) throwIfAborted(ctx.signal);
+        running = answered;
+        const result = await ctx.dispatchToolCall(call);
+        running = -1;
+        serial.push(result);
+        await appendToolResultMessage(result, ctx);
+        answered += 1;
+      }
+      return serial;
+    } catch (error) {
+      await settleUnanswered(calls, answered, running === answered ? error : undefined, ctx, serial);
+      throw error;
     }
-    return serial;
   }
 
   const results: (ToolResult | undefined)[] = new Array(calls.length);
@@ -87,13 +112,43 @@ export async function dispatchToolCallsInOrder(
     const synthetic = syntheticFailureResult(call, index < claimed ? firstFailure : undefined);
     returned.push(synthetic);
     await appendToolResultMessage(synthetic, ctx);
+    ctx.settled?.(synthetic);
   }
   if (stopped) throw firstFailure;
   return returned;
 }
 
+/**
+ * Answer calls `from..` of a stopped round, in call order, and never throw: the round's own error
+ * is what the caller rethrows. `failure` belongs to call `from` (it was dispatching when it threw);
+ * every later call, and `from` itself when `failure` is undefined, never started.
+ */
+async function settleUnanswered(
+  calls: readonly ToolCallContent[],
+  from: number,
+  failure: unknown,
+  ctx: ToolDispatchContext,
+  returned: ToolResult[],
+): Promise<void> {
+  for (let index = from; index < calls.length; index += 1) {
+    const call = calls[index];
+    if (call === undefined) continue;
+    const own = index === from ? failure : undefined;
+    // Suspension and loop-state errors are not tool outcomes: their machinery writes the real result.
+    if (own !== undefined && isRunControlError(own)) continue;
+    const synthetic = syntheticFailureResult(call, own);
+    try {
+      await appendToolResultMessage(synthetic, ctx);
+      returned.push(synthetic);
+      ctx.settled?.(synthetic);
+    } catch {
+      // A failing store cannot be repaired here; the read-time repair covers the branch.
+    }
+  }
+}
+
 /** Run-level control errors rethrown by `dispatchToolCall` (mirrors `src/tools.ts`). */
-function isRunControlError(error: unknown): boolean {
+export function isRunControlError(error: unknown): boolean {
   const code = (error as { code?: unknown } | null)?.code;
   return (
     typeof code === "string" &&
@@ -101,7 +156,7 @@ function isRunControlError(error: unknown): boolean {
   );
 }
 
-function syntheticFailureResult(call: ToolCallContent, failure: unknown): ToolResult {
+export function syntheticFailureResult(call: ToolCallContent, failure: unknown): ToolResult {
   if (failure === undefined) {
     return {
       toolCallId: call.id,
@@ -116,7 +171,7 @@ function syntheticFailureResult(call: ToolCallContent, failure: unknown): ToolRe
   return { toolCallId: call.id, name: call.name, error: { name: info.name, message: info.message, code: info.code } };
 }
 
-async function appendToolResultMessage(result: ToolResult, ctx: ToolDispatchContext): Promise<void> {
+export async function appendToolResultMessage(result: ToolResult, ctx: ToolDispatchContext): Promise<void> {
   // Approval-gated calls return a marker instead of a real result; the transcript must not
   // record a phantom tool_result for a call that never dispatched.
   if ((result.metadata as { approvalPending?: unknown } | undefined)?.approvalPending === true) return;

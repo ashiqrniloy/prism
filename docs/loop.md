@@ -154,7 +154,12 @@ A loop that drives an external agent never calls `turn()`; it reports what the a
 - `executeTools` is re-entrant: several overlapping calls (a broker answering concurrent callbacks) each fire
   `tool.call` once per call and append their results as they finish. Results come back in input order, and a
   denied call comes back as a `hook_denied` result and an approval-pending call as a result with
-  `metadata.approvalPending`. A throwing `tool.call` hook denies only its own call. `maxToolRounds` is checked in `turn()`, so
+  `metadata.approvalPending`. A throwing `tool.call` hook denies only its own call. When `executeTools` returns or
+  throws, every call it was given has one appended result (see [tools.md](tools.md) "A call always has a result"):
+  calls that never started get `tool_call_not_dispatched`, the serial path checks the abort signal before each call,
+  and the `agent_disposed` results of a dispose are appended. The kernel also answers the calls of a `turn()` a loop
+  drops, at the loop's next `turn()`, at the tool-round ceiling and at the run's end; `assertToolRoundSettlement`
+  from `@arnilo/prism/testing` holds a custom loop to it. `maxToolRounds` is checked in `turn()`, so
   concurrent rounds only increment the counter.
 - `origin` (an `EventOrigin`) is passed to the `tool.call` payload and stamped on that call's `tool.started`/`tool.completed`
   events. Absent means "this agent, executed by Prism".

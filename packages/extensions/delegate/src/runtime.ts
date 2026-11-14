@@ -279,6 +279,7 @@ export function createDelegateRuntime(prism: PackageAPI<DelegateConfig>, resolve
     principal: Principal | undefined,
     probe?: PackageInstance,
     seed?: { readonly sessionId: string; readonly entries: readonly SessionEntry[] },
+    session?: SessionContext,
   ): Promise<Agent> => {
     // `instances()` hands back frozen records; the definition rebuilds a loadable instance bound to the same config.
     const inherited: readonly PackageInstance[] = prism.packages
@@ -291,7 +292,10 @@ export function createDelegateRuntime(prism: PackageAPI<DelegateConfig>, resolve
         id: model.provider,
         generate: (request) => {
           const { model: _ignored, ...rest } = request;
-          return prism.models.client({ provider: model.provider, model: request.model.model }).generate(rest);
+          // With the delegating session, a synchronous child's turns are charged to the parent's run (plan 225 Task 5).
+          return prism.models
+            .client({ provider: model.provider, model: request.model.model })
+            .generate(rest, session === undefined ? undefined : { session });
         },
       },
     ]);
@@ -352,7 +356,15 @@ export function createDelegateRuntime(prism: PackageAPI<DelegateConfig>, resolve
             });
       usedContext = seeded?.used;
       const capture: { workspace?: IsolationWorkspace } = {};
-      agent = await buildAgent(name, child, input.session?.model, input.principal, isolated ? isolationProbe(capture) : undefined, seeded);
+      agent = await buildAgent(
+        name,
+        child,
+        input.session?.model,
+        input.principal,
+        isolated ? isolationProbe(capture) : undefined,
+        seeded,
+        input.session,
+      );
       if (isolated && capture.workspace === undefined) {
         throw new DelegateError(
           `isolation_unavailable: child ${name} has no "workspace" service; inherit a package that provides one, for example @arnilo/prism-tools/coding with workspace.enabled`,

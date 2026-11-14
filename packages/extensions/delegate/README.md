@@ -161,6 +161,8 @@ Child progress is reported as `package.event` named `delegate.step` with `{ orig
 
 Each delegation builds one child agent (`createAgent` over the inherited packages) plus the child's own model calls. No child runs unless the model calls `delegate`. Concurrency is capped by `maxConcurrent`. The child agent and its session are disposed when the delegation ends.
 
+A synchronous child's model turns go through the parent's provider resolution with the delegating session, so they count against the parent run's token and cost limits and appear in its usage. A child started without a session is not charged to any run.
+
 A `context` child also costs what its mode costs: `{ lastTurns }` reads the branch once and re-sends up to `maxChars` on every child turn; `"summary"` adds one model call with up to 48,000 chars in and 4,000 out. `"none"` costs nothing.
 
 The parent's context grows by at most `resultMaxChars` per delegation (12,000 chars, roughly 3,000 tokens, by default) — one verbose child cannot flood the conversation it was meant to keep out. Raise it per child when a parent needs the whole answer; `delegate_wait { offset }` pages the rest without changing the cap.

@@ -75,6 +75,7 @@ async function summarize(
   prism: PackageAPI<DelegateConfig>,
   model: { provider: string; model: string },
   slice: TranscriptSlice,
+  session?: SessionContext,
 ): Promise<string> {
   const transcript = [
     ...slice.summaries.map((summary) => `Summary of earlier conversation:\n${summary}`),
@@ -82,9 +83,13 @@ async function summarize(
   ].join("\n\n");
   const parts: string[] = [];
   let length = 0;
-  for await (const event of prism.models.client({ provider: model.provider, model: model.model }).generate({
-    messages: [{ role: "user", content: [{ type: "text", text: `${SUMMARY_INSTRUCTION}\n\n${transcript}` }] }],
-  }) as AsyncIterable<ProviderEvent>) {
+  // The delegating session carries the summary call: its hooks, its event stream, its run's limits (plan 225 Task 5).
+  for await (const event of prism.models
+    .client({ provider: model.provider, model: model.model })
+    .generate(
+      { messages: [{ role: "user", content: [{ type: "text", text: `${SUMMARY_INSTRUCTION}\n\n${transcript}` }] }] },
+      session === undefined ? undefined : { session },
+    ) as AsyncIterable<ProviderEvent>) {
     if (event.type === "error") throw new Error("the summarization call failed");
     const content = (event as { content?: { type?: string; text?: string } }).content;
     if (event.type !== "content_delta" || content?.type !== "text" || typeof content.text !== "string") continue;
@@ -114,7 +119,7 @@ export async function buildSeededContext(input: {
   const entries = await input.session.entries();
   if (input.context.mode === "summary") {
     const slice = selectTranscript(entries, { maxChars: SUMMARY_INPUT_CHARS });
-    const summary = await summarize(input.prism, input.model, slice);
+    const summary = await summarize(input.prism, input.model, slice, input.session);
     const sessionId = `session_${crypto.randomUUID()}`;
     return {
       sessionId,

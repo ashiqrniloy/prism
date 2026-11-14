@@ -74,9 +74,9 @@ export function enumerateSurface() {
   const tools = [...fabricTools, omTool, wikiTool];
 
   const fabricCommands = [...read("packages/memory/system/src/ltm/index.ts").matchAll(/name: "(memory(?::[a-z]+)?)",/g)].map((m) => m[1]);
-  const omCommands = [...read("packages/memory/system/src/session/commands.ts").matchAll(/name: "(memory:(?:session(?::[a-z]+)?|scope))",/g)].map(
-    (m) => m[1],
-  );
+  const omCommands = [
+    ...read("packages/memory/system/src/session/commands.ts").matchAll(/name: "(memory:(?:session(?::[a-z]+)?|scope))",/g),
+  ].map((m) => m[1]);
   const wikiCommands = ["status", "lint", "ingest", "consolidate"].map(
     (file) => /_COMMAND_NAME = "(wiki:[a-z]+)"/.exec(read(`packages/knowledge/wiki/src/commands/${file}.ts`))?.[1],
   );

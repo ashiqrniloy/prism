@@ -1047,7 +1047,7 @@
 ./web PlaywrightRequest	interface PlaywrightRequest { method?(): string; redirectedFrom?(): PlaywrightRequest | null; resourceType?(): string; url(): string; }
 ./web PlaywrightRoute	interface PlaywrightRoute { abort(errorCode?: string): Promise<void>; continue(options?: { url?: string; headers?: Record<string, string>; }): Promise<void>; fulfill?(options?: { status?: number; body?: string | Buffer; contentType?: string; }): Promise<void>; request(): PlaywrightRequest; }
 ./web PromptAnswer	interface PromptAnswer { readonly answer: string; readonly inputChars: number; readonly sourceTruncated: boolean; readonly usage?: Usage; }
-./web PromptFetch	interface PromptFetch { answer(page: WebDocument, question: string, options?: { readonly signal?: AbortSignal; }): Promise<PromptAnswer>; }
+./web PromptFetch	interface PromptFetch { answer(page: WebDocument, question: string, options?: { readonly signal?: AbortSignal; readonly session?: SessionContext; }): Promise<PromptAnswer>; }
 ./web ResolvedFetchCache	interface ResolvedFetchCache { readonly annotated: boolean; readonly maxBytes: number; readonly maxEntries: number; readonly ttlMs: number; }
 ./web ResolvedWebLimits	type ResolvedWebLimits = Required<WebLimits>
 ./web SearchControl	type SearchControl = keyof SearchControls

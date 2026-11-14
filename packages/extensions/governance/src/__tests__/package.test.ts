@@ -743,4 +743,47 @@ describe("governance package", () => {
       /config is invalid|config_invalid|ref/,
     );
   });
+  it("governance_model_request_gate_sees_sessionless_package_call", async () => {
+    // Plan 225 Task 5: a package's side call now runs `model.request`, so the opt-in gate decides it. With no session
+    // the actor is the placeholder identity, and a deny-by-default policy refuses it rather than letting it through.
+    let providerCalls = 0;
+    const provider: ModelProvider = {
+      id: "mock",
+      async *generate() {
+        providerCalls += 1;
+        yield providerTextDelta("side");
+        yield providerDone();
+      },
+    };
+    const clients: import("@arnilo/prism").ModelClient[] = [];
+    const side = definePackage<any>({
+      name: "@acme/side",
+      version: "1.0.0",
+      requires: { api: 1 },
+      capabilities: ["models"],
+      setup: ({ models }: any) => {
+        clients.push(models.client("mock/m"));
+      },
+    });
+    const run = async (policy: "deny" | "allow"): Promise<number> => {
+      providerCalls = 0;
+      const agent = await createAgent({
+        id: `model-request-${policy}`,
+        model: { provider: "mock", model: "m" },
+        slots: { store: createMemorySessionStore() },
+        packages: [providerPackageFor(provider), governance({ default: policy, hooks: { modelRequest: true } }), side],
+      });
+      const client = clients.at(-1);
+      assert.ok(client, "the package captured the models client");
+      try {
+        for await (const _event of client.generate({ messages: [] }));
+      } catch (error) {
+        assert.equal((error as Error).name, "HookRejectedError");
+      }
+      await agent.dispose();
+      return providerCalls;
+    };
+    assert.equal(await run("deny"), 0, "the gate refuses a sessionless package call under deny-by-default");
+    assert.equal(await run("allow"), 1, "and lets it through when the policy allows");
+  });
 });

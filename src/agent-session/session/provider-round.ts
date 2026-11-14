@@ -21,6 +21,7 @@ import type {
 } from "../../contracts.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
 import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
+import { tryAgentRuntime } from "../runtime-registry.js";
 import { normalizeStopReason, providerError, providerToolCallDeltaContent } from "../../models/events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
 import { mergeRetry, retryLoop } from "../../models/retry.js";
@@ -121,23 +122,26 @@ async function withCatalogCost(catalog: CostCatalog | undefined, model: ModelCon
   }
 }
 
-export async function recordProviderUsage(
+/**
+ * The steps every metered model call shares: price through the cost catalog, charge the run's limits, add to the run's
+ * usage, append one ledger row of `scope`. A breach throws from `limits.recordUsage` after aborting the run.
+ */
+async function meterUsage(
   ctx: RoundContext,
-  turnUsage: Usage | undefined,
-  turn: number,
-  attempt: number,
-  request?: ProviderRequest,
+  model: ModelConfig,
+  usage: Usage | undefined,
+  scope: "provider_turn" | "package_call",
+  row: { readonly turn?: number; readonly attempt?: number } = {},
 ): Promise<Usage | undefined> {
   const { session, limits, runUsage, runId } = ctx;
-  const usage = turnUsage ?? estimateTurnUsage(session, ctx.model, request);
   // An estimate is never priced: a catalog quote on estimated tokens would invent billing.
   const effective =
     usage && usage.estimated !== true
-      ? await withCatalogCost(session.agent.config.costCatalog, ctx.model, usage, ctx.controller.signal)
+      ? await withCatalogCost(session.agent.config.costCatalog, model, usage, ctx.controller.signal)
       : usage;
   limits.recordUsage(effective);
   if (!effective) return undefined;
-  if (effective.inputTokens !== undefined) {
+  if (scope === "provider_turn" && effective.inputTokens !== undefined) {
     session.activeInputMeter = { tokens: effective.inputTokens, source: effective.estimated === true ? "estimated" : "reported" };
   }
   runUsage.add(effective);
@@ -146,15 +150,38 @@ export async function recordProviderUsage(
     id: randomId("usage"),
     sessionId: session.id,
     runId,
-    scope: "provider_turn",
-    turn,
-    attempt,
+    scope,
+    ...row,
     usage: effective,
     recordedAt: new Date().toISOString(),
     ...session.activeOwnership,
   };
   await session.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, session.activeRedactor));
   return effective;
+}
+
+export async function recordProviderUsage(
+  ctx: RoundContext,
+  turnUsage: Usage | undefined,
+  turn: number,
+  attempt: number,
+  request?: ProviderRequest,
+): Promise<Usage | undefined> {
+  return meterUsage(ctx, ctx.model, turnUsage ?? estimateTurnUsage(ctx.session, ctx.model, request), "provider_turn", { turn, attempt });
+}
+
+/**
+ * Plan 225 Task 5: charges one finished package model call to the active run. Priced with the call's own model, so a
+ * side call to another model is not billed at the run's rate. A call whose provider reported no usage is estimated
+ * like a run turn, so a `maxCost` run fails closed on it the same way.
+ */
+export function recordPackageCallUsage(
+  ctx: RoundContext,
+  model: ModelConfig,
+  usage: Usage | undefined,
+  request: ProviderRequest,
+): Promise<Usage | undefined> {
+  return meterUsage(ctx, model, usage ?? estimateTurnUsage(ctx.session, model, request), "package_call");
 }
 
 /**
@@ -345,7 +372,15 @@ export async function generateProviderTurn(
   try {
     throwIfAborted(turnAbort.signal);
     const provider = session.activeProvider!;
-    const stream = await session.hooks().around("model.call", turnRequest, (request) => Promise.resolve(provider.generate(request)));
+    const runtime = tryAgentRuntime(session.agent);
+    const stream = await session.hooks().around(
+      "model.call",
+      turnRequest,
+      (request) => Promise.resolve(provider.generate(request)),
+      { sessionId: session.id, runId },
+      // The onward path for a handler that picks another model: the registry, no hooks, no metering.
+      runtime ? (request) => runtime.packages.resolveProvider(request.model).generate(request) : undefined,
+    );
     for await (const event of stream) {
       throwIfAborted(turnAbort.signal);
       session.activeLimits!.charge("maxResponseBytes", jsonBytes(event));

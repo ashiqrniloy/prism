@@ -255,7 +255,9 @@ export function claimViolations(files, current) {
   const independentVersions = new Map(
     [...parsed.values()].filter((pkg) => INDEPENDENT_LINES.has(pkg.name)).map((pkg) => [pkg.name, pkg.version]),
   );
-  const expected = (name) => independentVersions.get(name) ?? current;
+  /** A subpath of an independent bundle (`@arnilo/prism-ai/hyper`) claims its bundle's version, not the kernel's. */
+  const bundleOf = (name) => name.split("/").slice(0, 2).join("/");
+  const expected = (name) => independentVersions.get(name) ?? independentVersions.get(bundleOf(name)) ?? current;
   /** The range a pin must carry: exact into an experimental prerelease, caret into everything else. */
   const expectedRange = (name) => (EXPERIMENTAL_LINES.has(name) ? expected(name) : `^${expected(name)}`);
   for (const [path, pkg] of parsed) {
@@ -369,7 +371,7 @@ test("positive control: a half-finished cut is reported surface by surface", () 
       `${label} must be reported, got:\n${halfProblems.join("\n")}`,
     );
   }
-  assert.ok(halfProblems.length >= 10, `every stale surface must be named, got ${halfProblems.length}`);
+  assert.ok(halfProblems.length >= 7, `every stale surface must be named, got ${halfProblems.length}`);
 
   // A renamed/dropped surface must fail loudly instead of passing vacuously.
   const vacuous = new Map(half);

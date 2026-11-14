@@ -38,6 +38,8 @@ const agent = await createAgent({
 
 ## Joining a gateway's traces
 
+A model call a package makes with its session (`models.client(...).generate(request, { session })`) runs the same `model.request` transform, so with propagation on it carries the run's trace headers and joins the run's span; the kernel reports each such call as one `package.event` named `model.call`. A call made without a session has no run to join.
+
 Nothing is propagated by default. A gateway (LiteLLM, or any proxy that honours W3C trace context) can only
 join its spans to yours when the request carries the current trace:
 

@@ -2,9 +2,9 @@
 
 Prism is a TypeScript agent SDK for the Bun runtime. `@arnilo/prism` is a small kernel (agent, session, loop, hooks, slots, and packages); every capability is a native package a host lists in `createAgent({ packages })`. Start with the [README](../README.md).
 
-## Current line (0.13.0)
+## Current line (0.13.1)
 
-The kernel pages and package READMEs below describe the 0.13.0 contract. The current **0.13.0** line is the root `@arnilo/prism` kernel and every native package.
+The kernel pages and package READMEs below describe the 0.13.1 contract. The current **0.13.1** line is the root `@arnilo/prism` kernel and every native package.
 
 ## Kernel
 
@@ -160,13 +160,13 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.13.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism` | 0.13.1 | core — runtime, CLI/RPC, templates, docs |
 | `@arnilo/prism-ai` | 0.13.0 | capability |
-| `@arnilo/prism-extensions` | 0.13.1 | capability |
-| `@arnilo/prism-hosts` | 0.13.0 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
-| `@arnilo/prism-knowledge` | 0.13.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
-| `@arnilo/prism-memory-system` | 0.13.0-experimental.0 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
-| `@arnilo/prism-tools` | 0.13.1 | capability |
+| `@arnilo/prism-extensions` | 0.13.2 | capability |
+| `@arnilo/prism-hosts` | 0.13.1 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
+| `@arnilo/prism-knowledge` | 0.13.0-experimental.1 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
+| `@arnilo/prism-memory-system` | 0.13.0-experimental.1 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
+| `@arnilo/prism-tools` | 0.13.2 | capability |
 <!-- generated:package-truth:inventory end -->
 
 - [Extensions bundle](../packages/extensions/README.md): context, credentials, integrations, policy and stores.

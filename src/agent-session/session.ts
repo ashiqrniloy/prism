@@ -77,6 +77,7 @@ import { type RunLimitTracker, resolveBackgroundSettleMs } from "../run-limits.j
 import { type BackgroundTracker, createBackgroundTracker } from "../session/background.js";
 import { createExternalState, type ExternalStateHandle } from "../session/external-state.js";
 import { bindSessionState, type PackageStateData, SessionStateStore } from "../session/state.js";
+import { PACKAGE_CALL_SEAM, type PackageCallSeam } from "../package-call-seam.js";
 import type { SessionContext } from "../session-context.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
 import { narrowScope } from "../agent/sessions.js";
@@ -108,6 +109,7 @@ import {
   withoutTrailingInput,
 } from "./helpers.js";
 import { agentSkillSource } from "./runtime-registry.js";
+import { repairUnansweredToolCalls } from "./history-repair.js";
 import { executeRun } from "./session/assemble.js";
 import { asSessionHost } from "./session/types.js";
 
@@ -141,6 +143,8 @@ export class RuntimeAgentSession implements Session {
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
+  /** Charges a package's model call to the active run (plan 225 Task 5); set with the run, cleared with its limits. */
+  activePackageUsage?: PackageCallSeam["recordUsage"];
   /** Plan 091 T2: input tokens of the latest provider turn plus whether the provider reported
    *  them; set by the usage seam, read by `contextMeter()`. */
   activeInputMeter?: { readonly tokens: number; readonly source: "reported" | "estimated" };
@@ -246,10 +250,12 @@ export class RuntimeAgentSession implements Session {
     const runtime = tryAgentRuntime(config.agent);
     this.hookBusInstance = runtime?.hooks ?? createHookBus();
     this.packageCapabilities = runtime?.packages.capabilities ?? new Map();
-    this.boundHooks = this.hookBusInstance.bound((owner) => this.sessionContextFor(owner));
+    // `hook.error`/`ctx.emit` events raised by a hook dispatched here route back to this session only.
+    this.boundHooks = this.hookBusInstance.bound(
+      (owner) => this.sessionContextFor(owner),
+      (event) => this.emit(event),
+    );
     this.slotRegistry = runtime?.slots ?? createSlotRegistry(createSlotDefaults());
-    // `hook.error`/`emit` events raised by a hook route back to this session.
-    runtime?.setEventSink((event) => this.emit(event));
     this.metadata = config.metadata;
     this.scope = config.ownership;
     this.links = sessionLinksOption(config);
@@ -276,7 +282,10 @@ export class RuntimeAgentSession implements Session {
     const bus = tryAgentRuntime(this.agent)?.hooks;
     if (bus && bus !== this.hookBusInstance) {
       this.hookBusInstance = bus;
-      this.boundHooks = bus.bound((owner) => this.sessionContextFor(owner));
+      this.boundHooks = bus.bound(
+        (owner) => this.sessionContextFor(owner),
+        (event) => this.emit(event),
+      );
     }
     return this.boundHooks;
   }
@@ -305,6 +314,23 @@ export class RuntimeAgentSession implements Session {
         },
       };
       bindSessionState(view, this.stateStore);
+      // Plan 225 Task 5: what a package's `models.client(...).generate(..., { session })` reads. Symbol-keyed, so it is
+      // not part of `SessionContext`, and getters, so it follows a reload's re-bound bus and the active run.
+      Object.defineProperty(view, PACKAGE_CALL_SEAM, {
+        value: {
+          get hooks() {
+            return session.hooks();
+          },
+          emit: (event: AgentEvent) => session.emit(event),
+          redactRequest: (request: ProviderRequest) => session.redactProviderRequest(request),
+          get runId() {
+            return session.activeRunId ?? "";
+          },
+          get recordUsage() {
+            return session.activePackageUsage;
+          },
+        } satisfies PackageCallSeam,
+      });
       this.sessionViews.set(owner, view);
     }
     return view;
@@ -1214,8 +1240,9 @@ export class RuntimeAgentSession implements Session {
     return redactProviderRequest(request, this.activeRedactor);
   }
 
-  async rebuildHistory(): Promise<void> {
-    this.replaceHistory((await this.snapshot()).messages);
+  /** Rebuild the live history from the branch; resolves the ids of calls the provider view repaired. */
+  async rebuildHistory(): Promise<readonly string[]> {
+    return this.replaceHistory((await this.snapshot()).messages);
   }
 
   /**
@@ -1224,13 +1251,33 @@ export class RuntimeAgentSession implements Session {
    * later turn from the session view (run result text/content, tool narrowing) while the loop kept
    * appending to its own copy.
    */
-  private replaceHistory(messages: readonly Message[]): void {
+  private replaceHistory(messages: readonly Message[]): readonly string[] {
+    // The provider view answers calls the branch never answered (a 0.13.0 branch, a process that died);
+    // the stored branch and `messages()` are untouched.
+    const repair = repairUnansweredToolCalls(messages, this.callsOwnedBySuspension());
     this.history.length = 0;
-    this.history.push(...messages);
+    this.history.push(...repair.messages);
     if (this.activeLoopHistory && this.activeLoopHistory !== this.history) {
       this.activeLoopHistory.length = 0;
       this.activeLoopHistory.push(...this.history);
     }
+    return repair.repaired;
+  }
+
+  /**
+   * Calls a suspension still owns: a resume (or a gated round in flight) settles them with their real
+   * result, so the repair must not answer them. A fresh run has no `activeDurable`: starting it
+   * abandons the suspension, so every unanswered call is repaired.
+   */
+  private callsOwnedBySuspension(): ReadonlySet<string> | undefined {
+    const state = this.activeDurable?.state;
+    const gated = this.activeGatedRound;
+    if (!state && !gated?.size) return undefined;
+    const owned = new Set<string>(gated?.keys());
+    for (const entry of state?.pendingCalls ?? []) owned.add(entry.call.id);
+    if (state?.pending) owned.add(state.pending.call.id);
+    for (const nested of state?.nestedRuns ?? []) owned.add(nested.toolCallId);
+    return owned;
   }
 
   async snapshot(): Promise<SessionContextSnapshot> {

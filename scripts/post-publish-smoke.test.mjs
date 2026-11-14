@@ -91,7 +91,8 @@ test("post_publish_smoke_specs_follow_bundle_map and registry_consumer_runs_pack
       clearTimeout(timer);
     }
     assert.equal(status, 0, stdout + stderr);
-    assert.match(stdout, /post-publish smoke: PASS \(registry @0\.13\.0\)/);
+    const kernel = release.byName.get("@arnilo/prism").manifest.version.replaceAll(".", "\\.");
+    assert.match(stdout, new RegExp(`post-publish smoke: PASS \\(registry @${kernel}\\)`));
     assert.match(stdout, /@arnilo\/prism-memory-system@experimental/);
     assert.match(stdout, /@arnilo\/prism-knowledge@experimental/);
     for (const name of [

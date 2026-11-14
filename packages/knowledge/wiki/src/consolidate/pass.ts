@@ -6,7 +6,7 @@
  * nothing for that item and leaves it due for the next trigger. A shape failure gets one repair call with a safe
  * reason code, the extractor's rule. A failed item never fails the pass.
  */
-import type { ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism";
+import type { ModelClient, SecretRedactor, SessionContext, ToolDefinition } from "@arnilo/prism";
 import { type ConceptDoc, parseConceptBody } from "../ontology/codec.js";
 import type { ConceptEdit, WikiOntologyPort, OntologyNoteView, OntologySubject } from "../ontology/port.js";
 import type { WikiScopeLevel } from "../ontology/types.js";
@@ -76,6 +76,8 @@ export interface WikiPassInput {
   readonly now?: Date;
   readonly redactor?: SecretRedactor;
   readonly sessionId?: string;
+  /** The session the pass runs for: its model calls are charged to that session's active run (plan 225 Task 5). */
+  readonly session?: SessionContext;
   readonly thinkingLevel?: string;
   readonly signal?: AbortSignal;
 }
@@ -253,12 +255,16 @@ class CallFailure extends Error {
 }
 
 /** Pass-through client that reports each turn's stop reason and token usage; the worker loop discards both. */
-function observing(client: ModelClient, onDone: (stopReason: string | undefined, usage: unknown) => void): ModelClient {
+function observing(
+  client: ModelClient,
+  onDone: (stopReason: string | undefined, usage: unknown) => void,
+  session?: SessionContext,
+): ModelClient {
   return {
     model: client.model,
-    generate(request) {
+    generate(request, options) {
       return (async function* observed() {
-        for await (const event of client.generate(request)) {
+        for await (const event of client.generate(request, options ?? (session === undefined ? undefined : { session }))) {
           if (event.type === "done") onDone(event.stopReason, (event as { usage?: unknown }).usage);
           yield event;
         }
@@ -279,13 +285,17 @@ async function curate(built: Built, input: WikiPassInput, tally: Tally): Promise
     let recorded: ParsedAnswer | undefined;
     let failure: WikiAnswerError | undefined;
     let truncated = false;
-    const watched = observing(client, (stopReason, usage) => {
-      if (stopReason === "max_output_tokens") truncated = true;
-      const used = (usage ?? {}) as Record<string, unknown>;
-      tally.inputTokens += count(used.inputTokens);
-      tally.outputTokens += count(used.outputTokens);
-      tally.cacheReadTokens += count(used.cacheReadTokens);
-    });
+    const watched = observing(
+      client,
+      (stopReason, usage) => {
+        if (stopReason === "max_output_tokens") truncated = true;
+        const used = (usage ?? {}) as Record<string, unknown>;
+        tally.inputTokens += count(used.inputTokens);
+        tally.outputTokens += count(used.outputTokens);
+        tally.cacheReadTokens += count(used.cacheReadTokens);
+      },
+      input.session,
+    );
     const tool: ToolDefinition = {
       name: EDIT_TOOL_NAME,
       description: "Record the edits this evidence calls for, and nothing else.",

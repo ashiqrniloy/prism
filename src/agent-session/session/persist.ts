@@ -261,6 +261,7 @@ export async function cleanupRun(input: {
     session.activeLimits?.dispose();
     session.activeToolNames = undefined;
     session.activeLimits = undefined;
+    session.activePackageUsage = undefined;
     session.activeRecentToolCalls = undefined;
     session.activeLimitOutputBuffer = false;
     session.activeRedactor = undefined;

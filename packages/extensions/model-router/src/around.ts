@@ -66,8 +66,11 @@ export function createModelCallAroundHandler(
       issuedAt: new Date().toISOString(),
     };
 
-    const candidateList: ModelConfig[] = [...candidateConfigs];
-    const rawFallbacks = request.options?.extra?.fallbacks as readonly ModelConfig[] | undefined;
+    // A package's side call (a compactor's summary, a classifier) keeps the model its package chose: the router meters
+    // it (budgets, rate limits, circuit state) but never reselects or falls back to another model for it.
+    const isPackageCall = request.origin?.kind === "package";
+    const candidateList: ModelConfig[] = isPackageCall ? [request.model as ModelConfig] : [...candidateConfigs];
+    const rawFallbacks = isPackageCall ? undefined : (request.options?.extra?.fallbacks as readonly ModelConfig[] | undefined);
     if (rawFallbacks) {
       for (const fb of rawFallbacks) {
         if (!candidateList.some((c) => c.provider === fb.provider && c.model === fb.model)) {
@@ -236,7 +239,9 @@ export function createModelCallAroundHandler(
             calledNext = true;
             innerStream = await next(finalRequest);
           } else {
-            innerStream = prism.models.client(selectedModel).generate(finalRequest);
+            // The terminal for any model: unhooked and unmetered, so routing never re-enters `model.call`.
+            if (!context.call) throw new Error("model-router: the hook context carries no onward call");
+            innerStream = context.call(finalRequest);
           }
         } catch (callErr) {
           invocationError = callErr;

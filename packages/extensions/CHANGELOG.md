@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.13.2] - 2026-11-14
+
+Requires `@arnilo/prism` 0.13.1 for the hook-plane behaviour below. The peer window stays `>=0.13.0 <1.0.0`; `model-router` throws `model-router: the hook context carries no onward call` against a 0.13.0 kernel.
+
+### ./model-router
+
+#### Changed
+
+- A package's model call (a `model.call` whose `request.origin.kind` is `"package"`) keeps the model the package chose: the router adds no fallbacks and does not re-route it. The onward call goes through `context.call`, so it no longer re-enters `model.call`. Run-turn routing is unchanged.
+
+### ./context-engineering, ./compaction, ./advisor, ./delegate
+
+#### Changed
+
+- Their model calls pass the run's `session`, so they run through `model.request` / `model.call` and are charged to that run's token and cost limits, and a `model.call` `package.event` reports on the session's stream. `context-engineering` accounting ignores package calls. A synchronous `delegate` child's turns count toward the parent run.
+
+### ./governance, ./observability
+
+#### Changed
+
+- Documentation only: a package call now reaches the `model.request` gate (governance) and joins the run's trace (observability) when its caller passes `session`.
+
 ## [0.13.1] - 2026-11-12
 
 ### ./advisor

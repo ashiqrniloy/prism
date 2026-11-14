@@ -120,8 +120,14 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
 
   const messageOf = (error: unknown): string => redactSecrets(error instanceof Error ? error.message : String(error), secrets);
 
-  const emitError = (name: HookName, throwingOwner: string, error: unknown, context: HookContext): void => {
-    options.onEvent?.({
+  const emitError = (
+    onEvent: ((event: AgentEvent) => void) | undefined,
+    name: HookName,
+    throwingOwner: string,
+    error: unknown,
+    context: HookContext,
+  ): void => {
+    onEvent?.({
       type: "hook.error",
       sessionId: context.sessionId,
       runId: context.runId,
@@ -212,7 +218,7 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
   /** Per-dispatch, per-owner context views. */
   type Views = Map<string, HookContext>;
 
-  const dispatchers = (sessionFor: ((owner: string) => SessionContext) | undefined) => {
+  const dispatchers = (sessionFor: ((owner: string) => SessionContext) | undefined, onEvent: ((event: AgentEvent) => void) | undefined) => {
     const viewsFor = (): Views => new Map();
     /** Each registration gets a context whose `emit` is a `package.event` owned by that registration. */
     const viewOf = (views: Views, base: HookContext, owner: string): HookContext => {
@@ -220,10 +226,10 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
       if (!view) {
         view = {
           ...base,
-          emit: (name, data) => options.onEvent?.(packageEventFor(owner, base.sessionId, base.runId, name, data)),
+          emit: (name, data) => onEvent?.(packageEventFor(owner, base.sessionId, base.runId, name, data)),
           ...(sessionFor ? { session: sessionFor(owner) } : {}),
         };
-        Object.defineProperty(view, RAW_EMIT, { value: (event: AgentEvent) => options.onEvent?.(event) });
+        Object.defineProperty(view, RAW_EMIT, { value: (event: AgentEvent) => onEvent?.(event) });
         views.set(owner, view);
       }
       return view;
@@ -239,10 +245,10 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
         try {
           const result = (registration.handler as ObserveHook<unknown>)(payload, viewOf(views, context, registration.owner));
           if (result && typeof (result as Promise<unknown>).then === "function") {
-            (result as Promise<unknown>).catch((error) => emitError(name, registration.owner, error, context));
+            (result as Promise<unknown>).catch((error) => emitError(onEvent, name, registration.owner, error, context));
           }
         } catch (error) {
-          emitError(name, registration.owner, error, context);
+          emitError(onEvent, name, registration.owner, error, context);
         }
       }
     };
@@ -270,7 +276,7 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
         } catch (error) {
           if (error instanceof HookRejectedError) throw error;
           if (registration.onError === "ignore") {
-            emitError(name, registration.owner, error, context);
+            emitError(onEvent, name, registration.owner, error, context);
             continue;
           }
           throw new HookError(messageOf(error), { owner: registration.owner, hook: name });
@@ -304,9 +310,11 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
       name: N,
       payload: HookPayload<N>,
       terminal: (value: HookPayload<N>) => Promise<HookResult<N>>,
+      identity?: { readonly sessionId?: string; readonly runId?: string },
+      call?: HookContext["call"],
     ): Promise<HookResult<N>> => {
       if (!entry(name)) throw new UnknownHookError(name);
-      const context = contextFor(payload);
+      const context = call ? { ...contextFor(payload, identity), call } : contextFor(payload, identity);
       const views = viewsFor();
       const registrations = sorted(name);
       const dispatch = async (index: number, value: unknown): Promise<unknown> => {
@@ -366,8 +374,12 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
   const shared = { registrar, remove, removeOwner, registrations, has };
   const unbound = {
     ...shared,
-    ...dispatchers(undefined),
-    bound: (sessionFor: (owner: string) => SessionContext): HookBus => ({ ...shared, ...dispatchers(sessionFor), bound: unbound.bound }),
+    ...dispatchers(undefined, options.onEvent),
+    bound: (sessionFor: (owner: string) => SessionContext, onEvent: (event: AgentEvent) => void): HookBus => ({
+      ...shared,
+      ...dispatchers(sessionFor, onEvent),
+      bound: unbound.bound,
+    }),
   };
   return unbound;
 }

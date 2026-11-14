@@ -290,4 +290,33 @@ describe("context accounting and block share (plan 194 Task 5)", () => {
     assert.equal(serialized.includes("SECRET-INPUT-SENTINEL"), false);
     await agent.dispose();
   });
+  it("context_engineering_accounting_skips_package_calls", async () => {
+    // Plan 225 Task 5: a package's side call runs `model.request` now; it is not the run's request, so it is neither
+    // measured against the run's input cap nor reported as context pressure.
+    const events: AgentEvent[] = [];
+    let client: import("@arnilo/prism").ModelClient | undefined;
+    const side = definePackage<any>({
+      name: "@acme/side",
+      version: "1.0.0",
+      requires: { api: 1 },
+      capabilities: ["models"],
+      setup: ({ models }: any) => {
+        client = models.client("mock/main");
+      },
+    });
+    const { agent } = await harness({ config: { accounting: true }, events, extraPackages: [side()] });
+    assert.ok(client, "the package captured the models client");
+    for await (const _event of client.generate({ messages: [{ id: "m", role: "user", content: [{ type: "text", text: "summarize" }] }] }));
+    assert.equal(
+      events.filter((entry) => entry.type === "package.event" && (entry as { name?: string }).name === "context.accounted").length,
+      0,
+    );
+    await (await agent.session({ id: "s", create: true })).run("go");
+    assert.equal(
+      events.filter((entry) => entry.type === "package.event" && (entry as { name?: string }).name === "context.accounted").length,
+      1,
+      "the run's own request is still accounted",
+    );
+    await agent.dispose();
+  });
 });

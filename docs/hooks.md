@@ -83,8 +83,8 @@ Catalog (roadmap §2.4). `payload → result` is the handler's value; the error 
 | `run.input` | transform | messages → messages | ordered; throw fails the run |
 | `turn.before` | decide | turn counters → `{ stop }` | any stop stops; throw fails closed |
 | `context.build` | transform | context draft → draft | ordered; throw fails closed |
-| `model.request` | transform | request → request | ordered; throw fails closed |
-| `model.call` | around | request, `next` → event stream | nested by priority; throw fails the operation |
+| `model.request` | transform | request → request | ordered; throw fails closed. Also fires for a package's `models.client(...).generate` call, where `request.origin` is `{ kind: "package", package }` |
+| `model.call` | around | request, `next` → event stream | nested by priority; throw fails the operation. Also fires for package calls (`request.origin` names the package). `context.sessionId` and `context.runId` are set. `context.call(request)` is present on this hook only: it streams a request to ANY model's provider with no hooks and no metering, so a handler that picks another model (a router) does not re-enter itself; the enclosing call accounts for it |
 | `model.response` | transform | assistant message → message | ordered; throw fails closed |
 | `tool.call` | decide | call → allow / deny / ask / rewrite / respond | deny wins; a rewrite is applied and the gate runs again on the final arguments (see below); throw is a deny |
 | `tool.execute` | around | call, `next` → tool result | nested by priority; throw fails the operation |

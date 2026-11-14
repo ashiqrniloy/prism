@@ -79,7 +79,7 @@ agent.subscribe(); // package.event { package: "@arnilo/prism-extensions/compact
 
 Installing the package is the opt-in: without it the kernel compactor makes no model call. Each
 compaction makes one model call (two when one oversized turn has to be split) through
-`prism.models.client`. A failed summary falls back to the kernel compactor and never fails the run.
+`prism.models.client`, passing the compacting session when the slot has one, so the summary runs `model.request`/`model.call` and counts against the run's limits. A failed summary falls back to the kernel compactor and never fails the run.
 The package has no secret config field; the key is the credentials slot's, and the summary is
 redacted before it is stored or emitted.
 

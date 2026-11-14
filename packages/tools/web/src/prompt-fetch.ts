@@ -13,6 +13,7 @@ import {
   type ModelClient,
   type ModelConfig,
   type ProviderEvent,
+  type SessionContext,
   UNTRUSTED_EXTERNAL_TRUST,
   type Usage,
 } from "@arnilo/prism";
@@ -45,7 +46,7 @@ export function withOutputBudget(model: ModelConfig, maxTokens: number): ModelCo
 /** Builds the answerer once per package; the model and its budget are host config, not model input. */
 export function createPromptFetch(client: ModelClient, options: { readonly maxInputChars: number }): PromptFetch {
   return {
-    async answer(page: WebDocument, question: string, request?: { readonly signal?: AbortSignal }) {
+    async answer(page: WebDocument, question: string, request?: { readonly signal?: AbortSignal; readonly session?: SessionContext }) {
       const markdown = page.markdown;
       const sent = markdown.length > options.maxInputChars ? markdown.slice(0, options.maxInputChars) : markdown;
       const envelope = formatUntrustedToolText({
@@ -58,13 +59,16 @@ export function createPromptFetch(client: ModelClient, options: { readonly maxIn
       const parts: string[] = [];
       let usage: Usage | undefined;
       try {
-        for await (const event of client.generate({
-          messages: [
-            { role: "system", content: [{ type: "text", text: PROMPT_SYSTEM_PROMPT }] },
-            { role: "user", content: [{ type: "text", text }] },
-          ],
-          ...(request?.signal === undefined ? {} : { signal: request.signal }),
-        }) as AsyncIterable<ProviderEvent>) {
+        for await (const event of client.generate(
+          {
+            messages: [
+              { role: "system", content: [{ type: "text", text: PROMPT_SYSTEM_PROMPT }] },
+              { role: "user", content: [{ type: "text", text }] },
+            ],
+            ...(request?.signal === undefined ? {} : { signal: request.signal }),
+          },
+          request?.session === undefined ? undefined : { session: request.session },
+        ) as AsyncIterable<ProviderEvent>) {
           if (event.type === "error")
             throw new WebToolError("ERR_PRISM_WEB_RESPONSE", `page model error: ${event.error.message || "no message"}`);
           if (event.type === "usage") usage = event.usage;

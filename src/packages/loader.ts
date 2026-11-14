@@ -13,10 +13,13 @@ import type {
   Secret,
   Skill,
   ToolDefinition,
+  Usage,
 } from "../contracts.js";
 import { assertDecisionRequest, DecisionsError, modelSupportsDecisions } from "../contracts-core/decisions.js";
 import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embeddings.js";
-import type { HookBus, HookRegistrar } from "../hooks/index.js";
+import { HookError, type HookBus, type HookRegistrar } from "../hooks/index.js";
+import { PACKAGE_CALL_SEAM, type PackageCallSeam } from "../package-call-seam.js";
+import { RunLimitError } from "../run-limits.js";
 import { requestHostUi } from "../host/response.js";
 import type {
   HostPort,
@@ -41,6 +44,7 @@ import { createSkillRegistry, isSameSkill } from "../skills.js";
 import { SLOT_NAMES, type SlotAssignments, type SlotName, type SlotRegistry } from "../slots/index.js";
 import { createToolRegistry } from "../tools.js";
 import type {
+  ModelCallOptions,
   ModelClient,
   PackageAPI,
   PackageCommand,
@@ -703,28 +707,107 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   };
 
   /**
-   * One `models.client` turn with the agent's `retry` policy, the same loop a run turn uses. A failure is
-   * retried only before the first event reaches the caller; after that the stream cannot be unsent, so a
-   * failure surfaces as a redacted `error` event. Stop reasons land on the closed taxonomy.
+   * One `models.client` turn (plan 225 Task 5). It runs the same plane as a run turn, minus `context.build`:
+   * `model.request`, the agent's redactor, then `model.call` around the provider with the agent's `retry` policy. With a
+   * session the hooks run on that session's bus and the call's final usage is charged to its active run. A failure is
+   * retried only before the first event reaches the caller; after that the stream cannot be unsent, so a failure
+   * surfaces as a redacted `error` event. Stop reasons land on the closed taxonomy. A throwing hook fails the call with
+   * `HookError`.
    */
-  async function* generateWithRetry(model: ModelSpec, request: Omit<ProviderRequest, "model">): AsyncGenerator<ProviderEvent> {
+  async function* generatePackageCall(
+    owner: string,
+    model: ModelSpec,
+    request: Omit<ProviderRequest, "model">,
+    callOptions: ModelCallOptions | undefined,
+  ): AsyncGenerator<ProviderEvent> {
+    const session = callOptions?.session;
+    const seam = (session as { readonly [PACKAGE_CALL_SEAM]?: PackageCallSeam } | undefined)?.[PACKAGE_CALL_SEAM];
+    const hooks = seam?.hooks ?? bus;
+    const identity = { sessionId: session?.id ?? "", runId: seam?.runId ?? "" };
     const retry = mergeRetry(hostConfig.retry, undefined);
     const known = (): readonly string[] => [...secrets, ...((retry?.secrets ?? []) as string[])];
+    // The kernel names the caller; a value the package passed, or a transform wrote, never stands.
+    const stamp = (candidate: ProviderRequest): ProviderRequest => ({ ...candidate, origin: { kind: "package", package: owner } });
+    const callAny = (candidate: ProviderRequest): AsyncIterable<ProviderEvent> => resolveProvider(candidate.model).generate(candidate);
+
+    let outgoing: ProviderRequest = stamp({ ...request, model });
+    const requestSecrets: (string | undefined)[] = [];
+    if (hooks.has("model.request")) {
+      const transformed = await hooks.transform("model.request", outgoing, identity);
+      if (transformed && "request" in transformed) {
+        requestSecrets.push(...(transformed.secrets ?? []));
+        outgoing = stamp(transformed.request);
+      } else if (transformed) {
+        outgoing = stamp(transformed);
+      }
+    }
+    // Redaction runs last, so a transform cannot un-redact. The signal is a live object, not data to scan.
+    const { signal, ...plain } = outgoing;
+    const scrubbed = redactValue(plain) as Omit<ProviderRequest, "signal">;
+    outgoing = { ...(seam?.redactRequest ? seam.redactRequest(scrubbed as ProviderRequest) : scrubbed), ...(signal ? { signal } : {}) };
+    const finalModel = outgoing.model;
+    const startedAt = performance.now();
+    const hooked = hooks.has("model.call");
     const open = async (): Promise<{ first: IteratorResult<ProviderEvent>; iterator: AsyncIterator<ProviderEvent> }> => {
-      const iterator = resolveProvider(model)
-        .generate({ ...request, model })
-        [Symbol.asyncIterator]();
+      const stream = hooked
+        ? await hooks.around("model.call", outgoing, (candidate) => Promise.resolve(callAny(candidate)), identity, callAny)
+        : callAny(outgoing);
+      const iterator = stream[Symbol.asyncIterator]();
       const first = await iterator.next();
       if (!first.done && first.value.type === "error") throw Object.assign(new Error(first.value.error.message), first.value.error);
       return { first, iterator };
     };
-    const { first, iterator } = await retryLoop(open, {
-      retry,
-      sessionId: "",
-      runId: "",
-      signal: request.signal,
-      classify: (error) => ({ info: errorToErrorInfo(error, known()) }),
-    });
+
+    let usage: Usage | undefined;
+    let outcome: "ok" | "error" | "aborted" = "ok";
+    let settled = false;
+    // Charge the run and report the call once, whichever way the stream ends. Only a limit breach may throw.
+    const settle = async (): Promise<void> => {
+      if (settled) return;
+      settled = true;
+      if (signal?.aborted && outcome === "ok") outcome = "aborted";
+      const event: AgentEvent = {
+        type: "package.event",
+        sessionId: identity.sessionId,
+        runId: identity.runId,
+        package: "kernel",
+        name: "model.call",
+        data: {
+          package: owner,
+          provider: finalModel.provider,
+          model: finalModel.model,
+          outcome,
+          latencyMs: Math.round(performance.now() - startedAt),
+          ...(usage ? { usage: usage as unknown as JsonValue } : {}),
+        },
+      };
+      if (seam) seam.emit(event);
+      else {
+        const redacted = { ...event, data: redactValue((event as { data: JsonValue }).data) } as AgentEvent;
+        bus.observe("package.event", redacted as never);
+        options.emitAgentEvent?.(redacted);
+      }
+      if (seam?.recordUsage && outcome === "ok") await seam.recordUsage(finalModel, usage, outgoing);
+    };
+
+    let opened: { first: IteratorResult<ProviderEvent>; iterator: AsyncIterator<ProviderEvent> };
+    try {
+      opened = await retryLoop(open, {
+        retry,
+        sessionId: identity.sessionId,
+        runId: identity.runId,
+        signal: outgoing.signal,
+        passthrough: (error) => error instanceof HookError,
+        classify: (error) => ({
+          info: errorToErrorInfo(error, [...known(), ...requestSecrets.filter((value): value is string => Boolean(value))]),
+        }),
+      });
+    } catch (error) {
+      outcome = "error";
+      await settle().catch(() => undefined);
+      throw error;
+    }
+    const { first, iterator } = opened;
     const next = (event: ProviderEvent): ProviderEvent => {
       if (event.type === "error") return { ...event, error: redactSecrets(event.error, known()) };
       return event.type === "done" && event.stopReason !== undefined
@@ -734,14 +817,28 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     try {
       let step = first;
       while (!step.done) {
-        yield next(step.value);
+        const event = step.value;
+        if (event.type === "usage") usage = event.usage;
+        if (event.type === "done") {
+          usage = event.usage ?? usage;
+          await settle();
+        }
+        yield next(event);
         step = await iterator.next();
       }
+      await settle();
     } catch (error) {
+      if (error instanceof RunLimitError) throw error;
+      outcome = "error";
       yield { type: "error", error: errorToErrorInfo(error, known()) };
     } finally {
       // A caller that stops at `done` must still close the provider stream (an early `return()` skips the loop).
       await iterator.return?.();
+      // A caller that abandons the stream before it ends still owes its usage; a breach was already raised to the run.
+      if (!settled) {
+        outcome = outcome === "ok" ? "aborted" : outcome;
+        await settle().catch(() => undefined);
+      }
     }
   }
 
@@ -868,9 +965,9 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           return {
             model,
             resolve,
-            generate: (request) =>
+            generate: (request, callOptions) =>
               (async function* () {
-                yield* generateWithRetry(await resolve(), request);
+                yield* generatePackageCall(name, await resolve(), request, callOptions);
               })(),
           };
         },

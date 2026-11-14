@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.13.2] - 2026-11-14
+
+Requires `@arnilo/prism` 0.13.1 for the metering below; against 0.13.0 the `session` option is ignored and the call is unmetered, as before.
+
+### ./web
+
+#### Changed
+
+- `web_fetch({ url, prompt })` passes the tool's `session` to its page-question model call, so the call runs through the hooks and is charged to the run. `PromptFetch.answer` takes an optional `session`.
+
 ## [0.13.1] - 2026-11-12
 
 ### ./coding

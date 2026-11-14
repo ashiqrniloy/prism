@@ -22,7 +22,8 @@ import type { HookBus, RunEndDecision, ToolCallDecision, TurnBeforeDecision } fr
 import type { AgentInput } from "../input.js";
 import type { RunLimitTracker } from "../run-limits.js";
 import type { ExternalStateHandle } from "../session/external-state.js";
-import { dispatchableToolCalls, dispatchToolCallsInOrder, throwIfAborted } from "./dispatch.js";
+import { toToolResultMessage } from "../input.js";
+import { dispatchableToolCalls, dispatchToolCallsInOrder, isRunControlError, syntheticFailureResult, throwIfAborted } from "./dispatch.js";
 import { applyRequestTransforms } from "./request-draft.js";
 import {
   EXTERNAL_ACTIVITY_EVENTS,
@@ -38,6 +39,16 @@ import {
 
 /** How an `ask` decision resolved: execute, refuse, or (no UI) suspend the round. */
 export type AskResolution = { readonly kind: "allow" } | { readonly kind: "deny"; readonly reason: string } | { readonly kind: "suspend" };
+
+const settlers = new WeakMap<RunController, () => Promise<void>>();
+
+/**
+ * Kernel-internal: answer every dispatchable call of the last turn that still has no result (a loop
+ * that dropped `turn.toolCalls`). The run calls it where it ends without suspending. Never throws.
+ */
+export function settleOutstandingToolCalls(controller: RunController): Promise<void> {
+  return settlers.get(controller)?.() ?? Promise.resolve();
+}
 
 /** A `tool.call` decision that carries replacement arguments. */
 function isRewrite(decision: ToolCallDecision | undefined): decision is { readonly rewrite: JsonObject } {
@@ -118,6 +129,8 @@ export function createRunController(internals: RunControllerInternals): RunContr
   let toolRounds = 0;
   let continuations = 0;
   let pushedInput = false;
+  /** Dispatchable calls of the last turn that no result has answered and no suspension owns yet. */
+  const outstanding = new Map<string, ToolCallContent>();
 
   const append = async (message: Message): Promise<Message> => {
     const transformed = await internals.hooks.transform("message.append", message, {
@@ -129,7 +142,51 @@ export function createRunController(internals: RunControllerInternals): RunContr
     return transformed;
   };
 
+  /** One `tool.completed { status: "blocked" }` per synthetic result, so events and transcript agree. */
+  const emitSettled = (result: ToolResult): void => {
+    const error = result.error ?? { code: "tool_call_not_dispatched", message: "" };
+    const reason = typeof error.code === "string" ? error.code : (error.name ?? "tool_call_failed");
+    internals.emit({
+      type: "tool.completed",
+      sessionId: internals.sessionId,
+      runId: internals.runId,
+      toolCallId: result.toolCallId,
+      name: result.name,
+      result,
+      metadata: { durationMs: 0, status: "blocked" },
+      status: "blocked",
+      reason,
+      error,
+    });
+  };
+
+  /** Write one result per call through the transcript path. Best-effort: the caller's own error wins. */
+  const settleCalls = async (calls: readonly ToolCallContent[], make: (call: ToolCallContent) => ToolResult): Promise<ToolResult[]> => {
+    const results: ToolResult[] = [];
+    for (const call of calls) {
+      const result = make(call);
+      try {
+        await append(toToolResultMessage(result));
+        results.push(result);
+        emitSettled(result);
+      } catch {
+        // A failing store cannot be repaired here; the read-time repair covers the branch.
+      }
+    }
+    return results;
+  };
+
+  const settleOutstanding = async (): Promise<void> => {
+    if (outstanding.size === 0) return;
+    const calls = [...outstanding.values()];
+    outstanding.clear();
+    await settleCalls(calls, (call) => syntheticFailureResult(call, undefined));
+  };
+
   const turn = async (options: RunTurnOptions = {}): Promise<RunTurnResult> => {
+    // A loop that dropped the last round's calls and asks for another turn: answer them first, so
+    // the next request never carries a call without its result.
+    await settleOutstanding();
     turnCount += 1;
     const currentTurn = turnCount;
     throwIfAborted(internals.signal);
@@ -180,8 +237,10 @@ export function createRunController(internals: RunControllerInternals): RunContr
     }
 
     const dispatchable = dispatchableToolCalls(result.calls);
+    for (const call of dispatchable) outstanding.set(call.id, call);
     if (dispatchable.length > 0 && toolRounds >= internals.maxToolRounds) {
       internals.setFinishReason("turn_limit");
+      await settleOutstanding();
       return { stopped: true, toolCalls: dispatchable, finishReason: "turn_limit", ...(result.usage ? { usage: result.usage } : {}) };
     }
     // Soft-interrupt / late steer: a call-free turn keeps the run going when the queue has text.
@@ -256,44 +315,63 @@ export function createRunController(internals: RunControllerInternals): RunContr
   ): Promise<readonly ToolResult[]> => {
     if (calls.length === 0) return [];
     // Plan 177 Task 5: a loop that ignores the dispose signal must not execute tools after `dispose()`.
-    if (disposedAbort()) return calls.map(disposedResult);
+    // The disposed results are written, not only returned, so the branch never keeps the calls unanswered.
+    if (disposedAbort()) {
+      for (const call of calls) outstanding.delete(call.id);
+      return settleCalls(calls, disposedResult);
+    }
     const origin = options?.origin;
     toolRounds += 1;
     // Evaluate `tool.call` for the whole round before dispatching, so several asks collect into
     // one suspension instead of stopping at the first one.
     const decisions = new Map<string, ToolCallDecision | undefined>();
     const gatedCalls = new Map<string, ToolCallContent>();
-    const asks: AskRequest[] = [];
-    for (const call of calls) {
-      const gated = await gateCall(call, internals.effectsFor(call), origin);
-      decisions.set(call.id, gated.decision);
-      gatedCalls.set(call.id, gated.call);
-      // An `ask` carries the call that will execute (the rewritten one), so its pending hash matches.
-      if (gated.decision !== undefined && typeof gated.decision === "object" && "ask" in gated.decision) {
-        asks.push({ call: gated.call, reason: gated.decision.ask });
-      }
-    }
-    const askResolutions =
-      asks.length > 0 && internals.ask
-        ? await internals.ask(asks)
-        : new Map<string, AskResolution>(asks.map((entry) => [entry.call.id, { kind: "deny" as const, reason: entry.reason }]));
-    return dispatchToolCallsInOrder(calls, {
-      signal: internals.signal,
-      toolConcurrency: options?.concurrency ?? 1,
-      ...(internals.chargeToolRound ? { chargeToolRound: internals.chargeToolRound } : {}),
-      dispatchToolCall: (call) => {
-        // An unresolved ask is not dispatched: it is staged as a pending decision and the run
-        // suspends at the next turn boundary / loop end, after the round's allowed calls run.
-        if (askResolutions.get(call.id)?.kind === "suspend") {
-          return Promise.resolve({ toolCallId: call.id, name: call.name, metadata: { approvalPending: true } });
+    let askResolutions: ReadonlyMap<string, AskResolution>;
+    try {
+      const asks: AskRequest[] = [];
+      for (const call of calls) {
+        const gated = await gateCall(call, internals.effectsFor(call), origin);
+        decisions.set(call.id, gated.decision);
+        gatedCalls.set(call.id, gated.call);
+        // An `ask` carries the call that will execute (the rewritten one), so its pending hash matches.
+        if (gated.decision !== undefined && typeof gated.decision === "object" && "ask" in gated.decision) {
+          asks.push({ call: gated.call, reason: gated.decision.ask });
         }
-        return dispatchOne(call, gatedCalls.get(call.id) ?? call, decisions.get(call.id), askResolutions, origin);
-      },
-      ...(internals.isToolCallExclusive ? { isToolCallExclusive: internals.isToolCallExclusive } : {}),
-      appendMessage: async (message) => {
-        await append(message);
-      },
-    });
+      }
+      askResolutions =
+        asks.length > 0 && internals.ask
+          ? await internals.ask(asks)
+          : new Map<string, AskResolution>(asks.map((entry) => [entry.call.id, { kind: "deny" as const, reason: entry.reason }]));
+    } catch (error) {
+      // A throwing gate handler (or ask) ends the round before any call runs: answer every call,
+      // unless the error is a suspension, whose machinery owns the calls.
+      for (const call of calls) outstanding.delete(call.id);
+      if (!isRunControlError(error)) await settleCalls(calls, (call) => syntheticFailureResult(call, undefined));
+      throw error;
+    }
+    try {
+      return await dispatchToolCallsInOrder(calls, {
+        signal: internals.signal,
+        toolConcurrency: options?.concurrency ?? 1,
+        ...(internals.chargeToolRound ? { chargeToolRound: internals.chargeToolRound } : {}),
+        dispatchToolCall: (call) => {
+          // An unresolved ask is not dispatched: it is staged as a pending decision and the run
+          // suspends at the next turn boundary / loop end, after the round's allowed calls run.
+          if (askResolutions.get(call.id)?.kind === "suspend") {
+            return Promise.resolve({ toolCallId: call.id, name: call.name, metadata: { approvalPending: true } });
+          }
+          return dispatchOne(call, gatedCalls.get(call.id) ?? call, decisions.get(call.id), askResolutions, origin);
+        },
+        ...(internals.isToolCallExclusive ? { isToolCallExclusive: internals.isToolCallExclusive } : {}),
+        appendMessage: async (message) => {
+          await append(message);
+        },
+        settled: emitSettled,
+      });
+    } finally {
+      // The dispatch seam answered this round, or left a call to its suspension: none is outstanding.
+      for (const call of calls) outstanding.delete(call.id);
+    }
   };
 
   /**
@@ -607,5 +685,6 @@ export function createRunController(internals: RunControllerInternals): RunContr
     steers,
     emit: (name, data) => internals.emit(packageEventFor(internals.loopOwner, internals.sessionId, internals.runId, name, data)),
   };
+  settlers.set(controller, settleOutstanding);
   return controller;
 }

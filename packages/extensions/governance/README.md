@@ -54,7 +54,7 @@ Plan 159 Task 7 deleted `createSecureAgent`; its guarantees are explicit `AgentC
 
 - `describeStorage` classifies a store by declared kind. It reads no contents and no connection strings.
 - One `tool.call` decide handler. `deny` becomes `{ deny }` with the policy reason, `approval` becomes `{ ask }` (host confirm or suspension), `allow` registers nothing. No matching rule applies `default`. A throwing handler is a deny.
-- Opt-in `run.input` / `model.request` transforms that reject the run or the outgoing request with the policy reason.
+- Opt-in `run.input` / `model.request` transforms that reject the run or the outgoing request with the policy reason. `model.request` also gates a package's own model calls (`request.origin`); a call made with no session is evaluated as the placeholder identity, so a deny-by-default policy refuses it.
 - Every decision is recorded through `evaluateAndAppend` into the configured `PolicyDecisionStore`. An observe handler on `decision.resolved` (and a blocked `tool.completed`) closes an `approval` record with its resolved outcome.
 - Services `governance.policy` (the evaluator), `governance.identity` when `identity` is set (`{ get(sessionId) }`), and, when `audit` is set, `governance.audit` (`{ store, export }`).
 

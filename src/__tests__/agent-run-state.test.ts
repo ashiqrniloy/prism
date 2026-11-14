@@ -123,7 +123,9 @@ describe("durable agent runs", () => {
       () => stream.next(),
       (error: unknown) => error instanceof SubscriberOverflowError,
     );
-    assert.equal(calls, 1);
+    // The overflow aborted the resumed run before its approved call started: the serial path checks the
+    // signal before each call (plan 225 Task 4), so the call is answered `tool_call_not_dispatched`.
+    assert.equal(calls, 0);
   });
 
   it("redacts stored pending tool arguments and a rejection never executes", async () => {

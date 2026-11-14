@@ -1,4 +1,4 @@
-import type { JsonValue, Message, ModelClient, ModelConfig, PackageAPI, ProviderEvent, SessionEntry } from "@arnilo/prism";
+import type { JsonValue, Message, ModelClient, ModelConfig, PackageAPI, ProviderEvent, SessionContext, SessionEntry } from "@arnilo/prism";
 import { selectTranscript, type TranscriptSlice } from "@arnilo/prism";
 import type { AdvisorConfig, ResolvedContext } from "./config.js";
 
@@ -6,14 +6,16 @@ import type { AdvisorConfig, ResolvedContext } from "./config.js";
 export async function generateText(
   client: ModelClient,
   prompt: string,
-  options: { readonly maxChars: number; readonly signal?: AbortSignal },
+  options: { readonly maxChars: number; readonly signal?: AbortSignal; readonly session?: SessionContext },
 ): Promise<{ readonly text: string; readonly totalTokens?: number }> {
   const parts: string[] = [];
   let length = 0;
   let totalTokens: number | undefined;
   const request: Parameters<ModelClient["generate"]>[0] = { messages: [{ role: "user", content: [{ type: "text", text: prompt }] }] };
+  // The session charges the consult to the run it advises and routes its hooks and event to that session (plan 225 Task 5).
   for await (const event of client.generate(
     options.signal === undefined ? request : { ...request, signal: options.signal },
+    options.session === undefined ? undefined : { session: options.session },
   ) as AsyncIterable<ProviderEvent>) {
     if (event.type === "error") throw new Error(event.error.message || "the advisor model returned an error");
     if (event.type === "usage" && event.usage.totalTokens !== undefined) totalTokens = event.usage.totalTokens;

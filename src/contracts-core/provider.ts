@@ -74,6 +74,12 @@ export interface ProviderRequest {
   readonly options?: ProviderRequestOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
+  /**
+   * Who asked, set by the kernel and never by the caller: a model call a package makes through `models.client`
+   * carries `{ kind: "package", package }`; a run turn carries none. `model.request` and `model.call` handlers read it
+   * to tell a package's side call from the run's own turn.
+   */
+  readonly origin?: { readonly kind: "package"; readonly package: string };
 }
 
 /** What a provider's `auth` descriptors may do to the credentials slot. The kernel never runs `login`. */

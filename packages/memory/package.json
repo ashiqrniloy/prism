@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory-system",
-  "version": "0.13.0-experimental.0",
+  "version": "0.13.0-experimental.1",
   "description": "Experimental Prism memory bundle. Import each capability through its published entrypoint.",
   "type": "module",
   "exports": {

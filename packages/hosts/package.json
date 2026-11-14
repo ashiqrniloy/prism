@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-hosts",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Prism host libraries, process driver and version-exact host-builder kit. Import each library through its subpath.",
   "type": "module",
   "exports": {

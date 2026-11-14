@@ -28,6 +28,7 @@ import type {
 } from "../../contracts.js";
 import { AgentDecisionError, AgentDelegationSuspendedError, HARD_MAX_PENDING_DECISIONS, MAX_ATTRIBUTION_DEPTH } from "../../contracts.js";
 import { toToolResultMessage } from "../../input.js";
+import { isRunControlError, settleOutstandingToolCalls } from "../../loop/index.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../../tool-effects.js";
 import { dispatchToolCall, resolveToolEffectDeclaration } from "../../tools.js";
 import { randomId } from "../helpers.js";
@@ -579,10 +580,15 @@ export async function runLoopUntilSettled(ctx: RoundContext): Promise<Usage | un
   while (true) {
     try {
       await ctx.loop.run(ctx.runController);
+      // A loop that dropped a round's calls must not end the run with them unanswered.
+      await settleOutstandingToolCalls(ctx.runController);
       await suspendGatedRound(ctx);
       return undefined;
     } catch (error) {
-      if (!(error instanceof AgentDelegationSuspendedError)) throw error;
+      if (!(error instanceof AgentDelegationSuspendedError)) {
+        if (!isRunControlError(error)) await settleOutstandingToolCalls(ctx.runController);
+        throw error;
+      }
       await handleNestedSignal(ctx, error);
     }
   }

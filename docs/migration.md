@@ -1,5 +1,17 @@
 # Migration guide
 
+## 0.13.0 → 0.13.1 (package model calls run on the hook plane)
+
+**Nothing to change in a host.** 0.13.1 is a patch of the kernel and its bundles; no export moved and every addition is optional.
+
+What changes at runtime:
+
+- **A package's model call now fires `model.request` and `model.call`** (never `context.build`). A hook that gates, redacts or traces model calls sees these calls too, and tells them apart by `request.origin`, which the kernel stamps as `{ kind: "package", package }`. A `model.call` handler now has `context.sessionId` and `context.runId` set, and `context.call(request)` for an unhooked onward call to any model. `model-router` uses it, so it does not re-enter itself.
+- **Limits apply when the package passes the session.** `models.client(ref).generate(request, { session })` charges the call to the active run (`maxTotalTokens`, cost limits, `RunResult.usage`, a `package_call` ledger row) and reports a `model.call` `package.event` on that session. Without `session` the call runs the hooks and reports to `agent.subscribe()`, but nothing is charged. A host tool added through `AgentConfig.tools` gets no `context.session`; only package tools can pass one today.
+- **Hook events reach only their own session** (a security fix), and **every tool call of an assistant message has a tool result** when a round stops early.
+
+For a package author: pass `{ session }` from a tool's `context.session` or a hook's `hook.session` to `generate` whenever the call serves a run. `ModelCallOptions` is the type. `embeddings` and `decisions` are unchanged.
+
 ## 0.10.0 → 0.11.0 (behavior persona and graft subpath removals)
 
 **Prism 0.11.0 removes three public subpaths** that shipped through 0.10.0. Both capabilities stay supported on public seams — only the vendored convenience subpaths are gone. Compat baselines are regenerated for this line: 106 names removed (58 in `@arnilo/prism-memory`, 48 in `@arnilo/prism-coding-tools`) with no consumer-visible signature break; the only non-barrel signature changes are the widened `runCheckpointRestoreHooks` parameter and `describeBudgetExhaustion` return, plus two internal modules that no `exports` entry reaches. The 0.11.0 cut's own declaration change is `version` `"0.10.0"` → `"0.11.0"`. Plan 120 added no public name.

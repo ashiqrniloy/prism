@@ -87,9 +87,8 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
   const spec = input.model === undefined ? undefined : parseModelRef(input.model);
   const config = (spec === input.model ? input : { ...input, model: spec }) as ResolvedAgentConfig;
 
-  let sink: ((event: AgentEvent) => void) | undefined;
   const agentSubscribers = new Set<EventSubscriber>();
-  /** Agent-level fan-out only: the emitting session already observed the event, so it must not re-enter `sink`. */
+  /** Agent-level fan-out only: the emitting session already observed the event. Also the sink of the unbound bus. */
   function emitAgentEvent(event: AgentEvent): void {
     for (const subscriber of agentSubscribers) {
       subscriber.push(event);
@@ -149,7 +148,7 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       throw new ModelError("model_required", `AgentConfig.model is required unless the loop "${loop.name}" declares usesModel: false`);
     }
   };
-  const hooks = createHookBus({ onEvent: (event) => sink?.(event), secrets });
+  const hooks = createHookBus({ onEvent: (event) => emitAgentEvent(event), secrets });
   const slots = createSlotRegistry(createSlotDefaults());
   registerSkillCatalog(hooks.registrar("kernel"));
   const initial = await assemblePackages(config, hooks, slots);
@@ -262,7 +261,7 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       reloading ??= (async () => {
         if (runtime) runtime.reloading = true;
         const previous = { config: registryView.config, packages: registryView.packages };
-        const nextHooks = createHookBus({ onEvent: (event) => sink?.(event), secrets });
+        const nextHooks = createHookBus({ onEvent: (event) => emitAgentEvent(event), secrets });
         registerSkillCatalog(nextHooks.registrar("kernel"));
         const nextSlots = createSlotRegistry(createSlotDefaults());
         let assembled: Awaited<ReturnType<typeof assemblePackages>>;
@@ -332,9 +331,6 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
     slots: currentSlots,
     packages: currentPackages,
     openSessions,
-    setEventSink(next) {
-      sink = next;
-    },
     emitAgentEvent,
   };
   registerAgentRuntime(agent, runtime);

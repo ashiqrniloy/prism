@@ -185,7 +185,10 @@ export function createObscuraWebTools(options: ObscuraWebToolsOptions): ObscuraW
         if (question !== undefined && options.prompt === undefined)
           throw new ObscuraError("ERR_OBSCURA_INPUT", "prompt is only available when fetch.prompt is configured");
         if (question !== undefined) {
-          const answer = await options.prompt!.answer(page, question, { signal: context.signal });
+          const answer = await options.prompt!.answer(page, question, {
+            signal: context.signal,
+            ...(context.session === undefined ? {} : { session: context.session }),
+          });
           return untrusted(
             context,
             "web_fetch",

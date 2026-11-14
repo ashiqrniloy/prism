@@ -65,7 +65,18 @@ export interface PackageCommandInfo {
   readonly package: string;
 }
 
-/** A model call a package makes outside a run (a compactor's summary, a classifier). */
+/** Options of one {@link ModelClient.generate} call. */
+export interface ModelCallOptions {
+  /**
+   * The session this call belongs to, normally the one a hook, tool or command handler received. With it the call
+   * runs `model.request` and `model.call` on that session's hook bus, is reported on its event stream, and, while the
+   * session has an active run, is charged to that run's token and cost limits, usage and ledger. Without it the hooks
+   * still run (on the agent's bus) and nothing is charged to a run.
+   */
+  readonly session?: SessionContext;
+}
+
+/** A model call a package makes (a compactor's summary, a classifier), inside a run or outside one. */
 export interface ModelClient {
   /** The model as the ref gave it (the agent's configured model object when the ref names that model). */
   readonly model: ModelConfig;
@@ -79,7 +90,7 @@ export interface ModelClient {
    * Streams one provider turn with the resolved model. Resolves the provider on first use, so providers loaded later
    * are visible.
    */
-  generate(request: Omit<ProviderRequest, "model">): AsyncIterable<ProviderEvent>;
+  generate(request: Omit<ProviderRequest, "model">, options?: ModelCallOptions): AsyncIterable<ProviderEvent>;
 }
 
 /** What a package gets in `setup` (roadmap §2.6). */

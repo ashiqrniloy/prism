@@ -68,6 +68,8 @@ export type SessionHost = {
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
+  /** Charges a package's model call to the active run; set with the run, cleared with its limits (plan 225 Task 5). */
+  activePackageUsage?: import("../../package-call-seam.js").PackageCallSeam["recordUsage"];
   /** Plan 091 T2: input tokens of the latest provider turn plus whether the
    *  provider reported them. Set by the usage seam; read by `contextMeter()`. */
   activeInputMeter?: { readonly tokens: number; readonly source: "reported" | "estimated" };
@@ -93,7 +95,7 @@ export type SessionHost = {
   slots(): SlotRegistry;
   resolveRunProvider(options: ResolvedRunOptions, skip?: boolean): void;
   emit(event: AgentEvent): void;
-  rebuildHistory(): Promise<void>;
+  rebuildHistory(): Promise<readonly string[]>;
   resolveRunSkills(tools: readonly ToolDefinition[]): readonly Skill[];
   runRedactor(base?: SecretRedactor): SecretRedactor | undefined;
   sessionContextFor(owner: string): import("../../session-context.js").SessionContext;

@@ -119,7 +119,7 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
       client = prism.models.client(ref);
       memo.set(key, client);
     }
-    return createModelSummarize({ client, maxSummaryBytes: config.fold.maxSummaryBytes });
+    return createModelSummarize({ client, maxSummaryBytes: config.fold.maxSummaryBytes, session });
   };
 
   // The cap depends only on the model's limits, so the memo is keyed by the model, not the session.
@@ -154,6 +154,9 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
   prism.hooks.on(
     "model.request",
     (request, context) => {
+      // A package's side call (a fold summary, a compactor's summary) is not the run's request: measuring it against the
+      // run's input cap would report a summarizer's bytes as context pressure (plan 225 Task 5).
+      if (request.origin?.kind === "package") return undefined;
       const accounted = accountRequest(request, {
         inputCapTokens: inputCapOf(context.session),
         ...(config.blocks ? { maxShare: config.blocks.maxShare } : {}),

@@ -624,7 +624,6 @@
           "packages/memory/system/src/session/__tests__/observational.test.ts",
           "packages/memory/system/src/session/__tests__/recall.test.ts",
           "packages/memory/system/src/session/__tests__/recent-messages.test.ts",
-          "packages/memory/system/src/session/__tests__/reflection-replacement.test.ts",
           "packages/memory/system/src/session/__tests__/settings.test.ts",
           "packages/memory/system/src/session/__tests__/strategy.test.ts",
           "packages/memory/system/src/session/__tests__/temporal.test.ts",

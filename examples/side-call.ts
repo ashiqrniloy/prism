@@ -7,7 +7,7 @@ import { mockProvider } from "@arnilo/prism/testing";
  * The agent runs on two `mockProvider` packages: `main` answers the run and `side` is reached only through
  * `PackageAPI.models.client("side/side")` from inside the `ask_side` tool. The package declares the `models`
  * capability; the main provider emits the tool call, the tool streams the side model's text, and the side
- * provider is called exactly once. Imports only `@arnilo/prism` and `@arnilo/prism/testing`. Network-free.
+ * provider is called exactly once. The tool passes its `context.session` so the side call is charged to the run. Imports only `@arnilo/prism` and `@arnilo/prism/testing`. Network-free.
  * Run: npm run build:core && node examples/side-call.ts
  */
 
@@ -26,9 +26,13 @@ export async function demo(): Promise<Record<string, unknown>> {
         description: "Asks the side model a question and returns its text.",
         parameters: { type: "object", properties: { question: { type: "string" } }, required: ["question"] },
         execute: async (args, context) => {
-          for await (const event of prism.models.client("side/side").generate({
-            messages: [{ role: "user", content: [{ type: "text", text: String(args.question ?? "") }] }],
-          })) {
+          // Passing the tool's session runs the call on the hook plane and charges it to this run's limits.
+          for await (const event of prism.models
+            .client("side/side")
+            .generate(
+              { messages: [{ role: "user", content: [{ type: "text", text: String(args.question ?? "") }] }] },
+              { session: context.session },
+            )) {
             if (event.type === "content_delta" && event.content.type === "text") sideText += event.content.text;
           }
           return { toolCallId: context.toolCallId, name: "ask_side", value: sideText };
