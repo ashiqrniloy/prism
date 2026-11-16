@@ -1,5 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
+import { createLongTermMemory, createMemory, parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import {
   collectInvalidationIds,
@@ -11,7 +12,6 @@ import {
   recordBlocked,
   revokedIdsAbsent,
 } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
 import { HARD_LINEAGE_EDGES, LINEAGE_META_KEY } from "../../../../core/src/lineage.js";
 
 const scope = { tenantId: "t1", resourceId: "r1", threadId: "th1" };

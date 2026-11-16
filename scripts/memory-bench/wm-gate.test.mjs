@@ -10,9 +10,10 @@ import {
   buildM2Evidence,
   buildM2Manifest,
   isProductTestPath,
-  M2_JUDGES,
+  M2_ARMS,
   M2_PROBES,
-  M2_SUITE_QUESTIONS,
+  M2_SITTINGS,
+  M2_WORKTREE_COPY,
   m2Jobs,
   m2OfflineRows,
 } from "./wm-gate.mjs";
@@ -20,25 +21,6 @@ import { longSessionWmStats } from "./work-outcome/long-session.mjs";
 import { parseLongSessionLiveArgs } from "./work-outcome/long-session-live.mjs";
 
 const probes = JSON.parse(readFileSync(M2_PROBES, "utf8"));
-
-/** A scored suite report: `correct(i)` per question. */
-function suiteReport(ids, { correct = () => true, status = "partial" } = {}) {
-  return {
-    status,
-    results: ids.map((id, index) => ({
-      id,
-      ability: index % 2 ? "a" : "b",
-      outcome: "scored",
-      correct: correct(index),
-      evidenceAllRequired: true,
-      phaseTiming: { answer: 1000 + index },
-    })),
-    workerUsage: { reflector: { calls: 2, inputTokens: 100, outputTokens: 10 } },
-    wmCalls: { calls: 2, items: 3, capStops: 1, capNoItem: 1, stopReasons: { end_turn: 1, max_output_tokens: 1 } },
-    inputTokens: 1000,
-    cacheReadTokens: 800,
-  };
-}
 
 /** A family job report for one arm: `value(persona, pair)` gives success and re-derivations. */
 function familyReport(arm, { success = () => true, rederivations = () => 0, personas = ["rp1", "rp4", "rp6", "rp9"], repeat } = {}) {
@@ -66,17 +48,12 @@ function familyReport(arm, { success = () => true, rederivations = () => 0, pers
   };
 }
 
-function allReports({ wmSuccess = () => true, wmCorrect = () => true, s1 = () => 1 } = {}) {
+function allReports({ wmSuccess = () => true, s1 = () => 1 } = {}) {
   const reports = new Map();
-  const ids = Array.from({ length: M2_SUITE_QUESTIONS }, (_, index) => `q${index}`);
   for (const model of ["deepseek", "muse"]) {
     reports.set(`218-m2.${model}.WM.re-plan`, familyReport("WM", { success: wmSuccess }));
     reports.set(`218-m2.${model}.STM-only.re-plan`, familyReport("STM-only", { success: () => false }));
     reports.set(`218-m2.${model}.OM-before.re-plan`, familyReport("OM-before", { success: () => false }));
-    for (const suite of ["longmemeval-m", "beam-1m"]) {
-      reports.set(`218-m2.${model}.WM.${suite}`, suiteReport(ids, { correct: wmCorrect }));
-      reports.set(`218-m2.${model}.STM-only.${suite}`, suiteReport(ids));
-    }
   }
   for (let repeat = 1; repeat <= 3; repeat++) {
     reports.set(`218-m2.mimo.OM-before.long-session.r${repeat}`, familyReport("OM-before", { rederivations: () => 2, repeat }));
@@ -88,9 +65,9 @@ function allReports({ wmSuccess = () => true, wmCorrect = () => true, s1 = () =>
 
 test("gate_m2_arms_paired_on_identical_items", async () => {
   const jobs = m2Jobs();
-  // re-plan: 2 models x 3 arms; S1: MiMo x 3 arms x 3 repeats; M5: 2 models x 2 suites x {WM, STM-only};
-  // long-session cost rows: 2 models x 3 arms.
-  assert.equal(jobs.length, 2 * 3 + 3 * 3 + 2 * 2 * 2 + 2 * 3);
+  // re-plan: 2 models x 3 arms; S1: MiMo x 3 arms x 3 repeats; long-session cost rows: 2 models x 3 arms. M5 is the
+  // Compact-Bench screen (plan 218.1 Task 3), run by its own harness, so it adds no job.
+  assert.equal(jobs.length, 2 * 3 + 3 * 3 + 2 * 3);
   assertM2Paired(jobs);
   assert.ok(jobs.every((job) => job.subset === "dev" && job.provider === "opencode-go"));
   assert.deepEqual([...new Set(jobs.map((job) => job.model))].sort(), [
@@ -102,23 +79,11 @@ test("gate_m2_arms_paired_on_identical_items", async () => {
   const mimo = jobs.filter((job) => job.model_key === "mimo");
   assert.ok(mimo.every((job) => job.suite === "long-session" && job.sitting === 2));
   assert.deepEqual([...new Set(mimo.map((job) => job.repeat))], [1, 2, 3]);
-  // The suites: WM takes the task framing as its scope, STM-only the deterministic policy, both the same judges.
-  const suites = jobs.filter((job) => job.kind === "robustness");
-  assert.ok(suites.every((job) => job.maxQuestions === M2_SUITE_QUESTIONS && job.judges === M2_JUDGES.join(",")));
-  assert.ok(suites.filter((job) => job.arm === "WM").every((job) => job.wmScope === true && !job.ablate));
-  assert.ok(
-    suites.filter((job) => job.arm === "STM-only").every((job) => !job.wmScope && job.ablate[0] === "session.wm.policy=deterministic"),
-  );
-  assert.ok(!suites.some((job) => job.arm === "OM-before"));
-  // Judges never answer.
-  assert.ok(!jobs.some((job) => M2_JUDGES.includes(`${job.provider}/${job.model}`)));
   // OM-before runs from the pinned worktree, the others from this tree.
   assert.ok(jobs.every((job) => (job.arm === "OM-before") === Boolean(job.cwd)));
-  // A pair that differs in more than the arm is refused, and so is an arm without its switches.
-  const tampered = jobs.map((job) => (job.id === "218-m2.muse.STM-only.beam-1m" ? { ...job, judges: "opencode-go/qwen3.8-flash" } : job));
+  // A pair that differs in more than the arm is refused.
+  const tampered = jobs.map((job) => (job.id === "218-m2.muse.STM-only.re-plan" ? { ...job, maxOutputTokens: 4096 } : job));
   assert.throws(() => assertM2Paired(tampered), /differ in more than the arm/);
-  const unscoped = jobs.map((job) => (job.id === "218-m2.muse.WM.beam-1m" ? { ...job, wmScope: undefined } : job));
-  assert.throws(() => assertM2Paired(unscoped), /switches/);
   // Development partition only, in the manifest, the CLI and the live family child.
   assert.throws(() => assertM2Partition("heldout-a"), /dev partition only/);
   const live = [
@@ -191,15 +156,19 @@ test("m2_offline_rows_pass_before_paid_run", async () => {
     models: {
       answers: { deepseek: "opencode-go/deepseek-v4.1-flash", muse: "opencode-go/muse-spark-1.3-contributor" },
       s1: "opencode-go/mimo-v2.6-flash",
-      judges: [...M2_JUDGES],
     },
   };
   assertM2Gate(gate, manifest);
   assert.throws(() => assertM2Gate({ ...gate, approved: false }, manifest), /not approved/);
   assert.throws(() => assertM2Gate({ ...gate, manifestHash: "x" }, manifest), /manifest differs/);
   assert.throws(
-    () => assertM2Gate({ ...gate, models: { ...gate.models, judges: ["openrouter/free"] } }, manifest),
+    () => assertM2Gate({ ...gate, models: { ...gate.models, s1: "openrouter/free" } }, manifest),
     /outside the gate M-2 models/,
+  );
+  // No judge role is left once the QA suites are gone (plan 218.1 Task 3).
+  assert.throws(
+    () => assertM2Gate({ ...gate, models: { ...gate.models, judges: ["opencode-go/qwen3.8-flash"] } }, manifest),
+    /no judge role/,
   );
   assert.throws(() => assertM2Gate({ ...gate, closed: { at: "2026-11-12", by: "owner" } }, manifest), /closed/);
 });
@@ -212,21 +181,30 @@ test("m2_verdicts_computed_from_memory_model_criteria_only", () => {
   const pending = memoryModelGateVerdict("M-2", { ...pin, ...pinOf() });
   const status = Object.fromEntries(pending.rows.map((row) => [row.row, row.status]));
   assert.deepEqual(status, { M1: "missing", M2: "pass", M3: "pass", M4: "pass", M5: "missing" });
-  // WM wins every re-plan task and ties the QA sample: M1 passes, M5 is non-inferior (its interval is wide).
-  const full = buildM2Evidence({ reports: allReports(), manifest, probes, iterations: 200 });
+  // WM wins every re-plan task and, on the screen, ties STM-only: M1 passes, M5 is non-inferior.
+  const screen = (estimate, ciLow, ciHigh) => ({
+    branch: "A",
+    ruleHash: "r",
+    m5: { model: "muse", n: 30, estimate, ciLow, ciHigh, engagedOnly: { n: 30, estimate, ciLow, ciHigh } },
+  });
+  const full = buildM2Evidence({ reports: allReports(), manifest, probes, screen: screen(0.5, -1.5, 2.5), iterations: 200 });
   const verdict = memoryModelGateVerdict("M-2", { ...full, ...pinOf() });
   const rows = Object.fromEntries(verdict.rows.map((row) => [row.row, row.status]));
   assert.equal(rows.M1, "pass");
   assert.equal(rows.M5, "pass");
-  assert.equal(full.rows.M5.tests["vs-stm-only"].underpowered, true);
+  assert.equal(full.rows.M5.tests["vs-stm-only"].branch, "A");
   // WM's output cap is counted per model; the S1 re-measure is reported against plan 217's row.
-  assert.deepEqual(full.wmOutputCap.deepseek.capNoItem, 2);
+  // (family jobs only since the QA suites left: 4 re-plan personas x 2 WM calls, 4 items each).
+  assert.deepEqual(full.wmOutputCap.deepseek, { calls: 8, capStops: 0, capNoItem: 0, items: 16 });
   assert.equal(full.s1["WM - OM-before"].repeats, 3);
   assert.equal(full.s1["WM - OM-before"].estimate, 1);
   assert.match(full.s1.result, /not below zero/);
-  // A worse WM on the QA sample is a miss, and so is MiMo re-deriving more with both new arms.
-  const worse = buildM2Evidence({ reports: allReports({ wmCorrect: () => false, s1: () => 4 }), manifest, probes, iterations: 200 });
+  // A worse WM on the screen is a miss, and so is MiMo re-deriving more with both new arms.
+  const worse = buildM2Evidence({ reports: allReports({ s1: () => 4 }), manifest, probes, screen: screen(-6, -9, -3), iterations: 200 });
   assert.equal(memoryModelGateVerdict("M-2", { ...worse, ...pinOf() }).rows.find((row) => row.row === "M5").status, "miss");
+  // Branch B leaves M5 missing, never a pass.
+  const branchB = buildM2Evidence({ reports: allReports(), manifest, probes, screen: { branch: "B", m5: null }, iterations: 50 });
+  assert.equal(memoryModelGateVerdict("M-2", { ...branchB, ...pinOf() }).rows.find((row) => row.row === "M5").status, "missing");
   assert.match(worse.s1.result, /^miss/);
   assert.ok(worse.s1.perPersona.rp1);
   // The family's session stats read WM passes and compactions from the log.
@@ -240,7 +218,8 @@ test("m2_verdicts_computed_from_memory_model_criteria_only", () => {
     },
     { data: { op: "append", value: { type: "memory.session.wm.recorded", items: [], budgetUnmet: {} } } },
   ]);
-  assert.deepEqual(stats, { compactions: 1, passes: 2, items: [2, 0], budgetUnmet: 1, ratios: [0.2] });
+  // Plan 218.2 Task 8: the compaction block size per compaction (characters; this entry carries no summary).
+  assert.deepEqual(stats, { compactions: 1, compactionChars: [0], passes: 2, items: [2, 0], budgetUnmet: 1, ratios: [0.2] });
 });
 
 /**
@@ -251,3 +230,25 @@ function pinOf() {
   const { memoryModelCriteriaHash, criteriaHash } = memoryModelManifestPin();
   return { memoryModelCriteriaHash, criteriaHash };
 }
+
+test("gate_m2_names_no_qa_suite", async () => {
+  const jobs = m2Jobs();
+  // No job reads a QA suite, needs a judge or hands WM a suite scope.
+  assert.ok(jobs.every((job) => job.kind === "long-session" && ["re-plan", "long-session"].includes(job.suite)));
+  assert.ok(jobs.every((job) => !("judges" in job) && !("wmScope" in job) && !("maxQuestions" in job)));
+  assert.ok(M2_ARMS.every((entry) => !("wmScope" in entry)));
+  assert.equal(M2_SITTINGS[3], "compact-bench-screen");
+  const manifest = await buildM2Manifest();
+  const text = JSON.stringify({ ...manifest, rows: undefined });
+  for (const suite of ["beam-1m", "longmemeval-m"]) assert.equal(text.includes(suite), false, `${suite} in the manifest`);
+  assert.equal(manifest.models.judges, undefined);
+  assert.equal(manifest.m5.source, "docs/_evidence/memory-bench/218/compact-bench-screen.json");
+  // A suite job slipped back into the list is refused.
+  assert.throws(() => assertM2Paired([...jobs, { ...jobs[0], id: "x", kind: "robustness" }]), /runs no QA suite|every arm once/);
+  // The OM-before worktree carries the screen's adapter and draw (the screen's OM-before arm runs there).
+  assert.ok(M2_WORKTREE_COPY.includes("scripts/memory-bench/external"));
+  assert.ok(M2_WORKTREE_COPY.includes("scripts/memory-bench/work-outcome-compact-bench.json"));
+  // The bench CLI no longer accepts --wm-scope.
+  const source = readFileSync("scripts/memory-bench/run.mjs", "utf8") + readFileSync("scripts/memory-bench/ablations.mjs", "utf8");
+  assert.equal(/wm-scope|wmScope|SUITE_SCOPES/.test(source), false);
+});

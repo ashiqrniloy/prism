@@ -1,8 +1,9 @@
 import type { SessionEntry } from "@arnilo/prism";
 import { redactSecrets } from "@arnilo/prism";
+import { lexicalCoverage, lexicalTerms } from "@arnilo/prism-memory-system/core";
 import { isEligibleObservationSourceEntry } from "./coverage-helpers.js";
 import { foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
-import { HARD_MAX_RECALL_PAGE_LIMIT, resolveRecallPageLimit } from "./limits.js";
+import { DEFAULT_RECALL_QUERY_LIMIT, HARD_MAX_RECALL_PAGE_LIMIT, resolveRecallPageLimit } from "./limits.js";
 import { renderRecentMessageWindow } from "./recent-messages.js";
 import { serializeSourceEntries } from "./serialize.js";
 import {
@@ -198,6 +199,127 @@ export function recallObservationalMemory(
     reason: "unknown_id",
     text: `Unknown memory id ${id}: no record with this id on the current branch.`,
   };
+}
+
+/** Where a query hit stands: an STM record's state, or a WM item on the surface or superseded. */
+export type RecallQueryHitState = RecallRecordState | "superseded";
+
+/** One query hit: a session record whose description shares terms with the query. */
+export interface RecallQueryHit {
+  readonly id: string;
+  readonly kind: "observation" | "wm_item";
+  /** The record's kind (`request`, `error`, … for STM; `fact`, `summary`, `event` for WM). */
+  readonly recordKind: string;
+  readonly time: string;
+  readonly state: RecallQueryHitState;
+  /** The tombstone reason (`wm discard <reason>`, `wm keep <id>`, …) or the drop reason. */
+  readonly stateReason?: string;
+  readonly description: string;
+  /** Share of the query's terms the description holds, in (0,1]. */
+  readonly coverage: number;
+}
+
+export interface RecallQueryRequest {
+  readonly query: string;
+  readonly limit?: number;
+}
+
+export interface RecallQueryResult {
+  readonly found: boolean;
+  readonly query: string;
+  readonly limit: number;
+  /** The tiers searched: always `stm` and `wm`. */
+  readonly tiers: readonly ("stm" | "wm")[];
+  readonly hits: readonly RecallQueryHit[];
+  readonly text: string;
+  readonly reason?: "invalid_query" | "no_match" | "limit_exceeded";
+}
+
+const RECALL_QUERY_TIERS = ["stm", "wm"] as const;
+
+/**
+ * Plan 218.2 Task 7: a lexical query over this session's STM record and WM item descriptions, tombstoned, dropped and
+ * superseded ones included, so a record WM discarded stays findable without its id. Ordered by term coverage, then
+ * newest first. An in-memory scan of the folded ledger: no store read, no model call. Results never enter LTM ranking.
+ */
+export function recallObservationalMemoryQuery(
+  entries: readonly SessionEntry[],
+  request: RecallQueryRequest,
+  secrets: readonly (string | undefined)[] = [],
+  options?: { readonly ledger?: ObservationalMemoryLedger },
+): RecallQueryResult {
+  const query = typeof request.query === "string" ? request.query.trim() : "";
+  const base = { query, tiers: RECALL_QUERY_TIERS, hits: [] as RecallQueryHit[] };
+  const limit = request.limit ?? DEFAULT_RECALL_QUERY_LIMIT;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_RECALL_PAGE_LIMIT) {
+    return {
+      ...base,
+      found: false,
+      limit,
+      reason: "limit_exceeded",
+      text: `Query limit must be a positive safe integer at most ${HARD_MAX_RECALL_PAGE_LIMIT}.`,
+    };
+  }
+  const terms = lexicalTerms(query);
+  if (!terms.size) {
+    return { ...base, found: false, limit, reason: "invalid_query", text: "Invalid query; expected at least one search term." };
+  }
+  const ledger = options?.ledger ?? foldObservationalMemoryLedger(entries);
+  const dropped = new Set(ledger.droppedObservationIds);
+  const superseded = new Set(ledger.supersededWmItemIds ?? []);
+  const tombstones = ledger.tombstones ?? {};
+  const candidates: RecallQueryHit[] = [];
+  const consider = (hit: Omit<RecallQueryHit, "coverage">) => {
+    const coverage = lexicalCoverage(terms, lexicalTerms(hit.description));
+    if (coverage > 0) candidates.push({ ...hit, coverage });
+  };
+  for (const item of ledger.observations) {
+    const tombstone = Object.hasOwn(tombstones, item.id) ? tombstones[item.id] : undefined;
+    const state: RecallRecordState = tombstone ? "tombstoned" : dropped.has(item.id) ? "dropped" : "active";
+    const stateReason = tombstone ? tombstone.reason : state === "dropped" ? (ledger.dropReasons?.[item.id] ?? "dropped") : undefined;
+    consider({
+      id: item.id,
+      kind: "observation",
+      recordKind: item.kind,
+      time: item.observedAt ?? item.timestamp,
+      state,
+      ...(stateReason ? { stateReason } : {}),
+      description: item.description,
+    });
+  }
+  for (const item of ledger.wmItems) {
+    consider({
+      id: item.id,
+      kind: "wm_item",
+      recordKind: item.kind,
+      time: item.observedTo ?? item.observedFrom ?? "",
+      state: superseded.has(item.id) ? "superseded" : "active",
+      description: item.text,
+    });
+  }
+  const hits = candidates
+    .sort((a, b) => b.coverage - a.coverage || (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0))
+    .slice(0, limit)
+    .map((hit) => ({ ...hit, description: redactSecrets(hit.description, secrets) }));
+  if (!hits.length) {
+    return {
+      ...base,
+      found: false,
+      limit,
+      reason: "no_match",
+      text: `No session memory record matches "${redactSecrets(query, secrets)}" (searched STM records and WM items, discarded ones included).`,
+    };
+  }
+  const lines = hits.map((hit) => {
+    const state = hit.state === "active" || !hit.stateReason ? hit.state : `${hit.state}: ${hit.stateReason}`;
+    const time = hit.time ? ` ${hit.time}` : "";
+    return `- [${hit.id}] ${hit.kind === "wm_item" ? "WM " : ""}${hit.recordKind}${time} (${state}): ${hit.description}`;
+  });
+  const text = redactSecrets(
+    [`${hits.length} session memory record(s) match; call recall with an id for evidence and chunks.`, ...lines].join("\n"),
+    secrets,
+  );
+  return { ...base, found: true, limit, hits, text };
 }
 
 export function recallObservationalMemoryBranchPage(

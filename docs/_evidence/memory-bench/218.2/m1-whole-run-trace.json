@@ -1,0 +1,124 @@
+{
+  "kind": "218.2-m1-whole-run-trace",
+  "plan": "218.2",
+  "task": 8,
+  "date": "2026-11-15",
+  "question": "gate M-1 evidence.json performance.large.long-session reads whole-run input 13.6M (STM), 6.9M (OM-before), 1.8M (memory-off) while the worker-token ratio passed",
+  "sources": {
+    "reports": "docs/_evidence/memory-bench/217/runs/run-217-m1-217-m1.large.<arm>.long-session.json",
+    "wire": ".cache/memory-bench/217/long-session/wire/<job>_1/*-usage.jsonl (local, gitignored)",
+    "checkpoints": ".cache/memory-bench/217/long-session/checkpoints/<job>/<protocol>/ (local)"
+  },
+  "arms": {
+    "STM": {
+      "attemptId": "217-m1.large.STM.long-session@1",
+      "reportedInputTokens": 13638723,
+      "wireExchanges": 1993,
+      "processRuns": [
+        {
+          "exchanges": 188,
+          "inputTokens": 1943704
+        },
+        {
+          "exchanges": 136,
+          "inputTokens": 993279
+        },
+        {
+          "exchanges": 560,
+          "inputTokens": 3858902
+        },
+        {
+          "exchanges": 548,
+          "inputTokens": 3402162
+        },
+        {
+          "exchanges": 561,
+          "inputTokens": 3440676
+        }
+      ],
+      "checkpointProtocols": 4,
+      "personaCheckpointsPerProtocol": [
+        16,
+        16,
+        16,
+        4
+      ],
+      "lastRunInputTokens": 3440676,
+      "familyMeterInputTokens": 3487440,
+      "familyMeter": {
+        "mainCalls": 447,
+        "mainInputTokens": 2564627,
+        "workerCalls": 114,
+        "workerInputTokens": 922813,
+        "personas": 16
+      }
+    },
+    "OM-before": {
+      "attemptId": "217-m1.large.OM-before.long-session@1",
+      "reportedInputTokens": 6870441,
+      "wireExchanges": 863,
+      "processRuns": [
+        {
+          "exchanges": 161,
+          "inputTokens": 1321531
+        },
+        {
+          "exchanges": 180,
+          "inputTokens": 1423963
+        },
+        {
+          "exchanges": 522,
+          "inputTokens": 4124947
+        }
+      ],
+      "checkpointProtocols": 1,
+      "personaCheckpointsPerProtocol": [
+        16
+      ],
+      "lastRunInputTokens": 4124947,
+      "familyMeterInputTokens": 5544434,
+      "familyMeter": {
+        "mainCalls": 481,
+        "mainInputTokens": 3495022,
+        "workerCalls": 221,
+        "workerInputTokens": 2049412,
+        "personas": 16
+      }
+    },
+    "memory-off": {
+      "attemptId": "217-m1.large.memory-off.long-session@1",
+      "reportedInputTokens": 1799984,
+      "wireExchanges": 487,
+      "processRuns": [
+        {
+          "exchanges": 82,
+          "inputTokens": 280878
+        },
+        {
+          "exchanges": 84,
+          "inputTokens": 271601
+        },
+        {
+          "exchanges": 321,
+          "inputTokens": 1247505
+        }
+      ],
+      "checkpointProtocols": 2,
+      "personaCheckpointsPerProtocol": [
+        16,
+        4
+      ],
+      "lastRunInputTokens": 1247505,
+      "familyMeterInputTokens": 1497937,
+      "familyMeter": {
+        "mainCalls": 321,
+        "mainInputTokens": 1497937,
+        "workerCalls": 0,
+        "workerInputTokens": 0,
+        "personas": 16
+      }
+    }
+  },
+  "cause": "Re-runs counted. The live job sums every row of its attempt's wire usage log, and the proxy appends to that log across process runs. STM's attempt @1 holds 5 process runs: two partial, then three complete family runs under new checkpoint protocols (4 protocols; a new source revision re-runs all 16 personas). OM-before's holds 3 (two interrupted, then one that resumed their checkpoints); memory-off's holds 3 (two partial on an earlier protocol, then one complete). The reported rows' family meter reads 3.49M (STM), 5.54M (OM-before, rows from all three processes) and 1.50M (memory-off). The block size after compaction is not the cause. STM's remaining 2.3x over memory-off is its worker (0.92M input over 114 calls) and more main calls (447 against 321) at a larger request (5.7K against 4.7K tokens per call).",
+  "consequence": "the job's inputTokens is spend (it guards the ceiling, so it must count re-runs) and is not a per-run cost; plan 218.2 Task 8 adds the per-run cost row (report.cost, from the family meter) beside it, and wm-gate.mjs m2FamilyCost reports both (inputTokens = spend, wholeRun = the reported run)"
+}

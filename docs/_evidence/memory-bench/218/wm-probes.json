@@ -14,9 +14,9 @@
     "events": 66
   },
   "summary": {
-    "probes": 10,
+    "probes": 11,
     "verdicts": {
-      "works": 10
+      "works": 11
     },
     "errors": 0
   },
@@ -40,6 +40,24 @@
         "figureItem": "user",
         "proposalLine": true,
         "renderedMark": true
+      },
+      "group": "wm"
+    },
+    {
+      "id": "wm.discard-query",
+      "fires": 29,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "tool",
+      "property": "every record WM discarded is returned by recall with a query over its description, marked tombstoned with its discard reason, and the compaction block says discarded records exist",
+      "onSha256": "d9bf6d7d0d859b585a8c1715e844cb815bc7d4b6e134b87388d3031a2e7ab6e7",
+      "offSha256": "7e1c442275e1a1541cb924cd37774673963729db1baa567a5b748a67dbf9d979",
+      "counts": {
+        "discarded": 29,
+        "found": 29,
+        "recallCalls": 29,
+        "advertised": true
       },
       "group": "wm"
     },
@@ -128,24 +146,26 @@
     },
     {
       "id": "wm.protected",
-      "fires": 14,
+      "fires": 15,
       "reaches": true,
       "correct": true,
       "verdict": "works",
       "surface": "ledger",
-      "property": "the discard tool refuses every protected record (task state, fact, unresolved error, open question) and none is lost; a batch whose protected share exceeds the target records budget_unmet",
-      "onSha256": "84bccfa91afac65db4952265168bf0a11e05254da24907da2fe8d4076ef6b954",
+      "property": "every protected record (constraint, task state, fact, unresolved error, open question) is kept: constraints, task states, unresolved errors and open questions are settled by code before the model is asked, and judge refuses a discard of a fact; none is lost; a batch whose protected share exceeds the target records budget_unmet",
+      "onSha256": "c02b7fd01723ac79fe546cacd2ef861e6257e590ef451830075405575f770002",
       "offSha256": "1fa852e6c4387f4a5023b05adc549b6b5212d41fab293215e07041f8f1b1ce78",
       "counts": {
-        "refused": 14,
+        "refused": 1,
+        "settled": 14,
         "lost": 0,
         "classes": {
           "task_state": 8,
-          "fact": 1,
+          "constraint": 1,
           "unresolved_error": 4,
-          "open_question": 1
+          "open_question": 1,
+          "fact": 1
         },
-        "expectedClasses": 4,
+        "expectedClasses": 5,
         "budgetUnmetPasses": 14,
         "neededLaterReachable": false
       },
@@ -189,18 +209,18 @@
     },
     {
       "id": "wm.scope-blind-stm",
-      "fires": 53,
+      "fires": 48,
       "reaches": true,
       "correct": true,
       "verdict": "works",
       "surface": "worker-request",
       "property": "no STM request carries the episode scope; every WM request after the scope is set carries it inside <episode_scope>; an injecting scope leaves the WM tool calls unchanged",
-      "onSha256": "87a635bd883ece3421ef23d0c0a72561cceea2a3d6f83596fb7149247a389da8",
+      "onSha256": "1c32eb72d88785f64c54ad9df37b6d7cce6a49e3da2e61f4110980f808fade41",
       "offSha256": "5581af3879aa6fb5e4e1a198d3ad0bf56950637d5ea6b24fb1599e93d96c9fa7",
       "counts": {
         "stmRequests": 110,
-        "wmRequests": 55,
-        "wmWithScope": 53,
+        "wmRequests": 50,
+        "wmWithScope": 48,
         "stmLeaks": 0,
         "injectionCallsEqual": true,
         "injectedOutsideBlock": 0
@@ -231,5 +251,5 @@
       "group": "wm"
     }
   ],
-  "durationSeconds": 34
+  "durationSeconds": 99
 }

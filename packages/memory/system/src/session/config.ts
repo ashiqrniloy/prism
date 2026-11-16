@@ -28,6 +28,7 @@ import {
 } from "@arnilo/prism-memory-system/core";
 import {
   type ChunkStoreLocation,
+  DEFAULT_AUTO_CHUNK_BYTES,
   DEFAULT_MAX_CHUNK_BYTES,
   DEFAULT_MAX_CHUNKS_PER_EVENT,
   HARD_MAX_CHUNK_BYTES,
@@ -52,14 +53,17 @@ export const DEFAULT_STM_BOUNDARY_GAP_MINUTES = 10;
 /** STM surface tokens (records WM has not given a verdict) that trigger a WM pass (plan 218 Task 2). */
 export const DEFAULT_WM_TRIGGER_TOKENS = 10_000;
 /**
- * STM record tokens one WM pass is sent. Sized so a batch's verdicts (one tool call each, about 50 output tokens) fit one
- * model's output cap and the worker's call limits: gate M-1 saw two answer models write nothing on about 22k tokens.
+ * STM record tokens one WM pass is sent. Sized so a batch's verdicts (one `judge` call, about 40-75 output tokens per
+ * record on the plan 218.2 Task 5 replay) fit one model's output cap: gate M-1 saw two answer models write nothing on
+ * about 22k tokens.
  */
 export const DEFAULT_WM_BATCH_TOKENS = 3_000;
 /** The share of a batch's surface tokens WM's items aim at (plan 218 Task 3): pressure after relevance, never a cut of protected records. */
 export const DEFAULT_WM_TARGET_RATIO = 0.2;
 /** Tombstoned STM record tokens the first WM pass after a scope change is also sent for re-judgment (plan 218 Task 4). */
 export const DEFAULT_WM_REJUDGE_TOKENS = 8_000;
+/** WM passes a request or error stays protected by link without a resolving outcome (plan 218.2 Task 3). */
+export const DEFAULT_WM_PROTECT_REQUEST_PASSES = 8;
 export const DEFAULT_REHEARSAL_TARGET_TOKENS = 20_000;
 export const DEFAULT_CONTEXT_RECENT_MESSAGES = 8;
 export const DEFAULT_COMPACT_AT_RATIO = 0.6;
@@ -113,6 +117,12 @@ export interface MemorySessionConfig {
     /** Bytes one stored chunk may take, truncation marker included. Default 4_096, at most 65_536. */
     readonly maxChunkBytes?: number;
     /**
+     * Evidence kept by rule: an `error`, a failed `outcome`/`result` or a `durable` event recorded with no chunk gets one
+     * of at most this many bytes from its cited entry (the tail of a failing tool result, or the user's sentence), inside
+     * the batch's chunk budget. `0` turns the rule off. Default 1_024.
+     */
+    readonly autoChunkBytes?: number;
+    /**
      * Where the default chunk store lives: `"memory"` (the default: the process lifetime) or `{ sqlite: { path } }`, a
      * file in the host's data directory, created mode 0600. A package providing the `memory.chunks` service replaces it.
      */
@@ -141,6 +151,11 @@ export interface MemorySessionConfig {
     readonly targetRatio?: number;
     /** Tombstoned record tokens the first WM pass after a scope change re-judges (discarded records whose chunks still live). Default 8_000. */
     readonly rejudgeTokens?: number;
+    /**
+     * WM passes a user request (or an error) stays protected without an outcome naming it in `resolves`; then the pass
+     * records `protection_lapsed` and may discard it. Read only when the recorder writes `resolves`. Default 8.
+     */
+    readonly protectRequestPasses?: number;
     /** `"model"` (default) or `"deterministic"` (no model call). */
     readonly policy?: MemorySystemWmPolicy;
   };
@@ -220,6 +235,14 @@ const memorySystemSchema: JsonSchema = {
           maximum: HARD_MAX_CHUNK_BYTES,
           default: DEFAULT_MAX_CHUNK_BYTES,
           description: "Bytes one stored chunk may take, truncation marker included.",
+        },
+        autoChunkBytes: {
+          type: "integer",
+          minimum: 0,
+          maximum: HARD_MAX_CHUNK_BYTES,
+          default: DEFAULT_AUTO_CHUNK_BYTES,
+          description:
+            "Bytes of the evidence chunk kept by rule for an error, a failed outcome or result, or a durable statement recorded with no chunk; 0 turns the rule off.",
         },
         chunkStore: {
           description: 'Where the default chunk store lives: "memory" (process lifetime) or { "sqlite": { "path": "…" } } (mode 0600).',
@@ -308,6 +331,13 @@ const memorySystemSchema: JsonSchema = {
           default: DEFAULT_WM_REJUDGE_TOKENS,
           description:
             "Tokens of discarded STM records (chunks still live) the first WM pass after a scope change is also sent, so it may keep them back; 0 turns re-judgment off.",
+        },
+        protectRequestPasses: {
+          type: "integer",
+          minimum: 1,
+          default: DEFAULT_WM_PROTECT_REQUEST_PASSES,
+          description:
+            "WM passes a user request or error stays protected without an outcome naming it in resolves; then the pass records protection_lapsed.",
         },
         policy: {
           type: "string",
@@ -522,6 +552,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "stm.contextTokens",
   "stm.maxChunksPerEvent",
   "stm.maxChunkBytes",
+  "stm.autoChunkBytes",
   "stm.habituation.windowEvents",
   "stm.boundaryGapMinutes",
   "stm.thinkingLevel",
@@ -529,6 +560,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "wm.batchTokens",
   "wm.targetRatio",
   "wm.rejudgeTokens",
+  "wm.protectRequestPasses",
   "wm.thinkingLevel",
   "rehearsal.targetTokens",
   "rehearsal.thinkingLevel",
@@ -589,6 +621,7 @@ export interface ResolvedMemorySystemConfig {
     readonly contextTokens: number;
     readonly maxChunksPerEvent: number;
     readonly maxChunkBytes: number;
+    readonly autoChunkBytes: number;
     readonly chunkStore: ChunkStoreLocation;
     /** `false` when habituation is off. */
     readonly habituation: false | { readonly windowEvents: number };
@@ -602,6 +635,7 @@ export interface ResolvedMemorySystemConfig {
     readonly batchTokens: number;
     readonly targetRatio: number;
     readonly rejudgeTokens: number;
+    readonly protectRequestPasses: number;
     readonly policy: MemorySystemWmPolicy;
   };
   /** `enabled` is the `rehearsal` component: off, no dropper pass runs. */
@@ -702,6 +736,7 @@ export function resolveMemorySystemConfig(
       contextTokens: config.stm?.contextTokens ?? DEFAULT_STM_CONTEXT_TOKENS,
       maxChunksPerEvent: config.stm?.maxChunksPerEvent ?? DEFAULT_MAX_CHUNKS_PER_EVENT,
       maxChunkBytes: config.stm?.maxChunkBytes ?? DEFAULT_MAX_CHUNK_BYTES,
+      autoChunkBytes: config.stm?.autoChunkBytes ?? DEFAULT_AUTO_CHUNK_BYTES,
       chunkStore: config.stm?.chunkStore ?? "memory",
       habituation:
         config.stm?.habituation === false
@@ -717,6 +752,7 @@ export function resolveMemorySystemConfig(
       batchTokens: config.wm?.batchTokens ?? DEFAULT_WM_BATCH_TOKENS,
       targetRatio: config.wm?.targetRatio ?? DEFAULT_WM_TARGET_RATIO,
       rejudgeTokens: config.wm?.rejudgeTokens ?? DEFAULT_WM_REJUDGE_TOKENS,
+      protectRequestPasses: config.wm?.protectRequestPasses ?? DEFAULT_WM_PROTECT_REQUEST_PASSES,
       policy: config.wm?.policy === "deterministic" ? "deterministic" : "model",
     },
     rehearsal: {

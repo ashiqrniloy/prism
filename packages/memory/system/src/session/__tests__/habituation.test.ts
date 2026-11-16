@@ -153,6 +153,7 @@ describe("habituation and event boundaries (plan 217 Task 3)", () => {
       name: "record_event",
       args: {
         kind: "outcome",
+        status: "passed",
         description: "Retry counter fixed in campaign.mjs (retryUncounted); verified by 35 passing tests",
         sourceEntryIds: ["u1", "a1"],
       },

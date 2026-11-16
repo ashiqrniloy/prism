@@ -75,7 +75,7 @@ test("re_plan_offline_scores_tasks_after_the_re_plan", async () => {
       assert.ok(!text.includes(value), "the report carries no label");
   }
   await assert.rejects(runLongSession({ family: "re-plan", offline: true, personaLimit: 1, arms: ["STM"] }), /re-plan has no arm STM/);
-  assert.deepEqual([...RE_PLAN_ARMS], ["memory-off", "WM", "STM-only", "OM-before"]);
+  assert.deepEqual([...RE_PLAN_ARMS], ["memory-off", "WM", "STM-only", "OM-before", "fold", "llm-summary"]);
   const persona = createRePlanPersona(0);
   assert.deepEqual(longSessionChecks(persona.files, persona.labels), { task1: false, task3: false, task4: false, task6: false });
 }, 300_000);

@@ -258,6 +258,7 @@ const WM_PROBE_IDS = [
   "wm.referrer-delete",
   "wm.attribution",
   "wm.knowledge-update",
+  "wm.discard-query",
 ];
 
 test("wm_probe_covers_probes_1_to_8", async () => {
@@ -273,7 +274,7 @@ test("wm_probe_covers_probes_1_to_8", async () => {
   assert.ok(performance.now() - started < 600_000, "the WM probes run in under 10 minutes");
   const counts = Object.fromEntries(rows.map((row) => [row.id, row.counts]));
   assert.equal(counts["wm.protected"].lost, 0, "M2: protected-item loss is 0");
-  assert.equal(counts["wm.protected"].expectedClasses, 4);
+  assert.equal(counts["wm.protected"].expectedClasses, 5);
   assert.ok(counts["wm.target-ratio"].medianRatio <= counts["wm.target-ratio"].target + 0.1, "M3");
   assert.equal(counts["wm.prefix-stable"].breaksWithoutCompaction, 0, "M4");
   assert.equal(counts["wm.incremental"].unnamedSupersedes, 0);
@@ -295,24 +296,31 @@ test("wm_prompt_parser_reads_what_the_package_renders", async () => {
     "</episode_scope>",
     '## Current task\n{"goal":"re-plan, step 8: a line"}',
     "## Working memory items",
-    "- [aaaaaaaaaaaa] event (high) cites bbbbbbbbbbbb: kept",
+    "- [w1] event (high) cites r3, 2 earlier records: kept",
     "## Target\nThese records hold 90 tokens; aim for items totalling at most 18 tokens (ratio 0.2).",
-    "## Keep first (salience order: correction, denial, error, failed_verification)\ncccccccccccc",
+    "## Already kept (1; protected, kept by code: give them no verdict)",
+    "- [r1] 2026-01-01T00:00:00.000Z statement (high) protected: constraint: Never touch the public API",
+    "## Keep first (salience order: correction, denial, error, failed_verification)\nr2",
     "## New STM records (2; give each at most one verdict)",
-    "- [cccccccccccc] 2026-01-01T00:00:00.000Z statement (high) salient: correction: User correction: no",
-    "- [dddddddddddd] 2026-01-01T00:00:00.000Z assistant proposal (medium) protected: task_state: Proposed 25 minutes",
+    "- [r2] 2026-01-01T00:00:00.000Z statement (high) salient: correction: User correction: no",
+    "- [r3] 2026-01-01T00:00:00.000Z assistant proposal (medium) protected: fact: Proposed 25 minutes",
   ].join("\n");
   const parsed = parseWmPrompt(prompt);
   assert.equal(parsed.target, 18);
-  assert.deepEqual(parsed.keepFirst, ["cccccccccccc"]);
+  assert.deepEqual(parsed.keepFirst, ["r2"]);
   assert.deepEqual(
     parsed.records.map((record) => [record.id, record.label, record.salient, record.protection]),
     [
-      ["cccccccccccc", "statement", ["correction"], null],
-      ["dddddddddddd", "assistant proposal", [], "task_state"],
+      ["r2", "statement", ["correction"], null],
+      ["r3", "assistant proposal", [], "fact"],
     ],
   );
-  assert.equal(parsed.items[0].cites[0], "bbbbbbbbbbbb");
+  assert.deepEqual(
+    parsed.settled.map((record) => [record.id, record.protection, record.description]),
+    [["r1", "constraint", "Never touch the public API"]],
+  );
+  assert.equal(parsed.items[0].id, "w1");
+  assert.equal(parsed.items[0].cites[0], "r3");
   assert.deepEqual([...remainingSteps(parsed.scope, parsed.taskGoal)], [8, 9]);
   assert.deepEqual([...remainingSteps(parsed.scope, "step 9")], [9]);
 });

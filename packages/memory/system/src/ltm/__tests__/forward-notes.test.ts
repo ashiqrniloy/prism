@@ -14,7 +14,7 @@ import { createAgent, type JsonObject, type ProviderRequest } from "@arnilo/pris
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 
 import { createHashEmbedder, createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-system/core";
-import memorySystem, { createMemory, createLongTermMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
+import memorySystem, { createLongTermMemory, createMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
 import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 import { unreadableNoteReason } from "../types.js";
 

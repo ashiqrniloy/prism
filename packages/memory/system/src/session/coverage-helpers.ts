@@ -24,15 +24,15 @@ export function eligibleObservationTokenCount(sources: readonly SessionEntry[]):
 }
 
 /**
- * The WM batch (plan 218 Task 2): the oldest STM surface records up to `batchTokens` (at least one record, at most
- * `maxRecords`), so the verdicts for one batch fit one model's output. The rest stays on the surface for the next pass.
+ * The WM batch (plan 218 Task 2): the oldest STM surface records up to `batchTokens` (at least one record), so the
+ * verdicts for one batch fit one `judge` call. The rest stays on the surface for the next pass.
  */
-export function wmBatch(surface: readonly MemoryObservation[], batchTokens: number, maxRecords: number): readonly MemoryObservation[] {
+export function wmBatch(surface: readonly MemoryObservation[], batchTokens: number): readonly MemoryObservation[] {
   const ordered = [...surface].sort((a, b) => timeOf(a) - timeOf(b));
   const batch: MemoryObservation[] = [];
   let tokens = 0;
   for (const record of ordered) {
-    if (batch.length && (tokens + record.tokenCount > batchTokens || batch.length >= maxRecords)) break;
+    if (batch.length && tokens + record.tokenCount > batchTokens) break;
     batch.push(record);
     tokens += record.tokenCount;
   }

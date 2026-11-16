@@ -196,11 +196,6 @@ export function parseArgs(argv) {
       options.finalTurnAnswer = true;
       continue;
     }
-    // Plan 218 Task 6 (gate M-2): the session arms hand WM the suite's task framing as the episode scope.
-    if (argv[i] === "--wm-scope") {
-      options.wmScope = true;
-      continue;
-    }
     // Plan 210 Task 5: run `memory:maintain` once between ingest and the answer (the maintain-then-answer arm).
     if (argv[i] === "--maintain-before-answer") {
       options.maintainBeforeAnswer = true;
@@ -955,7 +950,6 @@ export async function runBench(input = {}) {
       ...(options.finalTurnAnswer && !coding ? { finalTurnAnswer: FINAL_TURN_ANSWER_VERSION } : {}),
       ...(options.stripSupersessionHints ? { stripSupersessionHints: STRIP_SUPERSESSION_VERSION } : {}),
       ...(options.maintainBeforeAnswer ? { maintainBeforeAnswer: 1 } : {}),
-      ...(options.wmScope ? { wmScope: 1 } : {}),
     },
     memoryConfig: resolvedMemoryConfigs(options.memoryConfigs),
     inputTokens: 0,

@@ -78,6 +78,20 @@ export const memoryEventKindValues: readonly MemoryEventKind[] = [
 export type MemoryAttribution = "user" | "assistant" | "tool" | "mixed";
 export const memoryAttributionValues: readonly MemoryAttribution[] = ["user", "assistant", "tool", "mixed"];
 
+/**
+ * How an `outcome` or `result` was verified (plan 218.2 Task 2), set by the STM worker from the cited messages: the
+ * check passed, failed, passed in part, or was not run or not shown. Salience and protections read it.
+ */
+export type MemoryEventStatus = "passed" | "failed" | "partial" | "unknown";
+export const memoryEventStatusValues: readonly MemoryEventStatus[] = ["passed", "failed", "partial", "unknown"];
+
+/**
+ * A user statement or decision that binds later work (`constraint`) or says how the user wants things done
+ * (`preference`), whatever the current task is (plan 218.2 Task 2). Set only on a user or mixed record.
+ */
+export type MemoryDurable = "constraint" | "preference";
+export const memoryDurableValues: readonly MemoryDurable[] = ["constraint", "preference"];
+
 /** A reference to one verbatim chunk in the chunk store; the text itself never lives on the branch. */
 export interface MemoryChunkRef {
   readonly id: string;
@@ -106,6 +120,14 @@ export interface MemoryObservation {
   readonly sourceEntryIds: readonly string[];
   /** Derived from the cited entries' roles (Task 4.1). Absent on records written before it. */
   readonly attribution?: MemoryAttribution;
+  /** How an `outcome` or `result` was verified (plan 218.2 Task 2). Absent on records written before it. */
+  readonly status?: MemoryEventStatus;
+  /** The user says an earlier answer or action was wrong (plan 218.2 Task 2). Absent means not marked. */
+  readonly corrects?: true;
+  /** A user constraint or preference that outlives the current task (plan 218.2 Task 2); never on an assistant-only record. */
+  readonly durable?: MemoryDurable;
+  /** Ids of the `request` or `error` records this `outcome` closes (plan 218.2 Task 2). */
+  readonly resolves?: readonly MemoryId[];
   readonly tokenCount: number;
 }
 
@@ -183,6 +205,11 @@ export interface WmRecordedData {
   readonly budgetUnmet?: WmBudgetUnmet;
   /** Present on the first WM pass after a scope change (plan 218 Task 4): what it re-judged. */
   readonly rejudge?: WmRejudge;
+  /**
+   * `protection_lapsed` (plan 218.2 Task 3): batch records whose link protection (a request or error no outcome named in
+   * `resolves`) ended after `wm.protectRequestPasses` passes, so this pass could discard them.
+   */
+  readonly protectionLapsed?: readonly string[];
 }
 
 /**
@@ -300,7 +327,18 @@ export function isMemoryObservation(value: unknown): value is MemoryObservation 
     isRelevance(value.relevance) &&
     isStringArray(value.sourceEntryIds) &&
     isAttribution(value.attribution) &&
+    isEventSignals(value) &&
     isNonNegativeNumber(value.tokenCount)
+  );
+}
+
+/** The plan 218.2 Task 2 fields: each absent, or a known value; a ledger written before them reads unchanged. */
+function isEventSignals(value: Record<string, unknown>): boolean {
+  return (
+    (value.status === undefined || (memoryEventStatusValues as readonly unknown[]).includes(value.status)) &&
+    (value.corrects === undefined || value.corrects === true) &&
+    (value.durable === undefined || (memoryDurableValues as readonly unknown[]).includes(value.durable)) &&
+    (value.resolves === undefined || (isStringArray(value.resolves) && value.resolves.every(isMemoryId)))
   );
 }
 
@@ -347,7 +385,8 @@ export function isWmRecordedData(value: unknown): value is WmRecordedData {
     (value.boundaries === undefined || (Number.isSafeInteger(value.boundaries) && (value.boundaries as number) >= 0)) &&
     (value.compression === undefined || isTokenRecord(value.compression, ["processedTokens", "itemTokens", "targetTokens"])) &&
     (value.budgetUnmet === undefined || isTokenRecord(value.budgetUnmet, ["protectedTokens", "targetTokens"])) &&
-    (value.rejudge === undefined || isWmRejudge(value.rejudge))
+    (value.rejudge === undefined || isWmRejudge(value.rejudge)) &&
+    (value.protectionLapsed === undefined || (isStringArray(value.protectionLapsed) && value.protectionLapsed.every(isMemoryId)))
   );
 }
 

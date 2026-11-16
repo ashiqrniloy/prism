@@ -114,6 +114,126 @@ export function prepareChunks(
   return { ok: true, chunks };
 }
 
+/**
+ * Bytes of the automatic evidence chunk (`stm.autoChunkBytes`, tuning); `0` turns the rule off. On by default by owner
+ * decision (2026-11-15): on the plan 218.2 worker replay, coverage rose on every worker model; one model's chunk bytes
+ * passed twice its own small baseline (`docs/_evidence/memory-bench/218.2/replay-task4.json`).
+ */
+export const DEFAULT_AUTO_CHUNK_BYTES = 1_024;
+
+/** The fields of an STM event the automatic chunk rule reads. */
+export interface AutoChunkEvent {
+  readonly kind: string;
+  readonly description: string;
+  readonly status?: string;
+  readonly durable?: string;
+}
+
+/**
+ * Evidence kept by rule (plan 218.2 Task 4), with no model call: the chunk candidate for an event the worker attached
+ * none to, or `undefined`. The candidate is raw text from one cited entry; the caller passes it through
+ * {@link prepareChunks} like a worker's chunk (substring check, redaction, caps) and the batch budget.
+ *
+ * - An `error`, or an `outcome`/`result` with `status: "failed"`, citing a tool result: the last `maxBytes` of that
+ *   result (the last one cited), cut on a line boundary.
+ * - A `durable` event citing a user message: the first sentence of the message that holds a term the description
+ *   quotes, else the first `maxBytes` of the message.
+ */
+export function automaticChunk(
+  event: AutoChunkEvent,
+  cited: readonly SessionEntry[],
+  maxBytes: number,
+): { readonly sourceEntryId: string; readonly text: string } | undefined {
+  if (!(maxBytes > 0)) return undefined;
+  const failed = event.kind === "error" || ((event.kind === "outcome" || event.kind === "result") && event.status === "failed");
+  if (failed) {
+    for (const entry of [...cited].reverse()) {
+      const text = toolResultText(entry);
+      if (text?.trim()) return { sourceEntryId: entry.id, text: tailOnLine(text, maxBytes) };
+    }
+  }
+  if (event.durable !== undefined) {
+    for (const entry of cited) {
+      if (entry.message?.role !== "user") continue;
+      const text = entry.message.content
+        .map((block) => (block.type === "text" ? block.text : ""))
+        .filter(Boolean)
+        .join("\n");
+      if (!text.trim()) continue;
+      const span = quotedSentence(text, event.description);
+      return { sourceEntryId: entry.id, text: headBytes(span ?? text, maxBytes) };
+    }
+  }
+  return undefined;
+}
+
+function toolResultText(entry: SessionEntry): string | undefined {
+  if (entry.message?.role !== "tool") return undefined;
+  for (const block of entry.message.content) {
+    if (block.type !== "tool_result") continue;
+    if (typeof block.result === "string") return block.result;
+    if (typeof block.error?.message === "string") return block.error.message;
+  }
+  return undefined;
+}
+
+/** The last whole lines of `text` within `maxBytes`; a last line longer than that keeps its own tail. */
+function tailOnLine(text: string, maxBytes: number): string {
+  const lines = text.trimEnd().split("\n");
+  const kept: string[] = [];
+  let bytes = 0;
+  for (const line of [...lines].reverse()) {
+    const size = Buffer.byteLength(line, "utf8") + (kept.length ? 1 : 0);
+    if (bytes + size > maxBytes) break;
+    kept.unshift(line);
+    bytes += size;
+  }
+  if (kept.some((line) => line.trim())) return kept.join("\n");
+  const tail: string[] = [];
+  let size = 0;
+  for (const char of [...(lines.filter((line) => line.trim()).at(-1) ?? "")].reverse()) {
+    size += Buffer.byteLength(char, "utf8");
+    if (size > maxBytes) break;
+    tail.unshift(char);
+  }
+  return tail.join("");
+}
+
+/** The first `maxBytes` of `text`, cut on a character boundary. */
+function headBytes(text: string, maxBytes: number): string {
+  let size = 0;
+  let out = "";
+  for (const char of text) {
+    size += Buffer.byteLength(char, "utf8");
+    if (size > maxBytes) break;
+    out += char;
+  }
+  return out;
+}
+
+const QUOTED = /"([^"\n]+)"|“([^”\n]+)”|'([^'\n]+)'|‘([^’\n]+)’|`([^`\n]+)`|「([^」\n]+)」|«([^»\n]+)»/g;
+const SENTENCE = /[^.!?。！？\n]+[.!?。！？]*/g;
+
+/** The first sentence of `text` that holds a term `description` quotes, or `undefined`. */
+function quotedSentence(text: string, description: string): string | undefined {
+  const terms = [...description.matchAll(QUOTED)]
+    .map(
+      (match) =>
+        match
+          .slice(1)
+          .find((group) => group !== undefined)
+          ?.trim()
+          .toLowerCase() ?? "",
+    )
+    .filter((term) => term.length > 1);
+  if (!terms.length) return undefined;
+  for (const sentence of text.match(SENTENCE) ?? []) {
+    const lower = sentence.toLowerCase();
+    if (terms.some((term) => lower.includes(term))) return sentence.trim();
+  }
+  return undefined;
+}
+
 function verbatimSources(entry: SessionEntry, secrets: readonly (string | undefined)[]): readonly string[] {
   const value = entry.message ?? entry.summary ?? entry.data ?? entry.event ?? entry.metadata ?? {};
   const leaves: string[] = [];

@@ -15,7 +15,7 @@
  * start, and the verdict refuses to read, under a different rule.
  *
  * ```sh
- * bun scripts/memory-bench/external/compact-bench/wm-probe.mjs [--limit N]
+ * bun scripts/memory-bench/external/compact-bench/wm-probe.mjs [--reading post-218.2] [--state-key <16 hex>] [--limit N]
  * ```
  */
 import { createHash } from "node:crypto";
@@ -162,7 +162,7 @@ export async function runWmProbe({
 /** The session id as the worker's cache key carries it (the adapter's session id sanitization). */
 export const wireSessionKey = (id) => id.replace(/[^A-Za-z0-9_.-]/g, "_");
 
-export function wmProbeEvidence({ run, draw, criteriaHash, startedAt, finishedAt, wire, rule = WM_PROBE_RULE }) {
+export function wmProbeEvidence({ run, draw, criteriaHash, startedAt, finishedAt, wire, rule = WM_PROBE_RULE, reading, productHash }) {
   const sum = (items) =>
     items.reduce(
       (acc, worker) => ({
@@ -192,6 +192,8 @@ export function wmProbeEvidence({ run, draw, criteriaHash, startedAt, finishedAt
     step: 1,
     ruleHash: wmProbeRuleHash(rule),
     rule,
+    ...(reading ? { reading } : {}),
+    ...(productHash ? { productHash } : {}),
     memoryModelCriteriaHash: criteriaHash,
     draw: { file: COMPACT_BENCH_DRAW_FILE, sha256: draw.sha256, retentionIdsHash: draw.retentionIdsHash },
     upstream: { codeRevision: COMPACT_BENCH_PIN.code.commit, datasetRevision: COMPACT_BENCH_PIN.dataset.revision },
@@ -225,6 +227,56 @@ export function wmProbeEvidence({ run, draw, criteriaHash, startedAt, finishedAt
   };
 }
 
+/**
+ * Plan 218.1 Task 3 (amended 2026-11-13): the probe is read twice, before and after plan 218.2. The evidence file holds
+ * both readings, each with its product hash (`m2ProductFingerprint`); only the post-218.2 reading selects the branch.
+ */
+export const WM_PROBE_READINGS = Object.freeze(["pre-218.2", "post-218.2"]);
+export const WM_PROBE_READINGS_KIND = "compact-bench-wm-probe-readings-v1";
+/**
+ * The first reading (2026-11-13) recorded no product hash. It is the product at commit `4c6547e6`, the commit that
+ * carries that reading, computed after the fact; it equals plan 218.2's replay baseline (`e7e100f1…`).
+ */
+export const WM_PROBE_PRE_READING_PRODUCT = Object.freeze({
+  productHash: "e7e100f15d11d1b84bfd58f56caf5d1f6d14963ca038484795c978338556e5de",
+  productHashBasis:
+    "m2ProductFingerprint of commit 4c6547e6 (the commit carrying this reading), computed on 2026-11-16; the run itself recorded none",
+});
+
+/** Merge `evidence` (one reading) into the readings file; a legacy single-reading file becomes the pre-218.2 reading. */
+export function wmProbeReadingsFile(existing, evidence) {
+  if (!WM_PROBE_READINGS.includes(evidence.reading)) throw new Error(`WmProbeReadings: unknown reading ${evidence.reading}`);
+  if (!evidence.productHash) throw new Error("WmProbeReadings: a reading carries its product hash");
+  let readings = [];
+  if (existing?.kind === WM_PROBE_READINGS_KIND) readings = existing.readings;
+  else if (existing?.kind === "compact-bench-wm-probe-v1")
+    readings = [{ ...existing, reading: "pre-218.2", ...WM_PROBE_PRE_READING_PRODUCT }];
+  readings = [...readings.filter((entry) => entry.reading !== evidence.reading), evidence].sort(
+    (a, b) => WM_PROBE_READINGS.indexOf(a.reading) - WM_PROBE_READINGS.indexOf(b.reading),
+  );
+  return { kind: WM_PROBE_READINGS_KIND, plan: "218.1", task: 3, step: 1, selects: "post-218.2", readings };
+}
+
+/**
+ * The branch Step 2 may run: the post-218.2 reading's verdict, only on the product it was read on and under the
+ * approved rule. The pre-218.2 reading alone never starts Step 2. An owner rebind in the gate record
+ * (`compactBenchWmProbe.reprobe.rebinds`: `{ approved: true, from, memoryHash }`, full hashes) lets the reading stand
+ * for a later product whose memory packages (`m2MemoryFingerprint`) still hash to `memoryHash`: kernel edits are
+ * waived, a memory-package edit is not. It never changes the rule or the verdict.
+ */
+export function wmProbeScreenBranch(file, { productHash, memoryHash, rule = WM_PROBE_RULE, rebinds = [] }) {
+  const readings = file?.kind === WM_PROBE_READINGS_KIND ? file.readings : [];
+  const post = readings.find((entry) => entry.reading === "post-218.2");
+  if (!post) throw new Error("WmProbeScreen: no post-218.2 reading; the pre-218.2 reading cannot start Step 2");
+  if (post.ruleHash !== wmProbeRuleHash(rule)) throw new Error("WmProbeScreen: the reading ran under a different rule");
+  const rebound =
+    typeof memoryHash === "string" &&
+    rebinds.some((r) => r?.approved === true && r.from === post.productHash && r.memoryHash === memoryHash);
+  if (post.productHash !== productHash && !rebound)
+    throw new Error(`WmProbeScreen: the reading ran on product ${post.productHash.slice(0, 8)}, not ${productHash.slice(0, 8)}; re-probe`);
+  return post.verdict;
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const flag = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -240,8 +292,23 @@ if (import.meta.main) {
   if (drawSha !== gate.compactBenchWmProbe.drawSha256) throw new Error("WmProbeGate: the draw differs from the approved one");
   const draw = JSON.parse(drawText);
   const histories = loadDrawnHistories({ track: "retention", draw, dataDir: paths.data, limit: Number(flag("--limit") ?? 0) });
+  // The re-probe (post-218.2) needs its own approval in the gate record and keys its state by the product, so it never
+  // resumes the pre-218.2 sessions. `--state-key` resumes a named run when other work moved the fingerprint mid-run.
+  const reading = flag("--reading") ?? "post-218.2";
+  if (!WM_PROBE_READINGS.includes(reading)) throw new Error(`WmProbeGate: --reading is one of ${WM_PROBE_READINGS.join(", ")}`);
+  const reprobe = gate.compactBenchWmProbe.reprobe;
+  if (reading === "post-218.2" && (reprobe?.approved !== true || reprobe.approvedBy !== "owner" || reprobe.ruleHash !== wmProbeRuleHash()))
+    throw new Error("WmProbeGate: the re-probe is not approved on the owner's word under this rule");
+  const { m2ProductFingerprint } = await import("../../wm-gate.mjs");
+  const productHash = await m2ProductFingerprint(".");
+  const stateKey = flag("--state-key");
+  if (stateKey && !/^[0-9a-f]{16}$/.test(stateKey)) throw new Error("WmProbeGate: --state-key is 16 hex characters");
   loadEnv();
-  const state = join(paths.root, "wm-probe", wmProbeRuleHash().slice(0, 16));
+  const state = join(
+    paths.root,
+    "wm-probe",
+    reading === "pre-218.2" ? wmProbeRuleHash().slice(0, 16) : `${wmProbeRuleHash().slice(0, 16)}-${stateKey ?? productHash.slice(0, 16)}`,
+  );
   await mkdir(join(state, "sessions"), { recursive: true, mode: 0o700 });
   const live = await liveProviders([refOf(WM_PROBE_RULE.worker)], join(state, "wire"), { maxOutputTokens: 8192 });
   const readWire = async () => {
@@ -290,8 +357,14 @@ if (import.meta.main) {
       startedAt,
       finishedAt: new Date().toISOString(),
       wire: await readWire(),
+      reading,
+      productHash,
     });
-    if (!flag("--limit")) await writeFile(WM_PROBE_EVIDENCE, `${JSON.stringify(evidence, null, 2)}\n`);
+    if (stateKey) evidence.stateKey = stateKey;
+    if (!flag("--limit")) {
+      const existing = existsSync(WM_PROBE_EVIDENCE) ? JSON.parse(readFileSync(WM_PROBE_EVIDENCE, "utf8")) : null;
+      await writeFile(WM_PROBE_EVIDENCE, `${JSON.stringify(wmProbeReadingsFile(existing, evidence), null, 2)}\n`);
+    }
     process.stdout.write(`${JSON.stringify({ verdict: evidence.verdict, summary: evidence.summary }, null, 2)}\n`);
   } finally {
     for (const { proxy } of live.proxies) proxy.stop();

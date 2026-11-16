@@ -90,13 +90,13 @@ function scriptedProvider(counts: { recordNotes: number }): ModelProvider {
         yield providerToolCall(
           toolCallContent("o1", "record_event", { kind: "statement", description: USER_TEXT, relevance: "high", sourceEntryIds: ids }),
         );
-      } else if (!alreadyCalled && names.has("summarize") && ids.length > 0) {
-        const stmIds = [...prompt.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]!);
-        yield providerToolCall(toolCallContent("r1", "summarize", { stmIds, text: USER_TEXT, relevance: "high" }));
+      } else if (!alreadyCalled && names.has("judge") && ids.length > 0) {
+        const of = [...prompt.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));
+        yield providerToolCall(toolCallContent("r1", "judge", { summaries: [{ of, text: USER_TEXT, relevance: "high" }] }));
       } else if (!alreadyCalled && names.has("record_notes") && prompt.includes("c1")) {
         counts.recordNotes += 1;
         yield providerToolCall(toolCallContent("n1", "record_notes", { notes: [NOTE] }));
-      } else if (!names.has("record_event") && !names.has("summarize") && !names.has("record_notes")) {
+      } else if (!names.has("record_event") && !names.has("judge") && !names.has("record_notes")) {
         yield providerTextDelta("ok");
       }
       yield providerDone();

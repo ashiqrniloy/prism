@@ -96,14 +96,14 @@ describe("observational memory coverage helpers", () => {
   it("wm_batch_takes_the_oldest_records_up_to_the_budget", () => {
     const older = { ...obs2, timestamp: "2026-06-19T00:00:00.000Z" };
     assert.deepEqual(
-      wmBatch([obs, older], obs.tokenCount, 10).map((item) => item.id),
+      wmBatch([obs, older], obs.tokenCount).map((item) => item.id),
       [older.id],
     );
-    // One record larger than the budget still travels alone, and the record cap holds.
+    // One record larger than the budget still travels alone; no record cap applies (plan 218.2 Task 5).
     assert.deepEqual(
-      wmBatch([obs, older], 1, 10).map((item) => item.id),
+      wmBatch([obs, older], 1).map((item) => item.id),
       [older.id],
     );
-    assert.equal(wmBatch([obs, older], 1_000, 1).length, 1);
+    assert.equal(wmBatch([obs, older], 1_000).length, 2);
   });
 });

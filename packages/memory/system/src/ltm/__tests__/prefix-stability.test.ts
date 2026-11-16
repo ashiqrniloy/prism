@@ -388,10 +388,10 @@ it("prefix_identical_between_compactions_across_wm_passes", async () => {
                 sourceEntryIds: [sourceId],
               }),
             );
-        } else if (request.tools?.some((tool) => tool.name === "keep")) {
+        } else if (request.tools?.some((tool) => tool.name === "judge")) {
           const batch = text.slice(text.indexOf("## New STM records"));
-          for (const [index, match] of [...batch.matchAll(/^- \[([a-f0-9]{12})\]/gm)].entries())
-            yield providerToolCall(toolCallContent(`k${index}`, "keep", { stmId: match[1]!, reason: "needed" }));
+          const keep = [...batch.matchAll(/^- \[r([0-9]+)\]/gm)].map((match) => ({ r: Number(match[1]), reason: "needed" }));
+          yield providerToolCall(toolCallContent("k", "judge", { keep }));
         }
       }
       yield providerDone();

@@ -134,11 +134,19 @@ describe("speaker attribution (plan 218 Task 4.1)", () => {
     const action = observation("dddddddddddd", "action", { attribution: "assistant" });
     const legacy = observation("eeeeeeeeeeee", "statement");
     const records = [proposal, decision, fact, action, legacy];
+    // Ordinals follow `records`: r1 proposal, r2 decision, r3 fact, r4 action, r5 legacy.
     const calls: [string, Record<string, unknown>][] = [
-      ["keep", { stmId: proposal.id, reason: "plan" }],
-      ["summarize", { stmIds: [decision.id, fact.id], text: "User spent $75; assistant decided on a cheaper plan", relevance: "high" }],
-      ["keep", { stmId: action.id, reason: "x" }],
-      ["keep", { stmId: legacy.id, reason: "x" }],
+      [
+        "judge",
+        {
+          keep: [
+            { r: 1, reason: "plan" },
+            { r: 4, reason: "x" },
+            { r: 5, reason: "x" },
+          ],
+          summaries: [{ of: [2, 3], text: "User spent $75; assistant decided on a cheaper plan", relevance: "high" }],
+        },
+      ],
     ];
     const client: ModelClient = {
       model: { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },

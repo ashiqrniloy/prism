@@ -7,11 +7,16 @@
  * propagator's invalidation path, recall stops serving them), the transaction/plain-write split,
  * the no-op count, and the scope guard that keeps a mis-wired composition from cross-writing.
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
-import type { RepointStore } from "@arnilo/prism-memory-system/core";
-import type { DeletionPropagationContext } from "@arnilo/prism-memory-system/core";
-import type { MemoryScope, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-system/core";
+import assert from "node:assert/strict";
+import type {
+  DeletionPropagationContext,
+  MemoryScope,
+  MemoryVectorRecord,
+  RepointStore,
+  VectorStore,
+} from "@arnilo/prism-memory-system/core";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -20,7 +25,7 @@ import {
   type RagAccessConstraint,
   repointSource,
 } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
+import { createLongTermMemory, createMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { createFabricRepointHandler } from "../repoint.js";
 
 const thread: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };

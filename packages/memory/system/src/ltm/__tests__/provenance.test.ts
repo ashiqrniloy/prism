@@ -14,9 +14,8 @@ import { join } from "node:path";
 import type { ContextDraft, HookContext, SessionEntry, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
-
+import { createLongTermMemory, createMemory } from "../../index.js";
 import { createFabricContext } from "../context.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 import { reconcileFabricFiles } from "../reconcile.js";
 import { parseMemoryNoteMetadata, parseMemoryNoteProvenance } from "../types.js";
 

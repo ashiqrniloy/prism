@@ -9,6 +9,7 @@
         "contextTokens": 4000,
         "maxChunksPerEvent": 2,
         "maxChunkBytes": 4096,
+        "autoChunkBytes": 1024,
         "chunkStore": "memory",
         "habituation": {
           "windowEvents": 50
@@ -22,6 +23,7 @@
         "batchTokens": 3000,
         "targetRatio": 0.2,
         "rejudgeTokens": 8000,
+        "protectRequestPasses": 8,
         "policy": "model"
       },
       "rehearsal": {

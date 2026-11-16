@@ -81,6 +81,7 @@ export function createObservationalMemoryCompactor(options: ObservationalMemoryC
         secrets,
         advertiseRecall: options.advertiseRecall,
         taskState: projection.full.taskState,
+        discardedCount: Object.keys(projection.full.tombstones ?? {}).length,
       });
       const data: CompactionEntryData & { readonly memory: unknown } = {
         throughEntryId,

@@ -13,7 +13,7 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
   const om = await import("@arnilo/prism-memory-system");
   const ev = await events();
   const requests = [];
-  const workerCalls = { record_event: 0, summarize: 0, drop_observations: 0, record_task_state: 0 };
+  const workerCalls = { record_event: 0, judge: 0, drop_observations: 0, record_task_state: 0 };
   const queue = [...mainCalls];
   const main = await responder(
     "mock",
@@ -62,12 +62,12 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
           ]
         : ev.say("");
     }
-    if (tools.includes("summarize")) {
-      workerCalls.summarize++;
+    if (tools.includes("judge")) {
+      workerCalls.judge++;
       if (!reflect) return ev.say("");
-      const sent = [...text.matchAll(/^- \[([0-9a-f]{12})\] \d{4}-/gm)].map((match) => match[1]);
+      const sent = [...text.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));
       return sent.length
-        ? ev.call("summarize", { stmIds: sent.slice(0, 2), text: "The user is migrating the staging cluster", relevance: "high" })
+        ? ev.call("judge", { summaries: [{ of: sent.slice(0, 2), text: "The user is migrating the staging cluster", relevance: "high" }] })
         : ev.say("");
     }
     if (tools.includes("drop_observations")) {

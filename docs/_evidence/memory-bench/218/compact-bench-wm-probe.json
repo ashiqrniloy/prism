@@ -1,838 +1,1693 @@
 {
-  "kind": "compact-bench-wm-probe-v1",
+  "kind": "compact-bench-wm-probe-readings-v1",
   "plan": "218.1",
   "task": 3,
   "step": 1,
-  "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
-  "rule": {
-    "suite": "compact-bench-retention",
-    "sessions": 30,
-    "arm": "WM",
-    "armConfig": "gate M-2's armMemory WM arm (stm.triggerTokens 1,000; WM defaults: triggerTokens 10,000, batchTokens 3,000); no trigger changed for the probe",
-    "worker": "opencode-go/muse-spark-1.3-contributor",
-    "engagement": "a session engages WM when it records at least one WM pass that writes at least one item",
-    "threshold": 15,
-    "branches": {
-      "A": "engaged >= 15: Step 2 runs the four-arm retention screen (memory-off, OM-before, STM-only, WM, plus references)",
-      "B": "engaged < 15: Step 2 runs the reduced STM screen (memory-off, OM-before, session, plus references); M5 stays missing; the owner decides the WM default"
-    },
-    "stop": "the input-token ceiling is hit or the worker fails on more than 3 sessions: no branch, the finding goes to the owner",
-    "maxInputTokens": 8000000,
-    "maxFailedSessions": 3,
-    "scoring": "none: S is discarded unread and never scored"
-  },
-  "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
-  "draw": {
-    "file": "scripts/memory-bench/work-outcome-compact-bench.json",
-    "sha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
-    "retentionIdsHash": "6bef39c301d07a24e5077efe17ce1893c7986e8cad722bae8363b73b1b3e7c68"
-  },
-  "upstream": {
-    "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
-    "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b"
-  },
-  "startedAt": "2026-11-13T08:32:06.662Z",
-  "finishedAt": "2026-11-13T12:06:20.661Z",
-  "verdict": {
-    "branch": "A",
-    "engaged": 30,
-    "of": 30
-  },
-  "summary": {
-    "sessions": 30,
-    "failed": 0,
-    "engaged": 30,
-    "wmPasses": 46,
-    "wmItems": 117,
-    "budgetUnmet": 9,
-    "stmEvents": 911,
-    "engagedViewCharsMin": 13100,
-    "worker": {
-      "inputTokens": 4050331,
-      "outputTokens": 1676208,
-      "cacheReadTokens": 601886
-    },
-    "failedWorker": {
-      "inputTokens": 0,
-      "outputTokens": 0,
-      "cacheReadTokens": 0
-    },
-    "spent": {
-      "inputTokens": 4762429,
-      "outputTokens": 1962063,
-      "cacheReadTokens": 742554
-    },
-    "spentBasis": "the wire log of every attempt under this rule (failed and retried sessions included) plus finished sessions carried from an earlier log",
-    "costEstimateUsd": 0.309558,
-    "costBasis": "input tokens x $0.065 per 1M (the plan's all-in Muse rate; OpenCode Go bills a subscription)"
-  },
-  "failed": [],
-  "sessions": [
+  "selects": "post-218.2",
+  "readings": [
     {
-      "id": "yi-4f286447b13821-11",
-      "viewChars": 75974,
-      "turns": 30,
-      "stm": {
-        "passes": 7,
-        "events": 24
+      "kind": "compact-bench-wm-probe-v1",
+      "plan": "218.1",
+      "task": 3,
+      "step": 1,
+      "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+      "rule": {
+        "suite": "compact-bench-retention",
+        "sessions": 30,
+        "arm": "WM",
+        "armConfig": "gate M-2's armMemory WM arm (stm.triggerTokens 1,000; WM defaults: triggerTokens 10,000, batchTokens 3,000); no trigger changed for the probe",
+        "worker": "opencode-go/muse-spark-1.3-contributor",
+        "engagement": "a session engages WM when it records at least one WM pass that writes at least one item",
+        "threshold": 15,
+        "branches": {
+          "A": "engaged >= 15: Step 2 runs the four-arm retention screen (memory-off, OM-before, STM-only, WM, plus references)",
+          "B": "engaged < 15: Step 2 runs the reduced STM screen (memory-off, OM-before, session, plus references); M5 stays missing; the owner decides the WM default"
+        },
+        "stop": "the input-token ceiling is hit or the worker fails on more than 3 sessions: no branch, the finding goes to the owner",
+        "maxInputTokens": 8000000,
+        "maxFailedSessions": 3,
+        "scoring": "none: S is discarded unread and never scored"
       },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          4
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
+      "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+      "draw": {
+        "file": "scripts/memory-bench/work-outcome-compact-bench.json",
+        "sha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
+        "retentionIdsHash": "6bef39c301d07a24e5077efe17ce1893c7986e8cad722bae8363b73b1b3e7c68"
       },
-      "engaged": true,
-      "sChars": 4750,
-      "blockChars": 3875,
-      "worker": {
-        "inputTokens": 92530,
-        "outputTokens": 50811,
-        "cacheReadTokens": 18425
-      }
+      "upstream": {
+        "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+        "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b"
+      },
+      "startedAt": "2026-11-13T08:32:06.662Z",
+      "finishedAt": "2026-11-13T12:06:20.661Z",
+      "verdict": {
+        "branch": "A",
+        "engaged": 30,
+        "of": 30
+      },
+      "summary": {
+        "sessions": 30,
+        "failed": 0,
+        "engaged": 30,
+        "wmPasses": 46,
+        "wmItems": 117,
+        "budgetUnmet": 9,
+        "stmEvents": 911,
+        "engagedViewCharsMin": 13100,
+        "worker": {
+          "inputTokens": 4050331,
+          "outputTokens": 1676208,
+          "cacheReadTokens": 601886
+        },
+        "failedWorker": {
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "cacheReadTokens": 0
+        },
+        "spent": {
+          "inputTokens": 4762429,
+          "outputTokens": 1962063,
+          "cacheReadTokens": 742554
+        },
+        "spentBasis": "the wire log of every attempt under this rule (failed and retried sessions included) plus finished sessions carried from an earlier log",
+        "costEstimateUsd": 0.309558,
+        "costBasis": "input tokens x $0.065 per 1M (the plan's all-in Muse rate; OpenCode Go bills a subscription)"
+      },
+      "failed": [],
+      "sessions": [
+        {
+          "id": "yi-4f286447b13821-11",
+          "viewChars": 75974,
+          "turns": 30,
+          "stm": {
+            "passes": 7,
+            "events": 24
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              4
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4750,
+          "blockChars": 3875,
+          "worker": {
+            "inputTokens": 92530,
+            "outputTokens": 50811,
+            "cacheReadTokens": 18425
+          }
+        },
+        {
+          "id": "yi-bc03e7147140af-18",
+          "viewChars": 250000,
+          "turns": 104,
+          "stm": {
+            "passes": 20,
+            "events": 47
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 15222,
+          "blockChars": 13500,
+          "worker": {
+            "inputTokens": 280160,
+            "outputTokens": 106702,
+            "cacheReadTokens": 56231
+          }
+        },
+        {
+          "id": "yi-f0e51db5adad49-13",
+          "viewChars": 133338,
+          "turns": 61,
+          "stm": {
+            "passes": 9,
+            "events": 33
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              4
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 12700,
+          "blockChars": 9711,
+          "worker": {
+            "inputTokens": 118098,
+            "outputTokens": 49869,
+            "cacheReadTokens": 14683
+          }
+        },
+        {
+          "id": "yi-10250d80aaa2e3-6",
+          "viewChars": 114022,
+          "turns": 21,
+          "stm": {
+            "passes": 10,
+            "events": 31
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              5
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 6998,
+          "blockChars": 4023,
+          "worker": {
+            "inputTokens": 117739,
+            "outputTokens": 53767,
+            "cacheReadTokens": 22973
+          }
+        },
+        {
+          "id": "yi-176b7280c584a8-7",
+          "viewChars": 236679,
+          "turns": 191,
+          "stm": {
+            "passes": 19,
+            "events": 95
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              4
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 20884,
+          "blockChars": 19492,
+          "worker": {
+            "inputTokens": 277099,
+            "outputTokens": 127684,
+            "cacheReadTokens": 45366
+          }
+        },
+        {
+          "id": "yi-acf07db34e5b44-5",
+          "viewChars": 102088,
+          "turns": 14,
+          "stm": {
+            "passes": 8,
+            "events": 18
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 8711,
+          "blockChars": 5971,
+          "worker": {
+            "inputTokens": 94831,
+            "outputTokens": 41278,
+            "cacheReadTokens": 20315
+          }
+        },
+        {
+          "id": "yi-45d5c4044c5c34-7",
+          "viewChars": 184776,
+          "turns": 26,
+          "stm": {
+            "passes": 21,
+            "events": 50
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              3
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 8976,
+          "blockChars": 5865,
+          "worker": {
+            "inputTokens": 250253,
+            "outputTokens": 90487,
+            "cacheReadTokens": 33688
+          }
+        },
+        {
+          "id": "yi-f741e73e4952fa-20",
+          "viewChars": 121009,
+          "turns": 50,
+          "stm": {
+            "passes": 14,
+            "events": 34
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              3
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 5911,
+          "blockChars": 3582,
+          "worker": {
+            "inputTokens": 163753,
+            "outputTokens": 76815,
+            "cacheReadTokens": 20112
+          }
+        },
+        {
+          "id": "yi-3c0a51fbf8f153-13",
+          "viewChars": 144769,
+          "turns": 42,
+          "stm": {
+            "passes": 11,
+            "events": 34
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              7
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 8065,
+          "blockChars": 5208,
+          "worker": {
+            "inputTokens": 137157,
+            "outputTokens": 62052,
+            "cacheReadTokens": 13885
+          }
+        },
+        {
+          "id": "yi-fdfd5d7cfea54e-19",
+          "viewChars": 83877,
+          "turns": 54,
+          "stm": {
+            "passes": 8,
+            "events": 26
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 12312,
+          "blockChars": 10914,
+          "worker": {
+            "inputTokens": 96374,
+            "outputTokens": 46234,
+            "cacheReadTokens": 9977
+          }
+        },
+        {
+          "id": "yi-815a09e57702b9-8",
+          "viewChars": 104713,
+          "turns": 31,
+          "stm": {
+            "passes": 9,
+            "events": 28
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              3,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7401,
+          "blockChars": 6124,
+          "worker": {
+            "inputTokens": 105344,
+            "outputTokens": 45712,
+            "cacheReadTokens": 10986
+          }
+        },
+        {
+          "id": "yi-cid:831105efd0-6",
+          "viewChars": 56547,
+          "turns": 20,
+          "stm": {
+            "passes": 5,
+            "events": 8
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              3
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7035,
+          "blockChars": 3036,
+          "worker": {
+            "inputTokens": 51926,
+            "outputTokens": 23444,
+            "cacheReadTokens": 4405
+          }
+        },
+        {
+          "id": "yi-cid:fc9b273351-5",
+          "viewChars": 13100,
+          "turns": 6,
+          "stm": {
+            "passes": 2,
+            "events": 2
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4866,
+          "blockChars": 820,
+          "worker": {
+            "inputTokens": 11528,
+            "outputTokens": 5124,
+            "cacheReadTokens": 339
+          }
+        },
+        {
+          "id": "yi-cid:5420afe3fb-6",
+          "viewChars": 97730,
+          "turns": 4,
+          "stm": {
+            "passes": 9,
+            "events": 16
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 10915,
+          "blockChars": 6293,
+          "worker": {
+            "inputTokens": 93439,
+            "outputTokens": 31034,
+            "cacheReadTokens": 20187
+          }
+        },
+        {
+          "id": "yi-cid:0e8d7b584e-7",
+          "viewChars": 80970,
+          "turns": 5,
+          "stm": {
+            "passes": 6,
+            "events": 10
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              2
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 16113,
+          "blockChars": 1874,
+          "worker": {
+            "inputTokens": 73559,
+            "outputTokens": 28668,
+            "cacheReadTokens": 11731
+          }
+        },
+        {
+          "id": "yi-cid:d9d427365c-5",
+          "viewChars": 196983,
+          "turns": 30,
+          "stm": {
+            "passes": 15,
+            "events": 35
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              6
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 13468,
+          "blockChars": 7444,
+          "worker": {
+            "inputTokens": 170561,
+            "outputTokens": 62973,
+            "cacheReadTokens": 29185
+          }
+        },
+        {
+          "id": "yi-cid:60e15a99f3-5",
+          "viewChars": 43685,
+          "turns": 10,
+          "stm": {
+            "passes": 4,
+            "events": 11
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              2
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 3635,
+          "blockChars": 1776,
+          "worker": {
+            "inputTokens": 41465,
+            "outputTokens": 18825,
+            "cacheReadTokens": 3125
+          }
+        },
+        {
+          "id": "yi-cid:7d26dba332-11",
+          "viewChars": 250000,
+          "turns": 71,
+          "stm": {
+            "passes": 20,
+            "events": 68
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              8
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 14901,
+          "blockChars": 9159,
+          "worker": {
+            "inputTokens": 253010,
+            "outputTokens": 119039,
+            "cacheReadTokens": 42761
+          }
+        },
+        {
+          "id": "yi-cid:b68de122a3-9",
+          "viewChars": 32932,
+          "turns": 7,
+          "stm": {
+            "passes": 3,
+            "events": 6
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4341,
+          "blockChars": 938,
+          "worker": {
+            "inputTokens": 27575,
+            "outputTokens": 11564,
+            "cacheReadTokens": 1619
+          }
+        },
+        {
+          "id": "yi-cid:2a1631d3c3-11",
+          "viewChars": 208738,
+          "turns": 9,
+          "stm": {
+            "passes": 18,
+            "events": 40
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 17441,
+          "blockChars": 14552,
+          "worker": {
+            "inputTokens": 190741,
+            "outputTokens": 56185,
+            "cacheReadTokens": 23922
+          }
+        },
+        {
+          "id": "yi-cid:f20620b306-8",
+          "viewChars": 42283,
+          "turns": 9,
+          "stm": {
+            "passes": 4,
+            "events": 10
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7114,
+          "blockChars": 1519,
+          "worker": {
+            "inputTokens": 34496,
+            "outputTokens": 16229,
+            "cacheReadTokens": 2899
+          }
+        },
+        {
+          "id": "yi-cid:037648d488-15",
+          "viewChars": 231807,
+          "turns": 17,
+          "stm": {
+            "passes": 18,
+            "events": 38
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 18946,
+          "blockChars": 15295,
+          "worker": {
+            "inputTokens": 197776,
+            "outputTokens": 70181,
+            "cacheReadTokens": 22228
+          }
+        },
+        {
+          "id": "yi-cid:8313307ede-14",
+          "viewChars": 67955,
+          "turns": 5,
+          "stm": {
+            "passes": 6,
+            "events": 11
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 5252,
+          "blockChars": 2179,
+          "worker": {
+            "inputTokens": 59672,
+            "outputTokens": 18746,
+            "cacheReadTokens": 6039
+          }
+        },
+        {
+          "id": "yi-cid:bc7e2ed07c-7",
+          "viewChars": 73201,
+          "turns": 18,
+          "stm": {
+            "passes": 6,
+            "events": 20
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              5,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 11132,
+          "blockChars": 3345,
+          "worker": {
+            "inputTokens": 77969,
+            "outputTokens": 36938,
+            "cacheReadTokens": 17913
+          }
+        },
+        {
+          "id": "yi-cid:e8983a72b3-6",
+          "viewChars": 79527,
+          "turns": 5,
+          "stm": {
+            "passes": 7,
+            "events": 9
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              2
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7046,
+          "blockChars": 1880,
+          "worker": {
+            "inputTokens": 65998,
+            "outputTokens": 21436,
+            "cacheReadTokens": 7304
+          }
+        },
+        {
+          "id": "yi-cid:8268853942-8",
+          "viewChars": 233202,
+          "turns": 70,
+          "stm": {
+            "passes": 18,
+            "events": 56
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              3,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 24986,
+          "blockChars": 19639,
+          "worker": {
+            "inputTokens": 214598,
+            "outputTokens": 94186,
+            "cacheReadTokens": 25458
+          }
+        },
+        {
+          "id": "yi-37aed568ac6123-9",
+          "viewChars": 111138,
+          "turns": 32,
+          "stm": {
+            "passes": 12,
+            "events": 30
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              4
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4702,
+          "blockChars": 3532,
+          "worker": {
+            "inputTokens": 143618,
+            "outputTokens": 50417,
+            "cacheReadTokens": 11483
+          }
+        },
+        {
+          "id": "yi-648218f10633b9-20",
+          "viewChars": 232564,
+          "turns": 37,
+          "stm": {
+            "passes": 20,
+            "events": 41
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              6
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 6326,
+          "blockChars": 5157,
+          "worker": {
+            "inputTokens": 266777,
+            "outputTokens": 121539,
+            "cacheReadTokens": 53144
+          }
+        },
+        {
+          "id": "yi-f1917d616839a5-5",
+          "viewChars": 250000,
+          "turns": 39,
+          "stm": {
+            "passes": 21,
+            "events": 63
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              6
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 14189,
+          "blockChars": 13293,
+          "worker": {
+            "inputTokens": 269035,
+            "outputTokens": 103205,
+            "cacheReadTokens": 37641
+          }
+        },
+        {
+          "id": "yi-cid:3ea34cbc33-21",
+          "viewChars": 46812,
+          "turns": 7,
+          "stm": {
+            "passes": 5,
+            "events": 17
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              3,
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4394,
+          "blockChars": 2012,
+          "worker": {
+            "inputTokens": 73250,
+            "outputTokens": 35064,
+            "cacheReadTokens": 13862
+          }
+        }
+      ],
+      "reading": "pre-218.2",
+      "productHash": "e7e100f15d11d1b84bfd58f56caf5d1f6d14963ca038484795c978338556e5de",
+      "productHashBasis": "m2ProductFingerprint of commit 4c6547e6 (the commit carrying this reading), computed on 2026-11-16; the run itself recorded none"
     },
     {
-      "id": "yi-bc03e7147140af-18",
-      "viewChars": 250000,
-      "turns": 104,
-      "stm": {
-        "passes": 20,
-        "events": 47
+      "kind": "compact-bench-wm-probe-v1",
+      "plan": "218.1",
+      "task": 3,
+      "step": 1,
+      "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+      "rule": {
+        "suite": "compact-bench-retention",
+        "sessions": 30,
+        "arm": "WM",
+        "armConfig": "gate M-2's armMemory WM arm (stm.triggerTokens 1,000; WM defaults: triggerTokens 10,000, batchTokens 3,000); no trigger changed for the probe",
+        "worker": "opencode-go/muse-spark-1.3-contributor",
+        "engagement": "a session engages WM when it records at least one WM pass that writes at least one item",
+        "threshold": 15,
+        "branches": {
+          "A": "engaged >= 15: Step 2 runs the four-arm retention screen (memory-off, OM-before, STM-only, WM, plus references)",
+          "B": "engaged < 15: Step 2 runs the reduced STM screen (memory-off, OM-before, session, plus references); M5 stays missing; the owner decides the WM default"
+        },
+        "stop": "the input-token ceiling is hit or the worker fails on more than 3 sessions: no branch, the finding goes to the owner",
+        "maxInputTokens": 8000000,
+        "maxFailedSessions": 3,
+        "scoring": "none: S is discarded unread and never scored"
       },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
+      "reading": "post-218.2",
+      "productHash": "c225f06546d77bf357dc3e1dda759efbc0251dd30185bf2cd1e026d363f447be",
+      "memoryModelCriteriaHash": "8a59fc796b966178518dc1093e00ef932b65308432a290416f7faf71d385e095",
+      "draw": {
+        "file": "scripts/memory-bench/work-outcome-compact-bench.json",
+        "sha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
+        "retentionIdsHash": "6bef39c301d07a24e5077efe17ce1893c7986e8cad722bae8363b73b1b3e7c68"
       },
-      "engaged": true,
-      "sChars": 15222,
-      "blockChars": 13500,
-      "worker": {
-        "inputTokens": 280160,
-        "outputTokens": 106702,
-        "cacheReadTokens": 56231
-      }
-    },
-    {
-      "id": "yi-f0e51db5adad49-13",
-      "viewChars": 133338,
-      "turns": 61,
-      "stm": {
-        "passes": 9,
-        "events": 33
+      "upstream": {
+        "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+        "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b"
       },
-      "wm": {
-        "passes": 2,
-        "items": [
-          1,
-          4
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
+      "startedAt": "2026-11-16T11:01:35.522Z",
+      "finishedAt": "2026-11-16T14:29:06.997Z",
+      "verdict": {
+        "branch": "A",
+        "engaged": 30,
+        "of": 30
       },
-      "engaged": true,
-      "sChars": 12700,
-      "blockChars": 9711,
-      "worker": {
-        "inputTokens": 118098,
-        "outputTokens": 49869,
-        "cacheReadTokens": 14683
-      }
-    },
-    {
-      "id": "yi-10250d80aaa2e3-6",
-      "viewChars": 114022,
-      "turns": 21,
-      "stm": {
-        "passes": 10,
-        "events": 31
+      "summary": {
+        "sessions": 30,
+        "failed": 0,
+        "engaged": 30,
+        "wmPasses": 49,
+        "wmItems": 256,
+        "budgetUnmet": 16,
+        "stmEvents": 912,
+        "engagedViewCharsMin": 13100,
+        "worker": {
+          "inputTokens": 4127110,
+          "outputTokens": 1604120,
+          "cacheReadTokens": 713999
+        },
+        "failedWorker": {
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "cacheReadTokens": 0
+        },
+        "spent": {
+          "inputTokens": 4127110,
+          "outputTokens": 1604120,
+          "cacheReadTokens": 713999
+        },
+        "spentBasis": "the wire log of every attempt under this rule (failed and retried sessions included) plus finished sessions carried from an earlier log",
+        "costEstimateUsd": 0.268262,
+        "costBasis": "input tokens x $0.065 per 1M (the plan's all-in Muse rate; OpenCode Go bills a subscription)"
       },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          5
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 6998,
-      "blockChars": 4023,
-      "worker": {
-        "inputTokens": 117739,
-        "outputTokens": 53767,
-        "cacheReadTokens": 22973
-      }
-    },
-    {
-      "id": "yi-176b7280c584a8-7",
-      "viewChars": 236679,
-      "turns": 191,
-      "stm": {
-        "passes": 19,
-        "events": 95
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          1,
-          4
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 20884,
-      "blockChars": 19492,
-      "worker": {
-        "inputTokens": 277099,
-        "outputTokens": 127684,
-        "cacheReadTokens": 45366
-      }
-    },
-    {
-      "id": "yi-acf07db34e5b44-5",
-      "viewChars": 102088,
-      "turns": 14,
-      "stm": {
-        "passes": 8,
-        "events": 18
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          1
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 8711,
-      "blockChars": 5971,
-      "worker": {
-        "inputTokens": 94831,
-        "outputTokens": 41278,
-        "cacheReadTokens": 20315
-      }
-    },
-    {
-      "id": "yi-45d5c4044c5c34-7",
-      "viewChars": 184776,
-      "turns": 26,
-      "stm": {
-        "passes": 21,
-        "events": 50
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          1,
-          3
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 8976,
-      "blockChars": 5865,
-      "worker": {
-        "inputTokens": 250253,
-        "outputTokens": 90487,
-        "cacheReadTokens": 33688
-      }
-    },
-    {
-      "id": "yi-f741e73e4952fa-20",
-      "viewChars": 121009,
-      "turns": 50,
-      "stm": {
-        "passes": 14,
-        "events": 34
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          3
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 5911,
-      "blockChars": 3582,
-      "worker": {
-        "inputTokens": 163753,
-        "outputTokens": 76815,
-        "cacheReadTokens": 20112
-      }
-    },
-    {
-      "id": "yi-3c0a51fbf8f153-13",
-      "viewChars": 144769,
-      "turns": 42,
-      "stm": {
-        "passes": 11,
-        "events": 34
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          7
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 8065,
-      "blockChars": 5208,
-      "worker": {
-        "inputTokens": 137157,
-        "outputTokens": 62052,
-        "cacheReadTokens": 13885
-      }
-    },
-    {
-      "id": "yi-fdfd5d7cfea54e-19",
-      "viewChars": 83877,
-      "turns": 54,
-      "stm": {
-        "passes": 8,
-        "events": 26
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 12312,
-      "blockChars": 10914,
-      "worker": {
-        "inputTokens": 96374,
-        "outputTokens": 46234,
-        "cacheReadTokens": 9977
-      }
-    },
-    {
-      "id": "yi-815a09e57702b9-8",
-      "viewChars": 104713,
-      "turns": 31,
-      "stm": {
-        "passes": 9,
-        "events": 28
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          3,
-          1
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 7401,
-      "blockChars": 6124,
-      "worker": {
-        "inputTokens": 105344,
-        "outputTokens": 45712,
-        "cacheReadTokens": 10986
-      }
-    },
-    {
-      "id": "yi-cid:831105efd0-6",
-      "viewChars": 56547,
-      "turns": 20,
-      "stm": {
-        "passes": 5,
-        "events": 8
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          3
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 7035,
-      "blockChars": 3036,
-      "worker": {
-        "inputTokens": 51926,
-        "outputTokens": 23444,
-        "cacheReadTokens": 4405
-      }
-    },
-    {
-      "id": "yi-cid:fc9b273351-5",
-      "viewChars": 13100,
-      "turns": 6,
-      "stm": {
-        "passes": 2,
-        "events": 2
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 4866,
-      "blockChars": 820,
-      "worker": {
-        "inputTokens": 11528,
-        "outputTokens": 5124,
-        "cacheReadTokens": 339
-      }
-    },
-    {
-      "id": "yi-cid:5420afe3fb-6",
-      "viewChars": 97730,
-      "turns": 4,
-      "stm": {
-        "passes": 9,
-        "events": 16
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 10915,
-      "blockChars": 6293,
-      "worker": {
-        "inputTokens": 93439,
-        "outputTokens": 31034,
-        "cacheReadTokens": 20187
-      }
-    },
-    {
-      "id": "yi-cid:0e8d7b584e-7",
-      "viewChars": 80970,
-      "turns": 5,
-      "stm": {
-        "passes": 6,
-        "events": 10
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          2
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 16113,
-      "blockChars": 1874,
-      "worker": {
-        "inputTokens": 73559,
-        "outputTokens": 28668,
-        "cacheReadTokens": 11731
-      }
-    },
-    {
-      "id": "yi-cid:d9d427365c-5",
-      "viewChars": 196983,
-      "turns": 30,
-      "stm": {
-        "passes": 15,
-        "events": 35
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          6
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 13468,
-      "blockChars": 7444,
-      "worker": {
-        "inputTokens": 170561,
-        "outputTokens": 62973,
-        "cacheReadTokens": 29185
-      }
-    },
-    {
-      "id": "yi-cid:60e15a99f3-5",
-      "viewChars": 43685,
-      "turns": 10,
-      "stm": {
-        "passes": 4,
-        "events": 11
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          2
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 3635,
-      "blockChars": 1776,
-      "worker": {
-        "inputTokens": 41465,
-        "outputTokens": 18825,
-        "cacheReadTokens": 3125
-      }
-    },
-    {
-      "id": "yi-cid:7d26dba332-11",
-      "viewChars": 250000,
-      "turns": 71,
-      "stm": {
-        "passes": 20,
-        "events": 68
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          8
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 14901,
-      "blockChars": 9159,
-      "worker": {
-        "inputTokens": 253010,
-        "outputTokens": 119039,
-        "cacheReadTokens": 42761
-      }
-    },
-    {
-      "id": "yi-cid:b68de122a3-9",
-      "viewChars": 32932,
-      "turns": 7,
-      "stm": {
-        "passes": 3,
-        "events": 6
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 4341,
-      "blockChars": 938,
-      "worker": {
-        "inputTokens": 27575,
-        "outputTokens": 11564,
-        "cacheReadTokens": 1619
-      }
-    },
-    {
-      "id": "yi-cid:2a1631d3c3-11",
-      "viewChars": 208738,
-      "turns": 9,
-      "stm": {
-        "passes": 18,
-        "events": 40
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 17441,
-      "blockChars": 14552,
-      "worker": {
-        "inputTokens": 190741,
-        "outputTokens": 56185,
-        "cacheReadTokens": 23922
-      }
-    },
-    {
-      "id": "yi-cid:f20620b306-8",
-      "viewChars": 42283,
-      "turns": 9,
-      "stm": {
-        "passes": 4,
-        "events": 10
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 7114,
-      "blockChars": 1519,
-      "worker": {
-        "inputTokens": 34496,
-        "outputTokens": 16229,
-        "cacheReadTokens": 2899
-      }
-    },
-    {
-      "id": "yi-cid:037648d488-15",
-      "viewChars": 231807,
-      "turns": 17,
-      "stm": {
-        "passes": 18,
-        "events": 38
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 18946,
-      "blockChars": 15295,
-      "worker": {
-        "inputTokens": 197776,
-        "outputTokens": 70181,
-        "cacheReadTokens": 22228
-      }
-    },
-    {
-      "id": "yi-cid:8313307ede-14",
-      "viewChars": 67955,
-      "turns": 5,
-      "stm": {
-        "passes": 6,
-        "events": 11
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 5252,
-      "blockChars": 2179,
-      "worker": {
-        "inputTokens": 59672,
-        "outputTokens": 18746,
-        "cacheReadTokens": 6039
-      }
-    },
-    {
-      "id": "yi-cid:bc7e2ed07c-7",
-      "viewChars": 73201,
-      "turns": 18,
-      "stm": {
-        "passes": 6,
-        "events": 20
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          5,
-          1
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 11132,
-      "blockChars": 3345,
-      "worker": {
-        "inputTokens": 77969,
-        "outputTokens": 36938,
-        "cacheReadTokens": 17913
-      }
-    },
-    {
-      "id": "yi-cid:e8983a72b3-6",
-      "viewChars": 79527,
-      "turns": 5,
-      "stm": {
-        "passes": 7,
-        "events": 9
-      },
-      "wm": {
-        "passes": 1,
-        "items": [
-          2
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 7046,
-      "blockChars": 1880,
-      "worker": {
-        "inputTokens": 65998,
-        "outputTokens": 21436,
-        "cacheReadTokens": 7304
-      }
-    },
-    {
-      "id": "yi-cid:8268853942-8",
-      "viewChars": 233202,
-      "turns": 70,
-      "stm": {
-        "passes": 18,
-        "events": 56
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          3,
-          1
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 24986,
-      "blockChars": 19639,
-      "worker": {
-        "inputTokens": 214598,
-        "outputTokens": 94186,
-        "cacheReadTokens": 25458
-      }
-    },
-    {
-      "id": "yi-37aed568ac6123-9",
-      "viewChars": 111138,
-      "turns": 32,
-      "stm": {
-        "passes": 12,
-        "events": 30
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          4
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 4702,
-      "blockChars": 3532,
-      "worker": {
-        "inputTokens": 143618,
-        "outputTokens": 50417,
-        "cacheReadTokens": 11483
-      }
-    },
-    {
-      "id": "yi-648218f10633b9-20",
-      "viewChars": 232564,
-      "turns": 37,
-      "stm": {
-        "passes": 20,
-        "events": 41
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          1,
-          6
-        ],
-        "budgetUnmet": 1,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 6326,
-      "blockChars": 5157,
-      "worker": {
-        "inputTokens": 266777,
-        "outputTokens": 121539,
-        "cacheReadTokens": 53144
-      }
-    },
-    {
-      "id": "yi-f1917d616839a5-5",
-      "viewChars": 250000,
-      "turns": 39,
-      "stm": {
-        "passes": 21,
-        "events": 63
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          2,
-          6
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 14189,
-      "blockChars": 13293,
-      "worker": {
-        "inputTokens": 269035,
-        "outputTokens": 103205,
-        "cacheReadTokens": 37641
-      }
-    },
-    {
-      "id": "yi-cid:3ea34cbc33-21",
-      "viewChars": 46812,
-      "turns": 7,
-      "stm": {
-        "passes": 5,
-        "events": 17
-      },
-      "wm": {
-        "passes": 2,
-        "items": [
-          3,
-          1
-        ],
-        "budgetUnmet": 0,
-        "compactions": 1
-      },
-      "engaged": true,
-      "sChars": 4394,
-      "blockChars": 2012,
-      "worker": {
-        "inputTokens": 73250,
-        "outputTokens": 35064,
-        "cacheReadTokens": 13862
-      }
+      "failed": [],
+      "sessions": [
+        {
+          "id": "yi-4f286447b13821-11",
+          "viewChars": 75974,
+          "turns": 30,
+          "stm": {
+            "passes": 7,
+            "events": 23
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              19
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 9246,
+          "blockChars": 8371,
+          "worker": {
+            "inputTokens": 108529,
+            "outputTokens": 45624,
+            "cacheReadTokens": 31308
+          }
+        },
+        {
+          "id": "yi-bc03e7147140af-18",
+          "viewChars": 250000,
+          "turns": 104,
+          "stm": {
+            "passes": 20,
+            "events": 81
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              3,
+              15
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 15152,
+          "blockChars": 13430,
+          "worker": {
+            "inputTokens": 326403,
+            "outputTokens": 134452,
+            "cacheReadTokens": 78586
+          }
+        },
+        {
+          "id": "yi-f0e51db5adad49-13",
+          "viewChars": 133338,
+          "turns": 61,
+          "stm": {
+            "passes": 9,
+            "events": 33
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              20
+            ],
+            "budgetUnmet": 2,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 11683,
+          "blockChars": 8694,
+          "worker": {
+            "inputTokens": 153910,
+            "outputTokens": 59722,
+            "cacheReadTokens": 55101
+          }
+        },
+        {
+          "id": "yi-10250d80aaa2e3-6",
+          "viewChars": 114022,
+          "turns": 21,
+          "stm": {
+            "passes": 10,
+            "events": 32
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              10
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7426,
+          "blockChars": 4451,
+          "worker": {
+            "inputTokens": 116063,
+            "outputTokens": 43360,
+            "cacheReadTokens": 23244
+          }
+        },
+        {
+          "id": "yi-176b7280c584a8-7",
+          "viewChars": 236679,
+          "turns": 191,
+          "stm": {
+            "passes": 19,
+            "events": 65
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              19
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 13577,
+          "blockChars": 12185,
+          "worker": {
+            "inputTokens": 254308,
+            "outputTokens": 111107,
+            "cacheReadTokens": 34245
+          }
+        },
+        {
+          "id": "yi-acf07db34e5b44-5",
+          "viewChars": 102088,
+          "turns": 14,
+          "stm": {
+            "passes": 8,
+            "events": 13
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              4
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 5057,
+          "blockChars": 2317,
+          "worker": {
+            "inputTokens": 83066,
+            "outputTokens": 30927,
+            "cacheReadTokens": 11257
+          }
+        },
+        {
+          "id": "yi-45d5c4044c5c34-7",
+          "viewChars": 184776,
+          "turns": 26,
+          "stm": {
+            "passes": 21,
+            "events": 41
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              5
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 10282,
+          "blockChars": 7171,
+          "worker": {
+            "inputTokens": 237928,
+            "outputTokens": 89833,
+            "cacheReadTokens": 35111
+          }
+        },
+        {
+          "id": "yi-f741e73e4952fa-20",
+          "viewChars": 121009,
+          "turns": 50,
+          "stm": {
+            "passes": 14,
+            "events": 19
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              3
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 5596,
+          "blockChars": 3267,
+          "worker": {
+            "inputTokens": 160423,
+            "outputTokens": 68565,
+            "cacheReadTokens": 27536
+          }
+        },
+        {
+          "id": "yi-3c0a51fbf8f153-13",
+          "viewChars": 144769,
+          "turns": 42,
+          "stm": {
+            "passes": 11,
+            "events": 37
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              4,
+              11
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 9123,
+          "blockChars": 6266,
+          "worker": {
+            "inputTokens": 153752,
+            "outputTokens": 68137,
+            "cacheReadTokens": 29245
+          }
+        },
+        {
+          "id": "yi-fdfd5d7cfea54e-19",
+          "viewChars": 83877,
+          "turns": 54,
+          "stm": {
+            "passes": 8,
+            "events": 34
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              0,
+              8
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 6343,
+          "blockChars": 4945,
+          "worker": {
+            "inputTokens": 117427,
+            "outputTokens": 49643,
+            "cacheReadTokens": 23929
+          }
+        },
+        {
+          "id": "yi-815a09e57702b9-8",
+          "viewChars": 104713,
+          "turns": 31,
+          "stm": {
+            "passes": 9,
+            "events": 20
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              8
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 6360,
+          "blockChars": 5083,
+          "worker": {
+            "inputTokens": 103180,
+            "outputTokens": 49313,
+            "cacheReadTokens": 12266
+          }
+        },
+        {
+          "id": "yi-cid:831105efd0-6",
+          "viewChars": 56547,
+          "turns": 20,
+          "stm": {
+            "passes": 5,
+            "events": 18
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              2
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 6574,
+          "blockChars": 2575,
+          "worker": {
+            "inputTokens": 57326,
+            "outputTokens": 29288,
+            "cacheReadTokens": 5399
+          }
+        },
+        {
+          "id": "yi-cid:fc9b273351-5",
+          "viewChars": 13100,
+          "turns": 6,
+          "stm": {
+            "passes": 2,
+            "events": 4
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              3,
+              0
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 6869,
+          "blockChars": 2823,
+          "worker": {
+            "inputTokens": 12421,
+            "outputTokens": 7490,
+            "cacheReadTokens": 226
+          }
+        },
+        {
+          "id": "yi-cid:5420afe3fb-6",
+          "viewChars": 97730,
+          "turns": 4,
+          "stm": {
+            "passes": 9,
+            "events": 37
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              6
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7667,
+          "blockChars": 3045,
+          "worker": {
+            "inputTokens": 97980,
+            "outputTokens": 34096,
+            "cacheReadTokens": 21595
+          }
+        },
+        {
+          "id": "yi-cid:0e8d7b584e-7",
+          "viewChars": 80970,
+          "turns": 5,
+          "stm": {
+            "passes": 6,
+            "events": 6
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 16080,
+          "blockChars": 1841,
+          "worker": {
+            "inputTokens": 65327,
+            "outputTokens": 23300,
+            "cacheReadTokens": 8599
+          }
+        },
+        {
+          "id": "yi-cid:d9d427365c-5",
+          "viewChars": 196983,
+          "turns": 30,
+          "stm": {
+            "passes": 15,
+            "events": 52
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              6
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 11575,
+          "blockChars": 5551,
+          "worker": {
+            "inputTokens": 168513,
+            "outputTokens": 52424,
+            "cacheReadTokens": 23199
+          }
+        },
+        {
+          "id": "yi-cid:60e15a99f3-5",
+          "viewChars": 43685,
+          "turns": 10,
+          "stm": {
+            "passes": 4,
+            "events": 8
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              3
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4165,
+          "blockChars": 2306,
+          "worker": {
+            "inputTokens": 41825,
+            "outputTokens": 19245,
+            "cacheReadTokens": 3637
+          }
+        },
+        {
+          "id": "yi-cid:7d26dba332-11",
+          "viewChars": 250000,
+          "turns": 71,
+          "stm": {
+            "passes": 20,
+            "events": 72
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              5
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 16305,
+          "blockChars": 10563,
+          "worker": {
+            "inputTokens": 241130,
+            "outputTokens": 98908,
+            "cacheReadTokens": 30420
+          }
+        },
+        {
+          "id": "yi-cid:b68de122a3-9",
+          "viewChars": 32932,
+          "turns": 7,
+          "stm": {
+            "passes": 3,
+            "events": 5
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              1
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 5379,
+          "blockChars": 1976,
+          "worker": {
+            "inputTokens": 28855,
+            "outputTokens": 11817,
+            "cacheReadTokens": 1875
+          }
+        },
+        {
+          "id": "yi-cid:2a1631d3c3-11",
+          "viewChars": 208738,
+          "turns": 9,
+          "stm": {
+            "passes": 18,
+            "events": 38
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              5
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7374,
+          "blockChars": 4485,
+          "worker": {
+            "inputTokens": 196752,
+            "outputTokens": 56138,
+            "cacheReadTokens": 28899
+          }
+        },
+        {
+          "id": "yi-cid:f20620b306-8",
+          "viewChars": 42283,
+          "turns": 9,
+          "stm": {
+            "passes": 4,
+            "events": 7
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              2
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 7459,
+          "blockChars": 1864,
+          "worker": {
+            "inputTokens": 34719,
+            "outputTokens": 13709,
+            "cacheReadTokens": 3411
+          }
+        },
+        {
+          "id": "yi-cid:037648d488-15",
+          "viewChars": 231807,
+          "turns": 17,
+          "stm": {
+            "passes": 18,
+            "events": 37
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              10
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 11903,
+          "blockChars": 8252,
+          "worker": {
+            "inputTokens": 206984,
+            "outputTokens": 73076,
+            "cacheReadTokens": 38469
+          }
+        },
+        {
+          "id": "yi-cid:8313307ede-14",
+          "viewChars": 67955,
+          "turns": 5,
+          "stm": {
+            "passes": 6,
+            "events": 9
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 5663,
+          "blockChars": 2590,
+          "worker": {
+            "inputTokens": 62009,
+            "outputTokens": 25387,
+            "cacheReadTokens": 11415
+          }
+        },
+        {
+          "id": "yi-cid:bc7e2ed07c-7",
+          "viewChars": 73201,
+          "turns": 18,
+          "stm": {
+            "passes": 6,
+            "events": 22
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              5
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 12730,
+          "blockChars": 4943,
+          "worker": {
+            "inputTokens": 67807,
+            "outputTokens": 36355,
+            "cacheReadTokens": 3976
+          }
+        },
+        {
+          "id": "yi-cid:e8983a72b3-6",
+          "viewChars": 79527,
+          "turns": 5,
+          "stm": {
+            "passes": 7,
+            "events": 22
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              3,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 8414,
+          "blockChars": 3248,
+          "worker": {
+            "inputTokens": 83651,
+            "outputTokens": 27497,
+            "cacheReadTokens": 17898
+          }
+        },
+        {
+          "id": "yi-cid:8268853942-8",
+          "viewChars": 233202,
+          "turns": 70,
+          "stm": {
+            "passes": 18,
+            "events": 54
+          },
+          "wm": {
+            "passes": 1,
+            "items": [
+              5
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 13915,
+          "blockChars": 8568,
+          "worker": {
+            "inputTokens": 206621,
+            "outputTokens": 79713,
+            "cacheReadTokens": 28801
+          }
+        },
+        {
+          "id": "yi-37aed568ac6123-9",
+          "viewChars": 111138,
+          "turns": 32,
+          "stm": {
+            "passes": 12,
+            "events": 22
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              2,
+              7
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4529,
+          "blockChars": 3359,
+          "worker": {
+            "inputTokens": 152041,
+            "outputTokens": 51196,
+            "cacheReadTokens": 31790
+          }
+        },
+        {
+          "id": "yi-648218f10633b9-20",
+          "viewChars": 232564,
+          "turns": 37,
+          "stm": {
+            "passes": 20,
+            "events": 50
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              21
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 11899,
+          "blockChars": 10730,
+          "worker": {
+            "inputTokens": 266063,
+            "outputTokens": 93968,
+            "cacheReadTokens": 50373
+          }
+        },
+        {
+          "id": "yi-f1917d616839a5-5",
+          "viewChars": 250000,
+          "turns": 39,
+          "stm": {
+            "passes": 21,
+            "events": 44
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              1,
+              12
+            ],
+            "budgetUnmet": 0,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 8644,
+          "blockChars": 7748,
+          "worker": {
+            "inputTokens": 264019,
+            "outputTokens": 94874,
+            "cacheReadTokens": 36135
+          }
+        },
+        {
+          "id": "yi-cid:3ea34cbc33-21",
+          "viewChars": 46812,
+          "turns": 7,
+          "stm": {
+            "passes": 5,
+            "events": 7
+          },
+          "wm": {
+            "passes": 2,
+            "items": [
+              5,
+              1
+            ],
+            "budgetUnmet": 1,
+            "compactions": 1
+          },
+          "engaged": true,
+          "sChars": 4936,
+          "blockChars": 2554,
+          "worker": {
+            "inputTokens": 58078,
+            "outputTokens": 24956,
+            "cacheReadTokens": 6054
+          }
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,43 @@
+{
+ "schemaVersion": 1,
+ "kind": "memory-model-worker-replay-index",
+ "note": "Plan 218.2 Task 1. sha256 of the built fixture files (build.mjs, from the long-session dev personas and written cases); loadWorkerReplayFixture refuses a file that does not match.",
+ "personas": [
+  "ls10",
+  "ls7",
+  "ls11",
+  "ls1",
+  "ls15",
+  "ls12",
+  "ls19",
+  "ls14",
+  "ls18",
+  "ls17",
+  "ls21",
+  "ls13",
+  "ls23",
+  "ls22",
+  "ls16",
+  "ls20"
+ ],
+ "counts": {
+  "stm": {
+   "base": 24,
+   "passed-outcome": 6,
+   "actually": 6,
+   "bn": 6,
+   "ja": 6,
+   "es": 6,
+   "offtopic-constraint": 6
+  },
+  "wm": {
+   "base": 24,
+   "long-scope": 24
+  }
+ },
+ "sha256": {
+  "stm.json": "96e12ffe6479c43d60b2702e545c862a17075331cbfdeb1eb48f540d852a8d5e",
+  "wm.json": "6f415b0307eeb61cbcd916e2fe7e85c092e2398eba79cf31ce141ff69056e3a8",
+  "annotations.json": "6f05f020d1d3a5b66f9b14951d7274cc1ea15f76fa613b9657b41aee61efd85c"
+ }
+}

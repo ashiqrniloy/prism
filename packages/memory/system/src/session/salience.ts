@@ -8,6 +8,11 @@ import type { MemoryObservation } from "./types.js";
 
 export type SalienceSignal = "error" | "correction" | "denial" | "failed_verification";
 
+/**
+ * Plan 218.2 Task 2: the recorder's fields (`corrects`, `status`) are read first. These English patterns stay as a union
+ * for records that carry no field (old ledgers, and a worker that leaves `corrects` unset), as the worker replay decided
+ * (plan 218.2 Task 2 Notes).
+ */
 /** A user turn that says the previous answer or action was wrong. */
 const CORRECTION = /\b(?:no,|that'?s (?:wrong|not right|incorrect)|actually\b|not what I|you should have|I said|wrong (?:file|one|value))/i;
 /** An outcome whose check did not pass. */
@@ -23,11 +28,18 @@ export function salienceSignals(
   for (const record of records) {
     const found = new Set<SalienceSignal>();
     if (record.kind === "error") found.add("error");
-    if (record.kind === "outcome" && FAILED_VERIFICATION.test(record.description)) found.add("failed_verification");
+    // Plan 218.2 Task 2: the recorder's `status` decides; the English pattern reads only an outcome written without one.
+    if (
+      record.status === "failed" ||
+      (record.kind === "outcome" && record.status === undefined && FAILED_VERIFICATION.test(record.description))
+    )
+      found.add("failed_verification");
+    if (record.corrects === true) found.add("correction");
     for (const id of record.sourceEntryIds) {
       const message = byId.get(id)?.message;
       if (!message) continue;
-      if (message.role === "user" && CORRECTION.test(messageText(message.content))) found.add("correction");
+      if (message.role === "user" && record.corrects === undefined && CORRECTION.test(messageText(message.content)))
+        found.add("correction");
       // A `tool.call` deny or a refused ask reaches the branch as a tool result with `hook_denied` (run-controller).
       if (message.role === "tool" && JSON.stringify(message.content).includes('"hook_denied"')) found.add("denial");
     }

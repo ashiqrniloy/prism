@@ -18,7 +18,7 @@ work alone, and the [example](../../../examples/memory-and-wiki.ts) runs all thr
 | Component | Today (unchanged worker behaviour) | Redesigned by |
 | --- | --- | --- |
 | `stm` | the observer: records source-backed observations and the current task | plan 217 |
-| `wm` | working memory: one verdict per STM record (keep, summarize, discard) plus derived facts, incremental ([Working memory](#working-memory)) | plan 218 |
+| `wm` | working memory: one verdict per STM record (keep, summarize, discard) plus derived facts, in one `judge` call; protected records kept by code first; incremental ([Working memory](#working-memory)) | plan 218, 218.2 |
 | `rehearsal` | the dropper: trims the active pool to a budget | plan 219 |
 | `ltm` | the former fabric: typed notes, scopes, recall, consolidation, lifecycle ([Long-term memory](#long-term-memory)) | plans 219–220 |
 | `sleep` | nothing yet: a no-op component | plan 221 |
@@ -165,10 +165,10 @@ secret set. Branch entries reach the package already redacted; the secret set th
 `compaction` slot is kept per session (bounded) and redacts every later worker prompt and error.
 Secrets never come from config text.
 
-**Worker tool results.** `record_event`, `record_task_state`, the WM tools (`keep`, `summarize`, `derive`, `discard`)
-and `drop_observations` answer `{ ok: false, reason }` whenever nothing was stored (`invalid_kind`,
-`empty_description`, `no_valid_ids`, `unknown_id`, `invalid_event`, `invalid_task_state`, and for WM
-`already_processed`, `empty_text`, `citation_outside_active_set`), so the model can correct itself.
+**Worker tool results.** `record_event`, `record_task_state` and `drop_observations` answer `{ ok: false, reason }`
+whenever nothing was stored (`invalid_kind`, `empty_description`, `no_valid_ids`, `unknown_id`, `invalid_event`,
+`invalid_task_state`); WM's `judge` lists each refused entry with its reason (`unknown_id`, `already_processed`,
+`empty_text`, `citation_outside_active_set`, `invalid_arguments`, `protected`), so the model can correct itself.
 
 **Measured live worker cost per 10k source-message tokens** (one LongMemEval-S question, free
 OpenRouter route): observer **233,494 input / 3,287 output tokens**, reflector **1,702 / 358**,
@@ -216,6 +216,7 @@ defaults below.
 | `stm.contextTokens` | `4000` | Token budget of the recent STM record index (id, kind, first 120 characters) each STM request carries |
 | `stm.maxChunksPerEvent` | `2` | Verbatim chunks one STM event may carry (at most 8); `0` removes the `chunks` argument ([Chunks](#chunks)) |
 | `stm.maxChunkBytes` | `4096` | Bytes one stored chunk may take, truncation marker included (256 to 65,536) |
+| `stm.autoChunkBytes` | `1024` | Bytes of the evidence chunk kept by rule for an error, a failed check or a durable statement recorded with no chunk (0 to 65,536); `0` turns the rule off ([Chunks](#chunks)) |
 | `stm.chunkStore` | `"memory"` | Where the default chunk store lives: `"memory"` (the process lifetime) or `{ "sqlite": { "path": "…" } }`, a file in the host's data directory created mode 0600 |
 | `stm.habituation` | `{ "windowEvents": 50 }` | Collapse a repeated identical event into one record with a count, against the newest `windowEvents` active records (1 to 1,000); `false` records every event ([Short-term memory](#short-term-memory)) |
 | `stm.boundaries` | `false` | `true` runs an STM pass below `stm.triggerTokens` when a user turn follows an idle gap (one extra STM call per boundary); boundary markers are recorded either way |
@@ -226,6 +227,7 @@ defaults below.
 | `wm.triggerTokens` | `10000` | STM surface tokens (records without a WM verdict) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
 | `wm.batchTokens` | `3000` | STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass |
 | `wm.targetRatio` | `0.2` | Items' tokens over the batch's tokens a WM pass aims at (0.01 to 1), as pressure after relevance; protected records are never cut ([Working memory](#working-memory)) |
+| `wm.protectRequestPasses` | `8` | WM passes a user request or error stays protected by its `resolves` link without a resolving outcome; then the pass records `protectionLapsed` ([Working memory](#working-memory)) |
 | `wm.rejudgeTokens` | `8000` | Tokens of discarded records (chunks still live) the first WM pass after a scope change is also sent to keep back; `0` turns re-judgment off ([Working memory](#working-memory)) |
 | `wm.policy` | `"model"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, outcomes and salient records and discards the lowest-relevance oldest to the target, with no model call |
 | `rehearsal.model` | the session's model | Rehearsal worker model (today's dropper) |
@@ -262,7 +264,8 @@ package holds no credential.
 
 - **`recall` tool**, registered with `when: on`, so a session with the toggle off neither sees nor can
   call it. It reads its own session only: exact 12-character ids for memory (an STM record returns its verbatim
-  chunks; [Recall](#recall)), or raw-source paging around a current-branch message id.
+  chunks; [Recall](#recall)), a query over the session's record descriptions (discarded records included), or
+  raw-source paging around a current-branch message id. A call gives exactly one of `id`, `query` or `cursor`.
 - **`context.build`**: awaits a pending compaction pin or one-time reopen reconciliation, then renders only the pinned ledger for foreign compactors. Steady requests do not read the branch.
 - **`turn.completed`**: starts `session.background("memory.session.observe", …)`. A failing pass fails only that
   background task (`background.failed`, error redacted), records `lastError`, and leaves the ledger
@@ -426,8 +429,26 @@ A `description` is one self-contained line: a later model that sees only the des
 able to judge whether the event helps a new task. For example:
 
 ```json
-{ "kind": "outcome", "description": "Campaign retries: interrupted attempts no longer count toward maxAttempts (campaign.mjs retryUncounted); 35 campaign tests pass.", "sourceEntryIds": ["e41", "e47"], "relevance": "high" }
+{ "kind": "outcome", "status": "passed", "resolves": ["a1b2c3d4e5f6"], "description": "Campaign retries: interrupted attempts no longer count toward maxAttempts (campaign.mjs retryUncounted); 35 campaign tests pass.", "sourceEntryIds": ["e41", "e47"], "relevance": "high" }
 ```
+
+**Structured signals (plan 218.2 Task 2).** `record_event` takes four optional fields, described in its schema so the
+instruction stays within its 2,100-character cap. None carries free text:
+
+| Field | Values | Rule |
+| --- | --- | --- |
+| `status` | `passed`, `failed`, `partial`, `unknown` | how an `outcome` or `result` was verified; **required on an `outcome`**, which is refused with `outcome_status_required` without it (the worker re-sends it); ignored on other kinds |
+| `corrects` | `true` | the user says an earlier answer or action was wrong |
+| `durable` | `constraint`, `preference` | a user statement or decision that binds later work, or says how the user wants things done, whatever the current task is |
+| `resolves` | record ids | on an `outcome`: the `request` or `error` records (recent index, or recorded earlier in the batch) it closes; other ids are dropped with `resolvesWarning`, like `supersedes` |
+
+`corrects` and `durable` are kept only when the event's `attribution` is `user` or `mixed`: an assistant proposal cannot
+mark itself durable. A recorded event's tool result returns its `id`, so a later call of the same batch can name it. The
+block renders the signals after the kind: `outcome (failed):`, `statement (constraint, correction):`. Salience reads
+`corrects` and `status: "failed"`; protections read `status` (only a `passed` outcome resolves an earlier error). A
+record without `corrects` (or an outcome without a status) keeps the English patterns as well: on the plan 218.2 worker
+replay the fields beat the patterns on non-English turns and on precision for every model, but not on English recall,
+so the patterns stay as a union. Ledgers written before the fields read unchanged.
 
 The stored record keeps `kind`, `description`, `count` (1; habituation raises it), `lastAt`, and
 optional `chunkRefs` (id, source entry id, sha256, bytes of verbatim chunks kept outside the branch).
@@ -490,26 +511,51 @@ session's secret set redacts the request as before.
 WM (plan 218 Task 2, design §5.4) turns the STM surface into what the episode's remaining work needs. It reads the
 episode scope ([Episode scope](#episode-scope)), the task state, the current WM items, and a batch of new STM records
 with their kinds, counts and chunk sizes. Records carrying a salience signal are marked `salient:` in the request: an
-`error` event, a user correction, a denied tool call (`hook_denied` on the branch) or a failed verification in an
-`outcome`. The signals come from the records and their source entries, never from a model.
+`error` event, a user correction (`corrects`, or for a record without it a correction phrase in the cited user turn), a
+denied tool call (`hook_denied` on the branch) or a failed verification (`status: "failed"`, or for an `outcome`
+without a status a failure phrase in its description). The signals come from the records the STM worker wrote and
+their source entries; the WM model sets none.
 
-**Verdicts on named records.** Each record in the batch gets at most one verdict:
+**Settled first (plan 218.2 Task 5).** A record protected as `constraint`, `task_state`, `unresolved_error` or
+`open_question` (see the protections below) is kept as a WM `event` by code before the model is asked, with
+`protected: <class>` as its reason. The request lists these records under "Already kept" and asks no verdict for them;
+when every record in the batch is settled and none is re-judged, the pass makes no model call. Records protected as
+`fact` or `needed_later` still go to the model, because a summary may absorb them.
 
-| Tool | Arguments | Effect |
-| --- | --- | --- |
-| `keep` | `{ stmId, reason, neededLater? }` | a WM `event` item: the record's description, relevance, time and chunks, and the reason |
-| `summarize` | `{ stmIds, text, relevance, supersedes?, neededLater? }` | one WM `summary` citing those records and inheriting their chunks |
-| `derive` | `{ text, supportingIds, relevance, supersedes?, neededLater? }` | an episode `fact` citing active STM records or WM items; it gives no verdict |
-| `discard` | `{ stmId, reason }` | no item; `reason` is `finished`, `out-of-scope`, `superseded` or `duplicate`; a protected record is refused |
+**Verdicts in one call, over ordinals.** The request names the batch's records `r1…rN`, the current WM items `w1…wM`
+and re-judged records `j1…jK`; the ordinals exist only inside that request, and the package maps them back to ids
+(items, tombstones, the render and `recall` keep the 12-character ids). The model gives every verdict in one `judge`
+call:
 
-`neededLater` names the scope step that needs the item; a marked item is protected. A tool that stored nothing answers
-`{ ok: false, reason }`: `unknown_id`, `already_processed` (a second verdict, or a record already tombstoned),
-`empty_text`, `citation_outside_active_set` (an id the session holds that is not in the batch, not active, or a WM item
-already superseded), or `protected` with the protection class. A record left without a verdict stays on the STM surface and
-rendered, for the next pass. The instruction asks for one subject per item in a few sentences, with a changed value
-written as old → new with its dates, and to keep what the scope's later planned steps need, not only the current task.
+```json
+{ "keep": [{ "r": 4, "reason": "task 3 reads this path", "neededLater": "Task 3" }],
+  "discard": { "finished": [2, 3], "out-of-scope": [], "superseded": [7], "duplicate": [] },
+  "summaries": [{ "of": [5, 6], "text": "…", "relevance": "medium", "supersedes": ["w2"] }],
+  "facts": [{ "text": "…", "support": ["r4", "w1"], "relevance": "high" }] }
+```
 
-**Incremental (I6).** A pass adds items and supersedes only the WM items its `summarize` or `derive` calls name; it
+| Entry | Effect |
+| --- | --- |
+| `keep` | a WM `event` item: the record's description, relevance, time and chunks, and the reason; `j` in place of `r` keeps a re-judged record |
+| `summaries` | one WM `summary` per entry, citing those records and inheriting their chunks |
+| `facts` | an episode `fact` per entry, citing records and items (`support`); it gives no verdict |
+| `discard` | no item; records by reason: `finished`, `out-of-scope`, `superseded` or `duplicate`; a protected record is refused |
+
+`neededLater` names the scope step that needs the item; a marked item is protected. Each entry is checked on its own,
+in the order keep, summaries, discard, facts, and the valid ones apply; the result lists each refused entry
+(`{ entry, reason, ordinal?, protection? }`, at most 64) with `unknown_id` (an ordinal outside the request, which can
+never name a record outside the batch), `already_processed` (a second verdict, a settled record, or a re-judged record
+named outside `keep`), `empty_text`, `citation_outside_active_set` (a WM item already superseded), `invalid_arguments`
+or `protected` with the protection class, plus `applied` and `unjudged` counts, so one more turn can fix them. A record
+left without a verdict stays on the STM surface and rendered, for the next pass. The instruction asks for one subject per
+item in a few sentences, with a changed value written as old → new with its dates, and to keep what the scope's later
+planned steps need, not only the current task.
+
+The four per-record tools this replaced (`keep`, `summarize`, `derive`, `discard`, one call per verdict) were measured
+against `judge` on the plan 218.2 worker replay. With `judge`, every worker model gave more records a verdict (Muse Spark
+0.45 → 1.00, DeepSeek 0.68 → 0.99, MiMo 0.12 → 0.75) and spent 35–67% fewer output tokens per record.
+
+**Incremental (I6).** A pass adds items and supersedes only the WM items its summaries or facts name; it
 never replaces the WM set. Every processed record leaves the STM surface with a tombstone carrying its verdict and
 stays recallable by id. In the same chunk-store transaction, every chunk a new WM item cites gains a `wm` referrer and
 every tombstoned record's `stm` referrer is removed, so a chunk WM cites survives and an uncited one is deleted (I2–I3).
@@ -517,9 +563,8 @@ A fork or resumed session adds its own `wm` referrers for the active items' chun
 
 **When it runs.** Once the STM surface reaches `wm.triggerTokens` (10,000), or when a boundary marker is new since the
 last WM attempt; no pass runs while one is in flight for the session. A pass sends at most `wm.batchTokens` (3,000) of
-the oldest records, and at most three quarters of `worker.maxToolCalls` records, so the verdicts fit one model's
-output: plan 217's gate M-1 saw two answer models write nothing when the whole log of about 22k tokens went in one
-call. A model call that stops on its output limit before giving any verdict (gate M-2: Muse Spark 1.3 spent the limit
+the oldest records, so the verdicts fit one model's output: plan 217's gate M-1 saw two answer models write nothing when
+the whole log of about 22k tokens went in one call. A model call that stops on its output limit before giving any verdict (gate M-2: Muse Spark 1.3 spent the limit
 on reasoning in half its calls) retries once on the older half of the batch; the newer half waits for the next pass.
 After an attempt that still did nothing, or failed, WM waits for another `wm.triggerTokens` of new records. A host runs
 one pass now, below the trigger, with `memory.system.rehearse(session, { only: "wm" })`, which resolves
@@ -530,23 +575,38 @@ whose hash differs from the one last re-judged (a set or a clear; setting the sa
 sent the records WM discarded earlier, newest tombstone first, up to `wm.rejudgeTokens` (8,000; 0 turns it off). Only
 records whose chunks still live are offered: a chunk is live while this session holds a referrer for it (a WM item, a fork
 restored into this session); a discarded record with no chunks is offered on its own line. `keep` may bring one back as a
-WM `event`, which takes a `wm` referrer for its chunks; any other verdict on it answers `already_processed`, and a record
-left alone stays tombstoned. The pass records `rejudge { scopeHash?, offered, kept, chunkDropped }` on its
+WM `event`, which takes a `wm` referrer for its chunks; a re-judged record has a `j` ordinal, which only `keep` takes, and a
+record left alone stays tombstoned. The pass records `rejudge { scopeHash?, offered, kept, chunkDropped }` on its
 `wm.recorded` record; `chunkDropped` names the discarded records whose chunks were all deleted, so the loss is visible.
 A scope change does not trigger a pass by itself, and the deterministic policy does not re-judge.
 
 **Compression: the ratio is pressure (plan 218 Task 3).** The request states a target: the items a pass writes aim at
 `wm.targetRatio` (0.2) × the batch's tokens, after relevance, never by dropping what later work needs. Salient records
 are listed under "Keep first" in priority order (corrections, denials, errors, failed verifications). Protections (I5)
-are code in `protections.ts`, shared with plan 219's Rehearsal, not prompt text: `discard` refuses with `protected`
+are code in `protections.ts`, shared with plan 219's Rehearsal, not prompt text: the first four classes below are settled
+by code before the model is asked, and `judge` refuses a discard of any protected record with `protected`
 
-- a `request` or `decision` the current task state was written from (`task_state`);
+- a user statement recorded `durable: "constraint"` (`constraint`), for the episode, until a later record `supersedes`
+  it; it is settled as an event of its own, so no summary folds it in (`durable: "preference"` is not protected here;
+  Rehearsal reads it);
+- a user `request` no `outcome` names in `resolves` yet (`task_state`). When no outcome in the ledger carries `resolves`
+  (an older ledger, or a worker that never sets it), the batch rule applies instead: a `request` or `decision` the
+  current task state was written from. A `decision` always follows the batch rule;
 - a record an active WM `fact` cites (`fact`);
-- an `error` no later passing `outcome` resolves (`unresolved_error`);
+- an `error` no `status: "passed"` outcome names in `resolves` (`unresolved_error`). With no `resolves` in the ledger, an
+  error no later passing outcome resolves (an outcome with `status` resolves only when it is `passed`, one without a
+  status unless it reads as a failed verification);
 - a question (`?`) the task state was written from while it lists open questions (`open_question`);
 - a record an active WM item marked `neededLater` cites (`needed_later`).
 
-A protected record may still be kept or summarized. When the batch's protected records alone exceed the target, the
+Protections by link (`task_state` and `unresolved_error` read from `resolves`) are bounded: after
+`wm.protectRequestPasses` (8) WM passes that processed records with no resolving outcome, the record is no longer
+protected and the pass names it in `protectionLapsed` on its `wm.recorded` record, so a worker that never resolves cannot
+grow `budgetUnmet` without limit. Only a ledger record written through the STM tool (`resolves`, `supersedes`, both
+validated ids) clears a protection; a prompt cannot. `isProtectedWmItem(item, ledger)` also protects a WM `event` kept
+from a constraint.
+
+A record protected as `fact` or `needed_later` may still be kept or summarized. When the batch's protected records alone exceed the target, the
 request says so, and the pass records `budgetUnmet { protectedTokens, targetTokens }`; nothing more is discarded to meet
 it. `memory:session:status` shows the latest pass's `budgetUnmet`, and each `wm.recorded` record carries `compression {
 processedTokens, itemTokens, targetTokens }` for the achieved ratio.
@@ -556,7 +616,8 @@ salient records as `event` items, summarises nothing, and discards the rest lowe
 a relevance, until the kept tokens reach the target (tombstone reason `wm discard budget`). It suits cost-capped hosts;
 its items are the records' own lines, so the achieved ratio is often above the target.
 
-**Cost.** One WM call per trigger crossing or new boundary (none with `wm.policy: "deterministic"`), its input bounded
+**Cost.** One WM call per trigger crossing or new boundary (none with `wm.policy: "deterministic"`, and none when every
+record in the batch is settled), usually one turn with one `judge` call, its input bounded
 by `wm.batchTokens` plus the active WM items, the task state and the scope (at most `scope.maxBytes`), and, only on the
 first pass after a scope change, at most `wm.rejudgeTokens` of re-judged records. The target and
 protection marks add one short section and one word per protected record. The whole-log rewrite and its "consume
@@ -578,6 +639,29 @@ snippet, a quoted request), so a later tier can read the exact text without re-r
   truncation marker names sizes only, never the cut bytes. A batch's accepted chunks may take at most 25% of its
   serialized transcript bytes (`chunk_budget_exceeded` past that), so stored chunk bytes stay under a quarter of the
   transcript they cover whatever the caps are.
+- **Evidence kept by rule.** When the worker records one of these with no chunk, the package attaches one from the
+  cited entry, with no model call:
+  - an `error`, or an `outcome`/`result` with `status: "failed"`, citing a tool result: the last `stm.autoChunkBytes`
+    (default 1,024) of that result, cut on a line boundary;
+  - a `durable` event citing a user message: the first sentence holding a term the description quotes, else the first
+    `stm.autoChunkBytes` of the message.
+
+  The automatic chunk takes the worker's path (verbatim check, redaction, `stm.maxChunkBytes`) and the batch's 25%
+  budget: when the budget is spent, the event records without it. A worker's own chunk is never replaced. It is off
+  with `stm.autoChunkBytes: 0`, and whenever chunks are off.
+
+  Cost: no model call, one scan of the cited entry per qualifying event. On the worker replay (60 STM requests, plan
+  218.2 Task 4) with `1024`, against the same product with the rule off:
+
+  | Worker model | Evidence spans covered (of 42), off → on | Chunk bytes per 10k source tokens, off → on |
+  | --- | --- | --- |
+  | `muse-spark-1.3-contributor` | 0 → 11 | 6 → 188 |
+  | `deepseek-v4.1-flash` | 19 → 26 | 156 → 359 |
+  | `mimo-v2.6-flash` | 13 → 21 | 461 → 529 |
+
+  The replay's fixed rule asked for off, because Muse's chunk bytes passed twice its own small first baseline (74 per
+  10k). The owner turned it on (2026-11-15): Muse's 188 bytes per 10k is below DeepSeek's baseline and far under the
+  25% batch share (`docs/_evidence/memory-bench/218.2/replay-task4.json`). Set `0` to avoid the cost.
 - **Never on the branch.** The ledger keeps only `chunkRefs` (id, source entry id, sha256, bytes). The text lives in
   the chunk store and never enters the context block, the ledger or a shared store.
 - **The store.** The default is a SQLite store (`stm.chunkStore`: in memory for the process lifetime, or a file
@@ -629,12 +713,36 @@ Ran 35 tests across 3 files. 0 fail
 - **Cost.** One ledger fold (already in memory) and one chunk-store read per chunk; no model call. A store that cannot
   be read lists the chunks as `(not read)` and the call still succeeds.
 
+`recall { query, limit? }` finds a record whose id the agent no longer sees, such as one WM discarded (plan 218.2
+Task 7):
+
+```text
+2 session memory record(s) match; call recall with an id for evidence and chunks.
+- [c1d2e3f4a5b6] result 2026-11-15T10:00:00.000Z (tombstoned: wm discard finished): Retry maxAttempts set to 5 after the interrupted upload.
+- [d4e5f6a1b2c3] error 2026-11-15T09:40:00.000Z (active): Upload interrupted twice on the CI runner.
+```
+
+- **What it searches.** The descriptions of this session's STM records and the text of its WM items, including
+  tombstoned, dropped and superseded ones, with the long-term store's lexical terms (lowercase, stopwords dropped,
+  light stemming). Hits are ordered by the share of query terms they hold, then newest first. Up to `limit` hits
+  (default 8, at most 100). Each line gives the id, kind, time, state (`active`, `tombstoned: <reason>`,
+  `dropped: <reason>`, `superseded`) and description; chunk text is read with `recall { id }`.
+- **No match.** `found: false`, `reason: "no_match"`, and `tiers: ["stm", "wm"]`. A query with no search term
+  answers `invalid_query`.
+- **Kept apart from long-term memory.** Session hits never enter `memory.recall` ranking.
+- **The block says what is hidden.** When WM has tombstoned records, the block written at compaction gains one line
+  (`N earlier records were taken off this surface by working memory; call recall with a query to search them.`). Only
+  the compaction summary carries it, so the prompt prefix between compactions stays byte-identical.
+- **Cost.** One in-memory fold and scan of the session's ledger; no store read and no model call. On the long-session
+  fixture (409 entries, 55 records) a query takes 1.6 ms median, 3.5 ms p95. Output is redacted with the session's
+  secrets.
+
 ### Dates, updates, and the current task
 
 The STM worker sees each source message prefixed with its stored ISO timestamp, and gaps of at least
 10 minutes marked as `[gap: 10m]`, `[gap: 2h]`, or `[gap: 2d]`. It converts relative time references
 using that message time. `record_event { kind, description, sourceEntryIds, relevance?, referencedAt?,
-supersedes? }` derives `observedAt` (and `lastAt`) from the latest source timestamp; `timestamp` remains the recording
+supersedes?, status?, corrects?, durable?, resolves? }` derives `observedAt` (and `lastAt`) from the latest source timestamp; `timestamp` remains the recording
 time. `referencedAt` accepts a valid `YYYY-MM-DD` date; invalid dates are discarded. A known
 `supersedes` id writes a drop record with `reason: "superseded"` and `supersededBy`; unknown ids are
 ignored and reported in the tool result without discarding the new event. WM item date
@@ -2308,6 +2416,7 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `stm.contextTokens` | tuning |
 | `stm.maxChunksPerEvent` | tuning |
 | `stm.maxChunkBytes` | tuning |
+| `stm.autoChunkBytes` | tuning |
 | `stm.chunkStore` | contract |
 | `stm.chunkStore.sqlite` | contract |
 | `stm.chunkStore.sqlite.path` | contract |
@@ -2323,6 +2432,7 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `wm.batchTokens` | tuning |
 | `wm.targetRatio` | tuning |
 | `wm.rejudgeTokens` | tuning |
+| `wm.protectRequestPasses` | tuning |
 | `wm.policy` | contract |
 | `rehearsal` | contract |
 | `rehearsal.model` | contract |

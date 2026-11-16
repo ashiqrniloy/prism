@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
+import assert from "node:assert/strict";
+import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { DEFAULT_CONSOLIDATION_THRESHOLD } from "../consolidate.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };

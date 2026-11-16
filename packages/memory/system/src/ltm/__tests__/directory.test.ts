@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ContextDraft, HookContext, JsonObject, ToolExecutionContext } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory } from "../../index.js";
 import { createFabricContext } from "../context.js";
 import {
   createFabricDirectory,
@@ -15,7 +16,6 @@ import {
   resolveFabricDirectoryOptions,
 } from "../directory.js";
 import { createFabricFileJail } from "../files.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 
 const tempDirs: string[] = [];
 after(async () => {

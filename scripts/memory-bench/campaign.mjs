@@ -1184,7 +1184,6 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       if (job.finalTurnAnswer) argv.push("--final-turn-answer");
       if (job.maintainBeforeAnswer) argv.push("--maintain-before-answer");
       if (job.strictQuestions) argv.push("--strict-questions");
-      if (job.wmScope) argv.push("--wm-scope");
       const writeOnly = producers.has(job.id);
       if (profile && !writeOnly) {
         argv.push(

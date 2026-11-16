@@ -1,0 +1,38 @@
+{
+  "seed": "prism-218.2-long-horizon",
+  "draw": "SHA-256(\"prism-218.2-long-horizon:\" + id), ascending inside the family stratum",
+  "source": "work-outcome/long-horizon.mjs (project-owned synthetic generator, the long-session template chained); ids only",
+  "strata": {
+    "long-horizon-coding": [
+      2,
+      2,
+      2
+    ]
+  },
+  "projectsPerSession": 13,
+  "part": "dev | heldout-a | heldout-b; dev is the development reading; heldout-a and heldout-b belong to the memory model's gate A",
+  "residualPool": {
+    "long-horizon-coding": 0
+  },
+  "idsHash": "d1bcae5ff7efe14b2d2988849c3207fe721137963884e73bd307f7f421447db8",
+  "abilities": {
+    "dev": {
+      "long-horizon-coding": [
+        "lh3",
+        "lh2"
+      ]
+    },
+    "heldout-a": {
+      "long-horizon-coding": [
+        "lh0",
+        "lh4"
+      ]
+    },
+    "heldout-b": {
+      "long-horizon-coding": [
+        "lh1",
+        "lh5"
+      ]
+    }
+  }
+}

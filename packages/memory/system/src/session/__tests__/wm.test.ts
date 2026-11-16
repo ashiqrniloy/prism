@@ -29,6 +29,7 @@ import {
 } from "../types.js";
 import { runDropper } from "../workers/dropper.js";
 import { DEFAULT_WM_INSTRUCTION, runWm } from "../workers/wm.js";
+import { judgeClient, promptText } from "./judge-helpers.js";
 
 const record = (id: string, description: string, extra: Partial<MemoryObservation> = {}): MemoryObservation => ({
   id,
@@ -113,14 +114,13 @@ it("every_processed_stm_record_has_exactly_one_verdict", async () => {
   const requests: ProviderRequest[] = [];
   const h = harness(
     [recorded(A, B, C, D)],
-    scripted(
-      [
-        ["summarize", { stmIds: [A.id, B.id], text: "Ran suites one and two; 23 pass.", relevance: "medium" }],
-        ["keep", { stmId: A.id, reason: "twice" }],
-        ["keep", { stmId: C.id, reason: "step 4 needs it" }],
-        ["discard", { stmId: B.id, reason: "duplicate" }],
-        ["discard", { stmId: D.id, reason: "finished" }],
-      ],
+    judgeClient(
+      [A, B, C, D],
+      {
+        keep: [{ id: C.id, reason: "step 4 needs it" }],
+        summaries: [{ of: [A.id, B.id], text: "Ran suites one and two; 23 pass.", relevance: "medium" }],
+        discard: { duplicate: [B.id], finished: [A.id, D.id] },
+      },
       requests,
     ),
     { worker: { maxTurns: 2 } },
@@ -145,7 +145,8 @@ it("every_processed_stm_record_has_exactly_one_verdict", async () => {
   const wm = h.data.find((value) => (value as { type?: string }).type === WM_RECORDED) as { processedIds: string[] };
   assert.deepEqual(wm.processedIds.sort(), [A.id, B.id, C.id, D.id]);
   // The kept record is an `event` citing it with its chunks and time; the summary cites both records it replaced.
-  const [summary, event] = activeWmItems(ledger);
+  // `judge` applies keeps before summaries: the event is made first.
+  const [event, summary] = activeWmItems(ledger);
   assert.equal(summary?.kind, "summary");
   assert.deepEqual(summary?.citedIds, [A.id, B.id]);
   assert.equal(event?.kind, "event");
@@ -156,10 +157,7 @@ it("every_processed_stm_record_has_exactly_one_verdict", async () => {
 it("partial_pass_keeps_unprocessed_records_rendered", async () => {
   const h = harness(
     [recorded(A, B, C, D)],
-    scripted([
-      ["keep", { stmId: A.id, reason: "needed" }],
-      ["discard", { stmId: B.id, reason: "finished" }],
-    ]),
+    judgeClient([A, B, C, D], { keep: [{ id: A.id, reason: "needed" }], discard: { finished: [B.id] } }),
   );
   await h.flush.flush(h.session);
   const ledger = h.ledger();
@@ -181,10 +179,10 @@ it("only_named_items_are_superseded", async () => {
   const two = item("222222222222", "Old summary two", [A.id]);
   const h = harness(
     [recorded(A, B, C), { type: WM_RECORDED, items: [one, two] }],
-    scripted([
-      ["summarize", { stmIds: [B.id], text: "Suite two: 11 → 12 pass after the retry fix.", relevance: "high", supersedes: [one.id] }],
-      ["derive", { text: "The retry fix is in.", supportingIds: [C.id, two.id], relevance: "high", supersedes: ["333333333333"] }],
-    ]),
+    judgeClient([A, B, C, one, two], {
+      summaries: [{ of: [B.id], text: "Suite two: 11 → 12 pass after the retry fix.", relevance: "high", supersedes: [one.id] }],
+      facts: [{ text: "The retry fix is in.", support: [C.id, two.id], relevance: "high", supersedes: ["w9"] }],
+    }),
   );
   await h.flush.flush(h.session);
   const active = activeWmItems(h.ledger()).map((wmItem) => wmItem.text);
@@ -193,7 +191,7 @@ it("only_named_items_are_superseded", async () => {
 });
 
 it("processed_stm_is_tombstoned_and_recallable", async () => {
-  const h = harness([recorded(A)], scripted([["discard", { stmId: A.id, reason: "out-of-scope" }]]));
+  const h = harness([recorded(A)], judgeClient([A], { discard: { "out-of-scope": [A.id] } }));
   await h.flush.flush(h.session);
   const entries = h.data.map((value, index) => ({ id: `r${index}`, sessionId: "s", timestamp: A.timestamp, kind: "custom", data: value }));
   const recalled = recallObservationalMemory(entries as SessionEntry[], A.id);
@@ -218,10 +216,7 @@ it("chunk_cited_by_wm_survives_uncited_chunk_deleted", async () => {
   const withOther = { ...D, chunkRefs: [ref(dropped)] };
   const h = harness(
     [recorded(withChunk, withOther)],
-    scripted([
-      ["keep", { stmId: A.id, reason: "result" }],
-      ["discard", { stmId: D.id, reason: "finished" }],
-    ]),
+    judgeClient([A, D], { keep: [{ id: A.id, reason: "result" }], discard: { finished: [D.id] } }),
   );
   const flush = createObservationalFlush({
     ...h.deps,
@@ -236,10 +231,12 @@ it("chunk_cited_by_wm_survives_uncited_chunk_deleted", async () => {
   assert.equal(renderObservationalMemory([event!], []).includes(kept.text), false, "chunk text never renders");
 });
 
-it("wm_tools_report_named_rejections", async () => {
+it("wm_judge_reports_named_rejections", async () => {
   const requests: ProviderRequest[] = [];
+  const old = item("111111111111", "Old summary one", [C.id]);
   const ledger = foldObservationalMemoryLedger([
     recorded(A, B, C),
+    { type: WM_RECORDED, items: [old] },
     { type: "memory.session.observations.tombstoned", observationIds: [C.id], reason: "wm discard finished", at: A.timestamp },
   ]);
   const { items, verdicts } = await runWm({
@@ -248,13 +245,21 @@ it("wm_tools_report_named_rejections", async () => {
     maxTurns: 2,
     client: scripted(
       [
-        ["keep", { stmId: "eeeeeeeeeeee", reason: "x" }],
-        ["keep", { stmId: C.id, reason: "x" }],
-        ["discard", { stmId: B.id, reason: "finished" }],
-        ["keep", { stmId: B.id, reason: "x" }],
-        ["summarize", { stmIds: [A.id], text: "   ", relevance: "low" }],
-        ["derive", { text: "fact", supportingIds: [C.id], relevance: "low" }],
-        ["summarize", { stmIds: [A.id], text: "ok", relevance: "low", supersedes: ["ffffffffffff"] }],
+        [
+          "judge",
+          {
+            keep: [
+              { r: 9, reason: "x" },
+              { r: 2, reason: "x" },
+            ],
+            summaries: [
+              { of: [1], text: "   ", relevance: "low" },
+              { of: [1], text: "ok", relevance: "low", supersedes: ["w1"] },
+            ],
+            discard: { finished: [2] },
+            facts: [{ text: "fact", support: ["r1"], relevance: "low", supersedes: ["w1"] }],
+          },
+        ],
       ],
       requests,
     ),
@@ -262,19 +267,22 @@ it("wm_tools_report_named_rejections", async () => {
   const text = replies(requests[1]!).join("\n");
   for (const reason of ["unknown_id", "already_processed", "empty_text", "citation_outside_active_set"])
     assert.match(text, new RegExp(`"reason":"${reason}"`), reason);
-  assert.equal((text.match(/"ok":false/g) ?? []).length, 6);
-  assert.deepEqual(items, []);
-  assert.deepEqual([...verdicts.keys()], [B.id]);
+  assert.equal((text.match(/"entry":/g) ?? []).length, 4);
+  assert.deepEqual(
+    items.map((made) => made.kind),
+    ["event", "summary"],
+  );
+  assert.deepEqual([...verdicts.keys()], [B.id, A.id]);
 });
 
 it("wm_input_is_batched_to_wm_batch_tokens", async () => {
   const requests: ProviderRequest[] = [];
   const h = harness([recorded(D, C, B, A)], scripted([], requests), { wm: { triggerTokens: 1, batchTokens: 20 } });
   await h.flush.flush(h.session);
-  const prompt = JSON.stringify(requests[0]!.messages);
+  const prompt = promptText(requests[0]!);
   // The oldest two records by time (D at :00, A at :07) fit 20 tokens; B and C wait and stay rendered.
-  const sent = [...prompt.matchAll(/- \[([a-f0-9]{12})\] 2026-/g)].map((match) => match[1]);
-  assert.deepEqual(sent, [D.id, A.id]);
+  const sent = [...prompt.matchAll(/^- \[(r[0-9]+)\] 2026-.*: (.*)$/gm)].map((match) => `${match[1]} ${match[2]}`);
+  assert.deepEqual(sent, [`r1 ${D.description}`, `r2 ${A.description}`]);
   assert.match(String(observationalMemoryBlock(h.ledger())[0]!.content), /suite two[\s\S]*suite three/);
   assert.equal(activeObservations(h.ledger()).length, 4, "a pass with no verdict processes nothing");
 });
@@ -307,7 +315,7 @@ it("wm_prompt_carries_scope_task_state_and_salience_never_to_stm", async () => {
   assert.match(user, /salient: error: Retry counter overflowed/);
   assert.deepEqual(
     requests[0]!.tools?.map((tool) => tool.name),
-    ["keep", "summarize", "derive", "discard"],
+    ["judge"],
   );
 });
 
@@ -336,7 +344,7 @@ it("a_new_boundary_triggers_wm_below_the_token_trigger", async () => {
 
 it("rehearse_only_wm_runs_a_pass_below_the_trigger", async () => {
   const { createMemorySystemService } = await import("../../service.js");
-  const h = harness([recorded(A)], scripted([["keep", { stmId: A.id, reason: "needed" }]]), {
+  const h = harness([recorded(A)], judgeClient([A], { keep: [{ id: A.id, reason: "needed" }] }), {
     wm: { triggerTokens: 1_000 },
     rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
   });
@@ -392,13 +400,13 @@ it("render_truncation_drops_oldest_observations_first", () => {
 // and failed outright past the per-turn call limit.
 it("wm_refuses_calls_past_the_per_turn_limit_and_keeps_the_rest", async () => {
   let requests = 0;
-  const keep = (id: string, stmId: string) => providerToolCall(toolCallContent(id, "keep", { stmId, reason: "needed" }));
+  const keep = (id: string, r: number) => providerToolCall(toolCallContent(id, "judge", { keep: [{ r, reason: "needed" }] }));
   const client: ModelClient = {
     ...done,
     async *generate() {
       requests++;
-      if (requests === 1) yield* [keep("r1", A.id), keep("r2", B.id), keep("r3", C.id)];
-      else if (requests === 2) yield keep("r4", C.id);
+      if (requests === 1) yield* [keep("r1", 1), keep("r2", 2), keep("r3", 3)];
+      else if (requests === 2) yield keep("r4", 3);
       yield providerDone();
     },
   };
@@ -421,7 +429,7 @@ it("wm_pass_ends_after_a_clean_turn", async () => {
     ...done,
     async *generate() {
       requests++;
-      yield providerToolCall(toolCallContent(`r${requests}`, "keep", { stmId: A.id, reason: "needed" }));
+      yield providerToolCall(toolCallContent(`r${requests}`, "judge", { keep: [{ r: 1, reason: "needed" }] }));
       yield providerDone();
     },
   };
@@ -482,21 +490,9 @@ it("scope_change_rejudges_live_tombstones", async () => {
   const withLive = { ...A, chunkRefs: [ref(live)] };
   const withGone = { ...D, chunkRefs: [ref(gone)] };
   const plain = record("ffffffffffff", "Timed the baseline run at 41 s");
-  let calls: [string, Record<string, unknown>][] = [
-    ["discard", { stmId: A.id, reason: "finished" }],
-    ["discard", { stmId: D.id, reason: "finished" }],
-    ["discard", { stmId: plain.id, reason: "out-of-scope" }],
-  ];
+  let spec: Parameters<typeof judgeClient>[1] = { discard: { finished: [A.id, D.id], "out-of-scope": [plain.id] } };
   const requests: ProviderRequest[] = [];
-  const client: ModelClient = {
-    ...done,
-    async *generate(request) {
-      requests.push(request);
-      if (!request.messages.some((message) => message.role === "tool"))
-        for (const [index, [name, args]] of calls.entries()) yield providerToolCall(toolCallContent(`c${index}`, name, args as never));
-      yield providerDone();
-    },
-  };
+  const client = judgeClient([withLive, withGone, plain], (prompt) => (typeof spec === "function" ? spec(prompt) : spec), requests);
   const h = harness([recorded(withLive, withGone, plain)], client);
   const flush = createObservationalFlush({
     ...h.deps,
@@ -509,19 +505,20 @@ it("scope_change_rejudges_live_tombstones", async () => {
 
   // The re-plan: a new step needs the baseline result. The next pass is sent the discarded records whose chunks live.
   h.data.push({ type: SCOPE_SET, hash: "1111111111111111", bytes: 40, at: A.timestamp } as unknown as JsonValue);
-  calls = [
-    ["keep", { stmId: A.id, reason: "step 4 compares against the baseline" }],
-    ["discard", { stmId: plain.id, reason: "finished" }],
-    ["summarize", { stmIds: [plain.id], text: "Baseline timing", relevance: "low" }],
-  ];
+  spec = {
+    keep: [{ id: A.id, reason: "step 4 compares against the baseline" }],
+    discard: { finished: [plain.id] },
+    summaries: [{ of: [plain.id], text: "Baseline timing", relevance: "low" }],
+  };
   requests.length = 0;
   await flush.flush(h.session, { forceWm: true });
-  const prompt = JSON.stringify(requests[0]?.messages);
+  const prompt = promptText(requests[0]!);
   assert.match(prompt, /Earlier discarded records \(2; the episode scope changed\)/);
-  assert.match(prompt, new RegExp(A.id));
-  assert.match(prompt, new RegExp(plain.id));
-  assert.equal(prompt.includes(`[${D.id}]`), false, "a record whose chunks were deleted is not offered");
-  assert.match(replies(requests[1]!).join("\n"), /already_processed.*already_processed/s, "only keep applies to re-judged records");
+  assert.match(prompt, /\[j1\][^\n]*Timed the baseline run/);
+  assert.match(prompt, /\[j2\][^\n]*Ran the campaign suite one/);
+  assert.equal(prompt.includes(D.description), false, "a record whose chunks were deleted is not offered");
+  // Only keep applies to re-judged records: a discard or summary naming one names no record of the batch.
+  assert.match(replies(requests[1]!).join("\n"), /unknown_id.*unknown_id/s, "only keep applies to re-judged records");
   const recordedPass = h.data.filter((value) => (value as { type?: string }).type === WM_RECORDED).at(-1) as unknown as {
     rejudge: { scopeHash: string; offered: number; kept: string[]; chunkDropped: string[] };
     processedIds?: string[];
@@ -553,7 +550,7 @@ it("wm_retries_the_older_half_after_an_output_cap_stop_with_no_verdict", async (
   const client: ModelClient = {
     ...done,
     async *generate(request) {
-      const prompt = JSON.stringify(request.messages);
+      const prompt = promptText(request);
       if (request.messages.some((message) => message.role === "tool")) {
         yield providerDone();
         return;
@@ -563,17 +560,17 @@ it("wm_retries_the_older_half_after_an_output_cap_stop_with_no_verdict", async (
         yield providerDone(undefined, "max_output_tokens");
         return;
       }
-      for (const [index, id] of [A.id, B.id, C.id, D.id].entries())
-        if (prompt.includes(id)) yield providerToolCall(toolCallContent(`k${index}`, "keep", { stmId: id, reason: "needed" }));
+      const offered = [...prompt.matchAll(/^- \[r([0-9]+)\]/gm)].map((match) => ({ r: Number(match[1]), reason: "needed" }));
+      yield providerToolCall(toolCallContent("k", "judge", { keep: offered }));
       yield providerDone();
     },
   };
   const h = harness([recorded(a, b, c, d)], client);
   const result = await h.flush.flush(h.session);
   assert.equal(prompts.length, 2, "one retry");
-  assert.ok([A.id, B.id, C.id, D.id].every((id) => prompts[0]!.includes(id)));
-  assert.ok(prompts[1]!.includes(A.id) && prompts[1]!.includes(B.id), "the retry sends the older half");
-  assert.ok(!prompts[1]!.includes(C.id) && !prompts[1]!.includes(D.id));
+  assert.ok([A, B, C, D].every((r) => prompts[0]!.includes(r.description)));
+  assert.ok(prompts[1]!.includes(A.description) && prompts[1]!.includes(B.description), "the retry sends the older half");
+  assert.ok(!prompts[1]!.includes(C.description) && !prompts[1]!.includes(D.description));
   assert.equal(result.processed, 2);
   assert.deepEqual(
     activeObservations(h.ledger()).map((observation) => observation.id),
@@ -600,7 +597,7 @@ it("wm_does_not_retry_an_empty_reply_that_stopped_normally_or_a_capped_reply_wit
     async *generate(request) {
       capped++;
       if (!request.messages.some((message) => message.role === "tool"))
-        yield providerToolCall(toolCallContent("k", "keep", { stmId: A.id, reason: "needed" }));
+        yield providerToolCall(toolCallContent("k", "judge", { keep: [{ r: 1, reason: "needed" }] }));
       yield providerDone(undefined, "max_output_tokens");
     },
   };

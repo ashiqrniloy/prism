@@ -142,7 +142,7 @@ describe("OM temporal grounding and task state", () => {
         id: "mock",
         async *generate() {
           yield providerToolCall(
-            toolCallContent("c", "summarize", { stmIds: [old.id, "bbbbbbbbbbbb"], text: "Deploy history", relevance: "medium" }),
+            toolCallContent("c", "judge", { summaries: [{ of: [1, 2], text: "Deploy history", relevance: "medium" }] }),
           );
           yield providerDone();
         },

@@ -4,7 +4,7 @@
   "task": 2,
   "file": "scripts/memory-bench/memory-model-criteria.json",
   "frozen": "2026-11-08",
-  "memoryModelCriteriaHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+  "memoryModelCriteriaHash": "8a59fc796b966178518dc1093e00ef932b65308432a290416f7faf71d385e095",
   "pins": {
     "robustness-criteria.json": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
     "three-tier-criteria.json": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
@@ -68,6 +68,22 @@
       "task": 2,
       "date": "2026-11-13",
       "reason": "fixture pins: compact-bench-retention and compact-bench-outcome get upstream code 9dd9a3f5..., dataset revision ff20521e..., SHA256SUMS 94a7c697... and the hash of the frozen draw work-outcome-compact-bench.json (e38d844d...); closed gate M-1 keeps 1a768299...; no row changes"
+    },
+    {
+      "previousHash": "9bdc892489baaad554857b1d609d04152219d3988e1d5b041026c956aef8e84b",
+      "hash": "9f8a7518ded6b474e86f5089dd89e5afe93522abf91385991f23a3536d9b0334",
+      "plan": "218.2",
+      "task": 1,
+      "date": "2026-11-13",
+      "reason": "fixture hash: worker-replay (plan 218.2's worker replay screen, index.json 0ce56d6b...) enters the index before its baseline; no row reads it; closed gate M-1 keeps 1a768299...; no row changes"
+    },
+    {
+      "previousHash": "9f8a7518ded6b474e86f5089dd89e5afe93522abf91385991f23a3536d9b0334",
+      "hash": "8a59fc796b966178518dc1093e00ef932b65308432a290416f7faf71d385e095",
+      "plan": "218.2",
+      "task": 8,
+      "date": "2026-11-15",
+      "reason": "fixture hash: long-horizon (plan 218.2's long-horizon family, work-outcome-long-horizon.json 52c8b368...) enters the index before any gate names it; no row reads it; closed gate M-1 keeps 1a768299...; no row changes"
     }
   ],
   "rule": "An amendment adds an `amendments` entry with `previousHash` to the criteria file, then replaces memoryModelCriteriaHash here and appends {previousHash, hash, plan, task, date} to `amendments`. Amendments add hashes or fitted values and change no row, except by a recorded owner decision (`kind` owner-decision, `decision`), as amendment 6 does."

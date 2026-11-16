@@ -14,7 +14,7 @@
  * Rows carry counts, hashes and verdicts only (the plan 210 harness rule).
  */
 import { digest, receivedText } from "./harness.mjs";
-import { longSession, replayLongSession } from "./stm.mjs";
+import { DURABLE_EVENTS, longSession, replayLongSession } from "./stm.mjs";
 
 const SCOPE_SENTINEL = "EPISODE-SCOPE-SENTINEL-218";
 /** Task 1's injection case: a scope that tries to steer the WM model's tools and output. */
@@ -50,17 +50,27 @@ function scopeSetter({ injection = false, replan = true } = {}) {
   };
 }
 
+// Plan 218.2 Task 5: the prompt names records, items and re-judged records by ordinal (`r3`, `w1`, `j2`), not by id.
 const RECORD_LINE =
-  /^- \[([0-9a-f]{12})\] (\S+) (.+?)(?: ×(\d+))? \((low|medium|high|critical)\)(?: \[chunks: [^\]]+\])?(?: salient: ([\w, ]+?))?(?: protected: (\w+))?: (.*)$/;
-const REJUDGE_LINE = /^- \[([0-9a-f]{12})\] (\S+) (\w+) \((low|medium|high|critical)\)(?: \[chunks: \d+\])?: (.*)$/;
-const ITEM_LINE = /^- \[([0-9a-f]{12})\] (event|summary|fact) \((low|medium|high|critical)\) cites ([0-9a-f, ]+): (.*)$/;
+  /^- \[(r[0-9]+)\] (\S+) (.+?)(?: ×(\d+))? \((low|medium|high|critical)\)(?: \[chunks: [^\]]+\])?(?: salient: ([\w, ]+?))?(?: protected: (\w+))?: (.*)$/;
+const REJUDGE_LINE = /^- \[(j[0-9]+)\] (\S+) (\w+) \((low|medium|high|critical)\)(?: \[chunks: \d+\])?: (.*)$/;
+const ITEM_LINE = /^- \[(w[0-9]+)\] (event|summary|fact) \((low|medium|high|critical)\) cites ([^:]*): (.*)$/;
+
+const recordOf = (m) => ({
+  id: m[1],
+  label: m[3],
+  relevance: m[5],
+  salient: m[6] ? m[6].split(/,\s*/) : [],
+  protection: m[7] ?? null,
+  description: m[8],
+});
 
 /** Parse one WM request the way a model reads it: sections by heading, records and items by line. */
 export function parseWmPrompt(text) {
   const open = text.indexOf(OPEN_TAG);
   const close = text.indexOf(CLOSE_TAG, open + 1);
   const scope = open >= 0 && close > open ? text.slice(open + OPEN_TAG.length, close) : "";
-  const out = { scope, records: [], rejudge: [], items: [], keepFirst: [], target: null, taskGoal: null };
+  const out = { scope, records: [], settled: [], rejudge: [], items: [], keepFirst: [], target: null, taskGoal: null };
   const goal = /"goal":"((?:[^"\\]|\\.)*)"/.exec(text);
   if (goal) out.taskGoal = JSON.parse(`"${goal[1]}"`);
   const target = /aim for items totalling at most (\d+) tokens/.exec(text);
@@ -76,17 +86,13 @@ export function parseWmPrompt(text) {
       const m = ITEM_LINE.exec(line);
       if (m) out.items.push({ id: m[1], kind: m[2], relevance: m[3], cites: m[4].split(/,\s*/), text: m[5] });
     }
+    if (section.startsWith("## Already kept")) {
+      const m = RECORD_LINE.exec(line);
+      if (m) out.settled.push(recordOf(m));
+    }
     if (section.startsWith("## New STM records")) {
       const m = RECORD_LINE.exec(line);
-      if (m)
-        out.records.push({
-          id: m[1],
-          label: m[3],
-          relevance: m[5],
-          salient: m[6] ? m[6].split(/,\s*/) : [],
-          protection: m[7] ?? null,
-          description: m[8],
-        });
+      if (m) out.records.push(recordOf(m));
     }
     if (section.startsWith("## Earlier discarded records")) {
       const m = REJUDGE_LINE.exec(line);
@@ -108,6 +114,9 @@ export function remainingSteps(scope, taskGoal) {
   return steps;
 }
 
+/** `{ eventId: class }` → `{ class: eventId }`. */
+const invert = (map) => Object.fromEntries(Object.entries(map).map(([id, value]) => [value, id]));
+
 /** The fixture steps that need an event: `expected.laterSteps` and the re-plan's `needs`. */
 function neededSteps(fx, eventId) {
   return [
@@ -117,7 +126,6 @@ function neededSteps(fx, eventId) {
 }
 
 const eventOf = (fx, description) => fx.events.find((event) => event.description === description);
-const toolResults = (request) => JSON.stringify(request.messages.filter((message) => message.role === "tool"));
 
 /**
  * The scripted WM worker. `mode`:
@@ -126,40 +134,65 @@ const toolResults = (request) => JSON.stringify(request.messages.filter((message
  *   other high-relevance records and outcomes into one item sized to the stated target; discard the rest;
  * - `aggressive`: try to discard every record (and derive one fact first), then keep whatever the package refuses;
  * - `salience`: under a tight target keep only protected records and the `## Keep first` list, discard the rest.
- * `log` collects every pass, call and refusal.
+ * It answers with one `judge` call over the prompt's ordinals (plan 218.2 Task 5). `log` collects every pass, the
+ * verdicts by kind, the records the package settled before the model was asked, and each refusal (by description).
  */
 export function scriptedWm(log, { mode = "scope", fx = longSession(), testing } = {}) {
-  const call = (id, name, args) => {
-    log.calls.push({ name, args });
-    if (Array.isArray(args.supersedes)) for (const item of args.supersedes) log.namedSupersedes.add(item);
-    return testing.providerToolCall(testing.toolCallContent(id, name, args));
-  };
   return (request) => {
     const prompt = receivedText({ messages: request.messages.filter((message) => message.role === "user") });
+    const parsed = parseWmPrompt(prompt);
+    const description = new Map([...parsed.records, ...parsed.settled].map((record) => [record.id, record.description]));
     if (request.messages.some((message) => message.role === "tool")) {
       // Second turn: keep what the package refused to discard as protected.
-      const refused = [...toolResults(request).matchAll(/protected\\*",\\*"id\\*":\\*"([0-9a-f]{12})\\*",\\*"protection\\*":\\*"(\w+)/g)];
-      const calls = [];
-      for (const [, id, protection] of refused) {
-        log.refusals.push({ id, protection });
-        calls.push(call(`wm-p-${log.calls.length}`, "keep", { stmId: id, reason: `protected: ${protection}` }));
+      const keep = [];
+      for (const entry of judgeRefusals(request)) {
+        if (entry.reason !== "protected") continue;
+        log.refusals.push({ description: description.get(entry.ordinal), protection: entry.protection });
+        keep.push({ r: Number(entry.ordinal.slice(1)), reason: `protected: ${entry.protection}` });
       }
-      return [...calls, testing.providerDone()];
+      if (!keep.length) return [testing.providerDone()];
+      log.calls.push({ name: "judge", args: { keep } });
+      return [testing.providerToolCall(testing.toolCallContent(`wm-p-${log.calls.length}`, "judge", { keep })), testing.providerDone()];
     }
-    const parsed = parseWmPrompt(prompt);
-    log.passes.push({ records: parsed.records.length, rejudge: parsed.rejudge.length, target: parsed.target, scope: parsed.scope });
+    for (const record of parsed.settled) log.settled.push({ description: record.description, protection: record.protection });
+    log.passes.push({
+      records: parsed.records.length,
+      settled: parsed.settled.length,
+      rejudge: parsed.rejudge.length,
+      target: parsed.target,
+      scope: parsed.scope,
+    });
     const remaining = remainingSteps(parsed.scope, parsed.taskGoal);
     const needed = (event) => (event ? neededSteps(fx, event.id).filter((step) => remaining.has(step)) : []);
-    const calls = [];
-    const next = (name, args) => calls.push(call(`wm-${log.calls.length}`, name, args));
+    const verdicts = { keep: [], discard: {}, summaries: [], facts: [] };
+    const ordinal = (label) => Number(label.slice(1));
+    const next = (name, args) => {
+      if (name === "keep")
+        verdicts.keep.push({
+          [args.stmId[0]]: ordinal(args.stmId),
+          reason: args.reason,
+          ...(args.neededLater ? { neededLater: args.neededLater } : {}),
+        });
+      else if (name === "discard") (verdicts.discard[args.reason] ??= []).push(ordinal(args.stmId));
+      else if (name === "summarize") verdicts.summaries.push({ of: args.stmIds.map(ordinal), text: args.text, relevance: args.relevance });
+      else {
+        const { supportingIds, ...rest } = args;
+        verdicts.facts.push({ ...rest, support: supportingIds });
+        for (const label of args.supersedes ?? []) {
+          const item = parsed.items.find((candidate) => candidate.id === label);
+          if (item) log.namedSupersedes.add(item.text);
+        }
+      }
+    };
     const group = [];
-    let kept = 0;
+    // Records under "Already kept" count toward the target like the ones this pass keeps.
+    let kept = parsed.settled.reduce((sum, record) => sum + tokens(record.description), 0);
     for (const record of parsed.records) {
       const event = eventOf(fx, record.description);
       const steps = needed(event);
       if (mode === "aggressive") {
-        if (event?.id === fx.expected.protected.fact && !log.derived.has(record.id)) {
-          log.derived.add(record.id);
+        if (event?.id === fx.expected.protected.fact && !log.derived.has(record.description)) {
+          log.derived.add(record.description);
           next("derive", { text: "Baseline after the rename: 41 tests pass in 9 files", supportingIds: [record.id], relevance: "high" });
           continue;
         }
@@ -208,11 +241,25 @@ export function scriptedWm(log, { mode = "scope", fx = longSession(), testing } 
       const steps = needed(eventOf(fx, record.description));
       if (steps.length) next("keep", { stmId: record.id, reason: `re-plan: step ${steps[0]} reads it`, neededLater: `step ${steps[0]}` });
     }
-    return [...calls, testing.providerDone()];
+    const args = Object.fromEntries(
+      Object.entries(verdicts).filter(([, value]) => (Array.isArray(value) ? value.length : Object.keys(value).length)),
+    );
+    if (!Object.keys(args).length) return [testing.providerDone()];
+    log.calls.push({ name: "judge", args });
+    return [testing.providerToolCall(testing.toolCallContent(`wm-${log.calls.length}`, "judge", args)), testing.providerDone()];
   };
 }
 
-const newLog = () => ({ passes: [], calls: [], refusals: [], derived: new Set(), namedSupersedes: new Set() });
+/** The refused entries of the `judge` results in a request's tool messages. */
+function judgeRefusals(request) {
+  return request.messages
+    .filter((message) => message.role === "tool")
+    .flatMap((message) => message.content ?? [])
+    .flatMap((block) => (Array.isArray(block.result?.refused) ? block.result.refused : []))
+    .filter((entry) => typeof entry.ordinal === "string" && entry.ordinal.startsWith("r"));
+}
+
+const newLog = () => ({ passes: [], calls: [], refusals: [], settled: [], derived: new Set(), namedSupersedes: new Set() });
 
 /** One replay with the scripted WM; `scope` sets the plan (and the re-plan) through `memory:scope`. */
 async function replayWm({ mode = "scope", scope = true, injection = false, replan = true, config = {}, ...rest } = {}) {
@@ -378,15 +425,29 @@ export const probes = [
       const h = await replayWm({ mode: "aggressive", config: { wm: { targetRatio: 0.05 } } });
       try {
         const ledger = await h.ledger();
-        const refused = new Map(h.wmLog.refusals.map((row) => [row.id, row.protection]));
-        const lost = [...refused.keys()].filter((id) => ledger.tombstones?.[id]?.reason.startsWith("wm discard"));
+        // Plan 218.2 Task 5: a record protected as constraint, task_state, unresolved_error or open_question is kept by
+        // code before the model is asked (settled); a fact or needed_later record goes to the model, whose discard is refused.
+        const idOf = (description) => ledger.observations.find((record) => record.description === description)?.id;
+        const refused = new Map(h.wmLog.refusals.map((row) => [idOf(row.description), row.protection]));
+        // Settled records are read off the ledger: a pass whose records were all settled makes no model call at all.
+        const settled = new Map(
+          ledger.wmItems.flatMap((item) => {
+            const protection = /^protected: (\w+)$/.exec(item.reason ?? "")?.[1];
+            const id = item.kind === "event" ? item.citedIds[0] : undefined;
+            return protection && id && !refused.has(id) ? [[id, protection]] : [];
+          }),
+        );
+        const guarded = new Map([...settled, ...refused]);
+        const lost = [...guarded.keys()].filter((id) => ledger.tombstones?.[id]?.reason.startsWith("wm discard"));
         const classes = {};
-        for (const protection of refused.values()) classes[protection] = (classes[protection] ?? 0) + 1;
-        const expected = Object.entries(h.fx.expected.protected).map(([protection, eventId]) => {
+        for (const protection of guarded.values()) classes[protection] = (classes[protection] ?? 0) + 1;
+        // Plan 218.2 Task 3: the scripted STM marks e102 a durable constraint, so the fifth class is `constraint`.
+        const expected = Object.entries({ ...h.fx.expected.protected, ...invert(DURABLE_EVENTS) }).map(([protection, eventId]) => {
           const record = recordByEvent(ledger, h.fx, eventId);
           return {
             protection,
-            refused: refused.get(record?.id) === protection,
+            guarded: guarded.get(record?.id) === protection,
+            settled: settled.get(record?.id) === protection,
             kept: ledger.tombstones?.[record?.id]?.reason.startsWith("wm keep") ?? false,
           };
         });
@@ -394,17 +455,22 @@ export const probes = [
         return {
           surface: "ledger",
           property:
-            "the discard tool refuses every protected record (task state, fact, unresolved error, open question) and none is lost; a batch whose protected share exceeds the target records budget_unmet",
-          fires: refused.size,
-          reaches: refused.size > 0,
-          correct: lost.length === 0 && expected.every((row) => row.refused && row.kept) && budgetUnmet > 0 && h.failures.length === 0,
+            "every protected record (constraint, task state, fact, unresolved error, open question) is kept: constraints, task states, unresolved errors and open questions are settled by code before the model is asked, and judge refuses a discard of a fact; none is lost; a batch whose protected share exceeds the target records budget_unmet",
+          fires: guarded.size,
+          reaches: guarded.size > 0,
+          correct:
+            lost.length === 0 &&
+            expected.every((row) => row.guarded && row.kept && row.settled === (row.protection !== "fact")) &&
+            budgetUnmet > 0 &&
+            h.failures.length === 0,
           on: digest({ classes, expected }),
           off: digest({ lost: lost.length }),
           counts: {
             refused: refused.size,
+            settled: settled.size,
             lost: lost.length,
             classes,
-            expectedClasses: expected.filter((row) => row.refused).length,
+            expectedClasses: expected.filter((row) => row.guarded).length,
             budgetUnmetPasses: budgetUnmet,
             // needed_later: an item marked neededLater cites only records that already have a verdict (keep and
             // summarize give one; derive makes a `fact`, which protects first), so no batch record can carry it.
@@ -554,8 +620,14 @@ export const probes = [
             chunkDropped: rejudge?.chunkDropped.includes(dropped?.id) ?? false,
             rejudgePrompts: h
               .wmPasses()
-              .filter((request) => request.text.includes("## Earlier discarded records") && request.text.includes(`[${restored?.id}]`))
-              .length,
+              // Re-judged records are shown as `j` ordinals: find the restored one by its description.
+              .filter(
+                (request) =>
+                  request.text.includes("## Earlier discarded records") &&
+                  receivedText({ messages: JSON.parse(request.text).messages.filter((message) => message.role === "user") })
+                    .split("## Earlier discarded records")[1]
+                    ?.includes(restored?.description ?? "\u0000"),
+              ).length,
           };
         } finally {
           await h.close();
@@ -598,7 +670,9 @@ export const probes = [
         for (const pass of passes) {
           const before = active.size;
           for (const id of pass.supersededItemIds ?? []) {
-            if (!h.wmLog.namedSupersedes.has(id)) unnamed += 1;
+            // The model names items by ordinal; the log keeps the text of each item it named.
+            const text = passes.flatMap((earlier) => earlier.items).find((item) => item.id === id)?.text;
+            if (!h.wmLog.namedSupersedes.has(text)) unnamed += 1;
             active.delete(id);
           }
           for (const item of pass.items) active.add(item.id);
@@ -695,7 +769,12 @@ export const probes = [
         const itemOf = (record) => items.find((item) => item.citedIds.includes(record?.id));
         const proposalLine = h
           .wmPasses()
-          .some((request) => request.text.includes(`[${proposal?.id}]`) && /\] \S+ assistant proposal \(/.test(request.text));
+          // The record line is found by its description (records are shown as ordinals).
+          .some((request) =>
+            receivedText({ messages: JSON.parse(request.text).messages.filter((message) => message.role === "user") })
+              .split("\n")
+              .some((line) => /^- \[r[0-9]+\] \S+ assistant proposal \(/.test(line) && line.endsWith(`: ${proposal?.description}`)),
+          );
         const view = await h.agent.commands.run("memory:session:view", {}, { session: h.session });
         const rendered = String(view?.text ?? "");
         const result = {
@@ -770,6 +849,42 @@ export const probes = [
         off: digest({ swallowed: model.swallowed }),
         counts: { model, deterministic },
       };
+    },
+  },
+  {
+    // Probe 11 (plan 218.2 Task 7): a record WM discarded is found by a query, not only by an id the agent no longer sees.
+    // After the replay and a compaction, the main model calls `recall { query }` with each discarded record's description;
+    // the hit names the record as tombstoned with its discard reason. The compaction block counts the discarded records.
+    id: "wm.discard-query",
+    async run() {
+      const h = await replayWm({ secrets: false });
+      try {
+        const ledger = await h.ledger();
+        const discarded = Object.entries(ledger.tombstones ?? {})
+          .filter(([, tombstone]) => tombstone.reason.startsWith("wm discard"))
+          .map(([id]) => ledger.observations.find((item) => item.id === id))
+          .filter(Boolean);
+        const { results } = await h.recallCalls(discarded.map((record) => ({ query: record.description, limit: 8 })));
+        const found = discarded.filter((record, index) => {
+          const text = results[index]?.text ?? "";
+          return new RegExp(`^- \\[${record.id}\\] [^\\n]*\\(tombstoned: wm discard `, "m").test(text);
+        }).length;
+        const summary = (await h.session.entries()).findLast((entry) => entry.kind === "compaction")?.summary ?? "";
+        const advertised = /earlier records? (?:was|were) taken off this surface by working memory; call recall with a query/.test(summary);
+        return {
+          surface: "tool",
+          property:
+            "every record WM discarded is returned by recall with a query over its description, marked tombstoned with its discard reason, and the compaction block says discarded records exist",
+          fires: discarded.length,
+          reaches: results.length === discarded.length,
+          correct: discarded.length > 0 && found === discarded.length && advertised && h.failures.length === 0,
+          on: digest({ discarded: discarded.length, found }),
+          off: digest({ advertised }),
+          counts: { discarded: discarded.length, found, recallCalls: results.length, advertised },
+        };
+      } finally {
+        await h.close();
+      }
     },
   },
 ];

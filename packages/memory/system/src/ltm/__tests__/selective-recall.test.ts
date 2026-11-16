@@ -1,7 +1,7 @@
 import { it } from "bun:test";
 import assert from "node:assert/strict";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory } from "../../index.js";
+import { createLongTermMemory, createMemory } from "../../index.js";
 
 it("hybrid recall applies cosine floor before fusion and admits lexical-only identifiers", async () => {
   const store = createMemoryVectorStore();

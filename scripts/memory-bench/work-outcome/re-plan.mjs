@@ -27,8 +27,8 @@ export const RE_PLAN_PERSONA_COUNT = 12;
 /** Personas per partition: [dev, heldout-a, heldout-b]. */
 export const RE_PLAN_STRATA = Object.freeze({ "re-plan-coding": [4, 4, 4] });
 export const RE_PLAN_SEED = "prism-218-re-plan";
-/** Gate M-2's arms (plan 218 Task 6) plus the no-memory control. */
-export const RE_PLAN_ARMS = Object.freeze(["memory-off", "WM", "STM-only", "OM-before"]);
+/** Gate M-2's arms (plan 218 Task 6), the no-memory control, and the cheap baselines (plan 218.2 Task 8). */
+export const RE_PLAN_ARMS = Object.freeze(["memory-off", "WM", "STM-only", "OM-before", "fold", "llm-summary"]);
 export const RE_PLAN_METRIC = "M1: task success on the tasks after a mid-episode re-plan (re-derivations reported beside it)";
 const PARTITION_FILE = new URL("../work-outcome-re-plan.json", import.meta.url);
 

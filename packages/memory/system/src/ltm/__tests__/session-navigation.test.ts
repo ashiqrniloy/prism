@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
+import { createLongTermMemory, createMemory } from "../../index.js";
 import { createExchangeArchive } from "../exchanges.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 
 const context = { sessionId: "caller", runId: "run", toolCallId: "call" };
 async function harness(fallback = false) {

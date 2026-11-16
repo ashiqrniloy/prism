@@ -254,6 +254,7 @@ async function pass(
             contextTokens: config.stm.contextTokens,
             maxChunksPerEvent: deps.chunks ? config.stm.maxChunksPerEvent : 0,
             maxChunkBytes: config.stm.maxChunkBytes,
+            autoChunkBytes: config.stm.autoChunkBytes,
             habituation: config.stm.habituation,
             onChunks: (id, chunks) => {
               for (const chunk of chunks) chunkOps.push({ op: "put", chunk, by: { kind: "stm", id, sessionId: session.id } });
@@ -291,17 +292,27 @@ async function pass(
         ? pendingScopeChange(deps.log.entries(session))
         : undefined;
     if (config.wm.enabled && (surface.length || scopeChange) && (options.forceWm === true || tokenTrigger || newBoundary)) {
-      // The batch (gate M-1): the oldest records up to `wm.batchTokens`, and no more records than three quarters of the
-      // worker's call cap, so one model's output holds a verdict for each. The rest waits for the next pass.
-      let batch = wmBatch(surface, config.wm.batchTokens, Math.max(1, Math.floor(limits.maxToolCalls * 0.75)));
+      // The batch: the oldest records up to `wm.batchTokens`; `judge` gives every verdict in one call (plan 218.2 Task 5),
+      // so no record limit tied to the call cap applies. The rest waits for the next pass.
+      let batch = wmBatch(surface, config.wm.batchTokens);
       const record = (data: Omit<WmRecordedData, "type">) => deps.log.append(session, asJson({ type: WM_RECORDED, ...data }));
       const rejudge = scopeChange
         ? await rejudgeCandidates(afterObservations, config.wm.rejudgeTokens, session.id, deps.chunks)
         : undefined;
       // Protections (I5) and the target are code: the discard tool refuses a protected record, and a batch whose
       // protected records alone exceed the target records `budget_unmet` instead of losing them.
+      // A link protection that lapsed (plan 218.2 Task 3) is recorded as `protection_lapsed` on the pass.
+      let lapsed = new Set<string>();
+      const protectionsFor = (records: readonly MemoryObservation[], signals: ReturnType<typeof salienceSignals>) => {
+        lapsed = new Set<string>();
+        return protectedRecords(afterObservations, records, {
+          salience: signals,
+          protectRequestPasses: config.wm.protectRequestPasses,
+          onLapse: (id) => lapsed.add(id),
+        });
+      };
       let salience = salienceSignals(batch, entries);
-      let protections = protectedRecords(afterObservations, batch, { salience });
+      let protections = protectionsFor(batch, salience);
       let targetTokens = wmTargetTokens(
         batch.reduce((sum, item) => sum + item.tokenCount, 0),
         config.wm.targetRatio,
@@ -339,7 +350,7 @@ async function pass(
         if (attempt > 0 || !output.endedAtOutputCap || output.verdicts.size > 0 || batch.length < 2) break;
         batch = batch.slice(0, Math.ceil(batch.length / 2));
         salience = salienceSignals(batch, entries);
-        protections = protectedRecords(afterObservations, batch, { salience });
+        protections = protectionsFor(batch, salience);
         targetTokens = wmTargetTokens(
           batch.reduce((sum, item) => sum + item.tokenCount, 0),
           config.wm.targetRatio,
@@ -362,6 +373,7 @@ async function pass(
         ...(output.supersededItemIds.length ? { supersededItemIds: output.supersededItemIds } : {}),
         ...(processedIds.length ? { processedIds, compression } : {}),
         ...(processedIds.length && protectedTokens > targetTokens ? { budgetUnmet: { protectedTokens, targetTokens } } : {}),
+        ...(lapsed.size ? { protectionLapsed: [...lapsed] } : {}),
         ...(scopeChange && rejudge
           ? {
               rejudge: {

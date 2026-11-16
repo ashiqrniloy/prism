@@ -256,3 +256,66 @@ it("compaction_renders_wm_then_stm_then_task_state_without_model_call", async ()
   const body = (text: string) => text.slice(text.indexOf("## Working memory"));
   assert.equal(body(viewed.text), body(result.summary));
 });
+
+it("block_names_discarded_count_only_at_compaction_and_prefix_stays_stable", async () => {
+  const records = (tombstoned: boolean) =>
+    [
+      {
+        type: OBSERVATIONS_RECORDED,
+        observations: ["aaaaaaaaaaaa", "bbbbbbbbbbbb", "cccccccccccc"].map((id) => ({
+          id,
+          kind: "result",
+          description: `Record ${id}`,
+          timestamp: now,
+          relevance: "medium",
+          sourceEntryIds: ["m1"],
+          tokenCount: 5,
+        })),
+        coversUpToId: "m2",
+      },
+      ...(tombstoned
+        ? [{ type: OBSERVATIONS_TOMBSTONED, observationIds: ["aaaaaaaaaaaa", "bbbbbbbbbbbb"], reason: "wm discard finished", at: now }]
+        : []),
+    ] as unknown as JsonValue[];
+  const entries = [message("m1", "first"), message("m2", "second"), message("m3", "recent one"), message("m4", "recent two")];
+  const compactWith = async (tombstoned: boolean, recall = true) => {
+    const list = records(tombstoned);
+    const log = { entries: () => list, append: async () => {} };
+    const config = resolveMemorySystemConfig({ enabled: true, recall, context: { recentMessages: 2 } });
+    const compactor = createObservationalCompactor({
+      log: log as never,
+      config,
+      fallback: { name: "fallback", compact: () => ({ summary: "", entries: [] }) },
+      isEnabled: () => true,
+    });
+    const session = { id: "s1", entries: async () => entries } as never;
+    return (await compactor.compact({ sessionId: "s1", session, entries, trigger: "manual" })).summary;
+  };
+  const line = /2 earlier records were taken off this surface by working memory; call recall with a query to search them\./;
+  const withTombstones = await compactWith(true);
+  assert.match(withTombstones, line);
+  assert.equal(await compactWith(true), withTombstones, "the same ledger renders byte-identical");
+  assert.doesNotMatch(await compactWith(false), /taken off this surface/, "no tombstones, no line");
+  assert.doesNotMatch(await compactWith(true, false), /taken off this surface/, "recall off, no line");
+  // The per-turn block (context.build) never carries the count, so it cannot move between compactions.
+  const { memoryBlocksFrom } = await import("../context.js");
+  const block = String(
+    memoryBlocksFrom(
+      [],
+      [
+        {
+          id: "cccccccccccc",
+          kind: "result",
+          description: "Record",
+          timestamp: now,
+          relevance: "medium",
+          sourceEntryIds: ["m1"],
+          tokenCount: 5,
+        },
+      ],
+      {},
+    )[0]?.content ?? "",
+  );
+  assert.match(block, /Record/);
+  assert.doesNotMatch(block, /taken off this surface/);
+});

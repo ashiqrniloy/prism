@@ -97,6 +97,15 @@
       "text": "\"I think before starting later job, we should already investigate the findings so far to see obvious issues that we can fix\"; then: \"Product default + retry (Recommended)\", \"Report miss + diagnostic (Recommended)\", \"Stop it now (Recommended)\" (owner, 2026-11-12)",
       "change": "after sitting 1 (re-plan) and part of sitting 2: memory workers (STM, WM, Rehearsal) default to thinkingLevel low, and a WM call that stops on its output limit before any verdict retries once on the older half of its batch (product hash moved); the family child runs at the manifest's 8,192 output limit (gate M-1 ran 4,096); the campaign reads each job's own journal attempt under --parallel-arms (it read the last reserved one); M1 keeps its frozen row and reports re-derivations beside it. Pre-fix reports moved to runs/superseded-pre-worker-fix/; every sitting re-runs on this manifest.",
       "manifestHash": "3e1d68dcdd8bf82b2bcc6cebb6c2ccba91f1a648625ece7cbf892e4b747185b8"
+    },
+    {
+      "date": "2026-11-15",
+      "text": "\"Approve both (Recommended)\" (owner, 2026-11-15, plan 218.2 Task 9 hand-off)",
+      "change": "Plan 218.2 Task 9 hand-off: the manifest is rebuilt on the product after plan 218.2 (m2ProductFingerprint 294c66c2…) with the arms of plan 218 Task 6 amendment of 2026-11-13: memory-off, fold and llm-summary as reported comparators beside WM, STM-only and OM-before on re-plan and long-session; long-horizon at the package defaults only after its --estimate (218.2/long-horizon-manifest.json, re-run on each model catalog window) is in this record. The rebuilt manifest pins the current criteria hash (8a59fc79…, amendment 9). Reports from before plan 218.2 move to runs/superseded-pre-218.2/. Approving the rebuild does not approve a sitting: the default rule, the per-run limits for long-horizon (Task 8: the 400K/450K caps stop memory-arm and llm-summary tasks at 128K) and the budget are written here and approved before any spend. The manifestHash above stays the paused sitting pin until plan 218 Task 6 writes the new manifest.",
+      "productHash": "294c66c2b7486080745d7a70c16fca97fda0c3fde2bbd458c35b1534e6848ca5",
+      "pending": [
+        "plan 218 Task 6: baseline arms in wm-gate.mjs, the default rule, long-horizon limits and budget, then writeM2Manifest"
+      ]
     }
   ],
   "compactBenchWmProbe": {
@@ -148,6 +157,138 @@
         ],
         "resume": "the 5 finished sessions are reused from checkpoints; the 4 timed-out sessions are retried; the failure cap counts this run only",
         "result": "2026-11-13: 30 of 30 engaged, rule names Branch A; 0 failed; spent 4,762,429 input tokens (~$0.31). Pre-218.2 reading: Step 2 waits for the re-probe after plan 218.2 Task 9 (plan 218.1 Task 3 amendment)."
+      }
+    ],
+    "reprobe": {
+      "date": "2026-11-15",
+      "approved": true,
+      "approvedBy": "owner",
+      "text": "\"Approve both (Recommended)\" (owner, 2026-11-15, plan 218.2 Task 9 hand-off)",
+      "productHash": "294c66c2b7486080745d7a70c16fca97fda0c3fde2bbd458c35b1534e6848ca5",
+      "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+      "ruleChanged": false,
+      "change": "Plan 218.2 Task 9 hand-off: Step 1 re-runs on the product after plan 218.2 (product hash above), with the same 30 sessions, worker, engagement definition, threshold and 8M input-token ceiling. That reading, not the 2026-11-13 one, selects Branch A or B for Step 2. Estimated about 4.8M input tokens (~$0.31) and ~8 h (the 2026-11-13 run). Step 2 still needs its own approval in this record.",
+      "launches": [
+        {
+          "date": "2026-11-16",
+          "productHash": "c225f06546d77bf357dc3e1dda759efbc0251dd30185bf2cd1e026d363f447be",
+          "text": "\"Run now on current tree\" (owner, 2026-11-16)",
+          "note": "The product moved from 294c66c2… (recorded with the approval) to c225f065… through another session uncommitted kernel compaction edits (src/compaction.ts, src/agent-session/session.ts). The rule, sessions, worker and ceiling are unchanged. The reading records the product it ran on; wmProbeScreenBranch refuses it for a screen on any other product, so a later kernel change means another re-probe."
+        }
+      ],
+      "rebinds": [
+        {
+          "date": "2026-11-16",
+          "approved": true,
+          "approvedBy": "owner",
+          "text": "\"Let us go with option 2. I do not want to rerun the probe as it has nothing to do with wm\" (owner, 2026-11-16)",
+          "from": "c225f06546d77bf357dc3e1dda759efbc0251dd30185bf2cd1e026d363f447be",
+          "memoryHash": "35e9b7e16dcd295ce1455846af8d2170d6c9a8a3259e6d1057d479a716d6f8f3",
+          "memoryHashBasis": "m2MemoryFingerprint: packages/memory/system/src and packages/memory/core/src, tests excluded; no file under them changed after the 17:01 launch",
+          "ruleHash": "9b743e3f4321a0bb5aaafc20a270f6c8576f09b6f97c42daa5a1b76f06cbbe79",
+          "ruleChanged": false,
+          "change": "The post-218.2 reading (30 of 30 engaged, Branch A) was read on product c225f065…. During the run another session edited kernel src/ (compaction contract, session state, agent-session), moving the product to 1232ceaf… and then 0ca74b28…. The owner waives kernel src/ changes for this reading: it selects the Step 2 branch on any product whose memory packages still hash to memoryHash. A memory-package edit still needs a re-probe. Rule, sessions, verdict unchanged. The waived kernel edits are untested by the probe."
+        }
+      ]
+    }
+  },
+  "compactBenchScreen": {
+    "date": "2026-11-16",
+    "approved": true,
+    "approvedBy": "owner",
+    "approvedAt": "2026-11-16T15:43:16.098Z",
+    "text": "\"Approve Branch A screen (Recommended)\" (owner, 2026-11-16, plan 218.1 Task 3 Step 2)",
+    "branch": "A",
+    "probe": {
+      "reading": "post-218.2",
+      "productHash": "c225f06546d77bf357dc3e1dda759efbc0251dd30185bf2cd1e026d363f447be",
+      "rebind": "compactBenchWmProbe.reprobe.rebinds[0]",
+      "engaged": 30,
+      "of": 30
+    },
+    "ruleHash": "697cb31d045af4a5f321680112e933756c2af624b6df2aee849f9a4911311e01",
+    "rule": {
+      "suite": "compact-bench-retention",
+      "sessions": 30,
+      "draw": "scripts/memory-bench/work-outcome-compact-bench.json (retention, 30 sessions, label-blind)",
+      "worker": "opencode-go/muse-spark-1.3-contributor",
+      "referenceSummarizer": "opencode-go/muse-spark-1.3-contributor through upstream's e2_score.compress_one (CB_SUMMARIZER_API=chat, the local pass-through); upstream's default output cap",
+      "branches": {
+        "A": {
+          "arms": [
+            "memory-off",
+            "OM-before",
+            "STM-only",
+            "WM"
+          ],
+          "candidate": "WM"
+        },
+        "B": {
+          "arms": [
+            "memory-off",
+            "OM-before",
+            "session"
+          ],
+          "candidate": "session"
+        }
+      },
+      "references": [
+        "claude-code",
+        "codex",
+        "anchor_index",
+        "mask-tail"
+      ],
+      "maskTail": "no model call: the session's transcript view, newest lines first, tool lines with their output cleared, cut to the candidate arm's S character count for the same session",
+      "variant": "every decision reads S (the memory block plus the kept messages, what the model sees after compaction); the block alone and the STM chunks are reported beside it, never decided on",
+      "estimate": "candidate minus comparator, points of retained details (recall x 100), paired per session",
+      "interval": "95% bootstrap over sessions (each session one cluster), 10,000 resamples, seed 7",
+      "nonInferiorPoints": 5,
+      "rules": {
+        "A": {
+          "ship": "STM + WM ships as the session default if WM vs the Claude Code prompt has interval lower bound >= -5 and WM vs memory-off has interval lower bound > 0",
+          "deterministic": "if WM does not beat STM-only (interval lower bound <= 0), the deterministic WM policy is the default: the same retention, no WM model call",
+          "loses": "if WM's interval upper bound is < 0 against the Claude Code prompt or anchor_index, the finding goes to the owner before any plan builds on WM; it holds the decision for the owner and does not change it",
+          "m5": "M5 (WM vs STM-only, criteria nonInferior) reads the paired estimate over all sessions; the sessions where this screen's WM run engaged are reported beside it"
+        },
+        "B": {
+          "ship": "STM is supported as the session memory if session vs the Claude Code prompt has interval lower bound >= -5 and session vs memory-off has interval lower bound > 0",
+          "loses": "if session's interval upper bound is < 0 against the Claude Code prompt or anchor_index, the finding goes to the owner; it holds the decision for the owner and does not change it",
+          "m5": "M5 stays missing; the screen makes no claim about WM"
+        },
+        "maskTail": "if the candidate does not beat mask-tail (interval lower bound <= 0), the finding goes to the owner with the verdict; it decides nothing by itself",
+        "notShown": "a candidate that neither ships nor loses clearly ships nothing; the finding goes to the owner"
+      },
+      "cannotShow": [
+        "one model family (Muse worker and summarizer)",
+        "30 sessions detect large differences only",
+        "histories are capped at 250,000 characters by upstream, so long-horizon WM behaviour is out of reach",
+        "no long-term memory"
+      ],
+      "maxInputTokens": {
+        "A": 30000000,
+        "B": 20000000
+      },
+      "iterations": 10000,
+      "seed": 7
+    },
+    "budget": {
+      "estimateInputTokens": 21000000,
+      "estimateUsd": 1.4,
+      "ceilingInputTokens": 30000000,
+      "ceilingBasis": "every arm and reference usage log under the screen wire directory (screenUsage)"
+    },
+    "launches": [
+      {
+        "date": "2026-11-16",
+        "at": "21:43",
+        "unit": "prism-218-1-screen",
+        "ended": "stopped 2026-11-16 ~23:55 in STM-only after 9 of 30 sessions: the memory worker did not settle within settleMs (45 min); last worker exchange 23:10, a stalled request (the bench fetch has no per-request timeout)",
+        "log": ".cache/memory-bench/218/logs/screen-1-stall.log"
+      },
+      {
+        "date": "2026-11-17",
+        "unit": "prism-218-1-screen",
+        "note": "resume: finished sessions are checkpointed; the unfinished session re-runs from scratch. Rule and budget unchanged; the stalled attempt’s logged exchanges stay in the screen-wide usage count (1.49M input tokens at relaunch)."
       }
     ]
   }

@@ -6,7 +6,15 @@ import {
   runMemoryWorkerLoop,
   truncateWorkerText,
 } from "@arnilo/prism-memory-system/core";
-import { DEFAULT_MAX_CHUNK_BYTES, DEFAULT_MAX_CHUNKS_PER_EVENT, MAX_CHUNK_SHARE, type PreparedChunk, prepareChunks } from "../../chunks.js";
+import {
+  automaticChunk,
+  DEFAULT_AUTO_CHUNK_BYTES,
+  DEFAULT_MAX_CHUNK_BYTES,
+  DEFAULT_MAX_CHUNKS_PER_EVENT,
+  MAX_CHUNK_SHARE,
+  type PreparedChunk,
+  prepareChunks,
+} from "../../chunks.js";
 import { attributionOfEntries } from "../attribution.js";
 import { DEFAULT_STM_CONTEXT_TOKENS, DEFAULT_STM_HABITUATION_WINDOW } from "../config.js";
 import { createMemoryId } from "../ids.js";
@@ -17,10 +25,14 @@ import { estimateTextTokens } from "../tokens.js";
 import {
   isIsoDate,
   isMemoryObservation,
+  type MemoryDurable,
   type MemoryEventKind,
+  type MemoryEventStatus,
   type MemoryObservation,
   type MemoryTaskState,
+  memoryDurableValues,
   memoryEventKindValues,
+  memoryEventStatusValues,
   OBSERVATIONS_DROPPED,
   OBSERVATIONS_REPEATED,
   TASK_STATE_RECORDED,
@@ -62,6 +74,12 @@ export interface RunStmOptions extends MemoryWorkerLimitOptions {
   readonly maxChunksPerEvent?: number;
   /** Bytes one stored chunk may take. Default {@link DEFAULT_MAX_CHUNK_BYTES}. */
   readonly maxChunkBytes?: number;
+  /**
+   * Evidence kept by rule (plan 218.2 Task 4): an `error`, a failed `outcome`/`result` or a `durable` event recorded
+   * with no chunk gets one of at most this many bytes from its cited entry, inside the batch's chunk budget. `0` turns
+   * the rule off; it is off whenever `maxChunksPerEvent` is `0`. Default {@link DEFAULT_AUTO_CHUNK_BYTES} (1,024).
+   */
+  readonly autoChunkBytes?: number;
   /**
    * Habituation (plan 217 Task 3): an event whose kind and normalised description match one of the newest
    * `windowEvents` records (recent and this batch's), with byte-equal chunks or none, raises that record's count.
@@ -136,9 +154,14 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
     return undefined;
   };
   const known = new Set(options.recent?.map((item) => item.id) ?? []);
+  // Plan 218.2 Task 2: what an outcome may name in `resolves`: a recent or this batch's `request` or `error`.
+  const resolvable = new Set(
+    (options.recent ?? []).filter((item) => item.kind === "request" || item.kind === "error").map((item) => item.id),
+  );
   const allowed = new Set(options.entries.map((entry) => entry.id));
   const maxChunks = options.maxChunksPerEvent ?? DEFAULT_MAX_CHUNKS_PER_EVENT;
   const maxChunkBytes = options.maxChunkBytes ?? DEFAULT_MAX_CHUNK_BYTES;
+  const autoChunkBytes = maxChunks > 0 ? Math.min(options.autoChunkBytes ?? DEFAULT_AUTO_CHUNK_BYTES, maxChunkBytes) : 0;
   const sourceText = options.sourceText ?? serializeSourceEntries(options.entries, options.secrets, limits.maxMessageBytes);
   // Accepted chunks may take at most a quarter of the batch's transcript bytes (MAX_CHUNK_SHARE).
   let chunkBudget = Math.floor(Buffer.byteLength(sourceText, "utf8") * MAX_CHUNK_SHARE);
@@ -169,6 +192,28 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
         referencedAt: { type: "string", description: "Absolute ISO date (YYYY-MM-DD) the event refers to." },
         supersedes: { type: "string", description: "Id of a recent STM record this event replaces." },
         relevance: { type: "string", enum: ["low", "medium", "high", "critical"] },
+        // Plan 218.2 Task 2: structured signals later tiers read, described here because the instruction is capped.
+        status: {
+          type: "string",
+          enum: [...memoryEventStatusValues],
+          description:
+            "Required on an outcome; allowed on a result. How the work was verified in the messages: passed, failed, partial, or unknown (no check run or shown).",
+        },
+        corrects: {
+          type: "boolean",
+          description: "true when the user says an earlier answer or action was wrong, in any language or wording.",
+        },
+        durable: {
+          type: "string",
+          enum: [...memoryDurableValues],
+          description:
+            "A user statement or decision that binds later work (constraint) or says how the user wants things done (preference), whatever the current task is. User content only.",
+        },
+        resolves: {
+          type: "array",
+          items: { type: "string" },
+          description: "On an outcome: ids of request or error records (recent index, or recorded in this batch) that this outcome closes.",
+        },
         ...(maxChunks > 0
           ? {
               chunks: {
@@ -207,15 +252,31 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
         maxChunks > 0
           ? prepareChunks(args.chunks, { entries: options.entries, secrets: options.secrets, maxChunks, maxChunkBytes })
           : ({ ok: true, chunks: [] } as const);
-      const chunks = prepared.ok ? prepared.chunks : [];
-      const chunkBytes = chunks.reduce((sum, chunk) => sum + chunk.bytes, 0);
+      const workerChunks = prepared.ok ? prepared.chunks : [];
       const supersedes = typeof args.supersedes === "string" ? args.supersedes : undefined;
+      // Plan 218.2 Task 2: the structured signals. `status` belongs to an outcome (required) or a result; `corrects` and
+      // `durable` describe user content, so an assistant-only event cannot set them; `resolves` names recent or
+      // this batch's `request`/`error` records only.
+      const status =
+        (kind === "outcome" || kind === "result") && (memoryEventStatusValues as readonly unknown[]).includes(args.status)
+          ? (args.status as MemoryEventStatus)
+          : undefined;
+      if (kind === "outcome" && status === undefined) {
+        return { toolCallId: context.toolCallId, name: "record_event", value: { ok: false, reason: "outcome_status_required" } };
+      }
+      const fromUser = attribution === "user" || attribution === "mixed";
+      const corrects = fromUser && args.corrects === true;
+      const durable =
+        fromUser && (memoryDurableValues as readonly unknown[]).includes(args.durable) ? (args.durable as MemoryDurable) : undefined;
+      const resolvesArg = kind === "outcome" && Array.isArray(args.resolves) ? args.resolves : [];
+      const resolves = [...new Set(resolvesArg.filter((id): id is string => typeof id === "string" && resolvable.has(id)))];
+      const resolvesDropped = resolvesArg.length > resolves.length;
       const match =
         kind && description && sourceEntryIds.length && prepared.ok
           ? habituationMatch(
               kind,
               description,
-              chunks.map((chunk) => chunk.sha256),
+              workerChunks.map((chunk) => chunk.sha256),
             )
           : undefined;
       if (match) {
@@ -242,6 +303,17 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
           },
         };
       }
+      // Plan 218.2 Task 4: evidence kept by rule when the worker attached none, through the worker's chunk path and
+      // inside the batch budget; when it does not fit, the event records without it.
+      let chunks = workerChunks;
+      if (kind && prepared.ok && !workerChunks.length && autoChunkBytes > 0) {
+        const candidate = automaticChunk({ kind, description, status, durable }, cited, autoChunkBytes);
+        const auto = candidate
+          ? prepareChunks([candidate], { entries: options.entries, secrets: options.secrets, maxChunks: 1, maxChunkBytes })
+          : undefined;
+        if (auto?.ok && auto.chunks.length && auto.chunks[0]!.bytes <= chunkBudget) chunks = auto.chunks;
+      }
+      const chunkBytes = chunks.reduce((sum, chunk) => sum + chunk.bytes, 0);
       const chunkReason = !prepared.ok ? prepared.reason : chunkBytes > chunkBudget ? "chunk_budget_exceeded" : undefined;
       const event = {
         id: createMemoryId(`${kind ?? ""}:${description}`, sourceEntryIds),
@@ -254,6 +326,10 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
         relevance,
         sourceEntryIds,
         ...(attribution ? { attribution } : {}),
+        ...(status ? { status } : {}),
+        ...(corrects ? { corrects: true as const } : {}),
+        ...(durable ? { durable } : {}),
+        ...(resolves.length ? { resolves } : {}),
         ...(chunks.length
           ? { chunkRefs: chunks.map(({ id, sourceEntryId, sha256, bytes }) => ({ id, sourceEntryId, sha256, bytes })) }
           : {}),
@@ -263,6 +339,7 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
       const recognized = supersedes !== undefined && known.has(supersedes) && supersedes !== event.id;
       if (valid) {
         events.push(event);
+        if (event.kind === "request" || event.kind === "error") resolvable.add(event.id);
         if (chunks.length) {
           chunkBudget -= chunkBytes;
           options.onChunks?.(event.id, chunks);
@@ -292,8 +369,11 @@ export async function runStm(options: RunStmOptions): Promise<readonly MemoryObs
         name: "record_event",
         value: {
           ok: valid,
+          // The new record's id, so a later call of the same batch can name it in `resolves` or `supersedes`.
+          ...(valid ? { id: event.id } : {}),
           ...(reason === undefined ? {} : { reason }),
           ...(supersedes && !recognized ? { warning: "Unknown supersedes id ignored" } : {}),
+          ...(resolvesDropped ? { resolvesWarning: "resolves ids outside the recent request and error records ignored" } : {}),
         },
       };
     },

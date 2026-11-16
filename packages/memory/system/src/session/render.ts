@@ -11,6 +11,11 @@ export interface RenderObservationalMemoryOptions {
   readonly maxBytes?: number;
   /** Include recall guidance only when recall is available. Default true. */
   readonly advertiseRecall?: boolean;
+  /**
+   * Records WM took off the surface (tombstoned). Set only at compaction (plan 218.2 Task 7): with recall advertised and a
+   * count above zero, one line says how many there are and that `recall` with a query searches them.
+   */
+  readonly discardedCount?: number;
 }
 
 export function renderObservationalMemory(
@@ -27,8 +32,14 @@ export function renderObservationalMemory(
   if (wmItems.length || observations.length || options.taskState) {
     prefix.push(
       `Use these source-backed memories when relevant and cite the ids you rely on as [id].${(options.advertiseRecall ?? true) ? " To inspect evidence, call recall with an id; [chunk] marks a record whose verbatim source text recall returns. Do not guess ids." : ""}`,
-      "",
     );
+    const discarded = options.discardedCount ?? 0;
+    if ((options.advertiseRecall ?? true) && discarded > 0) {
+      prefix.push(
+        `${discarded} earlier record${discarded === 1 ? " was" : "s were"} taken off this surface by working memory; call recall with a query to search them.`,
+      );
+    }
+    prefix.push("");
   }
   // Design §5.1: the WM surface (facts, then summaries, then events), the STM surface not yet processed, then the task
   // state. One function renders it for compaction, the pinned block and `memory:session:view`.
@@ -63,7 +74,7 @@ export function renderObservationalMemory(
       // Task 4.1: an assistant-only request, statement or decision renders `assistant proposal`; a mixed one names both
       // sides. Chunk text never renders here: a record with chunks shows only the `[chunk]` marker; `recall` reads them.
       lines.push(
-        `- [${item.id}] ${date.slice(11, 16)} (${item.relevance}) ${attributionLabel(item.kind, item.attribution, isAssistantProposal(item))}${(item.count ?? 1) > 1 ? ` ×${item.count}` : ""}: ${item.description}${item.referencedAt ? ` (refers to ${item.referencedAt})` : ""}${item.chunkRefs?.length ? " [chunk]" : ""}`,
+        `- [${item.id}] ${date.slice(11, 16)} (${item.relevance}) ${attributionLabel(item.kind, item.attribution, isAssistantProposal(item))}${signalMarks(item)}${(item.count ?? 1) > 1 ? ` ×${item.count}` : ""}: ${item.description}${item.referencedAt ? ` (refers to ${item.referencedAt})` : ""}${item.chunkRefs?.length ? " [chunk]" : ""}`,
       );
     }
     return redactSecrets([...prefix, ...(lines.length ? lines : ["- none"]), ...(taskText ? [taskText] : [])].join("\n"), secrets);
@@ -78,6 +89,12 @@ export function renderObservationalMemory(
     return `${truncateWorkerText(body, remaining)}${tail}`;
   }
   return truncateWorkerText(text, maxBytes);
+}
+
+/** Plan 218.2 Task 2: the recorder's signals after the kind: `(failed)`, `(constraint)`, `(correction)`. */
+function signalMarks(item: MemoryObservation): string {
+  const marks = [item.status, item.durable, item.corrects ? "correction" : undefined].filter(Boolean);
+  return marks.length ? ` (${marks.join(", ")})` : "";
 }
 
 /** The order WM items render in: facts, summaries, events. */

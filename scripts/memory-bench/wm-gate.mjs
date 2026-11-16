@@ -3,15 +3,15 @@
  *
  * Arms, on the development partitions only:
  * - `WM`: the `session` profile (STM + WM, plan 218). The re-plan family hands WM each plan as the episode scope before
- *   its turn; the QA suites hand it the suite's task framing (`--wm-scope`); the long-session family has no plan, so
- *   no scope;
+ *   its turn; the long-session family has no plan, so no scope;
  * - `STM-only`: plan 217's STM with `wm.policy: "deterministic"` and no scope. The deterministic policy keeps protected,
  *   outcome and salient records and discards the rest to meet the target, so it can discard a changed value
  *   (`wm.knowledge-update`, plan 218 Task 5); the report says so beside the arm's numbers;
  * - `OM-before`: the pinned pre-216 observer, run from its worktree. Gate M-1's rows ran on Ollama Cloud routes, so
  *   they do not pair with this gate's OpenCode Go routes, and the arm is re-run here on identical items.
  *
- * Rows: M1 from the live re-plan family (task success after the re-plan), M5 from the QA suites (`WM` vs `STM-only`),
+ * Rows: M1 from the live re-plan family (task success after the re-plan), M5 from plan 218.1's Compact-Bench retention
+ * screen (`WM` vs `STM-only`, `218/compact-bench-screen.json`; the QA suites left gate M-2 in plan 218.1 Task 3),
  * M2-M4 from Task 5's offline probes (`218/wm-probes.json`), which must read `works` before any paid call. Plan 217's
  * S1 miss is re-measured on MiMo (three repeats per arm on the long-session family) and reported beside the rows.
  *
@@ -24,7 +24,7 @@ import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileFingerprint, sourceFingerprint } from "./acceptance.mjs";
-import { pairOnIdenticalItems, refOf } from "./cleanup-campaign.mjs";
+import { refOf } from "./cleanup-campaign.mjs";
 import { stableHash } from "./journal.mjs";
 import {
   assertMemoryModelFixture,
@@ -32,10 +32,9 @@ import {
   MEMORY_MODEL_CRITERIA,
   memoryModelGateVerdict,
   memoryModelManifestPin,
-  ROBUSTNESS_DRAWS,
 } from "./robustness.mjs";
-import { pairedAnalysis, pairedClusterPermutation } from "./stats.mjs";
-import { loadM1Reports, m1SuiteDone } from "./stm-gate.mjs";
+import { pairedClusterPermutation } from "./stats.mjs";
+import { loadM1Reports } from "./stm-gate.mjs";
 
 export const M2_PLAN = 218;
 export const M2_TASK = 6;
@@ -54,7 +53,8 @@ export const M2_OUTPUT_PREFIX = "run-218-m2";
 export const M2_BASELINES = "docs/_evidence/memory-bench/memory-model/baselines.json";
 export const M2_WORKTREE = ".cache/memory-bench/216/om-before";
 export const M2_PROVIDER = "opencode-go";
-export const M2_SUITES = Object.freeze(["longmemeval-m", "beam-1m"]);
+/** M5's source (plan 218.1 Task 3): the Compact-Bench retention screen's evidence. */
+export const M2_SCREEN = `${M2_EVIDENCE}/compact-bench-screen.json`;
 export const M2_REPLAN = "re-plan";
 export const M2_LONG_SESSION = "long-session";
 /**
@@ -71,21 +71,14 @@ export const M2_S1_REPEATS = 3;
 /** Every answer route the gate may call. */
 export const M2_ANSWER_MODELS = Object.freeze([...M2_MODELS, M2_S1_MODEL]);
 /**
- * M5's judges (owner, 2026-11-12: "Use Qwen 3.8 flash and GPT 6 luna as judges from Opencode Go", then "Replace GPT 6
- * luna with Minimax m3.1 flash"). Neither answers.
- */
-export const M2_JUDGES = Object.freeze([`${M2_PROVIDER}/qwen3.8-flash`, `${M2_PROVIDER}/minimax-m3.1-flash`]);
-/**
- * Arms: the suite config, the switches that make the arm, and the tree it runs from. `STM-only` is the deterministic
- * WM policy; `WM` takes the suite's task framing as its scope.
+ * Arms: the switches that make the arm and the tree it runs from. `STM-only` is the deterministic WM policy. Gate M-2
+ * has no judge role since the QA suites left (plan 218.1 Task 3): every row is scored without a model.
  */
 export const M2_ARMS = Object.freeze([
-  { id: "WM", config: "om", tree: "current", wmScope: true, ablate: [] },
-  { id: "STM-only", config: "om", tree: "current", wmScope: false, ablate: ["session.wm.policy=deterministic"] },
-  { id: "OM-before", config: "om", tree: "om-before", wmScope: false, ablate: [] },
+  { id: "WM", tree: "current", ablate: [] },
+  { id: "STM-only", tree: "current", ablate: ["session.wm.policy=deterministic"] },
+  { id: "OM-before", tree: "om-before", ablate: [] },
 ]);
-/** M5 compares `WM` with `STM-only` only; `OM-before` does not run on the suites. */
-export const M2_SUITE_ARMS = Object.freeze(["WM", "STM-only"]);
 /** This tree's product: the session tiers' package, the store library and the kernel. */
 export const M2_PRODUCT_PATHS = Object.freeze(["packages/memory/system/src", "packages/memory/core/src", "src"]);
 /**
@@ -95,6 +88,9 @@ export const M2_PRODUCT_PATHS = Object.freeze(["packages/memory/system/src", "pa
 export const isProductTestPath = (path, directory = false) =>
   directory ? /(^|\/)__tests__$/.test(path) : /(^|\/)__tests__\//.test(path) || /\.test\.[^/]+$/.test(path);
 export const m2ProductFingerprint = (root = ".") => sourceFingerprint([...M2_PRODUCT_PATHS], root, { exclude: isProductTestPath });
+/** The memory packages alone (the product minus the kernel `src`): what an owner rebind of a probe reading pins. */
+export const M2_MEMORY_PATHS = Object.freeze(M2_PRODUCT_PATHS.filter((path) => path.startsWith("packages/memory/")));
+export const m2MemoryFingerprint = (root = ".") => sourceFingerprint([...M2_MEMORY_PATHS], root, { exclude: isProductTestPath });
 /** The harness both trees run. A harness edit is a new manifest, not a re-approval. */
 export const M2_HARNESS_PATHS = Object.freeze([
   "scripts/memory-bench/replay.mjs",
@@ -106,8 +102,11 @@ export const M2_HARNESS_PATHS = Object.freeze([
   "scripts/memory-bench/work-outcome/long-session.mjs",
   "scripts/memory-bench/work-outcome/long-session-live.mjs",
   "scripts/memory-bench/work-outcome/re-plan.mjs",
+  // Plan 218.2 Task 8: the runner imports the long-horizon family for that family only.
+  "scripts/memory-bench/work-outcome/long-horizon.mjs",
   "scripts/memory-bench/work-outcome-long-session.json",
   "scripts/memory-bench/work-outcome-re-plan.json",
+  "scripts/memory-bench/work-outcome-long-horizon.json",
 ]);
 /** The family files the OM-before worktree needs; nothing under its pinned product paths. */
 export const M2_WORKTREE_COPY = Object.freeze([
@@ -118,34 +117,32 @@ export const M2_WORKTREE_COPY = Object.freeze([
   "scripts/memory-bench/work-outcome-long-session.json",
   "scripts/memory-bench/work-outcome-re-plan.json",
   "scripts/memory-bench/fixtures/memory-model/long-session",
+  // Plan 218.1 Task 3: the screen's OM-before arm runs the Compact-Bench adapter from this worktree.
+  "scripts/memory-bench/external",
+  "scripts/memory-bench/work-outcome-compact-bench.json",
 ]);
-/** M5's sample (owner, 2026-11-12: "Small sample, flagged"): the first questions of each dev cohort, frozen order. */
-export const M2_SUITE_QUESTIONS = 4;
 /**
- * Per-job caps. Gate M-1 measured 3-14M input tokens per 16-persona family job and 4-20M per two suite questions; the
- * caps hold about three times that. OpenCode Go bills a subscription with rolling usage windows, so a spent window is
+ * Per-job caps. Gate M-1 measured 3-14M input tokens per 16-persona family job; the caps hold about three times that. OpenCode Go bills a subscription with rolling usage windows, so a spent window is
  * waited out (a quota-window interruption) and never counts against a job.
  */
 export const M2_CAPS = Object.freeze({
-  maxInputTokens: { [M2_REPLAN]: 15_000_000, [M2_LONG_SESSION]: 40_000_000, "beam-1m": 60_000_000, "longmemeval-m": 60_000_000 },
-  wallTimeCapHours: { [M2_REPLAN]: 24, [M2_LONG_SESSION]: 24, suite: 72 },
+  maxInputTokens: { [M2_REPLAN]: 15_000_000, [M2_LONG_SESSION]: 40_000_000 },
+  wallTimeCapHours: { [M2_REPLAN]: 24, [M2_LONG_SESSION]: 24 },
   concurrency: 1,
   maxOutputTokens: 8192,
 });
 export const M2_CEILING = 1_000_000_000_000;
 /** The planning estimate stated in the gate record (not a cap), from gate M-1's measured job sizes. */
 export const M2_ESTIMATE = Object.freeze({
-  tokensPerJob: { [M2_REPLAN]: 3_000_000, [M2_LONG_SESSION]: 10_000_000, "beam-1m": 9_000_000, "longmemeval-m": 11_000_000 },
-  basis: "gate M-1 run reports (217/runs): family jobs 3-14M input tokens on 16 personas, STM suite jobs 3.8-5.5M on two questions",
+  tokensPerJob: { [M2_REPLAN]: 3_000_000, [M2_LONG_SESSION]: 10_000_000 },
+  basis: "gate M-1 run reports (217/runs): family jobs 3-14M input tokens on 16 personas",
 });
 /**
  * The sittings, in run order. 1: the re-plan family (M1). 2: plan 217's S1 re-measure on MiMo (three repeats of every
- * arm). 3: the M5 suite sample. 4: the long-session family on the gate models (cost rows and S1 context).
+ * arm). 3: M5, plan 218.1's Compact-Bench screen, run by its own harness (`external/compact-bench/screen.mjs`) on its
+ * own approval; no campaign job. 4: the long-session family on the gate models (cost rows and S1 context).
  */
-export const M2_SITTINGS = Object.freeze({ 1: "re-plan", 2: "s1", 3: "suites", 4: "long-session" });
-
-/** The development question ids of a suite (the committed draw). */
-export const m2DevIds = (suite) => Object.values(ROBUSTNESS_DRAWS[suite].abilities.dev).flat();
+export const M2_SITTINGS = Object.freeze({ 1: "re-plan", 2: "s1", 3: "compact-bench-screen", 4: "long-session" });
 
 export function assertM2Partition(partition) {
   if (partition !== M2_PARTITION)
@@ -155,7 +152,6 @@ export function assertM2Partition(partition) {
   return partition;
 }
 
-const safe = (value) => value.replace(/[^A-Za-z0-9.+_-]/g, "_");
 const arm = (id) => M2_ARMS.find((entry) => entry.id === id);
 
 /** One live family job (`work-outcome/long-session-live.mjs --gate M-2`). Ids: `218-m2.<model>.<arm>.<family>[.r<n>]`. */
@@ -184,41 +180,6 @@ export function m2FamilyJob(model, armId, family, { repeat = 1, repeats = 1, sit
   };
 }
 
-/** One QA suite job (`run.mjs`), the first `M2_SUITE_QUESTIONS` dev questions. Ids: `218-m2.<model>.<arm>.<suite>`. */
-export function m2SuiteJob(model, armId, suite, { sitting } = {}) {
-  const entry = arm(armId);
-  return {
-    id: `218-m2.${model.key}.${armId}.${suite}`,
-    kind: "robustness",
-    family: `218-m2.${model.key}.${suite}`,
-    role: armId,
-    arm: armId,
-    model_key: model.key,
-    suite,
-    subset: M2_PARTITION,
-    config: entry.config,
-    provider: model.provider,
-    model: model.model,
-    judges: M2_JUDGES.join(","),
-    judgeText: true,
-    labelInjections: "off",
-    maxInputTokens: M2_CAPS.maxInputTokens[suite],
-    maxOutputTokens: M2_CAPS.maxOutputTokens,
-    maxQuestions: M2_SUITE_QUESTIONS,
-    concurrency: M2_CAPS.concurrency,
-    wallTimeCapHours: M2_CAPS.wallTimeCapHours.suite,
-    finalTurnAnswer: true,
-    interleaveAbilities: true,
-    strictQuestions: true,
-    ...(entry.wmScope ? { wmScope: true } : {}),
-    ...(entry.ablate.length ? { ablate: [...entry.ablate] } : {}),
-    // A paired comparison never shares answer or judge checkpoints between its arms.
-    answersDir: `${M2_CACHE}/${model.key}/${safe(armId)}/${suite}/answers`,
-    judgeCacheDir: `${M2_CACHE}/${model.key}/${safe(armId)}/${suite}/judge`,
-    sitting,
-  };
-}
-
 /** The job list in run order; arms of one item set run back to back, so a halt leaves whole pairs. */
 export function m2Jobs({ worktree = M2_WORKTREE } = {}) {
   const ids = M2_ARMS.map((entry) => entry.id);
@@ -227,26 +188,13 @@ export function m2Jobs({ worktree = M2_WORKTREE } = {}) {
   for (let repeat = 1; repeat <= M2_S1_REPEATS; repeat++)
     for (const id of ids)
       jobs.push(m2FamilyJob(M2_S1_MODEL, id, M2_LONG_SESSION, { repeat, repeats: M2_S1_REPEATS, sitting: 2, worktree }));
-  for (const model of M2_MODELS)
-    for (const suite of M2_SUITES) for (const id of M2_SUITE_ARMS) jobs.push(m2SuiteJob(model, id, suite, { sitting: 3 }));
   for (const model of M2_MODELS) for (const id of ids) jobs.push(m2FamilyJob(model, id, M2_LONG_SESSION, { sitting: 4, worktree }));
   return jobs;
 }
 
-/** Every group of the job list differs only in the arm (and what makes it): same items, model, judges and flags. */
+/** Every group of the job list differs only in the arm (and what makes it): same items, model and flags. */
 export function assertM2Paired(jobs) {
-  const strip = ({
-    id: _id,
-    role: _role,
-    arm: _arm,
-    config: _config,
-    cwd: _cwd,
-    answersDir: _a,
-    judgeCacheDir: _j,
-    wmScope: _s,
-    ablate: _ab,
-    ...rest
-  }) => stableHash(rest);
+  const strip = ({ id: _id, role: _role, arm: _arm, cwd: _cwd, ablate: _ab, ...rest }) => stableHash(rest);
   const groups = new Map();
   for (const job of jobs) {
     const key = `${job.model_key}|${job.suite}|${job.repeat ?? 1}`;
@@ -254,19 +202,15 @@ export function assertM2Paired(jobs) {
   }
   for (const [key, group] of groups) {
     const arms = group.map((job) => job.arm).sort();
-    const expected = (group[0].kind === "robustness" ? [...M2_SUITE_ARMS] : M2_ARMS.map((entry) => entry.id)).sort();
+    const expected = M2_ARMS.map((entry) => entry.id).sort();
     if (JSON.stringify(arms) !== JSON.stringify(expected))
       throw new Error(`M2Jobs: ${key} does not hold every arm once (${arms.join(", ")})`);
     if (new Set(group.map(strip)).size !== 1) throw new Error(`M2Jobs: the arms of ${key} differ in more than the arm`);
   }
   for (const job of jobs) {
     if (job.subset !== M2_PARTITION) throw new Error(`M2Jobs: ${job.id} reads ${job.subset}`);
+    if (job.kind !== "long-session") throw new Error(`M2Jobs: ${job.id} is not a family job; gate M-2 runs no QA suite`);
     const expected = arm(job.arm);
-    if (
-      job.kind === "robustness" &&
-      (Boolean(job.wmScope) !== expected.wmScope || JSON.stringify(job.ablate ?? []) !== JSON.stringify(expected.ablate))
-    )
-      throw new Error(`M2Jobs: ${job.id} does not run its arm's switches`);
     if ((job.cwd !== undefined) !== (expected.tree === "om-before")) throw new Error(`M2Jobs: ${job.id} runs from the wrong tree`);
   }
   return jobs;
@@ -343,45 +287,31 @@ export async function buildM2Manifest({ root = ".", worktree = M2_WORKTREE } = {
     models: {
       answers: M2_MODELS.map((model) => ({ key: model.key, ref: refOf(model), family: model.family })),
       s1: { key: M2_S1_MODEL.key, ref: refOf(M2_S1_MODEL), scope: M2_LONG_SESSION, repeats: M2_S1_REPEATS },
-      judges: [...M2_JUDGES],
       worker: "each arm's answer model: STM, WM and the pre-216 observer calls go to the answer route",
-      judgesDoNotAnswer: true,
     },
     billing: {
       mode: "subscription",
       provider: M2_PROVIDER,
       plan: "OpenCode Go subscription (rolling usage windows; a spent window is waited out)",
       paidAnswers: M2_ANSWER_MODELS.map((model) => refOf(model)),
-      paidJudges: [...M2_JUDGES],
       paidFallbacks: [],
     },
     interruptions:
-      "429s, spent usage windows, empty replies, timeouts and dropped sockets are re-run from the job's answer/judge (or persona) checkpoints after a cooldown and never count against its attempts; a question that errors fails the job (--strict-questions) instead of being scored",
+      "429s, spent usage windows, empty replies, timeouts and dropped sockets are re-run from the job's persona checkpoints after a cooldown and never count against its attempts",
     caps: { ...M2_CAPS, journalCeiling: M2_CEILING },
     estimate: m2Estimate(jobs),
     sittings: M2_SITTINGS,
     cohort: {
-      ...Object.fromEntries(
-        M2_SUITES.map((suite) => [
-          suite,
-          {
-            partition: M2_PARTITION,
-            questions: M2_SUITE_QUESTIONS,
-            of: m2DevIds(suite).length,
-            idsHash: ROBUSTNESS_DRAWS[suite].idsHash,
-            underpowered: true,
-          },
-        ]),
-      ),
       [M2_REPLAN]: { partition: M2_PARTITION, fixtureHash: assertMemoryModelFixture("re-plan") },
       [M2_LONG_SESSION]: { partition: M2_PARTITION, fixtureHash: assertMemoryModelFixture("long-session") },
     },
     arms: M2_ARMS.map((entry) => ({ ...entry, base: entry.id === "WM" ? null : "WM" })),
+    m5: { source: M2_SCREEN, note: "plan 218.1 Task 3's Compact-Bench retention screen (Branch A); Branch B leaves M5 missing" },
     pairing:
-      "every arm is paired with WM on identical items: the same question ids (suites), personas and repeat (families), answer model, judges and flags; an item one arm did not finish is reported unpaired, never imputed",
+      "every arm is paired with WM on identical items: the same personas and repeat, answer model and flags; an item one arm did not finish is reported unpaired, never imputed",
     caveats: [
       "STM-only's deterministic WM policy discards a changed value to meet the target (probe wm.knowledge-update): it protects no supersedes record",
-      `M5 reads ${M2_SUITE_QUESTIONS} questions per suite and model: underpowered, a screen; the QA decision stays at gate A`,
+      "M5 reads one model family (Muse) on 30 Compact-Bench sessions: a screen that detects large differences only",
     ],
     results: [],
     jobs,
@@ -418,12 +348,11 @@ export function assertM2Gate(gate, manifest) {
   if (JSON.stringify(gate.partitions) !== JSON.stringify([M2_PARTITION])) refuse("gate M-2 lists the dev partition only");
   if (gate.budget?.provider !== M2_PROVIDER || gate.budget?.billing !== "subscription")
     refuse("the budget is not the OpenCode Go subscription");
-  const routes = new Set([...M2_ANSWER_MODELS.map((model) => refOf(model)), ...M2_JUDGES]);
-  const named = [...Object.values(gate.models?.answers ?? {}), gate.models?.s1, ...(gate.models?.judges ?? [])].filter(Boolean);
+  const routes = new Set(M2_ANSWER_MODELS.map((model) => refOf(model)));
+  const named = [...Object.values(gate.models?.answers ?? {}), gate.models?.s1].filter(Boolean);
   if (!named.length || named.some((ref) => !routes.has(ref))) refuse("the gate names a route outside the gate M-2 models");
   if (named.some((ref) => /openrouter\/.*free|:free$|-free$/.test(ref))) refuse("never openrouter/free or a free route");
-  const answers = new Set([...Object.values(gate.models?.answers ?? {}), gate.models?.s1]);
-  if ((gate.models?.judges ?? []).some((ref) => answers.has(ref))) refuse("a judge never answers");
+  if (gate.models?.judges?.length) refuse("gate M-2 has no judge role since the QA suites left (plan 218.1 Task 3)");
   return gate;
 }
 
@@ -506,10 +435,8 @@ export async function prepareM2Worktree({
 
 /** Every route in the OpenCode Go catalog, the worktree pinned, the fixtures hashed; nothing runs otherwise. */
 export async function preflightM2(manifest, options = {}) {
-  const refs = [
-    ...new Set(manifest.jobs.flatMap((job) => [`${job.provider}/${job.model}`, ...(job.judges ? job.judges.split(",") : [])])),
-  ].sort();
-  const allowed = new Set([...M2_ANSWER_MODELS.map((model) => refOf(model)), ...M2_JUDGES]);
+  const refs = [...new Set(manifest.jobs.map((job) => `${job.provider}/${job.model}`))].sort();
+  const allowed = new Set(M2_ANSWER_MODELS.map((model) => refOf(model)));
   const foreign = refs.filter((ref) => !allowed.has(ref));
   if (foreign.length) throw new Error(`M2Preflight: ${foreign.join(", ")} is not a gate M-2 route`);
   for (const id of Object.keys(manifest.fixtures)) assertMemoryModelFixture(id);
@@ -585,44 +512,6 @@ export function m2FamilyPair(
   };
 }
 
-/** M5 on one model: WM - STM-only accuracy (points), every suite's identical items pooled, clustered per question. */
-export function m2AccuracyPair(stmReports, wmReports, { iterations = 4000 } = {}) {
-  const base = [];
-  const candidate = [];
-  const unpaired = { base: 0, arm: 0 };
-  const coverage = {};
-  for (const [suite, stm] of Object.entries(stmReports)) {
-    const wm = wmReports[suite];
-    const pair = pairOnIdenticalItems(stm, wm, suite);
-    base.push(...pair.base);
-    candidate.push(...pair.arm);
-    unpaired.base += pair.unpaired.base;
-    unpaired.arm += pair.unpaired.arm;
-    // All-required evidence coverage of WM's rows per ability, over the paired items (the QA rows' coverage rule).
-    const wmRows = new Map((wm?.results ?? []).map((row) => [row.id, row]));
-    for (const ability of [...new Set(pair.arm.map((row) => row.ability))].sort()) {
-      const values = pair.ids
-        .map((id) => wmRows.get(id))
-        .filter((row) => row?.ability === ability && typeof row.evidenceAllRequired === "boolean");
-      if (values.length) coverage[`${suite}:${ability}`] = round(values.filter((row) => row.evidenceAllRequired).length / values.length);
-    }
-  }
-  if (!base.length) return { n: 0, status: "not-computable", unpaired };
-  const result = pairedAnalysis(base, candidate, { iterations });
-  return {
-    n: result.n,
-    clusters: result.clusters,
-    unpaired,
-    stmOnlyCorrect: base.filter((row) => row.correct).length,
-    wmCorrect: candidate.filter((row) => row.correct).length,
-    estimate: round(result.diff * 100, 2),
-    ciLow: round(result.ci95[0] * 100, 2),
-    ciHigh: round(result.ci95[1] * 100, 2),
-    underpowered: true,
-    coverage,
-  };
-}
-
 /** M2-M4 from Task 5's offline probes, in the criteria's evidence shape. */
 export function m2OfflineRows(probes) {
   const probe = (id) => probes?.probes?.find((row) => row.id === id && row.verdict === "works");
@@ -651,6 +540,22 @@ export function m2OfflineRows(probes) {
           },
         }
       : { tests: {} },
+  };
+}
+
+/**
+ * Plan 218.2 Task 8: a family report's whole-run cost row for one arm (`longSessionWholeRunCost`): main and worker
+ * tokens, whole-run tokens per successful task, and the compaction block's size. Beside S4; it changes no row.
+ */
+export function m2WholeRun(cost) {
+  return {
+    main: { ...cost.main },
+    workers: { ...cost.workers },
+    wholeRunTokens: cost.wholeRunTokens,
+    successfulTasks: cost.successfulTasks,
+    gradedTasks: cost.gradedTasks,
+    wholeRunTokensPerSuccessfulTask: cost.wholeRunTokensPerSuccessfulTask,
+    compactionBlockChars: { ...cost.compactionBlockChars },
   };
 }
 
@@ -698,28 +603,12 @@ export function m2FamilyCost(job, armId) {
         }
       : {}),
     cachedInputShare: input ? round(cached / input) : null,
+    // The wire proxy's spend: every process run of the attempt, re-runs on a changed protocol included (plan 218.2
+    // Task 8 traced gate M-1's 13.6M to four STM family runs in one attempt). `wholeRun` is the reported run alone.
     inputTokens: job?.inputTokens ?? null,
+    ...(job?.report?.cost?.[armId] ? { wholeRun: m2WholeRun(job.report.cost[armId]) } : {}),
     successRate: job?.report?.summary?.[armId]?.successRate ?? null,
     rederivationsPerRelatedTask: job?.report?.summary?.[armId]?.rederivationsPerRelatedTask ?? null,
-  };
-}
-
-/** A suite job's cost row: worker tokens per question, WM call stops, cached-input share, cost and p95 answer time. */
-export function m2SuiteCost(report) {
-  const rows = (report?.results ?? []).filter((row) => row.outcome === "scored" || row.outcome === "answered");
-  const worker = sum(Object.values(report?.workerUsage ?? {}).map((row) => (row?.inputTokens ?? 0) + (row?.outputTokens ?? 0)));
-  return {
-    status: report?.status ?? "missing",
-    questions: rows.length,
-    workerTokensPerQuestion: rows.length ? round(worker / rows.length, 1) : null,
-    wmCalls: report?.wmCalls ?? null,
-    cachedInputShare: report?.inputTokens ? round((report.cacheReadTokens ?? 0) / report.inputTokens) : null,
-    inputTokens: report?.inputTokens ?? null,
-    costUsd: report?.cost?.measured ?? null,
-    p95AnswerMs: quantile(
-      rows.map((row) => row.phaseTiming?.answer),
-      0.95,
-    ),
   };
 }
 
@@ -727,15 +616,12 @@ export function m2SuiteCost(report) {
  * The gate's evidence from the run reports and the Task 5 probe file. Every value is computed; a cell whose reports
  * are missing or unfinished stays out, so its row reads `missing`, never `pass`.
  */
-export function buildM2Evidence({ reports, manifest, probes, iterations = 4000 }) {
+export function buildM2Evidence({ reports, manifest, probes, screen = null, iterations = 4000 }) {
   const get = (model, armId, scope, repeat) => reports.get(`218-m2.${model}.${armId}.${scope}${repeat ? `.r${repeat}` : ""}`);
-  const jobOf = (id) => manifest.jobs?.find((job) => job.id === id);
   const cells = {};
   const performance = {};
   const m1 = { "vs-stm-only": [], "vs-om-before": [] };
   const m1Rederivations = { "vs-stm-only": [], "vs-om-before": [] };
-  const m5 = [];
-  const coverage = {};
   const successOf = (row) => (row.success ? 1 : 0);
   for (const { key: model } of M2_MODELS) {
     performance[model] = {};
@@ -760,31 +646,6 @@ export function buildM2Evidence({ reports, manifest, probes, iterations = 4000 }
         iterations,
       });
       if (rederived.n) m1Rederivations[test].push({ model, ...rederived });
-    }
-    // M5: the QA suite sample, WM against STM-only.
-    const stm = {};
-    const wm = {};
-    performance[model].suites = {};
-    let suitesDone = true;
-    for (const suite of M2_SUITES) {
-      const stmReport = get(model, "STM-only", suite);
-      const wmReport = get(model, "WM", suite);
-      performance[model].suites[suite] = { "STM-only": m2SuiteCost(stmReport), WM: m2SuiteCost(wmReport) };
-      const done =
-        m1SuiteDone(stmReport, jobOf(`218-m2.${model}.STM-only.${suite}`)) && m1SuiteDone(wmReport, jobOf(`218-m2.${model}.WM.${suite}`));
-      if (!done) suitesDone = false;
-      stm[suite] = stmReport;
-      wm[suite] = wmReport;
-    }
-    if (!suitesDone) cells[`${model}.suites`] = "missing";
-    else {
-      const pair = m2AccuracyPair(stm, wm, { iterations });
-      cells[`${model}.suites`] = pair.n ? "paired" : "not-computable";
-      if (pair.n) {
-        const { coverage: perAbility, ...rest } = pair;
-        m5.push({ model, ...rest });
-        Object.assign(coverage, Object.fromEntries(Object.entries(perAbility).map(([key, value]) => [`${model}:${key}`, value])));
-      }
     }
     // The long-session family on the gate models: cost rows and S1 context, never a verdict.
     performance[model][M2_LONG_SESSION] = Object.fromEntries(
@@ -835,13 +696,10 @@ export function buildM2Evidence({ reports, manifest, probes, iterations = 4000 }
   const wmCap = {};
   for (const model of [...M2_MODELS, M2_S1_MODEL].map((entry) => entry.key)) {
     const rows = [];
-    for (const [scope, value] of Object.entries(performance[model] ?? {})) {
-      const cellsOf =
-        scope === "suites"
-          ? Object.values(value).map((arms) => arms.WM?.wmCalls)
-          : [value.WM]
-              .flat()
-              .map((row) => row && { calls: row.wmCalls, capStops: row.wmCapStops, capNoItem: row.wmCapNoItem, items: row.wmItems });
+    for (const value of Object.values(performance[model] ?? {})) {
+      const cellsOf = [value.WM]
+        .flat()
+        .map((row) => row && { calls: row.wmCalls, capStops: row.wmCapStops, capNoItem: row.wmCapNoItem, items: row.wmItems });
       for (const cell of cellsOf) if (cell && Number.isFinite(cell.calls)) rows.push(cell);
     }
     wmCap[model] = rows.length
@@ -861,9 +719,22 @@ export function buildM2Evidence({ reports, manifest, probes, iterations = 4000 }
         ? { tests: { "vs-stm-only": { models: m1["vs-stm-only"] }, "vs-om-before": { models: m1["vs-om-before"] } } }
         : { tests: {}, cells: m1 },
     ...offline,
-    M5: all(m5)
-      ? { tests: { "vs-stm-only": { models: m5, underpowered: true, questionsPerSuite: M2_SUITE_QUESTIONS } }, coverage }
-      : { tests: {}, cells: m5 },
+    // M5: the screen's WM - STM-only retention (Branch A only; Branch B or no screen leaves it missing).
+    M5: screen?.m5?.n
+      ? {
+          source: M2_SCREEN,
+          tests: {
+            "vs-stm-only": {
+              models: [
+                { model: screen.m5.model, n: screen.m5.n, estimate: screen.m5.estimate, ciLow: screen.m5.ciLow, ciHigh: screen.m5.ciHigh },
+              ],
+              engagedOnly: screen.m5.engagedOnly,
+              branch: screen.branch,
+              screenRuleHash: screen.ruleHash,
+            },
+          },
+        }
+      : { tests: {}, ...(screen ? { branch: screen.branch } : {}) },
   };
   return {
     kind: "218-m2-evidence",
@@ -892,7 +763,8 @@ export async function writeM2Evidence({ root = "." } = {}) {
   const manifest = JSON.parse(await readFile(join(root, M2_MANIFEST), "utf8"));
   const reports = await loadM2Reports(join(root, M2_RUNS));
   const probes = JSON.parse(await readFile(join(root, M2_PROBES), "utf8"));
-  const evidence = buildM2Evidence({ reports, manifest, probes });
+  const screen = existsSync(join(root, M2_SCREEN)) ? JSON.parse(await readFile(join(root, M2_SCREEN), "utf8")) : null;
+  const evidence = buildM2Evidence({ reports, manifest, probes, screen });
   await mkdir(join(root, M2_DIR), { recursive: true });
   await writeFile(join(root, M2_DIR, "evidence.json"), `${JSON.stringify(evidence, null, 2)}\n`);
   return { evidence, verdict: memoryModelGateVerdict(M2_GATE_ID, evidence, { partition: M2_PARTITION }) };

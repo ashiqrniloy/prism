@@ -1,4 +1,6 @@
 export const DEFAULT_RECALL_PAGE_LIMIT = 20;
+/** Hits a `recall { query }` returns when the call carries no limit (plan 218.2 Task 7). */
+export const DEFAULT_RECALL_QUERY_LIMIT = 8;
 export const HARD_MAX_RECALL_PAGE_LIMIT = 100;
 
 export function resolveRecallPageLimit(limit?: number): number {

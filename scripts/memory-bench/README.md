@@ -115,7 +115,8 @@ and the draw file's hash (`6fb271e6…` → `9bdc8924…`), and the verifier ref
   step in `docs/_evidence/memory-bench/memory-model/baselines.json`);
 - the retrieval-set construction rules and the threshold-fit rule (plan 219.1 adds the set hashes by amendment);
 - the fixture index with each fixture's owner plan (plan 217 Task 6's amendment adds the `long-session-replay` and
-  `long-session` hashes, plan 218 Task 5's moves `long-session-replay` and adds `re-plan`;
+  `long-session` hashes, plan 218 Task 5's moves `long-session-replay` and adds `re-plan`, plan 218.2 Task 1's adds `worker-replay` and Task 8's
+  `long-horizon`;
   `assertMemoryModelFixture()` refuses a gate read of an unhashed or drifted fixture);
 - R1's threshold, fixed with `power.mjs`.
 
@@ -253,11 +254,51 @@ long-session project generator under its own seed. The session runs as follows:
 M1 is task success on those two tasks (`longSessionChecks`), with re-derivations reported beside it. The `WM` arm
 receives each plan as the episode scope before its turn. The partitions (`work-outcome-re-plan.json`, 4 / 4 / 4) are
 drawn label-blind by `SHA-256("prism-218-re-plan:" + id)`, and the criteria pin the file. `runLongSession({ family:
-"re-plan" })` runs the arms `memory-off`, `WM`, `STM-only` (deterministic WM, no scope) and `OM-before`. Live runs
+"re-plan" })` runs the arms `memory-off`, `WM`, `STM-only` (deterministic WM, no scope) `OM-before` and the two baselines below. Live runs
 are gate M-2's (plan 218 Task 6).
 
 ```sh
 timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family re-plan --offline [--partition dev] [--output report.json]
+```
+
+### Baseline arms, the long-horizon family and whole-run cost (plan 218.2 Task 8)
+
+Two cheap baselines join the long-session, re-plan and long-horizon families (`armMemory`). Each is built from a package
+that already ships, and neither loads a memory package:
+
+- `fold`: `@arnilo/prism-extensions/context-engineering` with `fold: { summarize: "truncate" }`. Old tool output is
+  folded and actions and messages are kept (observation masking); the kernel's deterministic compactor runs at the
+  runner's entry gate, as for memory-off.
+- `llm-summary`: `@arnilo/prism-extensions/compaction` on the arm's worker model, one summary call per compaction.
+  The meter counts its summary calls as worker calls.
+
+`work-outcome/long-horizon.mjs` is the family at the shipped triggers. Each of its 6 sessions (`lh0`–`lh5`) chains 13
+long-session projects (`codingProject` under seed `prism-218.2-long-horizon`). Every project's source tasks run first
+(rename, build log, config, deploy log), then every project's dependent tasks. Each prompt names its project
+(`Task 1. [project p3] …`), and the tools act on that project's files.
+
+- Sessions: a complete session holds about 154K eligible tokens.
+- Defaults: the memory arms set no `stm.triggerTokens`, `context.recentMessages` or `context.compactAt`, so compaction
+  follows the model's window. `llm-summary` compacts at the memory system's default ratio (0.6 of the input cap);
+  memory-off and `fold` keep the entry gate.
+- Partitions: `work-outcome-long-horizon.json` holds 2 / 2 / 2 sessions, drawn by
+  `SHA-256("prism-218.2-long-horizon:" + id)`. Criteria amendment 9 pins the file.
+- Precondition: before any spend, the scripted worker must record at least 5 WM passes with an item in every session
+  at the defaults (`assertLongHorizonEngages`). A live run refuses otherwise.
+
+`--estimate` writes `docs/_evidence/memory-bench/218.2/long-horizon-manifest.json`: the precondition reading and the
+estimated live tokens per arm and model. The estimate is the offline run at `contextWindow` (default 128K), scaled by
+gate M-1's live/offline ratio on the long-session family. No gate names the family yet, so it has no live job.
+
+Every family report now carries `cost` per arm: input, cached-input and output tokens of the main model and of the
+workers, whole-run tokens per successful task (a graded task whose check passes), and the compaction block's size in
+characters at each compaction. It comes from the family meter of the run that produced each row. A live job's own
+`inputTokens` is the wire proxy's spend: it covers every process run of the attempt, so it counts re-runs
+(`218.2/m1-whole-run-trace.json`). Gate M-2's `m2FamilyCost` reports both.
+
+```sh
+timeout 1200 bun scripts/memory-bench/work-outcome/run.mjs --family long-horizon --arms memory-off,fold,llm-summary,STM-only,WM --offline
+timeout 1200 bun scripts/memory-bench/work-outcome/run.mjs --family long-horizon --estimate
 ```
 
 ### Gate M-1: STM against the pinned pre-redesign observer (plan 217 Task 6, paid)
@@ -316,8 +357,7 @@ did.
 machinery on the development partitions, with three arms:
 
 - `WM`: the `session` profile (STM + WM). The re-plan family hands WM each plan as the episode scope before its turn.
-  The QA suites give it the suite's task framing (`run.mjs --wm-scope`, `ablations.mjs` `SUITE_SCOPES`). The
-  long-session family has no plan, so it runs without a scope;
+  The long-session family has no plan, so it runs without a scope;
 - `STM-only`: STM with `wm.policy: "deterministic"` (`--ablate session.wm.policy=deterministic`) and no scope. The
   deterministic policy keeps protected, outcome and salient records only, so it can discard a changed value (probe
   `wm.knowledge-update`). The evidence carries this caveat beside the arm;
@@ -328,17 +368,17 @@ machinery on the development partitions, with three arms:
 The measured roles (owner, 2026-11-12) are OpenCode Go routes:
 
 - answers: `deepseek-v4.1-flash` and `muse-spark-1.3-contributor`;
-- plan 217's S1 re-measure: `mimo-v2.6-flash`;
-- judges, which never answer: `qwen3.8-flash` and `minimax-m3.1-flash`.
+- plan 217's S1 re-measure: `mimo-v2.6-flash`.
 
-The worker is each arm's answer model. The 29 jobs run in four sittings (`M2_SITTINGS`; `PRISM_MEMORY_BENCH_218_SITTING`
-picks one):
+Gate M-2 has no judge role since the QA suites left (plan 218.1 Task 3); `assertM2Gate` refuses a record that names
+judges. The worker is each arm's answer model. The 21 jobs run in sittings 1, 2 and 4 (`M2_SITTINGS`;
+`PRISM_MEMORY_BENCH_218_SITTING` picks one); sitting 3 is the Compact-Bench screen, which runs on its own harness:
 
 1. the `re-plan` family (M1), two models × three arms;
 2. the S1 re-measure, the `long-session` family on MiMo, three arms × three repeats (`--repeat`, part of the checkpoint
    protocol);
-3. M5's QA sample, `WM` and `STM-only` on the first 4 dev questions per suite and model (`M2_SUITE_QUESTIONS`; owner:
-   small sample, flagged underpowered, the QA decision stays at gate A);
+3. M5, plan 218.1's Compact-Bench retention screen (`external/compact-bench/screen.mjs`, its own approval in the gate
+   record's `compactBenchScreen`); no campaign job;
 4. the `long-session` family on the two gate models (cost rows only).
 
 The product fingerprint leaves out test files (`__tests__/`, `*.test.*`; owner decision, 2026-11-12). A test-only
@@ -348,7 +388,7 @@ commit no longer refuses a sitting.
 |---|---|
 | M1 | re-plan reports: task success (points) on the two tasks after the re-plan, `WM − STM-only` (non-inferior) and `WM − OM-before` (gain), paired by persona and pair, clustered by persona |
 | M2–M4 | `218/wm-probes.json` (offline, Task 5): protected-item loss, median achieved ratio against the target, prefix bytes between compactions. `assertM2OfflineRows` refuses the paid run unless all ten WM probes read `works` and these rows pass |
-| M5 | suite reports: `WM − STM-only` accuracy pooled over both suites per model, with WM's evidence coverage per ability; `underpowered: true` |
+| M5 | `218/compact-bench-screen.json` (Branch A): `WM − STM-only` retention in points, paired per session, with the sessions where the screen's WM run engaged beside it. Branch B, or no screen, leaves M5 `missing` |
 
 Beside the rows, the evidence carries:
 
@@ -491,6 +531,52 @@ first boundary, both the paper's figures; the transcript port equals upstream's 
 replay of the 30 sessions on three arms takes 18 s (OM-before runs from the gate M-2 worktree). The mock worker's
 recalls check the pipeline and are not measurements. Task environments (per-instance repository archives and virtual
 environments) need several GB and are built only by the paid screen (plan 218.1 Task 3).
+
+**Plan 218.1 Task 3** adds two files and a seam command:
+
+| File | Role |
+|---|---|
+| `wm-probe.mjs` | Step 1, the WM engagement probe: the 30 sessions × the `WM` arm on the live Muse worker, counts and cost only (nothing scored). The rule (`WM_PROBE_RULE`: ≥ 15 of 30 engaged → Branch A, else B; stop on the 8M ceiling or > 3 failed sessions) is hashed and approved in `owner-gate-m2.json` `compactBenchWmProbe`. The probe is read twice: `pre-218.2` (2026-11-13, product `e7e100f1…`, recovered from commit `4c6547e6`) and `post-218.2` (`--reading post-218.2`, the default, which needs the record's `reprobe` approval and keys its checkpoints by rule and product hash; `--state-key` resumes a named run). `compact-bench-wm-probe.json` holds both readings; `wmProbeScreenBranch` returns the post-218.2 verdict only on the product it was read on. |
+| `screen.mjs` | Step 2, the retention screen. `SCREEN_RULE` (hashed, approved in the record's `compactBenchScreen` for the branch the probe selected) fixes the arms per branch (A: `memory-off`, `OM-before`, `STM-only`, `WM`; B: `memory-off`, `OM-before`, `session`), the references (Claude Code and Codex prompts on Muse through upstream's `compress_one` and the pass-through, `anchor_index`, `mask-tail`), the decision variant (S; the block and chunks are reported beside it), the paired interval (bootstrap over sessions) and the rules. `--arm <arm>` runs one Prism arm live (OM-before from the gate M-2 worktree, which carries `external/` and the draw), `--references` runs the references, `--score` scores everything through `seam.py retention` and writes `218/compact-bench-screen.json` (ids, scores, S characters and counts; no text). `--offline` runs the whole pipeline on the mock worker with `anchor_index` and `mask-tail` only, so its verdict reads `missing`. |
+| `seam.py reference` | Upstream's `compress_one` with `C.PROMPTS["claude"]` / `["codex"]` on the given model through the environment's endpoint, and `C.anchor_baseline`; writes S, recall and atoms per (session, reference) to a private file and skips finished pairs. `self-check` now asserts six pinned upstream lines. |
+
+`mask-tail` is the session's transcript view, newest lines first, with tool lines reduced to `[tool] (output cleared)`,
+cut to exactly the candidate arm's S character count for the same session (code points): does the memory block beat
+keeping the recent turns at the same size? A candidate that does not beat it is a finding for the owner, never a
+decision. "Loses clearly" (interval upper bound below 0 against the Claude Code prompt or `anchor_index`) holds the
+decision for the owner; it does not change it.
+
+```sh
+bun scripts/memory-bench/external/compact-bench/wm-probe.mjs --reading post-218.2      # Step 1 re-probe (paid, approved)
+bun scripts/memory-bench/external/compact-bench/screen.mjs --offline --limit 3         # no model call
+bun scripts/memory-bench/external/compact-bench/screen.mjs --arm WM                    # paid, after compactBenchScreen approval
+bun scripts/memory-bench/external/compact-bench/screen.mjs --references
+bun scripts/memory-bench/external/compact-bench/screen.mjs --score
+```
+
+### Worker replay screen (plan 218.2 Task 1)
+
+A cheap, mechanical screen for changes to the session workers: each frozen request goes through the product's own
+`runStm` and `runWm` with the package defaults (`resolveMemorySystemConfig({})`), the product's salience and
+protections, and the flush's WM output-cap retry. There is no main agent and no judge; every property is a match against
+an annotation. Plan 218.2 decides Tasks 2, 4, 5 and 6 on it before any agent-level paid run.
+
+| File | Role |
+|---|---|
+| `worker-replay/build.mjs` | Builds `fixtures/memory-model/worker-replay/` from the long-session dev personas (`codingProject`) and written cases: 60 STM requests (`base`, two batches per persona; hard cases at 6 each: `passed-outcome` "fixed the failing test" / "0 failed", `actually` that corrects nothing, `bn` / `ja` / `es` corrections, constraints and failed checks, `offtopic-constraint`) and 48 WM requests (`base` under the six-step persona plan, `long-scope` under a 17 KB multi-workstream plan). `index.json` pins the files; criteria amendment 8 pins `index.json` (`0ce56d6b…`). `--check` rebuilds and compares byte for byte; a rebuild of a frozen fixture needs `--force` and a new amendment. |
+| `worker-replay/score.mjs` | Per-request rows (ids and counts) and aggregates. STM: events per 10k source tokens, output tokens, refused calls by reason, outcome recall, correction and failure signals read two ways (the English patterns through `salienceSignals` over the events with the Task 2 fields stripped; the structured fields once `record_event` offers them, else `null`), durable statements, `resolves` links, evidence spans covered by a chunk, chunk bytes. WM: share of records given a verdict, refused calls, turns and output tokens per record, cap stops, later-step records kept, changed values kept, durable statements discarded, finished records discarded, achieved ratio. Groups: STM `english` / `non-english`; WM `base` / `long-scope`. `REPLAY_RULES` and `decideTask2/4/5/6` are the decision rules, fixed before the baseline. |
+| `worker-replay/run.mjs` | The run. `--offline` uses a scripted worker (it re-sends calls the per-turn limit refused, as a model does) and must reproduce `OFFLINE_EXPECTED`. Live, the gate record (`docs/_evidence/memory-bench/218.2/gates/owner-gate-replay.json`) must be approved by the owner, carry exactly `REPLAY_RULES` and their hash, the frozen criteria hash and the fixture hash; once `replay-baseline.json` exists, a different rules hash is refused. Tokens come from the wire proxy's usage log (by model); the per-model input ceiling is checked before each request; rows are checkpointed under `.cache/memory-bench/218.2/replay/`. `--only stm|wm` runs one tier and still writes its report (`only` names the tier); `--label task2` and `--label task4` also print `decideTask2` / `decideTask4` against the baseline. `--set base|long-scope` replays one WM set alone (plan 218.2 Task 6). `--state-key <16 hex>` resumes a named run's checkpoints and wire log when the product fingerprint has moved since it started (edits elsewhere in the tree); the report records `stateKey` with the resumed and current keys. The scripted WM worker answers with one `judge` call over the request's ordinals (plan 218.2 Task 5); records the package settles first are not offered to it. Once `record_event` offers the fields, the scripted STM worker sets `status` on checks and outcomes and `resolves` on a passed outcome (the recent errors); it leaves `corrects` and `durable` unset. `--label after` (plan 218.2 Task 9) also writes `paired`: `pairReplays` (`score.mjs`) against the baseline, which refuses a different fixture, model set, rules hash or a one-tier run, and gives both product hashes and `{ before, after, delta }` per model for the STM and WM rows and usage. `--pair <report>` writes the same reading into a finished report. |
+
+```sh
+timeout 300 bun scripts/memory-bench/worker-replay/run.mjs --offline
+timeout 7200 bun scripts/memory-bench/worker-replay/run.mjs --gate docs/_evidence/memory-bench/218.2/gates/owner-gate-replay.json --out docs/_evidence/memory-bench/218.2/replay-baseline.json
+timeout 7200 bun scripts/memory-bench/worker-replay/run.mjs --gate docs/_evidence/memory-bench/218.2/gates/owner-gate-replay.json --only stm --label task2 --out docs/_evidence/memory-bench/218.2/replay-task2.json
+timeout 50400 bun scripts/memory-bench/worker-replay/run.mjs --gate docs/_evidence/memory-bench/218.2/gates/owner-gate-replay.json --label after --out docs/_evidence/memory-bench/218.2/replay-after.json
+```
+
+The WM fixture's records carry the fields a correct recorder would write (`status`, `corrects`, `durable`, `resolves`):
+today's product ignores them, and plan 218.2 Task 3's protections read them, so the WM replay measures WM on good STM
+output whichever product runs it. The offline counts check the pipeline and are not measurements.
 
 ## Measurement repair protocol
 

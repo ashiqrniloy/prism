@@ -456,7 +456,7 @@ test("seam_self_check_holds_on_the_pinned_checkout", () => {
     encoding: "utf8",
     timeout: 60_000,
   });
-  assert.deepEqual(JSON.parse(out), { ok: true, checked: 4 });
+  assert.deepEqual(JSON.parse(out), { ok: true, checked: 6 });
 });
 
 // --- Task 3 Step 1: the WM engagement probe ---
@@ -553,4 +553,173 @@ test("screen_branch_follows_the_probe_gate", async () => {
   assert.throws(() => assertWmProbeGate(gate, { ...WM_PROBE_RULE, threshold: 10 }), /a changed rule is a refusal/);
   assert.throws(() => assertWmProbeGate({ compactBenchWmProbe: { ...gate.compactBenchWmProbe, approved: false } }), /not approved/);
   assert.throws(() => assertWmProbeGate({}), /no compactBenchWmProbe/);
+});
+
+test("screen_branch_reads_the_reprobe_on_the_new_product_hash", async () => {
+  const { WM_PROBE_EVIDENCE, WM_PROBE_PRE_READING_PRODUCT, wmProbeReadingsFile, wmProbeRuleHash, wmProbeScreenBranch } = await import(
+    "./wm-probe.mjs"
+  );
+  const committed = JSON.parse(readFileSync(WM_PROBE_EVIDENCE, "utf8"));
+  const legacy = committed.kind === "compact-bench-wm-probe-v1" ? committed : committed.readings.find((r) => r.reading === "pre-218.2");
+  const pre = { ...legacy };
+  const after = "a".repeat(64);
+  // The pre-218.2 reading alone never starts Step 2, whatever product is current.
+  const preOnly = wmProbeReadingsFile(null, { ...pre, reading: "pre-218.2", productHash: WM_PROBE_PRE_READING_PRODUCT.productHash });
+  for (const productHash of [WM_PROBE_PRE_READING_PRODUCT.productHash, after])
+    assert.throws(() => wmProbeScreenBranch(preOnly, { productHash }), /cannot start Step 2/);
+  // A legacy single-reading file becomes the pre-218.2 reading with its recovered product hash.
+  const legacyFile = wmProbeReadingsFile(
+    { ...pre, kind: "compact-bench-wm-probe-v1", reading: undefined, productHash: undefined },
+    { ...pre, reading: "post-218.2", productHash: after, verdict: { branch: "B", engaged: 12, of: 30 } },
+  );
+  assert.deepEqual(
+    legacyFile.readings.map((r) => [r.reading, r.productHash]),
+    [
+      ["pre-218.2", WM_PROBE_PRE_READING_PRODUCT.productHash],
+      ["post-218.2", after],
+    ],
+  );
+  // The re-probe's verdict selects the branch, but only on the product it was read on and under the approved rule.
+  assert.deepEqual(wmProbeScreenBranch(legacyFile, { productHash: after }), { branch: "B", engaged: 12, of: 30 });
+  assert.throws(() => wmProbeScreenBranch(legacyFile, { productHash: "b".repeat(64) }), /re-probe/);
+  // An owner rebind waives kernel edits only: the reading stands while the memory packages hash as when it was read.
+  const memoryHash = "d".repeat(64);
+  const rebinds = [{ approved: true, from: after, memoryHash }];
+  const kernelMoved = { productHash: "b".repeat(64), rebinds };
+  assert.deepEqual(wmProbeScreenBranch(legacyFile, { ...kernelMoved, memoryHash }), { branch: "B", engaged: 12, of: 30 });
+  assert.throws(() => wmProbeScreenBranch(legacyFile, { ...kernelMoved, memoryHash: "e".repeat(64) }), /re-probe/);
+  assert.throws(() => wmProbeScreenBranch(legacyFile, kernelMoved), /re-probe/);
+  assert.throws(
+    () => wmProbeScreenBranch(legacyFile, { ...kernelMoved, memoryHash, rebinds: [{ ...rebinds[0], approved: false }] }),
+    /re-probe/,
+  );
+  assert.throws(
+    () => wmProbeScreenBranch(legacyFile, { ...kernelMoved, memoryHash, rebinds: [{ ...rebinds[0], from: "f".repeat(64) }] }),
+    /re-probe/,
+  );
+  const otherRule = { ...legacyFile, readings: legacyFile.readings.map((r) => ({ ...r, ruleHash: "0".repeat(64) })) };
+  assert.throws(() => wmProbeScreenBranch(otherRule, { productHash: after }), /different rule/);
+  assert.equal(legacyFile.readings.at(-1).ruleHash, wmProbeRuleHash());
+  // A reading without its product hash is refused.
+  assert.throws(() => wmProbeReadingsFile(null, { ...pre, reading: "post-218.2", productHash: undefined }), /product hash/);
+});
+
+test("mask_tail_reference_matches_the_memory_arm_character_count", async () => {
+  const { maskTail } = await import("./screen.mjs");
+  const view = [
+    { role: "user", line: "[user] fix the retry loop in src/retry.ts" },
+    { role: "tool", line: "[tool] 4,000 lines of test output with SECRET_LOOKING_ID_123 inside" },
+    { role: "assistant", line: "[assistant] patched maxAttempts in src/retry.ts; 35 tests pass" },
+    { role: "user", line: "[user] now the backoff — 日本語 too" },
+  ];
+  const whole = maskTail(view, 10_000);
+  assert.equal(whole.includes("SECRET_LOOKING_ID_123"), false, "tool output is cleared");
+  assert.ok(whole.includes("[tool] (output cleared)"));
+  // At any size below the whole view, the reference is exactly the memory arm's S character count (code points).
+  for (const chars of [1, 7, 30, 61, 90, Array.from(whole).length]) assert.equal(Array.from(maskTail(view, chars)).length, chars);
+  // It keeps the newest lines: the cut drops the oldest text first.
+  assert.ok(maskTail(view, 40).endsWith("日本語 too"));
+});
+
+test("screen_rule_is_fixed_in_the_gate_record_before_the_run", async () => {
+  const { assertScreenGate, SCREEN_RULE, screenRuleHash } = await import("./screen.mjs");
+  const approved = {
+    compactBenchScreen: { approved: true, approvedBy: "owner", text: "go", branch: "A", rule: SCREEN_RULE, ruleHash: screenRuleHash() },
+  };
+  assert.equal(assertScreenGate(approved, { probeBranch: { branch: "A", engaged: 30, of: 30 } }).branch, "A");
+  // No section, no approval, or a rule changed after approval is refused; so is an approval for the other branch.
+  assert.throws(() => assertScreenGate({}, { probeBranch: { branch: "A" } }), /no compactBenchScreen/);
+  assert.throws(
+    () => assertScreenGate({ compactBenchScreen: { ...approved.compactBenchScreen, approved: false } }, { probeBranch: { branch: "A" } }),
+    /not approved/,
+  );
+  const changed = { ...SCREEN_RULE, nonInferiorPoints: 10 };
+  assert.throws(() => assertScreenGate(approved, { probeBranch: { branch: "A" }, rule: changed }), /a changed rule is a refusal/);
+  const rehashed = { compactBenchScreen: { ...approved.compactBenchScreen, rule: changed, ruleHash: screenRuleHash(changed) } };
+  assert.throws(() => assertScreenGate(rehashed, { probeBranch: { branch: "A" } }), /a changed rule is a refusal/);
+  assert.throws(() => assertScreenGate(approved, { probeBranch: { branch: "B", engaged: 12, of: 30 } }), /approval is for Branch A/);
+  assert.throws(() => assertScreenGate(approved, { probeBranch: { branch: "stop" } }), /selected no branch/);
+  // The committed gate record carries no screen approval until the owner gives one.
+  const committed = JSON.parse(readFileSync((await import("./wm-probe.mjs")).WM_PROBE_GATE, "utf8"));
+  if (committed.compactBenchScreen?.approved === true) assert.equal(committed.compactBenchScreen.ruleHash, screenRuleHash());
+});
+
+test("screen_verdict_follows_the_preregistered_rule", async () => {
+  const { screenVerdict, screenM5 } = await import("./screen.mjs");
+  const ids = Array.from({ length: 30 }, (_, i) => `s${i}`);
+  // Recall per session: base + a small per-session wobble, so intervals are narrow and their sign follows `base`.
+  const arm = (base, engaged = true) => ids.map((id, i) => ({ id, recall: base + ((i % 5) - 2) * 0.002, engaged }));
+  const scores = (over) => ({
+    "memory-off": arm(0.1),
+    "OM-before": arm(0.15),
+    "STM-only": arm(0.2),
+    WM: arm(0.3),
+    session: arm(0.3),
+    "claude-code": arm(0.25),
+    codex: arm(0.2),
+    anchor_index: arm(0.2),
+    "mask-tail": arm(0.15),
+    ...over,
+  });
+  // Branch A: non-inferior to Claude Code, beats memory-off and STM-only → STM + WM ships with the model policy.
+  const ship = screenVerdict({ branch: "A", scores: scores({}) });
+  assert.equal(ship.decision, "ship-stm-wm");
+  assert.equal(ship.toOwner, false);
+  // WM does not beat STM-only → the deterministic policy.
+  assert.equal(screenVerdict({ branch: "A", scores: scores({ "STM-only": arm(0.3) }) }).decision, "ship-deterministic-wm");
+  // Within 5 points below Claude Code still ships, but clearly below it is held for the owner (both rules hold).
+  const close = screenVerdict({ branch: "A", scores: scores({ "claude-code": arm(0.33) }) });
+  assert.equal(close.decision, "ship-stm-wm");
+  assert.equal(close.holdForOwner, true);
+  assert.equal(close.toOwner, true);
+  // More than 5 below ships nothing and goes to the owner.
+  const lose = screenVerdict({ branch: "A", scores: scores({ "claude-code": arm(0.4) }) });
+  assert.equal(lose.decision, "not-shown");
+  assert.equal(lose.toOwner, true);
+  // Losing to anchor_index alone is a finding that holds the decision; it does not change it.
+  const anchored = screenVerdict({ branch: "A", scores: scores({ anchor_index: arm(0.6) }) });
+  assert.equal(anchored.decision, "ship-stm-wm");
+  assert.equal(anchored.holdForOwner, true);
+  // Not beating memory-off ships nothing.
+  const flat = screenVerdict({ branch: "A", scores: scores({ "memory-off": arm(0.3), "claude-code": arm(0.3) }) });
+  assert.equal(flat.decision, "not-shown");
+  assert.equal(flat.toOwner, true);
+  // mask-tail is a finding, never a decision.
+  const masked = screenVerdict({ branch: "A", scores: scores({ "mask-tail": arm(0.35) }) });
+  assert.equal(masked.decision, "ship-stm-wm");
+  assert.equal(masked.toOwner, true);
+  assert.match(masked.findings[0], /mask-tail/);
+  // Branch B reads `session` as STM and makes no WM claim.
+  const b = screenVerdict({ branch: "B", scores: scores({}) });
+  assert.equal(b.decision, "stm-supported");
+  assert.equal(b.candidate, "session");
+  assert.equal("wmOverStmOnly" in b, false);
+  assert.equal(screenVerdict({ branch: "B", scores: scores({ "claude-code": arm(0.5) }) }).decision, "not-shown");
+  // A missing reading leaves the verdict missing, never a pass.
+  const { "claude-code": _drop, ...noClaude } = scores({});
+  assert.equal(screenVerdict({ branch: "A", scores: noClaude }).decision, "missing");
+  // M5 reads WM vs STM-only over all sessions, with the engaged subset beside it.
+  const m5 = screenM5(scores({ WM: ids.map((id, i) => ({ id, recall: 0.3, engaged: i < 20 })) }));
+  assert.equal(m5.n, 30);
+  assert.equal(m5.engagedOnly.n, 20);
+  assert.ok(m5.estimate > 9 && m5.ciLow > 0);
+});
+
+test("screen_ceiling_counts_every_arm_and_the_references", async () => {
+  const { mkdir } = await import("node:fs/promises");
+  const { screenUsage } = await import("./screen.mjs");
+  const wire = await mkdtemp(join(tmpdir(), "cb-screen-usage-"));
+  try {
+    await mkdir(join(wire, "WM"), { recursive: true });
+    await mkdir(join(wire, "STM-only"), { recursive: true });
+    await mkdir(join(wire, "references"), { recursive: true });
+    await writeFile(join(wire, "WM", "opencode-go-usage.jsonl"), `${JSON.stringify({ inputTokens: 10, outputTokens: 1 })}\n`);
+    await writeFile(join(wire, "STM-only", "opencode-go-usage.jsonl"), `${JSON.stringify({ inputTokens: 20, outputTokens: 2 })}\n`);
+    await writeFile(join(wire, "references", "usage.jsonl"), `${JSON.stringify({ inputTokens: 30, outputTokens: 3 })}\n`);
+    await writeFile(join(wire, "WM", "exchanges.jsonl"), `${JSON.stringify({ inputTokens: 999 })}\n`);
+    assert.deepEqual(screenUsage(wire), { inputTokens: 60, outputTokens: 6 });
+    assert.deepEqual(screenUsage(join(wire, "absent")), { inputTokens: 0, outputTokens: 0 });
+  } finally {
+    await rm(wire, { recursive: true, force: true });
+  }
 });

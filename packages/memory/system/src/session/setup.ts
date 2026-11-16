@@ -90,7 +90,9 @@ export function setupSessionTiers(prism: PackageAPI<MemorySystemConfig>, compone
 
   // --- tools: recall is visible and callable only while the session's toggle is on.
   if (config.recall) {
-    prism.tools.register(createObservationalRecallTool({ chunks }), { when: (session) => read(session).enabled });
+    prism.tools.register(createObservationalRecallTool({ chunks, secretsFor: (sessionId) => secrets.get(sessionId) }), {
+      when: (session) => read(session).enabled,
+    });
   }
 
   // --- fork referrers (I3): a fork or resumed session adds its own referrer for every chunk its active STM records and

@@ -14,9 +14,9 @@ import {
 } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
 import { createHashEmbedder, createMemoryVectorStore, type Memory, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import memorySystem, { createLongTermMemory, createMemory } from "../../index.js";
 import { resolveMemoryFabricConfig } from "../config.js";
 import { exchangePairs } from "../exchanges.js";
-import memorySystem, { createMemory, createLongTermMemory } from "../../index.js";
 import { EVIDENCE_RELATION, LessonRequiresEvidenceError, lessonNudgeLine, lessonSignal } from "../lessons.js";
 import { DEFAULT_ARCHIVE_CONFIG, shouldArchive } from "../lifecycle/archive.js";
 import { SCOPE_CLOCK_COUNTER } from "../lifecycle/clock.js";

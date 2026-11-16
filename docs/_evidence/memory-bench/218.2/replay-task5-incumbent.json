@@ -1,0 +1,6653 @@
+{
+  "kind": "worker-replay-report-v1",
+  "plan": "218.2",
+  "task": 1,
+  "label": "task5-incumbent",
+  "only": "wm",
+  "wm": {
+    "format": "tools"
+  },
+  "startedAt": "2026-11-14T19:00:19.667Z",
+  "finishedAt": "2026-11-14T23:31:21.214Z",
+  "fixture": {
+    "id": "worker-replay",
+    "indexSha256": "0ce56d6b27d145f017833065a55880f45ca626ece39d9b4e3f1b1f21a7b806b7",
+    "counts": {
+      "stm": {
+        "base": 24,
+        "passed-outcome": 6,
+        "actually": 6,
+        "bn": 6,
+        "ja": 6,
+        "es": 6,
+        "offtopic-constraint": 6
+      },
+      "wm": {
+        "base": 24,
+        "long-scope": 24
+      }
+    }
+  },
+  "productHash": "f9e30b7811902172d15bd72a8626c166222394a1d323d2b3efa6dfe0068c3464",
+  "rulesHash": "195b0fd33e1d94601749bb414de3356175ac2c6e173d512ebfbeb3e6da64f03d",
+  "gate": {
+    "path": "docs/_evidence/memory-bench/218.2/gates/owner-gate-replay.json",
+    "rulesHash": "195b0fd33e1d94601749bb414de3356175ac2c6e173d512ebfbeb3e6da64f03d",
+    "models": [
+      "opencode-go/muse-spark-1.3-contributor",
+      "opencode-go/deepseek-v4.1-flash",
+      "opencode-go/mimo-v2.6-flash"
+    ],
+    "maxOutputTokens": 8192
+  },
+  "costBasis": "input tokens x $0.065 per 1M (the plan's all-in Muse rate, applied to every model; OpenCode Go bills a subscription)",
+  "models": {
+    "opencode-go/muse-spark-1.3-contributor": {
+      "stm": {
+        "all": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "english": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "non-english": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "sets": {}
+      },
+      "wm": {
+        "all": {
+          "requests": 48,
+          "failedRequests": 0,
+          "records": 3504,
+          "verdicts": 1587,
+          "verdictShare": 0.4529109589041096,
+          "keep": 214,
+          "summarize": 590,
+          "discard": 783,
+          "facts": 3,
+          "refused": {
+            "tool_call_limit": 623,
+            "already_processed": 3
+          },
+          "turns": 67,
+          "turnsPerRecord": 0.019121004566210045,
+          "inputTokens": 733299,
+          "outputTokens": 243044,
+          "outputTokensPerRecord": 69.36187214611873,
+          "capStops": 0,
+          "laterStep": {
+            "annotated": 96,
+            "kept": 66,
+            "discarded": 0,
+            "keptShare": 0.6875
+          },
+          "changedValues": {
+            "annotated": 48,
+            "kept": 36,
+            "keptShare": 0.75
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 48,
+          "finished": {
+            "annotated": 2112,
+            "discarded": 545,
+            "discardedShare": 0.25804924242424243
+          },
+          "achievedRatio": 0.16061606160616063
+        },
+        "base": {
+          "requests": 24,
+          "failedRequests": 0,
+          "records": 1752,
+          "verdicts": 680,
+          "verdictShare": 0.3881278538812785,
+          "keep": 115,
+          "summarize": 130,
+          "discard": 435,
+          "facts": 1,
+          "refused": {
+            "tool_call_limit": 302,
+            "already_processed": 1
+          },
+          "turns": 33,
+          "turnsPerRecord": 0.018835616438356163,
+          "inputTokens": 278100,
+          "outputTokens": 125152,
+          "outputTokensPerRecord": 71.4337899543379,
+          "capStops": 0,
+          "laterStep": {
+            "annotated": 48,
+            "kept": 34,
+            "discarded": 0,
+            "keptShare": 0.7083333333333334
+          },
+          "changedValues": {
+            "annotated": 24,
+            "kept": 18,
+            "keptShare": 0.75
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 24,
+          "finished": {
+            "annotated": 1056,
+            "discarded": 299,
+            "discardedShare": 0.2831439393939394
+          },
+          "achievedRatio": 0.18040435458786935
+        },
+        "long-scope": {
+          "requests": 24,
+          "failedRequests": 0,
+          "records": 1752,
+          "verdicts": 907,
+          "verdictShare": 0.5176940639269406,
+          "keep": 99,
+          "summarize": 460,
+          "discard": 348,
+          "facts": 2,
+          "refused": {
+            "tool_call_limit": 321,
+            "already_processed": 2
+          },
+          "turns": 34,
+          "turnsPerRecord": 0.019406392694063926,
+          "inputTokens": 455199,
+          "outputTokens": 117892,
+          "outputTokensPerRecord": 67.28995433789954,
+          "capStops": 0,
+          "laterStep": {
+            "annotated": 48,
+            "kept": 32,
+            "discarded": 0,
+            "keptShare": 0.6666666666666666
+          },
+          "changedValues": {
+            "annotated": 24,
+            "kept": 18,
+            "keptShare": 0.75
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 24,
+          "finished": {
+            "annotated": 1056,
+            "discarded": 246,
+            "discardedShare": 0.23295454545454544
+          },
+          "achievedRatio": 0.14571999173610634
+        }
+      },
+      "usage": {
+        "basis": "wire proxy usage log (every attempt)",
+        "inputTokens": 733299,
+        "outputTokens": 243044,
+        "cacheReadTokens": 188824,
+        "requests": 48,
+        "failedRequests": 0
+      },
+      "latencyMs": {
+        "p50": 28267,
+        "p95": 66827
+      },
+      "costEstimateUsd": 0.047664,
+      "ceilingHit": false,
+      "requests": {
+        "stm": [],
+        "wm": [
+          {
+            "id": "wm-ls10-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 6,
+            "keep": 6,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6388,
+            "outputTokens": 1911,
+            "cacheReadTokens": 113,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 181,
+            "itemTokens": 181
+          },
+          {
+            "id": "wm-ls10-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 71,
+            "keep": 4,
+            "summarize": 62,
+            "discard": 5,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6291,
+            "outputTokens": 5063,
+            "cacheReadTokens": 113,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 2
+            },
+            "processedTokens": 2323,
+            "itemTokens": 256
+          },
+          {
+            "id": "wm-ls10-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 75,
+            "keep": 4,
+            "summarize": 71,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11050,
+            "outputTokens": 2853,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2400,
+            "itemTokens": 288
+          },
+          {
+            "id": "wm-ls10-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 6,
+            "keep": 0,
+            "summarize": 6,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10953,
+            "outputTokens": 2906,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 174,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls7-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 8,
+            "keep": 8,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6400,
+            "outputTokens": 2692,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 237,
+            "itemTokens": 237
+          },
+          {
+            "id": "wm-ls7-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6315,
+            "outputTokens": 2993,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 178,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls7-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 6,
+            "keep": 6,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11039,
+            "outputTokens": 2239,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 185,
+            "itemTokens": 185
+          },
+          {
+            "id": "wm-ls7-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 4,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10954,
+            "outputTokens": 2672,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 104,
+            "itemTokens": 104
+          },
+          {
+            "id": "wm-ls11-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 64,
+            "keep": 7,
+            "summarize": 0,
+            "discard": 57,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20796,
+            "outputTokens": 9541,
+            "cacheReadTokens": 6498,
+            "refused": {
+              "tool_call_limit": 43
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 39
+            },
+            "processedTokens": 2049,
+            "itemTokens": 208
+          },
+          {
+            "id": "wm-ls11-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 64,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 63,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20185,
+            "outputTokens": 9048,
+            "cacheReadTokens": 6257,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 43
+            },
+            "processedTokens": 2073,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls11-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 6,
+            "keep": 0,
+            "summarize": 6,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11047,
+            "outputTokens": 1928,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 180,
+            "itemTokens": 28
+          },
+          {
+            "id": "wm-ls11-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 33,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 32,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 29439,
+            "outputTokens": 6937,
+            "cacheReadTokens": 10865,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 24
+            },
+            "processedTokens": 1016,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls1-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 7,
+            "keep": 7,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6383,
+            "outputTokens": 1842,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 209,
+            "itemTokens": 209
+          },
+          {
+            "id": "wm-ls1-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 1,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6316,
+            "outputTokens": 2607,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 27,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls1-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 66,
+            "keep": 4,
+            "summarize": 5,
+            "discard": 57,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 29943,
+            "outputTokens": 10461,
+            "cacheReadTokens": 10993,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 39
+            },
+            "processedTokens": 2089,
+            "itemTokens": 197
+          },
+          {
+            "id": "wm-ls1-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 71,
+            "keep": 5,
+            "summarize": 62,
+            "discard": 4,
+            "facts": 2,
+            "turns": 1,
+            "inputTokens": 10969,
+            "outputTokens": 6304,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 2
+            },
+            "processedTokens": 2323,
+            "itemTokens": 346
+          },
+          {
+            "id": "wm-ls15-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2397,
+            "verdicts": 7,
+            "keep": 7,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6399,
+            "outputTokens": 3844,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 206,
+            "itemTokens": 206
+          },
+          {
+            "id": "wm-ls15-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 33,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 28,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20204,
+            "outputTokens": 6670,
+            "cacheReadTokens": 6257,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 22
+            },
+            "processedTokens": 1024,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls15-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2397,
+            "verdicts": 8,
+            "keep": 8,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11057,
+            "outputTokens": 2006,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 225,
+            "itemTokens": 225
+          },
+          {
+            "id": "wm-ls15-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 33,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 28,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 29538,
+            "outputTokens": 6422,
+            "cacheReadTokens": 10865,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 22
+            },
+            "processedTokens": 1024,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls12-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 7,
+            "keep": 7,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6439,
+            "outputTokens": 3607,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 209,
+            "itemTokens": 209
+          },
+          {
+            "id": "wm-ls12-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 59,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 54,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20260,
+            "outputTokens": 9791,
+            "cacheReadTokens": 6257,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 37
+            },
+            "processedTokens": 1916,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls12-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 60,
+            "keep": 6,
+            "summarize": 0,
+            "discard": 54,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 52210,
+            "outputTokens": 11436,
+            "cacheReadTokens": 30050,
+            "refused": {
+              "tool_call_limit": 43,
+              "already_processed": 1
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 37
+            },
+            "processedTokens": 1919,
+            "itemTokens": 181
+          },
+          {
+            "id": "wm-ls12-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 71,
+            "keep": 5,
+            "summarize": 66,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10997,
+            "outputTokens": 3415,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2323,
+            "itemTokens": 367
+          },
+          {
+            "id": "wm-ls19-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 1,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6419,
+            "outputTokens": 2068,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 31,
+            "itemTokens": 31
+          },
+          {
+            "id": "wm-ls19-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 1,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6291,
+            "outputTokens": 2683,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 27,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls19-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 64,
+            "keep": 6,
+            "summarize": 0,
+            "discard": 58,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 49499,
+            "outputTokens": 11073,
+            "cacheReadTokens": 30050,
+            "refused": {
+              "tool_call_limit": 43,
+              "already_processed": 1
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 39
+            },
+            "processedTokens": 2040,
+            "itemTokens": 179
+          },
+          {
+            "id": "wm-ls19-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 60,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 55,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 29392,
+            "outputTokens": 9086,
+            "cacheReadTokens": 10865,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 38
+            },
+            "processedTokens": 1948,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls14-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 8,
+            "keep": 8,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6438,
+            "outputTokens": 3076,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 237,
+            "itemTokens": 237
+          },
+          {
+            "id": "wm-ls14-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 1,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6277,
+            "outputTokens": 2376,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 27,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls14-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 1,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11078,
+            "outputTokens": 1520,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 20,
+            "itemTokens": 20
+          },
+          {
+            "id": "wm-ls14-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 67,
+            "keep": 1,
+            "summarize": 35,
+            "discard": 31,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 29326,
+            "outputTokens": 7639,
+            "cacheReadTokens": 10978,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 23
+            },
+            "processedTokens": 2179,
+            "itemTokens": 97
+          },
+          {
+            "id": "wm-ls18-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 64,
+            "keep": 2,
+            "summarize": 0,
+            "discard": 62,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20159,
+            "outputTokens": 11260,
+            "cacheReadTokens": 6385,
+            "refused": {
+              "tool_call_limit": 38
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 42
+            },
+            "processedTokens": 2060,
+            "itemTokens": 47
+          },
+          {
+            "id": "wm-ls18-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 64,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 60,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20040,
+            "outputTokens": 9119,
+            "cacheReadTokens": 6257,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2097,
+            "itemTokens": 152
+          },
+          {
+            "id": "wm-ls18-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 10,
+            "keep": 6,
+            "summarize": 4,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11057,
+            "outputTokens": 3645,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 285,
+            "itemTokens": 232
+          },
+          {
+            "id": "wm-ls18-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 71,
+            "keep": 5,
+            "summarize": 66,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10944,
+            "outputTokens": 3121,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2331,
+            "itemTokens": 286
+          },
+          {
+            "id": "wm-ls17-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 7,
+            "keep": 5,
+            "summarize": 2,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6397,
+            "outputTokens": 3227,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 212,
+            "itemTokens": 187
+          },
+          {
+            "id": "wm-ls17-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 63,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 59,
+            "facts": 1,
+            "turns": 3,
+            "inputTokens": 34146,
+            "outputTokens": 11265,
+            "cacheReadTokens": 18658,
+            "refused": {
+              "tool_call_limit": 25,
+              "already_processed": 1
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2056,
+            "itemTokens": 152
+          },
+          {
+            "id": "wm-ls17-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 6,
+            "keep": 0,
+            "summarize": 6,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11062,
+            "outputTokens": 2517,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 180,
+            "itemTokens": 22
+          },
+          {
+            "id": "wm-ls17-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 71,
+            "keep": 4,
+            "summarize": 66,
+            "discard": 1,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10965,
+            "outputTokens": 5122,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2331,
+            "itemTokens": 209
+          },
+          {
+            "id": "wm-ls21-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 6,
+            "keep": 6,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6417,
+            "outputTokens": 2140,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 182,
+            "itemTokens": 182
+          },
+          {
+            "id": "wm-ls21-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2324,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6326,
+            "outputTokens": 1905,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 179,
+            "itemTokens": 179
+          },
+          {
+            "id": "wm-ls21-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 75,
+            "keep": 8,
+            "summarize": 67,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11078,
+            "outputTokens": 3984,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2400,
+            "itemTokens": 343
+          },
+          {
+            "id": "wm-ls21-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2324,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10987,
+            "outputTokens": 1648,
+            "cacheReadTokens": 113,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 179,
+            "itemTokens": 179
+          },
+          {
+            "id": "wm-ls13-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 57,
+            "keep": 10,
+            "summarize": 0,
+            "discard": 47,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 20501,
+            "outputTokens": 10720,
+            "cacheReadTokens": 6385,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 34
+            },
+            "processedTokens": 1792,
+            "itemTokens": 289
+          },
+          {
+            "id": "wm-ls13-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 71,
+            "keep": 5,
+            "summarize": 66,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6313,
+            "outputTokens": 5704,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2330,
+            "itemTokens": 340
+          },
+          {
+            "id": "wm-ls13-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11050,
+            "outputTokens": 2023,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 156,
+            "itemTokens": 156
+          },
+          {
+            "id": "wm-ls13-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 33,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 28,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 29565,
+            "outputTokens": 6935,
+            "cacheReadTokens": 10865,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 22
+            },
+            "processedTokens": 1031,
+            "itemTokens": 178
+          }
+        ]
+      }
+    },
+    "opencode-go/deepseek-v4.1-flash": {
+      "stm": {
+        "all": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "english": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "non-english": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "sets": {}
+      },
+      "wm": {
+        "all": {
+          "requests": 48,
+          "failedRequests": 0,
+          "records": 3504,
+          "verdicts": 2389,
+          "verdictShare": 0.6817922374429224,
+          "keep": 238,
+          "summarize": 433,
+          "discard": 1718,
+          "facts": 3,
+          "refused": {
+            "tool_call_limit": 1016,
+            "already_processed": 27
+          },
+          "turns": 85,
+          "turnsPerRecord": 0.024257990867579907,
+          "inputTokens": 920288,
+          "outputTokens": 389339,
+          "outputTokensPerRecord": 111.11272831050228,
+          "capStops": 1,
+          "laterStep": {
+            "annotated": 96,
+            "kept": 90,
+            "discarded": 4,
+            "keptShare": 0.9375
+          },
+          "changedValues": {
+            "annotated": 48,
+            "kept": 47,
+            "keptShare": 0.9791666666666666
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 48,
+          "finished": {
+            "annotated": 2112,
+            "discarded": 1226,
+            "discardedShare": 0.5804924242424242
+          },
+          "achievedRatio": 0.1603014550299104
+        },
+        "base": {
+          "requests": 24,
+          "failedRequests": 0,
+          "records": 1752,
+          "verdicts": 1193,
+          "verdictShare": 0.6809360730593608,
+          "keep": 113,
+          "summarize": 101,
+          "discard": 979,
+          "facts": 3,
+          "refused": {
+            "tool_call_limit": 605,
+            "already_processed": 16
+          },
+          "turns": 47,
+          "turnsPerRecord": 0.02682648401826484,
+          "inputTokens": 422327,
+          "outputTokens": 208639,
+          "outputTokensPerRecord": 119.08618721461187,
+          "capStops": 1,
+          "laterStep": {
+            "annotated": 48,
+            "kept": 45,
+            "discarded": 1,
+            "keptShare": 0.9375
+          },
+          "changedValues": {
+            "annotated": 24,
+            "kept": 23,
+            "keptShare": 0.9583333333333334
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 24,
+          "finished": {
+            "annotated": 1056,
+            "discarded": 698,
+            "discardedShare": 0.6609848484848485
+          },
+          "achievedRatio": 0.1415455642411206
+        },
+        "long-scope": {
+          "requests": 24,
+          "failedRequests": 0,
+          "records": 1752,
+          "verdicts": 1196,
+          "verdictShare": 0.682648401826484,
+          "keep": 125,
+          "summarize": 332,
+          "discard": 739,
+          "facts": 0,
+          "refused": {
+            "tool_call_limit": 411,
+            "already_processed": 11
+          },
+          "turns": 38,
+          "turnsPerRecord": 0.021689497716894976,
+          "inputTokens": 497961,
+          "outputTokens": 180700,
+          "outputTokensPerRecord": 103.1392694063927,
+          "capStops": 0,
+          "laterStep": {
+            "annotated": 48,
+            "kept": 45,
+            "discarded": 3,
+            "keptShare": 0.9375
+          },
+          "changedValues": {
+            "annotated": 24,
+            "kept": 24,
+            "keptShare": 1
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 24,
+          "finished": {
+            "annotated": 1056,
+            "discarded": 528,
+            "discardedShare": 0.5
+          },
+          "achievedRatio": 0.17890218522372528
+        }
+      },
+      "usage": {
+        "basis": "wire proxy usage log (every attempt)",
+        "inputTokens": 920288,
+        "outputTokens": 389339,
+        "cacheReadTokens": 346496,
+        "requests": 48,
+        "failedRequests": 0
+      },
+      "latencyMs": {
+        "p50": 69597,
+        "p95": 107135
+      },
+      "costEstimateUsd": 0.059819,
+      "ceilingHit": false,
+      "requests": {
+        "stm": [],
+        "wm": [
+          {
+            "id": "wm-ls10-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 74,
+            "keep": 7,
+            "summarize": 0,
+            "discard": 67,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 33097,
+            "outputTokens": 11228,
+            "cacheReadTokens": 18304,
+            "refused": {
+              "tool_call_limit": 42,
+              "already_processed": 11
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 1
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2369,
+            "itemTokens": 206
+          },
+          {
+            "id": "wm-ls10-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 71,
+            "keep": 4,
+            "summarize": 40,
+            "discard": 27,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17897,
+            "outputTokens": 8741,
+            "cacheReadTokens": 6016,
+            "refused": {
+              "tool_call_limit": 37
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 22
+            },
+            "processedTokens": 2323,
+            "itemTokens": 336
+          },
+          {
+            "id": "wm-ls10-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 66,
+            "keep": 6,
+            "summarize": 4,
+            "discard": 56,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 27537,
+            "outputTokens": 11717,
+            "cacheReadTokens": 10880,
+            "refused": {
+              "tool_call_limit": 34
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 39
+            },
+            "processedTokens": 2089,
+            "itemTokens": 269
+          },
+          {
+            "id": "wm-ls10-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 15,
+            "keep": 5,
+            "summarize": 10,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10869,
+            "outputTokens": 6460,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 512,
+            "itemTokens": 276
+          },
+          {
+            "id": "wm-ls7-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 11,
+            "keep": 4,
+            "summarize": 7,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6244,
+            "outputTokens": 5191,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 311,
+            "itemTokens": 329
+          },
+          {
+            "id": "wm-ls7-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 5,
+            "keep": 3,
+            "summarize": 2,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6160,
+            "outputTokens": 4962,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 178,
+            "itemTokens": 135
+          },
+          {
+            "id": "wm-ls7-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 67,
+            "keep": 4,
+            "summarize": 5,
+            "discard": 58,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 27941,
+            "outputTokens": 8477,
+            "cacheReadTokens": 10880,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 41
+            },
+            "processedTokens": 2162,
+            "itemTokens": 322
+          },
+          {
+            "id": "wm-ls7-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10868,
+            "outputTokens": 2994,
+            "cacheReadTokens": 1280,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 178,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls11-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 67,
+            "keep": 5,
+            "summarize": 5,
+            "discard": 57,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 18630,
+            "outputTokens": 9474,
+            "cacheReadTokens": 7552,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2135,
+            "itemTokens": 328
+          },
+          {
+            "id": "wm-ls11-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 71,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 66,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 31982,
+            "outputTokens": 9790,
+            "cacheReadTokens": 17792,
+            "refused": {
+              "tool_call_limit": 39,
+              "already_processed": 2
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2330,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls11-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 66,
+            "keep": 5,
+            "summarize": 3,
+            "discard": 58,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 27867,
+            "outputTokens": 11048,
+            "cacheReadTokens": 10880,
+            "refused": {
+              "tool_call_limit": 41
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 1
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 35
+            },
+            "processedTokens": 2102,
+            "itemTokens": 230
+          },
+          {
+            "id": "wm-ls11-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 7,
+            "keep": 5,
+            "summarize": 2,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10857,
+            "outputTokens": 3402,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 231,
+            "itemTokens": 230
+          },
+          {
+            "id": "wm-ls1-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 67,
+            "keep": 5,
+            "summarize": 6,
+            "discard": 56,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 18539,
+            "outputTokens": 10436,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2133,
+            "itemTokens": 294
+          },
+          {
+            "id": "wm-ls1-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 64,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 59,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17936,
+            "outputTokens": 9876,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2089,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls1-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 65,
+            "keep": 5,
+            "summarize": 2,
+            "discard": 58,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 28081,
+            "outputTokens": 9776,
+            "cacheReadTokens": 10880,
+            "refused": {
+              "tool_call_limit": 42
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2079,
+            "itemTokens": 210
+          },
+          {
+            "id": "wm-ls1-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 71,
+            "keep": 4,
+            "summarize": 52,
+            "discard": 15,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10891,
+            "outputTokens": 7615,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 15
+            },
+            "processedTokens": 2323,
+            "itemTokens": 484
+          },
+          {
+            "id": "wm-ls15-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2397,
+            "verdicts": 46,
+            "keep": 9,
+            "summarize": 2,
+            "discard": 35,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17667,
+            "outputTokens": 10409,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 30
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 31
+            },
+            "processedTokens": 1406,
+            "itemTokens": 307
+          },
+          {
+            "id": "wm-ls15-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 63,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 59,
+            "facts": 1,
+            "turns": 2,
+            "inputTokens": 18271,
+            "outputTokens": 9404,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2015,
+            "itemTokens": 162
+          },
+          {
+            "id": "wm-ls15-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2397,
+            "verdicts": 75,
+            "keep": 7,
+            "summarize": 4,
+            "discard": 64,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 47969,
+            "outputTokens": 12352,
+            "cacheReadTokens": 28160,
+            "refused": {
+              "tool_call_limit": 41,
+              "already_processed": 10
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2397,
+            "itemTokens": 301
+          },
+          {
+            "id": "wm-ls15-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 71,
+            "keep": 7,
+            "summarize": 50,
+            "discard": 14,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10890,
+            "outputTokens": 5149,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 14
+            },
+            "processedTokens": 2323,
+            "itemTokens": 526
+          },
+          {
+            "id": "wm-ls12-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 64,
+            "keep": 7,
+            "summarize": 0,
+            "discard": 57,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 18846,
+            "outputTokens": 8928,
+            "cacheReadTokens": 6272,
+            "refused": {
+              "tool_call_limit": 43
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 38
+            },
+            "processedTokens": 2025,
+            "itemTokens": 209
+          },
+          {
+            "id": "wm-ls12-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 63,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 58,
+            "facts": 1,
+            "turns": 2,
+            "inputTokens": 18280,
+            "outputTokens": 9151,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2048,
+            "itemTokens": 242
+          },
+          {
+            "id": "wm-ls12-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 12,
+            "keep": 6,
+            "summarize": 6,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 11036,
+            "outputTokens": 4374,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 331,
+            "itemTokens": 316
+          },
+          {
+            "id": "wm-ls12-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 64,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 59,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 27622,
+            "outputTokens": 8832,
+            "cacheReadTokens": 10880,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2089,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls19-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 69,
+            "keep": 3,
+            "summarize": 8,
+            "discard": 58,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17538,
+            "outputTokens": 13242,
+            "cacheReadTokens": 6272,
+            "refused": {
+              "tool_call_limit": 28
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2199,
+            "itemTokens": 291
+          },
+          {
+            "id": "wm-ls19-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 31,
+            "keep": 3,
+            "summarize": 4,
+            "discard": 24,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6134,
+            "outputTokens": 4732,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 24
+            },
+            "processedTokens": 918,
+            "itemTokens": 185
+          },
+          {
+            "id": "wm-ls19-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 68,
+            "keep": 3,
+            "summarize": 6,
+            "discard": 59,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 27092,
+            "outputTokens": 10794,
+            "cacheReadTokens": 12288,
+            "refused": {
+              "tool_call_limit": 29
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 38
+            },
+            "processedTokens": 2167,
+            "itemTokens": 306
+          },
+          {
+            "id": "wm-ls19-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 64,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 60,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 24573,
+            "outputTokens": 10004,
+            "cacheReadTokens": 12160,
+            "refused": {
+              "tool_call_limit": 5
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2089,
+            "itemTokens": 104
+          },
+          {
+            "id": "wm-ls14-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 11,
+            "keep": 5,
+            "summarize": 6,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6289,
+            "outputTokens": 5312,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 311,
+            "itemTokens": 296
+          },
+          {
+            "id": "wm-ls14-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 35,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 34,
+            "facts": 1,
+            "turns": 3,
+            "inputTokens": 16583,
+            "outputTokens": 14091,
+            "cacheReadTokens": 3840,
+            "refused": {
+              "tool_call_limit": 5
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 26
+            },
+            "processedTokens": 1090,
+            "itemTokens": 100
+          },
+          {
+            "id": "wm-ls14-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 50,
+            "keep": 6,
+            "summarize": 2,
+            "discard": 42,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 26772,
+            "outputTokens": 10019,
+            "cacheReadTokens": 12160,
+            "refused": {
+              "tool_call_limit": 26
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 1
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 29
+            },
+            "processedTokens": 1559,
+            "itemTokens": 225
+          },
+          {
+            "id": "wm-ls14-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 37,
+            "keep": 5,
+            "summarize": 2,
+            "discard": 30,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 27034,
+            "outputTokens": 8465,
+            "cacheReadTokens": 12032,
+            "refused": {
+              "tool_call_limit": 35
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 24
+            },
+            "processedTokens": 1171,
+            "itemTokens": 230
+          },
+          {
+            "id": "wm-ls18-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 65,
+            "keep": 6,
+            "summarize": 4,
+            "discard": 55,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17602,
+            "outputTokens": 11768,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 28
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 39
+            },
+            "processedTokens": 2078,
+            "itemTokens": 278
+          },
+          {
+            "id": "wm-ls18-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 64,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 60,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17988,
+            "outputTokens": 8081,
+            "cacheReadTokens": 6144,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2097,
+            "itemTokens": 105
+          },
+          {
+            "id": "wm-ls18-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 74,
+            "keep": 6,
+            "summarize": 68,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10971,
+            "outputTokens": 5292,
+            "cacheReadTokens": 1280,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 2378,
+            "itemTokens": 549
+          },
+          {
+            "id": "wm-ls18-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 5,
+            "keep": 4,
+            "summarize": 1,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10856,
+            "outputTokens": 4273,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 179,
+            "itemTokens": 136
+          },
+          {
+            "id": "wm-ls17-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 75,
+            "keep": 4,
+            "summarize": 5,
+            "discard": 66,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 33142,
+            "outputTokens": 11473,
+            "cacheReadTokens": 18432,
+            "refused": {
+              "tool_call_limit": 40,
+              "already_processed": 1
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2410,
+            "itemTokens": 252
+          },
+          {
+            "id": "wm-ls17-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 64,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 60,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17979,
+            "outputTokens": 10785,
+            "cacheReadTokens": 6016,
+            "refused": {
+              "tool_call_limit": 39
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 40
+            },
+            "processedTokens": 2097,
+            "itemTokens": 105
+          },
+          {
+            "id": "wm-ls17-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 67,
+            "keep": 5,
+            "summarize": 6,
+            "discard": 56,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 28062,
+            "outputTokens": 9639,
+            "cacheReadTokens": 10880,
+            "refused": {
+              "tool_call_limit": 40
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2143,
+            "itemTokens": 280
+          },
+          {
+            "id": "wm-ls17-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 71,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 66,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 46425,
+            "outputTokens": 9659,
+            "cacheReadTokens": 28800,
+            "refused": {
+              "tool_call_limit": 39,
+              "already_processed": 1
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 44
+            },
+            "processedTokens": 2331,
+            "itemTokens": 179
+          },
+          {
+            "id": "wm-ls21-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 10,
+            "keep": 8,
+            "summarize": 2,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6262,
+            "outputTokens": 3864,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 287,
+            "itemTokens": 302
+          },
+          {
+            "id": "wm-ls21-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2324,
+            "verdicts": 23,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 19,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6164,
+            "outputTokens": 4359,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 16
+            },
+            "processedTokens": 685,
+            "itemTokens": 105
+          },
+          {
+            "id": "wm-ls21-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 75,
+            "keep": 7,
+            "summarize": 53,
+            "discard": 15,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10993,
+            "outputTokens": 7272,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 14
+            },
+            "processedTokens": 2400,
+            "itemTokens": 505
+          },
+          {
+            "id": "wm-ls21-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2324,
+            "verdicts": 21,
+            "keep": 5,
+            "summarize": 2,
+            "discard": 14,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10895,
+            "outputTokens": 5018,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 14
+            },
+            "processedTokens": 619,
+            "itemTokens": 229
+          },
+          {
+            "id": "wm-ls13-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 75,
+            "keep": 3,
+            "summarize": 10,
+            "discard": 62,
+            "facts": 0,
+            "turns": 4,
+            "inputTokens": 46945,
+            "outputTokens": 10745,
+            "cacheReadTokens": 32128,
+            "refused": {
+              "tool_call_limit": 36,
+              "already_processed": 2
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 42
+            },
+            "processedTokens": 2410,
+            "itemTokens": 295
+          },
+          {
+            "id": "wm-ls13-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6152,
+            "outputTokens": 2597,
+            "cacheReadTokens": 1280,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 178,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls13-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 75,
+            "keep": 6,
+            "summarize": 54,
+            "discard": 15,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10980,
+            "outputTokens": 5851,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 1
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 13
+            },
+            "processedTokens": 2410,
+            "itemTokens": 436
+          },
+          {
+            "id": "wm-ls13-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 5,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 10880,
+            "outputTokens": 2218,
+            "cacheReadTokens": 6144,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 178,
+            "itemTokens": 178
+          }
+        ]
+      }
+    },
+    "opencode-go/mimo-v2.6-flash": {
+      "stm": {
+        "all": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "english": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "non-english": {
+          "requests": 0,
+          "failedRequests": 0,
+          "events": 0,
+          "sourceTokens": 0,
+          "eventsPer10kSourceTokens": null,
+          "outputTokens": 0,
+          "outputTokensPerEvent": null,
+          "inputTokens": 0,
+          "turns": 0,
+          "refused": {},
+          "outcomes": {
+            "annotated": 0,
+            "found": 0
+          },
+          "correction": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "failure": {
+            "annotated": 0,
+            "pattern": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            },
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "durable": {
+            "annotated": 0,
+            "recorded": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "resolves": {
+            "annotated": 0,
+            "field": {
+              "found": 0,
+              "tp": 0,
+              "fp": 0,
+              "recall": null,
+              "precision": null
+            }
+          },
+          "evidence": {
+            "annotated": 0,
+            "covered": 0,
+            "coverage": null
+          },
+          "chunks": 0,
+          "chunkBytes": 0,
+          "chunkBytesPer10kSourceTokens": null
+        },
+        "sets": {}
+      },
+      "wm": {
+        "all": {
+          "requests": 48,
+          "failedRequests": 0,
+          "records": 3504,
+          "verdicts": 436,
+          "verdictShare": 0.12442922374429223,
+          "keep": 58,
+          "summarize": 82,
+          "discard": 296,
+          "facts": 0,
+          "refused": {
+            "citation_outside_active_set": 23,
+            "unknown_id": 1,
+            "unknown_tool": 2
+          },
+          "turns": 105,
+          "turnsPerRecord": 0.029965753424657533,
+          "inputTokens": 977398,
+          "outputTokens": 589996,
+          "outputTokensPerRecord": 168.37785388127853,
+          "capStops": 48,
+          "laterStep": {
+            "annotated": 96,
+            "kept": 9,
+            "discarded": 0,
+            "keptShare": 0.09375
+          },
+          "changedValues": {
+            "annotated": 48,
+            "kept": 5,
+            "keptShare": 0.10416666666666667
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 48,
+          "finished": {
+            "annotated": 2112,
+            "discarded": 271,
+            "discardedShare": 0.12831439393939395
+          },
+          "achievedRatio": 0.25262251448254264
+        },
+        "base": {
+          "requests": 24,
+          "failedRequests": 0,
+          "records": 1752,
+          "verdicts": 195,
+          "verdictShare": 0.1113013698630137,
+          "keep": 33,
+          "summarize": 26,
+          "discard": 136,
+          "facts": 0,
+          "refused": {
+            "citation_outside_active_set": 9
+          },
+          "turns": 50,
+          "turnsPerRecord": 0.028538812785388126,
+          "inputTokens": 309079,
+          "outputTokens": 281751,
+          "outputTokensPerRecord": 160.8167808219178,
+          "capStops": 25,
+          "laterStep": {
+            "annotated": 48,
+            "kept": 5,
+            "discarded": 0,
+            "keptShare": 0.10416666666666667
+          },
+          "changedValues": {
+            "annotated": 24,
+            "kept": 3,
+            "keptShare": 0.125
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 24,
+          "finished": {
+            "annotated": 1056,
+            "discarded": 126,
+            "discardedShare": 0.11931818181818182
+          },
+          "achievedRatio": 0.26402927849424884
+        },
+        "long-scope": {
+          "requests": 24,
+          "failedRequests": 0,
+          "records": 1752,
+          "verdicts": 241,
+          "verdictShare": 0.1375570776255708,
+          "keep": 25,
+          "summarize": 56,
+          "discard": 160,
+          "facts": 0,
+          "refused": {
+            "citation_outside_active_set": 14,
+            "unknown_id": 1,
+            "unknown_tool": 2
+          },
+          "turns": 55,
+          "turnsPerRecord": 0.03139269406392694,
+          "inputTokens": 668319,
+          "outputTokens": 308245,
+          "outputTokensPerRecord": 175.93892694063928,
+          "capStops": 23,
+          "laterStep": {
+            "annotated": 48,
+            "kept": 4,
+            "discarded": 0,
+            "keptShare": 0.08333333333333333
+          },
+          "changedValues": {
+            "annotated": 24,
+            "kept": 2,
+            "keptShare": 0.08333333333333333
+          },
+          "durableDiscarded": 0,
+          "durableAnnotated": 24,
+          "finished": {
+            "annotated": 1056,
+            "discarded": 145,
+            "discardedShare": 0.13731060606060605
+          },
+          "achievedRatio": 0.2433200682205799
+        }
+      },
+      "usage": {
+        "basis": "wire proxy usage log (every attempt)",
+        "inputTokens": 1004691,
+        "outputTokens": 619213,
+        "cacheReadTokens": 308032,
+        "requests": 48,
+        "failedRequests": 0
+      },
+      "latencyMs": {
+        "p50": 332106,
+        "p95": 495477
+      },
+      "costEstimateUsd": 0.065305,
+      "ceilingHit": false,
+      "requests": {
+        "stm": [],
+        "wm": [
+          {
+            "id": "wm-ls10-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 13,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 5,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11245,
+            "outputTokens": 13544,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 5
+            },
+            "processedTokens": 378,
+            "itemTokens": 162
+          },
+          {
+            "id": "wm-ls10-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11158,
+            "outputTokens": 10027,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 232,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls10-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 13,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 5,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21709,
+            "outputTokens": 14937,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 5
+            },
+            "processedTokens": 378,
+            "itemTokens": 125
+          },
+          {
+            "id": "wm-ls10-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21622,
+            "outputTokens": 12874,
+            "cacheReadTokens": 7168,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 232,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls7-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11315,
+            "outputTokens": 10491,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 228,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls7-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11167,
+            "outputTokens": 16384,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls7-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 14,
+            "keep": 0,
+            "summarize": 2,
+            "discard": 12,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 47027,
+            "outputTokens": 5970,
+            "cacheReadTokens": 29760,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 10
+            },
+            "processedTokens": 400,
+            "itemTokens": 15
+          },
+          {
+            "id": "wm-ls7-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21603,
+            "outputTokens": 14357,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 238,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls11-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 23,
+            "keep": 3,
+            "summarize": 2,
+            "discard": 18,
+            "facts": 0,
+            "turns": 4,
+            "inputTokens": 27485,
+            "outputTokens": 13017,
+            "cacheReadTokens": 17408,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 18
+            },
+            "processedTokens": 655,
+            "itemTokens": 132
+          },
+          {
+            "id": "wm-ls11-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11151,
+            "outputTokens": 16384,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls11-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 19,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 11,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 38989,
+            "outputTokens": 18432,
+            "cacheReadTokens": 10432,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 11
+            },
+            "processedTokens": 553,
+            "itemTokens": 156
+          },
+          {
+            "id": "wm-ls11-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21617,
+            "outputTokens": 16384,
+            "cacheReadTokens": 12288,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls1-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 9,
+            "keep": 3,
+            "summarize": 2,
+            "discard": 4,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11287,
+            "outputTokens": 13996,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 4
+            },
+            "processedTokens": 240,
+            "itemTokens": 120
+          },
+          {
+            "id": "wm-ls1-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6976,
+            "outputTokens": 1781,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 7
+            },
+            "processedTokens": 271,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls1-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 11,
+            "keep": 4,
+            "summarize": 7,
+            "discard": 0,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 12344,
+            "outputTokens": 5598,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 308,
+            "itemTokens": 271
+          },
+          {
+            "id": "wm-ls1-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 22,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 22,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 45630,
+            "outputTokens": 5933,
+            "cacheReadTokens": 32640,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 16
+            },
+            "processedTokens": 664,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls15-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2397,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11312,
+            "outputTokens": 16384,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls15-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 3,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6964,
+            "outputTokens": 3771,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 2
+            },
+            "processedTokens": 267,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls15-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2397,
+            "verdicts": 20,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 12,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 34823,
+            "outputTokens": 12196,
+            "cacheReadTokens": 10432,
+            "refused": {
+              "citation_outside_active_set": 1
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 12
+            },
+            "processedTokens": 565,
+            "itemTokens": 151
+          },
+          {
+            "id": "wm-ls15-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21653,
+            "outputTokens": 16384,
+            "cacheReadTokens": 12288,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls12-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 15,
+            "keep": 2,
+            "summarize": 2,
+            "discard": 11,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 20246,
+            "outputTokens": 13869,
+            "cacheReadTokens": 2048,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 11
+            },
+            "processedTokens": 404,
+            "itemTokens": 101
+          },
+          {
+            "id": "wm-ls12-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11190,
+            "outputTokens": 13470,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 232,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls12-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 13,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 5,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21755,
+            "outputTokens": 13796,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 5
+            },
+            "processedTokens": 378,
+            "itemTokens": 158
+          },
+          {
+            "id": "wm-ls12-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21658,
+            "outputTokens": 14909,
+            "cacheReadTokens": 6144,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 221,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls19-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 10,
+            "keep": 1,
+            "summarize": 3,
+            "discard": 6,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 21168,
+            "outputTokens": 14341,
+            "cacheReadTokens": 5184,
+            "refused": {
+              "citation_outside_active_set": 1
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 274,
+            "itemTokens": 89
+          },
+          {
+            "id": "wm-ls19-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11145,
+            "outputTokens": 10282,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 232,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls19-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21764,
+            "outputTokens": 16384,
+            "cacheReadTokens": 7168,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls19-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2323,
+            "verdicts": 9,
+            "keep": 5,
+            "summarize": 0,
+            "discard": 4,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 32589,
+            "outputTokens": 11899,
+            "cacheReadTokens": 12288,
+            "refused": {
+              "unknown_id": 1
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 3
+            },
+            "processedTokens": 296,
+            "itemTokens": 178
+          },
+          {
+            "id": "wm-ls14-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11312,
+            "outputTokens": 16384,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls14-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11165,
+            "outputTokens": 9140,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 228,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls14-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 13,
+            "keep": 2,
+            "summarize": 7,
+            "discard": 4,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 34542,
+            "outputTokens": 15745,
+            "cacheReadTokens": 13376,
+            "refused": {
+              "unknown_tool": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 4
+            },
+            "processedTokens": 377,
+            "itemTokens": 180
+          },
+          {
+            "id": "wm-ls14-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 14,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 13,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 37822,
+            "outputTokens": 15222,
+            "cacheReadTokens": 15552,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 13
+            },
+            "processedTokens": 397,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls18-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11273,
+            "outputTokens": 9549,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 228,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls18-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 14,
+            "keep": 6,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 17621,
+            "outputTokens": 4997,
+            "cacheReadTokens": 6912,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 2,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 433,
+            "itemTokens": 205
+          },
+          {
+            "id": "wm-ls18-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 0,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 35438,
+            "outputTokens": 12928,
+            "cacheReadTokens": 11392,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 233,
+            "itemTokens": 156
+          },
+          {
+            "id": "wm-ls18-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 15,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 14,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 38627,
+            "outputTokens": 16214,
+            "cacheReadTokens": 15552,
+            "refused": {
+              "citation_outside_active_set": 1
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 12
+            },
+            "processedTokens": 419,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls17-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 10,
+            "keep": 1,
+            "summarize": 3,
+            "discard": 6,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11278,
+            "outputTokens": 11109,
+            "cacheReadTokens": 8064,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 280,
+            "itemTokens": 98
+          },
+          {
+            "id": "wm-ls17-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11204,
+            "outputTokens": 15312,
+            "cacheReadTokens": 1024,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 238,
+            "itemTokens": 27
+          },
+          {
+            "id": "wm-ls17-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21754,
+            "outputTokens": 12349,
+            "cacheReadTokens": 7168,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 228,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls17-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2331,
+            "verdicts": 10,
+            "keep": 1,
+            "summarize": 3,
+            "discard": 6,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21664,
+            "outputTokens": 11810,
+            "cacheReadTokens": 6144,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 5
+            },
+            "processedTokens": 308,
+            "itemTokens": 67
+          },
+          {
+            "id": "wm-ls21-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 8,
+            "keep": 4,
+            "summarize": 0,
+            "discard": 4,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11308,
+            "outputTokens": 13147,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 4
+            },
+            "processedTokens": 216,
+            "itemTokens": 100
+          },
+          {
+            "id": "wm-ls21-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2324,
+            "verdicts": 8,
+            "keep": 2,
+            "summarize": 0,
+            "discard": 6,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 6969,
+            "outputTokens": 2697,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 1,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 1
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 3
+            },
+            "processedTokens": 261,
+            "itemTokens": 58
+          },
+          {
+            "id": "wm-ls21-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2400,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21814,
+            "outputTokens": 16384,
+            "cacheReadTokens": 7168,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls21-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2324,
+            "verdicts": 8,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 8,
+            "facts": 0,
+            "turns": 1,
+            "inputTokens": 12222,
+            "outputTokens": 1016,
+            "cacheReadTokens": 0,
+            "refused": {},
+            "failed": null,
+            "capStop": 0,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 8
+            },
+            "processedTokens": 275,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls13-a",
+            "set": "base",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 0,
+            "keep": 0,
+            "summarize": 0,
+            "discard": 0,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 11278,
+            "outputTokens": 16384,
+            "cacheReadTokens": 2048,
+            "refused": {},
+            "failed": null,
+            "capStop": 2,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 0
+            },
+            "processedTokens": 0,
+            "itemTokens": 0
+          },
+          {
+            "id": "wm-ls13-b",
+            "set": "base",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 13,
+            "keep": 1,
+            "summarize": 7,
+            "discard": 5,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 21862,
+            "outputTokens": 15291,
+            "cacheReadTokens": 4160,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 4
+            },
+            "processedTokens": 441,
+            "itemTokens": 164
+          },
+          {
+            "id": "wm-ls13-a-long",
+            "set": "long-scope",
+            "records": 75,
+            "recordTokens": 2410,
+            "verdicts": 12,
+            "keep": 3,
+            "summarize": 2,
+            "discard": 7,
+            "facts": 0,
+            "turns": 3,
+            "inputTokens": 37977,
+            "outputTokens": 15644,
+            "cacheReadTokens": 10432,
+            "refused": {
+              "citation_outside_active_set": 2
+            },
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 7
+            },
+            "processedTokens": 328,
+            "itemTokens": 120
+          },
+          {
+            "id": "wm-ls13-b-long",
+            "set": "long-scope",
+            "records": 71,
+            "recordTokens": 2330,
+            "verdicts": 8,
+            "keep": 1,
+            "summarize": 0,
+            "discard": 7,
+            "facts": 0,
+            "turns": 2,
+            "inputTokens": 21676,
+            "outputTokens": 10880,
+            "cacheReadTokens": 6144,
+            "refused": {},
+            "failed": null,
+            "capStop": 1,
+            "laterStep": {
+              "annotated": 2,
+              "kept": 0,
+              "discarded": 0
+            },
+            "changedValues": {
+              "annotated": 1,
+              "kept": 0
+            },
+            "durable": {
+              "annotated": 1,
+              "discarded": 0
+            },
+            "finished": {
+              "annotated": 44,
+              "discarded": 6
+            },
+            "processedTokens": 238,
+            "itemTokens": 27
+          }
+        ]
+      }
+    }
+  }
+}

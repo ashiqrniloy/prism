@@ -1,13 +1,13 @@
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "bun:test";
 import type { ContextDraft, HookContext, SessionEntry } from "@arnilo/prism";
 import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory, type MemoryFabricScopeBinding } from "../../index.js";
 import { createFabricContext } from "../context.js";
 import { createFabricDirectory, renderFabricDirectory } from "../directory.js";
-import { createMemory, createLongTermMemory, type MemoryFabricScopeBinding } from "../../index.js";
 import { createFabricLifecycle } from "../lifecycle/index.js";
 import { createTouchedPathTracker } from "../scope/touched-paths.js";
 

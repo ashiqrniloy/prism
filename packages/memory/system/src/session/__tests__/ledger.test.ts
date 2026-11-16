@@ -43,6 +43,28 @@ describe("observational memory ledger", () => {
     assert.equal(isMemoryObservation({ ...obs, description: "two\nlines" }), false);
   });
 
+  it("ledger_without_new_fields_reads_unchanged", () => {
+    // Plan 218.2 Task 2: a record written before `status`, `corrects`, `durable` and `resolves` folds, renders and
+    // validates as before; a record with them keeps them; a malformed field fails the record.
+    const signalled: MemoryObservation = {
+      ...obs,
+      id: "cccccccccccc",
+      kind: "outcome",
+      description: "Retries fixed; 35 tests pass",
+      status: "passed",
+      resolves: ["dddddddddddd"],
+    };
+    const ledger = foldObservationalMemoryLedger([
+      entry("o", { type: OBSERVATIONS_RECORDED, observations: [obs, signalled], coversUpToId: "m1" }),
+    ]);
+    assert.deepEqual(ledger.observations, [obs, signalled]);
+    assert.match(renderObservationalMemory([], [obs]), /\(high\) statement: User prefers minimal diffs\./);
+    assert.match(renderObservationalMemory([], [signalled]), /outcome \(passed\): Retries fixed/);
+    for (const bad of [{ status: "green" }, { corrects: false }, { durable: "always" }, { resolves: ["not-an-id"] }])
+      assert.equal(isMemoryObservation({ ...obs, ...bad }), false, JSON.stringify(bad));
+    assert.equal(isMemoryObservation({ ...obs, durable: "preference", corrects: true }), true);
+  });
+
   it("observational_memory_fold_ignores_invalid_unknown_entries", () => {
     const ledger = foldObservationalMemoryLedger([
       entry("x", { type: "other", observations: [obs] }),

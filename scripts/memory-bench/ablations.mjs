@@ -70,6 +70,7 @@ const paths = new Set([
   "session.wm.batchTokens",
   "session.wm.targetRatio",
   "session.wm.rejudgeTokens",
+  "session.wm.protectRequestPasses",
   "session.wm.policy",
   "session.rehearsal.targetTokens",
   "session.rehearsal.policy",
@@ -149,22 +150,6 @@ export function writeGeneration(options = {}) {
   };
 }
 
-/**
- * Plan 218 Task 6 (gate M-2): each QA suite's task framing, given to WM as the episode scope (`--wm-scope`). It names
- * what the later questions ask about, never an answer or a question id.
- */
-export const SUITE_SCOPES = Object.freeze({
-  "longmemeval-m":
-    "Later in this work the user asks questions about anything in these past chat sessions: facts about themselves, their preferences, what the assistant told them, events and their dates, and values that changed over time (the old and the new value, with dates). Keep what those questions need.",
-  "beam-1m":
-    "Later in this work the user asks questions about this long multi-session conversation: details and facts stated, instructions and preferences the user gave, events and their order, contradictions and updates, and summaries of what was discussed. Keep what those questions need.",
-});
-export function suiteScope(suite) {
-  const text = SUITE_SCOPES[suite];
-  if (!text) throw new Error(`MemoryBenchArguments: --wm-scope has no task framing for ${suite}`);
-  return text;
-}
-
 /** Only shipped settings: unsupported historical mechanisms fail before any paid call. */
 export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) {
   // Plan 210 Task 7 removed `retrieval: "hybrid"`: the fabric package is lexical and has no embeddings arm.
@@ -174,8 +159,6 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     ? {
         enabled: true,
         ...(options.offline || lifecycle ? { stm: { triggerTokens: options.offline ? 1 : 1000 } } : {}),
-        // Plan 218 Task 6 (gate M-2): the QA suites hand WM the suite's task framing as the episode scope.
-        ...(options.wmScope ? { scope: { text: suiteScope(options.suite) } } : {}),
       }
     : null;
   const fabric = options.config?.includes("fabric")

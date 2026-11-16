@@ -10,6 +10,10 @@ checkout given by --code, so upstream's code does the scoring and the task runs.
              `prism-*` model, the seam writes that model's S to the summary cache `e1_xb` reads first, so the POST
              continuation, the PRE control and the FAIL_TO_PASS tests stay upstream's. A missing S is refused, never
              summarized.
+  reference  Plan 218.1 Task 3's references: upstream's own `e2_score.compress_one` with the Claude Code and Codex
+             prompts (`C.PROMPTS["claude"]`, `C.PROMPTS["codex"]`) on the given model, through the endpoint the
+             environment names (the local pass-through), and the mechanical `C.anchor_baseline`. Writes S, recall and
+             atom count per (session, reference) to --out (private: it holds S text); a finished pair is skipped.
   self-check Assert the pinned upstream still has the seams this file relies on.
 """
 import argparse
@@ -23,6 +27,9 @@ E1_XB_CACHE_LINE = 's_cache = os.path.join(WORK, "work", f"{iid}.S.{tag}.{varian
 E1_XB_TAG_LINE = 'tag = f"xb-{C.file_id(backbone)}"'
 E2_RECALL_LINE = 'hits = sum(1 for a in atoms if a["value"] in S)'
 RUN_LAUNCH_LINE = 'def launch(module, *args, round_number=None):'
+E2_COMPRESS_LINE = 'S = C.summarize(model, tr + "\\n\\n" + C.PROMPTS[variant], C.key_for_model(model))'
+ANCHOR_LINE = 'def anchor_baseline(H, cap_chars=400_000, per_type=40):'
+REFERENCE_PROMPTS = {"claude-code": "claude", "codex": "codex"}
 PRISM_PREFIX = "prism-"
 
 
@@ -37,7 +44,8 @@ def use_upstream(code):
 def self_check(code):
     checks = {
         "harness/e1_xb.py": [E1_XB_CACHE_LINE, E1_XB_TAG_LINE],
-        "harness/e2_score.py": [E2_RECALL_LINE],
+        "harness/e2_score.py": [E2_RECALL_LINE, E2_COMPRESS_LINE],
+        "harness/cb_common.py": [ANCHOR_LINE],
         "run.py": [RUN_LAUNCH_LINE],
     }
     missing = []
@@ -93,6 +101,60 @@ def retention(args):
     print(json.dumps({"scored": len(out)}))
 
 
+def reference(args):
+    import cb_common as C
+    import e2_score
+    from cb_data import ensure_data
+
+    with open(args.summaries, encoding="utf-8") as source:
+        wanted = [json.loads(line) for line in source if line.strip()]
+    ids = {row["sample_id"] for row in wanted}
+    sessions = {}
+    with open(ensure_data("e2/sessions.jsonl"), encoding="utf-8") as source:
+        for line in source:
+            if line.strip():
+                sample = json.loads(line)
+                if sample["sample_id"] in ids:
+                    sessions[sample["sample_id"]] = sample
+    unknown = ids - set(sessions)
+    if unknown:
+        raise SystemExit(f"unknown sample ids: {sorted(unknown)[:5]}")
+    done = set()
+    if os.path.exists(args.out):
+        with open(args.out, encoding="utf-8") as source:
+            for line in source:
+                if line.strip():
+                    row = json.loads(line)
+                    if "error" not in row:
+                        done.add((row["sample_id"], row["reference"]))
+    written = 0
+    with open(args.out, "a", encoding="utf-8") as target:
+        for row in wanted:
+            sid, ref = row["sample_id"], row["reference"]
+            if (sid, ref) in done:
+                continue
+            sample = sessions[sid]
+            if ref == "anchor_index":
+                S = C.anchor_baseline(sample["H"])
+                hits = sum(1 for atom in sample["atoms"] if atom["value"] in S)
+                out = {"recall": hits / len(sample["atoms"]) if sample["atoms"] else None, "S": S,
+                       "n_atoms": len(sample["atoms"])}
+            elif ref in REFERENCE_PROMPTS:
+                scored = e2_score.compress_one((sid, sample["client"], C.transcript(sample["H"]), sample["atoms"],
+                                                REFERENCE_PROMPTS[ref], args.model))
+                if "error" in scored:
+                    out = {"error": scored["error"]}
+                else:
+                    out = {"recall": scored["recall"], "S": scored["S"], "n_atoms": scored["n_atoms"]}
+            else:
+                raise SystemExit(f"unknown reference {ref}")
+            target.write(json.dumps({"sample_id": sid, "client": sample["client"], "reference": ref, **out},
+                                    ensure_ascii=False) + "\n")
+            target.flush()
+            written += 1
+    print(json.dumps({"written": written, "skipped": len(done)}))
+
+
 def s_cache_path(work_root, iid, model, variant, round_number):
     """The path `e1_xb` reads S from (E1_XB_CACHE_LINE), computed with upstream's own `file_id`."""
     import cb_common as C
@@ -124,7 +186,8 @@ def task(args, rest):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("retention", "task", "self-check"))
+    parser.add_argument("command", choices=("retention", "task", "reference", "self-check"))
+    parser.add_argument("--model")
     parser.add_argument("--code", required=True)
     parser.add_argument("--summaries")
     parser.add_argument("--out")
@@ -137,6 +200,9 @@ def main():
     if args.command == "retention":
         self_check(code)
         retention(args)
+    elif args.command == "reference":
+        self_check(code)
+        reference(args)
     elif args.command == "task":
         self_check(code)
         task(args, rest)

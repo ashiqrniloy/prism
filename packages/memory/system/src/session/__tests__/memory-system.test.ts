@@ -354,8 +354,8 @@ describe("memory-system session tiers", () => {
       ...base,
       client: clientFor(
         scripted([
-          toolCallContent("r1", "summarize", { stmIds: ["bbbbbbbbbbbb"], text: "summary", relevance: "low" }),
-          toolCallContent("r2", "summarize", { stmIds: [observation.id], text: " ", relevance: "low" }),
+          toolCallContent("r1", "judge", { summaries: [{ of: [2], text: "summary", relevance: "low" }] }),
+          toolCallContent("r2", "judge", { summaries: [{ of: [1], text: " ", relevance: "low" }] }),
         ]),
       ),
       records: [observation],

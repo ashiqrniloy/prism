@@ -1599,3 +1599,44 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/217-Phase-11-Part-O18-Memory-System-Short-Term-Memory-Scope-Blind-Events-Verbatim-Chunks-And-Habituation.md
 - What: `AgentConfig.compaction.maxSummaryChars` reaches the default compactor.
 - Why: only the constructor option is read today, and there `0` means unlimited (plan 217 Task 5 finding).
+
+## Failed-check `status` on small STM workers (English)
+- Review (plan 218.2 Task 9, 2026-11-16): memory track, before gate M-2's sittings (plan 218 Task 6). No public contract change.
+- Section: Further Actions
+- Priority: P1
+- Source: plans/218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md
+- What: Reword `status` in `record_event`'s schema so a failed check in the cited output is recorded `failed`, then re-run the worker replay's STM tier (`--only stm`) against `docs/_evidence/memory-bench/218.2/replay-after.json`. The alternative is to let the failure pattern also read outcomes with `status` `passed` or `unknown`, at the pattern's 0.17–0.23 precision. Owner decision.
+- Why: On the fields alone, Muse records 0 of the English failed checks and MiMo 0.33, against 0.92 and 0.67 for the pattern baseline. Every new outcome carries `status`, so the pattern no longer backs these up.
+
+## Score the product's union salience reading in the worker replay
+- Review (plan 218.2 Task 9, 2026-11-16): memory track; harness only.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md
+- What: Add a third reading to `scripts/memory-bench/worker-replay/score.mjs`: `salienceSignals` on the records as written (field first, pattern for a record with no field), beside the pattern-only and field-only readings.
+- Why: The replay cannot say what correction and failure recall the shipped product has; it scores the two inputs of the union, not the union.
+
+## WM later-step discards and over-compression under `judge`
+- Review (plan 218.2 Task 9, 2026-11-16): memory track; read at gate M-2 and the long-horizon family.
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md
+- Compromise: `judge` shipped on the owner's override, with later-step records discarded up from 0 to 9 (Muse) and 0 to 15 (MiMo) of 96, and an achieved ratio of 0.08–0.11 against the 0.2 target. Kept later-step records rose more (+23, +35).
+- Implications: Gate M-2 should report later-step re-derivations per model. If they rise on Muse or MiMo, adjust the `judge` instruction's discard guidance or add a floor near `wm.targetRatio`.
+
+## Muse re-sends WM verdicts already given
+- Review (plan 218.2 Task 9, 2026-11-16): memory track.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md
+- What: Have the `judge` result name the ordinals already judged, so a worker ends the pass instead of re-sending them.
+- Why: On the after-replay, Muse drew 779 `already_processed` and 128 `unknown_id` refusals over 84 turns, and its input rose 1.33M → 1.46M while the other two models fell.
+
+## Memory-bench evidence defaults drift (`config_defaults_match_evidence`)
+- Review (plan 218.2 Task 9, 2026-11-16): memory track; bench only.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md
+- What: Regenerate `scripts/memory-bench/defaults.json` with the workers' `thinkingLevel: "low"` (plan 218, 2026-11-12) and without the removed `fabric.*` keys, with a recorded reason.
+- Why: `calibrate`'s `config_defaults_match_evidence` has failed at HEAD since before plan 218.2, so the bench suite never reads green.
+

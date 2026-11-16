@@ -74,7 +74,7 @@ function allWorkers(seen: { stm: ProviderRequest[]; wm: ProviderRequest[]; rehea
     id: "mock",
     async *generate(request) {
       const tools = toolNames(request);
-      const bucket = tools.includes("record_event") ? seen.stm : tools.includes("summarize") ? seen.wm : seen.rehearsal;
+      const bucket = tools.includes("record_event") ? seen.stm : tools.includes("judge") ? seen.wm : seen.rehearsal;
       bucket.push({ ...request, messages: [...request.messages] });
       if (request.messages.some((message) => message.role === "tool")) return yield providerDone();
       const prompt = text(request, "user");
@@ -83,9 +83,9 @@ function allWorkers(seen: { stm: ProviderRequest[]; wm: ProviderRequest[]; rehea
         yield providerToolCall(
           toolCallContent("c1", "record_event", { kind: "statement", description: `Saw ${ids.join(",")}`, sourceEntryIds: ids }),
         );
-      } else if (tools.includes("summarize")) {
-        const ids = [...prompt.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]!);
-        yield providerToolCall(toolCallContent("c1", "summarize", { stmIds: ids, text: "Work so far.", relevance: "medium" }));
+      } else if (tools.includes("judge")) {
+        const of = [...prompt.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));
+        yield providerToolCall(toolCallContent("c1", "judge", { summaries: [{ of, text: "Work so far.", relevance: "medium" }] }));
       } else {
         const id = prompt.match(/^\[([a-f0-9]{12})\]/m)?.[1];
         yield providerToolCall(toolCallContent("c1", "drop_observations", { observationIds: id ? [id] : [] }));
@@ -239,7 +239,7 @@ describe("episode scope", () => {
         async *generate(request) {
           requests.push(request);
           if (request.messages.some((message) => message.role === "tool")) return yield providerDone();
-          const call = toolCallContent("c1", "summarize", { stmIds: ["aaaaaaaaaaaa"], text: "Suites pass.", relevance: "high" });
+          const call = toolCallContent("c1", "judge", { summaries: [{ of: [1], text: "Suites pass.", relevance: "high" }] });
           calls.push(`${call.name}:${JSON.stringify(call.arguments)}`);
           yield providerToolCall(call);
           yield providerDone();
@@ -259,7 +259,7 @@ describe("episode scope", () => {
     const injected = await run(injection);
     // The tools offered, the calls made and what they recorded are the same with the injection scope as without one.
     expect(injected.requests.map(toolNames)).toEqual(plain.requests.map(toolNames));
-    expect(toolNames(injected.requests[0]!)).toBe("keep,summarize,derive,discard");
+    expect(toolNames(injected.requests[0]!)).toBe("judge");
     expect(injected.calls).toEqual(plain.calls);
     expect(injected.recorded).toEqual(plain.recorded);
     // The injected text sits only inside the delimited block, under the system rule that it is data.

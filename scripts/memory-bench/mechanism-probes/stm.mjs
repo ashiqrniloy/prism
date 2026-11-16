@@ -80,6 +80,9 @@ function indexIds(text) {
  * with the pre-redesign `record_observation` (no kind, no chunks), for the OM-before cost arm. `log` collects what it
  * did: emitted events, rejected tool results and output tokens (the mock provider's counter: tokens of its calls).
  */
+/** Fixture events the scripted STM marks `durable` (plan 218.2 Task 3): e102, "use pnpm, never npm", binds later work. */
+export const DURABLE_EVENTS = Object.freeze({ e102: "constraint" });
+
 export function scriptedStm(log, { shape = "event", fx = longSession(), testing } = {}) {
   const emitted = new Set();
   return (request) => {
@@ -97,6 +100,10 @@ export function scriptedStm(log, { shape = "event", fx = longSession(), testing 
     }
     const recordTool = shape === "event" ? "record_event" : "record_observation";
     if (!tools.includes(recordTool)) return [testing.providerDone()];
+    // Plan 218.2 Task 2: an outcome carries `status` when the tool offers it (every fixture outcome names its passing check).
+    const offersStatus = Boolean(request.tools?.find((tool) => tool.name === recordTool)?.parameters?.properties?.status);
+    // Plan 218.2 Task 3: the user's standing pnpm rule is a durable constraint when the tool offers `durable`.
+    const offersDurable = Boolean(request.tools?.find((tool) => tool.name === recordTool)?.parameters?.properties?.durable);
     const steps = batchSteps(prompt, fx);
     const index = indexIds(prompt);
     const calls = [];
@@ -119,6 +126,8 @@ export function scriptedStm(log, { shape = "event", fx = longSession(), testing 
               description: event.description,
               relevance: event.relevance,
               sourceEntryIds,
+              ...(offersStatus && event.kind === "outcome" ? { status: "passed" } : {}),
+              ...(offersDurable && DURABLE_EVENTS[event.id] ? { durable: DURABLE_EVENTS[event.id] } : {}),
               ...(supersedes ? { supersedes } : {}),
               ...(event.chunks.length
                 ? {
@@ -224,7 +233,8 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
       if (current === "recall") {
         if (toolTurn && step >= recallIds.length) return ev.say("Recalled.");
         const id = recallIds[step++];
-        return id ? ev.call("recall", { id }, `recall-${step}`) : ev.say("Nothing to recall.");
+        // A string recalls by id; an object is the recall call's arguments (plan 218.2 Task 7: `{ query }`).
+        return id ? ev.call("recall", typeof id === "string" ? { id } : id, `recall-${step}`) : ev.say("Nothing to recall.");
       }
       const call = current.calls[step++];
       return call ? ev.call(call.tool, call.args, call.id) : ev.say(current.reply);
@@ -239,7 +249,7 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
     const tools = (request.tools ?? []).map((tool) => tool.name);
     const kind = tools.includes("record_event")
       ? "stm"
-      : tools.includes("summarize")
+      : tools.includes("judge")
         ? "wm"
         : tools.includes("drop_observations")
           ? "rehearsal"
@@ -248,9 +258,9 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
     if (kind === "stm") return stm(request);
     if (kind === "wm" && wmWorker) return wmWorker(request, { testing, ev });
     if (kind === "wm" && sentinels && !request.messages.some((message) => message.role === "tool")) {
-      const ids = [...receivedText({ messages: request.messages }).matchAll(/^- \[([0-9a-f]{12})\] \d{4}-/gm)].map((m) => m[1]);
-      return ids.length
-        ? ev.call("summarize", { stmIds: ids.slice(0, 2), text: `${WM_SENTINEL} summary`, relevance: "medium" })
+      const of = [...receivedText({ messages: request.messages }).matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((m) => Number(m[1]));
+      return of.length
+        ? ev.call("judge", { summaries: [{ of: of.slice(0, 2), text: `${WM_SENTINEL} summary`, relevance: "medium" }] })
         : ev.say("");
     }
     return ev.say("");
@@ -374,7 +384,13 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
     },
     /** After the replay: compact the transcript away, then let the main model recall `eventIds` by record id. */
     async recallTurn(eventIds) {
-      for (const id of eventIds) recallIds.push((await this.recordOf(id))?.id ?? "000000000000");
+      const ids = [];
+      for (const id of eventIds) ids.push((await this.recordOf(id))?.id ?? "000000000000");
+      return this.recallCalls(ids);
+    },
+    /** After the replay: compact the transcript away, then let the main model call `recall` once per entry (an id or the call's arguments). */
+    async recallCalls(calls) {
+      recallIds.push(...calls);
       await session.compact();
       await settle();
       const before = toolLog.length;

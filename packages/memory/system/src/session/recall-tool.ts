@@ -1,5 +1,6 @@
 /**
- * The `recall` tool: exact-id memory lookup plus raw-source paging over the current branch.
+ * The `recall` tool: exact-id memory lookup, a lexical query over this session's STM records and WM items (discarded ones
+ * included, plan 218.2 Task 7), plus raw-source paging over the current branch.
  *
  * Registered with `when: on`, so a session with observational memory off neither sees the tool nor
  * can call it. Entries come from the executing session itself (`ToolExecutionContext.session`), so the
@@ -12,7 +13,12 @@ import type { ChunkStoreHandle } from "../chunks.js";
 import { isMemoryId } from "./ids.js";
 import { foldObservationalMemoryLedger } from "./ledger.js";
 import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
-import { type RecallChunkTexts, recallObservationalMemory, recallObservationalMemoryBranchPage } from "./recall.js";
+import {
+  type RecallChunkTexts,
+  recallObservationalMemory,
+  recallObservationalMemoryBranchPage,
+  recallObservationalMemoryQuery,
+} from "./recall.js";
 
 export interface RecallToolOptions {
   readonly name?: string;
@@ -20,6 +26,8 @@ export interface RecallToolOptions {
   readonly pageLimit?: number;
   /** The package's chunk store. Without it, recall lists a record's chunk refs without their text. */
   readonly chunks?: ChunkStoreHandle;
+  /** The executing session's secrets; query and id results are redacted with them again on output. */
+  readonly secretsFor?: (sessionId: string) => readonly (string | undefined)[];
 }
 
 export function createObservationalRecallTool(options: RecallToolOptions = {}): ToolDefinition {
@@ -27,13 +35,17 @@ export function createObservationalRecallTool(options: RecallToolOptions = {}): 
   return {
     name,
     description:
-      "Recall a session memory record by exact 12-character id (its description, kind, time, count, source ids and verbatim chunks; detail full adds the raw source entries), or page current-branch user/assistant/tool messages around a cursor entry id.",
+      "Recall session memory. Give exactly one of: id (an exact 12-character record id: its description, kind, time, count, source ids and verbatim chunks; detail full adds the raw source entries); query (search terms over this session's memory record descriptions, records working memory discarded included; returns ids, kinds, times, states and descriptions); or cursor (a current-branch message entry id: page user/assistant/tool messages around it).",
     parameters: {
       type: "object",
       properties: {
         id: { type: "string", description: "Exact 12-character observational-memory id." },
+        query: {
+          type: "string",
+          description: "Search terms; finds this session's memory records, discarded ones included, by their descriptions.",
+        },
         cursor: { type: "string", description: "Current-branch message entry id for raw-source paging." },
-        limit: { type: "integer", description: "Page size; defaults to the package's page limit." },
+        limit: { type: "integer", description: "With query: hits to return (default 8). With cursor: page size." },
         direction: { type: "string", enum: ["forward", "backward"] },
         detail: {
           type: "string",
@@ -56,9 +68,20 @@ export function createObservationalRecallTool(options: RecallToolOptions = {}): 
 
       const hasId = typeof args.id === "string" && args.id.length > 0;
       const hasCursor = typeof args.cursor === "string" && args.cursor.trim().length > 0;
-      if (hasId === hasCursor) return fail({ found: false, reason: "invalid_request", text: "Provide exactly one of id or cursor." });
+      const hasQuery = typeof args.query === "string" && args.query.trim().length > 0;
+      if (Number(hasId) + Number(hasCursor) + Number(hasQuery) !== 1)
+        return fail({ found: false, reason: "invalid_request", text: "Provide exactly one of id, cursor or query." });
 
       const entries = await session.entries();
+      const secrets = options.secretsFor?.(session.id) ?? [];
+      if (hasQuery) {
+        const value = recallObservationalMemoryQuery(
+          entries,
+          { query: args.query as string, ...(typeof args.limit === "number" ? { limit: args.limit } : {}) },
+          secrets,
+        );
+        return { toolCallId: context.toolCallId, name, value, content: [{ type: "text", text: value.text }] };
+      }
       if (hasId) {
         const id = args.id as string;
         if (!isMemoryId(id)) {
@@ -79,7 +102,7 @@ export function createObservationalRecallTool(options: RecallToolOptions = {}): 
               () => undefined,
             );
         }
-        const value = recallObservationalMemory(entries, id, [], {
+        const value = recallObservationalMemory(entries, id, secrets, {
           ledger,
           detail: args.detail === "full" ? "full" : "summary",
           ...(chunkTexts ? { chunkTexts } : {}),
@@ -87,12 +110,16 @@ export function createObservationalRecallTool(options: RecallToolOptions = {}): 
         return { toolCallId: context.toolCallId, name, value, content: [{ type: "text", text: value.text }] };
       }
 
-      const value = recallObservationalMemoryBranchPage(entries, {
-        cursor: (args.cursor as string).trim(),
-        limit: typeof args.limit === "number" ? args.limit : (options.pageLimit ?? DEFAULT_RECALL_PAGE_LIMIT),
-        direction: args.direction === "forward" ? "forward" : "backward",
-        detail: args.detail === "full" ? "full" : "summary",
-      });
+      const value = recallObservationalMemoryBranchPage(
+        entries,
+        {
+          cursor: (args.cursor as string).trim(),
+          limit: typeof args.limit === "number" ? args.limit : (options.pageLimit ?? DEFAULT_RECALL_PAGE_LIMIT),
+          direction: args.direction === "forward" ? "forward" : "backward",
+          detail: args.detail === "full" ? "full" : "summary",
+        },
+        secrets,
+      );
       return { toolCallId: context.toolCallId, name, value, content: [{ type: "text", text: value.text }] };
     },
   };

@@ -1,14 +1,14 @@
+import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { afterAll as after, describe, it } from "bun:test";
-import { Pool } from "pg";
-import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
-import { createPostgresMemoryStores } from "@arnilo/prism-memory-system/core/postgres";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHashEmbedder } from "@arnilo/prism-memory-system/core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-system/core/fabric";
-import { createMemory, createLongTermMemory, exportMemoryOkf, importMemoryOkf, runMemoryConformance } from "../../index.js";
+import { createPostgresMemoryStores } from "@arnilo/prism-memory-system/core/postgres";
+import { Pool } from "pg";
+import { createLongTermMemory, createMemory, exportMemoryOkf, importMemoryOkf, runMemoryConformance } from "../../index.js";
 import { assertScopeIsolation } from "./scope-isolation.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;

@@ -72,11 +72,15 @@ describe("observational memory workers", () => {
     const parameters = seen as { properties?: Record<string, unknown>; required?: string[] } | undefined;
     assert.deepEqual(Object.keys(parameters?.properties ?? {}).sort(), [
       "chunks",
+      "corrects",
       "description",
+      "durable",
       "kind",
       "referencedAt",
       "relevance",
+      "resolves",
       "sourceEntryIds",
+      "status",
       "supersedes",
     ]);
     assert.deepEqual(parameters?.required, ["kind", "description", "sourceEntryIds"]);
@@ -97,14 +101,13 @@ describe("observational memory workers", () => {
       ledger: foldObservationalMemoryLedger([{ type: OBSERVATIONS_RECORDED, observations: [observation] }]),
       client: clientFor(
         provider([
+          // r2 names no record of the batch: the summary is refused; the keep applies.
           providerToolCall(
-            toolCallContent("c1", "summarize", {
-              stmIds: [observation.id, "bbbbbbbbbbbb"],
-              text: "Keep it optional.",
-              relevance: "medium",
+            toolCallContent("c1", "judge", {
+              summaries: [{ of: [1, 2], text: "Keep it optional.", relevance: "medium" }],
+              keep: [{ r: 1, reason: "later steps need it" }],
             }),
           ),
-          providerToolCall(toolCallContent("c2", "keep", { stmId: observation.id, reason: "later steps need it" })),
           providerDone(),
         ]),
       ),

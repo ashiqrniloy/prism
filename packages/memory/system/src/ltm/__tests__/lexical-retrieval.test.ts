@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
 import type { ContextDraft, HookContext, JsonObject, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { createMemoryVectorStore, type Embedder, MemoryValidationError, type VectorStore } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory } from "../../index.js";
 import { createFabricContext } from "../context.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
 const tempDirs: string[] = [];

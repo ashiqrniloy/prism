@@ -9,8 +9,13 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgent, definePackage } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory, createMemoryLtmPort, MEMORY_LTM_SERVICE, type MemoryLtmPort } from "../../index.js";
-import memorySystem from "../../index.js";
+import memorySystem, {
+  createLongTermMemory,
+  createMemory,
+  createMemoryLtmPort,
+  MEMORY_LTM_SERVICE,
+  type MemoryLtmPort,
+} from "../../index.js";
 import { DEFAULT_RECALL_KINDS, MEMORY_NOTE_KINDS, unreadableNoteReason } from "../types.js";
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));

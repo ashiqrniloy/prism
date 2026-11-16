@@ -1,7 +1,7 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
+import { createLongTermMemory, createMemory, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../index.js";
 
 const REF = "2026-03-15T12:00:00.000Z";
 

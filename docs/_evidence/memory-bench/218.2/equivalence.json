@@ -1,0 +1,63 @@
+{
+  "kind": "202-cache-stability-equivalence",
+  "version": 1,
+  "status": "identical",
+  "requestsCompared": 54,
+  "differingArms": [],
+  "differing": [],
+  "rerunArms": [],
+  "mergeWithPreChangeCells": false,
+  "deterministic": {
+    "base": true,
+    "post": true
+  },
+  "arms": [
+    {
+      "id": "preset-r1",
+      "config": "fabric-x-tools",
+      "questions": 14,
+      "requests": 40,
+      "identical": true
+    },
+    {
+      "id": "passive-only",
+      "config": "fabric-x",
+      "questions": 14,
+      "requests": 14,
+      "identical": true
+    }
+  ],
+  "harness": "shared",
+  "base": {
+    "commit": "0d11738eebe0b08ce91ff323aff315f6565d4b7a",
+    "productPaths": [
+      "packages/memory/system/src/ltm"
+    ],
+    "productHash": "68a4d82142ac536e7da7ef6f6b98c8189985f1897dcdfbd978dbdfd56e7a727e",
+    "harnessHash": "dd2bdcde6d49464add5ffa330b2bfaf6dfa8a7b03dd984ae1bd952d2a817b5bd",
+    "supportingPaths": [
+      "src",
+      "packages/memory/core/src",
+      "packages/memory/system/src"
+    ],
+    "supportingHash": "0aee085f49975f43d39f23074d86bf5da5e04d2f03c46f3450edf365cd9cbe22",
+    "screenProductHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+    "isScreenProduct": false
+  },
+  "post": {
+    "commit": "0d11738eebe0b08ce91ff323aff315f6565d4b7a",
+    "productPaths": [
+      "packages/memory/system/src/ltm"
+    ],
+    "productHash": "f03fc1c005295a675e4f2a036c69cb6448a2078dea043b5b1ac6dd0360b58d30",
+    "harnessHash": "dd2bdcde6d49464add5ffa330b2bfaf6dfa8a7b03dd984ae1bd952d2a817b5bd",
+    "supportingPaths": [
+      "src",
+      "packages/memory/core/src",
+      "packages/memory/system/src"
+    ],
+    "supportingHash": "7e49953068e84aa802179152024c3e808569ba075be1a4a9715c2e99bdb6de1f"
+  },
+  "policy": "Compares every answer-phase provider request on the pre-change tree and this tree, byte for byte.",
+  "sha256": "6dec7e0ef5068b3d9fc63f457f244c1427a3a320313915d8634b281eb012ec37"
+}

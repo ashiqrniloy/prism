@@ -30,9 +30,9 @@ function workerProvider(): ModelProvider {
       const ids = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]);
       const names = new Set(request.tools?.map((tool) => tool.name) ?? []);
       if (!alreadyCalled && ids.length > 0) {
-        if (names.has("summarize")) {
-          const stmIds = [...text.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]!);
-          yield providerToolCall(toolCallContent("c1", "summarize", { stmIds, text: REFLECTION_TEXT, relevance: "high" }));
+        if (names.has("judge")) {
+          const of = [...text.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));
+          yield providerToolCall(toolCallContent("c1", "judge", { summaries: [{ of, text: REFLECTION_TEXT, relevance: "high" }] }));
         } else if (names.has("record_event")) {
           yield providerToolCall(
             toolCallContent("c1", "record_event", {

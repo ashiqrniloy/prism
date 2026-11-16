@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { Embedder, VectorStore } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory } from "../../index.js";
+import { createLongTermMemory, createMemory } from "../../index.js";
 
 export const PROJECT_A = "projects/alpha--00000001";
 export const PROJECT_B = "projects/beta--00000002";

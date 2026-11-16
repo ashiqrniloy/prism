@@ -21,8 +21,8 @@ import {
   validateJsonSchema,
 } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory } from "../../index.js";
 import { buildConsolidationExtractPrompt, CONSOLIDATION_EXTRACT_SYSTEM, consolidationExtractSchema } from "../consolidation/prompts.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 import { memoryFabricPromoteSchema, readPromoteState, resolvePromoteConfig } from "../promote.js";
 
 const TIMESTAMP = "2026-01-01T00:00:00.000Z";

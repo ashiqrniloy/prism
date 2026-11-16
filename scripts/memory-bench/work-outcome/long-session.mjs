@@ -42,10 +42,25 @@ export const LONG_SESSION_PERSONA_COUNT = LONG_SESSION_BASE_COUNT + LONG_SESSION
 export const LONG_SESSION_STRATA = Object.freeze({ "long-session-coding": [4, 4, 4] });
 export const LONG_SESSION_SEED = "prism-217-long-session";
 /**
+ * Plan 218.2 Task 8: the cheap baselines, built from two packages that already ship and no memory package. `fold` is
+ * observation masking (the context-engineering package folds old tool output; actions and messages stay; the kernel's
+ * deterministic compactor runs at the same gate as memory-off). `llm-summary` is one summary call per compaction (the
+ * compaction package on the arm's worker model, at that same gate).
+ */
+export const BASELINE_ARMS = Object.freeze(["fold", "llm-summary"]);
+/** The compaction package's summarisation prompts open with this; its calls are worker calls (S4, whole-run cost). */
+const SUMMARY_PROMPT = /^You summarize /;
+/**
+ * The memory system's `context.compactAt.ratio` default. At the package defaults (the long-horizon family) the
+ * llm-summary arm compacts at this share of the input cap, as the memory arms do, so its one summary per compaction
+ * comes at the same pressure; memory-off and fold keep the kernel's entry gate.
+ */
+export const SHIPPED_COMPACT_AT_RATIO = 0.6;
+/**
  * Plan 217's arms, plus gate M-2's (plan 218 Task 6): `WM` (the session profile, no scope on this family since it has
  * no plan) and `STM-only` (deterministic WM), so plan 217's S1 miss is re-measured on the same family.
  */
-export const LONG_SESSION_ARMS = Object.freeze(["memory-off", "STM", "OM-before", "WM", "STM-only"]);
+export const LONG_SESSION_ARMS = Object.freeze(["memory-off", "STM", "OM-before", "WM", "STM-only", ...BASELINE_ARMS]);
 export const LONG_SESSION_REPORT_KIND = "long-session-report-v1";
 /** The provider-view budget every arm shares: the memory system's gate, and the kernel's entry gate without it. */
 export const LONG_SESSION_CONTEXT = Object.freeze({ maxTokens: 6_000, thresholdEntries: 12, keepRecentEntries: 6 });
@@ -127,8 +142,22 @@ export function createLongSessionPersona(index) {
     throw new Error("LongSessionArguments: persona index out of range");
   const id = `ls${index}`;
   const { word, files, labels } = codingProject(id, LONG_SESSION_SEED);
+  const tasks = longSessionTasks(word, labels);
+  return {
+    id,
+    family: LONG_SESSION_FAMILY,
+    files,
+    tasks,
+    pairs: longSessionPairs(labels),
+    // Hidden labels for the checks; never in a prompt the agent reads before its own task names them.
+    labels,
+  };
+}
+
+/** The six task prompts of one project (plan 218.2 Task 8 chains them into the long-horizon family). */
+export function longSessionTasks(word, labels) {
   const { to, before, after } = labels;
-  const tasks = [
+  return [
     {
       // Plan 217 Task 6: the prompt names neither the function nor its module, so task 3 depends on what the agent found.
       id: "task1",
@@ -159,15 +188,6 @@ export function createLongSessionPersona(index) {
         "Task 6. Write docs/retries.md with one line naming the config file and the key you changed in task 4, and its new value. Run the tests.",
     },
   ];
-  return {
-    id,
-    family: LONG_SESSION_FAMILY,
-    files,
-    tasks,
-    pairs: longSessionPairs(labels),
-    // Hidden labels for the checks; never in a prompt the agent reads before its own task names them.
-    labels,
-  };
 }
 
 /** The related pairs: task 3 reads what task 1 renamed, task 6 what task 4 changed. */
@@ -395,6 +415,11 @@ function mockStep(request) {
     .slice(0, taskIndex)
     .map((m) => plain(m.content))
     .join("\n")}`;
+  // Plan 218.2 Task 8: a long-horizon task names its project; its outcome carries the tag, and what a dependent task
+  // takes from view must carry the same one (other projects hold look-alike facts).
+  const tag = /^Task \d\. \[project (\w+)\]/.exec(task)?.[1];
+  const label = tag ? ` [project ${tag}]` : "";
+  const scoped = (number, pattern) => new RegExp(tag ? `Task ${number} done \\[project ${tag}\\]: ${pattern}` : pattern);
   let match = /rename the function that formats cents \(src\/cli\.ts uses it\) to `(\w+)`/i.exec(task);
   if (match) {
     const [, to] = match;
@@ -415,7 +440,7 @@ function mockStep(request) {
       if (!did("edit_file", (a) => a.path === path)) return { call: ["edit_file", { path, find: from, replace: to }] };
     if (!did("run_tests")) return { call: ["run_tests", {}] };
     const module = hits.find((p) => /^src\/(?!cli)/.test(p)) ?? hits[0];
-    return { text: `Task 1 done: renamed \`${from}\` to \`${to}\` in ${module} and its callers (${hits.join(", ")}); tests pass.` };
+    return { text: `Task 1 done${label}: renamed \`${from}\` to \`${to}\` in ${module} and its callers (${hits.join(", ")}); tests pass.` };
   }
   match = /four parts (logs\/[a-z]+)-1\.log/.exec(task);
   if (match) {
@@ -429,7 +454,7 @@ function mockStep(request) {
     };
   }
   if (/function you renamed in task 1/.test(task)) {
-    let known = /renamed `\w+` to `(\w+)` in (src\/[\w.-]+)\.ts/.exec(visible);
+    let known = scoped(1, "renamed `\\w+` to `(\\w+)` in (src/[\\w.-]+)\\.ts").exec(visible);
     if (!known) {
       // Re-derive: find exported functions, then read the module that is not the CLI.
       if (!did("grep")) return { call: ["grep", { pattern: "export function" }] };
@@ -455,7 +480,7 @@ function mockStep(request) {
       };
     }
     if (!did("run_tests")) return { call: ["run_tests", {}] };
-    return { text: "Task 3 done: src/report.ts exports summary; tests run." };
+    return { text: `Task 3 done${label}: src/report.ts exports summary; tests run.` };
   }
   match = /raise its retry limit in the project config from (\d+) to (\d+)/.exec(task);
   if (match) {
@@ -470,10 +495,10 @@ function mockStep(request) {
     if (!path || !key) return { text: "Task 4: could not find the retry setting." };
     if (!did("edit_file")) return { call: ["edit_file", { path, find: `"${key}": ${before}`, replace: `"${key}": ${after}` }] };
     if (!did("run_tests")) return { call: ["run_tests", {}] };
-    return { text: `Task 4 done: set \`${key}\` to ${after} in ${path}; tests pass.` };
+    return { text: `Task 4 done${label}: set \`${key}\` to ${after} in ${path}; tests pass.` };
   }
   if (/config file and the key you changed in task \d/.test(task)) {
-    let known = /set `(\w+)` to (\d+) in (config\/[\w.-]+?\.json)/.exec(visible);
+    let known = scoped(4, "set `(\\w+)` to (\\d+) in (config/[\\w.-]+?\\.json)").exec(visible);
     if (!known) {
       if (!did("grep")) return { call: ["grep", { pattern: "timeout_ms" }] };
       const path = grepResult(since)
@@ -495,7 +520,7 @@ function mockStep(request) {
       return { call: ["write_file", { path: "docs/retries.md", text: `${path}: ${key} = ${value}\n` }] };
     }
     if (!did("run_tests")) return { call: ["run_tests", {}] };
-    return { text: "Task 6 done: docs/retries.md written; tests run." };
+    return { text: `Task 6 done${label}: docs/retries.md written; tests run.` };
   }
   return { text: "Done." };
 }
@@ -529,7 +554,14 @@ export function longSessionWorkerMock() {
     async *generate(request) {
       const tools = (request.tools ?? []).map((tool) => tool.name);
       const shape = tools.includes("record_event") ? "event" : tools.includes("record_observation") ? "observation" : null;
-      const wm = tools.includes("keep");
+      const wm = tools.includes("judge");
+      const offersStatus = Boolean(request.tools?.find((tool) => tool.name === "record_event")?.parameters?.properties?.status);
+      // Plan 218.2 Task 8: the llm-summary arm's compaction call keeps the task lines it can see, as a summary would.
+      if (isSummaryRequest(request)) {
+        yield providerTextDelta(mockSummary(request));
+        yield providerDone();
+        return;
+      }
       if ((!shape && !wm) || request.messages.some((message) => message.role === "tool")) {
         yield providerDone();
         return;
@@ -540,9 +572,13 @@ export function longSessionWorkerMock() {
         .join("\n");
       let n = 0;
       if (wm) {
-        // Plan 218 Task 5: the offline WM keeps every record it is sent, and every earlier-discarded one re-judged.
-        for (const match of prompt.matchAll(/^- \[([0-9a-f]{12})\] /gm))
-          yield providerToolCall(toolCallContent(`k${++n}`, "keep", { stmId: match[1], reason: "kept offline" }));
+        // Plan 218 Task 5: the offline WM keeps every record it is sent, and every earlier-discarded one re-judged
+        // (plan 218.2 Task 5: in one `judge` call over ordinals).
+        const keep = [...prompt.matchAll(/^- \[([rj])([0-9]+)\] /gm)].map((match) => ({
+          [match[1]]: Number(match[2]),
+          reason: "kept offline",
+        }));
+        if (keep.length) yield providerToolCall(toolCallContent(`k${++n}`, "judge", { keep }));
         yield providerDone();
         return;
       }
@@ -559,20 +595,43 @@ export function longSessionWorkerMock() {
         const kind =
           match[3] === "user" && /^Task \d\./.test(text)
             ? "request"
-            : match[3] === "assistant" && /^Task \d done:/.test(text)
+            : match[3] === "assistant" && /^Task \d done(?: \[project \w+\])?:/.test(text)
               ? "outcome"
               : null;
         if (!kind || !text) continue;
         const description = text.slice(0, 400);
         const args =
           shape === "event"
-            ? { kind, description, sourceEntryIds: [match[1]], relevance: "high" }
+            ? {
+                kind,
+                description,
+                sourceEntryIds: [match[1]],
+                relevance: "high",
+                // Plan 218.2 Task 2: a scripted "Task N done" outcome passed its check, when the tool offers `status`.
+                ...(kind === "outcome" && offersStatus ? { status: "passed" } : {}),
+              }
             : { content: description, sourceEntryIds: [match[1]], relevance: "high" };
         yield providerToolCall(toolCallContent(`w${++n}`, shape === "event" ? "record_event" : "record_observation", args));
       }
       yield providerDone();
     },
   };
+}
+
+/** A compaction-package summary call: its system prompt is the package's summarisation prompt. */
+function isSummaryRequest(request) {
+  const system = (request.messages ?? []).find((message) => message.role === "system");
+  return SUMMARY_PROMPT.test(plain(system?.content));
+}
+
+/** The offline summary: the task prompts and outcomes the summarised history holds, in order, once each. */
+function mockSummary(request) {
+  const text = (request.messages ?? [])
+    .filter((message) => message.role === "user")
+    .map((message) => plain(message.content))
+    .join("\n");
+  const lines = [...new Set([...text.matchAll(/Task \d(?:\.| done)[^\n]*/g)].map((match) => match[0].slice(0, 400)))];
+  return lines.length ? `## Progress\n${lines.join("\n")}` : "## Progress\nNothing to carry.";
 }
 
 /**
@@ -588,9 +647,22 @@ export async function armMemory(
     stmOverrides = {},
     // Plan 218.1 Task 2: Compact-Bench replays one long history and compacts once at the end, so it passes its own gate.
     context = { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+    // Plan 218.2 Task 8 (the long-horizon family): the package defaults, with no trigger, recent-message or compactAt
+    // override; compaction then follows the model's real window.
+    defaults = false,
   } = {},
 ) {
   if (arm === "memory-off") return [];
+  if (arm === "fold") {
+    const { default: contextEngineering } = await import("@arnilo/prism-extensions/context-engineering");
+    return [contextEngineering({ fold: { summarize: "truncate" } })];
+  }
+  if (arm === "llm-summary") {
+    const { default: compaction } = await import("@arnilo/prism-extensions/compaction");
+    return [compaction({ model: workerModel, ...(defaults ? { trigger: { type: "input_ratio", ratio: SHIPPED_COMPACT_AT_RATIO } } : {}) })];
+  }
+  const stm = defaults ? { model: workerModel } : { model: workerModel, triggerTokens: 1_000, ...stmOverrides };
+  const contextConfig = defaults ? {} : { context };
   if (arm === "STM") {
     const { default: memorySystem } = await import("@arnilo/prism-memory-system");
     const meter = chunkMeter ? [await (await import("../chunk-meter.mjs")).chunkMeterPackage(chunkMeter)] : [];
@@ -598,9 +670,9 @@ export async function armMemory(
       ...meter,
       memorySystem({
         enabled: true,
-        stm: { model: workerModel, triggerTokens: 1_000, ...stmOverrides },
+        stm,
         wm: false,
-        context,
+        ...contextConfig,
       }),
     ];
   }
@@ -611,9 +683,9 @@ export async function armMemory(
     return [
       memorySystem({
         enabled: true,
-        stm: { model: workerModel, triggerTokens: 1_000, ...stmOverrides },
+        stm,
         wm: arm === "WM" ? { model: workerModel } : { policy: "deterministic" },
-        context,
+        ...contextConfig,
       }),
     ];
   }
@@ -630,8 +702,8 @@ export async function armMemory(
     return [
       observational.default({
         enabled: true,
-        observer: { model: workerModel, messageTokens: 1_000 },
-        context,
+        observer: defaults ? { model: workerModel } : { model: workerModel, messageTokens: 1_000 },
+        ...contextConfig,
       }),
     ];
   }
@@ -639,19 +711,23 @@ export async function armMemory(
 }
 
 /**
- * The session-memory worker tools of both trees: STM (`record_event`), WM (`summarize`, offered with every WM verdict tool
- * since plan 218 Task 2), the pre-216 observer and reflector, and the dropper.
+ * The session-memory worker tools of both trees: STM (`record_event`), WM (`judge`, plan 218.2 Task 5), the pre-216
+ * observer and reflector, and the dropper.
  */
 export const LONG_SESSION_WORKER_TOOLS = Object.freeze([
   "record_event",
-  "summarize",
+  "judge",
   "record_observation",
   "record_reflection",
   "drop_observations",
 ]);
 const estimate = (chars) => Math.ceil(chars / 4);
-/** WM's verdict tools that write an item (plan 218 Task 2); `discard` writes none. */
-export const LONG_SESSION_WM_ITEM_TOOLS = Object.freeze(["keep", "summarize", "derive"]);
+/** The items one `judge` call writes (plan 218.2 Task 5): its keeps, summaries and facts; a discard writes none. */
+export function longSessionWmItemCount(call) {
+  if (call?.name !== "judge") return 0;
+  const args = call.arguments ?? {};
+  return ["keep", "summaries", "facts"].reduce((sum, key) => sum + (Array.isArray(args[key]) ? args[key].length : 0), 0);
+}
 const WM_RECORDED_TYPE = "memory.session.wm.recorded";
 
 /**
@@ -666,6 +742,9 @@ export function longSessionWmStats(entries) {
   });
   return {
     compactions: entries.filter((entry) => entry.kind === "compaction").length,
+    // Plan 218.2 Task 8: the compaction block's size at each compaction (characters), since plan 218.1 Task 2 found
+    // the memory block bounded by its pool, not by an output cap.
+    compactionChars: entries.filter((entry) => entry.kind === "compaction").map((entry) => String(entry.summary ?? "").length),
     passes: passes.length,
     items: passes.map((pass) => (Array.isArray(pass.items) ? pass.items.length : 0)),
     budgetUnmet: passes.filter((pass) => pass.budgetUnmet).length,
@@ -683,11 +762,11 @@ export function meteredLongSessionProviders(providers, meter, log) {
   return providers.map((provider) => ({
     ...provider,
     async *generate(request) {
-      const worker = (request.tools ?? []).some((tool) => LONG_SESSION_WORKER_TOOLS.includes(tool.name));
+      const worker = (request.tools ?? []).some((tool) => LONG_SESSION_WORKER_TOOLS.includes(tool.name)) || isSummaryRequest(request);
       const row = worker ? meter.worker : meter.main;
       row.calls++;
-      // Plan 218 Task 6 (gate M-2): a WM call (its verdict tools carry `summarize`) records its stop reason and items.
-      const wm = meter.wm && (request.tools ?? []).some((tool) => tool.name === "summarize") ? { items: 0 } : null;
+      // Plan 218 Task 6 (gate M-2): a WM call (it offers `judge`) records its stop reason and items.
+      const wm = meter.wm && (request.tools ?? []).some((tool) => tool.name === "judge") ? { items: 0 } : null;
       let outputChars = 0;
       let usage;
       let stopReason;
@@ -698,7 +777,7 @@ export function meteredLongSessionProviders(providers, meter, log) {
           else if (chunk.type === "tool_call") outputChars += JSON.stringify(chunk.call?.arguments ?? {}).length;
           else if (chunk.type === "tool_call_delta") outputChars += chunk.argumentsText?.length ?? 0;
           else if (chunk.type === "usage" || chunk.type === "done") usage = chunk.usage ?? usage;
-          if (chunk.type === "tool_call" && wm && LONG_SESSION_WM_ITEM_TOOLS.includes(chunk.call?.name)) wm.items++;
+          if (chunk.type === "tool_call" && wm) wm.items += longSessionWmItemCount(chunk.call);
           if (chunk.type === "done") stopReason = chunk.stopReason;
           yield chunk;
         }
@@ -725,17 +804,42 @@ export function meteredLongSessionProviders(providers, meter, log) {
 /**
  * One persona on one arm: the six tasks in one session; rows per related pair (ids and counts only). `compactor`
  * replaces memory-off's default compactor (tests pass `createDefaultCompactor({ maxSummaryChars: 1 })`, a no-carry
- * control).
+ * control). A long-horizon session (plan 218.2 Task 8) chains several projects: `persona.projects` holds each one's
+ * files, labels and pairs, each task names its `project`, and the tools act on that task's project (as a host that
+ * changes directory), so the dependent tasks must find their own project's facts among look-alike ones.
  */
-export async function runLongSessionPersona({ persona, arm, providers, model, temp, compactor, workerModel, usage, stmOverrides }) {
+export async function runLongSessionPersona({
+  persona,
+  arm,
+  providers,
+  model,
+  temp,
+  compactor,
+  workerModel,
+  usage,
+  stmOverrides,
+  defaults = false,
+}) {
   if (compactor && arm !== "memory-off") throw new Error("LongSessionArguments: a compactor override is for memory-off only");
   const root = join(temp, `${persona.id}-${arm.replace(/[^A-Za-z0-9-]/g, "_")}`);
-  for (const [path, text] of Object.entries(persona.files)) {
-    await mkdir(dirname(join(root, path)), { recursive: true });
-    await writeFile(join(root, path), text);
-  }
-  const log = { task: undefined, started: new Set(), calls: [], eligibleChars: 0 };
-  const project = projectTools(root, persona, log);
+  const projects = (persona.projects ?? [{ id: "", files: persona.files, labels: persona.labels, pairs: persona.pairs }]).map((project) => {
+    const log = { task: undefined, started: new Set(), calls: [], eligibleChars: 0 };
+    return { ...project, log, tools: projectTools(join(root, project.id), project, log) };
+  });
+  for (const project of projects)
+    for (const [path, text] of Object.entries(project.files)) {
+      await mkdir(dirname(join(root, project.id, path)), { recursive: true });
+      await writeFile(join(root, project.id, path), text);
+    }
+  const byId = new Map(projects.map((project) => [project.id, project]));
+  let active = projects[0];
+  // One tool set; each call goes to the active task's project.
+  const tools = active.tools.tools.map((tool) => ({
+    ...tool,
+    execute: (args, context) => active.tools.tools.find((own) => own.name === tool.name).execute(args, context),
+  }));
+  // The session's own eligible text (prompts and the main agent's output); tool replies count in each project's log.
+  const log = { eligibleChars: 0 };
   const meter = {
     worker: { calls: 0, inputTokens: 0, outputTokens: 0 },
     main: { calls: 0, inputTokens: 0, outputTokens: 0 },
@@ -750,11 +854,12 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
         ...(workerModel ? { workerModel } : {}),
         ...(chunkMeter ? { chunkMeter } : {}),
         ...(stmOverrides ? { stmOverrides } : {}),
+        defaults,
       })),
     ],
-    tools: { add: project.tools },
+    tools: { add: tools },
     slots: { store: createMemorySessionStore(), ...(compactor ? { compaction: compactor } : {}) },
-    // The kernel's own compaction gate (memory-off; the memory arms vote with their own gate and own the slot).
+    // The kernel's own compaction gate (memory-off and the baselines; the memory arms vote with their own gate and own the slot).
     compaction: { thresholdEntries: LONG_SESSION_CONTEXT.thresholdEntries, keepRecentEntries: LONG_SESSION_CONTEXT.keepRecentEntries },
     limits: {
       maxTurns: 24,
@@ -770,8 +875,11 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
   try {
     const session = await agent.session({ id: `${persona.id}-${arm}`, create: true });
     for (const task of persona.tasks) {
-      log.task = task.id;
-      log.started.add(task.id);
+      active = byId.get(task.project ?? "");
+      if (!active) throw new Error(`LongSessionArguments: task ${task.id} names no project of ${persona.id}`);
+      const taskId = task.taskId ?? task.id;
+      active.log.task = taskId;
+      active.log.started.add(taskId);
       log.eligibleChars += task.prompt.length;
       // Plan 218 Task 5: a turn that carries a plan hands it to the WM arm as the episode scope, as a host would.
       if (task.scope && arm === "WM") await agent.commands.run("memory:scope", { text: task.scope }, { session });
@@ -779,7 +887,6 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
       tasks[task.id] = {
         status: result?.status ?? "unknown",
         ...(result?.error?.code ? { code: result.error.code } : {}),
-        calls: log.calls.filter((call) => call.task === task.id).length,
       };
     }
     if (typeof session.entries === "function") wmStats = longSessionWmStats(await session.entries());
@@ -787,14 +894,14 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
   } finally {
     await agent.dispose();
   }
-  const checks = longSessionChecks(project.files, persona.labels);
+  const eligibleChars = log.eligibleChars + projects.reduce((sum, project) => sum + project.log.eligibleChars, 0);
   // Gate M-1 (S4 and the cost rows): one usage row per persona-arm, ids and counts only.
   usage?.push({
     persona: persona.id,
     arm,
     worker: { ...meter.worker },
     main: { ...meter.main },
-    eligibleTokens: estimate(log.eligibleChars),
+    eligibleTokens: estimate(eligibleChars),
     chunkStorePeakBytes: chunkMeter ? chunkMeter.peakBytes : null,
     ...(meter.wm ? { wmCalls: { ...meter.wm } } : {}),
     ...(wmStats ? { session: wmStats } : {}),
@@ -802,19 +909,23 @@ export async function runLongSessionPersona({ persona, arm, providers, model, te
       Object.entries(tasks).map(([id, task]) => [id, { status: task.status, ...(task.code ? { code: task.code } : {}) }]),
     ),
   });
-  return persona.pairs.map((pair) => {
-    const calls = log.calls.filter((call) => call.task === pair.b);
-    return {
-      family: persona.family,
-      persona: persona.id,
-      arm,
-      pair: pair.id,
-      rederivations: searchRederivationCalls(calls).length,
-      toolCalls: calls.length,
-      success: Boolean(checks[pair.b]),
-      sourceSucceeded: Boolean(checks[pair.a]),
-      status: tasks[pair.b]?.status ?? "missing",
-    };
+  return projects.flatMap((project) => {
+    const checks = longSessionChecks(project.tools.files, project.labels);
+    const status = (taskId) => tasks[project.id ? `${project.id}.${taskId}` : taskId]?.status ?? "missing";
+    return project.pairs.map((pair) => {
+      const calls = project.log.calls.filter((call) => call.task === pair.b);
+      return {
+        family: persona.family,
+        persona: persona.id,
+        arm,
+        pair: project.id ? `${project.id}.${pair.id}` : pair.id,
+        rederivations: searchRederivationCalls(calls).length,
+        toolCalls: calls.length,
+        success: Boolean(checks[pair.b]),
+        sourceSucceeded: Boolean(checks[pair.a]),
+        status: status(pair.b),
+      };
+    });
   });
 }
 
@@ -845,6 +956,8 @@ export async function runLongSession({
   providers,
   model,
   checkpoint,
+  // Plan 218.2 Task 8 (`--estimate`): the offline model's window, so compaction at the defaults follows a real one.
+  offlineContextWindow = 64_000,
 } = {}) {
   if (!offline && (!providers || !model)) throw new Error("LongSessionArguments: live runs pass providers and model");
   const spec = await familySpec(family);
@@ -854,6 +967,8 @@ export async function runLongSession({
   const chosenArms = arms ?? (offline ? spec.offlineArms : [...spec.arms]);
   for (const arm of chosenArms) if (!spec.arms.includes(arm)) throw new Error(`LongSessionArguments: ${family} has no arm ${arm}`);
   const personas = ids.slice(0, personaLimit ?? ids.length).map((id) => spec.persona(id));
+  // Plan 218.2 Task 8: the long-horizon family spends nothing until the scripted worker shows WM engaging at the defaults.
+  if (!offline && spec.precondition) await spec.precondition({ partition, personaLimit });
   const temp = await mkdtemp(join(tmpdir(), "prism-long-session-"));
   const started = performance.now();
   const rows = {};
@@ -875,11 +990,12 @@ export async function runLongSession({
           persona,
           arm,
           providers: offline ? [longSessionAgentMock(), longSessionWorkerMock()] : providers,
-          model: offline ? { provider: "mock", model: "main", limits: { contextWindow: 64_000, maxOutputTokens: 0 } } : model,
+          model: offline ? { provider: "mock", model: "main", limits: { contextWindow: offlineContextWindow, maxOutputTokens: 0 } } : model,
           // Live, the worker is the answer model itself, as in the robustness suites.
           ...(offline ? {} : { workerModel: `${model.provider}/${model.model}` }),
           temp,
           usage: own,
+          defaults: Boolean(spec.defaults),
         });
         rows[arm].push(...personaRows);
         usage.push(...own);
@@ -899,6 +1015,15 @@ export async function runLongSession({
       },
     ]),
   );
+  const cost = Object.fromEntries(
+    chosenArms.map((arm) => [
+      arm,
+      longSessionWholeRunCost(
+        usage.filter((row) => row.arm === arm),
+        rows[arm],
+      ),
+    ]),
+  );
   return {
     kind: LONG_SESSION_REPORT_KIND,
     family,
@@ -909,10 +1034,60 @@ export async function runLongSession({
     arms: chosenArms,
     personas: personas.map((persona) => persona.id),
     summary,
+    // Plan 218.2 Task 8: whole-run tokens beside S4 and the worker-token ratio; it changes no row.
+    cost,
     rows,
     usage,
     wallMs: Math.round(performance.now() - started),
   };
+}
+
+const add = (rows, key) => rows.reduce((sum, row) => sum + (row?.[key] ?? 0), 0);
+
+/**
+ * Plan 218.2 Task 8: one arm's whole-run cost from its usage rows (the family meter, one row per persona-arm of the
+ * run that produced it): input, cached-input and output tokens of the main model and of the workers, and whole-run
+ * tokens (all input plus all output) per successful task. A successful task is a graded task whose check passes (the
+ * source and the dependent task of each related pair); the log-reading tasks have no check and are not counted. The
+ * wire proxy's spend (every process run of an attempt, re-runs included) is the live job's own `inputTokens`, not this.
+ */
+export function longSessionWholeRunCost(usageRows, pairRows) {
+  const side = (key) => {
+    const rows = usageRows.map((row) => row[key]);
+    return {
+      inputTokens: add(rows, "inputTokens"),
+      cachedInputTokens: add(rows, "cacheReadTokens"),
+      outputTokens: add(rows, "outputTokens"),
+    };
+  };
+  const main = side("main");
+  const workers = side("worker");
+  const wholeRunTokens = main.inputTokens + main.outputTokens + workers.inputTokens + workers.outputTokens;
+  const successfulTasks = pairRows.reduce((sum, row) => sum + (row.success ? 1 : 0) + (row.sourceSucceeded ? 1 : 0), 0);
+  const compactionChars = usageRows.flatMap((row) => row.session?.compactionChars ?? []);
+  return {
+    personas: usageRows.length,
+    main,
+    workers,
+    wholeRunTokens,
+    gradedTasks: pairRows.length * 2,
+    successfulTasks,
+    wholeRunTokensPerSuccessfulTask: successfulTasks ? Math.round(wholeRunTokens / successfulTasks) : null,
+    compactionBlockChars: compactionChars.length
+      ? {
+          compactions: compactionChars.length,
+          max: Math.max(...compactionChars),
+          last: compactionChars.at(-1),
+          median: medianOf(compactionChars),
+        }
+      : { compactions: 0 },
+  };
+}
+
+function medianOf(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
 }
 
 /** The families this runner drives: partitions, persona builder, arms and the reported metric. */
@@ -933,6 +1108,19 @@ async function familySpec(family) {
       arms: rePlan.RE_PLAN_ARMS,
       offlineArms: ["memory-off", "WM"],
       metric: rePlan.RE_PLAN_METRIC,
+    };
+  }
+  if (family === "long-horizon") {
+    const longHorizon = await import("./long-horizon.mjs");
+    return {
+      partitions: longHorizon.longHorizonPartitions,
+      persona: (id) => longHorizon.createLongHorizonSession(Number(id.slice(2))),
+      arms: longHorizon.LONG_HORIZON_ARMS,
+      offlineArms: [...longHorizon.LONG_HORIZON_ARMS],
+      metric: longHorizon.LONG_HORIZON_METRIC,
+      // Every memory arm runs the package defaults (no trigger, recent-message or compactAt override).
+      defaults: true,
+      precondition: longHorizon.assertLongHorizonEngages,
     };
   }
   throw new Error(`LongSessionArguments: unknown family ${family}`);

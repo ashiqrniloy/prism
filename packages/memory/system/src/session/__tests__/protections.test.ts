@@ -11,16 +11,19 @@ import { resolveMemorySystemConfig } from "../config.js";
 import { createObservationalFlush } from "../flush.js";
 import { activeWmItems, foldObservationalMemoryLedger } from "../ledger.js";
 import { isProtectedWmItem, protectedRecords } from "../protections.js";
+import { salienceSignals } from "../salience.js";
 import {
   type MemoryObservation,
   type MemoryTaskState,
   type MemoryWmItem,
+  OBSERVATIONS_DROPPED,
   OBSERVATIONS_RECORDED,
   TASK_STATE_RECORDED,
   WM_RECORDED,
   type WmRecordedData,
 } from "../types.js";
 import { DEFAULT_WM_INSTRUCTION, deterministicWm, salienceOrder } from "../workers/wm.js";
+import { judgeClient, promptText } from "./judge-helpers.js";
 
 type ProviderRequest = Parameters<ModelClient["generate"]>[0];
 
@@ -137,10 +140,7 @@ it("protected_items_refused_for_discard", async () => {
       recorded(...ALL),
       { type: WM_RECORDED, items: [fact("888888888888", [CITED.id]), later] },
     ],
-    scripted(
-      ALL.map((item) => ["discard", { stmId: item.id, reason: "finished" }] as [string, Record<string, unknown>]),
-      requests,
-    ),
+    judgeClient(ALL, { discard: { finished: ALL.map((item) => item.id) } }, requests),
     {},
   );
   const ledger = h.ledger();
@@ -152,16 +152,19 @@ it("protected_items_refused_for_discard", async () => {
     [LATER.id]: "needed_later",
   });
   const result = await h.flush.flush(h.session);
-  // Only the unprotected record was discarded; each protected one got `protected` naming its class.
-  assert.equal(result.processed, 1);
-  assert.deepEqual(Object.keys(h.ledger().tombstones ?? {}), [PLAIN.id]);
+  // Plan 218.2 Task 5: task-state, open-question and unresolved-error records are kept by code before the model is
+  // asked; the fact and needed-later records still go to the model, whose discard is refused with `protected`.
+  assert.equal(result.processed, 4);
+  assert.deepEqual(Object.keys(h.ledger().tombstones ?? {}).sort(), [REQUEST.id, QUESTION.id, ERROR.id, PLAIN.id].sort());
+  for (const settled of [REQUEST, QUESTION, ERROR]) assert.match(h.ledger().tombstones![settled.id]!.reason, /^wm keep [a-f0-9]{12}$/);
   const replies = toolReplies(requests[1]!);
-  assert.equal((replies.match(/"reason":"protected"/g) ?? []).length, 5);
-  for (const reason of ["task_state", "open_question", "unresolved_error", "fact", "needed_later"])
-    assert.match(replies, new RegExp(reason));
+  assert.equal((replies.match(/"reason":"protected"/g) ?? []).length, 2);
+  for (const reason of ["fact", "needed_later"]) assert.match(replies, new RegExp(`"protection":"${reason}"`));
   // The prompt marks them, so the model need not guess; the refusal does not depend on the mark.
-  const prompt = JSON.stringify(requests[0]!.messages);
-  assert.match(prompt, new RegExp(`\\[${ERROR.id}\\][^\\n]*protected: unresolved_error`));
+  const prompt = promptText(requests[0]!);
+  const kept = prompt.split("## Already kept")[1]!.split("## New STM records")[0]!;
+  assert.match(kept, new RegExp(`protected: unresolved_error: ${ERROR.description}`));
+  assert.match(prompt.split("## New STM records")[1]!, new RegExp(`protected: fact: ${CITED.description}`));
   // A later outcome that passed resolves the error; one that failed does not.
   const failed = record("abababababab", "Re-ran the suite: still failed", { kind: "outcome" });
   const passed = record("cdcdcdcdcdcd", "Re-ran the suite: 35 pass", { kind: "outcome" });
@@ -179,13 +182,8 @@ it("budget_unmet_recorded_when_protected_share_exceeds_target", async () => {
   const errors = ["111111111111", "222222222222", "333333333333"].map((id) => record(id, `Error ${id.slice(0, 1)}`, { kind: "error" }));
   const h = harness(
     [recorded(...errors, PLAIN)],
-    scripted(
-      [
-        ...errors.map((item) => ["keep", { stmId: item.id, reason: "unresolved" }] as [string, Record<string, unknown>]),
-        ["discard", { stmId: PLAIN.id, reason: "finished" }],
-      ],
-      requests,
-    ),
+    // The three errors are kept by code (plan 218.2 Task 5); the model judges the plain record.
+    judgeClient([...errors, PLAIN], { discard: { finished: [PLAIN.id] } }, requests),
   );
   await h.flush.flush(h.session);
   const wm = wmRecord(h.data);
@@ -219,7 +217,7 @@ it("budget_unmet_recorded_when_protected_share_exceeds_target", async () => {
   assert.equal(status.thresholds.wmTargetRatio, 0.2);
   assert.equal(status.thresholds.wmPolicy, "model");
   // A later pass that meets its target clears it.
-  const h2 = harness([recorded(PLAIN)], scripted([["discard", { stmId: PLAIN.id, reason: "finished" }]]));
+  const h2 = harness([recorded(PLAIN)], judgeClient([PLAIN], { discard: { finished: [PLAIN.id] } }));
   h2.data.unshift(...(h.data.filter((value) => (value as { type?: string }).type === WM_RECORDED) as JsonValue[]));
   await h2.flush.flush(h2.session);
   assert.equal(h2.ledger().budgetUnmet, undefined);
@@ -248,10 +246,12 @@ it("correction_survives_tight_target", async () => {
   const requests: ProviderRequest[] = [];
   const m = harness([recorded(error, correction, ...filler)], scripted([], requests), { targetRatio: 0.05 }, entries);
   await m.flush.flush(m.session);
-  assert.match(
-    JSON.stringify(requests[0]!.messages),
-    new RegExp(`## Keep first \\(salience order: correction, denial, error, failed_verification\\)\\\\n${correction.id}, ${error.id}`),
-  );
+  // The unresolved error is kept by code (plan 218.2 Task 5), so only the correction is left to rank.
+  const prompt = promptText(requests[0]!);
+  const first = prompt.match(/## Keep first \(salience order: correction, denial, error, failed_verification\)\n(r[0-9]+)\n/)?.[1];
+  assert.ok(first, "a keep-first line with one ordinal");
+  assert.match(prompt, new RegExp(`\\[${first}\\][^\\n]*: ${correction.description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  assert.match(prompt.split("## Already kept")[1]!, /Build error/);
   assert.deepEqual(
     salienceOrder(
       [error, correction],
@@ -307,4 +307,190 @@ it("wm_target_ratio_is_bounded", () => {
   assert.throws(() => resolveMemorySystemConfig({ wm: { targetRatio: 1.5 } }), /wm.targetRatio/);
   assert.equal(resolveMemorySystemConfig({}).wm.targetRatio, 0.2);
   assert.equal(resolveMemorySystemConfig({}).wm.policy, "model");
+});
+
+it("salience_reads_fields_and_passed_outcome_with_failing_in_text_is_not_a_failure", () => {
+  const userEntry = (id: string, text: string) =>
+    ({
+      id,
+      sessionId: "s",
+      kind: "message",
+      timestamp: "2026-11-12T10:00:00.000Z",
+      message: { role: "user", content: [{ type: "text", text }] },
+    }) as SessionEntry;
+  const entries = [userEntry("e-fix", "Actually, can you also add a log line?"), userEntry("e-bn", "না, ভুল ফাইল")];
+  // A passed outcome that says "fixed the failing test; 0 failed" is no failure once the recorder set its status.
+  const passed = record("f1f1f1f1f1f1", "Fixed the failing test; 0 failed", { kind: "outcome", status: "passed" });
+  // A failed check written in another language is a failure by its status alone.
+  const failedJa = record("f2f2f2f2f2f2", "チェック失敗: 2件", { kind: "result", status: "failed" });
+  // "actually" that corrects nothing, on a record without `corrects`: the union still reads the English pattern there.
+  // `corrects: true` marks a non-English correction the pattern cannot read.
+  const actually = record("f3f3f3f3f3f3", "User asked for a log line too", { kind: "request", sourceEntryIds: ["e-fix"] });
+  const bengali = record("f4f4f4f4f4f4", "User: wrong file", { kind: "statement", sourceEntryIds: ["e-bn"], corrects: true });
+  // An old outcome with no status keeps today's pattern reading.
+  const legacy = record("f5f5f5f5f5f5", "Re-ran the suite: still failed", { kind: "outcome" });
+  const signals = salienceSignals([passed, failedJa, actually, bengali, legacy], entries);
+  assert.equal(signals.get(passed.id), undefined);
+  assert.deepEqual(signals.get(failedJa.id), ["failed_verification"]);
+  assert.deepEqual(signals.get(actually.id), ["correction"]);
+  assert.deepEqual(signals.get(bengali.id), ["correction"]);
+  assert.deepEqual(signals.get(legacy.id), ["failed_verification"]);
+  // Protections read `status`: a passed outcome resolves an earlier error, a failed or unknown one does not, whatever
+  // its text says.
+  const error = record("f6f6f6f6f6f6", "bun test failed: 2 retry cases", { kind: "error" });
+  const later = (status: MemoryObservation["status"], description: string) =>
+    record(`${status === "passed" ? "a" : status === "failed" ? "b" : "c"}7a7a7a7a7a7`, description, { kind: "outcome", status });
+  const resolvedBy = (outcome: MemoryObservation) =>
+    protectedRecords(foldObservationalMemoryLedger([recorded(error, outcome)]), [error]).get(error.id);
+  assert.equal(resolvedBy(later("passed", "Fixed the failing test; 0 failed")), undefined);
+  assert.equal(resolvedBy(later("failed", "Suite green")), "unresolved_error");
+  assert.equal(resolvedBy(later("unknown", "Changed the retry loop")), "unresolved_error");
+});
+
+// Plan 218.2 Task 3: protections follow content (the `durable` and `resolves` links the STM recorder writes).
+const linkOutcome = (id: string, resolves: readonly string[], status: MemoryObservation["status"] = "passed") =>
+  record(id, "Ran the suite; 35 pass", { kind: "outcome", status, resolves });
+const wmPass = (processedIds: readonly string[]) => ({ type: WM_RECORDED, items: [], processedIds });
+
+it("constraint_never_discarded_and_survives_a_new_task_state", async () => {
+  const constraint = record("c1c1c1c1c1c1", "User: never touch the public API", {
+    kind: "statement",
+    sourceEntryIds: ["e-old"],
+    attribution: "user",
+    durable: "constraint",
+  });
+  const preference = record("c2c2c2c2c2c2", "User prefers short commit messages", {
+    kind: "statement",
+    sourceEntryIds: ["e-old"],
+    attribution: "user",
+    durable: "preference",
+  });
+  // A later task state written from other entries: the batch rule would no longer protect the constraint.
+  const requests: ProviderRequest[] = [];
+  const h = harness(
+    [recorded(constraint, preference, PLAIN), taskState(["e-new"])],
+    judgeClient(
+      [constraint, preference, PLAIN],
+      (prompt) => ({
+        keep: [{ id: PLAIN.id, reason: "listing" }],
+        // The constraint is settled by code and has an ordinal under Already kept: naming it is refused.
+        summaries: [{ of: [`r${prompt.match(/\[r([0-9]+)\][^\n]*never touch the public API/)![1]}`], text: "API rule", relevance: "low" }],
+        discard: { finished: [preference.id] },
+      }),
+      requests,
+    ),
+  );
+  assert.deepEqual(Object.fromEntries(protectedRecords(h.ledger())), { [constraint.id]: "constraint" });
+  await h.flush.flush(h.session);
+  // The constraint is kept as an event of its own by code (plan 218.2 Task 5): a summary naming it is refused; a
+  // preference is not protected from WM (Rehearsal's, plan 219).
+  const replies = toolReplies(requests[1]!);
+  assert.match(replies, /"entry":"summaries\[0\]","reason":"already_processed"/);
+  const ledger = h.ledger();
+  assert.match(ledger.tombstones?.[constraint.id]?.reason ?? "", /^wm keep [a-f0-9]{12}$/);
+  assert.equal(activeWmItems(ledger).find((made) => made.citedIds.includes(constraint.id))?.reason, "protected: constraint");
+  assert.equal(ledger.tombstones?.[preference.id]?.reason, "wm discard finished");
+  // A WM event kept from a constraint is protected for Rehearsal; without the ledger only facts and neededLater are.
+  const event: MemoryWmItem = {
+    id: "e1e1e1e1e1e1",
+    kind: "event",
+    text: constraint.description,
+    relevance: "medium",
+    citedIds: [constraint.id],
+    tokenCount: 8,
+  };
+  assert.equal(isProtectedWmItem(event, ledger), true);
+  assert.equal(isProtectedWmItem(event), false);
+  assert.equal(isProtectedWmItem({ ...event, citedIds: [PLAIN.id] }, ledger), false);
+  // A later record that supersedes it replaces it.
+  const superseding = foldObservationalMemoryLedger([
+    recorded(constraint),
+    { type: OBSERVATIONS_DROPPED, observationIds: [constraint.id], reason: "superseded", supersededBy: "c3c3c3c3c3c3" },
+  ]);
+  assert.equal(protectedRecords(superseding, [constraint]).size, 0);
+  assert.equal(isProtectedWmItem(event, superseding), false);
+});
+
+it("request_protected_until_resolved_by_outcome", () => {
+  const request = record("a2a2a2a2a2a2", "User asked to add retry logging", {
+    kind: "request",
+    attribution: "user",
+    sourceEntryIds: ["e-r"],
+  });
+  const other = record("a3a3a3a3a3a3", "User asked to rename the flag", { kind: "request", attribution: "user", sourceEntryIds: ["e-o"] });
+  // No task state cites the request; an outcome naming another request turns link mode on.
+  const open = foldObservationalMemoryLedger([recorded(request, other, linkOutcome("a4a4a4a4a4a4", [other.id]))]);
+  assert.deepEqual(Object.fromEntries(protectedRecords(open, [request, other])), { [request.id]: "task_state" });
+  // An outcome that names it resolves it, whatever its status.
+  const closed = foldObservationalMemoryLedger([recorded(request, linkOutcome("a5a5a5a5a5a5", [request.id], "partial"))]);
+  assert.equal(protectedRecords(closed, [request]).size, 0);
+  // A resolved request is no longer protected even when the current task state was written from it.
+  const withTask = foldObservationalMemoryLedger([recorded(request, linkOutcome("a5a5a5a5a5a5", [request.id])), taskState(["e-r"])]);
+  assert.equal(protectedRecords(withTask, [request]).size, 0);
+  // An assistant-attributed request keeps the batch rule.
+  const proposal = { ...request, id: "a6a6a6a6a6a6", attribution: "assistant" as const };
+  assert.equal(
+    protectedRecords(foldObservationalMemoryLedger([recorded(proposal, linkOutcome("a4a4a4a4a4a4", [other.id]))]), [proposal]).size,
+    0,
+  );
+});
+
+it("unrelated_passed_outcome_does_not_resolve_an_error", () => {
+  const error = record("b3b3b3b3b3b3", "bun test failed: 2 retry cases", { kind: "error" });
+  const request = record("b4b4b4b4b4b4", "User asked to rename the flag", { kind: "request", attribution: "user" });
+  const ledger = (...outcomes: MemoryObservation[]) => foldObservationalMemoryLedger([recorded(error, request, ...outcomes)]);
+  // A passed outcome closing another record does not resolve the error (today's rule would: any later passed outcome).
+  assert.equal(protectedRecords(ledger(linkOutcome("b5b5b5b5b5b5", [request.id])), [error]).get(error.id), "unresolved_error");
+  // Named by a failed outcome it stays; named by a passed one it is resolved.
+  assert.equal(protectedRecords(ledger(linkOutcome("b6b6b6b6b6b6", [error.id], "failed")), [error]).get(error.id), "unresolved_error");
+  assert.equal(protectedRecords(ledger(linkOutcome("b7b7b7b7b7b7", [error.id])), [error]).size, 0);
+});
+
+it("ledger_without_resolves_keeps_the_batch_rule", () => {
+  const request = record("d5d5d5d5d5d5", "User asked to ship the retry fix", {
+    kind: "request",
+    attribution: "user",
+    sourceEntryIds: ["e-task"],
+  });
+  const loose = record("d6d6d6d6d6d6", "User asked about the docs", { kind: "request", attribution: "user", sourceEntryIds: ["e-docs"] });
+  const error = record("d7d7d7d7d7d7", "bun test failed", { kind: "error" });
+  const before = foldObservationalMemoryLedger([recorded(request, loose, error), taskState(["e-task"])]);
+  assert.deepEqual(Object.fromEntries(protectedRecords(before, [request, loose, error])), {
+    [request.id]: "task_state",
+    [error.id]: "unresolved_error",
+  });
+  // Any later passed outcome resolves the error, with no link.
+  const after = foldObservationalMemoryLedger([
+    recorded(request, loose, error, record("d8d8d8d8d8d8", "Suite green", { kind: "outcome", status: "passed" })),
+    taskState(["e-task"]),
+  ]);
+  assert.deepEqual(Object.fromEntries(protectedRecords(after, [request, loose, error])), { [request.id]: "task_state" });
+});
+
+it("request_protection_lapses_after_bounded_passes_and_is_recorded", async () => {
+  const request = record("e7e7e7e7e7e7", "User asked to add retry logging", { kind: "request", attribution: "user" });
+  const error = record("e8e8e8e8e8e8", "Lint failed", { kind: "error" });
+  const outcome = linkOutcome("e9e9e9e9e9e9", ["f0f0f0f0f0f0"]);
+  const other = record("f0f0f0f0f0f0", "User asked to rename the flag", { kind: "request", attribution: "user" });
+  const history = [recorded(other, outcome), recorded(request, error), wmPass([other.id]), wmPass([outcome.id])];
+  const ledger = foldObservationalMemoryLedger(history);
+  assert.equal(ledger.wmPasses, 2);
+  // Under the bound both stay protected; at it, both lapse and are named.
+  assert.equal(protectedRecords(ledger, [request, error], { protectRequestPasses: 3 }).size, 2);
+  const lapsed: string[] = [];
+  assert.equal(protectedRecords(ledger, [request, error], { protectRequestPasses: 2, onLapse: (id) => lapsed.push(id) }).size, 0);
+  assert.deepEqual(lapsed, [request.id, error.id]);
+  // A record recorded after the passes counts only the passes since.
+  assert.equal(
+    protectedRecords(foldObservationalMemoryLedger([...history, recorded(PLAIN)]), [request], { protectRequestPasses: 2 }).size,
+    0,
+  );
+  // Through the flush: the pass may discard it and records `protection_lapsed`.
+  const h = harness(history, judgeClient([request], { discard: { finished: [request.id] } }), {
+    protectRequestPasses: 2,
+  });
+  await h.flush.flush(h.session);
+  assert.deepEqual(wmRecord(h.data).protectionLapsed, [request.id, error.id]);
+  assert.equal(h.ledger().tombstones?.[request.id]?.reason, "wm discard finished");
+  assert.equal(resolveMemorySystemConfig({}).wm.protectRequestPasses, 8);
 });

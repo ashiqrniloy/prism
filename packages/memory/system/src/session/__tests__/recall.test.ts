@@ -1,8 +1,9 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import type { SessionEntry } from "@arnilo/prism";
+import type { SessionEntry, ToolExecutionContext } from "@arnilo/prism";
 import { type MemoryObservation, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "../../index.js";
-import { recallObservationalMemory, recallObservationalMemoryBranchPage } from "../recall.js";
+import { recallObservationalMemory, recallObservationalMemoryBranchPage, recallObservationalMemoryQuery } from "../recall.js";
+import { createObservationalRecallTool } from "../recall-tool.js";
 import { OBSERVATIONS_DROPPED } from "../types.js";
 
 const source: SessionEntry = {
@@ -166,5 +167,104 @@ describe("observational memory recall", () => {
       "cursor_not_message",
     );
     assert.equal(recallObservationalMemoryBranchPage(entries, { cursor: "m1", limit: 10_000 }).reason, "limit_exceeded");
+  });
+});
+
+describe("recall query over the session tiers (plan 218.2 Task 7)", () => {
+  const at = "2026-11-15T10:00:00.000Z";
+  const record = (id: string, description: string, kind: MemoryObservation["kind"] = "result"): MemoryObservation => ({
+    id,
+    kind,
+    description,
+    timestamp: at,
+    relevance: "medium",
+    sourceEntryIds: [source.id],
+    tokenCount: 5,
+  });
+  const discarded = record("cccccccccccc", "Retry maxAttempts set to 5 after the interrupted upload.");
+  const active = record("dddddddddddd", "Upload interrupted twice on the CI runner.", "error");
+  const ledgerEntries = (sessionId = "s1"): SessionEntry[] =>
+    [
+      { type: OBSERVATIONS_RECORDED, observations: [discarded, active] },
+      { type: WM_RECORDED, items: [reflection] },
+      { type: "memory.session.observations.tombstoned", observationIds: [discarded.id], reason: "wm discard finished", at },
+    ].map((data, index) => ({ ...custom(`q${index}`, data), sessionId }));
+
+  it("query_finds_tombstoned_record_with_its_discard_reason", () => {
+    const result = recallObservationalMemoryQuery(ledgerEntries(), { query: "retry maxAttempts interrupted", limit: 8 });
+    assert.equal(result.found, true);
+    assert.equal(result.hits[0]?.id, discarded.id, "full coverage ranks first");
+    assert.equal(result.hits[0]?.state, "tombstoned");
+    assert.equal(result.hits[0]?.stateReason, "wm discard finished");
+    assert.match(result.text, /\[cccccccccccc\] result 2026-11-15T10:00:00\.000Z \(tombstoned: wm discard finished\): Retry maxAttempts/);
+    assert.deepEqual(
+      result.hits.map((hit) => [hit.id, hit.state]),
+      [
+        [discarded.id, "tombstoned"],
+        [active.id, "active"],
+      ],
+    );
+  });
+
+  it("query_searches_wm_items_and_reports_no_match_with_the_tiers", () => {
+    const wm = recallObservationalMemoryQuery(ledgerEntries(), { query: "minimal package changes" });
+    assert.equal(wm.hits[0]?.kind, "wm_item");
+    const none = recallObservationalMemoryQuery(ledgerEntries(), { query: "kubernetes helm" });
+    assert.equal(none.found, false);
+    assert.equal(none.reason, "no_match");
+    assert.deepEqual(none.tiers, ["stm", "wm"]);
+    assert.equal(recallObservationalMemoryQuery(ledgerEntries(), { query: "the of" }).reason, "invalid_query");
+    assert.equal(recallObservationalMemoryQuery(ledgerEntries(), { query: "retry", limit: 0 }).reason, "limit_exceeded");
+  });
+
+  it("query_output_is_redacted_with_the_session_secrets", () => {
+    const leaky = record("eeeeeeeeeeee", "Deploy token tok-12345 rotated");
+    const entries = [custom("x", { type: OBSERVATIONS_RECORDED, observations: [leaky] })];
+    const result = recallObservationalMemoryQuery(entries, { query: "deploy token" }, ["tok-12345"]);
+    assert.equal(result.found, true);
+    assert.doesNotMatch(result.text, /tok-12345/);
+    assert.doesNotMatch(JSON.stringify(result.hits), /tok-12345/);
+  });
+
+  it("recall_requires_exactly_one_of_id_cursor_query", async () => {
+    const tool = createObservationalRecallTool();
+    const session = { id: "s1", entries: async () => ledgerEntries() };
+    const run = async (args: Record<string, unknown>) =>
+      (await tool.execute(args as never, { toolCallId: "t", session } as unknown as ToolExecutionContext)).value as {
+        found: boolean;
+        reason?: string;
+      };
+    for (const args of [{}, { id: discarded.id, query: "retry" }, { cursor: "m1", query: "retry" }, { id: discarded.id, cursor: "m1" }]) {
+      assert.equal((await run(args)).reason, "invalid_request", JSON.stringify(args));
+    }
+    assert.equal((await run({ query: "retry maxAttempts" })).found, true);
+    assert.equal((await run({ id: discarded.id })).found, true);
+  });
+
+  it("query_reads_only_the_executing_session", async () => {
+    const tool = createObservationalRecallTool();
+    // Session s2's branch holds no memory records; s1's records are not reachable from it.
+    const other = { id: "s2", entries: async () => [{ ...source, sessionId: "s2" }] };
+    const result = (
+      await tool.execute(
+        { query: "retry maxAttempts" } as never,
+        {
+          toolCallId: "t",
+          session: other,
+        } as unknown as ToolExecutionContext,
+      )
+    ).value as { found: boolean; reason?: string };
+    assert.equal(result.found, false);
+    assert.equal(result.reason, "no_match");
+    const own = (
+      await tool.execute(
+        { query: "retry maxAttempts" } as never,
+        {
+          toolCallId: "t",
+          session: { id: "s1", entries: async () => ledgerEntries() },
+        } as unknown as ToolExecutionContext,
+      )
+    ).value as { found: boolean };
+    assert.equal(own.found, true);
   });
 });

@@ -1,9 +1,9 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-system/core";
+import { createLongTermMemory, createMemory } from "../../index.js";
 import { resolveMemoryFabricConfig } from "../config.js";
 import { fitInjection } from "../excerpt.js";
-import { createMemory, createLongTermMemory } from "../../index.js";
 import { expandLexicalQuery } from "../lexical-expansion.js";
 import { groupRecallHits } from "../recall.js";
 import type { MemoryNoteHit } from "../types.js";

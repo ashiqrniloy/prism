@@ -32,14 +32,27 @@ const edited = (edit) => {
 };
 const QA_SUITES = ["beam-1m", "longmemeval-m"];
 const LME_BEAM_LOCOMO = ["longmemeval-m", "beam-1m", "locomo"];
-/** Amendment 7 (plan 218.1 Task 2) undone: the two Compact-Bench fixtures back to their unhashed slots. */
+/** Amendment 9 (plan 218.2 Task 8) undone: the long-horizon fixture leaves the index. */
+const beforeNinth = (c) => {
+  c.amendments = c.amendments.slice(0, 8);
+  c.fixtures.index = c.fixtures.index.filter((entry) => entry.id !== "long-horizon");
+};
+/** Amendment 8 (plan 218.2 Task 1) undone (after 9): the worker replay fixture leaves the index. */
+const beforeEighth = (c) => {
+  beforeNinth(c);
+  c.amendments = c.amendments.slice(0, 7);
+  c.fixtures.index = c.fixtures.index.filter((entry) => entry.id !== "worker-replay");
+};
+/** Amendment 7 (plan 218.1 Task 2) undone (after 8): the two Compact-Bench fixtures back to their unhashed slots. */
 const beforeSeventh = (c) => {
+  beforeEighth(c);
   c.amendments = c.amendments.slice(0, 6);
   for (const entry of c.fixtures.index)
     if (entry.kind === "external") Object.assign(entry, { codeRevision: null, datasetRevision: null, sha256sums: null, hash: null });
 };
-/** Amendment 6 (plan 218.1 Task 1) undone (after 7): the rows, qaRows and fixtures amendment 5's file held. */
+/** Amendment 6 (plan 218.1 Task 1) undone (after 7 and 8): the rows, qaRows and fixtures amendment 5's file held. */
 const beforeSixth = (c) => {
+  beforeEighth(c);
   c.amendments = c.amendments.slice(0, 5);
   c.hashRule = c.hashRule.replace(
     "; a row changes only by an owner decision recorded in `ownerDecisions` and named by its amendment (`kind` owner-decision, `decision`).",
@@ -353,8 +366,24 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
 
 test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   // Plan 217 Task 6: the two fixtures gate M-1 reads are hashed by the first amendment; removing it restores the frozen file.
-  const [first, second, third, fourth, fifth, sixth, seventh] = MEMORY_MODEL_CRITERIA.amendments;
+  const [first, second, third, fourth, fifth, sixth, seventh, eighth, ninth] = MEMORY_MODEL_CRITERIA.amendments;
   const rowsBeforeSixth = edited(beforeSixth).rows;
+  // Amendment 9 (plan 218.2 Task 8): the long-horizon family's partition hash, no row change and no other fixture moved.
+  assert.deepEqual([ninth.plan, ninth.task, ninth.kind], ["218.2", 8, undefined]);
+  assert.equal(memoryModelCriteriaHash(edited(beforeNinth)), ninth.previousHash);
+  assert.deepEqual(edited(beforeNinth).rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(
+    edited(beforeNinth).fixtures.index,
+    MEMORY_MODEL_CRITERIA.fixtures.index.filter((entry) => entry.id !== "long-horizon"),
+  );
+  // Amendment 8 (plan 218.2 Task 1): the worker replay fixture's hash, no row change and no other fixture moved.
+  assert.deepEqual([eighth.plan, eighth.task, eighth.kind], ["218.2", 1, undefined]);
+  assert.equal(memoryModelCriteriaHash(edited(beforeEighth)), eighth.previousHash);
+  assert.deepEqual(edited(beforeEighth).rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(
+    edited(beforeEighth).fixtures.index,
+    MEMORY_MODEL_CRITERIA.fixtures.index.filter((entry) => entry.id !== "worker-replay" && entry.id !== "long-horizon"),
+  );
   // Amendment 7 (plan 218.1 Task 2): the Compact-Bench pins and draw hash, no row change.
   assert.deepEqual([seventh.plan, seventh.task, seventh.kind], ["218.1", 2, undefined]);
   assert.equal(memoryModelCriteriaHash(edited(beforeSeventh)), seventh.previousHash);
@@ -548,7 +577,9 @@ test("closed_gate_m1_still_reads_its_own_hash", () => {
   assert.notEqual(record.memoryModelCriteriaHash, closed.memoryModelCriteriaHash);
   const hashes = memoryModelCriteriaHashes();
   assert.equal(hashes.at(-1), frozenMemoryModelHash());
-  assert.equal(record.amendments.at(-2).previousHash, "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e");
+  assert.equal(record.amendments.at(-4).previousHash, "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e");
+  assert.equal(record.amendments.at(-3).previousHash, record.amendments.at(-4).hash);
+  assert.equal(record.amendments.at(-2).previousHash, record.amendments.at(-3).hash);
   assert.equal(record.amendments.at(-1).previousHash, record.amendments.at(-2).hash);
   assert.equal(record.amendments.at(-1).hash, record.memoryModelCriteriaHash);
   // Gate M-1's verdict under its closed hash is unchanged: S3 deferred to A, S1/S2/S4 decide it.

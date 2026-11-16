@@ -404,7 +404,7 @@ export function compactBenchWorkerMock(id = "cb-worker") {
     async *generate(request) {
       const tools = (request.tools ?? []).map((tool) => tool.name);
       const shape = tools.includes("record_event") ? "event" : tools.includes("record_observation") ? "observation" : null;
-      if ((!shape && !tools.includes("keep")) || request.messages.some((message) => message.role === "tool")) {
+      if ((!shape && !tools.includes("judge")) || request.messages.some((message) => message.role === "tool")) {
         yield providerDone();
         return;
       }
@@ -414,8 +414,12 @@ export function compactBenchWorkerMock(id = "cb-worker") {
         .join("\n");
       let n = 0;
       if (!shape) {
-        for (const match of prompt.matchAll(/^- \[([0-9a-f]{12})\] /gm))
-          yield providerToolCall(toolCallContent(`k${++n}`, "keep", { stmId: match[1], reason: "kept offline" }));
+        // Plan 218.2 Task 5: one `judge` call keeps every record (and re-judged record) the prompt lists by ordinal.
+        const keep = [...prompt.matchAll(/^- \[([rj])([0-9]+)\] /gm)].map((match) => ({
+          [match[1]]: Number(match[2]),
+          reason: "kept offline",
+        }));
+        if (keep.length) yield providerToolCall(toolCallContent(`k${++n}`, "judge", { keep }));
         yield providerDone();
         return;
       }

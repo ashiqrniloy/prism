@@ -17,8 +17,8 @@ import type { MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-syste
 import { createPostgresMemoryStores } from "@arnilo/prism-memory-system/core/postgres";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-system/core/sqlite";
 import { Pool } from "pg";
+import { createLongTermMemory, createMemory, parseMemoryNoteMetadata } from "../../index.js";
 import { createExchangeArchive } from "../exchanges.js";
-import { createMemory, createLongTermMemory, parseMemoryNoteMetadata } from "../../index.js";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 const describeIntegration = postgresUrl ? describe : describe.skip;

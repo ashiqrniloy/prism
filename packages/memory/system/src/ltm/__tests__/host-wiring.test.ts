@@ -9,6 +9,8 @@
 
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
+import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "@arnilo/prism-knowledge/rag";
+import { createLongTermMemory, createMemory } from "@arnilo/prism-memory-system";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -18,8 +20,6 @@ import {
   MemoryScopeError,
   type MemoryVectorRecord,
 } from "@arnilo/prism-memory-system/core";
-import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
-import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "@arnilo/prism-knowledge/rag";
 import { createFabricRepointHandler } from "../repoint.js";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "handbook", threadId: "s1" };

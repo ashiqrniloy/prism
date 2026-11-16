@@ -725,14 +725,18 @@ export function mockCuratorEdits(request) {
   }
   return [{ op: "add_claim", text: claim(evidence[0]), cites: [evidence[0].id] }];
 }
-/** WM's verdict tools that write an item (plan 218 Task 2); `discard` writes none. */
-export const WM_ITEM_TOOLS = Object.freeze(["keep", "summarize", "derive"]);
+/** The items one WM `judge` call writes (plan 218.2 Task 5): its keeps, summaries and facts; a discard writes none. */
+export function wmItemCount(call) {
+  if (call?.name !== "judge") return 0;
+  const args = call.arguments ?? {};
+  return ["keep", "summaries", "facts"].reduce((sum, key) => sum + (Array.isArray(args[key]) ? args[key].length : 0), 0);
+}
 function workerKind(request) {
   const names = request.tools?.map((tool) => tool.name) ?? [];
   // `record_observation` is the pinned OM-before baseline's STM tool (plan 217 Task 6 runs it from the pre-216 source).
   if (names.includes("record_event") || names.includes("record_observation")) return "observer";
-  // `summarize` is one of WM's verdict tools (plan 218 Task 2); `record_reflection` is the pre-218 reflector's.
-  if (names.includes("summarize") || names.includes("record_reflection")) return "reflector";
+  // `judge` is WM's verdict tool (plan 218.2 Task 5); `record_reflection` is the pre-218 reflector's.
+  if (names.includes("judge") || names.includes("record_reflection")) return "reflector";
   if (names.includes("drop_observations")) return "dropper";
 }
 /** The consolidation extractor: the one model call the product write side makes (`xc`). */
@@ -793,7 +797,7 @@ export function measuredProvider(provider, state) {
         const handle = state.timing?.begin();
         // Plan 218 Task 6 (gate M-2): each WM call's stop reason and the items it wrote, so a pass that ends at the
         // output cap with no item is counted. Created on first use, so no other report changes shape.
-        const wm = kind === "reflector" && (request.tools ?? []).some((tool) => tool.name === "summarize") ? { items: 0 } : null;
+        const wm = kind === "reflector" && (request.tools ?? []).some((tool) => tool.name === "judge") ? { items: 0 } : null;
         try {
           for await (const chunk of provider.generate({
             ...request,
@@ -817,7 +821,7 @@ export function measuredProvider(provider, state) {
                 if (typeof chunk.usage?.[field] === "number") stats[key] += chunk.usage[field];
             }
             // Plan 202 Task 16: OM worker cost is its own ledger, not the product answer's.
-            if (wm && chunk.type === "tool_call" && WM_ITEM_TOOLS.includes(chunk.call?.name)) wm.items++;
+            if (wm && chunk.type === "tool_call") wm.items += wmItemCount(chunk.call);
             if (wm && chunk.type === "done") {
               state.wmCalls ??= { calls: 0, items: 0, capStops: 0, capNoItem: 0, stopReasons: {} };
               const stats = state.wmCalls;
