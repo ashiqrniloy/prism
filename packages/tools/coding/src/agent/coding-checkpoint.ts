@@ -11,13 +11,6 @@ import {
   DEFAULT_MAX_PLAN_BYTES,
   DEFAULT_MAX_TODO_TEXT_BYTES,
   DEFAULT_MAX_TODOS,
-  HARD_MAX_CHECK_SUMMARY_BYTES,
-  HARD_MAX_CODING_ARTIFACT_BYTES,
-  HARD_MAX_CODING_ARTIFACTS,
-  HARD_MAX_CODING_CHECKPOINT_BYTES,
-  HARD_MAX_PLAN_BYTES,
-  HARD_MAX_TODO_TEXT_BYTES,
-  HARD_MAX_TODOS,
   validateCodingLimit,
 } from "./limits.js";
 
@@ -172,29 +165,13 @@ export class CodingCheckpointError extends Error {
 
 export function resolveCodingCheckpointLimits(options?: CodingCheckpointLimitOptions): ResolvedCodingCheckpointLimits {
   return {
-    maxPlanBytes: validateCodingLimit("maxPlanBytes", options?.maxPlanBytes ?? DEFAULT_MAX_PLAN_BYTES, HARD_MAX_PLAN_BYTES),
-    maxTodos: validateCodingLimit("maxTodos", options?.maxTodos ?? DEFAULT_MAX_TODOS, HARD_MAX_TODOS),
-    maxTodoTextBytes: validateCodingLimit(
-      "maxTodoTextBytes",
-      options?.maxTodoTextBytes ?? DEFAULT_MAX_TODO_TEXT_BYTES,
-      HARD_MAX_TODO_TEXT_BYTES,
-    ),
-    maxArtifacts: validateCodingLimit("maxArtifacts", options?.maxArtifacts ?? DEFAULT_MAX_CODING_ARTIFACTS, HARD_MAX_CODING_ARTIFACTS),
-    maxArtifactBytes: validateCodingLimit(
-      "maxArtifactBytes",
-      options?.maxArtifactBytes ?? DEFAULT_MAX_CODING_ARTIFACT_BYTES,
-      HARD_MAX_CODING_ARTIFACT_BYTES,
-    ),
-    maxCheckSummaryBytes: validateCodingLimit(
-      "maxCheckSummaryBytes",
-      options?.maxCheckSummaryBytes ?? DEFAULT_MAX_CHECK_SUMMARY_BYTES,
-      HARD_MAX_CHECK_SUMMARY_BYTES,
-    ),
-    maxCheckpointBytes: validateCodingLimit(
-      "maxCheckpointBytes",
-      options?.maxCheckpointBytes ?? DEFAULT_MAX_CODING_CHECKPOINT_BYTES,
-      HARD_MAX_CODING_CHECKPOINT_BYTES,
-    ),
+    maxPlanBytes: validateCodingLimit("maxPlanBytes", options?.maxPlanBytes ?? DEFAULT_MAX_PLAN_BYTES),
+    maxTodos: validateCodingLimit("maxTodos", options?.maxTodos ?? DEFAULT_MAX_TODOS),
+    maxTodoTextBytes: validateCodingLimit("maxTodoTextBytes", options?.maxTodoTextBytes ?? DEFAULT_MAX_TODO_TEXT_BYTES),
+    maxArtifacts: validateCodingLimit("maxArtifacts", options?.maxArtifacts ?? DEFAULT_MAX_CODING_ARTIFACTS),
+    maxArtifactBytes: validateCodingLimit("maxArtifactBytes", options?.maxArtifactBytes ?? DEFAULT_MAX_CODING_ARTIFACT_BYTES),
+    maxCheckSummaryBytes: validateCodingLimit("maxCheckSummaryBytes", options?.maxCheckSummaryBytes ?? DEFAULT_MAX_CHECK_SUMMARY_BYTES),
+    maxCheckpointBytes: validateCodingLimit("maxCheckpointBytes", options?.maxCheckpointBytes ?? DEFAULT_MAX_CODING_CHECKPOINT_BYTES),
   };
 }
 
@@ -447,7 +424,7 @@ export function validateCodingCheckpointMetadata(value: unknown, limits?: Coding
     throw new CodingCheckpointError(`Coding checkpoint exceeds ${resolved.maxArtifacts} artifact references`);
   }
   const checks = requireArray(value.checks, "checks").map((item, index) => validateCheckSummary(item, resolved, `checks[${index}]`));
-  if (checks.length > HARD_MAX_CODING_ARTIFACTS) {
+  if (checks.length > resolved.maxArtifacts) {
     throw new CodingCheckpointError("Too many check summaries");
   }
   const todos = requireArray(value.todos, "todos").map((item, index) => validateTodo(item, resolved, `todos[${index}]`));

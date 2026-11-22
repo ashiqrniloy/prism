@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- **One compaction system per agent (plan 218.3 Task 2).** `./compaction` provides the `compaction.system` service (`{ name: "llm-compaction" }`) and fails setup when another compaction system already provides it, naming it; the memory system's session compaction provides it as `session-memory`. `./context-engineering` with `fold` or `attention` fails setup beside session memory's compaction and otherwise provides `context.fold`, so the memory system fails setup when it loads second. To keep LLM compaction or folding beside the memory system, set its `context.compaction: false`.
+
 ## [0.13.2] - 2026-11-14
 
 Requires `@arnilo/prism` 0.13.1 for the hook-plane behaviour below. The peer window stays `>=0.13.0 <1.0.0`; `model-router` throws `model-router: the hook context carries no onward call` against a 0.13.0 kernel.

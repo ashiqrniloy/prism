@@ -5,7 +5,7 @@ import { basename, extname, join, relative, resolve, sep } from "node:path";
 import { assertSsrfAllowedUrl, MediaContentError } from "@arnilo/prism";
 import { MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import type { OntologySourceResult } from "./ontology/port.js";
-import { HARD_MAX_DOCUMENT_BYTES_CAP, pdfParser } from "@arnilo/prism-knowledge/rag";
+import { pdfParser } from "@arnilo/prism-knowledge/rag";
 import type {
   WikiExtensionOptions,
   WikiIngestFetch,
@@ -258,11 +258,7 @@ export async function ingestWikiSource(input: WikiIngestInput, options: WikiInge
       throw new MemoryValidationError(`ingest source is not valid UTF-8: ${toSingleLine(filename)}`);
     }
   } else if (mediaType === "application/pdf") {
-    // ponytail: built-in parser is capped at the RAG hard cap (8 MiB).
-    const parsed = await pdfParser.parse(
-      { uri: "wiki:ingest", mediaType, data: bytes },
-      { maxBytes: Math.min(maxInputBytes, HARD_MAX_DOCUMENT_BYTES_CAP) },
-    );
+    const parsed = await pdfParser.parse({ uri: "wiki:ingest", mediaType, data: bytes }, { maxBytes: maxInputBytes });
     extract = parsed.text;
   } else if (image) {
     extract = [

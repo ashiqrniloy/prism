@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { WorkToolError } from "./errors.js";
-import { DEFAULT_WORK_LIMITS, HARD_WORK_LIMITS } from "./limits.js";
+import { DEFAULT_WORK_LIMITS } from "./limits.js";
 import type {
   IdempotencyStore,
   WorkMutationFailure,
@@ -12,9 +12,7 @@ import type {
 } from "./types.js";
 import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 const DEFAULT_CLAIM_TTL_MS = 15 * 60_000;
-const HARD_CLAIM_TTL_MS = 60 * 60_000;
 const DEFAULT_MAX_ATTEMPTS = DEFAULT_WORK_LIMITS.maxRetries + 1;
-const HARD_MAX_ATTEMPTS = HARD_WORK_LIMITS.maxRetries + 1;
 
 /** In-process reference implementation. Durable adapters provide cross-replica claims. */
 export function createMemoryIdempotencyStore(options: { readonly now?: () => number } = {}): IdempotencyStore {
@@ -184,7 +182,7 @@ function assertOp(op: string, record: WorkMutationRecord): void {
 
 function resolveClaimTtl(value: number | undefined): number {
   const ttl = value ?? DEFAULT_CLAIM_TTL_MS;
-  if (!Number.isSafeInteger(ttl) || ttl < 1 || ttl > HARD_CLAIM_TTL_MS) {
+  if (!Number.isSafeInteger(ttl) || ttl < 1) {
     throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "claimTtlMs out of range");
   }
   return ttl;
@@ -192,7 +190,7 @@ function resolveClaimTtl(value: number | undefined): number {
 
 function resolveMaxAttempts(value: number | undefined): number {
   const attempts = value ?? DEFAULT_MAX_ATTEMPTS;
-  if (!Number.isSafeInteger(attempts) || attempts < 1 || attempts > HARD_MAX_ATTEMPTS) {
+  if (!Number.isSafeInteger(attempts) || attempts < 1) {
     throw new WorkToolError("ERR_PRISM_WORK_IDEMPOTENCY", "maxAttempts out of range");
   }
   return attempts;

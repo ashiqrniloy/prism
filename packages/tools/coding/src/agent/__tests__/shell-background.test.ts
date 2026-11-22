@@ -6,7 +6,7 @@ import { join } from "node:path";
 import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { ExecutionPolicy } from "../execution-policy.js";
 import { createShellTool, getShellConfig, type ShellToolOptions } from "../shell.js";
-import { BACKGROUND_FIRST_OUTPUT_MS, createBackgroundProcesses, HARD_MAX_BACKGROUND_PROCESSES } from "../shell-background.js";
+import { BACKGROUND_FIRST_OUTPUT_MS, createBackgroundProcesses } from "../shell-background.js";
 import { createShellOutputTool } from "../shell-output.js";
 
 let counter = 0;
@@ -232,8 +232,12 @@ test("background_schema_and_first_output_bound", async () => {
     const withProperties = (withBackground.parameters as { properties: Record<string, unknown> }).properties;
     assert.ok(withProperties.background !== undefined);
     assert.ok(withBackground.description?.includes("background: true"));
-    assert.equal(HARD_MAX_BACKGROUND_PROCESSES, 16);
     assert.equal(background.maxProcesses, 4);
+    assert.equal(background.maxWaitSeconds, 60);
+    // Plan 239 Task 5: the host sets the per-session cap and the model's wait ceiling.
+    const raised = createBackgroundProcesses({ shell: getShellConfig(), maxProcesses: 64, ceilings: { backgroundWaitSeconds: 600 } });
+    assert.equal(raised.maxProcesses, 64);
+    assert.equal(raised.maxWaitSeconds, 600);
     assert.equal(BACKGROUND_FIRST_OUTPUT_MS, 1000);
   } finally {
     await rm(cwd, { recursive: true, force: true });

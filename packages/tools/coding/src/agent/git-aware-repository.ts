@@ -9,7 +9,7 @@
 import { lstat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { type BoundGitRunner, type CreateGitRunnerOptions, createBoundGitRunner, GitError, gitText } from "./git-exec.js";
-import { DEFAULT_MAX_LS_FILES_OUTPUT_BYTES, HARD_MAX_LS_FILES_OUTPUT_BYTES, validateCodingLimit } from "./limits.js";
+import { DEFAULT_MAX_LS_FILES_OUTPUT_BYTES, validateCodingLimit } from "./limits.js";
 import {
   createLocalRepositoryOperations,
   type RepoListEntry,
@@ -178,11 +178,7 @@ async function* walkGitFiles(
 export function createGitAwareRepositoryOperations(cwd: string, options?: GitAwareRepositoryOptions): RepositoryOperations {
   const fallback = options?.fallback ?? createLocalRepositoryOperations(options?.limits);
   const includeIgnored = options?.includeIgnored === true;
-  const maxLsBytes = validateCodingLimit(
-    "maxLsFilesOutputBytes",
-    options?.maxLsFilesOutputBytes ?? DEFAULT_MAX_LS_FILES_OUTPUT_BYTES,
-    HARD_MAX_LS_FILES_OUTPUT_BYTES,
-  );
+  const maxLsBytes = validateCodingLimit("maxLsFilesOutputBytes", options?.maxLsFilesOutputBytes ?? DEFAULT_MAX_LS_FILES_OUTPUT_BYTES);
 
   let detected: boolean | undefined;
   let runnerPromise: Promise<BoundGitRunner> | undefined;

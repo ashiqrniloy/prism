@@ -68,6 +68,15 @@ tenant's reads, writes, and lease takeover all fail closed.
   RPC active runs) are optional fast paths only. On restart, every component
   reloads authority, status, and cursors from durable stores; a killed
   replica's registry is never required to make progress.
+- Running one session from several processes needs no lease: on the SQLite and
+  Postgres stores every linear append is tip-checked (plan 230 Task 2), so when
+  two replicas run the same session, the one whose tip is stale fails its run
+  with `error.code: "session_conflict"` and writes nothing from that append on.
+  Retry that run on the same session object: it moves to the store's current
+  leaf and continues after the other writer. Hosts that persist a `leafId`
+  (channels, remote) and re-open with it get the same conflict when another
+  replica moved the session on. The JSONL store checks within one process only,
+  so do not share a JSONL directory between replicas.
 - SIEM/alerting: emit owner/fence/lease-age/state metadata only — never tenant
   payloads, tokens, or credentials. Metrics to watch: lease-acquire latency,
   fence counter jumps (a jump means a takeover happened), and outbox pending

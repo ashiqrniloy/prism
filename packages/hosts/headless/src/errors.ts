@@ -26,7 +26,9 @@ export type HeadlessErrorCode =
   | "invalid_limit"
   | "invalid_route"
   | "invalid_policy"
-  | "policy_allow_refused";
+  | "policy_allow_refused"
+  | "ledger_query_unsupported"
+  | "invalid_ownership";
 
 export class HeadlessError extends Error {
   constructor(readonly code: HeadlessErrorCode) {

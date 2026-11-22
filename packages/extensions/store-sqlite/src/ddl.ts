@@ -350,6 +350,14 @@ CREATE INDEX IF NOT EXISTS prism_sessions_link_delegation_idx ON prism_sessions 
 CREATE INDEX IF NOT EXISTS prism_sessions_link_actor_idx ON prism_sessions (actor_kind, actor_agent, updated_at);
 `;
 
+// Plan 230 Task 2: a constant default adds the column without rewriting rows. Every existing row is 0, so
+// legacy sibling branches cannot violate the partial index, and only tip-checked appends write 1.
+export const MIGRATION_012_SESSION_ENTRY_LINEAR = `
+ALTER TABLE prism_session_entries ADD COLUMN linear INTEGER NOT NULL DEFAULT 0;
+CREATE UNIQUE INDEX IF NOT EXISTS prism_session_entries_linear_parent_unique
+  ON prism_session_entries (session_id, parent_id) WHERE linear = 1;
+`;
+
 export const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = `
 CREATE TABLE IF NOT EXISTS prism_legal_holds (
   id TEXT NOT NULL PRIMARY KEY,
@@ -420,6 +428,7 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_session_entries_session_run_ts_idx",
   "prism_session_entries_session_ts_id_idx",
   "prism_session_entries_session_id_idx",
+  "prism_session_entries_linear_parent_unique",
   "prism_session_append_idempotency_unique",
   "prism_runs_session_started_idx",
   "prism_runs_branch_started_idx",

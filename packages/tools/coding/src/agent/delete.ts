@@ -1,3 +1,4 @@
+import { type CodingArgCeilings, resolveCodingArgCeilings, validateCodingLimit } from "./limits.js";
 import { lstat, readdir, rmdir, unlink } from "node:fs/promises";
 import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { CODING_LOCAL_EFFECT } from "./effects.js";
@@ -26,13 +27,14 @@ export interface DeleteToolOptions {
   operations?: DeleteOperations;
   /** Optional consumer-gated lifecycle listener (file_changed / permission_denied). */
   onEvent?: (event: CodingLifecycleEvent) => void;
+  /** Recursive-delete fan-out when the model sets no `maxEntries`. Default 10,000. */
+  maxEntries?: number;
+  /** Ceiling on the model's `maxEntries` (`recursiveDeleteEntries`, default 100,000; plan 239 Task 5). */
+  ceilings?: CodingArgCeilings;
 }
 
-// Per-call recursive-delete fan-out cap: default 10,000 entries, hard 100,000.
-// ponytail: single global constants (not tunable options) — the recursive flag is
-// per-call opt-in; hosts that need a different ceiling can deny via executionPolicy.
-const DEFAULT_MAX_RECURSIVE_DELETE_ENTRIES = 10_000;
-const HARD_MAX_RECURSIVE_DELETE_ENTRIES = 100_000;
+/** Per-call recursive-delete fan-out when neither the model nor the host sets one. */
+export const DEFAULT_MAX_RECURSIVE_DELETE_ENTRIES = 10_000;
 
 const defaultDeleteOperations: DeleteOperations = {
   lstat: async (path) => {
@@ -59,6 +61,8 @@ function errorResult(toolCallId: string, message: string): ToolResult {
 }
 
 export function createDeleteTool(cwd: string, options?: DeleteToolOptions): ToolDefinition {
+  const ceilings = resolveCodingArgCeilings(options?.ceilings);
+  const defaultMaxEntries = validateCodingLimit("maxEntries", options?.maxEntries ?? DEFAULT_MAX_RECURSIVE_DELETE_ENTRIES);
   const ops = options?.operations ?? defaultDeleteOperations;
 
   return {
@@ -82,7 +86,7 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
         },
         maxEntries: {
           type: "number",
-          description: `Per-call recursive fan-out cap (default ${DEFAULT_MAX_RECURSIVE_DELETE_ENTRIES}, hard ${HARD_MAX_RECURSIVE_DELETE_ENTRIES})`,
+          description: `Per-call recursive fan-out cap (default ${defaultMaxEntries}, max ${ceilings.recursiveDeleteEntries})`,
         },
       },
       required: ["path"],
@@ -92,11 +96,11 @@ export function createDeleteTool(cwd: string, options?: DeleteToolOptions): Tool
       const toolCallId = context.toolCallId;
       const path = typeof args.path === "string" ? args.path : "";
       const recursive = args.recursive === true;
-      let maxEntries = DEFAULT_MAX_RECURSIVE_DELETE_ENTRIES;
+      let maxEntries = defaultMaxEntries;
       if (args.maxEntries !== undefined) {
         const raw = args.maxEntries as number;
-        if (!Number.isInteger(raw) || raw < 1 || raw > HARD_MAX_RECURSIVE_DELETE_ENTRIES) {
-          return errorResult(toolCallId, `maxEntries must be an integer between 1 and ${HARD_MAX_RECURSIVE_DELETE_ENTRIES}`);
+        if (!Number.isInteger(raw) || raw < 1 || raw > ceilings.recursiveDeleteEntries) {
+          return errorResult(toolCallId, `maxEntries must be an integer between 1 and ${ceilings.recursiveDeleteEntries}`);
         }
         maxEntries = raw;
       }

@@ -143,6 +143,55 @@ describe("workflowLoop", () => {
     await other.dispose();
   });
 
+  it("workflow_loop_node_tool_rounds_is_configurable", async () => {
+    // Plan 239 Task 5: the loop's `maxToolRounds` (default 16) and a step's own value both bound a step that keeps calling tools.
+    const run = async (loopRounds: number | undefined, stepRounds: number | undefined) => {
+      let turns = 0;
+      const provider: ModelProvider = {
+        id: "mock",
+        async *generate() {
+          turns += 1;
+          yield { type: "tool_call" as const, call: toolCallContent(`c${turns}`, "noop", {}) };
+          yield providerDone();
+        },
+      };
+      const wf = defineWorkflow({
+        id: "rounds",
+        revision: "1",
+        nodes: { step: loopAgentNode(stepRounds === undefined ? {} : { maxToolRounds: stepRounds }) },
+      });
+      const agent = await createAgent({
+        model: { provider: "mock", model: "demo" },
+        slots: { store: createMemorySessionStore() },
+        limits: { maxTurns: null, maxToolRounds: null, maxToolCalls: null, maxRepeatedToolRounds: null },
+        packages: [
+          providerPackage("test-provider", [provider]),
+          workflowLoop(wf, loopRounds === undefined ? {} : { maxToolRounds: loopRounds }),
+        ],
+        tools: {
+          add: [
+            { name: "noop", parameters: {}, execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) },
+          ],
+        },
+      });
+      const result = await (await agent.session()).run("go");
+      await agent.dispose();
+      return { turns, status: result.status, error: JSON.stringify(result.error ?? "") };
+    };
+    const byDefault = await run(undefined, undefined);
+    assert.equal(byDefault.turns, 17);
+    assert.match(byDefault.error, /16 tool rounds/);
+    const raised = await run(40, undefined);
+    assert.equal(raised.turns, 41);
+    assert.match(raised.error, /40 tool rounds/);
+    const stepWins = await run(40, 2);
+    assert.equal(stepWins.turns, 3);
+    assert.throws(
+      () => workflowLoopStrategy(defineWorkflow({ id: "z", revision: "1", nodes: { s: loopAgentNode() } }), { maxToolRounds: 0 }),
+      /maxToolRounds/,
+    );
+  });
+
   it("loop_agent_node_fails_outside_loop", async () => {
     const node = loopAgentNode();
     assert.throws(() => (node.execute as () => unknown)(), /only inside workflowLoop/);

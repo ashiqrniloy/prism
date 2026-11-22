@@ -3,13 +3,7 @@
 
 import { lstat } from "node:fs/promises";
 import { compileGlob, validateGlobPattern } from "../glob-match.js";
-import {
-  HARD_MAX_REPO_DEPTH,
-  HARD_MAX_REPO_ENTRIES,
-  HARD_MAX_REPO_RESULTS,
-  validateCodingLimit,
-  validateCodingLimitAllowZero,
-} from "../limits.js";
+import { validateCodingLimit, validateCodingLimitAllowZero } from "../limits.js";
 import { resolveRepoPath } from "./path.js";
 import type { RepositoryGlobRequest, RepositoryGlobResult, ResolvedRepositoryLimits } from "./types.js";
 import { RepositoryError } from "./types.js";
@@ -29,9 +23,9 @@ export async function globLocal(
   // filesystem; bounds enforced by expandGlobBraces (max alternatives / bytes).
   const matchesAnyPattern = compileGlob(request.pattern, request.braceExpansion !== false);
   const resolved = await resolveRepoPath(request.root, request.path);
-  const maxResults = validateCodingLimit("maxResults", request.maxResults ?? defaults.maxResults, HARD_MAX_REPO_RESULTS);
-  const offset = validateCodingLimitAllowZero("offset", request.offset ?? 0, HARD_MAX_REPO_ENTRIES);
-  const maxDepth = validateCodingLimit("maxDepth", request.maxDepth ?? defaults.maxDepth, HARD_MAX_REPO_DEPTH);
+  const maxResults = validateCodingLimit("maxResults", request.maxResults ?? defaults.maxResults);
+  const offset = validateCodingLimitAllowZero("offset", request.offset ?? 0);
+  const maxDepth = validateCodingLimit("maxDepth", request.maxDepth ?? defaults.maxDepth);
   const exclude = new Set(request.exclude ?? defaults.exclude);
   const deadlineAt = request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;
 

@@ -1,7 +1,7 @@
 import type { EvaluationRecord } from "@arnilo/prism";
 import { type Message, type RunResult, resolveRedactor } from "@arnilo/prism";
 import { EvalError, EvalScoreError } from "./errors.js";
-import { DEFAULT_MAX_STEP_SCORES, DEFAULT_SAMPLE_RATE, HARD_MAX_STEP_SCORES } from "./limits.js";
+import { DEFAULT_MAX_STEP_SCORES, DEFAULT_SAMPLE_RATE } from "./limits.js";
 import { mulberry32 } from "./scenarios.js";
 import { loadTimeline } from "./timeline.js";
 import type {
@@ -210,12 +210,10 @@ export async function scoreRun<TInput = unknown, TExpected = unknown>(
       return false;
     });
 
-    const cap = Math.min(
+    const cap =
       options.maxStepScores !== undefined && Number.isInteger(options.maxStepScores) && options.maxStepScores > 0
         ? options.maxStepScores
-        : DEFAULT_MAX_STEP_SCORES,
-      HARD_MAX_STEP_SCORES,
-    );
+        : DEFAULT_MAX_STEP_SCORES;
     const stepsToScore = matchingSteps.slice(0, cap);
 
     if (!stepsToScore.length) {

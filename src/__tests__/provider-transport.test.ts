@@ -74,8 +74,8 @@ describe("provider transport primitives", () => {
     assert.equal(parseRetryAfterMs("5"), 5000);
     assert.equal(parseRetryAfterMs("nonsense"), undefined);
     const now = Date.parse("Wed, 21 Oct 2015 07:28:00 GMT");
-    assert.equal(parseRetryAfterMs("Wed, 21 Oct 2015 07:28:10 GMT", now), 10_000);
-    assert.equal(parseRetryAfterMs("Wed, 21 Oct 2015 07:27:00 GMT", now), 0);
+    assert.equal(parseRetryAfterMs("Wed, 21 Oct 2015 07:28:10 GMT", undefined, now), 10_000);
+    assert.equal(parseRetryAfterMs("Wed, 21 Oct 2015 07:27:00 GMT", undefined, now), 0);
   });
 
   it("parses CRLF and LF delimited events with multiline data", async () => {
@@ -214,6 +214,61 @@ describe("provider transport primitives", () => {
 
     for (const dir of providerDirs) walk(dir);
     assert.deepEqual(offenders, [], offenders.join("\n"));
+  });
+});
+
+describe("SSE reader byte accounting (plan 228 Task 4)", () => {
+  it("sse_buffer_limit_holds_without_reencoding", async () => {
+    const encoder = new TextEncoder();
+    // 10 × "😀" = 40 bytes after "data: " (6), split mid-character across chunks.
+    const bytes = encoder.encode(`data: ${"😀".repeat(10)}`);
+    const chunks = [bytes.slice(0, 7), bytes.slice(7, 9), bytes.slice(9, 23), bytes.slice(23)];
+    await assert.rejects(
+      () => collectEvents(stream(chunks), { maxBufferBytes: 45 }),
+      (error: unknown) => error instanceof ProviderTransportError && error.code === "sse_buffer_overflow",
+    );
+    // Exactly at the limit is allowed, and the frame decodes intact.
+    const events = await collectEvents(stream([...chunks, "\n\n"]), { maxBufferBytes: 48 });
+    assert.equal(events.length, 1);
+    assert.equal(events[0]?.data, "😀".repeat(10));
+    // Consumed frames release their bytes: many frames through a small buffer never overflow.
+    const many = Array.from({ length: 200 }, (_, i) => `data: é${i}\n\n`);
+    const out = await collectEvents(stream(many), { maxBufferBytes: 32 });
+    assert.equal(out.length, 200);
+    assert.equal(out[199]?.data, "é199");
+  });
+
+  it("sse_large_frame_in_small_chunks_is_linear", async () => {
+    const payload = "a".repeat(240_000);
+    const frame = `data: ${payload}\r\n\r\ndata: next\n\n`;
+    const chunked = (text: string, size: number) => {
+      const out: string[] = [];
+      for (let i = 0; i < text.length; i += size) out.push(text.slice(i, i + size));
+      return out;
+    };
+    // The \r\n\r\n delimiter is split across chunk boundaries at every offset.
+    for (const cut of [1, 2, 3]) {
+      const at = 6 + payload.length + cut;
+      const events = await collectEvents(stream([frame.slice(0, at), frame.slice(at)]));
+      assert.deepEqual(
+        events.map((event) => event.data.length),
+        [240_000, 4],
+        `split at delimiter offset ${cut}`,
+      );
+    }
+    const time = async (text: string) => {
+      const chunks = chunked(text, 256);
+      const started = performance.now();
+      const events = await collectEvents(stream(chunks), { maxEventBytes: 4 * 1024 * 1024, maxBufferBytes: 4 * 1024 * 1024 });
+      assert.equal(events.length, 2);
+      return performance.now() - started;
+    };
+    await time(frame); // warm-up
+    const small = Math.min(await time(frame), await time(frame));
+    const bigFrame = `data: ${"a".repeat(960_000)}\n\ndata: next\n\n`;
+    const big = Math.min(await time(bigFrame), await time(bigFrame));
+    // Linear: 4× the frame costs ~4× (quadratic would be ~16×). Loose bound for loaded machines.
+    assert.ok(big < small * 9 + 20, `240 KB ${small.toFixed(1)} ms vs 960 KB ${big.toFixed(1)} ms`);
   });
 });
 

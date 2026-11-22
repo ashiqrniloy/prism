@@ -74,7 +74,7 @@ export function createWorkflowCheckpoints(options: GenericWorkflowCheckpointOpti
           category: statuses ? [...statuses] : undefined,
           ...input.ownership,
           cursor: input.cursor,
-          limit: resolveListLimit(input.limit),
+          limit: resolveListLimit(input.limit, limits.maxListLimit),
           signal: input.signal,
         });
         return { items: page.items.map((record) => toWorkflowRecord(record, limits.maxNodeOutputBytes)), nextCursor: page.nextCursor };

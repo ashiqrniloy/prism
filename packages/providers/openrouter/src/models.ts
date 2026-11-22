@@ -74,6 +74,8 @@ export const openRouterModels: readonly ModelConfig[] = [
 ];
 
 export interface ListOpenRouterModelsOptions {
+  /** Catalog body ceiling (`transport.maxCatalogBytes`); default OPENROUTER_CATALOG_BYTES. */
+  readonly maxBodyBytes?: number;
   readonly provider?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -94,7 +96,7 @@ export async function listOpenRouterModels(options: ListOpenRouterModelsOptions 
     throw new Error(`OpenRouter model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
   const payload = await readBoundedResponseJson<{ data?: OpenRouterModelEntry[] }>(response, {
-    maxResponseBodyBytes: OPENROUTER_CATALOG_BYTES,
+    maxResponseBodyBytes: options.maxBodyBytes ?? OPENROUTER_CATALOG_BYTES,
   });
   if (!Array.isArray(payload.data)) throw new Error("OpenRouter model discovery response missing data array");
   return payload.data.map((entry) => mapOpenRouterModel(entry, { provider }));

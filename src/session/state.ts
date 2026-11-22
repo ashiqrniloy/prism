@@ -11,6 +11,8 @@ import type { SessionContext } from "../session-context.js";
 
 /** Largest JSON value one `set` may persist. Every `set` is a store entry, so it is bounded. */
 export const MAX_STATE_VALUE_BYTES = 64 * 1024;
+/** Most entries one `(package, key)` session log may hold on a branch. */
+export const MAX_STATE_LOG_ENTRIES = 10_000;
 const MAX_STATE_KEY_LENGTH = 128;
 
 /** A session-scoped value a package owns. `get` is synchronous; `set` appends one `package_state` entry. */
@@ -31,12 +33,15 @@ export interface SessionState<T extends JsonValue> {
  */
 export interface SessionLog<T extends JsonValue> {
   /**
-   * Every record on this session's branch, in append order. Throws `state_not_ready` before the session
-   * has read its branch (a run, command, or `close()` does). A fork carries the records up to the fork point.
+   * Every record on this session's branch since the latest rotation, in append order. Throws `state_not_ready`
+   * before the session has read its branch (a run, command, or `close()` does). A fork carries the records
+   * up to the fork point.
    */
   entries(session: SessionContext): readonly T[];
   /** Appends `value` (JSON, at most 64 KiB, redacted first) as one `package_state` entry. */
   append(session: SessionContext, value: T): Promise<void>;
+  /** Replaces the log with `values` (default empty), dropping earlier records from compaction checkpoints. */
+  replace?(session: SessionContext, values?: readonly T[]): Promise<void>;
 }
 
 /** A value kept in process memory for the agent's lifetime, reset to `initial` on dispose. */
@@ -51,11 +56,39 @@ export interface PackageStateData {
   readonly package: string;
   readonly key: string;
   readonly value: JsonValue;
-  /** `"append"` records join the key's log and never replace its latest value. */
-  readonly op?: "set" | "append";
+  /** `"append"` records join the key's log; `"replace"` resets it to the array in `value`. */
+  readonly op?: "set" | "append" | "replace";
 }
 
 const NO_RECORDS: readonly JsonValue[] = Object.freeze([]);
+
+/**
+ * The `package_state` data a hydrate needs from `branch` (and optional prior checkpoint `base`), in fold order
+ * (plan 230 Task 3): each key's latest `set`, then each key's active `append` / `replace` records. A `"replace"`
+ * entry drops earlier log records for that key so compaction checkpoints stay bounded across rotations.
+ */
+export function foldPackageState(branch: readonly SessionEntry[], base: readonly PackageStateData[] = []): PackageStateData[] {
+  const sets = new Map<string, PackageStateData>();
+  const appends = new Map<string, PackageStateData[]>();
+  const fold = (data: PackageStateData) => {
+    const key = slot(data.package, data.key);
+    if (data.op === "append") {
+      const list = appends.get(key) ?? [];
+      list.push(data);
+      appends.set(key, list);
+    } else if (data.op === "replace") {
+      appends.set(key, [data]);
+    } else {
+      sets.set(key, data);
+    }
+  };
+  for (const data of base) if (isStateData(data)) fold(data);
+  for (const entry of branch) {
+    if (entry.kind !== "package_state" || !isStateData(entry.data)) continue;
+    fold(entry.data);
+  }
+  return [...sets.values(), ...[...appends.values()].flat()];
+}
 
 const slot = (owner: string, key: string): string => `${owner}\u0000${key}`;
 
@@ -80,12 +113,18 @@ export interface SessionStateStoreOptions {
   readonly ready: () => Promise<void>;
   /** The agent's redactor and every resolved secret, applied before a value is persisted. */
   readonly redact: <T>(value: T) => T;
+  /** Largest stored value in bytes: the agent's `ceilings.stateValueBytes`. Default {@link MAX_STATE_VALUE_BYTES}. */
+  readonly maxValueBytes?: () => number;
+  /** Most entries one `state.log(key)` holds per branch: the agent's `ceilings.stateLogEntries`. Default {@link MAX_STATE_LOG_ENTRIES}. */
+  readonly maxLogEntries?: () => number;
 }
 
 /** The state one session holds. The session owns it and binds it to every {@link SessionContext} it hands out. */
 export class SessionStateStore {
   private values = new Map<string, JsonValue>();
   private records = new Map<string, JsonValue[]>();
+  /** The newest in-flight or persisted `write` of each key. */
+  private latest = new Map<string, JsonValue>();
   private hydrated = false;
 
   constructor(private readonly options: SessionStateStoreOptions) {}
@@ -98,21 +137,28 @@ export class SessionStateStore {
    * Replaces the held state with the branch: the latest value per `(package, key)` for `set` records,
    * and every `append` record in branch order. A malformed entry is skipped.
    */
-  hydrate(branch: readonly SessionEntry[]): void {
+  hydrate(branch: readonly SessionEntry[], base: readonly PackageStateData[] = []): void {
     const next = new Map<string, JsonValue>();
     const records = new Map<string, JsonValue[]>();
-    for (const entry of branch) {
-      if (entry.kind !== "package_state" || !isStateData(entry.data)) continue;
-      const key = slot(entry.data.package, entry.data.key);
-      const frozen = deepFreeze(entry.data.value);
-      if (entry.data.op === "append") {
+    const fold = (data: unknown) => {
+      if (!isStateData(data)) return;
+      const key = slot(data.package, data.key);
+      const frozen = deepFreeze(data.value);
+      if (data.op === "append") {
         const list = records.get(key) ?? [];
         list.push(frozen);
         records.set(key, list);
-        continue;
+        return;
+      }
+      if (data.op === "replace") {
+        records.set(key, Array.isArray(frozen) ? [...frozen] : []);
+        return;
       }
       next.set(key, frozen);
-    }
+    };
+    // `base` is a compaction checkpoint's fold of the branch before it (plan 230 Task 3); `branch` follows it.
+    for (const data of base) fold(data);
+    for (const entry of branch) if (entry.kind === "package_state") fold(entry.data);
     this.values = next;
     this.records = records;
     this.hydrated = true;
@@ -129,16 +175,47 @@ export class SessionStateStore {
   }
 
   async write(owner: string, key: string, value: unknown): Promise<void> {
-    const stored = await this.persist(owner, key, value, "set");
-    this.values.set(slot(owner, key), stored);
+    const keyed = slot(owner, key);
+    const stored = this.prepare(owner, key, value);
+    // Read-your-writes: the value is visible at once, so tool calls of one round that run together
+    // (plan 226 Task 4) see each other's updates instead of a stale snapshot. `latest` names the newest
+    // write of a key: only it may re-assert the value after `ready()` hydrated the branch (which
+    // replaces `values`) or restore the previous value when its append failed.
+    const previous = this.values.get(keyed);
+    this.values.set(keyed, stored);
+    this.latest.set(keyed, stored);
+    try {
+      await this.persist(owner, key, stored, "set");
+    } catch (error) {
+      if (this.latest.get(keyed) === stored) {
+        this.latest.delete(keyed);
+        if (previous === undefined) this.values.delete(keyed);
+        else this.values.set(keyed, previous);
+      }
+      throw error;
+    }
+    if (this.latest.get(keyed) === stored) this.values.set(keyed, stored);
   }
 
   async append(owner: string, key: string, value: unknown): Promise<void> {
-    const stored = await this.persist(owner, key, value, "append");
+    const stored = this.prepare(owner, key, value);
+    await this.options.ready();
     const keyed = slot(owner, key);
     const list = this.records.get(keyed) ?? [];
-    list.push(stored);
-    this.records.set(keyed, list);
+    this.assertLogEntries(owner, key, list.length + 1);
+    await this.options.append({ schemaVersion: 1, package: owner, key, value: stored, op: "append" });
+    const updated = this.records.get(keyed) ?? [];
+    updated.push(stored);
+    this.records.set(keyed, updated);
+  }
+
+  async replace(owner: string, key: string, values: readonly unknown[] = []): Promise<void> {
+    if (!Array.isArray(values)) throw new TypeError("log.replace needs an array of JSON values");
+    this.assertLogEntries(owner, key, values.length);
+    const prepared = values.map((value) => this.prepareValue(owner, key, value));
+    const stored = this.assertMaxBytes(owner, key, deepFreeze(prepared) as JsonValue[]);
+    await this.persist(owner, key, stored, "replace");
+    this.records.set(slot(owner, key), [...(stored as readonly JsonValue[])]);
   }
 
   private assertReady(owner: string, key: string, member: "state" | "log"): void {
@@ -150,7 +227,23 @@ export class SessionStateStore {
     );
   }
 
-  private async persist(owner: string, key: string, value: unknown, op: "set" | "append"): Promise<JsonValue> {
+  private async persist(owner: string, key: string, stored: JsonValue, op: "set" | "append" | "replace"): Promise<void> {
+    await this.options.ready();
+    await this.options.append({ schemaVersion: 1, package: owner, key, value: stored, op });
+  }
+
+  private assertLogEntries(owner: string, key: string, count: number): void {
+    const max = this.options.maxLogEntries?.() ?? MAX_STATE_LOG_ENTRIES;
+    if (count > max) {
+      throw new PackageLoadError(
+        "state_log_limit",
+        `Package ${owner} log ${key} would hold ${count} entries; ceilings.stateLogEntries is ${max}.`,
+        { package: owner },
+      );
+    }
+  }
+
+  private prepareValue(owner: string, key: string, value: unknown): JsonValue {
     const json = toJsonValue(value);
     if ("error" in json) {
       throw new PackageLoadError("state_not_json", `Package ${owner} state ${key} ${json.error.message} at ${json.error.path}.`, {
@@ -159,20 +252,27 @@ export class SessionStateStore {
       });
     }
     // Redact before persisting. `activeRedactor` is unset between runs, so the store applies the agent's own.
-    const stored = deepFreeze(this.options.redact(json.value));
+    return deepFreeze(this.options.redact(json.value));
+  }
+
+  private assertMaxBytes(owner: string, key: string, stored: JsonValue): JsonValue {
     const bytes = new TextEncoder().encode(JSON.stringify(stored)).length;
-    if (bytes > MAX_STATE_VALUE_BYTES) {
+    const max = this.options.maxValueBytes?.() ?? MAX_STATE_VALUE_BYTES;
+    if (bytes > max) {
       throw new PackageLoadError(
         "state_too_large",
-        `Package ${owner} state ${key} is ${bytes} bytes; the limit is ${MAX_STATE_VALUE_BYTES}.`,
+        `Package ${owner} state ${key} is ${bytes} bytes; ceilings.stateValueBytes is ${max}.`,
         {
           package: owner,
         },
       );
     }
-    await this.options.ready();
-    await this.options.append({ schemaVersion: 1, package: owner, key, value: stored, op });
     return stored;
+  }
+
+  /** Validate, redact, and size-check a value before it is stored or persisted. */
+  private prepare(owner: string, key: string, value: unknown): JsonValue {
+    return this.assertMaxBytes(owner, key, this.prepareValue(owner, key, value));
   }
 }
 
@@ -225,6 +325,7 @@ export function createSessionLog<T extends JsonValue>(owner: string, key: string
   return {
     entries: (session) => storeOf(session).readRecords(owner, key) as readonly T[],
     append: (session, value) => storeOf(session).append(owner, key, value),
+    replace: (session, values = []) => storeOf(session).replace(owner, key, values),
   };
 }
 

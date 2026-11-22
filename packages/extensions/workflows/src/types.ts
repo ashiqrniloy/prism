@@ -117,6 +117,11 @@ export interface WorkflowLoopNodeContext extends WorkflowNodeContext {
 export interface WorkflowNodeBase {
   readonly kind: WorkflowNodeKind;
   readonly retries?: number;
+  /**
+   * Wait between retries: `stepMs × attempt`, at most `maxMs`. Defaults 25 ms and 1,000 ms
+   * (`DEFAULT_RETRY_BACKOFF_STEP_MS`, `DEFAULT_MAX_RETRY_BACKOFF_MS`).
+   */
+  readonly retryBackoff?: { readonly stepMs?: number; readonly maxMs?: number };
   readonly timeoutMs?: number;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly activation?: "all" | "any";
@@ -254,7 +259,7 @@ export interface GateNodeDefinition extends WorkflowNodeBase {
   readonly check: (ctx: WorkflowNodeContext) => GateCheckResult | Promise<GateCheckResult>;
   /** Failure routing target when `check` does not name one. Must be a declared successor. */
   readonly onFail?: string;
-  /** Bound on executions of this gate; default and hard cap `HARD_MAX_LOOP_ITERATIONS`. */
+  /** Bound on executions of this gate; default `DEFAULT_MAX_GATE_ITERATIONS` (64). */
   readonly maxIterations?: number;
 }
 
@@ -291,13 +296,22 @@ export interface WorkflowLimits {
   readonly maxNodes?: number;
   readonly maxFanOut?: number;
   readonly maxConcurrency?: number;
-  readonly maxSupersteps?: number;
+  /**
+   * Superstep cap of a cyclic (or routed) workflow; required when the graph has a cycle. `null` leaves it unbounded:
+   * the host's explicit choice for a job that ends on its own condition or on abort.
+   */
+  readonly maxSupersteps?: number | null;
   readonly maxNodeOutputBytes?: number;
   readonly maxCheckpointBytes?: number;
   readonly maxNestedDepth?: number;
   readonly maxStateBytes?: number;
   readonly maxStateHistory?: number;
   readonly maxReplayDepth?: number;
+  /**
+   * Newest per-execution records a cyclic workflow keeps for each non-loop node (the replay ledger). Unset keeps
+   * every record; a long-lived cycle sets it so its checkpoint stays bounded. Replay reaches only kept records.
+   */
+  readonly maxIterationRecords?: number;
 }
 
 export interface WorkflowDefinition {
@@ -441,6 +455,8 @@ export interface WorkflowCheckpointAdapter {
 export interface WorkflowCheckpointAdapterOptions {
   readonly maxCheckpointBytes?: number;
   readonly maxNodeOutputBytes?: number;
+  /** Largest page `list({ limit })` returns. Default 500 (`DEFAULT_MAX_LIST_LIMIT`). */
+  readonly maxListLimit?: number;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
 }

@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { ModelProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
-import {
-  createMemoryModelRouterStateStore,
-  createModelRouter,
-  HARD_MODEL_ROUTER_LIMITS,
-  ModelRouterError,
-  resolveModelRouterLimits,
-} from "../index.js";
+import { createMemoryModelRouterStateStore, createModelRouter, ModelRouterError, resolveModelRouterLimits } from "../index.js";
 import { AgentIdentity } from "@arnilo/prism-extensions/governance";
 function provider(id: string): ModelProvider {
   return {
@@ -269,14 +263,15 @@ describe("../index.js", () => {
     assert.deepEqual(await state.claimCircuitProbe({ key, failureThreshold: 1, coolDownMs: 10, maxKeys: 1, now: 20 }), { admitted: false });
   });
 
-  it("frozen limits validation", () => {
+  it("limits validation: the host's value is the cap; router state windows stay within 31 days", () => {
     assert.equal(resolveModelRouterLimits().maxAttempts, 3);
-    assert.throws(() => resolveModelRouterLimits({ maxAttempts: HARD_MODEL_ROUTER_LIMITS.maxAttempts + 1 }));
+    assert.throws(() => resolveModelRouterLimits({ maxAttempts: 0 }));
+    assert.equal(resolveModelRouterLimits({ maxAttempts: 20 }).maxAttempts, 20);
     assert.throws(() => createModelRouter({ rateLimit: { maxRequests: 1, windowMs: 31 * 24 * 60 * 60_000 + 1 } }));
     assert.equal(resolveModelRouterLimits().maxRateKeys, 4_096);
     assert.equal(resolveModelRouterLimits().maxBudgetKeys, 4_096);
-    assert.throws(() => resolveModelRouterLimits({ maxRateKeys: 65_536 + 1 }));
-    assert.throws(() => resolveModelRouterLimits({ maxBudgetKeys: 65_536 + 1 }));
+    assert.equal(resolveModelRouterLimits({ maxRateKeys: 65_536 + 1 }).maxRateKeys, 65_537);
+    assert.throws(() => resolveModelRouterLimits({ maxBudgetKeys: 0 }));
     assert.throws(() => createModelRouter({ budgets: { reservationTtlMs: 31 * 24 * 60 * 60_000 + 1 } }));
   });
 

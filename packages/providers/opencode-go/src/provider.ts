@@ -1,9 +1,10 @@
 import type { ProviderRequest } from "@arnilo/prism";
 import {
   createRoutedProvider,
-  sanitizeCacheKey,
+  type ProviderTransportConfig,
   type RoutedProvider,
   type RoutedProviderRoute,
+  sanitizeCacheKey,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoRoute, routeForOpenCodeGoModel } from "./models.js";
@@ -38,6 +39,8 @@ export const OPENCODE_GO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages
 };
 
 export interface OpenCodeGoProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   /** Defaults to official `https://opencode.ai/zen/go/v1`. */
   readonly baseUrl?: string;
@@ -47,6 +50,7 @@ export interface OpenCodeGoProviderOptions {
 
 export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): RoutedProvider {
   return createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "opencode-go",
     baseUrl: options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL,
     apiKey: options.apiKey,

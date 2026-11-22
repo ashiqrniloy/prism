@@ -25,6 +25,7 @@ prism add @arnilo/prism-ai/litellm
 | --- | --- | --- | --- |
 | `apiKey` | ref only (`env:`/`keyring:`) | `env:LITELLM_API_KEY` | Resolved through credentials per request; never a literal key. |
 | `baseUrl` | string | `http://127.0.0.1:4000` | Proxy base. `http:` is accepted **only** for a loopback host; anything else must be `https:`. |
+| `transport` | object | transport defaults | Wire ceilings the host sets; a provider response never raises them. `maxEventBytes` (SSE event, default 256 KiB), `maxBufferBytes` (SSE buffer, default 512 KiB), `maxResponseBodyBytes` (an error body, default 64 KiB). `maxCatalogBytes` bounds the `/models` catalog body (default 4 MiB). |
 | `models` | ModelConfig[] | discovery | Static catalog; suppresses discovery when supplied, including `[]`. |
 
 `id` and `fetch` belong only to the `litellm(options)` factory, not manifest config.

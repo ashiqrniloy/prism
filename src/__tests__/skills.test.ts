@@ -56,7 +56,7 @@ describe("skill registry and selection", () => {
   it("oversized body is rejected at registration", () => {
     assert.throws(
       () => createSkillRegistry([{ name: "big", instructions: "x".repeat(HARD_MAX_SKILL_INSTRUCTION_BYTES + 1) }]),
-      /exceed hard cap/,
+      /exceed ceilings\.skillInstructionBytes/,
     );
   });
 

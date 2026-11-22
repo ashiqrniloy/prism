@@ -4,7 +4,7 @@
  * process over the same store can find it and resume. The entry is self-contained: it carries the
  * full redacted run state, so a resume reads nothing else from the store.
  */
-import { parseAgentRunState, type StoredAgentRunState } from "./agent-run-state.js";
+import { parseAgentRunState, type RunStateBounds, type StoredAgentRunState } from "./agent-run-state.js";
 import type { AgentRunInterruption, JsonValue, SessionEntry } from "./contracts.js";
 import { AgentRunStateError } from "./contracts.js";
 
@@ -58,7 +58,8 @@ export function createSuspendedRunEntry(input: {
 }
 
 /** Fail-closed parse of a `suspended_run` entry's data; a malformed entry never resumes. */
-export function parseSuspendedRunEntry(entry: SessionEntry): SuspendedRunEntryData {
+/** `bounds` bound the stored state's load (from the agent's ceilings; default the shipped ones). */
+export function parseSuspendedRunEntry(entry: SessionEntry, bounds?: RunStateBounds): SuspendedRunEntryData {
   if (entry.kind !== "suspended_run") throw new AgentRunStateError("Not a suspended_run session entry");
   const data = entry.data as Partial<SuspendedRunEntryData> | undefined;
   if (!data || typeof data !== "object" || data.schemaVersion !== SUSPENDED_RUN_ENTRY_SCHEMA_VERSION) {
@@ -76,7 +77,7 @@ export function parseSuspendedRunEntry(entry: SessionEntry): SuspendedRunEntryDa
   if (!data.interruption || typeof data.interruption !== "object") {
     throw new AgentRunStateError("Malformed suspended_run session entry interruption");
   }
-  const state = parseAgentRunState(data.state, (data.state as { readonly version?: number } | undefined)?.version);
+  const state = parseAgentRunState(data.state, (data.state as { readonly version?: number } | undefined)?.version, bounds);
   return {
     schemaVersion: SUSPENDED_RUN_ENTRY_SCHEMA_VERSION,
     runId: data.runId,
@@ -108,11 +109,11 @@ export async function loadSuspendedRunEntry(
  * branch tip (package state aside). Anything appended after it, such as a later run or the resumed run's own
  * messages, means that suspension was resolved or abandoned, so it never resumes twice.
  */
-export function pendingSuspensionOf(branch: readonly SessionEntry[]): SuspendedRunEntryData | undefined {
+export function pendingSuspensionOf(branch: readonly SessionEntry[], bounds?: RunStateBounds): SuspendedRunEntryData | undefined {
   for (let index = branch.length - 1; index >= 0; index -= 1) {
     const entry = branch[index]!;
     if (entry.kind === "package_state") continue;
-    return entry.kind === "suspended_run" ? parseSuspendedRunEntry(entry) : undefined;
+    return entry.kind === "suspended_run" ? parseSuspendedRunEntry(entry, bounds) : undefined;
   }
   return undefined;
 }

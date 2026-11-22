@@ -10,7 +10,6 @@ import {
   type SessionEntry,
 } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
-import { HARD_MAX_SUMMARY_ERROR_BYTES, HARD_MAX_SUMMARY_TOKENS, HARD_RESERVE_TOKENS } from "../limits.js";
 import { createLlmCompactor } from "../strategy.js";
 import { summaryClient } from "./helpers.js";
 
@@ -224,16 +223,12 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_and_errors", a
   );
 });
 
-test("llm_compaction_strategy_rejects_invalid_limits_and_accepts_hard_boundaries", () => {
+test("llm_compaction_strategy_rejects_invalid_limits_and_accepts_any_host_value", () => {
   const base = { clientFor: summaryClient(createMockProvider([{ type: "done" }]), model) };
-  const limits = [
-    ["maxSummaryTokens", HARD_MAX_SUMMARY_TOKENS],
-    ["reserveTokens", HARD_RESERVE_TOKENS],
-    ["maxErrorBytes", HARD_MAX_SUMMARY_ERROR_BYTES],
-  ] as const;
-  for (const [name, hardCap] of limits) {
-    assert.doesNotThrow(() => createLlmCompactor({ ...base, [name]: hardCap }));
-    for (const value of [0, -1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, hardCap + 1]) {
+  for (const name of ["maxSummaryTokens", "reserveTokens", "maxErrorBytes", "maxChunks"] as const) {
+    // Plan 239 Task 5: the host's value is the cap; no hidden ceiling above it.
+    assert.doesNotThrow(() => createLlmCompactor({ ...base, [name]: 1_000_000 }));
+    for (const value of [0, -1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, 1.5]) {
       assert.throws(() => createLlmCompactor({ ...base, [name]: value }), new RegExp(name));
     }
   }

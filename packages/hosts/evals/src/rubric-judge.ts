@@ -7,14 +7,9 @@ import { canonicalJson } from "./util.js";
 import {
   DEFAULT_RUBRIC_JUDGE_MAX_ATTEMPTS,
   DEFAULT_JUDGE_TIMEOUT_MS,
-  HARD_JUDGE_TIMEOUT_MS,
   DEFAULT_JUDGE_MAX_INPUT_BYTES,
-  HARD_JUDGE_MAX_INPUT_BYTES,
   DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
-  HARD_JUDGE_MAX_OUTPUT_BYTES,
   DEFAULT_JUDGE_MAX_RUBRIC_BYTES,
-  HARD_JUDGE_MAX_RUBRIC_BYTES,
-  HARD_JUDGE_MAX_ATTEMPTS,
 } from "./limits.js";
 import type { RubricJudgeOptions, Scorer, JudgeRubric, PairwiseJudgeOptions, PairwiseScorer } from "./types.js";
 
@@ -95,11 +90,11 @@ function createJudgeRunner<TRubric extends Pick<JudgeRubric, "id" | "version" | 
   ) {
     throw new EvalError("invalid judge rubric or id", "ERR_PRISM_EVAL_JUDGE");
   }
-  const timeoutMs = bounded(options.timeoutMs, DEFAULT_JUDGE_TIMEOUT_MS, HARD_JUDGE_TIMEOUT_MS, "timeoutMs");
-  const maxAttempts = bounded(options.maxAttempts, DEFAULT_RUBRIC_JUDGE_MAX_ATTEMPTS, HARD_JUDGE_MAX_ATTEMPTS, "maxAttempts");
-  const maxInputBytes = bounded(options.maxInputBytes, DEFAULT_JUDGE_MAX_INPUT_BYTES, HARD_JUDGE_MAX_INPUT_BYTES, "maxInputBytes");
-  const maxOutputBytes = bounded(options.maxOutputBytes, DEFAULT_JUDGE_MAX_OUTPUT_BYTES, HARD_JUDGE_MAX_OUTPUT_BYTES, "maxOutputBytes");
-  const maxRubricBytes = bounded(options.maxRubricBytes, DEFAULT_JUDGE_MAX_RUBRIC_BYTES, HARD_JUDGE_MAX_RUBRIC_BYTES, "maxRubricBytes");
+  const timeoutMs = bounded(options.timeoutMs, DEFAULT_JUDGE_TIMEOUT_MS, "timeoutMs");
+  const maxAttempts = bounded(options.maxAttempts, DEFAULT_RUBRIC_JUDGE_MAX_ATTEMPTS, "maxAttempts");
+  const maxInputBytes = bounded(options.maxInputBytes, DEFAULT_JUDGE_MAX_INPUT_BYTES, "maxInputBytes");
+  const maxOutputBytes = bounded(options.maxOutputBytes, DEFAULT_JUDGE_MAX_OUTPUT_BYTES, "maxOutputBytes");
+  const maxRubricBytes = bounded(options.maxRubricBytes, DEFAULT_JUDGE_MAX_RUBRIC_BYTES, "maxRubricBytes");
   // Share the canonical JSON rules used by dataset hashes.
   const canonical = canonicalJson({
     id: rubric.id,

@@ -190,7 +190,7 @@ export function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options: { reado
 /**
  * Models verified against the live gateway to accept JSON Schema `response_format`.
  * Route alone never implies support — unverified OpenAI-route models (e.g.
- * `deepseek-v4-pro`, HTTP 400 upstream) must fall back to artifact-loop parsing.
+ * `deepseek-v4-pro`, HTTP 400 upstream) resolve without the capability and must not receive a native schema.
  * Extend only with per-model verification evidence.
  */
 const VERIFIED_JSON_SCHEMA_MODELS: ReadonlySet<string> = new Set(["mimo-v2.5", "mimo-v2.5-pro"]);

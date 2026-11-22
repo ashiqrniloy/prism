@@ -21,10 +21,10 @@ import type {
   ToolCallContent,
   Usage,
 } from "../../contracts.js";
-import { AgentLoopStateError, AgentRunStateError } from "../../contracts.js";
+import { AgentLoopStateError, AgentRunStateError, isSessionAppendConflict, SESSION_CONFLICT_CODE } from "../../contracts.js";
 import { HookError } from "../../hooks/errors.js";
 import { jsonEqual } from "../../hooks/json.js";
-import type { AgentInput } from "../../input.js";
+import type { AgentInput, PromptInstruction } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
 import type { AskRequest, AskResolution, LoopStrategy, RunTurnOptions } from "../../loop/index.js";
 import { packageEventFor } from "../../hooks/emit.js";
@@ -32,18 +32,34 @@ import { createRunController } from "../../loop/index.js";
 import { applyRequestTransforms } from "../../loop/request-draft.js";
 import { applyDefaultProviderRequestOptions } from "../../provider-kit/provider-request-policy.js";
 import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
-import { describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
+import { ceilingsOf, describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
 import { createSessionEntry } from "../../session-stores.js";
 import { applyRestoredSkillBodies, createLoadSkillTool } from "../../skill-load.js";
 import { createSkillRegistry } from "../../skills.js";
-import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "../../provider-kit/structured-output.js";
+import {
+  DEFAULT_STRUCTURED_OUTPUT_REPAIRS,
+  parseStructuredOutput,
+  resolveRunProviderOptions,
+  resolveStructuredOutputRun,
+  structuredOutputRepairMessage,
+} from "../../provider-kit/structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../../system-prompts.js";
-import { clampTurnToolNames, createToolRegistry, resolveToolEffects, selectRunTools } from "../../tools.js";
-import { bridgeAbort, createUsageAccumulator, inputToMessages, isDurableLoop, isSteerSoftInterrupt, throwIfAborted } from "../helpers.js";
+import { clampTurnToolNames, createToolRegistry, resolveToolConcurrency, resolveToolEffects, selectRunTools } from "../../tools.js";
+import {
+  bridgeAbort,
+  createUsageAccumulator,
+  finalAssistantMessage,
+  inputToMessages,
+  isDurableLoop,
+  isSteerSoftInterrupt,
+  throwIfAborted,
+} from "../helpers.js";
 import { assignedLoop, tryAgentRuntime } from "../runtime-registry.js";
-import { cleanupRun, persistDurable, persistSucceeded } from "./persist.js";
+import { cleanupRun, persistDurable, persistSucceeded, writeRunCheckpoint } from "./persist.js";
+import { settleContinuationTip } from "../continue.js";
 import { generateWithRetry, recordPackageCallUsage, recordProviderUsage } from "./provider-round.js";
 import {
+  bindChargeStallRound,
   bindChargeToolRound,
   bindDispatchToolCall,
   matchStickyDecision,
@@ -54,6 +70,7 @@ import {
 } from "./tool-round.js";
 import { requestHostUi } from "../../host/response.js";
 import type { RoundContext, SessionHost } from "./types.js";
+import { packageCallSeamOf } from "../../package-call-seam.js";
 
 const PROMPT_VERSION_MAX_NAME_BYTES = 256;
 const PROMPT_VERSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
@@ -199,6 +216,7 @@ type LoopInternals = {
   readonly inputMessages: readonly Message[];
   readonly maxToolRounds: number;
   readonly restoredLoopState?: JsonValue;
+  recordLoopState?(value: JsonValue): void;
   assemble(
     nextInput: AgentInput,
     toolResults: readonly import("../../contracts.js").ToolResult[] | undefined,
@@ -206,6 +224,11 @@ type LoopInternals = {
     runOptions?: RunTurnOptions,
   ): Promise<import("../../contracts.js").ProviderRequest>;
   chargeToolRound(calls: readonly import("../../contracts.js").ToolCallContent[]): void | Promise<void>;
+  onToolRoundSettled(
+    calls: readonly import("../../contracts.js").ToolCallContent[],
+    results: readonly import("../../contracts.js").ToolResult[],
+  ): void;
+  onToolRoundComplete?(): Promise<void>;
   generate(
     request: import("../../contracts.js").ProviderRequest,
     requestSecrets?: readonly (string | undefined)[],
@@ -293,8 +316,11 @@ async function assembleRoundContext(params: {
   metadata: Readonly<Record<string, unknown>>;
   limits: RunLimitTracker;
   runUsage: RoundContext["runUsage"];
+  /** A `session.continue()` run: settle the tip's unanswered calls before the history is rebuilt. */
+  continued?: boolean;
 }): Promise<RoundContext> {
-  const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage } = params;
+  const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage, continued } =
+    params;
   const loop = session.slots().resolve("loop", session.agent.config.slots?.loop);
   if (options.model && loop.runModel === "none") {
     throw new ModelError("run_model_unsupported", `Loop "${loop.name}" does not accept RunOptions.model`);
@@ -307,6 +333,7 @@ async function assembleRoundContext(params: {
     sessionId: session.id,
     runId,
     ...(resumed ? { resumed: true } : {}),
+    ...(continued ? { continued: true } : {}),
   });
   const startRecord: RunRecord = {
     id: runId,
@@ -322,6 +349,8 @@ async function assembleRoundContext(params: {
   };
   await session.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, session.activeRedactor));
 
+  // Plan 231 Task 2: persisted results for the calls a stopped run left unanswered, so the repair below finds none.
+  if (continued) await settleContinuationTip(session, runId);
   const repairedCalls = await session.rebuildHistory();
   // One event per run, after `run.started`: the provider view answered calls the branch never did.
   if (repairedCalls.length > 0) {
@@ -334,12 +363,15 @@ async function assembleRoundContext(params: {
   session.activeToolNames = selected.grant;
   // Run-local snapshot: concurrent runs and MCP refresh must not mutate this registry.
   const activeToolList = selected.tools;
-  const activeSkills = session.resolveRunSkills(activeToolList);
+  const activeSkills = session.resolveRunSkills(activeToolList, options.skills);
   // Progressive disclosure registers the `load_skill` bridge; eager renders every body up front.
   const disclosure = session.agent.config.skills?.disclosure ?? "progressive";
   const loadSkill =
     activeSkills.length > 0 && disclosure === "progressive"
-      ? createLoadSkillTool({ registry: createSkillRegistry(activeSkills) })
+      ? (() => {
+          const maxInstructionBytes = ceilingsOf(session.agent).skillInstructionBytes;
+          return createLoadSkillTool({ registry: createSkillRegistry(activeSkills, { maxInstructionBytes }), maxInstructionBytes });
+        })()
       : undefined;
   const tools = loadSkill ? [...activeToolList, loadSkill] : activeToolList;
   // `duplicate: "error"` fails closed when a host tool already owns `load_skill`/`search_tools`.
@@ -368,14 +400,26 @@ async function assembleRoundContext(params: {
   for (const message of inputMessages) await session.appendMessage(message, runId);
   await session.autoCompact(runId, options, controller.signal, inputMessages);
   // Disabled cap (`null`) maps to +Infinity so loop comparisons never trip (`n >= null` would be true).
-  const maxToolRounds = resolveRunLimits(session.agent.config.limits, options.limits).maxToolRounds ?? Number.POSITIVE_INFINITY;
+  const ceilings = ceilingsOf(session.agent);
+  const maxToolRounds = resolveRunLimits(session.agent.config.limits, options.limits, ceilings).maxToolRounds ?? Number.POSITIVE_INFINITY;
   const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(session.agent.config.systemPrompt, options.systemPrompt), {
     base: session.agent.config.instructions,
   });
   const providerOptions = resolveRunProviderOptions(options, session.agent.config);
   const runModel = options.model ?? session.agent.config.model;
-  if (runModel) assertStructuredOutputRequestSupported(runModel, providerOptions);
+  // Plan 235 Task 3: mode resolution runs before any provider call or hook. `providerOptions` (kept on
+  // `ctx`) still carries `structuredOutput` for the result and repair; requests get `requestOptions`.
+  const structuredPlan = resolveStructuredOutputRun(runModel, providerOptions);
+  const requestProviderOptions = structuredPlan.requestOptions;
+  const structuredInstruction: PromptInstruction | undefined =
+    structuredPlan.instruction === undefined ? undefined : { label: "Output format", text: structuredPlan.instruction };
   const validate = options.validate ?? session.agent.config.validator;
+  const validation = session.agent.config.tools?.validation ?? "schema";
+  const toolConcurrency = resolveToolConcurrency(
+    session.agent.config.tools?.concurrency,
+    options.tools?.concurrency,
+    ceilings.toolConcurrency,
+  );
   const inputLayout = options.inputLayout ?? session.agent.config.inputLayout;
   session.activeLoopTurn = 1;
 
@@ -397,6 +441,7 @@ async function assembleRoundContext(params: {
     systemInstructions,
     providerOptions,
     validate,
+    validation,
     inputLayout,
     loop: undefined as unknown as LoopStrategy,
     runController: undefined as unknown as import("../../loop/index.js").RunController,
@@ -458,15 +503,22 @@ async function assembleRoundContext(params: {
       turn,
       inputLayout,
       systemInstructions: runOptions?.system ?? systemInstructions,
-      skills: session.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, session.restoredSkillBodies) : activeSkills,
+      skills: session.restoredSkillBodies.length
+        ? applyRestoredSkillBodies(activeSkills, session.restoredSkillBodies, {
+            bodyBytes: ceilings.skillInstructionBytes,
+            totalBytes: ceilings.runStateBytes,
+          })
+        : activeSkills,
       skillsDisclosure: session.agent.config.skills?.disclosure,
+      skillsCatalog: session.agent.config.skills?.catalog,
       deferSkillsCatalog: true,
       loadedSkills: session.loadedSkills,
       tailSegments: session.tailSegments,
       tools: turnTools,
       resourceLoader: session.agent.config.resourceLoader,
       trust: session.agent.config.trust,
-      providerOptions,
+      providerOptions: requestProviderOptions,
+      ...(structuredInstruction ? { instructions: structuredInstruction } : {}),
       redactor: session.activeRedactor,
       sessionId: session.id,
       runId,
@@ -490,6 +542,9 @@ async function assembleRoundContext(params: {
     inputMessages,
     maxToolRounds,
     restoredLoopState: resumed?.state?.loopState?.snapshot,
+    recordLoopState: (value) => {
+      session.activeLoopCheckpoint = { value };
+    },
     assemble: async (nextInput, toolResults, turn, runOptions) => {
       limits.charge("maxTurns");
       const turnIndex = turn ?? 1;
@@ -500,6 +555,17 @@ async function assembleRoundContext(params: {
       return buildTurnRequest(nextInput, toolResults, turn, runOptions);
     },
     chargeToolRound: bindChargeToolRound(ctx),
+    onToolRoundSettled: bindChargeStallRound(ctx),
+    // Plan 231 Task 3: one checkpoint per completed tool round. A round that staged an ask suspends next and
+    // writes its own `suspended_run` entry instead.
+    ...(session.agent.config.durability === "turn"
+      ? {
+          onToolRoundComplete: async () => {
+            if (session.activeGatedRound?.size || session.activeNestedRound?.size) return;
+            await writeRunCheckpoint(session, { runId, model, limits });
+          },
+        }
+      : {}),
     generate: async (request, requestSecrets) => {
       await suspendGatedRound(ctx);
       if (!ctx.assembledTurn) limits.charge("maxTurns");
@@ -546,7 +612,7 @@ async function assembleRoundContext(params: {
           // An abort during recovery propagates (the run appends nothing); only a real compaction
           // failure becomes the terminal overflow error.
           throwIfAborted(controller.signal);
-          const counts = { ...error.counts, afterCompaction: true };
+          const counts = { ...error.counts, compactionFailed: true };
           throw new ContextOverflowError(contextOverflowMessage(counts), counts, compactionError);
         }
         throwIfAborted(controller.signal);
@@ -561,7 +627,12 @@ async function assembleRoundContext(params: {
         }
       }
     },
-    isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
+    // Serial unless every call's tool is known, declares `effects`, and is not `exclusive`: undeclared
+    // or unknown effects fail closed (plan 226 Task 4).
+    isToolCallExclusive: (call) => {
+      const tool = registry.get(call.name);
+      return tool === undefined || tool.exclusive === true || tool.effects === undefined;
+    },
     dispatchToolCall: dispatchBound,
     ask: (requests, askOptions) => resolveAskDecisions(ctx, requests, askOptions),
     appendMessage: (message) => session.appendMessage(message, runId),
@@ -578,6 +649,8 @@ async function assembleRoundContext(params: {
     },
     emit: (event) => session.emit(event),
   };
+  /** Structured-output repairs queued this run; counted apart from `maxContinuations`. */
+  let structuredRepairs = 0;
   ctx.loop = session.slots().resolve("loop", session.agent.config.slots?.loop);
   session.activeLoop = ctx.loop;
   ctx.runController = createRunController({
@@ -589,6 +662,7 @@ async function assembleRoundContext(params: {
     limits,
     hooks: session.hooks(),
     maxContinuations: limits.limits.maxContinuations,
+    toolConcurrency,
     assemble: (nextInput, turn, runOptions) => loopInternals.assemble(nextInput, undefined, turn, runOptions),
     externalState: (key) => session.externalState(ctx.loop.name, key),
     effectsFor: (call) => {
@@ -610,6 +684,16 @@ async function assembleRoundContext(params: {
       } catch (_error) {
         throw new HookError("run.end continuation could not be queued", { owner: "kernel", hook: "run.end" });
       }
+    },
+    structuredOutputRepair: () => {
+      const structured = providerOptions?.structuredOutput;
+      // Only a natural end: a stop or limit already decided this run's outcome.
+      if (!structured || ctx.loopFinishReason) return undefined;
+      if (structuredRepairs >= (structured.repair ?? DEFAULT_STRUCTURED_OUTPUT_REPAIRS)) return undefined;
+      const parsed = parseStructuredOutput(finalAssistantMessage(session.history).text, structured);
+      if (!("outputError" in parsed)) return undefined;
+      structuredRepairs += 1;
+      return structuredOutputRepairMessage(structured, parsed.outputError);
     },
     setFinishReason: (reason, detail) => {
       ctx.loopFinishReason = reason;
@@ -645,27 +729,40 @@ function hiddenPackageTools(session: SessionHost, tools: readonly ToolDefinition
   return hidden;
 }
 
+/**
+ * Active runs per strategy object that keeps loop state on itself (`snapshot`/`restore`, no `state: "run"`).
+ * Module-level because one strategy object can be shared across agents (plan 231 Task 4).
+ */
+const strategyStateRuns = new WeakMap<LoopStrategy, number>();
+
+function strategyStateLoop(loop: LoopStrategy | undefined): LoopStrategy | undefined {
+  if (!loop || loop.state === "run") return undefined;
+  return typeof loop.snapshot === "function" || typeof loop.restore === "function" ? loop : undefined;
+}
+
 export async function executeRun(
   session: SessionHost,
   input: AgentInput,
   options: ResolvedRunOptions,
   runId: string,
   resumed?: ActiveDurableRun,
+  continued = false,
 ): Promise<RunResult> {
   const promptVersion = assertPromptVersionRef(options.promptVersion);
   const requestedLimits = options.limits;
-  const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits);
+  const ceilings = ceilingsOf(session.agent);
+  const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits, ceilings);
   // Only a resume has durable options: a fresh run allocates its private cell at suspension.
   const durableOptions = resumed?.options;
   if (durableOptions) {
-    validateRunStateOptions(durableOptions);
+    validateRunStateOptions(durableOptions, ceilings.runStateBytes);
     if (options.model || options.effectStore)
       throw new AgentRunStateError("Durable runs require model, loop, and effect store on AgentConfig for fingerprinting");
     const configuredLoop = assignedLoop(session.agent);
     if (configuredLoop && !isDurableLoop(configuredLoop)) {
       throw new AgentLoopStateError(
         "ERR_PRISM_LOOP_NOT_DURABLE",
-        "Custom LoopStrategy on a durable run requires snapshot and restore hooks",
+        'Custom LoopStrategy on a durable run requires state: "run" or snapshot and restore hooks',
       );
     }
     // Fingerprint drift fails closed on a store-slot resume too (`session.resume` bypasses
@@ -674,11 +771,29 @@ export async function executeRun(
       throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
     }
   }
+  if (session.agent.config.durability === "turn") {
+    const configuredLoop = assignedLoop(session.agent);
+    if (configuredLoop && !isDurableLoop(configuredLoop)) {
+      throw new AgentLoopStateError(
+        "ERR_PRISM_LOOP_NOT_DURABLE",
+        'Custom LoopStrategy with durability: "turn" requires state: "run" or snapshot and restore hooks',
+      );
+    }
+  }
   if (session.activeRun) {
     const error = new Error("Agent session already has an active run");
     session.emit({ type: "run.failed", sessionId: session.id, runId, error: errorToErrorInfo(error) });
     throw error;
   }
+  // Plan 231 Task 4: a strategy that keeps its state on the strategy object serves one run at a time.
+  const sharedStateLoop = strategyStateLoop(assignedLoop(session.agent));
+  if (sharedStateLoop && (strategyStateRuns.get(sharedStateLoop) ?? 0) > 0) {
+    throw new AgentLoopStateError(
+      "ERR_PRISM_LOOP_SHARED_STATE",
+      `Loop ${sharedStateLoop.name} keeps its state on the strategy object and already has an active run; declare state: "run" and use run.checkpoint / run.restored`,
+    );
+  }
+  session.checkSessionLimitsForStart();
 
   const controller = new AbortController();
   const cleanupSignal = bridgeAbort(options.signal, controller);
@@ -693,9 +808,13 @@ export async function executeRun(
   session.activeEffectStore = options.effectStore ?? session.agent.config.effectStore;
   session.activeOwnership = options.ownership;
   session.activePrincipal = options.principal ?? session.agent.config.principal;
+  // Plan 232 Task 2: the ancestor `chargeTo` names was checked before this run started (`runInternal`).
+  session.activeChargeTo = options.chargeTo ? packageCallSeamOf(options.chargeTo) : undefined;
   session.activeIdempotencyKey = options.idempotencyKey ?? session.agent.config.idempotencyKey;
   session.activeDurable = resumed;
+  session.activeLoopCheckpoint = resumed?.state?.loopState ? { value: resumed.state.loopState.snapshot } : undefined;
   session.activeGatedRound = undefined;
+  session.activeNestedRound = undefined;
   if (resumed) session.invalidateSnapshot();
 
   const model = options.model ?? session.agent.config.model;
@@ -722,14 +841,19 @@ export async function executeRun(
     },
     snapshot: resumed?.state?.counters,
     deadlineAt: resumed?.state?.deadlineAt,
+    toolRoundDigests: resumed?.state?.toolRoundDigests,
+    sessionDeadlineAt: session.resolvedSessionLimits.deadline ?? undefined,
+    session: session.sessionLimitsTracker.runLimitTracker,
+  });
+  session.sessionLimitsTracker.setRunExceededHandler((breach) => {
+    controller.abort(new RunLimitError(breach));
   });
   session.activeLimits = limits;
   session.activeRecentToolCalls = [];
-  const hasFiniteTokenCap = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
-  session.activeLimitOutputBuffer = [session.agent.config.limits, requestedLimits].some(
-    (value) => hasFiniteTokenCap(value?.maxOutputTokens) || hasFiniteTokenCap(value?.maxTotalTokens) || value?.maxCost !== undefined,
-  );
+  // Deltas stream live unless a layer opts into `limits.bufferOutput` (plan 228 Task 2).
+  session.activeLimitOutputBuffer = resolvedLimits.bufferOutput;
 
+  if (sharedStateLoop) strategyStateRuns.set(sharedStateLoop, (strategyStateRuns.get(sharedStateLoop) ?? 0) + 1);
   try {
     const ctx = await assembleRoundContext({
       session,
@@ -744,10 +868,11 @@ export async function executeRun(
       metadata,
       limits,
       runUsage,
+      continued,
     });
     // From here a package's model call that passes this session is charged to this run (plan 225 Task 5).
-    session.activePackageUsage = async (callModel, callUsage, callRequest) => {
-      await recordPackageCallUsage(ctx, callModel, callUsage, callRequest);
+    session.activePackageUsage = async (callModel, callUsage, callRequest, scope) => {
+      await recordPackageCallUsage(ctx, callModel, callUsage, callRequest, scope);
     };
 
     await replayDurableNestedAndPending(ctx);
@@ -760,12 +885,14 @@ export async function executeRun(
           `Loop ${resumedLoopState.name} revision ${resumedLoopState.revision} does not match the resumed durable run`,
         );
       }
-      ctx.loop.restore?.(resumedLoopState.snapshot);
+      // A `state: "run"` loop reads it as `run.restored`; only a strategy-level loop is restored in place.
+      if (ctx.loop.state !== "run") ctx.loop.restore?.(resumedLoopState.snapshot);
     }
     const loopUsage = await runLoopUntilSettled(ctx);
     stopReason = ctx.loopFinishReason;
     stopDetail = ctx.loopStopDetail;
     usage = runUsage.value() ?? loopUsage;
+    session.recordSessionRunCompleted();
     return await persistSucceeded(ctx, loopUsage);
   } catch (error) {
     if (error instanceof AgentRunSuspended) {
@@ -774,12 +901,20 @@ export async function executeRun(
       session.emit({ type: "run.suspended", sessionId: session.id, runId, interruption: error.interruption, version });
       return session.buildRunResult({ runId, status: "suspended", runState: error.state, interruption: error.interruption });
     }
+    session.recordSessionRunCompleted();
     runError = errorToErrorInfo(error);
+    // Plan 230 Task 2: another writer moved the session's tip (or removed the parent) under this run.
+    if (isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate !== true)
+      runError = { ...runError, code: SESSION_CONFLICT_CODE };
     // A dispose abort wins over whatever the interrupted await threw, so the run's code is stable.
     if (controller.signal.aborted && (controller.signal.reason as { code?: unknown } | null)?.code === "agent_disposed") {
       runError = errorToErrorInfo(controller.signal.reason);
     }
-    const breach = error instanceof RunLimitError ? error.breach : limits.breach;
+    const breach =
+      error instanceof RunLimitError
+        ? error.breach
+        : (limits.breach ??
+          (controller.signal.aborted && controller.signal.reason instanceof RunLimitError ? controller.signal.reason.breach : undefined));
     // Built once: the event and the terminal result carry the same attribution payload (plan 108 T5).
     const exhaustion = breach ? describeBudgetExhaustion(limits, breach, session.activeRecentToolCalls ?? []) : undefined;
     // Terminal attribution before the terminal `error`/finish records, so a subscriber that stops
@@ -831,6 +966,11 @@ export async function executeRun(
     });
     return result;
   } finally {
+    if (sharedStateLoop) {
+      const active = (strategyStateRuns.get(sharedStateLoop) ?? 1) - 1;
+      if (active > 0) strategyStateRuns.set(sharedStateLoop, active);
+      else strategyStateRuns.delete(sharedStateLoop);
+    }
     await cleanupRun({ session, controller, cleanupSignal, runId, model, startedAt, runStatus, runError, stopReason, stopDetail });
   }
 }

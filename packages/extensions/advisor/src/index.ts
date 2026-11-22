@@ -40,17 +40,11 @@ export {
   DEFAULT_CONTEXT_MAX_CHARS,
   DEFAULT_MAX_CONSULTS_PER_RUN,
   DEFAULT_MAX_ROUNDS,
-  HARD_ADVICE_MAX_CHARS,
-  HARD_CONTEXT_LAST_TURNS,
-  HARD_CONTEXT_MAX_CHARS,
-  HARD_MAX_CONSULTS_PER_RUN,
-  HARD_MAX_ROUNDS,
   resolveContext,
   resolveLimits,
 } from "./config.js";
 export {
   DEFAULT_EVIDENCE_MAX_CHARS,
-  HARD_EVIDENCE_MAX_CHARS,
   MAX_EVIDENCE_BLOCKS,
   MAX_TASK_CHARS,
   type ValidationEvidence,
@@ -125,15 +119,6 @@ const definitionFor = (options: AdvisorFactoryOptions) =>
       }
       const context = resolveContext(config.context);
       const limits = resolveLimits(config);
-      const validateContext = config.validate?.context === undefined ? undefined : resolveContext(config.validate.context);
-      const clamped = [
-        ...limits.clamped,
-        ...(context.clamped ? [`context (lastTurns → ${context.lastTurns}, maxChars → ${context.maxChars})`] : []),
-        ...(validateContext?.clamped === true
-          ? [`validate.context (lastTurns → ${validateContext.lastTurns}, maxChars → ${validateContext.maxChars})`]
-          : []),
-      ];
-      if (clamped.length > 0) prism.status.note("info", `Advisor config was clamped to its ceiling: ${clamped.join(", ")}.`);
 
       let client: ModelClient;
       try {

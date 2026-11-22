@@ -8,7 +8,6 @@ import {
   DocumentExtractionError,
   doclingOcrArgs,
   doclingOcrHelperPath,
-  HARD_MAX_OCR_PAGES,
   NeedsOcrError,
   type OcrRunner,
   type OcrWorkerResult,
@@ -140,7 +139,7 @@ test("helper source stays offline and local", async () => {
 
 test("bad ocr options fail at creation", async () => {
   await assert.rejects(createDocumentExtractor({ maxPages: 0 }), RangeError);
-  await assert.rejects(createDocumentExtractor({ maxPages: HARD_MAX_OCR_PAGES + 1 }), RangeError);
+  await assert.rejects(createDocumentExtractor({ maxPages: 1.5 }), RangeError);
   await assert.rejects(createDocumentExtractor({ ocr: "nope" as unknown as OcrRunner }), TypeError);
 });
 

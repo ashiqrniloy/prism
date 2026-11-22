@@ -56,12 +56,12 @@ A driver loop reports vendor activity through `run.observe`. Tool activity emits
 | --- | --- | --- |
 | `session.opened` | `{ sessionId, restored }` | `agent.session()` resolved. `restored` is true when the session was resumed with `{ id }` or is a `fork`. Reaches hooks and `agent.subscribe()`. |
 | `session.closed` | `{ sessionId, reason? }` | `session.close()` finished settling background tasks. |
-| `run.started` | `{ resumed?, restore? }` | A run begins. `resumed: true` marks a durable resume of a suspended run; `restore` is the audit of the external-state restore hooks that ran before the claim. |
-| `run.completed` | `{ status, usage?, stopReason?, stopDetail? }` | The run ended cleanly. `status` is `"completed"` for a natural end and `"stopped"` when `stopReason` names a ceiling, a `turn.before` stop, or a continuation cap. |
-| `run.failed` | `{ error, limit?, attribution? }` | The run failed. A configured ceiling adds `limit` (which axis, maximum, observed) and `attribution` (counters at exhaustion, closest other axes, hashes of recent tool calls). |
+| `run.started` | `{ resumed?, continued?, restore? }` | A run begins. `resumed: true` marks a durable resume of a suspended run; `continued: true` marks a `session.continue()` run, which takes no new input; `restore` is the audit of the external-state restore hooks that ran before the claim. |
+| `run.completed` | `{ status, usage?, stopReason?, stopDetail?, output?, outputError? }` | The run ended cleanly. `status` is `"completed"` for a natural end and `"stopped"` when `stopReason` names a ceiling, a `turn.before` stop, or a continuation cap. `output` / `outputError` match `RunResult` when the run asked for structured output. |
+| `run.failed` | `{ error, limit?, attribution? }` | The run failed. A configured ceiling adds `limit` (which axis, `scope?: "run" | "session"` — present as `"session"` for session-wide limits and absent for run limits, maximum, observed) and `attribution` (counters at exhaustion, closest other axes, hashes of recent tool calls). |
 | `run.suspended` | `{ interruption, version }` | The run is staged for suspension on an unresolved `ask`. `interruption.pendingDecisions` holds the redacted requests. |
-| `turn.started` | `{ turn, metadata, attempt?, retry? }` | A provider attempt began. `metadata` carries `providerId`, `model`, and `attempt`. A retry re-opens the turn with `retry: { delayMs, error }`. |
-| `turn.completed` | `{ turn, metadata, usage?, error? }` | The attempt settled. `metadata` carries `latencyMs`, `stopReason`, `budgets`, and cache counts; `error` is redacted. |
+| `turn.started` | `{ turn, metadata, attempt?, retry? }` | A provider attempt began, once per attempt. `metadata` carries `providerId`, `model`, and `attempt`. A retry re-opens the same `turn` with `attempt` and `retry: { delayMs, error }` on that attempt's own `turn.started`. |
+| `turn.completed` | `{ turn, metadata, usage?, error? }` | The attempt settled. `metadata` carries `latencyMs`, `stopReason`, `budgets`, and cache counts; `error` is redacted. With `error`, the attempt's deltas are void (see [Failed attempts](#failed-attempts)). |
 | `message.delta` | `{ content }` | One streamed content block. Opens the message; there is no separate message-start event. |
 | `message.completed` | `{ message }` | The assistant message was appended to history. |
 | `tool.started` | `{ call }` | A tool call is about to run. |
@@ -77,6 +77,62 @@ A driver loop reports vendor activity through `run.observe`. Tool activity emits
 | `hook.error` | `{ hook, owner, error }` | A hook threw. The run continues; `owner` is kernel-set. Delivered to the session whose dispatch raised it, and to no other session; one raised outside any session reaches `agent.subscribe()` only. |
 | `package.status` | `{ package, level, message, at }` | A package called `status.note`. Agent-scoped and redacted. |
 | `package.event` | `{ package, name, data? }` | A package emitted a namespaced event, e.g. `memory.session.status`. Kernel modules use `package: "kernel"` until their owning phase gives them a dedicated name. A handler's `ctx.emit` is delivered like `hook.error`: to the session that dispatched the hook only, or to `agent.subscribe()` when no session did. Kernel events: `history.repaired` `{ count, callIds }` (a run's provider view answered tool calls the branch never answered; ids only); `model.call` `{ package, provider, model, outcome, latencyMs, usage? }` (one per model call a package made through `models.client`; delivered to the session passed in `generate(..., { session })`, else to `agent.subscribe()`; no message content). |
+
+### Failed attempts
+
+A provider attempt can fail after it streamed output, and the run may retry it (`retry.afterOutput`,
+[Models](models.md#retry)). The rule a consumer follows: **discard the deltas of a turn attempt that ends with
+`error`.** Nothing of that attempt reaches the branch, no `message.completed` is emitted for it, and none of its
+tool calls run.
+
+```text
+turn.started {turn: 3, metadata.attempt: 1} → message.delta… → turn.completed {turn: 3, error}
+turn.started {turn: 3, attempt: 2, retry} → message.delta… → turn.completed {turn: 3} → message.completed
+```
+
+The first-party host libraries apply the rule:
+ACP holds each attempt's chunks until it completes, AG-UI ends the failed attempt's messages and names them in a
+`prism.retry` custom event, and channel previews restart. `remote` and `devtools` forward events unchanged, so
+their clients apply it.
+
+### Delivery under caps
+
+`message.delta` events are delivered as the provider yields them, whatever limits are set. A turn whose usage
+breaches a ceiling (`maxOutputTokens`, `maxTotalTokens`, `maxCost`) is reported once it has streamed, in the
+failed-attempt shape above, and the same discard rule applies:
+
+```text
+turn.started → message.delta… → turn.completed {error} → run.failed {limit, attribution}
+```
+
+Nothing of the breaching turn is appended to the session. A host that must not show any output of a turn that
+breaches a cap sets `limits.bufferOutput: true` (agent or run; `true` at either layer wins): each turn's deltas
+are then held until its usage has been charged, and a breaching turn emits `turn.started` →
+`turn.completed {error}` → `run.failed` with no deltas. Buffering gives up streaming: every delta of a turn
+arrives together, just before `turn.completed`.
+
+### Subscribers and backpressure
+
+Each subscriber (`session.subscribe()`, `session.stream()`/`resume()`, `agent.subscribe()`) has its own queue,
+and pushing never waits, so a slow consumer cannot pace the run or another subscriber. The queue holds
+`SubscribeOptions.maxQueuedEvents` events (default 4,096; a whole coding run is about 120). What happens when a
+consumer falls behind follows `SubscribeOptions.overflow`:
+
+| Policy | Behavior |
+| --- | --- |
+| `coalesce` (default) | While the consumer is not awaiting, a `message.delta` whose text (or thinking, when neither side is `redacted` and neither has `data`) continues the queue's last delta of the same run and origin is merged into it, up to 16 KiB of text per merged delta. A queued `tool.progress` is replaced by a newer one for the same `toolCallId`, which takes the newer one's position. Nothing else merges, and order across types holds. When the bound is reached by events that cannot be merged, the iterator rejects with `SubscriberOverflowError`. |
+| `close` | No merging; the iterator rejects with `SubscriberOverflowError` at the bound. |
+| `drop_oldest` / `drop_newest` | No merging; the oldest queued event, or the new one, is dropped. |
+
+A merged delta's text is exactly what concatenating its parts gives. Events are redacted before they reach any
+queue, so merging cannot reassemble a secret the redactor masked. A consumer that needs every delta boundary
+(per-delta timing, say) passes `overflow: "close"`.
+
+`session.stream()` and `session.resume()` abort the run when the consumer stops (`break`, `return`, or a throw
+from the loop body). An overflow is not a stop: the generator throws `SubscriberOverflowError` and the run
+continues to its result. Its messages land in the session (`session.messages()`), its terminal event reaches
+any other subscriber (an `acrossRuns` `session.subscribe()` sees `run.completed` / `run.failed`), and the ledger
+records it. A new `run()` on that session rejects until it settles.
 
 ## Outputs
 
@@ -112,9 +168,9 @@ for await (const event of session.resume(decisions)) resumed.push(event.type);
 
 ## Fail-closed notes
 
-- A subscriber whose queue overflows under the default `close` policy has its iterator **rejected**
+- A subscriber whose queue overflows under `coalesce` (default) or `close` has its iterator **rejected**
   with `SubscriberOverflowError`; the kernel never synthesizes a marker event. `drop_oldest` and
-  `drop_newest` are the lossy alternatives.
+  `drop_newest` are the lossy alternatives. An overflow ends the iterator, not the run.
 - A projection that reads a stored event whose type is no longer in the catalog **skips** it. No
   reader switches on a persisted event type, and no event reaches a durable resume.
 - `decision.pending` and `run.failed` carry redacted reasons and hashes; raw tool arguments never

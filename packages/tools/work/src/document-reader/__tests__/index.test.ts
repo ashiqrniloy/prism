@@ -2,7 +2,7 @@ import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { createDocumentReader, DocumentReaderError, HARD_MAX_DOCUMENT_PAGES } from "../index.js";
+import { createDocumentReader, DocumentReaderError } from "../index.js";
 
 const FIXTURES = new URL("../../../src/document-reader/__tests__/fixtures/", import.meta.url);
 const read = (name: string) => readFile(new URL(name, FIXTURES));
@@ -34,7 +34,7 @@ test("D1: creation fails closed with a documented error when no parser is availa
   });
   // caps are validated at creation
   await assert.rejects(createDocumentReader({ maxBytes: 0 }), RangeError);
-  await assert.rejects(createDocumentReader({ maxPages: HARD_MAX_DOCUMENT_PAGES + 1 }), RangeError);
+  await assert.rejects(createDocumentReader({ maxPages: 0 }), RangeError);
   await assert.rejects(createDocumentReader({ maxTextBytes: -1 }), RangeError);
 });
 

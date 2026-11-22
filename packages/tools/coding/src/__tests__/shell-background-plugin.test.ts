@@ -59,7 +59,7 @@ describe("@arnilo/prism-tools/coding background processes", () => {
       model: { provider: "background", model: "m" },
       ownership: { tenantId: "local" },
       principal: { kind: "user", id: "local" },
-      packages: [backgroundProvider(), toolsCoding({ root })],
+      packages: [backgroundProvider(), toolsCoding({ root, guard: "off" })], // no host UI here: the guard would suspend the call
     });
     try {
       const session = await agent.session({ id: "bg-close", create: true });
@@ -86,7 +86,7 @@ describe("@arnilo/prism-tools/coding background processes", () => {
       model: { provider: "background", model: "m" },
       ownership: { tenantId: "local" },
       principal: { kind: "user", id: "local" },
-      packages: [backgroundProvider(), toolsCoding({ root })],
+      packages: [backgroundProvider(), toolsCoding({ root, guard: "off" })], // no host UI here: the guard would suspend the call
     });
     const session = await agent.session({ id: "bg-dispose", create: true });
     for await (const _event of session.stream("start the dev server")) {

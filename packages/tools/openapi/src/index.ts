@@ -35,7 +35,7 @@ export type { ToolsOpenapiConfig, ToolsOpenapiSpecConfig } from "./config.js";
 export { toolsOpenapiConfigSchema } from "./config.js";
 export { OpenApiToolError, type OpenApiToolErrorCode } from "./errors.js";
 export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js";
-export { DEFAULT_OPENAPI_LIMITS, HARD_OPENAPI_LIMITS, resolveOpenApiLimits } from "./limits.js";
+export { DEFAULT_OPENAPI_LIMITS, resolveOpenApiLimits } from "./limits.js";
 export { firstServerUrl, listOperationIds, loadSpecDocument, selectOperations } from "./specs.js";
 export { createOpenApiTools, effectsForMethod } from "./tools.js";
 export type {

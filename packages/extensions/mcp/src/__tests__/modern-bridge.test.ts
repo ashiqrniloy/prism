@@ -740,8 +740,8 @@ describe("modern MRTR auto-fulfilment (plan 063 task 3)", () => {
     await bridge.close();
 
     await assert.rejects(
-      connectMcpCapabilities({ serverId: "mrtr-too-many", transport: bridgeTransport(fixture.origin), maxMrtrRounds: 11 }),
-      /maxMrtrRounds must be a positive safe integer <= 10/,
+      connectMcpCapabilities({ serverId: "mrtr-too-many", transport: bridgeTransport(fixture.origin), maxMrtrRounds: 0 }),
+      /maxMrtrRounds must be a positive safe integer/,
     );
   });
 

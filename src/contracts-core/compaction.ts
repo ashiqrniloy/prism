@@ -1,6 +1,6 @@
 /** Contracts-core compaction family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
-import type { ErrorInfo } from "./content.js";
+import type { ErrorInfo, JsonValue } from "./content.js";
 import type { SessionEntry } from "./session.js";
 import type { SessionContext } from "../session-context.js";
 
@@ -16,6 +16,13 @@ export interface CompactionContext {
   readonly session?: SessionContext;
   readonly entries: readonly SessionEntry[];
   readonly keepRecentEntries?: number;
+  /**
+   * The active model's per-request input cap (`resolveInputCap`), when one resolves from the host's
+   * spec or the provider catalog. Sizes the default compactor's token-budget tail.
+   */
+  readonly inputCapTokens?: number;
+  /** `CompactionOptions.maxSummaryChars`, forwarded to the compactor (plan 229 Task 5). */
+  readonly maxSummaryChars?: number;
   readonly trigger?: CompactionReason | string;
   readonly secrets?: readonly (string | undefined)[];
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -41,9 +48,9 @@ export interface CompactionTriggerContext {
 /**
  * Host-programmable compact-when gate, evaluated by {@link resolveShouldCompact}.
  *
- * Not an auto-compaction seam of its own: the session's only auto trigger is the `compaction.when`
- * hook, and a handler composes this gate as its own policy (OM's attach loop and Prism Code's
- * `compaction` config do). Kept because the four trigger kinds are policy no caller should re-derive.
+ * Two uses: a `compaction.when` handler composes it as its own policy (the compaction package's
+ * `trigger` does), and `CompactionOptions.trigger` sets the kernel's fallback, which runs only when
+ * every handler abstains (plan 229 Task 4).
  */
 export type CompactionTrigger =
   | { readonly type: "threshold_entries"; readonly entries: number }
@@ -54,6 +61,17 @@ export type CompactionTrigger =
       readonly type: "custom";
       readonly shouldCompact: (context: CompactionTriggerContext) => boolean | Promise<boolean>;
     };
+
+/**
+ * The kernel's auto trigger when `AgentConfig.compaction` sets neither `trigger` nor
+ * `thresholdEntries` (plan 229 Task 4): compact at 80% of the model's input cap. A safety net against
+ * provider rejection, not a quality gate: a measured `threshold_tokens` is the better host setting.
+ * A model with no resolvable cap gets no default trigger.
+ */
+export const DEFAULT_COMPACTION_TRIGGER: Readonly<{ type: "input_ratio"; ratio: number }> = Object.freeze({
+  type: "input_ratio",
+  ratio: 0.8,
+});
 
 /** Validate a host trigger at config time, so an unknown `type` fails at create (C11). */
 export function assertCompactionTrigger(trigger: CompactionTrigger): CompactionTrigger {
@@ -91,10 +109,16 @@ export function assertCompactionTrigger(trigger: CompactionTrigger): CompactionT
 /**
  * Non-strategy compaction knobs. The implementation is the `compaction` slot (`AgentConfig.slots
  * .compaction`); these only size and time it. `false` on `AgentConfig.compaction`/`RunOptions
- * .compaction` disables compaction entirely.
+ * .compaction` turns off the kernel's auto trigger; a `compaction.when` vote and overflow recovery
+ * still compact.
  */
 export interface CompactionOptions {
-  /** Entry-count gate for the kernel's default auto trigger; used only when every `compaction.when` handler abstains. */
+  /**
+   * The kernel's auto trigger, used only when every `compaction.when` handler abstains. Replaces
+   * {@link DEFAULT_COMPACTION_TRIGGER}; when both this and `thresholdEntries` are set, this wins.
+   */
+  readonly trigger?: CompactionTrigger;
+  /** Entry-count gate for the kernel's auto trigger; replaces {@link DEFAULT_COMPACTION_TRIGGER}. */
   readonly thresholdEntries?: number;
   readonly keepRecentEntries?: number;
   readonly maxSummaryChars?: number;
@@ -183,6 +207,34 @@ export interface CompactionEntryData {
   readonly keepEntryIds?: readonly string[];
   readonly strategy?: string;
   readonly trigger?: CompactionReason | string;
+  /**
+   * Written by the kernel, not the compactor (plan 230 Task 3): the state folded from the branch before
+   * this entry, so a run reads the branch from here on (`SessionBranchRead.from: "compaction"`). A
+   * compaction without it makes the kernel read the whole branch.
+   */
+  readonly checkpoint?: {
+    readonly version: 1;
+    /** Entries on the branch before this compaction entry. */
+    readonly branchLength: number;
+    /** `package_state` data in fold order: each key's latest `set`, then its `append` / `replace` records. */
+    readonly packageState: readonly {
+      readonly schemaVersion: 1;
+      readonly package: string;
+      readonly key: string;
+      readonly value: JsonValue;
+      readonly op?: "set" | "append" | "replace";
+    }[];
+    /** Per `(vendor, key)` totals of the `external_state` log: records held, their JSON bytes, the last `seq`. */
+    readonly externalState: readonly {
+      readonly vendor: string;
+      readonly key: string;
+      readonly count: number;
+      readonly bytes: number;
+      readonly seq: number;
+    }[];
+    /** Message, `run_checkpoint`, `session_limits` and session-links entries `keepEntryIds` names before `throughEntryId`, in branch order. */
+    readonly pinnedEntryIds: readonly string[];
+  };
 }
 
 export interface RetryPolicy {
@@ -211,6 +263,17 @@ export interface RetryOptions {
   readonly maxAttempts?: number;
   readonly baseDelayMs?: number;
   readonly maxDelayMs?: number;
+  /** Longest provider `Retry-After` hint honored, in ms (default 60,000; hard cap 600,000). A hint
+   *  within it is the delay exactly; a longer one fails the turn without sleeping. */
+  readonly maxRetryAfterMs?: number;
+  /**
+   * Retry a run turn whose stream failed transiently after output began (default `true`). The failed
+   * attempt ends with `turn.completed { error }` and the next opens with `turn.started { attempt, retry }`;
+   * a consumer discards the failed attempt's deltas. The retry re-sends the whole request, so its input
+   * tokens are billed again. `false` keeps such a failure final. Package model calls retry only before
+   * their first event and ignore this field.
+   */
+  readonly afterOutput?: boolean;
   readonly secrets?: readonly (string | undefined)[];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }

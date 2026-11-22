@@ -15,6 +15,7 @@ import {
   createPersistenceSchemaModel,
   getPersistencePaginationCursors,
   PERSISTENCE_SCHEMA_VERSION,
+  SESSION_ENTRIES_SEQ_INDEX,
   tenantScopedUniqueKey,
 } from "../persistence-schema.js";
 
@@ -71,28 +72,59 @@ void describe("persistence schema model", () => {
     const shape = {
       tables: model.tables.map((table) => ({
         name: table.name,
-        columns: table.columns.map((column) => ({
-          name: column.name,
-          type: column.type === "integer" || column.type === "boolean" ? "INTEGER" : column.type === "number" ? "REAL" : "TEXT",
-          nullable: column.nullable === true,
-          defaultValue: column.defaultValue,
-        })),
+        // Plan 230 Task 4: `seq` and its index are PostgreSQL-only.
+        columns: table.columns
+          .filter((column) => column.dialects === undefined || column.dialects.includes("sqlite"))
+          .map((column) => ({
+            name: column.name,
+            type:
+              column.type === "integer" || column.type === "bigint" || column.type === "boolean"
+                ? "INTEGER"
+                : column.type === "number"
+                  ? "REAL"
+                  : "TEXT",
+            nullable: column.nullable === true,
+            defaultValue: column.defaultValue,
+          })),
         primaryKey: table.primaryKey,
         uniqueKeys: table.uniqueKeys ?? [],
         foreignKeys: table.foreignKeys ?? [],
       })),
-      indexes: model.indexes.map((index) => ({
-        name: index.name,
-        table: index.table,
-        columns: index.columns,
-        unique: index.unique === true,
-      })),
+      indexes: model.indexes
+        .filter((index) => index.dialects === undefined || index.dialects.includes("sqlite"))
+        .map((index) => ({
+          name: index.name,
+          table: index.table,
+          columns: index.columns,
+          unique: index.unique === true,
+        })),
     };
     assert.doesNotThrow(() => assertPersistenceSchemaShape(shape, "sqlite", model));
+    // The same shape lacks PostgreSQL's `seq`, so it is not a PostgreSQL schema.
+    assert.throws(() => assertPersistenceSchemaShape(shape, "postgres", model), /prism_\w+ has unexpected columns|incompatible type/);
     const drifted = structuredClone(shape);
     drifted.tables.find((table) => table.name === "prism_usage")!.columns.find((column) => column.name === "scope")!.defaultValue =
       "'turn'";
     assert.throws(() => assertPersistenceSchemaShape(drifted, "sqlite", model), /incompatible default/);
+  });
+
+  it("session_entry_seq_is_postgres_only: migration 013 and the seq index apply to PostgreSQL alone", () => {
+    const model = createPersistenceSchemaModel();
+    const entries = model.tables.find((table) => table.name === "prism_session_entries");
+    assert.deepEqual(
+      entries?.columns.find((column) => column.name === "seq"),
+      { name: "seq", type: "bigint", dialects: ["postgres"] },
+    );
+    assert.deepEqual(model.indexes.find((index) => index.name === SESSION_ENTRIES_SEQ_INDEX)?.dialects, ["postgres"]);
+    const step = createPersistenceMigrationContract().steps.at(-1);
+    assert.equal(step?.name, "013_session_entry_seq");
+    assert.equal(step?.version, PERSISTENCE_SCHEMA_VERSION);
+    const withoutSeq = model.indexes.filter((index) => index.name !== SESSION_ENTRIES_SEQ_INDEX).map((index) => index.name);
+    const tables = model.tables.map((table) => table.name);
+    // A SQLite adapter (no dialect named) needs no seq index; a PostgreSQL adapter does.
+    assert.doesNotThrow(() => assertAdapterSchemaMatchesModel(tables, withoutSeq, model));
+    assert.doesNotThrow(() => assertAdapterSchemaMatchesModel(tables, withoutSeq, model, "sqlite"));
+    assert.throws(() => assertAdapterSchemaMatchesModel(tables, withoutSeq, model, "postgres"), /prism_session_entries_session_seq_idx/);
   });
 
   it("adapter schema matcher requires canonical tables and indexes", () => {

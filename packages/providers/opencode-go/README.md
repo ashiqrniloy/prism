@@ -29,6 +29,7 @@ The bare definition uses the schema defaults, so `packages: [opencodeGo]` is the
 | --- | --- | --- | --- |
 | `apiKey` | `env:`/`keyring:` ref | `env:OPENCODE_GO_API_KEY` | Resolved through the credentials slot on every request. A literal key is rejected (`secret_literal`). |
 | `baseUrl` | string | `https://opencode.ai/zen/go/v1` | Official base. |
+| `transport` | object | transport defaults | Wire ceilings the host sets; a provider response never raises them. `maxEventBytes` (SSE event, default 256 KiB), `maxBufferBytes` (SSE buffer, default 512 KiB), `maxResponseBodyBytes` (an error body, default 64 KiB). |
 | `models` | `ModelConfig[]` | — | Static catalog. When absent, `models()` asks the vendor's `/models` endpoint. |
 
 Set config through the code instance (`opencodeGo({ apiKey: "env:OPENCODE_GO_API_KEY" })`) or through `AgentConfig.packageConfig`

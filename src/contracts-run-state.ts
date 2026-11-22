@@ -11,6 +11,7 @@ import type {
   RunLimitBreach,
   SessionEntry,
   SessionForkOptions,
+  SessionLimitsStatus,
   SubscribeOptions,
   ToolCallContent,
   Usage,
@@ -107,39 +108,42 @@ export interface NestedRunRef {
   readonly runId: string;
   readonly sessionId?: string;
   readonly toolCallId: string;
-  /** Redacted delegation path (child ids, root first). */
+  /** The hosting tool: its `resumeNested` settles the call on resume. */
+  readonly toolName: string;
+  /** This level's attribution: the hosting tool call id, then the child (session id, else run id). */
   readonly path: readonly string[];
   readonly approvals: readonly NestedRunApproval[];
-  /** Decisions persisted by a partial batch, keyed by root-visible approval id. */
-  readonly decisions?: Readonly<Record<string, Decision>>;
 }
 
-/** Outcome of resuming a nested run through the host-supplied hook. */
-/** Reference to an agent run as a nested child identifies it (plan 168 Task 5: kept for the nested-run path). */
+/** Reference to an agent run as a nested child identifies it. */
 export interface AgentRunRef {
   readonly runId: string;
   readonly sessionId?: string;
 }
 
+/** Outcome of resuming a nested run through the hosting tool's `resumeNested`. */
 export type NestedRunOutcome =
   | { readonly status: "suspended"; readonly pendingDecisions: readonly PendingDecision[] }
   | { readonly status: "completed"; readonly value?: JsonValue }
   | { readonly status: "failed"; readonly code: string; readonly message: string };
 
 /**
- * Host hook that resumes a nested run (supervisor child) with child-visible decisions.
- * Used both when a nested suspension first surfaces (sticky auto-apply) and when root
- * decisions route back to the child on resume.
+ * `ToolDefinition.resumeNested` (plan 232 Task 3): resume a child run with child-visible decisions.
+ * The kernel calls it when a parent `session.resume` routes decisions to the child, and when a sticky
+ * `allow_for_run` / `reject_for_run` already covers every ask of a newly surfaced nested suspension.
+ * `context` is the hosting call's tool context (session view, principal, signal).
  */
 export type ResumeNestedRun = (
   nested: { readonly ref: AgentRunRef; readonly toolCallId: string; readonly path: readonly string[] },
   decisions: readonly Decision[],
+  context: import("./contracts-protocol.js").ToolExecutionContext,
 ) => Promise<NestedRunOutcome>;
 
 /**
- * Thrown by a delegated-run host (e.g. the supervisor) when a nested run suspends on
- * pending decisions inside a tool execution. Core converts it into a root suspension
- * with attributed, root-visible approval ids; the dispatching wrapper attaches `toolCall`.
+ * Thrown by a tool's `execute` when a child run it started suspends on pending decisions. The kernel
+ * stages it like a gated ask: the round's other calls finish, then the run suspends with the child's
+ * decisions under root-visible approval ids and an attribution path naming the call and the child.
+ * The tool must define `resumeNested`, else the call fails closed.
  */
 export class AgentDelegationSuspendedError extends Error {
   readonly code = "ERR_PRISM_DELEGATION_SUSPENDED";
@@ -147,8 +151,6 @@ export class AgentDelegationSuspendedError extends Error {
   constructor(
     readonly ref: AgentRunRef,
     readonly pendingDecisions: readonly PendingDecision[],
-    /** Redacted delegation path (child ids) used when decisions carry no attribution. */
-    readonly path?: readonly string[],
   ) {
     super("Delegated run suspended");
     this.name = "AgentDelegationSuspendedError";
@@ -173,18 +175,23 @@ export class AgentDecisionError extends Error {
   }
 }
 
-export const DEFAULT_MAX_PENDING_DECISIONS = 32;
+/** Shipped `ceilings.pendingDecisions`: pending decisions per run, and the size of one decision batch. */
 export const HARD_MAX_PENDING_DECISIONS = 128;
+/** Shipped `ceilings.stickyDecisions`: sticky decisions one run may hold. */
 export const DEFAULT_MAX_STICKY_DECISIONS = 64;
-export const HARD_MAX_STICKY_DECISIONS = 256;
 export const MAX_DECISION_REASON_BYTES = 2 * 1024;
 export const HARD_MAX_DECISION_REASON_BYTES = 8 * 1024;
 export const MAX_ELICITATION_BYTES = 16 * 1024;
 export const HARD_MAX_ELICITATION_BYTES = 64 * 1024;
 export const MAX_ACTION_CONSTRAINTS = 32;
 export const HARD_MAX_ACTION_CONSTRAINTS = 64;
-/** Maximum delegation attribution depth for surfaced nested pending decisions. */
+/** Maximum delegation attribution depth for surfaced nested pending decisions (two entries per level). */
 export const MAX_ATTRIBUTION_DEPTH = 8;
+/**
+ * How many times one nested suspension is resumed in a row by sticky decisions alone before it is
+ * surfaced to the host, so a child that keeps re-asking cannot spin the parent.
+ */
+export const MAX_NESTED_STICKY_RESUMES = 4;
 export const MAX_ACTION_CONSTRAINT_BYTES = 4 * 1024;
 export const HARD_MAX_ACTION_CONSTRAINT_BYTES = 16 * 1024;
 
@@ -211,15 +218,35 @@ export class AgentRunStateError extends Error {
   }
 }
 
-/** Durable-loop contract violations: hook-less custom strategy on a durable run, invalid snapshot, or revision drift. */
+/**
+ * Durable-loop contract violations: hook-less custom strategy on a durable run, invalid snapshot, revision
+ * drift, or a second concurrent run on a strategy that keeps its state on the strategy object.
+ */
 export class AgentLoopStateError extends Error {
   constructor(
-    readonly code: "ERR_PRISM_LOOP_NOT_DURABLE" | "ERR_PRISM_LOOP_SNAPSHOT" | "ERR_PRISM_LOOP_REVISION",
+    readonly code: "ERR_PRISM_LOOP_NOT_DURABLE" | "ERR_PRISM_LOOP_SNAPSHOT" | "ERR_PRISM_LOOP_REVISION" | "ERR_PRISM_LOOP_SHARED_STATE",
     message: string,
     options?: { readonly cause?: unknown },
   ) {
     super(message, options);
     this.name = "AgentLoopStateError";
+  }
+}
+
+export const SESSION_NOTHING_TO_CONTINUE_CODE = "nothing_to_continue" as const;
+
+/**
+ * Thrown by `session.continue()` / `continueStream()` when the branch owes no model turn: it is empty,
+ * or its tail is a completed assistant message. A pending suspension rejects with `AgentDecisionError`.
+ */
+export class SessionContinueError extends Error {
+  readonly code = SESSION_NOTHING_TO_CONTINUE_CODE;
+  constructor(
+    readonly sessionId: string,
+    message = `Session "${sessionId}" has nothing to continue: its branch does not owe a model turn`,
+  ) {
+    super(message);
+    this.name = "SessionContinueError";
   }
 }
 
@@ -282,16 +309,32 @@ export interface RunResult {
   readonly pending?: readonly PendingDecision[];
   /** Present for durable suspended/terminal runs. Payload is redacted and bounded. */
   readonly runState?: AgentRunState;
+  /**
+   * The final reply parsed as JSON and validated against `providerOptions.structuredOutput.schema`.
+   * Present only on a succeeded run that asked for structured output and whose reply passed.
+   */
+  readonly output?: unknown;
+  /** Why the final reply did not yield {@link RunResult.output}. Never present with `output`. */
+  readonly outputError?: RunOutputError;
 }
 
-/** Mid-run steer queue: default pending message count (fail closed at this cap). */
+/** Maximum entries in {@link RunOutputError.errors}. */
+export const MAX_RUN_OUTPUT_ERRORS = 8;
+
+/**
+ * A structured-output reply that did not parse (`invalid_json`) or did not satisfy the schema
+ * (`schema_mismatch`). Entries name a JSON path and the expected shape, never reply content.
+ */
+export interface RunOutputError {
+  readonly code: "invalid_json" | "schema_mismatch";
+  /** At most {@link MAX_RUN_OUTPUT_ERRORS} entries. */
+  readonly errors: readonly { readonly path: string; readonly message: string }[];
+}
+
+/** Shipped `ceilings.pendingSteers`: queued steer messages per session (fail closed at this cap). */
 export const DEFAULT_MAX_PENDING_STEERS = 8;
-/** Absolute pending steer count ceiling if hosts later expose overrides. */
-export const HARD_MAX_PENDING_STEERS = 32;
-/** Mid-run steer queue: default total UTF-8 byte budget across pending messages. */
+/** Shipped `ceilings.pendingSteerBytes`: total UTF-8 bytes of queued steer messages per session. */
 export const DEFAULT_MAX_PENDING_STEER_BYTES = 64 * 1024;
-/** Absolute pending steer byte ceiling if hosts later expose overrides. */
-export const HARD_MAX_PENDING_STEER_BYTES = 256 * 1024;
 
 export interface SteerOptions {
   /**
@@ -351,6 +394,18 @@ export interface Session {
    * (plan 168 Task 5 kept the guarantee when the checkpoint resume stream was retired).
    */
   resume(decisions: readonly Decision[], options?: RunOptions & SubscribeOptions): AsyncIterable<AgentEvent>;
+  /**
+   * Start a run with no new input on a branch that stopped partway: a crash, a provider failure, a
+   * limit breach, or an abort. The branch must owe a model turn (its tail is a user message, tool
+   * results, or an assistant message with unanswered calls), else it rejects with
+   * {@link SessionContinueError}; a pending suspension rejects with `AgentDecisionError` (use `resume`).
+   * Each unanswered call at the tip first gets a persisted result: its stored effect result, an
+   * outcome-unknown result for an effect that was dispatched, or `tool_call_interrupted`. No tool is
+   * re-dispatched. The run is a new run id with fresh counters and emits `run.started { continued: true }`.
+   */
+  continue(options?: RunOptions): Promise<RunResult>;
+  /** The streaming form of {@link Session.continue}, as `stream` is of `run`. */
+  continueStream(options?: RunOptions & SubscribeOptions): AsyncIterable<AgentEvent>;
   /** Kernel member: re-point this session at another entry of its own branch tree (Prism Code branching). */
   checkout(leafId?: string): Promise<void>;
   /**
@@ -364,6 +419,11 @@ export interface Session {
    * included, and resolve that session opened. The original is untouched.
    */
   fork(options?: SessionForkOptions): Promise<Session>;
+  /**
+   * Current session-wide limit counters and remaining budget (`SessionOptions.limits` / `AgentConfig.sessionLimits`),
+   * restored from the store across restarts.
+   */
+  limits(): Promise<SessionLimitsStatus>;
   /** Plan 137 Task 3: loaded skill names currently active in this session. */
   getLoadedSkillNames?(): readonly string[];
   /** Plan 015 / Plan 137 Task 3: re-add loaded skill names to session. */

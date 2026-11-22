@@ -211,7 +211,7 @@ describe("@arnilo/prism-tools/work — XLSX Parser & Container Gating", () => {
       (err: unknown) => {
         assert(err instanceof SheetsValidationError);
         assert.equal(err.code, "ERR_PRISM_SHEETS_VALIDATION");
-        assert.match(err.message, /must be an integer/);
+        assert.match(err.message, /must be a positive integer/);
         return true;
       },
     );

@@ -5,20 +5,6 @@ import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { attachMcpToolBridge, connectMcpTools, listAllMcpTools, mapMcpToolsToDefinitions } from "../bridge.js";
-import {
-  HARD_CALL_TIMEOUT_MS,
-  HARD_LIST_CACHE_TTL_MS,
-  HARD_MAX_CURSOR_BYTES,
-  HARD_MAX_JSON_DEPTH,
-  HARD_MAX_JSON_PROPERTIES,
-  HARD_MAX_LIST_PAGES,
-  HARD_MAX_RESULT_BYTES,
-  HARD_MAX_TOOL_DESCRIPTION_BYTES,
-  HARD_MAX_TOOL_NAME_BYTES,
-  HARD_MAX_TOOL_SCHEMA_BYTES,
-  HARD_MAX_TOOLS,
-  HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES,
-} from "../limits.js";
 import { createMcpTransport } from "../transport.js";
 import { McpBridgeClosedError, McpBridgeError, McpToolNameCollisionError } from "../types.js";
 
@@ -602,6 +588,8 @@ describe("listAllMcpTools", () => {
       "maxJsonProperties",
       "maxResultBytes",
       "callTimeoutMs",
+      "maxCallTimeMs",
+      "connectTimeoutMs",
       "listCacheTtlMs",
     ];
     for (const name of names) {
@@ -611,24 +599,26 @@ describe("listAllMcpTools", () => {
     }
   });
 
-  it("accepts each hard boundary and rejects cap plus one", async () => {
-    const boundaries = {
-      maxListPages: HARD_MAX_LIST_PAGES,
-      maxTools: HARD_MAX_TOOLS,
-      maxCursorBytes: HARD_MAX_CURSOR_BYTES,
-      maxToolNameBytes: HARD_MAX_TOOL_NAME_BYTES,
-      maxToolDescriptionBytes: HARD_MAX_TOOL_DESCRIPTION_BYTES,
-      maxToolSchemaBytes: HARD_MAX_TOOL_SCHEMA_BYTES,
-      maxTotalToolSchemaBytes: HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES,
-      maxJsonDepth: HARD_MAX_JSON_DEPTH,
-      maxJsonProperties: HARD_MAX_JSON_PROPERTIES,
-      maxResultBytes: HARD_MAX_RESULT_BYTES,
-      callTimeoutMs: HARD_CALL_TIMEOUT_MS,
-      listCacheTtlMs: HARD_LIST_CACHE_TTL_MS,
-    } as const;
-    for (const [name, cap] of Object.entries(boundaries)) {
-      await assert.doesNotReject(listAllMcpTools(fakeListClient([{ tools: [] }]), undefined, { [name]: cap }));
-      await assert.rejects(listAllMcpTools(fakeListClient([{ tools: [] }]), undefined, { [name]: cap + 1 }));
+  it("accepts any positive host value above the old caps", async () => {
+    // Plan 239 Task 5: the host's value is the cap; server data is bounded by it.
+    const names = [
+      "maxListPages",
+      "maxTools",
+      "maxCursorBytes",
+      "maxToolNameBytes",
+      "maxToolDescriptionBytes",
+      "maxToolSchemaBytes",
+      "maxTotalToolSchemaBytes",
+      "maxJsonDepth",
+      "maxJsonProperties",
+      "maxResultBytes",
+      "callTimeoutMs",
+      "maxCallTimeMs",
+      "connectTimeoutMs",
+      "listCacheTtlMs",
+    ] as const;
+    for (const name of names) {
+      await assert.doesNotReject(listAllMcpTools(fakeListClient([{ tools: [] }]), undefined, { [name]: 100_000_000 }));
     }
   });
 

@@ -22,6 +22,7 @@ import { createId } from "./ids.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 import type { RunLimitTracker } from "./run-limits.js";
+import { compileToolSchema } from "./packages/schema.js";
 import { assertTrusted, type TrustPolicy } from "./security.js";
 import { deriveToolEffectKey, ToolEffectError, toolEffectArgumentsHash } from "./tool-effects.js";
 
@@ -36,6 +37,8 @@ export type ToolValidator = (
   args: JsonObject,
   context: ToolExecutionContext,
 ) => undefined | string | ErrorInfo | Promise<undefined | string | ErrorInfo>;
+
+export type ToolArgumentValidation = "schema" | "off";
 
 export interface ToolArgumentValidationError {
   readonly path?: string;
@@ -70,6 +73,21 @@ export function createToolParameterValidator(validator: ToolArgumentValidator, o
   };
 }
 
+const MAX_ARGUMENT_ERROR_CHARS = 1024;
+
+/**
+ * The built-in argument check: `tool.parameters` in tolerant mode (see `compileToolSchema`). Returns
+ * the failing paths with what each expected, never argument values, or `undefined` when the call may
+ * run. A tool with no `parameters`, or with `validateArguments: false`, accepts any JSON object.
+ */
+export function checkToolArguments(tool: ToolDefinition, args: JsonObject): string | undefined {
+  if (!tool.parameters || tool.validateArguments === false) return undefined;
+  const errors = compileToolSchema(tool.parameters).validate(args);
+  if (errors.length === 0) return undefined;
+  const message = errors.map((error) => `${error.path}: ${error.message}`).join("; ");
+  return message.length > MAX_ARGUMENT_ERROR_CHARS ? `${message.slice(0, MAX_ARGUMENT_ERROR_CHARS - 1)}…` : message;
+}
+
 function formatToolArgumentValidationErrors(toolName: string, errors?: readonly ToolArgumentValidationError[]): string {
   if (!errors?.length) return `Tool arguments failed validation: ${toolName}`;
   return errors.map((error) => (error.path ? `${error.path}: ${error.message}` : error.message)).join("; ");
@@ -81,6 +99,11 @@ export interface DispatchToolCallOptions {
   readonly context: ToolExecutionContext;
   readonly filter?: ToolFilterInput;
   readonly validate?: ToolValidator;
+  /**
+   * Built-in argument check against `tool.parameters` (default `"schema"`). It runs before `validate`;
+   * `"off"` skips it. A tool can opt out alone with `ToolDefinition.validateArguments: false`.
+   */
+  readonly validation?: ToolArgumentValidation;
   /** Adapter-specific policy check immediately before the tool side effect. */
   readonly beforeExecute?: (call: ToolCallContent, tool: ToolDefinition, context: ToolExecutionContext) => void | Promise<void>;
   readonly emit?: (event: AgentEvent) => void | Promise<void>;
@@ -138,6 +161,12 @@ function assertToolEffects(tool: ToolDefinition): void {
   }
 }
 
+function assertToolTimeout(tool: ToolDefinition): void {
+  const timeout = tool.timeoutMs;
+  if (timeout === undefined) return;
+  if (!Number.isSafeInteger(timeout) || timeout < 1) throw new TypeError(`Tool ${tool.name} timeoutMs must be a positive safe integer`);
+}
+
 /**
  * Capabilities reported to `tool.call` hooks. A tool with no `effects` resolves to all kinds, so a
  * missing annotation never widens what an effects-based policy allows.
@@ -153,6 +182,7 @@ export function createToolRegistry(tools: readonly ToolDefinition[] = [], option
     register(tool) {
       assertCanRegister(byName, tool.name, "tool", tool.name, options.duplicate);
       assertToolEffects(tool);
+      assertToolTimeout(tool);
       byName.set(tool.name, tool);
     },
     get(name) {
@@ -223,6 +253,28 @@ export function clampTurnToolNames(
  * Per-run allow-list. Omitted grant → unchanged list. Checkpointed grant cannot widen.
  * Fresh unknown names fail closed; resume drops names the current registry no longer has.
  */
+/** Default number of calls of one round that run at once (`AgentConfig.tools.concurrency`). */
+const DEFAULT_TOOL_CONCURRENCY = 4;
+/** Shipped `ceilings.toolConcurrency`: the most calls of one round that run at once. */
+export const MAX_TOOL_CONCURRENCY = 16;
+
+/**
+ * Resolve a round's concurrency: the agent value (default 4), narrowed by the run value. Each is at most
+ * `max`, the agent's `ceilings.toolConcurrency`.
+ */
+export function resolveToolConcurrency(agent: number | undefined, run: number | undefined, max = MAX_TOOL_CONCURRENCY): number {
+  for (const [label, value] of [
+    ["tools.concurrency", agent],
+    ["RunOptions.tools.concurrency", run],
+  ] as const) {
+    if (value !== undefined && (!Number.isInteger(value) || value < 1 || value > max)) {
+      throw new TypeError(`${label} must be an integer from 1 to ${max}`);
+    }
+  }
+  const base = agent ?? DEFAULT_TOOL_CONCURRENCY;
+  return run === undefined ? base : Math.min(base, run);
+}
+
 export function selectRunTools(
   listed: readonly ToolDefinition[],
   requested: readonly string[] | undefined,
@@ -246,7 +298,108 @@ function toolExecutionMetadata(startedAt: string, status: ToolCallStatus): ToolE
   return { durationMs: Math.max(0, Date.now() - Date.parse(startedAt)), status };
 }
 
+/** `tool_aborted` / `tool_timeout`: how a call ends when the race in `executeInterruptibly` is lost. */
+class ToolInterruptedError extends Error {
+  constructor(
+    readonly code: "tool_aborted" | "tool_timeout",
+    message: string,
+  ) {
+    super(message);
+    this.name = "ToolInterruptedError";
+  }
+}
+
+/**
+ * Per-call signal and lifetime. The signal is the run signal combined with a controller only dispatch
+ * can abort, so a tool cannot extend its own deadline. After `close()` a detached tool's `progress`
+ * calls are dropped, so a late tool emits nothing.
+ */
+class ToolCallScope {
+  private readonly controller = new AbortController();
+  readonly signal: AbortSignal;
+  closed = false;
+
+  constructor(parent: AbortSignal | undefined) {
+    this.signal = parent ? AbortSignal.any([parent, this.controller.signal]) : this.controller.signal;
+  }
+
+  abort(): void {
+    this.controller.abort();
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+}
+
+function effectiveToolTimeoutMs(tool: ToolDefinition, options: DispatchToolCallOptions): number | undefined {
+  const own = tool.timeoutMs;
+  const run = options.limitTracker?.limits.maxToolTimeMs ?? undefined;
+  if (own === undefined) return run;
+  return run === undefined ? own : Math.min(own, run);
+}
+
+/**
+ * Run `execute` and settle with the first of: its outcome, the call's signal aborting, or the timeout.
+ * The tool's promise is detached when it loses: a late result is dropped and a late rejection swallowed.
+ * No timer is armed without a timeout.
+ */
+function executeInterruptibly(
+  tool: ToolDefinition,
+  call: ToolCallContent,
+  context: ToolExecutionContext,
+  scope: ToolCallScope,
+  timeoutMs: number | undefined,
+): Promise<ToolResult> {
+  const signal = scope.signal;
+  if (signal.aborted) return Promise.reject(new ToolInterruptedError("tool_aborted", "Tool call aborted"));
+  return new Promise<ToolResult>((resolve, reject) => {
+    let running: Promise<ToolResult> | ToolResult;
+    try {
+      running = tool.execute(call.arguments, context);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    // A result already in hand (a synchronous tool) is the call's outcome, even if the tool aborted the run on its way out.
+    if (typeof (running as { then?: unknown } | null)?.then !== "function") {
+      resolve(running as ToolResult);
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onAbort = (): void => finish(() => reject(new ToolInterruptedError("tool_aborted", "Tool call aborted")));
+    const finish = (settle: () => void): void => {
+      if (timer !== undefined) clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      settle();
+    };
+    // Handlers go on first: a promise that loses the race must still have its late rejection handled.
+    (running as Promise<ToolResult>).then(
+      (value) => finish(() => resolve(value)),
+      (error) => finish(() => reject(error)),
+    );
+    if (signal.aborted) return onAbort();
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (timeoutMs !== undefined) {
+      timer = setTimeout(() => {
+        // Settle first, then abort, so a cooperative tool's own abort handling cannot turn this into `tool_aborted`.
+        finish(() => reject(new ToolInterruptedError("tool_timeout", `Tool call timed out after ${timeoutMs} ms`)));
+        scope.abort();
+      }, timeoutMs);
+    }
+  });
+}
+
 export async function dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult> {
+  const scope = new ToolCallScope(options.context.signal);
+  try {
+    return await dispatchToolCallInScope(options, scope);
+  } finally {
+    scope.close();
+  }
+}
+
+async function dispatchToolCallInScope(options: DispatchToolCallOptions, scope: ToolCallScope): Promise<ToolResult> {
   const secrets = options.secrets ?? [];
   const startedAt = new Date().toISOString();
   options.limitTracker?.charge("maxToolCalls");
@@ -259,8 +412,10 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   let context: ToolExecutionContext = {
     ...baseContext,
     toolCallId: mediatedCall.id,
+    signal: scope.signal,
     principal: options.principal ?? options.context.principal,
     progress: async (progress, metadata) => {
+      if (scope.closed) return;
       await options.context.progress?.(progress, metadata);
       await options.emit?.({
         type: "tool.progress",
@@ -290,6 +445,11 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     return blocked(mediatedCall, context, "permission_denied", errorToErrorInfo(error, secrets), options, startedAt);
   }
 
+  if (options.validation !== "off") {
+    const invalid = checkToolArguments(tool!, mediatedCall.arguments);
+    if (invalid)
+      return blocked(mediatedCall, context, "invalid_arguments", { code: "invalid_arguments", message: invalid }, options, startedAt);
+  }
   const validation = await options.validate?.(tool!, mediatedCall.arguments, context);
   if (validation) return blocked(mediatedCall, context, "validation_failed", toErrorInfo(validation, secrets), options, startedAt);
 
@@ -317,13 +477,15 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   try {
     await options.emit?.({ type: "tool.started", sessionId: context.sessionId, runId: context.runId, call: mediatedCall });
     await appendToolCallRecord(options, "started", mediatedCall, startedAt, {});
+    // An already-aborted call never reaches the effect store's `dispatched` mark, so it stays retryable.
+    if (scope.signal.aborted) throw new ToolInterruptedError("tool_aborted", "Tool call aborted");
     if (effect) {
       dispatchAttempted = true;
       const record = await effect.store.markDispatched(transition(effect));
       effect.expectedVersion = record.version;
       effect.dispatched = true;
     }
-    const raw = await tool!.execute(mediatedCall.arguments, context);
+    const raw = await executeInterruptibly(tool!, mediatedCall, context, scope, effectiveToolTimeoutMs(tool!, options));
     const mediatedResult = raw;
     if (effect && mediatedResult.error) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
     const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
@@ -361,8 +523,11 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
       throw error;
     }
     if (effect && (effect.dispatched || dispatchAttempted)) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
-    await failBeforeEffect(effect, "failed_terminal");
-    const info = errorToErrorInfo(error, secrets);
+    await failBeforeEffect(effect, error instanceof ToolInterruptedError ? "failed_retryable" : "failed_terminal");
+    const info: ErrorInfo =
+      error instanceof ToolInterruptedError
+        ? { name: error.name, code: error.code, message: error.message }
+        : errorToErrorInfo(error, secrets);
     const result = { toolCallId: mediatedCall.id, name: mediatedCall.name, error: info };
     const finishedAt = new Date().toISOString();
     const metadata = toolExecutionMetadata(startedAt, "error");
@@ -576,7 +741,14 @@ async function checkCall(call: ToolCallContent, options: DispatchToolCallOptions
     return blocked(call, context, "tool_denied", { message: `Tool denied: ${call.name}` }, options, startedAt);
   if (call.argumentsError) return blocked(call, context, "invalid_arguments", call.argumentsError, options, startedAt);
   if (!isJsonObject(call.arguments))
-    return blocked(call, context, "invalid_arguments", { message: "Tool arguments must be a JSON object" }, options, startedAt);
+    return blocked(
+      call,
+      context,
+      "invalid_arguments",
+      { code: "invalid_arguments", message: "Tool arguments must be a JSON object" },
+      options,
+      startedAt,
+    );
   return undefined;
 }
 

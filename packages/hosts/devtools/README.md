@@ -82,7 +82,7 @@ Unknown sessions answer 404 with `ERR_PRISM_DEVTOOLS_NOT_FOUND`. A malformed que
 
 - Replay pages are at most 500 entries; the page shows 100 at a time.
 - The live feed keeps the newest 500 rows on screen. Each subscription uses the agent's bounded queue
-  (`SubscribeOptions.maxQueuedEvents`, default 1024).
+  (`SubscribeOptions.maxQueuedEvents`, default 4096; `overflow` default `coalesce`).
 - The browser module is transpiled once per process and cached. The package ships source, so there is no
   build step and no `dist/`.
 

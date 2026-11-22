@@ -44,6 +44,7 @@ A routed provider is configured with `createRoutedProvider(options)`:
 - `apiKey`: a `SecretSource` (`() => Promise<string | undefined>`; build it with `refSource()` from an `env:`/`keyring:` ref). A literal string does not type-check. `resolveApiKey(request)` resolves per request instead.
 - `routes`: Record of route definitions keyed by route name (`RoutedProviderRoute`). Each route declares `path`, `format` (`"openai-chat" | "anthropic-messages" | "openai-responses"`), `auth`, optional `codec` options, `affinity`, and optional `require`.
 - `fetch`: Optional custom or replay `fetch` implementation.
+- `streamLimits`: Optional wire ceilings, `{ maxEventBytes?, maxBufferBytes?, maxResponseBodyBytes? }` (defaults 256 KiB, 512 KiB, 64 KiB). They reach the SSE reader of every codec and the error-body read. The host sets them: a provider package exposes them as a `transport` config key (`transportProperty()` builds its schema, `ProviderTransportConfig` its type), and a provider response never raises them. Every limit and its host path is listed in [limits.md](limits.md).
 
 ## Outputs / response / events
 
@@ -243,8 +244,11 @@ Each route binds a wire protocol codec:
     - `"reasoning_content"`: emitted as OpenAI-compatible `reasoning_content` field on assistant messages.
     - `"reasoning_details"`: replayed as `assistant.reasoning_details` entries, unchanged and in order (the entries
       the stream produced, stored as each thinking block's `data`; a coalesced block's `signature` holds the list).
-    - `"fold"`: folded into `content` as `<thought>...</thought>`.
-    - `"drop"`: omitted from the message payload.
+    - `"fold"`: folded into `content` as plain text parts, with no marker. Opt-in only: the model then reads the
+      reasoning as something the assistant said, including reasoning another provider produced.
+    - `"drop"` (default): omitted from the message payload.
+    `createOpenAICompatibleProvider` takes the same `reasoningReplay` option and forwards it to its route; set
+    `"reasoning_content"` for an endpoint that expects its reasoning back in that field (for example during a tool loop).
   - `cacheControl: "anthropic-blocks"` (Chat wire): stamps `cache_control: {type: "ephemeral"}` (plus `ttl: "1h"`
     when the model declares `cache.longRetention` and the request asks for long retention) at the breakpoints
     resolved by `resolvePromptCachePlan`. Default breakpoints match pi: `system_prompt`, `tools`, `last_message`;
@@ -400,23 +404,57 @@ Prism decision models (such as `@arnilo/prism-ai/typesafe` and `@arnilo/prism-ai
 
 ## Provider failure classes
 
-`classifyProviderFailure(error)` (also stamped by `httpStatusError` and `providerHttpError`) reads the wire evidence only and returns `ErrorInfo.failureClass`: `auth` (401/403), `quota`/`rate_limited` (429, split by body), `context_overflow` (400/413/422 whose bounded body matches `context_length_exceeded`, `maximum context length`, `context window exceeds limit`, or `prompt is too long`), `transient` (5xx and transient network codes), `permanent` (any other 4xx), and `unknown`. The class is advisory: the retry policy still decides from status codes, and only `context_overflow` has kernel behavior — one compaction-and-retry in [loops](loop.md). A route whose overflow body is not distinguishable falls back to the session's estimate-versus-window check, not to a status-only rule.
+`classifyProviderFailure(error)` (also stamped by `httpStatusError` and `providerHttpError`) reads the wire evidence only and returns `ErrorInfo.failureClass`. The default retry policy (`isTransientErrorInfo`) acts on it, so a provider gets correct retries by stamping the class or a status `code`, never by wording its message.
+
+| Evidence | `failureClass` | Retried by default |
+| --- | --- | --- |
+| Status 401 / 403 | `auth` | no |
+| Status 429, body names a usage limit or quota | `quota` | no |
+| Status 429 | `rate_limited` | yes, honoring `Retry-After` up to `maxRetryAfterMs` |
+| Status 400 / 413 / 422, body matches `context_length_exceeded`, `maximum context length`, `context window exceeds limit` or `prompt is too long` | `context_overflow` | no; one compaction-and-retry in [loops](loop.md) |
+| Status ≥ 500 | `transient` | yes |
+| Any other 4xx (409 included) | `permanent` | no |
+| No status, network `code` (`ECONNRESET`, `ECONNREFUSED`, `ECONNABORTED`, `ETIMEDOUT`, `EAI_AGAIN`, `ENETUNREACH`, `ENOTFOUND`, `EPIPE`, `UND_ERR_CONNECT_TIMEOUT`, on the error or its `cause`) | `transient` | yes |
+| No status, stream wire `code` `rate_limit_error` (Anthropic) or `rate_limit_exceeded` (Responses) | `rate_limited` | yes |
+| No status, stream wire `code` `overloaded_error` / `api_error` (Anthropic) or `server_error` (Responses) | `transient` | yes |
+| No status, body names a usage limit | `quota` | no |
+| Anything else | `unknown` (an Anthropic `error` event of another type is `permanent`) | no |
+
+A route whose overflow body is not distinguishable falls back to the session's estimate-versus-window check, not to a status-only rule. `ErrorInfo.code` keeps a string only when it is a short token (`/^[A-Za-z0-9_.:-]{1,64}$/`); provider text in any other shape is dropped, so it cannot reach events unredacted.
+
+`parseRetryAfterMs(source, bodyRetryAfter?, now?)` is the one backpressure parser: it reads `retry-after-ms`, then `Retry-After` (delay-seconds or an HTTP date), then a body value in seconds the caller passes (for routes that put the hint in the error body), from `Headers`, a plain header record, or one raw header value. It returns whole milliseconds, or `undefined` for a missing, malformed or negative value. Put the result on the error as `retryAfterMs` (`providerHttpError`'s decision does this).
+
+## Request timeouts
+
+`fetchWithStreamTimeouts(input, init, { fetch, timeouts })` is the `fetch` for every provider turn request. It
+arms a connect timer until the response headers arrive and, while the body is being read, an idle timer that every
+chunk re-arms (one timer per request, refreshed, so a healthy stream allocates nothing per chunk). Either one aborts
+the request and fails it with `code: "ETIMEDOUT"`, `failureClass: "transient"`, and a message that names the timeout
+and its duration and carries no response body. It wraps the response body stream, so SSE, NDJSON and JSON readers
+all get the idle timer, and it races the fetch so a timeout wins even over a transport that ignores its signal.
+`init.signal` (the run's abort) still wins and surfaces as an abort. Defaults are 60,000 ms connect and 300,000 ms
+idle; `timeouts` is `request.options?.timeouts`, `null` disables one, and a non-positive value fails before the fetch.
+
+`createRoutedProvider`, the SystemOne client (`postSystemOne`) and the Ollama Cloud native route call it. **A
+provider that sends its own turn request must call it too, passing `request.options?.timeouts`**; there is no
+per-provider timeout code. `providerConformance` (recorded mode) and `systemOneConformance` check this with a stalled
+connect and a stalled body. Catalog, quota, OAuth and spend-log fetches are not turn requests and do not use it.
 
 ## Shared surface inventory
 
 | Group | Exports |
 | --- | --- |
-| Transport | `readSseEvents`, `readSseData`, `readBoundedResponseText`, `readBoundedResponseJson`, `httpStatusError`, `ProviderTransportError`, `classifyProviderFailure`, `parseRetryAfterMs`, `parseJsonObjectArguments` |
+| Transport | `fetchWithStreamTimeouts`, `readSseEvents`, `readSseData`, `readBoundedResponseText`, `readBoundedResponseJson`, `httpStatusError`, `ProviderTransportError`, `classifyProviderFailure`, `parseRetryAfterMs`, `parseJsonObjectArguments` |
 | Routed provider | `createRoutedProvider`, `assertNotAborted`, `resolveProviderApiKey`, `createOpenAICompatibleProvider` |
 | Codecs | `openAIChatBody`, `buildOpenAIChatBody`, `openAIChatEvents`, `serializeOpenAIChatMessage`, `serializeOpenAITool`, `mapOpenAIChatUsage`, `anthropicMessagesBody`, `anthropicMessagesEvents` |
 | Wire replay | `replayFetch`, `assertRecordedStreamConforms` |
 | System One | `createSystemOneDecisionProvider`, `systemOneProviderPackage`, `systemOneConformance`, `warnIfPlaintextRemote`, `askSystemOneDecisions`, `normalizeSystemOnePath`, `DEFAULT_SYSTEMONE_PATH`, `createSystemOneClient`, System One schema and options |
 | Usage | `normalizeUsage`, `mapOpenAIChatUsage`, `mapSystemOneUsage` |
-| Retry | `providerHttpError`, `parseErrorBody`, `readRetryAfterMs`, `RETRYABLE_STATUSES` |
+| Retry | `providerHttpError`, `parseErrorBody`, `RETRYABLE_STATUSES` (and `parseRetryAfterMs`, under Transport) |
 | Thinking | `normalizeThinkingLevel`, `snapThinkingLevel`, `applyThinkingLevel`, `applyThinkingLevelForModel`, `THINKING_LEVELS`, `resolvePreserveThinking`, `preserveThinking`, `resolveReasoningEffort`, `reasoningEffort`, `resolveThinkingObject`, `thinkingObject`, `resolveReasoningObject`, `reasoningObject`, `stripOwnedCompat`, `DEFAULT_OWNED_COMPAT_KEYS` |
 | Cache | `anthropicCacheEnabled`, `applyCacheControl`, `resolvePromptCachePlan`, `sanitizeCacheKey`, `systemCacheControlField`, `cacheUsageReport`, `cacheHitRate`, `cacheSavings` |
 | Request policy | `applyDefaultProviderRequestOptions`, `mergeProviderRequestOptions`, `ProviderRequirementError` |
-| Structured output | `validateStructuredOutputOptions`, `assertStructuredOutputRequestSupported`, `StructuredOutputError` |
+| Structured output | `validateStructuredOutputOptions`, `assertStructuredOutputRequestSupported`, `parseStructuredOutput` (the kernel's parse-and-validate step behind `RunResult.output`), `resolveStructuredOutputRun` (a session run's `mode` resolution), `structuredOutputInstruction` (the prompted block), `structuredOutputRepairMessage`, `DEFAULT_STRUCTURED_OUTPUT_REPAIRS`, `MAX_STRUCTURED_OUTPUT_REPAIRS`, `StructuredOutputError`. A codec calls `assertStructuredOutputRequestSupported`; a codec whose wire cannot carry a schema throws `unsupported_model` instead of dropping it. See [Structured output](models.md#structured-output). `withoutStructuredOutput` and `artifactStructuredOutputRequest` were removed: they served an artifact-loop mode that never shipped. |
 | Schema, media | `canonicalizeJsonSchema`, `resolveProviderMediaMessages`, `assertProviderMediaCapability`, upload-cache helpers |
 | Package | `providerPackage(name, providers, description?)` |
 | Provider package | `defineProviderPackage`, `providerPackageInstance`, `secretRefProperty`, `baseUrlProperty`, `modelsProperty`, `modelEntrySchema`, `refSource`, `optionalRefSource`, `ProviderPackageDefinitionSpec` |
@@ -445,6 +483,21 @@ Prism decision models (such as `@arnilo/prism-ai/typesafe` and `@arnilo/prism-ai
 - `strictCompletion` is `true` by default: a stream without `[DONE]` and a `finish_reason` yields an `error`, so
   truncated answers fail closed.
 
+## Thinking replay per codec
+
+A stored thinking block is replayed only in a form the route can accept. Stored history is never rewritten; each
+codec decides what reaches the wire.
+
+| Codec | Replayed | Dropped |
+| --- | --- | --- |
+| Anthropic Messages | `redacted_thinking` verbatim; `thinking` with its signature when `preserveThinking` is on | unsigned blocks, and every non-redacted block when `preserveThinking` is off; never sent as `text` |
+| OpenAI Responses | a `reasoning` item whose encrypted payload this provider produced | foreign items, summaries with no payload, thinking outside assistant messages |
+| OpenAI Chat | per `reasoningReplay` (`reasoning_content`, `reasoning_details`, `fold`, `drop`) when `preserveThinking` is on | everything when `preserveThinking` is off or `reasoningReplay: "drop"` |
+
+The Chat default is `drop`, so a route that does not choose a replay mode never sends reasoning as assistant text.
+`fold` writes the reasoning into the assistant `content` as text; choose it only for a single-provider session whose
+model needs its earlier reasoning and takes no `reasoning_content` or `reasoning_details` field.
+
 ## Anthropic Messages codec
 
 The Anthropic Messages codec in `@arnilo/prism/provider-kit` (`src/provider-kit/codecs/anthropic-messages.ts`)
@@ -454,8 +507,11 @@ handles request serialization and SSE event parsing for providers implementing t
 - `anthropicMessagesBody(request, hooks)`: builds the JSON payload for Anthropic `/v1/messages` (or vendor routes).
   - Handles message and content block transformation, tool definitions, and system prompts.
   - Injects `output_config.effort` and generation-aware `thinking` options.
-  - Supports thinking replay: signed thinking blocks replay with their signature, redacted thinking blocks replay
-    verbatim as `type: "redacted_thinking"`, and unsigned thinking replays as text when `preserveThinking: true`.
+  - Thinking replay: a redacted thinking block replays verbatim as `type: "redacted_thinking"`; a signed thinking
+    block replays as `type: "thinking"` with its signature when `preserveThinking` is on. Any other thinking block
+    (unsigned, or `preserveThinking` off) is omitted: it is never sent as `text`, because the route cannot verify it
+    and the model would read another provider's reasoning as its own words. An assistant message left with no
+    content keeps the `{ type: "text", text: "" }` placeholder. Stored history is not changed.
 - `anthropicMessagesEvents(body, options)`: parses the Anthropic SSE event stream into the shared `ProviderEvent` stream.
   - Handles `message_start`, `content_block_start`, `content_block_delta` (`text_delta`, `input_json_delta`, `thinking_delta`, `signature_delta`), `content_block_stop`, `message_delta`, and `message_stop`.
   - Merges wire usage across `message_start` and `message_delta` field-by-field and normalizes inclusive usage via `normalizeUsage`.

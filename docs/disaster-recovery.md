@@ -54,6 +54,21 @@ The drill's legs: (1) seed multi-tenant state through `createPostgresPersistence
 - Guards that must stay in place: source and target databases must differ; the target host must be loopback and the database name must not match production patterns; the target must not pre-exist; the confirmation token is mandatory; secret canaries seeded into the data must never appear in the manifest or console output.
 - Quarterly re-run the drill and refresh `docs/_evidence/phase27-dr-evidence.json` as the schema evolves; treat any change to table counts/digests as needing a new recorded run.
 
+### Process death mid-run
+
+A database restore brings back sessions, not running processes. A run that was in flight when its
+process died leaves a branch that "owes a model turn": a user message, tool results, or an assistant
+message with unanswered tool calls. Nothing in the branch marks it as interrupted; the run ledger's
+record stays `running` with no `finishedAt`. After the restart, open the session and call
+`session.continue()` ([Continuing a run](agent.md#continuing-a-run)). Each unanswered call gets a
+persisted result first. A call whose durable effect record is `dispatched` is moved to `unknown`, and
+its result tells the model to verify the effect before repeating it. No tool is re-dispatched.
+
+To find those sessions at startup, read the ledger: `findInterruptedRuns` and `continueInterrupted` in
+[`@arnilo/prism-hosts/headless`](../packages/hosts/headless/README.md#recovering-interrupted-runs) list the
+`running` rows in one ownership scope and continue each session. The reference host's `prism-agent recover`
+command is a worked example.
+
 ## Security and performance notes
 
 - Credentials are explicit and redacted: the manifest stores URLs with passwords masked, and the drill asserts the source/target/PITR passwords and the seeded secret canary never appear in the evidence, logs, or console. Connection strings are passed to the tools via the container environment, never printed.

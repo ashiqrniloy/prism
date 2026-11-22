@@ -12,9 +12,6 @@ import {
   assertSessionLinkFilter,
   assertSessionMetadataKey,
   type BranchQuery,
-  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
-  DEFAULT_SESSION_LIST_LIMIT,
-  HARD_MAX_SESSION_LIST_LIMIT,
   type MigrationQuery,
   type OwnershipScope,
   type PersistencePage,
@@ -26,11 +23,15 @@ import {
   type RunLedger,
   type RunQuery,
   type RunRecord,
+  type ResolvedSessionQueryLimits,
+  resolveSessionListLimit,
+  resolveSessionQueryLimits,
   resolveSessionSearchQuery,
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
+  type SessionAppendManyOptions,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
@@ -46,6 +47,7 @@ import {
   type ToolCallRecord,
   type UsageQuery,
   type UsageRecord,
+  validateSessionAppendBatch,
 } from "@arnilo/prism";
 import {
   prepareEvaluationRecord,
@@ -61,6 +63,7 @@ import {
   ownershipColumns,
   parseSessionMetadata,
   prepareRunFeedback,
+  readBranchTail,
   RunFeedbackError,
   requireRunFeedbackOwnership,
   runFeedbackPageLimit,
@@ -111,6 +114,8 @@ import { createSqlitePersistenceLifecycle } from "./lifecycle.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 
+const DEFAULT_QUERY_LIMIT = 100;
+
 export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPersistenceStore {
   readonly name: "sqlite";
   readonly checkpoints: CheckpointStore;
@@ -145,6 +150,7 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
 export function createSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence {
   const ownsDatabase = !options.database;
   const db = options.database ?? openDatabase(options);
+  const queryLimits = resolveSessionQueryLimits(options.queryLimits);
 
   if (!options.skipMigrations) {
     applySqliteMigrations(db);
@@ -188,9 +194,12 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
   const insertEntry = db.prepare(
     `INSERT INTO prism_session_entries (
       id, session_id, parent_id, run_id, timestamp, kind, schema_version,
-      message, event, model, previous_model, label, summary, data, metadata
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      message, event, model, previous_model, label, summary, data, metadata, linear
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
+  // Plan 230 Task 2: the partial unique index on (session_id, parent_id) WHERE linear = 1 is the guard;
+  // this lookup (same transaction, same index) only names the conflict before the insert would fail.
+  const selectLinearChild = db.prepare(`SELECT 1 FROM prism_session_entries WHERE session_id = ? AND parent_id = ? AND linear = 1 LIMIT 1`);
   const insertSearchFts = db.prepare(
     `INSERT INTO prism_session_search_fts(session_id, entry_id, label, summary, body)
      VALUES (?, ?, ?, ?, ?)`,
@@ -298,7 +307,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
     async query(query: EvaluationQuery = {}) {
       query.signal?.throwIfAborted();
-      const limit = query.limit ?? 100;
+      const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
       if (
         !Number.isSafeInteger(limit) ||
         limit < 1 ||
@@ -372,7 +381,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
     async query(query: ExperimentReportQuery = {}) {
       query.signal?.throwIfAborted();
-      const limit = query.limit ?? 100;
+      const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
       if (
         !Number.isSafeInteger(limit) ||
         limit < 1 ||
@@ -431,6 +440,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         throw new RunFeedbackError("Duplicate feedback id", "ERR_PRISM_RUN_FEEDBACK_DUPLICATE");
       }
       const record = await prepareRunFeedback(input, {
+        ...options.feedbackLimits,
         redactor: options.feedbackRedactor,
         resolveRun: ({ runId, ownership }) => {
           const row = db
@@ -514,7 +524,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       return queryTable(
         db,
         "prism_run_feedback",
-        { ...query, limit: runFeedbackPageLimit(query.limit) },
+        { ...query, limit: runFeedbackPageLimit(query.limit, options.maxPageSize) },
         filters,
         mapFeedbackRow,
         params,
@@ -544,6 +554,50 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     const ownerClause = ownerFilters.length
       ? `AND EXISTS (SELECT 1 FROM prism_sessions s WHERE s.id = seed.session_id AND ${ownerFilters.join(" AND ")})`
       : "";
+
+    if (query.from === "compaction") {
+      // Plan 230 Task 3: the walk stops at the newest compaction's `throughEntryId`, so a long session's
+      // compacted part is never read. Same primary-key walk as below, with a stop condition.
+      const items = await readBranchTail(
+        {
+          async walk(seedId, stop, seed) {
+            const stopClause = stop === undefined ? "" : "id" in stop ? "AND bp.id <> ?" : "AND bp.kind <> 'compaction'";
+            const rows = db
+              .prepare(
+                `WITH RECURSIVE branch_path(id, parent_id, kind, depth) AS (
+                   SELECT seed.id, seed.parent_id, seed.kind, 0 FROM prism_session_entries seed
+                   WHERE seed.id = ? AND seed.session_id = ? ${seed ? ownerClause : ""}
+                   UNION ALL
+                   SELECT parent.id, parent.parent_id, parent.kind, bp.depth + 1
+                   FROM branch_path bp
+                   INNER JOIN prism_session_entries parent ON parent.id = bp.parent_id
+                   WHERE +parent.session_id = ? ${stopClause}
+                 )
+                 SELECT e.* FROM branch_path bp
+                 CROSS JOIN prism_session_entries e ON e.id = bp.id
+                 ORDER BY bp.depth ASC`,
+              )
+              .all(
+                seedId,
+                query.sessionId,
+                ...(seed && scope ? ownershipParams(scope) : []),
+                query.sessionId,
+                ...(stop !== undefined && "id" in stop ? [stop.id] : []),
+              ) as SessionEntryRow[];
+            return rows.map(rowToSessionEntry);
+          },
+          async byIds(ids) {
+            const rows = db
+              .prepare("SELECT * FROM prism_session_entries WHERE session_id = ? AND id IN (SELECT value FROM json_each(?)) ORDER BY rowid")
+              .all(query.sessionId, JSON.stringify(ids)) as SessionEntryRow[];
+            return rows.map(rowToSessionEntry);
+          },
+        },
+        leafId,
+      );
+      const end = query.limit === undefined ? items.length : start + query.limit;
+      return { items: items.slice(start, end), nextCursor: end < items.length ? encodeBranchCursor(end) : undefined };
+    }
 
     // ponytail: no limit preserves full-chain reads; default paging needs the reader's 64-page cap revisited first.
     // Each ancestor is found by primary key: the CTE carries parent_id, `+parent.session_id` keeps the planner off the
@@ -579,14 +633,42 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     };
   }
 
+  /** The rows one entry owns: the entry, its search row, and the session's link columns for the links entry. */
+  function writeEntryRows(entry: SessionEntry, linear: boolean): void {
+    const row = sessionEntryToRow(entry);
+    insertEntry.run(
+      row.id,
+      row.session_id,
+      row.parent_id,
+      row.run_id,
+      row.timestamp,
+      row.kind,
+      row.schema_version,
+      row.message,
+      row.event,
+      row.model,
+      row.previous_model,
+      row.label,
+      row.summary,
+      row.data,
+      row.metadata,
+      linear ? 1 : 0,
+    );
+    const search = entrySearchFields(entry);
+    insertSearchFts.run(row.session_id, row.id, search.label, search.summary, search.body);
+    // The links entry is the source of truth; the session row's columns only index it.
+    const links = sessionLinkColumns(entry);
+    if (links) setSessionLinks.run(...links, entry.sessionId);
+  }
+
   const persistence: SqlitePersistence = {
     name: "sqlite",
-    checkpoints: createSqliteCheckpointStore(db),
+    checkpoints: createSqliteCheckpointStore(db, options.maxPageSize),
     leases: createSqliteLeaseStore(db),
     feedback,
     evaluations,
     experiments,
-    lifecycle: createSqlitePersistenceLifecycle(db),
+    lifecycle: createSqlitePersistenceLifecycle(db, options.maxPageSize),
     metadata: { kind: "sqlite", multiProcess: true, driver: "bun:sqlite" },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {
@@ -617,41 +699,57 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
           }
         }
 
-        const duplicate = selectEntryById.get(entry.id);
-        if (duplicate) {
-          throw new Error(`Duplicate session entry id: ${entry.id}`);
+        const linearParent = appendOptions?.tip === true ? appendOptions.expectedParentId : undefined;
+        const linear = linearParent !== undefined;
+        if (linearParent !== undefined && selectLinearChild.get(entry.sessionId, linearParent)) {
+          throw new SessionAppendConflictError({
+            code: "session_append_conflict",
+            expectedParentId: linearParent,
+            currentLeafId: findLatestLeafId(db, entry.sessionId),
+          });
         }
 
-        const row = sessionEntryToRow(entry);
-        insertEntry.run(
-          row.id,
-          row.session_id,
-          row.parent_id,
-          row.run_id,
-          row.timestamp,
-          row.kind,
-          row.schema_version,
-          row.message,
-          row.event,
-          row.model,
-          row.previous_model,
-          row.label,
-          row.summary,
-          row.data,
-          row.metadata,
-        );
-        const search = entrySearchFields(entry);
-        insertSearchFts.run(row.session_id, row.id, search.label, search.summary, search.body);
-        // The links entry is the source of truth; the session row's columns only index it.
-        const links = sessionLinkColumns(entry);
-        if (links) setSessionLinks.run(...links, entry.sessionId);
+        if (selectEntryById.get(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+        writeEntryRows(entry, linear);
 
         if (appendOptions?.idempotencyKey) {
           insertIdempotency.run(entry.sessionId, expectedParent, appendOptions.idempotencyKey, entry.id, now);
         }
       });
 
-      appendTx();
+      try {
+        appendTx();
+      } catch (error) {
+        // The index is the backstop when another connection inserted the linear child between the lookup and the insert.
+        if (appendOptions?.tip === true && appendOptions.expectedParentId !== undefined && isLinearIndexViolation(error)) {
+          throw new SessionAppendConflictError({
+            code: "session_append_conflict",
+            expectedParentId: appendOptions.expectedParentId,
+            currentLeafId: findLatestLeafId(db, entry.sessionId),
+          });
+        }
+        throw error;
+      }
+    },
+
+    async appendMany(batchEntries: readonly SessionEntry[], manyOptions?: SessionAppendManyOptions): Promise<void> {
+      manyOptions?.signal?.throwIfAborted();
+      const batch = validateSessionAppendBatch(batchEntries);
+      if (!batch) return;
+      const now = new Date().toISOString();
+      // Plan 230 Task 5: one transaction, so a failed check or insert writes nothing. Copies are not linear.
+      db.transaction(() => {
+        ensureSession.run(batch.sessionId, now, now);
+        for (const parentId of batch.externalParentIds) {
+          if (!selectParent.get(parentId, batch.sessionId)) {
+            throw new SessionAppendConflictError({ code: "session_append_conflict", expectedParentId: parentId });
+          }
+        }
+        for (const entry of batchEntries) {
+          if (selectEntryById.get(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+          writeEntryRows(entry, false);
+        }
+      })();
     },
 
     async list(sessionId: string): Promise<readonly SessionEntry[]> {
@@ -664,7 +762,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     async listSessions(query: SessionListQuery): Promise<PersistencePage<SessionSummary>> {
-      return listSqliteSessions(db, query);
+      return listSqliteSessions(db, query, queryLimits);
     },
 
     async deleteSession(sessionId: string, scope?: OwnershipScope): Promise<boolean> {
@@ -677,6 +775,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     readBranchPath: readEntryBranch,
+    tipCheck: true,
 
     appendRun(record: RunRecord): void {
       const timestamp = canonicalSessionTimestamp(record.startedAt);
@@ -833,7 +932,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     },
 
     async searchSessions(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>> {
-      return searchSqliteSessions(db, query);
+      return searchSqliteSessions(db, query, queryLimits);
     },
 
     async queryBranches(query: BranchQuery): Promise<PersistencePage<ReturnType<typeof rowToBranchRecord>>> {
@@ -926,7 +1025,7 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         }
       }
 
-      const limit = query.limit ?? 100;
+      const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const rows = db
         .prepare(
@@ -1088,6 +1187,15 @@ function openDatabase(options: SqlitePersistenceOptions): Database {
   return db;
 }
 
+/** The only unique key over (session_id, parent_id) is the partial linear index (migration 012). */
+function isLinearIndexViolation(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("UNIQUE constraint failed") &&
+    error.message.includes("prism_session_entries.session_id, prism_session_entries.parent_id")
+  );
+}
+
 function findLatestLeafId(db: Database, sessionId: string): string | undefined {
   const row = db
     .prepare(
@@ -1097,7 +1205,7 @@ function findLatestLeafId(db: Database, sessionId: string): string | undefined {
            SELECT 1 FROM prism_session_entries child
            WHERE child.session_id = e.session_id AND child.parent_id = e.id
          )
-       ORDER BY e.timestamp DESC, e.id DESC
+       ORDER BY e.rowid DESC
        LIMIT 1`,
     )
     .get(sessionId) as { id: string } | undefined;
@@ -1176,12 +1284,9 @@ function deleteSqliteSessionRows(db: Database, sessionId: string): void {
  * in that session's entries. Denormalize the leaf id and message count onto `prism_sessions` if a host
  * measures it.
  */
-function listSqliteSessions(db: Database, query: SessionListQuery): PersistencePage<SessionSummary> {
+function listSqliteSessions(db: Database, query: SessionListQuery, limits: ResolvedSessionQueryLimits): PersistencePage<SessionSummary> {
   query.signal?.throwIfAborted();
-  const limit = query.limit ?? DEFAULT_SESSION_LIST_LIMIT;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_SESSION_LIST_LIMIT) {
-    throw new TypeError(`SessionListQuery.limit must be a safe integer from 1 to ${HARD_MAX_SESSION_LIST_LIMIT}`);
-  }
+  const limit = resolveSessionListLimit(query, limits);
   const order = query.order ?? "desc";
   if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
 
@@ -1228,13 +1333,13 @@ function listSqliteSessions(db: Database, query: SessionListQuery): PersistenceP
   if (pageRows.length > 0) {
     const sessionIds = pageRows.map((row) => row.session_id);
     const placeholders = sessionIds.map(() => "?").join(", ");
-    // Leaves order per session (timestamp desc, id desc); the first row wins for each session.
+    // Leaves order per session (newest insert first); the first row wins for each session.
     const leafRows = db
       .prepare(
         `SELECT e.session_id, e.id FROM prism_session_entries e
          WHERE e.session_id IN (${placeholders})
            AND NOT EXISTS (SELECT 1 FROM prism_session_entries child WHERE child.session_id = e.session_id AND child.parent_id = e.id)
-         ORDER BY e.session_id ASC, e.timestamp DESC, e.id DESC`,
+         ORDER BY e.session_id ASC, e.rowid DESC`,
       )
       .all(...sessionIds) as { session_id: string; id: string }[];
     for (const row of leafRows) {
@@ -1272,8 +1377,12 @@ function listSqliteSessions(db: Database, query: SessionListQuery): PersistenceP
   };
 }
 
-function searchSqliteSessions(db: Database, query: SessionSearchQuery): PersistencePage<SessionSearchHit> {
-  const q = resolveSessionSearchQuery(query);
+function searchSqliteSessions(
+  db: Database,
+  query: SessionSearchQuery,
+  limits: ResolvedSessionQueryLimits,
+): PersistencePage<SessionSearchHit> {
+  const q = resolveSessionSearchQuery(query, limits);
   q.signal?.throwIfAborted();
 
   const filters: string[] = [];
@@ -1345,7 +1454,7 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
   // correlated subqueries in this SELECT are evaluated for every candidate session before LIMIT.
   const rows = db
     .prepare(
-      `${buildSqliteSearchCte(q)}
+      `${buildSqliteSearchCte(q, limits.ftsCandidates)}
      SELECT s.id AS session_id, s.updated_at, s.metadata${
        q.query
          ? `,
@@ -1381,10 +1490,10 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
     `SELECT
        (SELECT e.label FROM prism_session_entries e
          WHERE e.session_id = ? AND e.label IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS label,
+         ORDER BY e.rowid DESC LIMIT 1) AS label,
        (SELECT e.summary FROM prism_session_entries e
          WHERE e.session_id = ? AND e.summary IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1) AS summary,
+         ORDER BY e.rowid DESC LIMIT 1) AS summary,
        (SELECT COUNT(*) FROM prism_session_entries e
          WHERE e.session_id = ? AND e.kind = 'message') AS message_count`,
   );
@@ -1409,7 +1518,7 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
       messageCount: Number(display.message_count),
       label: display.label ?? undefined,
       summary: display.summary ?? undefined,
-      snippet: clipSearchSnippet(row.match_snippet ?? display.label ?? display.summary ?? undefined),
+      snippet: clipSearchSnippet(row.match_snippet ?? display.label ?? display.summary ?? undefined, limits.searchSnippetBytes),
       metadata: safeSearchMetadata(parseSessionMetadata(row.metadata)),
       entryId: row.entry_id ?? undefined,
       runId: row.run_id ?? undefined,
@@ -1436,7 +1545,7 @@ const SESSION_SEARCH_SNIPPET_TOKENS = 12;
  * Best-matching entry per session for a text query: bounded FTS candidate rows, ranked by
  * bm25 (lower = better), then one row per session. `kind` filters which entries may match.
  */
-function buildSqliteSearchCte(q: ResolvedSessionSearchQuery): string {
+function buildSqliteSearchCte(q: ResolvedSessionSearchQuery, ftsCandidates: number): string {
   if (!q.query) return "";
   const kindFilter = q.kind
     ? `JOIN prism_session_entries matched ON matched.id = prism_session_search_fts.entry_id
@@ -1450,7 +1559,7 @@ function buildSqliteSearchCte(q: ResolvedSessionSearchQuery): string {
        FROM prism_session_search_fts
        ${kindFilter}
        ORDER BY rank, prism_session_search_fts.entry_id
-       LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
+       LIMIT ${ftsCandidates}
      ),
      best AS (
        SELECT session_id, entry_id, score, snippet
@@ -1501,7 +1610,7 @@ function queryTable<T>(
     }
   }
 
-  const limit = query.limit ?? 100;
+  const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
   const where = allFilters.length ? `WHERE ${allFilters.join(" AND ")}` : "";
   const rows = db
     .prepare(

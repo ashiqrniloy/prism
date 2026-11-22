@@ -4,6 +4,7 @@
   "description": "Prism host libraries, process driver and version-exact host-builder kit. Import each library through its subpath.",
   "type": "module",
   "exports": {
+    "./a2a": "./a2a/src/index.ts",
     "./mcp-server": "./mcp-server/src/index.ts",
     "./acp": "./acp/src/index.ts",
     "./ag-ui": "./ag-ui/src/index.ts",
@@ -11,6 +12,8 @@
     "./channels": "./channels/src/index.ts",
     "./channels/telegram": "./channels/src/telegram.ts",
     "./channels/signal": "./channels/src/signal.ts",
+    "./channels/slack": "./channels/src/slack.ts",
+    "./channels/discord": "./channels/src/discord.ts",
     "./evals": "./evals/src/index.ts",
     "./devtools": "./devtools/src/index.ts",
     "./remote": "./remote/src/index.ts",
@@ -21,6 +24,9 @@
     "./driver-process/testing": "./driver-process/src/testing.ts"
   },
   "files": [
+    "a2a/src",
+    "!a2a/src/**/__tests__",
+    "a2a/README.md",
     "mcp-server/src",
     "!mcp-server/src/**/__tests__",
     "mcp-server/README.md",
@@ -60,7 +66,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 mcp-server/src acp/src ag-ui/src channels/src evals/src devtools/src remote/src headless/src host-builder/src driver-process/src --path-ignore-patterns=channels/src/__tests__/postgres.integration.test.ts",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 a2a/src mcp-server/src acp/src ag-ui/src channels/src evals/src devtools/src remote/src headless/src host-builder/src driver-process/src --path-ignore-patterns=channels/src/__tests__/postgres.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:postgres": "bun ../../scripts/require-postgres-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --timeout=0 channels/src/__tests__/postgres.integration.test.ts",
     "pack:dry-run": "bun pm pack --dry-run"

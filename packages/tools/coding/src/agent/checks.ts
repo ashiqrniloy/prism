@@ -14,18 +14,14 @@ import {
   DEFAULT_CHECK_TIMEOUT_MS,
   DEFAULT_MAX_CHECK_CONCURRENCY,
   DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES,
-  DEFAULT_MAX_CHECK_NAMES,
   DEFAULT_MAX_CHECK_OUTPUT_BYTES,
-  HARD_CHECK_TIMEOUT_MS,
-  HARD_MAX_BYTES,
-  HARD_MAX_CHECK_CONCURRENCY,
-  HARD_MAX_CHECK_DIAGNOSTIC_LINES,
-  HARD_MAX_CHECK_NAMES,
-  HARD_MAX_CHECK_OUTPUT_BYTES,
   validateCodingLimit,
 } from "./limits.js";
 import { OutputAccumulator } from "./output-accumulator.js";
 import type { ExecutionPolicy } from "./execution-policy.js";
+
+/** Bytes of a check's output shown inline; the rest stays in the artifact. */
+const CHECK_DISPLAY_BYTES = 50 * 1024;
 
 export interface NamedCheckDefinition {
   /** Absolute executable path, or a basename resolved only via host-supplied env PATH. */
@@ -58,7 +54,7 @@ function errorResult(toolCallId: string, message: string): ToolResult {
 function validateCheckMap(checks: Readonly<Record<string, NamedCheckDefinition>>): ReadonlyMap<string, NamedCheckDefinition> {
   const names = Object.keys(checks);
   if (names.length < 1) throw new Error("checks must declare at least one named command");
-  validateCodingLimit("checkNames", names.length, HARD_MAX_CHECK_NAMES);
+  validateCodingLimit("checkNames", names.length);
   const map = new Map<string, NamedCheckDefinition>();
   for (const name of names) {
     if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name)) {
@@ -73,7 +69,6 @@ function validateCheckMap(checks: Readonly<Record<string, NamedCheckDefinition>>
     }
     map.set(name, def);
   }
-  void DEFAULT_MAX_CHECK_NAMES;
   return map;
 }
 
@@ -91,7 +86,7 @@ async function runNamedCheck(
     return { exitCode: null, output: "", timedOut: false, aborted: true };
   }
 
-  const displayBytes = Math.min(50 * 1024, HARD_MAX_BYTES, options.maxBytes);
+  const displayBytes = Math.min(CHECK_DISPLAY_BYTES, options.maxBytes);
   const accumulator = new OutputAccumulator({
     maxLines: options.maxLines,
     maxBytes: displayBytes,
@@ -181,26 +176,10 @@ async function runNamedCheck(
  */
 export function createCodingCheckTool(cwd: string, options: CodingCheckToolOptions): ToolDefinition {
   const checks = validateCheckMap(options.checks);
-  const maxConcurrency = validateCodingLimit(
-    "maxConcurrency",
-    options.maxConcurrency ?? DEFAULT_MAX_CHECK_CONCURRENCY,
-    HARD_MAX_CHECK_CONCURRENCY,
-  );
-  const maxDiagnosticLines = validateCodingLimit(
-    "maxDiagnosticLines",
-    options.maxDiagnosticLines ?? DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES,
-    HARD_MAX_CHECK_DIAGNOSTIC_LINES,
-  );
-  const maxOutputBytes = validateCodingLimit(
-    "maxOutputBytes",
-    options.maxOutputBytes ?? DEFAULT_MAX_CHECK_OUTPUT_BYTES,
-    HARD_MAX_CHECK_OUTPUT_BYTES,
-  );
-  const defaultTimeoutMs = validateCodingLimit(
-    "defaultTimeoutMs",
-    options.defaultTimeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS,
-    HARD_CHECK_TIMEOUT_MS,
-  );
+  const maxConcurrency = validateCodingLimit("maxConcurrency", options.maxConcurrency ?? DEFAULT_MAX_CHECK_CONCURRENCY);
+  const maxDiagnosticLines = validateCodingLimit("maxDiagnosticLines", options.maxDiagnosticLines ?? DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES);
+  const maxOutputBytes = validateCodingLimit("maxOutputBytes", options.maxOutputBytes ?? DEFAULT_MAX_CHECK_OUTPUT_BYTES);
+  const defaultTimeoutMs = validateCodingLimit("defaultTimeoutMs", options.defaultTimeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS);
   const semaphore = new Semaphore(maxConcurrency);
   const names = [...checks.keys()].sort();
 
@@ -233,7 +212,7 @@ export function createCodingCheckTool(cwd: string, options: CodingCheckToolOptio
         return errorResult(toolCallId, `check ${name} file must be absolute unless env.PATH is explicitly provided`);
       }
 
-      const timeoutMs = validateCodingLimit("timeoutMs", def.timeoutMs ?? defaultTimeoutMs, HARD_CHECK_TIMEOUT_MS);
+      const timeoutMs = validateCodingLimit("timeoutMs", def.timeoutMs ?? defaultTimeoutMs);
 
       const policyCheck = await enforceExecutionPolicy(
         options.executionPolicy,

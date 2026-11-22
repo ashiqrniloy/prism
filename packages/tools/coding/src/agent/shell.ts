@@ -9,36 +9,35 @@
  * Deviations from pi (documented):
  *  - Tool named `"shell"` (pi: `"bash"`).
  *  - `timeout` param is in **seconds** (matches pi).
- *  - Shell resolution honors `process.env.SHELL` → `/bin/bash` → `sh` (pi forces `/bin/bash`);
- *    overridable via `options.shellPath`. Rationale: a host integrating the tool usually wants its
- *    login shell respected; `shellPath` still lets a host force bash for fully predictable POSIX.
+ *  - Shell resolution (`getShellConfig`, once at setup): `options.shellPath` → `/bin/bash` → `bash`
+ *    on `PATH` → `$SHELL` only when it is a POSIX-family shell (bash, zsh, sh, dash, ksh) → `sh`
+ *    (pi forces `/bin/bash`). Rationale: the model writes bash; a fish or nushell login shell is
+ *    the person's preference, not the model's dialect.
  *  - Non-zero exit is **not** a tool error: returned as a normal `ToolResult` with `exitCode` in
  *    `metadata` and a status footer in `content` (pi throws). timeout/abort *are* error results
  *    (the command did not complete). Rationale: `ToolResult.error` should mean the tool call failed,
  *    not that the command returned non-zero.
  *  - Drops detached-child PID tracking (`killTrackedDetachedChildren`): the host owns process
  *    lifecycle; the tool kills the tree only on timeout/abort. Drops the stdin command transport
- *  - Shell resolution honors `process.env.SHELL` → `/bin/bash` → `sh` (pi forces `/bin/bash`);
  *    (argv `-c` only). Default spawn env is the allow-list from `env.ts` (PATH,
  *    locale, HOME, TERM) — never the full `process.env` (P1 hardening).
  */
 import { type ChildProcess, spawn } from "node:child_process";
-import { constants, existsSync } from "node:fs";
+import { accessSync, constants, statSync } from "node:fs";
 import { access as fsAccess } from "node:fs/promises";
+import { basename, delimiter, isAbsolute, join } from "node:path";
 import type { JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
 import { CODING_UNSUPPORTED_EFFECT } from "./effects.js";
 import { buildChildEnv, DEFAULT_CHILD_ENV_INHERIT } from "./env.js";
 import type { ExecutionPolicy } from "./execution-policy.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import {
+  type CodingArgCeilings,
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
   DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
   DEFAULT_SHELL_TIMEOUT_SECONDS,
-  HARD_MAX_BYTES,
-  HARD_MAX_LINES,
-  HARD_MAX_TOTAL_OUTPUT_BYTES,
-  HARD_SHELL_TIMEOUT_SECONDS,
+  resolveCodingArgCeilings,
   validateCodingLimit,
 } from "./limits.js";
 import { OutputAccumulator, type OutputSnapshot } from "./output-accumulator.js";
@@ -50,6 +49,8 @@ const EXIT_STDIO_GRACE_MS = 100;
 export interface ShellConfig {
   shell: string;
   args: string[];
+  /** The shell's basename (`bash`, `sh`, …), named in the tool description. */
+  family?: string;
 }
 
 export interface BashSpawnContext {
@@ -79,8 +80,15 @@ export interface ShellToolOptions {
   operations?: BashOperations;
   /** Command prefix prepended to every command (e.g. shell setup commands). */
   commandPrefix?: string;
-  /** Explicit shell binary path; overrides SHELL/defaults. */
+  /** Explicit shell binary path; overrides the default resolution. Ignored when `shell` is set. */
   shellPath?: string;
+  /** An already-resolved shell (from {@link getShellConfig}); the local backend spawns it. */
+  shell?: ShellConfig;
+  /**
+   * The shell family the description names ("POSIX shell (bash)"). Defaults to the resolved local
+   * shell, or `sh` when a custom `operations` backend runs the command.
+   */
+  shellFamily?: string;
   /** Hook to adjust command, cwd, or env before execution. */
   spawnHook?: BashSpawnHook;
   /** Restrict the process environment cloned for the spawn hook / child process to these
@@ -91,8 +99,10 @@ export interface ShellToolOptions {
   maxLines?: number;
   /** Max bytes kept in the tail snapshot (default 50KB). */
   maxBytes?: number;
-  /** Default wall timeout in seconds (default 600, hard cap 3600). */
+  /** Default wall timeout in seconds (default 600). */
   timeout?: number;
+  /** Ceiling on the model's `timeout` (`shellTimeoutSeconds`, default 3,600; plan 239 Task 5). */
+  ceilings?: CodingArgCeilings;
   /** Maximum combined raw stdout/stderr retained or spilled (default 64 MiB). */
   maxTotalOutputBytes?: number;
   /** Temp-file prefix for spilled full output (default "prism-shell"). */
@@ -117,16 +127,56 @@ function pickSpawnEnv(allowlist?: readonly string[]): NodeJS.ProcessEnv {
   return env;
 }
 
-/** Resolve the shell binary + args. shellPath → SHELL env → /bin/bash → sh. */
-export function getShellConfig(customShellPath?: string): ShellConfig {
-  if (customShellPath) {
-    if (existsSync(customShellPath)) return { shell: customShellPath, args: ["-c"] };
-    throw new Error(`Custom shell path not found: ${customShellPath}`);
+/** Login shells accepted from `$SHELL`: the POSIX family. fish, nushell, csh, and the rest are skipped. */
+export const POSIX_SHELL_NAMES: readonly string[] = Object.freeze(["bash", "zsh", "sh", "dash", "ksh"]);
+
+/** What {@link getShellConfig} looks at. Defaults to the live process; tests pass their own. */
+export interface ShellResolutionProbe {
+  readonly env?: NodeJS.ProcessEnv;
+  /** True when `path` is an existing executable file. */
+  readonly isExecutable?: (path: string) => boolean;
+}
+
+function isExecutableFile(path: string): boolean {
+  try {
+    if (!statSync(path).isFile()) return false;
+    accessSync(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
   }
-  const shellEnv = process.env.SHELL;
-  if (shellEnv && existsSync(shellEnv)) return { shell: shellEnv, args: ["-c"] };
-  if (existsSync("/bin/bash")) return { shell: "/bin/bash", args: ["-c"] };
-  return { shell: "sh", args: ["-c"] };
+}
+
+function findOnPath(name: string, env: NodeJS.ProcessEnv, isExecutable: (path: string) => boolean): string | undefined {
+  for (const dir of (env.PATH ?? "").split(delimiter)) {
+    if (dir.length === 0 || !isAbsolute(dir)) continue;
+    const candidate = join(dir, name);
+    if (isExecutable(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+/**
+ * Resolve the shell model-written commands run in, once at setup: `customShellPath` (must be an
+ * executable file, else this throws) → `/bin/bash` → `bash` on `PATH` → `$SHELL` when its basename
+ * is a POSIX-family shell → `sh`. A login shell is the person's preference, not the model's
+ * dialect, so fish or nushell in `$SHELL` is never used.
+ */
+export function getShellConfig(customShellPath?: string, probe: ShellResolutionProbe = {}): ShellConfig {
+  const env = probe.env ?? process.env;
+  const isExecutable = probe.isExecutable ?? isExecutableFile;
+  const config = (shell: string): ShellConfig => ({ shell, args: ["-c"], family: basename(shell) });
+  if (customShellPath !== undefined) {
+    if (isExecutable(customShellPath)) return config(customShellPath);
+    throw new Error(`shell path is not an executable file: ${customShellPath}`);
+  }
+  if (isExecutable("/bin/bash")) return config("/bin/bash");
+  const bash = findOnPath("bash", env, isExecutable);
+  if (bash !== undefined) return config(bash);
+  const login = env.SHELL;
+  if (login && isAbsolute(login) && POSIX_SHELL_NAMES.includes(basename(login)) && isExecutable(login)) return config(login);
+  if (isExecutable("/bin/sh")) return config("/bin/sh");
+  return config("sh");
 }
 
 /** Kill a process and all its descendants (cross-platform). */
@@ -236,11 +286,13 @@ export function waitForChildProcess(child: ChildProcess): Promise<number | null>
 }
 
 /** Default local-shell operations: spawn the command in a shell, stream combined stdout+stderr. */
-export function createLocalBashOperations(options?: { shellPath?: string }): BashOperations {
+export function createLocalBashOperations(options?: { shellPath?: string; shell?: ShellConfig }): BashOperations {
+  // Resolved once here, not per command.
+  const shellConfig = options?.shell ?? getShellConfig(options?.shellPath);
   return {
     exec: async (command, cwd, { onData, signal, timeout, env }) => {
-      const timeoutSeconds = validateCodingLimit("timeout", timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS, HARD_SHELL_TIMEOUT_SECONDS);
-      const shellConfig = getShellConfig(options?.shellPath);
+      // The tool already bounded a model's timeout by `ceilings.shellTimeoutSeconds`; a host caller's value is its own cap.
+      const timeoutSeconds = validateCodingLimit("timeout", timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS);
       try {
         await fsAccess(cwd, constants.F_OK);
       } catch {
@@ -315,17 +367,21 @@ function appendStatus(text: string, status: string): string {
 // --- tool factory ---
 
 export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition {
-  const ops = options?.operations ?? createLocalBashOperations({ shellPath: options?.shellPath });
+  let ops = options?.operations;
+  let family = options?.shellFamily;
+  if (ops === undefined) {
+    const shell = options?.shell ?? getShellConfig(options?.shellPath);
+    ops = createLocalBashOperations({ shell });
+    family ??= shell.family ?? basename(shell.shell);
+  }
+  family ??= "sh";
   const commandPrefix = options?.commandPrefix;
   const spawnHook = options?.spawnHook;
-  const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
-  const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
-  const defaultTimeout = validateCodingLimit("timeout", options?.timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS, HARD_SHELL_TIMEOUT_SECONDS);
-  const maxTotalOutputBytes = validateCodingLimit(
-    "maxTotalOutputBytes",
-    options?.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
-    HARD_MAX_TOTAL_OUTPUT_BYTES,
-  );
+  const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES);
+  const ceilings = resolveCodingArgCeilings(options?.ceilings);
+  const defaultTimeout = validateCodingLimit("timeout", options?.timeout ?? DEFAULT_SHELL_TIMEOUT_SECONDS);
+  const maxTotalOutputBytes = validateCodingLimit("maxTotalOutputBytes", options?.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES);
   if (maxTotalOutputBytes < maxBytes) throw new Error("maxTotalOutputBytes must be at least maxBytes");
   const tempFilePrefix = options?.tempFilePrefix ?? "prism-shell";
   const background = options?.background;
@@ -336,12 +392,15 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
     effect: CODING_UNSUPPORTED_EFFECT,
     effects: ["execute"],
     exclusive: true,
-    description: `Execute a shell command in the current working directory. Returns combined stdout and stderr. Prefer grep, glob, read, write, or edit for those jobs; use shell for everything else (git, rm, mv, directory listings). Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB and capped at ${formatSize(maxTotalOutputBytes)} total. Truncated successful output is saved to a temp file. Timeout defaults to ${defaultTimeout} seconds.${background ? " With background: true the command keeps running: the call returns a process id and the first output, and shell_output reads, waits on, or kills it." : ""}`,
+    description: `Execute a command in a POSIX shell (${family}) in the current working directory. Returns combined stdout and stderr. Prefer grep, glob, read, write, or edit for those jobs; use shell for everything else (git, rm, mv, directory listings). Output is truncated to the last ${maxLines} lines or ${maxBytes / 1024}KB and capped at ${formatSize(maxTotalOutputBytes)} total. Truncated successful output is saved to a temp file. Timeout defaults to ${defaultTimeout} seconds.${background ? " With background: true the command keeps running: the call returns a process id and the first output, and shell_output reads, waits on, or kills it." : ""}`,
     parameters: {
       type: "object",
       properties: {
         command: { type: "string", description: "Shell command to execute" },
-        timeout: { type: "number", description: `Timeout in seconds (default ${defaultTimeout}, max ${HARD_SHELL_TIMEOUT_SECONDS})` },
+        timeout: {
+          type: "number",
+          description: `Timeout in seconds (default ${defaultTimeout}, max ${Math.max(defaultTimeout, ceilings.shellTimeoutSeconds)})`,
+        },
         ...(background
           ? { background: { type: "boolean", description: "Start the command and return a process id instead of waiting for it to exit" } }
           : {}),
@@ -365,7 +424,11 @@ export function createShellTool(cwd: string, options?: ShellToolOptions): ToolDe
 
       let timeout: number;
       try {
-        timeout = validateCodingLimit("timeout", timeoutInput ?? defaultTimeout, HARD_SHELL_TIMEOUT_SECONDS);
+        // The model's timeout is bounded by the host's ceiling (or the host's own default, when that is higher).
+        timeout =
+          timeoutInput === undefined
+            ? defaultTimeout
+            : validateCodingLimit("timeout", timeoutInput, Math.max(defaultTimeout, ceilings.shellTimeoutSeconds));
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return { toolCallId, name: "shell", content: [{ type: "text", text: message }], error: { message } };

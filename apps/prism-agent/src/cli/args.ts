@@ -29,7 +29,13 @@ export type ScheduleArgs = {
   readonly config?: string;
 };
 
-export type CliArgs = RunArgs | ResumeArgs | AcpArgs | ScheduleArgs;
+export type RecoverArgs = {
+  readonly command: "recover";
+  readonly agent: AgentName;
+  readonly config?: string;
+};
+
+export type CliArgs = RunArgs | ResumeArgs | AcpArgs | ScheduleArgs | RecoverArgs;
 
 export class UsageError extends Error {
   readonly exitCode = 2;
@@ -49,6 +55,7 @@ Usage:
   prism-agent resume --session <id> [--config <file>] [--agent orchestrator|coding|research] [--decision <approvalId>=allow|deny]...
   prism-agent acp [--agent orchestrator|coding|research] [--config <file>]
   prism-agent schedule [--config <file>]
+  prism-agent recover [--agent orchestrator|coding|research] [--config <file>]
 
 Exit codes: 0 completed, 1 run failed, 2 usage or config, 3 suspended, 4 research citations failed.
 Precedence: 2 > 3 > 1 > 4 > 0.
@@ -72,7 +79,9 @@ function decision(value: string): DecisionArg {
 /** Hand-written flag parser. One positional prompt for `run`. No CLI dependency. */
 export function parseArgs(argv: readonly string[]): CliArgs {
   const command = argv[0];
-  if (command !== "run" && command !== "resume" && command !== "acp" && command !== "schedule") throw new UsageError();
+  if (command !== "run" && command !== "resume" && command !== "acp" && command !== "schedule" && command !== "recover") {
+    throw new UsageError();
+  }
   let agent: string | undefined;
   let config: string | undefined;
   let session: string | undefined;
@@ -106,5 +115,6 @@ export function parseArgs(argv: readonly string[]): CliArgs {
     if (agent !== undefined || session !== undefined || decisions.length > 0) throw new UsageError("schedule takes only --config");
     return { command, config };
   }
+  if (session !== undefined || decisions.length > 0) throw new UsageError(`${command} takes only --agent and --config`);
   return { command, agent: agentName(agent, "orchestrator"), config };
 }

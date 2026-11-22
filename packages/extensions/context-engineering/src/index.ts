@@ -98,6 +98,7 @@ export * from "./exports.js";
 function install(prism: PackageAPI<ContextEngineeringConfig>): void {
   const config = resolveContextEngineeringConfig(prism.config);
   if (isEmptyContextEngineeringConfig(config)) return;
+  if (config.fold || config.attention) claimContextFold(prism);
 
   const frontierState = prism.state.session<JsonObject>(ATTENTION_STATE_KEY, initialAttentionState());
   const foldFrontierState = prism.state.session<JsonObject>(FOLD_FRONTIER_KEY, writeFoldFrontier([]));
@@ -122,30 +123,57 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
     return createModelSummarize({ client, maxSummaryBytes: config.fold.maxSummaryBytes, session });
   };
 
+  // The session's model with the provider catalog's limits filled in when the host wrote none, so a bare
+  // `"provider/model"` ref still has a window (plan 229 Further Actions P2). The kernel caches the catalog
+  // per provider; a failed lookup answers the model as given.
+  const describedModel = async (session: SessionContext | undefined): Promise<SessionContext["model"]> => {
+    const model = session?.model;
+    if (!model || model.limits?.contextWindow !== undefined) return model;
+    try {
+      const client = prism.models.client(model);
+      return client.resolve ? await client.resolve() : model;
+    } catch {
+      return model;
+    }
+  };
+
   // The cap depends only on the model's limits, so the memo is keyed by the model, not the session.
-  const attentionCompilerFor = (session: SessionContext): AttentionCompiler => {
-    const key = modelKey(session.model);
-    const memo = compilers.get();
-    const cached = memo.get(key);
-    if (cached) return cached;
-    const compiler = createAttentionCompiler(config.attention ?? {}, session.model ? { model: session.model } : {});
-    memo.set(key, compiler);
+  // `warmAttentionCompiler` builds it from the catalog-described model before the handler or the vote
+  // reads it; the sync lookup builds from the model as given only when nothing warmed it.
+  const buildCompiler = (key: string, model: SessionContext["model"]): AttentionCompiler => {
+    const compiler = createAttentionCompiler(config.attention ?? {}, model ? { model } : {});
+    compilers.get().set(key, compiler);
     return compiler;
   };
+  const attentionCompilerFor = (session: SessionContext): AttentionCompiler => {
+    const key = modelKey(session.model);
+    return compilers.get().get(key) ?? buildCompiler(key, session.model);
+  };
+  const warmAttentionCompiler = async (session: SessionContext | undefined): Promise<void> => {
+    if (!config.attention || !session) return;
+    const key = modelKey(session.model);
+    if (compilers.get().has(key)) return;
+    const model = await describedModel(session);
+    if (!compilers.get().has(key)) buildCompiler(key, model);
+  };
+  const handler = createContextEngineeringHandler({
+    prism,
+    config,
+    frontierState,
+    foldFrontierState,
+    foldLog,
+    activatedState,
+    summarizeFor,
+    attentionCompilerFor,
+    ...(searchTools ? { searchTools } : {}),
+  });
 
   prism.hooks.on(
     "context.build",
-    createContextEngineeringHandler({
-      prism,
-      config,
-      frontierState,
-      foldFrontierState,
-      foldLog,
-      activatedState,
-      summarizeFor,
-      attentionCompilerFor,
-      ...(searchTools ? { searchTools } : {}),
-    }),
+    async (draft, context) => {
+      await warmAttentionCompiler(context.session);
+      return handler(draft, context);
+    },
     { priority: CONTEXT_ENGINEERING_PRIORITY, id: "context-engineering" },
   );
 
@@ -153,12 +181,12 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
 
   prism.hooks.on(
     "model.request",
-    (request, context) => {
+    async (request, context) => {
       // A package's side call (a fold summary, a compactor's summary) is not the run's request: measuring it against the
       // run's input cap would report a summarizer's bytes as context pressure (plan 225 Task 5).
       if (request.origin?.kind === "package") return undefined;
       const accounted = accountRequest(request, {
-        inputCapTokens: inputCapOf(context.session),
+        inputCapTokens: inputCapOf(await describedModel(context.session)),
         ...(config.blocks ? { maxShare: config.blocks.maxShare } : {}),
       });
       prism.events.emit("context.accounted", accounted.event as unknown as JsonValue);
@@ -171,9 +199,11 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
   if (config.attention) {
     // Compaction fires past `compactRatio`, the ratio the attention gate folds *below*, so a
     // request the stages cannot settle asks for a new prefix instead of evicting further.
-    prism.hooks.on("compaction.when", (payload, context) => {
+    // A session-less call (no compiler to ask) still abstains.
+    prism.hooks.on("compaction.when", async (payload, context) => {
       const session = context.session;
       if (!session) return undefined;
+      await warmAttentionCompiler(session);
       const compiler = attentionCompilerFor(session);
       const decision = evaluateAttentionTrigger(
         [{ kind: "input_ratio", ratio: compiler.compactRatio }],
@@ -182,15 +212,36 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
           ...(payload.turn === undefined ? {} : { turn: payload.turn }),
         }),
       );
-      return decision.shouldFold ? { compact: true } : undefined;
+      // Below its gate attention vetoes, so the kernel's default trigger (80% of the cap) cannot compact
+      // before attention's own `compactRatio` (plan 229 Task 4).
+      return { compact: decision.shouldFold };
     });
   }
 }
 
+/** The service every compaction system provides (`{ name }`); session memory's is `session-memory`. */
+const COMPACTION_SYSTEM_SERVICE = "compaction.system";
+/** Provided while `fold` or `attention` is on, so session memory, loaded after this package, can refuse it too. */
+const CONTEXT_FOLD_SERVICE = "context.fold";
+
+/**
+ * `fold` clears old tool results from requests and `attention` votes on compaction: both shorten the context outside
+ * session memory, which must stay the only compaction when a host turns it on (plan 218.3 Task 2). Whichever of the two
+ * packages loads second fails agent creation.
+ */
+function claimContextFold(prism: PackageAPI<ContextEngineeringConfig>): void {
+  const system = prism.services.consume<{ readonly name?: string }>(COMPACTION_SYSTEM_SERVICE);
+  if (system?.name === "session-memory")
+    throw new TypeError(
+      "context-engineering fold and attention cannot run beside session memory's compaction; turn them off, or set the memory system's context.compaction: false",
+    );
+  prism.services.provide(CONTEXT_FOLD_SERVICE, Object.freeze({ name: PACKAGE }));
+}
+
 /** The model's input cap; `0` when it declares no window (the share cap then does nothing). */
-function inputCapOf(session: SessionContext | undefined): number {
+function inputCapOf(model: SessionContext["model"]): number {
   try {
-    return resolveInputCap({}, session?.model);
+    return resolveInputCap({}, model);
   } catch {
     return 0;
   }

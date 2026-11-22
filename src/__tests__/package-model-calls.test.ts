@@ -3,27 +3,28 @@
  * the run it belongs to (evaluation probe `p8-sidecall`: seven provider calls, `model.call` fired twice, a run under a
  * 5,000-token cap finished after spending 14,000 and reported 4,000).
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import {
   type Agent,
   type AgentConfig,
   type AgentEvent,
+  createAgent,
+  createMemorySessionStore,
+  definePackage,
   type ModelClient,
   type ModelProvider,
   type ProviderRequest,
+  providerDone,
+  providerTextDelta,
   type RunLedger,
   type RunLimits,
   type RunResult,
   type SessionContext,
+  toolCallContent,
   type Usage,
   type UsageRecord,
-  createAgent,
-  createMemorySessionStore,
-  definePackage,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
 } from "../index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -366,6 +367,91 @@ describe("package model calls (plan 225 Task 5)", () => {
     assert.ok(quotes.includes("pricey"), "the side call was priced by its own model id");
     const row = h.usageRows.find((entry) => entry.scope === "package_call");
     assert.ok(row?.usage.cost !== undefined && row.usage.cost > 0);
+    await h.agent.dispose();
+  });
+});
+
+/** Plan 237 Task 3: a decision call a package makes with its session is charged to the active run. */
+describe("package decision calls (plan 237 Task 3)", () => {
+  async function decisionHarness(limits?: RunLimits) {
+    const usageRows: UsageRecord[] = [];
+    let turn = 0;
+    let decided = 0;
+    const provider: ModelProvider = {
+      id: "mock",
+      async *generate() {
+        turn += 1;
+        if (turn === 1) {
+          yield { type: "tool_call" as const, call: toolCallContent("c1", "judge", {}) };
+          yield providerDone(TURN_USAGE);
+          return;
+        }
+        yield providerTextDelta("done");
+        yield providerDone(TURN_USAGE);
+      },
+      decisions: () => ({
+        id: "mock",
+        decide: async (request) => {
+          decided += 1;
+          return { model: request.model, answers: { q: { type: "noul", noul: 0.9 } }, usage: SIDE_USAGE, timingMs: 1 };
+        },
+      }),
+    };
+    const judge = definePackage<any>({
+      name: "@acme/judge",
+      version: "1.0.0",
+      requires: { api: 1 },
+      capabilities: ["models"],
+      setup: ({ models, tools }: any) => {
+        tools.register({
+          name: "judge",
+          parameters: {},
+          execute: async (_args: unknown, context: { toolCallId: string; session?: SessionContext }) => {
+            const client = models.decisions("mock/decider");
+            await client.decide(
+              { state: "text", questions: { q: { type: "noul", instructions: "Is it?" } } },
+              { session: context.session },
+            );
+            await client.decide({ state: "text", questions: { q: { type: "noul", instructions: "Is it?" } } });
+            return { toolCallId: context.toolCallId, name: "judge", value: "ok" };
+          },
+        });
+      },
+    });
+    const ledger: RunLedger = {
+      appendRun: async () => undefined,
+      appendEvent: async () => undefined,
+      appendToolCall: async () => undefined,
+      appendUsage: async (record) => {
+        usageRows.push(record);
+      },
+    };
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("mock-provider", [provider]), judge],
+      slots: { store: createMemorySessionStore() },
+      runLedger: ledger,
+      ...(limits ? { limits } : {}),
+    });
+    const session = await agent.session({ id: "s", create: true });
+    return { agent, usageRows, decided: () => decided, run: () => session.run("go") };
+  }
+
+  it("decision_call_with_session_is_charged_to_the_run", async () => {
+    const h = await decisionHarness();
+    const result = await h.run();
+    assert.equal(result.status, "completed");
+    assert.equal(h.decided(), 2);
+    assert.equal(result.usage?.totalTokens, 200 + 200 + 4_000, "only the call that passed its session is charged");
+    assert.equal(h.usageRows.filter((row) => row.scope === "package_call").length, 1);
+    await h.agent.dispose();
+  });
+
+  it("decision_call_with_session_counts_against_run_limits", async () => {
+    const h = await decisionHarness({ maxTotalTokens: 1_000 });
+    const result = await h.run();
+    assert.equal(result.status, "failed");
+    assert.equal(result.limit?.limit, "maxTotalTokens");
     await h.agent.dispose();
   });
 });

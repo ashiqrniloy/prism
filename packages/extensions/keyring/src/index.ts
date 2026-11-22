@@ -80,11 +80,7 @@ export {
   DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
   DEFAULT_MAX_SCRYPT_MEMORY_BYTES,
   DEFAULT_MAX_VAULT_BYTES,
-  HARD_KEYCHAIN_TIMEOUT_MS,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
-  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  HARD_MAX_SCRYPT_MEMORY_BYTES,
-  HARD_MAX_VAULT_BYTES,
+  DEFAULT_KMS_TIMEOUT_MS,
 } from "./limits.js";
 export type { ExtendedOAuthCredentialStore } from "./resolver.js";
 export { createOAuthCredentialSink, createOAuthCredentialStoreAdapter, createStoredCredentialResolver } from "./resolver.js";

@@ -8,6 +8,7 @@ import {
   anthropicMessagesEvents,
 } from "../provider-kit/codecs/anthropic-messages.js";
 import { createToolNameMap } from "../provider-kit/tool-names.js";
+import { anthropicSegments, assertWireSegmentsStable } from "../testing/prefix-stability-conformance.js";
 
 const model: ModelConfig = {
   provider: "shared-fixture",
@@ -347,7 +348,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     });
   });
 
-  it("anthropic_unsigned_thinking_replays_as_text", async () => {
+  it("unsigned_thinking_is_omitted_on_anthropic_route", async () => {
     const replayRequest: ProviderRequest = {
       model,
       messages: [
@@ -361,13 +362,101 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
         },
       ],
     };
-    const body = await anthropicMessagesBody(replayRequest, hooks);
+    const before = structuredClone(replayRequest.messages);
+    const plain = { ...hooks, applyCacheControl: undefined };
+    const body = await anthropicMessagesBody(replayRequest, plain);
     const assistantMsg = (body.messages as any[])[1];
-    // Must replay as text, NEVER as an unsigned thinking block
-    assert.deepEqual(assistantMsg.content[0], {
-      type: "text",
-      text: "unsigned reasoning",
-    });
+    // Neither a `thinking` block the route cannot verify nor the reasoning as assistant `text`.
+    assert.deepEqual(assistantMsg.content, [{ type: "text", text: "answer" }]);
+    assert.ok(!JSON.stringify(body).includes("unsigned reasoning"));
+    // A signed block is omitted too when thinking is not preserved.
+    const signed: ProviderRequest = {
+      ...replayRequest,
+      messages: [
+        replayRequest.messages[0]!,
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "signed", signature: "sig" },
+            { type: "text", text: "answer" },
+          ],
+        },
+      ],
+    };
+    const notPreserved = await anthropicMessagesBody(signed, { ...plain, preserveThinking: () => false });
+    assert.deepEqual((notPreserved.messages as any[])[1].content, [{ type: "text", text: "answer" }]);
+    // Stored history is unchanged; only the wire body differs.
+    assert.deepEqual(replayRequest.messages, before);
+  });
+
+  it("signed_thinking_is_replayed_when_preserved", async () => {
+    const replayRequest: ProviderRequest = {
+      model,
+      messages: [
+        { role: "user", content: [{ type: "text", text: "question" }] },
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "signed reasoning", signature: "sig_abc" },
+            { type: "thinking", text: "unsigned reasoning" },
+            { type: "text", text: "answer" },
+          ],
+        },
+      ],
+    };
+    const body = await anthropicMessagesBody(replayRequest, { ...hooks, applyCacheControl: undefined });
+    assert.deepEqual((body.messages as any[])[1].content, [
+      { type: "thinking", thinking: "signed reasoning", signature: "sig_abc" },
+      { type: "text", text: "answer" },
+    ]);
+  });
+
+  it("message_with_only_unsigned_thinking_stays_valid", async () => {
+    const replayRequest: ProviderRequest = {
+      model,
+      messages: [
+        { role: "user", content: [{ type: "text", text: "question" }] },
+        { role: "assistant", content: [{ type: "thinking", text: "unsigned reasoning" }] },
+        { role: "user", content: [{ type: "text", text: "go on" }] },
+      ],
+    };
+    const body = await anthropicMessagesBody(replayRequest, { ...hooks, applyCacheControl: undefined });
+    const messages = body.messages as any[];
+    assert.deepEqual(
+      messages.map((m) => m.role),
+      ["user", "assistant", "user"],
+    );
+    assert.deepEqual(messages[1].content, [{ type: "text", text: "" }]);
+  });
+
+  it("prefix_stability_holds_after_omission", async () => {
+    const turn1: ProviderRequest["messages"] = [
+      { role: "system", content: [{ type: "text", text: "be brief" }] },
+      { role: "user", content: [{ type: "text", text: "question" }] },
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", text: "foreign reasoning" },
+          { type: "text", text: "answer" },
+        ],
+      },
+      { role: "user", content: [{ type: "text", text: "follow up" }] },
+    ];
+    const turn2: ProviderRequest["messages"] = [
+      ...turn1,
+      {
+        role: "assistant",
+        content: [
+          { type: "thinking", text: "more foreign reasoning" },
+          { type: "text", text: "second" },
+        ],
+      },
+      { role: "user", content: [{ type: "text", text: "and then" }] },
+    ];
+    const first = await anthropicMessagesBody({ ...request, messages: turn1 }, hooks);
+    const second = await anthropicMessagesBody({ ...request, messages: turn2 }, hooks);
+    assertWireSegmentsStable(anthropicSegments(first), anthropicSegments(second));
+    assert.ok(!JSON.stringify(second).includes("foreign reasoning"));
   });
 
   it("anthropic_redacted_thinking_round_trips", async () => {
@@ -580,3 +669,16 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
 });
 
 const PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
+
+describe("anthropic messages structured output", () => {
+  it("anthropic_messages_codec_rejects_structured_output", async () => {
+    const schema = { type: "object", properties: { title: { type: "string" } } };
+    const capable: ModelConfig = { ...model, capabilities: { ...model.capabilities, structuredOutput: "json_schema" } };
+    for (const target of [model, capable]) {
+      await assert.rejects(
+        anthropicMessagesBody({ model: target, messages: [], options: { structuredOutput: { name: "a", schema } } } as ProviderRequest),
+        (error: Error & { code?: string }) => error.name === "StructuredOutputError" && error.code === "unsupported_model",
+      );
+    }
+  });
+});

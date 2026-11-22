@@ -1,3 +1,4 @@
+import type { CodingArgCeilings } from "./agent/limits.js";
 import type { JsonSchema } from "@arnilo/prism";
 
 import type { NamedCheckDefinition } from "./agent/checks.js";
@@ -10,6 +11,11 @@ export interface ToolsCodingShellConfig {
   readonly enabled?: boolean;
   /** Default wall timeout in milliseconds. Converted to the tool's seconds option. */
   readonly timeoutMs?: number;
+  /**
+   * The shell commands run in. Must be an executable file, or the load fails. Default:
+   * `/bin/bash`, else `bash` on `PATH`, else `$SHELL` when it is bash/zsh/sh/dash/ksh, else `sh`.
+   */
+  readonly path?: string;
   /** Background processes from `shell({ background: true })` (plan 189 Task 9). */
   readonly background?: ToolsCodingShellBackgroundConfig;
 }
@@ -20,7 +26,13 @@ export interface ToolsCodingShellBackgroundConfig {
   readonly maxProcesses?: number;
 }
 
-/** One JSON command rule. `match` is a substring or a `/pattern/` string. */
+/**
+ * One JSON command rule. `match` written as `/pattern/` or `/pattern/i` is compiled as a regular
+ * expression at setup (max 512 characters, no nested quantifiers; an invalid one fails the load);
+ * any other string is a substring match. Every matching rule is considered and the strictest
+ * decision wins (`deny` > `requireApproval` > `allow`); the built-in denies run first and no rule
+ * overrides them.
+ */
 export interface ToolsCodingCommandRule {
   readonly match: string;
   readonly decision: "allow" | "deny" | "requireApproval";
@@ -119,12 +131,23 @@ export interface ToolsCodingConfig {
   readonly forge?: ToolsCodingForgeConfig;
   /** Shell/file backend. Default `"none"` (local). `docker` fails closed without host wiring. */
   readonly sandbox?: CodingSandboxKind;
+  /**
+   * The unsandboxed default gate. `"auto"` (default): with `sandbox: "none"` and no package providing
+   * the `tool-policy` service, `shell` asks through `tool.call` before each command. `"off"` adds no ask.
+   */
+  readonly guard?: "auto" | "off";
   /** Hard-deny command rules for `shell`; a `deny` decision wins over any approval. */
   readonly commandRules?: readonly ToolsCodingCommandRule[];
   /** Egress allow-list for sandboxed shells. */
   readonly egress?: ToolsCodingEgressConfig;
   /** Disposable git worktrees for delegated coding work. Default `{ enabled: true }`. */
   readonly workspace?: ToolsCodingWorkspaceConfig;
+  /**
+   * Host-only ceilings on values the model passes as tool arguments (plan 239 Task 5): `searchMatches`,
+   * `searchContextLines`, `repoResults`, `repoDepth`, `shellTimeoutSeconds`, `backgroundWaitSeconds`,
+   * `recursiveDeleteEntries`. Each defaults to the shipped value; the model never raises one.
+   */
+  readonly ceilings?: CodingArgCeilings;
 }
 
 const repositoryProperties: Readonly<Record<string, JsonSchema>> = {
@@ -158,11 +181,12 @@ export const toolsCodingConfigSchema: JsonSchema = {
       type: "object",
       properties: {
         enabled: { type: "boolean", default: true },
-        timeoutMs: { type: "number", minimum: 1, maximum: 3_600_000 },
+        timeoutMs: { type: "number", minimum: 1 },
+        path: { type: "string", minLength: 1, maxLength: 4096 },
         background: {
           type: "object",
           properties: {
-            maxProcesses: { type: "number", minimum: 1, maximum: 16, default: 4 },
+            maxProcesses: { type: "number", minimum: 1, default: 4 },
           },
         },
       },
@@ -199,7 +223,7 @@ export const toolsCodingConfigSchema: JsonSchema = {
           args: { type: "array", maxItems: 256, items: { type: "string", maxLength: 4096 } },
           cwd: { type: "string", minLength: 1, maxLength: 4096 },
           env: { type: "object", additionalProperties: { type: "string", maxLength: 4096 } },
-          timeoutMs: { type: "number", minimum: 1, maximum: 3_600_000 },
+          timeoutMs: { type: "number", minimum: 1 },
         },
         required: ["file", "args"],
       },
@@ -228,17 +252,33 @@ export const toolsCodingConfigSchema: JsonSchema = {
       },
     },
     sandbox: { type: "string", enum: ["none", "native", "docker", "e2b"], default: "none" },
+    guard: { type: "string", enum: ["auto", "off"], default: "auto" },
+    ceilings: {
+      type: "object",
+      properties: Object.fromEntries(
+        [
+          "searchMatches",
+          "searchContextLines",
+          "repoResults",
+          "repoDepth",
+          "shellTimeoutSeconds",
+          "backgroundWaitSeconds",
+          "recursiveDeleteEntries",
+        ].map((key) => [key, { type: "integer", minimum: 1 }]),
+      ),
+      additionalProperties: false,
+    },
     workspace: {
       type: "object",
       properties: {
         enabled: { type: "boolean", default: true },
         worktreeRoot: { type: "string", minLength: 1, maxLength: 4096 },
-        maxWorktrees: { type: "number", minimum: 1, maximum: 16 },
+        maxWorktrees: { type: "number", minimum: 1 },
         diff: {
           type: "object",
           properties: {
-            maxFiles: { type: "number", minimum: 1, maximum: 2000 },
-            maxBytes: { type: "number", minimum: 1, maximum: 8_388_608 },
+            maxFiles: { type: "number", minimum: 1 },
+            maxBytes: { type: "number", minimum: 1 },
           },
         },
       },

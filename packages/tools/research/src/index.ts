@@ -11,7 +11,7 @@ import { definePackage, type JsonValue, type PackageInstance, type SessionContex
 import manifest from "../../package.json" with { type: "json" };
 
 import { citationDecision, citationIds, citeMarker, lastAssistantText, unresolvedIds, withLedgerLine } from "./check.js";
-import { type ToolsResearchConfig, toolsResearchConfigSchema } from "./config.js";
+import { DEFAULT_MAX_REPAIRS, DEFAULT_MAX_SOURCES, type ToolsResearchConfig, toolsResearchConfigSchema } from "./config.js";
 import { EMPTY_STATE, ledgerLine, type ResearchState, recordSources, sourcesIn } from "./ledger.js";
 
 const PACKAGE = "@arnilo/prism-tools/research";
@@ -58,7 +58,7 @@ const definition = definePackage<ToolsResearchConfig>({
           tool: result.name,
           toolCallId: result.toolCallId,
           fetchedAt: new Date().toISOString(),
-          maxSources: prism.config.maxSources ?? 500,
+          maxSources: prism.config.maxSources ?? DEFAULT_MAX_SOURCES,
         });
         if (recorded.cappedNow && !flags.get().capNoted) {
           prism.status.note("warn", `ledger reached maxSources (${prism.config.maxSources}); further sources are not recorded`);
@@ -80,7 +80,7 @@ const definition = definePackage<ToolsResearchConfig>({
         const decision = citationDecision(
           current,
           unresolvedIds(citationIds(lastAssistantText(payload.history)), current.entries, prism.config.requireCitations === true),
-          prism.config.maxRepairs ?? 1,
+          prism.config.maxRepairs ?? DEFAULT_MAX_REPAIRS,
         );
         research.set(context.session, decision.state as unknown as JsonValue);
         if (decision.state.verdict === "failed") {

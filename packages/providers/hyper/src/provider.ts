@@ -4,8 +4,9 @@ import {
   mapOpenAIChatUsage,
   normalizeUsage,
   parseErrorBody,
+  parseRetryAfterMs,
   providerHttpError,
-  readRetryAfterMs,
+  type ProviderTransportConfig,
   RETRYABLE_STATUSES,
   type RoutedProvider,
   type RoutedProviderRoute,
@@ -15,6 +16,8 @@ import { HYPER_DEFAULT_BASE_URL, type HyperRoute, routeForHyperModel } from "./m
 import { parseHyperUsageCost } from "./telemetry.js";
 
 export interface HyperProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   /** Defaults to official `https://hyper.charm.land/v1`. */
   readonly baseUrl?: string;
@@ -88,7 +91,7 @@ function hyperHttpError(response: Response, bodyText: string, secrets: readonly 
   }
   const errorBody = parseErrorBody(parsedBody);
   const errorCode = typeof errorBody?.error?.code === "string" ? errorBody.error.code : undefined;
-  const retryAfterMs = readRetryAfterMs(response.headers);
+  const retryAfterMs = parseRetryAfterMs(response.headers);
   const status = response.status;
   const retryable = RETRYABLE_STATUSES.has(status);
 
@@ -107,6 +110,7 @@ function hyperHttpError(response: Response, bodyText: string, secrets: readonly 
 
 export function createHyperProvider(options: HyperProviderOptions = {}): RoutedProvider {
   return createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "hyper",
     baseUrl: options.baseUrl ?? HYPER_DEFAULT_BASE_URL,
     apiKey: options.apiKey,

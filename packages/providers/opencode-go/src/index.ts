@@ -22,8 +22,10 @@ import {
   defineProviderPackage,
   modelsProperty,
   providerPackageInstance,
+  type ProviderTransportConfig,
   refSource,
   secretRefProperty,
+  transportProperty,
 } from "@arnilo/prism/provider-kit";
 
 import { createOpenCodeGoProvider } from "./provider.js";
@@ -34,6 +36,8 @@ export const OPENCODE_GO_DEFAULT_API_KEY_REF = "env:OPENCODE_GO_API_KEY";
 
 /** The config a host (or a code instance) may set; every secret field is a ref, never a value. */
 export interface OpenCodeGoProviderConfig {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); each defaults to the transport's. */
+  readonly transport?: ProviderTransportConfig;
   /** An `env:`/`keyring:` ref; defaults to {@link OPENCODE_GO_DEFAULT_API_KEY_REF}. */
   readonly apiKey?: string;
   /** Official base; defaults to the vendor default. */
@@ -55,6 +59,7 @@ const configSchema: JsonSchema = {
   properties: {
     apiKey: secretRefProperty(OPENCODE_GO_DEFAULT_API_KEY_REF),
     baseUrl: baseUrlProperty("Official base; defaults to the vendor default."),
+    transport: transportProperty(),
     models: modelsProperty("Static catalog. When absent, `models()` asks the vendor's `/models` endpoint."),
   },
   additionalProperties: false,
@@ -74,7 +79,13 @@ function definitionFor(options: OpenCodeGoProviderPackageOptions) {
       // catalog should still list. The note is what a host shows the user.
       if ((await resolve(ref)) === undefined) prism.status.note("warn", `opencode-go: no API key at ${ref}`);
       const baseUrl = prism.config.baseUrl;
-      const provider = createOpenCodeGoProvider({ id, baseUrl, apiKey, fetch: options.fetch });
+      const provider = createOpenCodeGoProvider({
+        ...(prism.config.transport === undefined ? {} : { transport: prism.config.transport }),
+        id,
+        baseUrl,
+        apiKey,
+        fetch: options.fetch,
+      });
       const configured = prism.config.models;
       prism.providers.register({
         ...provider,

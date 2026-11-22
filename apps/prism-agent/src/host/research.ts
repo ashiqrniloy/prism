@@ -7,10 +7,11 @@ import { toolsBrowser } from "@arnilo/prism-tools/browser";
 import { toolsResearch } from "@arnilo/prism-tools/research";
 import { toolsWeb } from "@arnilo/prism-tools/web";
 import type { HostConfig, HostDeps } from "./config.js";
+import { sessionLimitsConfig } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
-import { memoryProfileFor } from "./memory.js";
+import { memoryProfileFor, sessionMemoryCompacts } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
-import { sqlitePackage } from "./store.js";
+import { runLedgerConfig, sqlitePackage } from "./store.js";
 
 const COMPACTION = "@arnilo/prism-extensions/compaction";
 
@@ -23,14 +24,18 @@ const ALLOWED = ["web_fetch", "web_search", "rag_search", "cite", "memory.recall
 
 export async function createResearchWorker(config: HostConfig, deps: HostDeps = {}): Promise<Agent> {
   const repairs = config.maxRepairs ?? 1;
+  // One compaction system per agent (plan 218.3 Task 2): session memory, or LLM compaction with tool-result folding.
+  const sessionCompaction = sessionMemoryCompacts(config);
   return createAgent({
     name: "research",
     ownership: deps.ownership ?? { tenantId: "prism-agent", userId: "prism-agent" },
     model: config.models.research,
     ...(deps.host === undefined ? {} : { host: deps.host }),
+    ...runLedgerConfig(config),
+    ...sessionLimitsConfig(config),
     ...(deps.hooks === undefined ? {} : { hooks: deps.hooks }),
     limits: { maxContinuations: repairs },
-    slots: { compaction: COMPACTION },
+    ...(sessionCompaction ? {} : { slots: { compaction: COMPACTION } }),
     packages: [
       sqlitePackage(config.storePath),
       toolsWeb({
@@ -50,14 +55,18 @@ export async function createResearchWorker(config: HostConfig, deps: HostDeps = 
       ...ontologyPackages(config, config.workspace),
       toolsResearch({ maxRepairs: repairs }),
       approvalPackage({ mode: "ask", rules: ALLOWED.map((tool) => ({ tool })) }),
-      compaction({ trigger: compactionTriggerFor(config.models.research) }),
+      ...(sessionCompaction ? [] : [compaction({ trigger: compactionTriggerFor(config.models.research) })]),
       contextEngineering({
-        fold: {
-          minAgeTurns: 2,
-          minBytes: 2_048,
-          keepLast: 3,
-          clearAtLeastTokens: foldClearAtLeastTokensFor(config.models.research),
-        },
+        ...(sessionCompaction
+          ? {}
+          : {
+              fold: {
+                minAgeTurns: 2,
+                minBytes: 2_048,
+                keepLast: 3,
+                clearAtLeastTokens: foldClearAtLeastTokensFor(config.models.research),
+              },
+            }),
         blocks: { maxShare: 0.2 },
         accounting: true,
       }),

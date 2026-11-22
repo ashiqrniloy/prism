@@ -7,10 +7,11 @@
  * fails closed. Any backend that cannot be built yields a warning and no `shell` registration —
  * never a throw and never a silent unsandboxed shell.
  */
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import type { ToolDefinition } from "@arnilo/prism";
 import type { ProcessSandboxBackend } from "./agent/process/types.js";
 import type { RepositoryLimitOptions } from "./agent/repository/types.js";
+import type { ShellConfig } from "./agent/shell.js";
 import { createE2BSandbox } from "./security/e2b-sandbox.js";
 import { createNativeSandbox } from "./security/native-sandbox.js";
 import type { SandboxAdapter } from "./security/sandbox.js";
@@ -22,6 +23,11 @@ export interface SelectCodingSandboxOptions {
   readonly root: string;
   readonly repository?: RepositoryLimitOptions;
   readonly readOnly: boolean;
+  /**
+   * The host's resolved shell. `native` shares the host filesystem, so its commands run in it;
+   * container backends (`docker`, `e2b`) run `/bin/sh` in the image, whose shells are not the host's.
+   */
+  readonly shell?: ShellConfig;
 }
 
 export interface SelectedCodingSandbox {
@@ -42,8 +48,8 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function buildAdapter(kind: Exclude<CodingSandboxKind, "none">, root: string): Promise<SandboxAdapter> {
-  if (kind === "native") return createNativeSandbox({ root: resolve(root) });
+async function buildAdapter(kind: Exclude<CodingSandboxKind, "none">, root: string, shell?: string): Promise<SandboxAdapter> {
+  if (kind === "native") return createNativeSandbox({ root: resolve(root), ...(shell !== undefined ? { shell } : {}) });
   if (kind === "e2b") return createE2BSandbox({});
   throw new Error('sandbox "docker" needs a host-provided digest-pinned image and docker runner');
 }
@@ -53,9 +59,11 @@ export async function selectCodingSandbox(
   kind: Exclude<CodingSandboxKind, "none">,
   options: SelectCodingSandboxOptions,
 ): Promise<SelectedCodingSandbox> {
+  const nativeShell = kind === "native" && options.shell !== undefined && isAbsolute(options.shell.shell) ? options.shell : undefined;
+  const shellFamily = nativeShell?.family ?? "sh";
   let adapter: SandboxAdapter;
   try {
-    adapter = await buildAdapter(kind, options.root);
+    adapter = await buildAdapter(kind, options.root, nativeShell?.shell);
   } catch (error) {
     return { toolRoot: resolve(options.root), warnings: [`sandbox "${kind}" unavailable: ${message(error)}; shell is not registered`] };
   }
@@ -74,6 +82,7 @@ export async function selectCodingSandbox(
           sandbox: adapter,
           ...(workspaceRoot ? { workspaceRoot } : {}),
           repository: options.repository,
+          shell: { shellFamily },
         });
     const processes =
       typeof (adapter as ProcessSandboxBackend).startProcess === "function" ? (adapter as ProcessSandboxBackend) : undefined;

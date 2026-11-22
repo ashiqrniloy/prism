@@ -1,5 +1,5 @@
 import type { ContentBlock, ErrorInfo } from "@arnilo/prism";
-import { HARD_MAX_RESULT_BYTES, validateMcpLimit } from "./limits.js";
+import { validateMcpLimit } from "./limits.js";
 import { McpBridgeError } from "./types.js";
 
 type McpContentBlock =
@@ -39,7 +39,7 @@ export function estimateUtf8Bytes(value: string): number {
 }
 
 export function mapMcpContentToBlocks(content: readonly McpContentBlock[] | undefined, options: MapMcpContentOptions): MapMcpContentResult {
-  const maxResultBytes = validateMcpLimit("maxResultBytes", options.maxResultBytes, HARD_MAX_RESULT_BYTES);
+  const maxResultBytes = validateMcpLimit("maxResultBytes", options.maxResultBytes);
   if (!content?.length) {
     return { content: [], truncated: false, bytesUsed: 0 };
   }
@@ -131,7 +131,7 @@ export function mapMcpContentToBlocks(content: readonly McpContentBlock[] | unde
 }
 
 export function summarizeMcpContent(content: readonly McpContentBlock[] | undefined, maxBytes = 8 * 1024): string {
-  const limit = validateMcpLimit("maxErrorBytes", maxBytes, HARD_MAX_RESULT_BYTES);
+  const limit = validateMcpLimit("maxErrorBytes", maxBytes);
   if (!content?.length) return truncateUtf8("MCP tool returned no content", limit);
   let summary = "";
   for (const block of content) {
@@ -148,7 +148,7 @@ export function summarizeMcpContent(content: readonly McpContentBlock[] | undefi
 }
 
 export function boundedMcpErrorMessage(error: unknown, maxBytes: number): string {
-  const limit = validateMcpLimit("maxErrorBytes", maxBytes, HARD_MAX_RESULT_BYTES);
+  const limit = validateMcpLimit("maxErrorBytes", maxBytes);
   const fallback = truncateUtf8("MCP tool call failed", limit);
   const message = error instanceof Error ? error.message : fallback;
   return truncateUtf8(message, limit) || fallback;

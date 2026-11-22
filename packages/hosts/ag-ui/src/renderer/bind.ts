@@ -45,7 +45,8 @@ export interface RenderA2UiSurfaceOptions {
   readonly onAction?: (action: AgUiA2UiAction) => void;
 }
 
-const MAX_RENDER_DEPTH = 64; // mirrors HARD_MAX_A2UI_COMPONENT_DEPTH
+/** Recursion bound of the client-side renderer; a host that raises `maxComponentDepth` above it gets a flattened tail. */
+const MAX_RENDER_DEPTH = 64;
 
 /** Render one surface model into a detached DOM node. */
 export function renderA2UiSurface(

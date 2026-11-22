@@ -1,3 +1,4 @@
+import { runToolConcurrency } from "./run-controller.js";
 import type { LoopStrategy, RunController } from "./types.js";
 
 /**
@@ -13,7 +14,7 @@ export const defaultLoop: LoopStrategy = {
         const turn = await run.turn();
         if (turn.stopped) return;
         if (turn.toolCalls.length > 0) {
-          await run.executeTools(turn.toolCalls);
+          await run.executeTools(turn.toolCalls, { concurrency: runToolConcurrency(run) });
           continue;
         }
         // Soft interrupt / late steer: keep the same run going while the queue has text.

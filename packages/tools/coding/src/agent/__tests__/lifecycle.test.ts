@@ -97,7 +97,7 @@ test("emitter drops unknown (deferred) kinds and oversized events without throwi
 });
 
 test("invalid limits fail closed with ERR_PRISM_LIFECYCLE_LIMIT", () => {
-  for (const limits of [{ maxEventBytes: 0 }, { maxPathBytes: 10 ** 9 }, { maxConfigKeys: -1 }]) {
+  for (const limits of [{ maxEventBytes: 0 }, { maxPathBytes: 1.5 }, { maxConfigKeys: -1 }]) {
     assert.throws(
       () => createCodingLifecycleEmitter({ limits }),
       (error: unknown) => {

@@ -2,8 +2,8 @@ import { type Agent, createAgent, definePackage } from "@arnilo/prism";
 import delegate from "@arnilo/prism-extensions/delegate";
 import workflows, { type WorkflowRun, workflowCommand } from "@arnilo/prism-extensions/workflows";
 import type { HostConfig, HostDeps } from "./config.js";
-import { hostPortOf } from "./config.js";
-import { sqlitePackage } from "./store.js";
+import { hostPortOf, sessionLimitsConfig } from "./config.js";
+import { runLedgerConfig, sqlitePackage } from "./store.js";
 import { type BuildWorkers, buildWorkflow } from "./workflow.js";
 
 export interface OrchestratorDeps extends HostDeps {
@@ -14,8 +14,8 @@ export interface OrchestratorDeps extends HostDeps {
 }
 
 /**
- * Delegate child `research-brief` inherits nothing and is not the research worker.
- * Its store is delegate's memory store, not the shared SQLite file.
+ * Delegate child `research-brief` inherits nothing, so it runs with no tools, and is not the research worker.
+ * It is a session of this agent linked to the calling session, so its transcript is in the shared SQLite file.
  * `build` is a host command, not a model-visible tool.
  */
 export async function createOrchestrator(config: HostConfig, deps: OrchestratorDeps = {}): Promise<Agent> {
@@ -26,6 +26,8 @@ export async function createOrchestrator(config: HostConfig, deps: OrchestratorD
     ...(deps.ownership === undefined ? {} : { ownership: deps.ownership }),
     model: config.models.orchestrator,
     ...(host === undefined ? {} : { host }),
+    ...runLedgerConfig(config),
+    ...sessionLimitsConfig(config),
     packages: [
       sqlitePackage(config.storePath),
       workflows,

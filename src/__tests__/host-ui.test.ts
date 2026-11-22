@@ -381,7 +381,7 @@ async function askAgent(
     ...(config as Partial<AgentConfig>),
     hooks: (hooks: Parameters<NonNullable<AgentConfig["hooks"]>>[0]) => hooks.on("tool.call", () => ({ ask: "Approve?" })),
     packages: [providerPackage("test-provider", [provider])],
-    ...(loop === "custom" ? { loop: customLoop() } : {}),
+    ...(loop === "custom" ? { slots: { loop: customLoop() } } : {}),
     tools: {
       add: [
         {
@@ -402,10 +402,16 @@ async function askAgent(
 function customLoop() {
   return {
     name: "custom",
+    // A suspendable run needs a durable loop (`ERR_PRISM_LOOP_NOT_DURABLE`).
+    snapshot: () => null,
+    restore: () => {},
     async run(controller: any) {
       const turn = await controller.turn();
-      if (turn.type === "tool_calls") return controller.executeTools(turn.calls);
-      return { stop: true as const };
+      if (turn.stopped) return;
+      if (turn.toolCalls.length > 0) await controller.executeTools(turn.toolCalls);
+      const last = await controller.turn();
+      if (last.stopped) return;
+      await controller.end();
     },
   } as never;
 }

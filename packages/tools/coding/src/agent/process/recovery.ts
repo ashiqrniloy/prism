@@ -23,11 +23,6 @@ import {
   DEFAULT_MAX_RECOVERY_LEASE_TTL_MS,
   DEFAULT_MAX_RECOVERY_RECORD_BYTES,
   DEFAULT_MAX_RECOVERY_RECORDS,
-  HARD_MAX_RECOVERY_ATTACH_TIMEOUT_MS,
-  HARD_MAX_RECOVERY_BACKEND_REF_BYTES,
-  HARD_MAX_RECOVERY_LEASE_TTL_MS,
-  HARD_MAX_RECOVERY_RECORD_BYTES,
-  HARD_MAX_RECOVERY_RECORDS,
   validateCodingLimit,
 } from "../limits.js";
 import type { ProcessPtyHandle, ProcessSandboxHandle, ProcessSessionState } from "./types.js";
@@ -131,23 +126,11 @@ export interface ResolvedProcessRecoveryLimits {
 
 export function resolveProcessRecoveryLimits(limits?: ProcessRecoveryLimits): ResolvedProcessRecoveryLimits {
   return {
-    maxRecords: validateCodingLimit("maxRecords", limits?.maxRecords ?? DEFAULT_MAX_RECOVERY_RECORDS, HARD_MAX_RECOVERY_RECORDS),
-    leaseTtlMs: validateCodingLimit("leaseTtlMs", limits?.leaseTtlMs ?? DEFAULT_MAX_RECOVERY_LEASE_TTL_MS, HARD_MAX_RECOVERY_LEASE_TTL_MS),
-    attachTimeoutMs: validateCodingLimit(
-      "attachTimeoutMs",
-      limits?.attachTimeoutMs ?? DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS,
-      HARD_MAX_RECOVERY_ATTACH_TIMEOUT_MS,
-    ),
-    backendRefBytes: validateCodingLimit(
-      "backendRefBytes",
-      limits?.backendRefBytes ?? DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES,
-      HARD_MAX_RECOVERY_BACKEND_REF_BYTES,
-    ),
-    recordBytes: validateCodingLimit(
-      "recordBytes",
-      limits?.recordBytes ?? DEFAULT_MAX_RECOVERY_RECORD_BYTES,
-      HARD_MAX_RECOVERY_RECORD_BYTES,
-    ),
+    maxRecords: validateCodingLimit("maxRecords", limits?.maxRecords ?? DEFAULT_MAX_RECOVERY_RECORDS),
+    leaseTtlMs: validateCodingLimit("leaseTtlMs", limits?.leaseTtlMs ?? DEFAULT_MAX_RECOVERY_LEASE_TTL_MS),
+    attachTimeoutMs: validateCodingLimit("attachTimeoutMs", limits?.attachTimeoutMs ?? DEFAULT_MAX_RECOVERY_ATTACH_TIMEOUT_MS),
+    backendRefBytes: validateCodingLimit("backendRefBytes", limits?.backendRefBytes ?? DEFAULT_MAX_RECOVERY_BACKEND_REF_BYTES),
+    recordBytes: validateCodingLimit("recordBytes", limits?.recordBytes ?? DEFAULT_MAX_RECOVERY_RECORD_BYTES),
   };
 }
 

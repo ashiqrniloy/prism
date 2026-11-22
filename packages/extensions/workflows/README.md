@@ -45,7 +45,15 @@ None. The package reads no config and registers no schema.
 | `loopNode` | an inline `execute` or a `body` sub-step, bounded by `maxIterations` |
 | `workflowNode` | a nested definition, with optional scoped state |
 
-A graph with a cycle, a route node, or `limits.maxSupersteps` runs on the superstep scheduler; every other graph runs on the Kahn scheduler. `limits` bounds nodes, fan-out, concurrency, supersteps, node output bytes, checkpoint bytes, nesting depth, state bytes, state history, and replay depth, each with a hard cap.
+A graph with a cycle, a route node, or `limits.maxSupersteps` runs on the superstep scheduler; every other graph runs on the Kahn scheduler. `limits` bounds nodes, fan-out, concurrency, supersteps, node output bytes, checkpoint bytes, nesting depth, state bytes, state history, and replay depth. Each is the host's value: there is no hidden ceiling above it (plan 239). `limits.maxSupersteps: null` leaves a cyclic workflow unbounded, the host's explicit choice for a job that ends on its own condition or on abort. `limits.maxIterationRecords` keeps only the newest per-execution records of each node in a cycle (unset keeps all), so a long-lived cycle's checkpoint stays bounded; replay reaches only kept records.
+
+| Bound | Default | Where the host sets it |
+| --- | --- | --- |
+| Node retries backoff | 25 ms × attempt, at most 1,000 ms | `node.retryBackoff: { stepMs, maxMs }` |
+| Gate executions | 64 | `gateNode({ maxIterations })` |
+| Loop-step tool rounds | 16 | `workflowLoop(def, { maxToolRounds })`, or `loopAgentNode({ maxToolRounds })` per step |
+| Checkpoint list page | 100, at most 500 | `list({ limit })`; `createWorkflowCheckpointAdapter({ maxListLimit })` |
+| Graph export size | 10,000 nodes | `workflowGraphToMermaid(view, { maxNodes })` / `workflowGraphToDot(view, { maxNodes })` |
 
 `runWorkflow(def, input, options)` runs; `resumeWorkflow(def, { runId }, { checkpoints, resume })` resumes a suspended run exactly once; `suspend({ reason, data?, resumeSchema? })` returns from a node to pause durably; `replayWorkflow(def, { sourceRunId, fromNodeId }, { checkpoints })` forks a new run from one completed node without mutating the source; `serializeWorkflowGraph` / `workflowGraphToMermaid` / `workflowGraphToDot` project the definition for a UI.
 
@@ -55,7 +63,7 @@ A graph with a cycle, a route node, or `limits.maxSupersteps` runs on the supers
 agentNode({ agent: uiEngineer, worktree: true, input: (ctx) => ctx.workflowInput, output: (result) => result.text })
 ```
 
-`agentNode({ agent, session?, input?, runOptions?, worktree?, output? })` runs any `Agent` through its public session API. By default each attempt opens a new child session with `parent: { sessionId: <host parent session>, agentId: agent.id, workflowRunId }`, so `createSessionIndex(store).list({ workflowRunId })` finds it. `session(ctx)` supplies one instead. `output(result, ctx)` maps the child's `RunResult`; the default is the final assistant text. A child run that suspends (an approval) suspends the workflow with reason `child_session_suspended` and the child session id in the suspension data.
+`agentNode({ agent, session?, input?, runOptions?, worktree?, output? })` runs any `Agent` through its public session API. By default each attempt opens a new child session with `parent: { sessionId: <host parent session>, agentId: agent.id, workflowRunId }`, so `createSessionIndex(store).list({ workflowRunId })` finds it. `session(ctx)` supplies one instead. `output(result, ctx)` maps the child's `RunResult`; the default is the final assistant text. A child run that suspends (an approval) suspends the workflow with reason `child_session_suspended` and the child session id in the suspension data. A remote agent works too: `connectA2A` (`@arnilo/prism-hosts/a2a`) and `connectAgent` (`@arnilo/prism-hosts/remote`) return `Agent` proxies, and their events carry `origin.executedBy: "external"`.
 
 `worktree: true` (or `{ dispose: "keep" | "dispose" }`) creates a worktree through the `workspace` service (`@arnilo/prism-tools/coding`) bound to the child session, so its tools resolve to it. After the run the node calls `workspace.diff(path)`, emits each change as an `agent.file` package event (`source: "diff"`, with `sessionId`, `workflowRunId`, `nodeId`), and returns `{ output, worktree: { path, branch, truncated } }` for a merge gate. Without the `workspace` service, or without a host parent, the node fails with `WorkflowRuntimeError` code `missing_service`; it never falls back to the main tree. The worktree is kept by default for the merge gate, so the host or the gate disposes it; `dispose: "dispose"` force-disposes it when the node ends. Cost: one child session per attempt and one `diff` call per worktree node.
 
@@ -221,7 +229,7 @@ setup: (prism) =>
 
 ## Single-agent loops
 
-`workflowLoop(def)` returns a package that claims `slot:loop` and runs `def` inside one agent's run. `loopAgentNode({ input?, tools?, system?, output?, activation? })` is its agent step: it appends the optional `input` as a user message, then runs `run.turn()` and `run.executeTools()` until the model stops calling tools, so every tool call fires `tool.call` and is gated by `@arnilo/prism-extensions/approval` or any host gate. Gates, functions, routes, and conditionals run as usual; a failed `gateNode` routes back for a revision.
+`workflowLoop(def)` returns a package that claims `slot:loop` and runs `def` inside one agent's run. `loopAgentNode({ input?, tools?, system?, output?, activation?, maxToolRounds? })` is its agent step: it appends the optional `input` as a user message, then runs `run.turn()` and `run.executeTools()` until the model stops calling tools, so every tool call fires `tool.call` and is gated by `@arnilo/prism-extensions/approval` or any host gate. Gates, functions, routes, and conditionals run as usual; a failed `gateNode` routes back for a revision.
 
 ```ts
 packages: [workflowLoop(generateValidateRevise), approvalPackage({ mode: "ask" })]
@@ -230,8 +238,46 @@ packages: [workflowLoop(generateValidateRevise), approvalPackage({ mode: "ask" }
 - A loop is one agent and one session: an `agentNode` anywhere in the definition (including a nested workflow) fails `workflowLoop(def)` with `WorkflowDefinitionError`. Use `workflowCommand` to orchestrate several agents. A `loopAgentNode` in a `fanOut` route or loop body is not bound; place it at the top level.
 - Steps of parallel branches take turns on the run. The run's `limits` and `tool.call` gates apply as in any run.
 - The loop adds no model call beyond its steps' turns. It is not resumable: an `ask` with no `host.ui` denies instead of suspending. It keeps no checkpoints (an in-memory run).
-- `workflowLoopStrategy(def)` returns the bare `LoopStrategy`, which `loopConformance` from `@arnilo/prism/testing` takes.
+- A step that keeps calling tools fails with `loop_tool_rounds` after `maxToolRounds` rounds (default 16; `workflowLoop(def, { maxToolRounds })` for every step).
+- `workflowLoopStrategy(def, { maxToolRounds? })` returns the bare `LoopStrategy`, which `loopConformance` from `@arnilo/prism/testing` takes.
 - Runnable: [`examples/workflow-loop.ts`](../../../examples/workflow-loop.ts).
+
+## Agent jobs
+
+`runAgentJob(session, spec)` runs one agent session until a host predicate says done, across runs and process restarts. It is the bounded iterate-until-done loop, with checkpoints, backoff, and stop rules a host would otherwise write itself. [docs/long-running.md](../../../docs/long-running.md) covers the whole setup: session limits, the stall axis, durability, compaction, and stores.
+
+```ts
+import { resumeAgentJob, runAgentJob } from "@arnilo/prism-extensions/workflows";
+
+const session = await agent.session({ limits: { maxCost: { amount: 40, currency: "USD" }, deadline: "2026-11-20T00:00:00Z" } });
+const result = await runAgentJob(session, {
+  input: "Migrate every service to the new auth client.",
+  next: () => "Continue with the next service.",
+  done: ({ lastRunResult }) => lastRunResult?.text.includes("ALL SERVICES MIGRATED") ?? false,
+  maxRuns: null,
+  checkpoints, // or `prism`, which resolves the `checkpoints` service
+});
+// result: { jobId, status: "done", reason: "done", runs, usage, lastRun }
+
+// In a new process, over the same session store and checkpoints:
+await resumeAgentJob(session, spec, result.jobId);
+```
+
+- **Each run.** If the branch owes a model turn (a crash, a provider failure, a limit breach), the job calls `session.continue()`. Otherwise it sends `next(view)`, or `input` for the first run. `next` returning `undefined` with nothing to continue stops the job with `nothing_to_continue`.
+- **Stops.** `done(view)` true (checked after each run that did not fail; it may call a model), a session limit (`session_limit`), `maxRuns` (default 100; `null` is unbounded), `maxConsecutiveFailures` failed runs in a row (default 3), `maxIdenticalOutcomes` runs in a row with the same final text and tool calls and results (default 3), or `spec.signal` (`aborted`). A run that dies on `maxRepeatedToolRounds` is a failed run.
+- **Backoff.** After a failed run, the next one waits `retry.baseMs × 2^(failures − 1)`, at most `retry.maxMs` (default 30 s to 15 min). The wait is abortable. The job retries whole runs only; provider retries stay the kernel's.
+- **Approvals.** A run that suspends on an approval suspends the job (`status: "suspended"`, `pending`). `resumeAgentJob(session, spec, jobId, { decisions })` continues the run through `session.resume`.
+- **Restarts.** `resumeAgentJob` reads the newest checkpoint. A run that was in flight is continued, not restarted. A run that finished after the last checkpoint is recorded from the branch, not sent again. `spec` must match the original's `maxRuns` (the definition hash includes it).
+- **Events.** With `prism`, the job emits `job.started`, `job.run`, and `job.stopped` as this package's events, each with `jobId` and `sessionId`.
+- **Shape.** The job is a cyclic workflow (`AGENT_JOB_WORKFLOW_ID`) of one function node and a route back to it, with `maxSupersteps` from `maxRuns` and `maxIterationRecords: 4`, so its checkpoint stays bounded over thousands of runs. Its state (counters, usage, the newest run's id, status, and error code) is the step's output. No message content is checkpointed.
+- **Security.** The job runs with the session's principal and limits and cannot raise either: `runOptions` narrow like any run's. `done` and `next` are host code.
+
+| Cost | When |
+| --- | --- |
+| One workflow checkpoint write | per run (plus one per route step) |
+| One SHA-256 over the final text and tool calls | per run that did not fail |
+| No model call | the driver makes none; `done` costs what the host makes it cost |
+| One store append | per run end, only when session limits are set (the kernel's, not the driver's) |
 
 ## Capabilities
 

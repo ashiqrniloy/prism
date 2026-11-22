@@ -280,5 +280,5 @@ test("limits: resolution validates defaults and hard caps", () => {
   assert.equal(resolved.maxFds, 1024);
   assert.equal(resolved.wallTimeMs, 20 * 60_000);
   assert.throws(() => resolveNativeSandboxLimits({ maxFds: 0 }), RangeError);
-  assert.throws(() => resolveNativeSandboxLimits({ maxFds: 8193 }), RangeError);
+  assert.equal(resolveNativeSandboxLimits({ maxFds: 8193 }).maxFds, 8193);
 });

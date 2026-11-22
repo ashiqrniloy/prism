@@ -107,6 +107,7 @@ const definition = definePackage<ToolsBrowserConfig>({
       browser,
       networkPolicy: networkPolicyOf(prism.config),
       cdp: { mode: prism.config.cdp ?? "auto" },
+      ...(prism.config.limits !== undefined ? { limits: prism.config.limits } : {}),
       ...(uploadRoots !== undefined && uploadRoots.length > 0 ? { uploads: { roots: uploadRoots } } : {}),
       ...(quarantine !== undefined ? { downloads: { quarantine } } : {}),
     });

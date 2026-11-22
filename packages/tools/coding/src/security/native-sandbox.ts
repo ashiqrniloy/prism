@@ -31,20 +31,6 @@ import {
   DEFAULT_MEMORY_BYTES,
   DEFAULT_STOP_GRACE_MS,
   DEFAULT_WALL_TIME_MS,
-  HARD_CLEANUP_DEADLINE_MS,
-  HARD_IDLE_TIMEOUT_MS,
-  HARD_MAX_COMMANDS,
-  HARD_MAX_CONCURRENT_EXECS,
-  HARD_MAX_ENV_BYTES,
-  HARD_MAX_ENV_NAMES,
-  HARD_MAX_EXPORT_BYTES,
-  HARD_MAX_EXPORT_ENTRIES,
-  HARD_MAX_FDS,
-  HARD_MAX_OUTPUT_BYTES,
-  HARD_MAX_RETAINED_ARTIFACTS,
-  HARD_MEMORY_BYTES,
-  HARD_STOP_GRACE_MS,
-  HARD_WALL_TIME_MS,
   validateSandboxLimit,
 } from "./sandbox-limits.js";
 import { createImportTarStream, summarizeTarStream } from "./sandbox-tar.js";
@@ -106,28 +92,28 @@ export interface ResolvedNativeSandboxLimits {
   readonly cleanupDeadlineMs: number;
 }
 
-const SPECS: Record<keyof NativeSandboxLimitOptions, [number, number]> = {
-  wallTimeMs: [DEFAULT_WALL_TIME_MS, HARD_WALL_TIME_MS],
-  idleTimeoutMs: [DEFAULT_IDLE_TIMEOUT_MS, HARD_IDLE_TIMEOUT_MS],
-  memoryBytes: [DEFAULT_MEMORY_BYTES, HARD_MEMORY_BYTES],
-  maxFds: [DEFAULT_MAX_FDS, HARD_MAX_FDS],
-  maxCommands: [DEFAULT_MAX_COMMANDS, HARD_MAX_COMMANDS],
-  maxConcurrentExecs: [DEFAULT_MAX_CONCURRENT_EXECS, HARD_MAX_CONCURRENT_EXECS],
-  maxEnvNames: [DEFAULT_MAX_ENV_NAMES, HARD_MAX_ENV_NAMES],
-  maxEnvBytes: [DEFAULT_MAX_ENV_BYTES, HARD_MAX_ENV_BYTES],
-  maxOutputBytes: [DEFAULT_MAX_OUTPUT_BYTES, HARD_MAX_OUTPUT_BYTES],
-  maxExportEntries: [DEFAULT_MAX_EXPORT_ENTRIES, HARD_MAX_EXPORT_ENTRIES],
-  maxExportBytes: [DEFAULT_MAX_EXPORT_BYTES, HARD_MAX_EXPORT_BYTES],
-  maxRetainedArtifacts: [DEFAULT_MAX_RETAINED_ARTIFACTS, HARD_MAX_RETAINED_ARTIFACTS],
-  stopGraceMs: [DEFAULT_STOP_GRACE_MS, HARD_STOP_GRACE_MS],
-  cleanupDeadlineMs: [DEFAULT_CLEANUP_DEADLINE_MS, HARD_CLEANUP_DEADLINE_MS],
+const SPECS: Record<keyof NativeSandboxLimitOptions, number> = {
+  wallTimeMs: DEFAULT_WALL_TIME_MS,
+  idleTimeoutMs: DEFAULT_IDLE_TIMEOUT_MS,
+  memoryBytes: DEFAULT_MEMORY_BYTES,
+  maxFds: DEFAULT_MAX_FDS,
+  maxCommands: DEFAULT_MAX_COMMANDS,
+  maxConcurrentExecs: DEFAULT_MAX_CONCURRENT_EXECS,
+  maxEnvNames: DEFAULT_MAX_ENV_NAMES,
+  maxEnvBytes: DEFAULT_MAX_ENV_BYTES,
+  maxOutputBytes: DEFAULT_MAX_OUTPUT_BYTES,
+  maxExportEntries: DEFAULT_MAX_EXPORT_ENTRIES,
+  maxExportBytes: DEFAULT_MAX_EXPORT_BYTES,
+  maxRetainedArtifacts: DEFAULT_MAX_RETAINED_ARTIFACTS,
+  stopGraceMs: DEFAULT_STOP_GRACE_MS,
+  cleanupDeadlineMs: DEFAULT_CLEANUP_DEADLINE_MS,
 };
 
 export function resolveNativeSandboxLimits(input: NativeSandboxLimitOptions = {}): ResolvedNativeSandboxLimits {
   const resolved = {} as Record<keyof ResolvedNativeSandboxLimits, number>;
-  for (const [name, [fallback, hardCap]] of Object.entries(SPECS)) {
+  for (const [name, fallback] of Object.entries(SPECS)) {
     const value = input[name as keyof NativeSandboxLimitOptions] ?? fallback;
-    resolved[name as keyof ResolvedNativeSandboxLimits] = validateSandboxLimit(name, value as number, hardCap);
+    resolved[name as keyof ResolvedNativeSandboxLimits] = validateSandboxLimit(name, value as number);
   }
   return resolved as ResolvedNativeSandboxLimits;
 }
@@ -142,6 +128,12 @@ export interface CreateNativeSandboxOptions {
   readonly env?: Readonly<Record<string, string>>;
   /** Secret canaries redacted from error text. */
   readonly secrets?: readonly string[];
+  /**
+   * Absolute path of the shell `exec` requests run in (from `getShellConfig`). The `/bin/sh`
+   * wrapper still applies the ulimits, then `exec`s this shell with `-c`. Default: the wrapper runs
+   * the command itself.
+   */
+  readonly shell?: string;
 }
 
 /** Which `unshare` invocation granted the netns at creation (recorded once). */
@@ -163,6 +155,7 @@ export function buildNativeSpawnCommand(
     readonly mode: NativeUnshareMode;
     readonly limits: ResolvedNativeSandboxLimits;
     readonly env: Readonly<Record<string, string>>;
+    readonly shell?: string;
   },
 ): NativeSpawnCommand {
   const modeFlags = options.mode === "plain" ? ["--net"] : ["--net", "--map-root-user"];
@@ -172,6 +165,15 @@ export function buildNativeSpawnCommand(
     `ulimit -t ${Math.ceil(options.limits.wallTimeMs / 1000)} || exit 126`,
     `ulimit -n ${options.limits.maxFds} || exit 126`,
   ].join("; ");
+  if ("command" in request && options.shell !== undefined) {
+    // The command is argv to the resolved shell, after the wrapper set the limits.
+    return {
+      file: options.unshare,
+      args: [...modeFlags, SH, "-c", `${ulimit}; exec "$@"`, WRAPPER_ARGV0, options.shell, "-c", request.command],
+      env: { ...options.env },
+      cwd: request.cwd,
+    };
+  }
   if ("command" in request) {
     return {
       file: options.unshare,
@@ -312,6 +314,7 @@ class NativeSandboxSession implements DisposableSandbox {
       readonly limits: ResolvedNativeSandboxLimits;
       readonly env: Record<string, string>;
       readonly secrets: readonly string[];
+      readonly shell?: string;
     },
   ) {
     this.id = randomUUID();
@@ -419,6 +422,7 @@ class NativeSandboxSession implements DisposableSandbox {
           mode: this.opts.mode,
           limits: this.opts.limits,
           env: { ...baseEnv, ...extraEnv },
+          ...(this.opts.shell !== undefined ? { shell: this.opts.shell } : {}),
         },
       );
       const timeoutMs = request.timeout !== undefined ? Math.min(request.timeout, this.remainingWallMs()) : this.remainingWallMs();
@@ -635,5 +639,6 @@ export async function createNativeSandbox(options: CreateNativeSandboxOptions): 
     limits,
     env,
     secrets: options.secrets ?? [],
+    ...(options.shell !== undefined ? { shell: options.shell } : {}),
   });
 }

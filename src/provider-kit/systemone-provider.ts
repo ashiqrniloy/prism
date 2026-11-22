@@ -91,6 +91,7 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
             apiKey: resolvedSecret(apiKey),
             fetch: options.fetch,
             maxRetries: options.maxRetries,
+            timeouts: request.options?.timeouts,
           },
           request.signal,
         );

@@ -191,6 +191,8 @@ export interface WebToolsOptions {
   readonly cache?: FetchCache;
   /** Adds the `web_fetch` `prompt` argument: one model call answers a question from the page. */
   readonly prompt?: PromptFetch;
+  /** Ceiling on the model's `web_fetch` `max_chars` (default 100,000; plan 239 Task 5). */
+  readonly maxFetchChars?: number;
 }
 
 /** The `web.fetch` service `@arnilo/prism-tools/web` provides when a fetch backend is configured. */

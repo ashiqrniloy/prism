@@ -1,4 +1,5 @@
 /// <reference path="./bun-sqlite.d.ts" />
+import type { SessionQueryLimits } from "@arnilo/prism";
 /**
  * `@arnilo/prism-extensions/store-sqlite` — the SQLite session store (with its leases, lifecycle, and schema
  * migrations) as the `store` slot. `bun:sqlite` is built in; the module fails closed with a
@@ -53,6 +54,10 @@ export type { SqlitePersistenceOptions } from "./types.js";
 export interface SqliteStoreConfig {
   readonly path: string;
   readonly busyTimeoutMs?: number;
+  /** Store query limits (plan 239 Task 5); each defaults to the kernel's value. */
+  readonly queryLimits?: SessionQueryLimits;
+  /** Largest checkpoint, lifecycle or feedback page. Default 500. */
+  readonly maxPageSize?: number;
 }
 
 const configSchema: JsonSchema = {
@@ -60,6 +65,17 @@ const configSchema: JsonSchema = {
   properties: {
     path: { type: "string", minLength: 1, maxLength: 4096 },
     busyTimeoutMs: { type: "number", minimum: 0 },
+    queryLimits: {
+      type: "object",
+      description: "Store query limits: largest list and search page, search text, cursor and snippet bytes, full-text candidates.",
+      properties: Object.fromEntries(
+        ["maxListLimit", "maxSearchLimit", "maxSearchQueryBytes", "maxSearchCursorBytes", "searchSnippetBytes", "ftsCandidates"].map(
+          (key) => [key, { type: "integer", minimum: 1 }],
+        ),
+      ),
+      additionalProperties: false,
+    },
+    maxPageSize: { type: "integer", minimum: 1 },
   },
   // `path` is checked in setup rather than declared required: a config schema whose defaults cannot
   // validate would fail package conformance, and the setup error names the field (plan 152 Task 6).
@@ -78,7 +94,12 @@ const definition = definePackage<SqliteStoreConfig>({
     if (typeof path !== "string" || path.length === 0) {
       throw new Error("prism-store-sqlite: config needs path (the SQLite database file; use :memory: for tests)");
     }
-    const persistence = createSqlitePersistence({ filename: path, busyTimeoutMs: prism.config.busyTimeoutMs });
+    const persistence = createSqlitePersistence({
+      filename: path,
+      busyTimeoutMs: prism.config.busyTimeoutMs,
+      ...(prism.config.queryLimits === undefined ? {} : { queryLimits: prism.config.queryLimits }),
+      ...(prism.config.maxPageSize === undefined ? {} : { maxPageSize: prism.config.maxPageSize }),
+    });
     prism.slots.store.provide(persistence);
     // The workflows service names are the cross-package contract (plan 168 Task 4); both stores share the
     // one open `Database` above, so providing them opens no second handle.

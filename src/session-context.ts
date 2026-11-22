@@ -14,6 +14,14 @@ export interface SessionContext {
   /** The agent's model; absent on a model-less agent. */
   readonly model?: ModelConfig;
   /**
+   * Parent links between this session and its root: 0 for a root, 1 for a child opened with `parent.sessionId`, and so
+   * on. Synchronous: stamped in the links entry when the session opened, read back when it resumes. Every view the
+   * kernel hands out sets it; it is optional only so a hand-built context stays valid (read it as `depth ?? 0`).
+   */
+  readonly depth?: number;
+  /** `SessionOptions.parent.sessionId` this session was opened with; absent on a root. Synchronous. */
+  readonly parentSessionId?: string;
+  /**
    * The session's current branch as persisted (already redacted). Needs the `"session-state"` capability.
    * One branch read per call and never cached, so read it from a background task or command, not per
    * `context.build`. Called before the session has read its branch, it reads the branch first.

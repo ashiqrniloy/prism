@@ -363,10 +363,10 @@ describe("workspace service", () => {
 });
 
 describe("workspace service config", () => {
-  it("workspace_config_rejects_unknown_keys_and_out_of_range_bounds", async () => {
+  it("workspace_config_rejects_unknown_keys_and_invalid_bounds", async () => {
     const base = await mkdtemp(join(tmpdir(), "prism-workspace-config-"));
     bases.push(base);
-    for (const workspace of [{ nope: true }, { maxWorktrees: 99 }, { diff: { maxFiles: 0 } }, { worktreeRoot: "" }]) {
+    for (const workspace of [{ nope: true }, { maxWorktrees: 0 }, { diff: { maxFiles: 0 } }, { worktreeRoot: "" }]) {
       const thrown = await load(base, workspace).catch((error: unknown) => error);
       assert.ok(thrown instanceof Error, `expected ${JSON.stringify(workspace)} to fail closed`);
     }

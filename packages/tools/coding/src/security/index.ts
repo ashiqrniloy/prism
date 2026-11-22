@@ -1,6 +1,9 @@
-export type { CommandRule, CommandRuleAction, CommandRuleEvaluation } from "./command-rules.js";
+export type { BuiltinDenyRule, CommandRule, CommandRuleAction, CommandRuleEvaluation, CommandRuleSpec } from "./command-rules.js";
 export {
+  BUILTIN_DENY_RULES,
+  compileCommandRules,
   evaluateCommandRules,
+  MAX_COMMAND_RULE_PATTERN_LENGTH,
   hasShellMetacharacters,
 } from "./command-rules.js";
 export type { DockerCliRequest, DockerCliResult, DockerRunner } from "./docker-cli.js";
@@ -83,12 +86,6 @@ export {
   DEFAULT_MAX_EGRESS_RESPONSE_BYTES,
   DEFAULT_MAX_EGRESS_RULES,
   DEFAULT_MAX_EGRESS_TRANSFER_TIME_MS,
-  HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS,
-  HARD_MAX_EGRESS_REDIRECT_HOPS,
-  HARD_MAX_EGRESS_REQUEST_BYTES,
-  HARD_MAX_EGRESS_RESPONSE_BYTES,
-  HARD_MAX_EGRESS_RULES,
-  HARD_MAX_EGRESS_TRANSFER_TIME_MS,
 } from "./egress/limits.js";
 export type {
   CreateNativeSandboxOptions,
@@ -173,26 +170,6 @@ export {
   DEFAULT_TMP_BYTES,
   DEFAULT_WALL_TIME_MS,
   DEFAULT_WORKSPACE_BYTES,
-  HARD_CLEANUP_DEADLINE_MS,
-  HARD_CPUS,
-  HARD_DOWNLOAD_BYTES,
-  HARD_IDLE_TIMEOUT_MS,
-  HARD_MAX_COMMANDS,
-  HARD_MAX_CONCURRENT_EXECS,
-  HARD_MAX_ENV_BYTES,
-  HARD_MAX_ENV_NAMES,
-  HARD_MAX_EXPORT_BYTES,
-  HARD_MAX_EXPORT_ENTRIES,
-  HARD_MAX_FDS,
-  HARD_MAX_OUTPUT_BYTES,
-  HARD_MAX_PIDS,
-  HARD_MAX_RETAINED_ARTIFACTS,
-  HARD_MEMORY_BYTES,
-  HARD_STARTUP_TIMEOUT_MS,
-  HARD_STOP_GRACE_MS,
-  HARD_TMP_BYTES,
-  HARD_WALL_TIME_MS,
-  HARD_WORKSPACE_BYTES,
   resolveDockerSandboxLimits,
   validateSandboxLimit,
 } from "./sandbox-limits.js";

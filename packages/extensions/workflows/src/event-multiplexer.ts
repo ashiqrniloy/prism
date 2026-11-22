@@ -1,3 +1,5 @@
+const DEFAULT_MAX_QUEUED_EVENTS = 1024;
+
 export type EventOverflowPolicy = "close" | "drop_oldest" | "drop_newest";
 
 export const EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE = "ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER";
@@ -43,7 +45,7 @@ export interface EventMultiplexer<T> {
 
 /** Bounded single-consumer fan-in for arbitrary async event sources. */
 export function createEventMultiplexer<T>(options: EventMultiplexerOptions<T> = {}): EventMultiplexer<T> {
-  const maxQueuedEvents = Math.max(1, options.maxQueuedEvents ?? 1024);
+  const maxQueuedEvents = Math.max(1, options.maxQueuedEvents ?? DEFAULT_MAX_QUEUED_EVENTS);
   const overflow = options.overflow ?? "close";
   const queue: T[] = [];
   const stops = new Set<() => void>();

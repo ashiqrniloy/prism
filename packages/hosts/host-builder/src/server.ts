@@ -5,7 +5,7 @@ import manifest from "../../package.json" with { type: "json" };
 import { checkPackage } from "./check/conformance.js";
 import { inspectHost } from "./check/inspect.js";
 import { checkManifest } from "./check/manifest.js";
-import { DEFAULT_CHECK_TIMEOUT_MS, MAX_CHECK_TIMEOUT_MS } from "./check/runner.js";
+import { DEFAULT_CHECK_TIMEOUT_MS } from "./check/runner.js";
 import { type CheckTargets, findTarget, resolveCheckTargets } from "./check/targets.js";
 import { HostBuilderError } from "./errors.js";
 import { type LoadHostBuilderIndexOptions, loadHostBuilderIndex } from "./indexes.js";
@@ -70,7 +70,7 @@ export function createHostBuilderMcpServer(options: HostBuilderMcpOptions): McpS
   const targets: CheckTargets = resolveCheckTargets(root, options.entries, options.packages);
   const checkSettings = {
     root,
-    timeoutMs: Math.min(options.checkTimeoutSeconds ?? DEFAULT_CHECK_TIMEOUT_MS / 1000, MAX_CHECK_TIMEOUT_MS / 1000) * 1000,
+    timeoutMs: (options.checkTimeoutSeconds ?? DEFAULT_CHECK_TIMEOUT_MS / 1000) * 1000,
     passEnv: options.passEnv ?? [],
   };
   const flagHelp = (flag: string) =>

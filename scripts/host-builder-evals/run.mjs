@@ -150,7 +150,8 @@ export function offlineProvider({ task }) {
 
 /** The packages one arm adds on top of the shared builder: nothing for `none`, the MCP server for `skill+mcp`. */
 export function armPackages(arm, dir) {
-  const packages = [toolsCoding({ root: dir }), contextFiles({ root: dir })];
+  // The builder works alone in a throwaway workspace with no UI to answer an ask: `guard: "off"` (plan 233 Task 2).
+  const packages = [toolsCoding({ root: dir, guard: "off" }), contextFiles({ root: dir })];
   if (arm === "skill+mcp") {
     packages.push(
       mcp({

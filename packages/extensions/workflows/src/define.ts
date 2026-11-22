@@ -1,13 +1,5 @@
 import { WorkflowDefinitionError } from "./errors.js";
-import {
-  DEFAULT_MAX_NODES,
-  HARD_MAX_FAN_OUT,
-  HARD_MAX_LOOP_ITERATIONS,
-  HARD_MAX_NODE_RETRIES,
-  HARD_MAX_NODE_TIMEOUT_MS,
-  validateWorkflowLimit,
-  validateWorkflowLimits,
-} from "./limits.js";
+import { DEFAULT_MAX_NODES, validateWorkflowLimit, validateWorkflowLimits } from "./limits.js";
 import type { WorkflowDefinition, WorkflowLimits, WorkflowNodeDefinition, WorkflowNodeKind } from "./types.js";
 
 /** Node kinds the 0.13 engine executes. `tool` was retired with `toolNode` (Phase 16). */
@@ -91,7 +83,7 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
         throw new WorkflowDefinitionError(`Gate node "${nodeId}" onFail references unknown node "${node.onFail}"`);
       }
       if (node.maxIterations !== undefined) {
-        validateWorkflowLimit(`Node "${nodeId}" maxIterations`, node.maxIterations, HARD_MAX_LOOP_ITERATIONS);
+        validateWorkflowLimit(`Node "${nodeId}" maxIterations`, node.maxIterations);
       }
     }
     if (node.kind === "conditional") {
@@ -112,20 +104,26 @@ export function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition {
         throw new WorkflowDefinitionError(`Node "${nodeId}" idempotent "resume-session" is only valid on an agent node`);
       }
     }
-    if (node.retries !== undefined && (!Number.isSafeInteger(node.retries) || node.retries < 0 || node.retries > HARD_MAX_NODE_RETRIES)) {
-      throw new WorkflowDefinitionError(`Node "${nodeId}" retries must be a non-negative safe integer at most ${HARD_MAX_NODE_RETRIES}`);
+    if (node.retries !== undefined && (!Number.isSafeInteger(node.retries) || node.retries < 0)) {
+      throw new WorkflowDefinitionError(`Node "${nodeId}" retries must be a non-negative safe integer`);
+    }
+    for (const key of ["stepMs", "maxMs"] as const) {
+      const value = node.retryBackoff?.[key];
+      if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
+        throw new WorkflowDefinitionError(`Node "${nodeId}" retryBackoff.${key} must be a non-negative safe integer`);
+      }
     }
     if (node.timeoutMs !== undefined) {
-      validateWorkflowLimit(`Node "${nodeId}" timeoutMs`, node.timeoutMs, HARD_MAX_NODE_TIMEOUT_MS);
+      validateWorkflowLimit(`Node "${nodeId}" timeoutMs`, node.timeoutMs);
     }
     if (node.kind === "fan_out" && node.maxFanOut !== undefined) {
-      validateWorkflowLimit(`Node "${nodeId}" maxFanOut`, node.maxFanOut, HARD_MAX_FAN_OUT);
+      validateWorkflowLimit(`Node "${nodeId}" maxFanOut`, node.maxFanOut);
     }
     if (node.kind === "loop") {
       if (node.maxIterations === undefined) {
         throw new WorkflowDefinitionError(`Loop node "${nodeId}" maxIterations is required`);
       }
-      validateWorkflowLimit(`Node "${nodeId}" maxIterations`, node.maxIterations, HARD_MAX_LOOP_ITERATIONS);
+      validateWorkflowLimit(`Node "${nodeId}" maxIterations`, node.maxIterations);
       if (typeof node.until !== "function") {
         throw new WorkflowDefinitionError(`Loop node "${nodeId}" requires until()`);
       }

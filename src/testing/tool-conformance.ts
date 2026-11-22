@@ -96,6 +96,16 @@ export async function assertToolDispatchConforms(registry: ToolRegistry, options
     "invalid_arguments",
   );
 
+  // 3b. arguments that violate the tool's own `parameters` → blocked "invalid_arguments" (plan 226 Task 2).
+  // Derived from the schema: `{}` when it requires a key, else an undeclared key when it closes the object.
+  const violating = schemaViolatingArgs(options.tool);
+  if (violating) {
+    await assertToolBlocked(
+      { call: call(options.tool.name, violating), context: baseContext, ...shared, ...pickPolicy(options) },
+      "invalid_arguments",
+    );
+  }
+
   // 4. pre-execution policy denial → blocked "execution_denied".
   await assertToolBlocked(
     {
@@ -165,6 +175,15 @@ export async function dispatchAndCollect(probe: ToolDispatchProbeOptions): Promi
     },
   });
   return { result, events };
+}
+
+/** Arguments the built-in check must reject, or `undefined` when the tool opts out or its schema forbids nothing derivable. */
+function schemaViolatingArgs(tool: ToolDefinition): JsonObject | undefined {
+  const parameters = tool.parameters as { readonly required?: unknown; readonly additionalProperties?: unknown } | undefined;
+  if (!parameters || tool.validateArguments === false) return undefined;
+  if (Array.isArray(parameters.required) && parameters.required.length > 0) return {};
+  if (parameters.additionalProperties === false) return { conformanceUndeclaredKey: 1 };
+  return undefined;
 }
 
 function pickPolicy(options: ToolConformanceOptions): {

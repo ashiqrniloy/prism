@@ -463,9 +463,11 @@ test("maxSteps validation rejects invalid values", () => {
     (err: unknown) => err instanceof TimelineError && err.code === "ERR_PRISM_TIMELINE_BOUNDS",
   );
   assert.throws(
-    () => projectAgentTimeline([], { maxSteps: 10_001 }),
+    () => projectAgentTimeline([], { maxSteps: 1.5 }),
     (err: unknown) => err instanceof TimelineError && err.code === "ERR_PRISM_TIMELINE_BOUNDS",
   );
+  // Plan 239 Task 5: the host's value is the cap.
+  assert.doesNotThrow(() => projectAgentTimeline([], { maxSteps: 100_000, maxStepIoBytes: 4 * 1024 * 1024 }));
 });
 
 test("host turn-policy stop lands on the timeline as stopReason plus bounded detail", () => {

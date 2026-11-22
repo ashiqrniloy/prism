@@ -1,11 +1,6 @@
 import type { Agent, SecretRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import {
-  DEFAULT_JUDGE_TIMEOUT_MS,
-  HARD_JUDGE_TIMEOUT_MS,
-  DEFAULT_JUDGE_MAX_INPUT_BYTES,
-  DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
-} from "./limits.js";
+import { DEFAULT_JUDGE_TIMEOUT_MS, DEFAULT_JUDGE_MAX_INPUT_BYTES, DEFAULT_JUDGE_MAX_OUTPUT_BYTES } from "./limits.js";
 import { runToollessSession } from "./toolless-session.js";
 import type { UserSimulatorSpec, UserSimulator, UserSimulation } from "./types.js";
 
@@ -50,7 +45,6 @@ export function createUserSimulator(options: UserSimulatorSpec & { readonly agen
     maxTurns > 32 ||
     !Number.isInteger(timeoutMs) ||
     timeoutMs < 1 ||
-    timeoutMs > HARD_JUDGE_TIMEOUT_MS ||
     !model?.provider?.trim() ||
     !model.model?.trim()
   )

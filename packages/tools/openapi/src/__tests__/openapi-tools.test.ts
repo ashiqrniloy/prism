@@ -219,7 +219,7 @@ describe("createOpenApiTools compile", () => {
       () => makeTools({ operations: ["getCustomer", "createCustomer"], limits: { maxOperations: 1 } }),
       "ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS",
     );
-    throwsCode(() => makeTools({ limits: { maxRetries: 99 } }), "ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS");
+    throwsCode(() => makeTools({ limits: { maxRetries: -1 } }), "ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS");
     throwsCode(() => makeTools({ limits: { maxPages: 0 } }), "ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS");
   });
 

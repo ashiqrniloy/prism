@@ -28,6 +28,8 @@ prism add @arnilo/prism-extensions/store-postgres
 | `url` | string (`x-prism-secret`, ref only) | — | `env:`/`keyring:` ref for the connection string. One string, so a password never lands in the manifest; resolved through `prism.credentials.resolve` once at `setup`, and the value joins the agent's secret set. |
 | `schema` | string | `prism` | Schema holding the Prism tables. Created by the migrations if it is absent. |
 | `pool` | object | — | Pool tuning for the pool this package creates: `max` (default `10`), `connectionTimeoutMillis`, `idleTimeoutMillis`. Anything else (`ssl`, certificates, a caller-owned `Pool`) stays code-only. |
+| `queryLimits` | object | kernel defaults | Store query limits: `maxListLimit` (100), `maxSearchLimit` (100), `maxSearchQueryBytes`, `maxSearchCursorBytes`, `searchSnippetBytes` (512), `ftsCandidates` (1,000). Host-only; a list or search page above the store's limit is refused. |
+| `maxPageSize` | integer | `500` | Largest checkpoint, lifecycle or run-feedback page. |
 
 A missing `url` fails the package load with a field-naming error, and an unresolvable ref fails it
 naming the ref — never a value. A literal connection string in an `x-prism-secret` field is refused
@@ -59,9 +61,42 @@ by the kernel's config check (`secret_literal`) before any connection.
 
 `slot:store`, `credentials` (to resolve the `url` ref).
 
+The store declares `tipCheck` (plan 230 Task 2): a `tip: true` append is inserted with `linear = 1`, and the
+partial unique index `prism_session_entries_linear_parent_unique` on `(session_id, parent_id) WHERE linear =
+1` rejects a second one at the same parent inside the insert, with no extra round trip. The `23505` on that
+index becomes `SessionAppendConflictError`; the current leaf is read only on that failure path. Migration
+`012_session_entry_linear` adds the column with a constant `DEFAULT 0` (a catalog-only change, no table
+rewrite) and builds the index; existing sibling branches stay valid. Several processes can safely run one
+session: the second writer's run fails with `session_conflict` instead of forking the branch.
+
+`readBranchPath({ from: "compaction" })` (plan 230 Task 3) reads only the branch's tail in two recursive
+statements: the walk from the leaf stops at the newest compaction, the second goes on to its `throughEntryId`;
+a third statement reads the older entries its `keepEntryIds` name, when there are any. The kernel uses it for
+every session snapshot (5,000 entries compacted at 4,800: 221 rows and ~2.7 ms instead of 5,000 rows and ~36 ms
+over a local socket). No schema change.
+
+`append` is one statement (plan 230 Task 4): data-modifying CTEs check the parent, the idempotency key, and the
+entry id, then upsert the session row (and its link columns, for the links entry), insert the entry, upsert its
+search row, and record the key. A failed check writes nothing and maps to the same error as before. A
+concurrent writer that passed the same checks hits a unique index instead: the linear index is
+`SessionAppendConflictError`, the idempotency primary key an idempotency duplicate, the entry primary key a
+duplicate id. There is no explicit transaction, so no `ROLLBACK` can hide the original error. Migration
+`013_session_entry_seq` adds `prism_session_entries.seq`, a `BIGINT` identity backfilled in the old
+`timestamp, ctid` order, and the `(session_id, seq)` index; `list()`, the latest-leaf lookup, and the session
+index order by it instead of `ctid`, which `VACUUM FULL` and `CLUSTER` rewrite. The backfill updates every
+entry row once, under the migration lock.
+
+`appendMany` (plan 230 Task 5) writes a batch in one statement: each column is one array parameter (`unnest …
+WITH ORDINALITY`), so the parameter count does not grow with the batch, and rows are inserted in batch order so
+`seq` follows the branch. An `ok` CTE checks that every parent outside the batch is in the session and no id is
+taken; a failed check writes nothing, not even the session row. Batch rows are not linear. `session.fork()`
+uses it: a 5,000-entry fork is 2 statements (~0.43 s over a local socket) instead of one per entry (5,001
+statements, ~5.0 s; 30,001 statements and 9.85 s before plan 230 Task 4).
+
 ## Cost, security, failure behavior
 
-- Each `append` is one transaction and one round trip; a page of `listSessions` is three queries
+- Each `append` is one statement and one round trip (1 ms RTT: ~3 ms instead of ~19–23 ms; 20 ms RTT: ~22 ms
+  instead of ~145–186 ms); a page of `listSessions` is three queries
   (the page, its leaves, its message counts) regardless of page size. The default pool is 10
   connections (`DEFAULT_POOL_MAX`), created once per agent unless the host passes one.
 - `pg` is a dependency of this package only and is loaded lazily: importing the package (or running an

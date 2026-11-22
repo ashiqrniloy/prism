@@ -24,6 +24,7 @@ import {
   MIGRATION_009_RUN_PROMPT_VERSION,
   MIGRATION_010_SESSION_LINKS,
   MIGRATION_011_EVALUATIONS,
+  MIGRATION_012_SESSION_ENTRY_LINEAR,
 } from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
@@ -59,7 +60,10 @@ export function applySqliteMigrations(db: Database): readonly AppliedPersistence
       else if (step.name === "009_run_prompt_version") db.exec(MIGRATION_009_RUN_PROMPT_VERSION);
       else if (step.name === "010_session_links") db.exec(MIGRATION_010_SESSION_LINKS);
       else if (step.name === "011_evaluations") db.exec(MIGRATION_011_EVALUATIONS);
-      else throw new Error(`Unknown migration step: ${step.name}`);
+      else if (step.name === "012_session_entry_linear") db.exec(MIGRATION_012_SESSION_ENTRY_LINEAR);
+      else if (step.name === "013_session_entry_seq") {
+        // Plan 230 Task 4: PostgreSQL-only `seq`; SQLite already orders entries by its stable rowid.
+      } else throw new Error(`Unknown migration step: ${step.name}`);
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)
          VALUES (?, ?, ?, ?, ?, ?)`,

@@ -19,9 +19,7 @@ import type { PermissionDecision, PermissionRequest, PrismMcpWebHandler, ServeTo
 
 const DEFAULT_HEADER_ENV = "PRISM_MCP_TOKEN";
 const DEFAULT_MAX_CONCURRENT_CALLS = 8;
-const HARD_MAX_CONCURRENT_CALLS = 64;
 const DEFAULT_RESULT_BYTES = 1024 * 1024;
-const HARD_RESULT_BYTES = 8 * 1024 * 1024;
 export const MAX_RESOURCE_BYTES = 256 * 1024;
 const CLOSED_MESSAGE = "served tools are closed";
 const APPROVAL_PENDING_MESSAGE = "approval is pending; the run is suspended until a decision is recorded, so do not retry this call";
@@ -77,13 +75,8 @@ export async function serveTools(run: RunController, options: ServeToolsOptions)
   if (options.allow.length === 0 && options.permissionTool === undefined)
     throw new ServeToolsError("serve_tools_empty", "serveTools needs a non-empty allow list");
   const headerEnv = options.headerEnv ?? DEFAULT_HEADER_ENV;
-  const maxConcurrentCalls = bounded(
-    options.limits?.maxConcurrentCalls,
-    DEFAULT_MAX_CONCURRENT_CALLS,
-    HARD_MAX_CONCURRENT_CALLS,
-    "maxConcurrentCalls",
-  );
-  const resultBytes = bounded(options.limits?.resultBytes, DEFAULT_RESULT_BYTES, HARD_RESULT_BYTES, "resultBytes");
+  const maxConcurrentCalls = bounded(options.limits?.maxConcurrentCalls, DEFAULT_MAX_CONCURRENT_CALLS, "maxConcurrentCalls");
+  const resultBytes = bounded(options.limits?.resultBytes, DEFAULT_RESULT_BYTES, "resultBytes");
   const resources = options.resources ?? [];
   for (const resource of resources) {
     if (Buffer.byteLength(resource.text, "utf8") > MAX_RESOURCE_BYTES)

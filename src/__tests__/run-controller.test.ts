@@ -81,6 +81,7 @@ describe("RunController", () => {
     assert.deepEqual(Object.keys(controller).sort(), [
       "append",
       "ask",
+      "checkpoint",
       "emit",
       "end",
       "executeTools",
@@ -88,6 +89,7 @@ describe("RunController", () => {
       "limits",
       "model",
       "observe",
+      "restored",
       "session",
       "signal",
       "state",

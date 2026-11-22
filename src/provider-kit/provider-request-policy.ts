@@ -79,6 +79,8 @@ export function mergeProviderRequestOptions(
     headers: patch.headers || base.headers ? { ...base.headers, ...patch.headers } : undefined,
     compat: patch.compat || base.compat ? { ...base.compat, ...patch.compat } : undefined,
     extra: patch.extra || base.extra ? { ...base.extra, ...patch.extra } : undefined,
+    // Per field, so a run can change one timeout and keep the agent's other one.
+    ...(patch.timeouts || base.timeouts ? { timeouts: { ...base.timeouts, ...patch.timeouts } } : {}),
   };
   if (!patch.cache && !base.cache) return merged;
   return {

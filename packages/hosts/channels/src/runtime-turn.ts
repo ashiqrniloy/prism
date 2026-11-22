@@ -389,19 +389,27 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
 
   /**
    * Assistant-text preview accumulator for one turn: cumulative, redacted, never journaled and
-   * never allowed to fail the turn. Resets on each new assistant message so a tool-call preamble
-   * does not leak into the preview of the answer that follows it.
+   * never allowed to fail the turn. Resets on each new run. A provider attempt that ends with
+   * `error` drops its text (plan 227 Task 4: the run may retry it), so the next delta's cumulative
+   * preview replaces the failed attempt's.
    */
   function createPreview(route: RouteState, isLive: () => boolean): (event: AgentEvent) => void {
     const onDelta = options.onAssistantDelta;
     if (onDelta === undefined) return () => undefined;
     let runId: string | undefined;
     let text = "";
+    let attemptStart = "";
     return (event) => {
       // A new run resets the preview: `run.started` replaces the retired message-start event.
       if (event.type === "run.started") {
         runId = event.runId;
         text = "";
+        attemptStart = "";
+        return;
+      }
+      if ((event.type === "turn.started" || event.type === "turn.completed") && (runId === undefined || event.runId === runId)) {
+        if (event.type === "turn.started") attemptStart = text;
+        else if (event.error) text = attemptStart;
         return;
       }
       if (event.type !== "message.delta" || event.content.type !== "text") return;

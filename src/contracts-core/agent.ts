@@ -22,7 +22,7 @@ import type { ContentBlock, JsonObject, ModelConfig, ModelRef, ModelSpec } from 
 import type { OwnershipScope, PersistencePage } from "./persistence.js";
 import type { ModelProvider, ProviderRequestOptions } from "./provider.js";
 import type { ResourceLoader } from "./resources.js";
-import type { RunLimits } from "./run-limits.js";
+import type { RunLimits, SessionLimits } from "./run-limits.js";
 import type { SessionActor, SessionListQuery, SessionParentLink, SessionSearchHit, SessionSearchQuery, SessionSummary } from "./session.js";
 import type { SystemPromptConfig } from "./system-prompt.js";
 
@@ -57,12 +57,28 @@ export interface AgentConfig {
    * otherwise `createAgent` fails with `model_required`. Never falls back to a default provider.
    */
   readonly model?: ModelRef;
-  readonly tools?: { readonly add?: readonly ToolDefinition[] };
+  readonly tools?: {
+    readonly add?: readonly ToolDefinition[];
+    /**
+     * Built-in check of every tool call's arguments against the tool's `parameters` before it runs
+     * (default `"schema"`): a violation blocks the call with `reason: "invalid_arguments"`. `"off"`
+     * restores the 0.14.0 behavior. `validator` still runs after the check.
+     */
+    readonly validation?: "schema" | "off";
+    /**
+     * How many calls of one model turn run at once (integer 1–16, default 4; `1` is serial). A round
+     * with an `exclusive` tool, a tool with no `effects`, or an unknown tool name stays serial. Results
+     * are appended in call order. `RunOptions.tools.concurrency` can only lower it.
+     */
+    readonly concurrency?: number;
+  };
   readonly skills?: {
     readonly dirs?: readonly string[];
     readonly add?: readonly Skill[];
     /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
     readonly disclosure?: import("../skill-disclosure.js").SkillsDisclosure;
+    /** Progressive catalog bounds: listed skills (default 64) and description bytes (default 512). */
+    readonly catalog?: import("../skill-disclosure.js").SkillCatalogOptions;
   };
   /** Opt-in: tools hidden by a `RunOptions.tools` scoping stay callable by name (default off). */
   readonly allowHiddenToolCalls?: true;
@@ -88,14 +104,28 @@ export interface AgentConfig {
   readonly costCatalog?: import("./content.js").CostCatalog;
   /** Optional durable recovery store. */
   readonly effectStore?: ToolEffectStore;
+  /**
+   * When the kernel writes durable run state to the branch. `"suspension"` (default) writes it only when a run
+   * suspends for an approval. `"turn"` also appends one `run_checkpoint` entry per completed tool round, so
+   * `session.continue()` restores the run id, limit counters, wall deadline and loop state (plan 231 Task 3).
+   */
+  readonly durability?: "suspension" | "turn";
   readonly ownership?: OwnershipScope;
   /** Opaque optional host principal. Packages own verification and enforcement. */
   readonly principal?: import("./principal.js").Principal;
   readonly idempotencyKey?: string;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
-  /** Agent-wide ceilings; per-run limits may only narrow these values. */
+  /** Agent-wide policy limits (`RunOptions.limits` narrows them); each byte axis stays at or below `ceilings`. */
   readonly limits?: RunLimits;
+  /** Default session-wide limits for every session opened on this agent (`SessionOptions.limits` narrows by `min`). */
+  readonly sessionLimits?: SessionLimits;
+  /**
+   * Process-safety ceilings (plan 239 Task 4). Host-only: `createAgent` reads them once, and no run option,
+   * package, manifest, tool or model can set or raise one. Each is a positive safe integer; `null` is rejected.
+   * Omitted keys keep the shipped defaults. See {@link AgentCeilings}.
+   */
+  readonly ceilings?: AgentCeilings;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly validator?: ToolValidator;
   readonly inputLayout?: InputAssemblyLayout;
@@ -299,9 +329,52 @@ export interface SessionOptions {
    * without `get` rebuilds), so the TTL bounds how long an external delete can go unseen.
    */
   readonly snapshotCacheTtlMs?: number;
+  /** Session-wide budget across runs (`maxCost`, `maxTotalTokens`, `maxRuns`, `deadline`); narrows `AgentConfig.sessionLimits` by `min`. */
+  readonly limits?: SessionLimits;
 }
 
 export type AgentSessionConfig = SessionOptions;
+
+/**
+ * Host-only process-safety ceilings (plan 239 Task 4). A ceiling bounds what any policy layer may ask for,
+ * so a bug or an untrusted input cannot exhaust the process. Only the host raises or lowers one, at
+ * `createAgent`. Each defaults to the shipped value named in brackets.
+ */
+export interface AgentCeilings {
+  /** Upper bound for `limits.maxRequestBytes` [`HARD_RUN_LIMITS.maxRequestBytes`, 64 MiB]. */
+  readonly maxRequestBytes?: number;
+  /** Upper bound for `limits.maxResponseBytes` [`HARD_RUN_LIMITS.maxResponseBytes`, 64 MiB]. */
+  readonly maxResponseBytes?: number;
+  /** Upper bound for `limits.maxRunStateBytes`, and the bound on loading a stored run state [`HARD_MAX_AGENT_RUN_STATE_BYTES`, 1 MiB]. */
+  readonly runStateBytes?: number;
+  /** Pending decisions one run may suspend on, and the size of one decision batch [`HARD_MAX_PENDING_DECISIONS`, 128]. */
+  readonly pendingDecisions?: number;
+  /** Sticky decisions one run may hold [`DEFAULT_MAX_STICKY_DECISIONS`, 64]. */
+  readonly stickyDecisions?: number;
+  /** Steer messages queued on one session [`DEFAULT_MAX_PENDING_STEERS`, 8]. */
+  readonly pendingSteers?: number;
+  /** UTF-8 bytes of queued steer messages on one session [`DEFAULT_MAX_PENDING_STEER_BYTES`, 64 KiB]. */
+  readonly pendingSteerBytes?: number;
+  /** Upper bound for `SessionOptions.snapshotCacheTtlMs` [`HARD_MAX_SNAPSHOT_CACHE_TTL_MS`, 30 s]. */
+  readonly snapshotCacheTtlMs?: number;
+  /** Bytes of one skill's instructions, from any source; packages read it as `prism.ceilings` [`HARD_MAX_SKILL_INSTRUCTION_BYTES`, 256 KiB]. */
+  readonly skillInstructionBytes?: number;
+  /** Bytes of one package state value or one external-state entry [`MAX_STATE_VALUE_BYTES`, 64 KiB]. */
+  readonly stateValueBytes?: number;
+  /** Entries one `prism.state.log(key)` holds per branch [`MAX_STATE_LOG_ENTRIES`, 10,000]. */
+  readonly stateLogEntries?: number;
+  /** Entries one external-state key holds per branch [`MAX_EXTERNAL_STATE_ENTRIES`, 10,000]. */
+  readonly externalStateEntries?: number;
+  /** Bytes one external-state key holds per branch [`MAX_EXTERNAL_STATE_BYTES`, 8 MiB]. */
+  readonly externalStateBytes?: number;
+  /** Pages a branch read follows before it fails with `SessionBranchReadLimitError` [`DEFAULT_MAX_BRANCH_PAGES`, 64]. */
+  readonly branchReadPages?: number;
+  /** Upper bound for `tools.concurrency` [`MAX_TOOL_CONCURRENCY`, 16]. */
+  readonly toolConcurrency?: number;
+}
+
+/** Every ceiling resolved: the host's value, or the shipped default. */
+export type ResolvedAgentCeilings = { readonly [K in keyof AgentCeilings]-?: number };
 
 /** Default `session.snapshot()` branch-cache TTL (milliseconds). */
 export const DEFAULT_SNAPSHOT_CACHE_TTL_MS = 1_000;
@@ -313,18 +386,24 @@ export interface SessionForkOptions {
   readonly at?: string;
 }
 
-export type SubscriberOverflowPolicy = "close" | "drop_oldest" | "drop_newest";
+/**
+ * What a subscriber does when `maxQueuedEvents` is reached. `coalesce` (default, plan 228 Task 3) merges a
+ * lagging subscriber's adjacent text/thinking `message.delta` events (≤ 16 KiB of text per merged delta) and
+ * keeps only the newest queued `tool.progress` per call, then fails the iterator with
+ * `SubscriberOverflowError` like `close` once the bound is reached by events that cannot be merged.
+ */
+export type SubscriberOverflowPolicy = "coalesce" | "close" | "drop_oldest" | "drop_newest";
 
 export interface SubscribeOptions {
   /**
    * Plan 104 T5: `true` keeps this subscriber open across runs of the same session; it is then
    * closed only by the host (`subscription.close()` / `session.closeSubscribers()`) or by an
-   * overflow under the default `close` policy. Default `false` (closed at run end).
+   * overflow under the `coalesce` (default) or `close` policy. Default `false` (closed at run end).
    */
   readonly acrossRuns?: boolean;
-  /** Maximum queued events for a subscriber that is not actively awaiting `next()`. Defaults to 1024. */
+  /** Maximum queued events for a subscriber that is not actively awaiting `next()`. Defaults to 4096; no hard cap. */
   readonly maxQueuedEvents?: number;
-  /** What to do when `maxQueuedEvents` is reached. Defaults to `close`. */
+  /** What to do when `maxQueuedEvents` is reached. Defaults to `coalesce`. */
   readonly overflow?: SubscriberOverflowPolicy;
 }
 

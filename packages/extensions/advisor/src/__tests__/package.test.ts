@@ -11,7 +11,7 @@ import {
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { packageConformance } from "@arnilo/prism/testing";
-import advisor, { HARD_CONTEXT_MAX_CHARS, resolveContext, resolveLimits } from "../index.js";
+import advisor, { resolveContext, resolveLimits } from "../index.js";
 
 const agents: Agent[] = [];
 afterEach(async () => {
@@ -76,7 +76,8 @@ describe("advisor package", () => {
     );
   });
 
-  it("out_of_range_values_are_clamped_with_one_note", async () => {
+  it("host_values_above_the_old_ceilings_are_kept", async () => {
+    // Plan 239 Task 5: the config is host-authored, so its value is the cap; nothing is clamped or noted.
     const agent = await build({
       model: { provider: "mock", model: "m" },
       adviceMaxChars: 999_999,
@@ -84,16 +85,10 @@ describe("advisor package", () => {
       context: { lastTurns: 500, maxChars: 999_999 },
       validate: { maxRounds: 99 },
     });
-    const notes = agent.inspect().statusNotes.filter((note) => note.level === "info" && /clamped/.test(note.message));
-    assert.equal(notes.length, 1);
-    assert.ok(notes[0]);
-    for (const field of ["adviceMaxChars", "maxConsultsPerRun", "maxRounds", "lastTurns"])
-      assert.match(notes[0].message, new RegExp(field));
-    assert.deepEqual(resolveContext({ lastTurns: 500, maxChars: 999_999 }), {
-      lastTurns: 50,
-      maxChars: HARD_CONTEXT_MAX_CHARS,
-      clamped: true,
-    });
-    assert.equal(resolveLimits({ model: "mock/m", validate: { maxRounds: 99 } }).maxRounds, 10);
+    assert.equal(agent.inspect().statusNotes.filter((note) => /clamped/.test(note.message)).length, 0);
+    assert.deepEqual(resolveContext({ lastTurns: 500, maxChars: 999_999 }), { lastTurns: 500, maxChars: 999_999 });
+    const limits = resolveLimits({ model: "mock/m", adviceMaxChars: 999_999, maxConsultsPerRun: 999, validate: { maxRounds: 99 } });
+    assert.deepEqual(limits, { adviceMaxChars: 999_999, maxConsultsPerRun: 999, maxRounds: 99 });
+    await agent.dispose();
   });
 });

@@ -16,7 +16,6 @@ import {
   applyDraftBudget,
   ContextBudgetError,
   DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS,
-  HARD_MAX_CONTEXT_BUDGET_BYTES,
   isContextBudgetError,
   measureBudgetCost,
   resolveContextBudget,
@@ -36,11 +35,12 @@ const system = text("system", "Policy");
 const user = (value = "go") => text("user", value);
 
 describe("draft input budget", () => {
-  it("requires a cap and validates it against the hard maximum", () => {
+  it("requires a cap and accepts any positive host value", () => {
     assert.throws(() => resolveContextBudget({}), /maxInputTokens and\/or maxInputBytes/);
     assert.throws(() => resolveContextBudget({ maxInputTokens: 0 }), /maxInputTokens/);
     assert.throws(() => resolveContextBudget({ maxInputTokens: 1.5 }), /maxInputTokens/);
-    assert.throws(() => resolveContextBudget({ maxInputBytes: HARD_MAX_CONTEXT_BUDGET_BYTES + 1 }), /maxInputBytes/);
+    assert.throws(() => resolveContextBudget({ maxInputBytes: -1 }), /maxInputBytes/);
+    assert.doesNotThrow(() => resolveContextBudget({ maxInputBytes: 64 * 1024 * 1024, maxInputTokens: 10_000_000 }));
     assert.equal(resolveContextBudget({ maxInputTokens: 10 }).reportOmissions, false);
     assert.equal(resolveContextBudget({ maxInputTokens: 10, reportOmissions: true }).reportOmissions, true);
   });

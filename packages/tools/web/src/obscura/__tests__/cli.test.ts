@@ -77,11 +77,11 @@ test("url validation rejects private, credentialed, and non-HTTP targets; allows
   assert.equal(await validateObscuraWebUrl("https://example.com/page"), "https://example.com/page");
 });
 
-test("web limits resolve within hard ceilings and reject out-of-range values", () => {
+test("web limits resolve host values and reject invalid ones", () => {
   const limits = resolveObscuraWebLimits({ maxResults: 5, timeoutMs: 5000 });
   assert.equal(limits.maxResults, 5);
   assert.equal(limits.maxConcurrency, 5);
   assert.throws(() => resolveObscuraWebLimits({ maxResults: 0 }), /out of range/);
-  assert.throws(() => resolveObscuraWebLimits({ timeoutMs: 999_000 }), /out of range/);
-  assert.throws(() => resolveObscuraWebLimits({ maxConcurrency: 999 }), /out of range/);
+  assert.equal(resolveObscuraWebLimits({ timeoutMs: 999_000 }).timeoutMs, 999_000);
+  assert.equal(resolveObscuraWebLimits({ maxConcurrency: 999 }).maxConcurrency, 999);
 });

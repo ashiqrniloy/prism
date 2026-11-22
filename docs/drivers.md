@@ -58,8 +58,9 @@ redefine a spec key or `requires`. `driverPackage` declares `slot:loop` and prov
 
 At `setup` the package probes the binary (`start.probe`, bounded by `probeTimeoutMs`, default 5 s). A missing binary, a
 rejected probe, or a timeout is a `warn` status note; the loop is still registered, and a run on it fails with
-`driver_unavailable`. The loop's `snapshot` records the binary's major version, and `restore` fails a resume under a
-different major with `driver_revision_mismatch`. The loop `revision` stays the driver's own: the kernel compares it for
+`driver_unavailable`. The loop declares per-run state (`state: "run"`, see [loop.md](loop.md#loop-state)), so one
+driver loop serves concurrent sessions: each run records the binary's major version with `run.checkpoint`, and a
+resumed or continued run whose `run.restored` names a different major fails with `driver_revision_mismatch`. The loop `revision` stays the driver's own: the kernel compares it for
 exact equality on resume, which would reject every minor upgrade and preempt the typed error.
 
 ## `requires`

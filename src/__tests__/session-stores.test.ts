@@ -526,13 +526,11 @@ describe("memory readBranchPath", () => {
       searchSessions: store.searchSessions?.bind(store),
       readBranchPath: readBranchPath.bind(store),
     };
-    const session = await (
-      await createAgent({
-        model: { provider: "mock", model: "m" },
-        packages: [mockProvider()],
-        slots: { store: wrapped },
-      })
-    ).session({ id: "s1", leafId: parent, create: true });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [mockProvider()],
+      slots: { store: wrapped },
+    });
     const slot = globalThis as { structuredClone: typeof structuredClone };
     const orig = slot.structuredClone;
     let clones = 0;
@@ -542,6 +540,8 @@ describe("memory readBranchPath", () => {
     }) as typeof structuredClone;
     try {
       const listedBefore = listed;
+      // Plan 230 Task 3: the open's read is the session's first snapshot, so the branch is read once in all.
+      const session = await agent.session({ id: "s1", leafId: parent, create: true });
       const snap = await (session as unknown as { snapshot(): Promise<{ messages: readonly unknown[] }> }).snapshot();
       assert.equal(snap.messages.length, 5000);
       assert.equal(clones, 5000);

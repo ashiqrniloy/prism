@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import type { Agent, AgentEvent, HostUi } from "@arnilo/prism";
 import { connectAgent, remoteHostUi, type ServedAgent, serveAgent } from "./index.js";
 
+const DEFAULT_TIMEOUT_MS = 2000;
+
 export type ConformanceTransport = "stdio" | "websocket" | "http";
 export interface RemoteConformanceFactory {
   readonly module: string;
@@ -208,7 +210,7 @@ export async function remoteConformance(
               assert.equal(events.at(-1)?.type, "run.completed");
             }
           })(),
-          options.timeoutMs ?? 2000,
+          options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
           `${transport}/${leg}`,
         );
         legs.push({ transport, leg, passed: true });

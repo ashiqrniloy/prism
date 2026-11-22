@@ -1,7 +1,8 @@
 import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { assertPersistenceSearchQueryParity, storeConformance } from "@arnilo/prism/testing";
+import { createAgent, rebuildSessionContext, SESSION_LINKS_DATA_KEY, type SessionEntry } from "@arnilo/prism";
+import { assertPersistenceSearchQueryParity, mockProvider, storeConformance } from "@arnilo/prism/testing";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import {
   assertPersistenceBranchQueryConforms,
@@ -52,6 +53,56 @@ describeIntegration("createPostgresPersistence integration", () => {
     });
   });
 
+  it("honors host query limits (plan 239 Task 5)", async () => {
+    const schema = uniqueSchema();
+    const pool = createPool();
+    const queryLimits = { maxListLimit: 1_000, maxSearchLimit: 250, searchSnippetBytes: 64, ftsCandidates: 50 };
+    await storeConformance(() => createPostgresPersistence({ pool, schema, queryLimits }), { queryLimits });
+  });
+
+  it("tail read stops at the newest compaction in one walk per side and the session matches the whole branch", async () => {
+    // Plan 230 Task 3: 300 entries, a compaction at 250 (throughEntryId e229, keeps e230..e249, pins e5).
+    const pool = createPool();
+    const persistence = await createPostgresPersistence({ pool, schema: uniqueSchema() });
+    const sessionId = "tail";
+    const ids: string[] = [];
+    let parentId: string | undefined;
+    for (let index = 0; index < 300; index += 1) {
+      const id = `e${index}`;
+      const at = new Date(Date.UTC(2026, 0, 1, 0, 0, 0, index)).toISOString();
+      const entry: SessionEntry =
+        index === 250
+          ? {
+              id,
+              sessionId,
+              parentId,
+              timestamp: at,
+              kind: "compaction",
+              summary: "summary",
+              data: {
+                throughEntryId: "e229",
+                keepEntryIds: ["e5", ...Array.from({ length: 20 }, (_, k) => `e${230 + k}`)],
+                checkpoint: { version: 1, branchLength: 250, packageState: [], externalState: [], pinnedEntryIds: ["e5"] },
+              },
+            }
+          : { id, sessionId, parentId, timestamp: at, kind: "message", message: { role: "user", content: [{ type: "text", text: id }] } };
+      await persistence.append(entry, parentId === undefined ? undefined : { expectedParentId: parentId });
+      ids.push(id);
+      parentId = id;
+    }
+    const read = persistence.readBranchPath;
+    if (!read) throw new Error("the Postgres store reads branches");
+    const tail = await read({ sessionId, leafId: "e299", from: "compaction" });
+    assert.deepEqual(
+      tail.items.map((entry) => entry.id),
+      ["e5", ...ids.slice(229)],
+    );
+    const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [mockProvider()], slots: { store: persistence } });
+    const session = await agent.session({ id: sessionId });
+    assert.deepEqual(await session.messages(), rebuildSessionContext(await persistence.list(sessionId)).messages);
+    await persistence.close();
+  });
+
   it("shares filter-only search ordering, scoping, and cursor semantics", async () => {
     const persistence = await createPostgresPersistence({ pool: createPool(), schema: uniqueSchema() });
     await assertPersistenceSearchQueryParity(persistence);
@@ -81,7 +132,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     const schema = uniqueSchema();
     await createPostgresPersistence({ pool, schema });
     await pool.query(`DROP TABLE ${qualifyTable(schema, "prism_evaluations")}; DROP TABLE ${qualifyTable(schema, "prism_experiment_reports")};
-      DELETE FROM ${qualifyTable(schema, "prism_migrations")} WHERE name = '011_evaluations'`);
+      DELETE FROM ${qualifyTable(schema, "prism_migrations")} WHERE name IN ('011_evaluations', '012_session_entry_linear', '013_session_entry_seq')`);
     await pool.query(
       `INSERT INTO ${qualifyTable(schema, "prism_sessions")} (id, created_at, updated_at) VALUES ('old', '2026-01-01', '2026-01-01')`,
     );
@@ -91,7 +142,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     assert.deepEqual(
       (
         await pool.query(
-          `SELECT name, checksum FROM ${qualifyTable(schema, "prism_migrations")} WHERE name != '011_evaluations' ORDER BY version`,
+          `SELECT name, checksum FROM ${qualifyTable(schema, "prism_migrations")} WHERE name NOT IN ('011_evaluations', '012_session_entry_linear', '013_session_entry_seq') ORDER BY version`,
         )
       ).rows,
       before.rows,
@@ -108,6 +159,323 @@ describeIntegration("createPostgresPersistence integration", () => {
     await store.append({ id: "entry", sessionId: "old", kind: "label", timestamp: "2026-10-27T00:00:00Z", label: "old" });
     assert.equal(await store.deleteSession("old"), true);
     assert.deepEqual((await store.evaluations.query()).items, []);
+  });
+
+  it("migration_adds_marker_without_rewriting_entries: a schema-11 database with sibling branches upgrades and reads back identically", async () => {
+    // Plan 230 Task 2: migration 012 adds `linear` with a constant default and the partial unique index.
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const entries = qualifyTable(schema, "prism_session_entries");
+    await (await createPostgresPersistence({ pool, schema })).close();
+    await pool.query(`DROP INDEX ${quoteIdentifier(schema)}.prism_session_entries_linear_parent_unique;
+      ALTER TABLE ${entries} DROP COLUMN linear;
+      DELETE FROM ${qualifyTable(schema, "prism_migrations")} WHERE name IN ('012_session_entry_linear', '013_session_entry_seq')`);
+    await pool.query(
+      `INSERT INTO ${qualifyTable(schema, "prism_sessions")} (id, created_at, updated_at) VALUES ('legacy', '2026-01-01', '2026-01-01')`,
+    );
+    for (const [id, parent] of [
+      ["root", null],
+      ["left", "root"],
+      ["right", "root"],
+    ] as const) {
+      await pool.query(
+        `INSERT INTO ${entries} (id, session_id, parent_id, timestamp, kind, label) VALUES ($1, 'legacy', $2, '2026-01-01T00:00:00.000Z', 'label', $1)`,
+        [id, parent],
+      );
+    }
+    const before = (await pool.query(`SELECT * FROM ${entries} ORDER BY id`)).rows;
+    const store = await createPostgresPersistence({ pool, schema });
+    assert.ok((await store.queryMigrations({})).items.some((row) => row.name === "012_session_entry_linear"));
+    const after = (await pool.query(`SELECT * FROM ${entries} ORDER BY id`)).rows as Record<string, unknown>[];
+    assert.deepEqual(
+      after.map(({ linear: _linear, ...row }) => row),
+      before,
+      "existing rows are unchanged",
+    );
+    assert.ok(
+      after.every((row) => row.linear === 0),
+      "existing rows default to not linear",
+    );
+    const at = (id: string): SessionEntry => ({
+      id,
+      parentId: "root",
+      sessionId: "legacy",
+      timestamp: "2026-01-02T00:00:00.000Z",
+      kind: "label",
+      label: id,
+    });
+    await store.append(at("tip-1"), { expectedParentId: "root", tip: true });
+    await assert.rejects(
+      () => store.append(at("tip-2"), { expectedParentId: "root", tip: true }),
+      (error: unknown) =>
+        (error as { code?: unknown }).code === "session_append_conflict" &&
+        (error as { conflict?: { currentLeafId?: unknown } }).conflict?.currentLeafId !== undefined,
+    );
+    await store.close();
+  });
+
+  // Plan 230 Task 4: one statement per append, `seq` ordering, and migration 013.
+  /** A pool whose physical clients count every statement they send. */
+  function countingPool(): { pool: Pool; statements: () => number } {
+    const pool = createPool();
+    let count = 0;
+    pool.on("connect", (client) => {
+      const query = client.query.bind(client) as (...args: unknown[]) => unknown;
+      (client as unknown as { query: (...args: unknown[]) => unknown }).query = (...args: unknown[]) => {
+        count += 1;
+        return query(...args);
+      };
+    });
+    return { pool, statements: () => count };
+  }
+
+  const msg = (id: string, sessionId: string, parentId?: string, timestamp = "2026-01-01T00:00:00.000Z"): SessionEntry => ({
+    id,
+    sessionId,
+    parentId,
+    timestamp,
+    kind: "message",
+    message: { role: "user", content: [{ type: "text", text: id }] },
+  });
+
+  it("append_is_one_round_trip: root, linear, tip, idempotent, and links appends each send one statement", async () => {
+    const { pool, statements } = countingPool();
+    const persistence = await createPostgresPersistence({ pool, schema: uniqueSchema() });
+    const counted = async (run: () => Promise<void>): Promise<number> => {
+      const before = statements();
+      await run();
+      return statements() - before;
+    };
+    assert.equal(await counted(() => persistence.append(msg("r", "one"))), 1, "root");
+    assert.equal(await counted(() => persistence.append(msg("a", "one", "r"), { expectedParentId: "r" })), 1, "linear");
+    assert.equal(await counted(() => persistence.append(msg("b", "one", "a"), { expectedParentId: "a", tip: true })), 1, "tip");
+    assert.equal(
+      await counted(() => persistence.append(msg("c", "one", "b"), { expectedParentId: "b", tip: true, idempotencyKey: "k" })),
+      1,
+      "tip with an idempotency key",
+    );
+    const links: SessionEntry = {
+      id: "links",
+      sessionId: "one",
+      parentId: "c",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      kind: "metadata",
+      data: { [SESSION_LINKS_DATA_KEY]: { sessionId: "parent-session", agentId: "agent-1" } },
+    };
+    assert.equal(await counted(() => persistence.append(links, { expectedParentId: "c", tip: true })), 1, "links entry");
+    // The links entry indexes the session row's link columns in the same statement.
+    assert.deepEqual(
+      (await persistence.listSessions({ parentSessionId: "parent-session", limit: 10 })).items.map((item) => item.sessionId),
+      ["one"],
+    );
+    assert.deepEqual(
+      (await persistence.list("one")).map((entry) => entry.id),
+      ["r", "a", "b", "c", "links"],
+    );
+    await persistence.close();
+  });
+
+  // Plan 230 Task 5.
+  it("append_many_is_one_statement_and_fork_uses_it", async () => {
+    const { pool, statements } = countingPool();
+    const persistence = await createPostgresPersistence({ pool, schema: uniqueSchema() });
+    const appendMany = persistence.appendMany?.bind(persistence);
+    if (!appendMany) throw new Error("the Postgres store implements appendMany");
+    const linksEntry = (id: string, sessionId: string): SessionEntry => ({
+      id,
+      sessionId,
+      timestamp: "2026-01-01T00:00:00.000Z",
+      kind: "metadata",
+      data: { [SESSION_LINKS_DATA_KEY]: { sessionId: "batch-parent", agentId: "agent-1" } },
+    });
+    // 300 entries with equal timestamps: `seq` must follow batch order.
+    const batch = [linksEntry("b0", "batch"), ...Array.from({ length: 299 }, (_, i) => msg(`b${i + 1}`, "batch", `b${i}`))];
+    const before = statements();
+    await appendMany(batch);
+    assert.equal(statements() - before, 1, "one statement for the whole batch");
+    assert.deepEqual(
+      (await persistence.list("batch")).map((entry) => entry.id),
+      batch.map((entry) => entry.id),
+    );
+    assert.deepEqual(
+      (await persistence.listSessions({ parentSessionId: "batch-parent", limit: 10 })).items.map((item) => item.sessionId),
+      ["batch"],
+      "the links entry indexes the session row in the same statement",
+    );
+    // A rejected batch writes nothing, not even the session row.
+    await assert.rejects(appendMany([linksEntry("x0", "rejected"), msg("x1", "rejected", "nowhere")]), (error: unknown) => {
+      assert.equal((error as { conflict?: { expectedParentId?: string } }).conflict?.expectedParentId, "nowhere");
+      return true;
+    });
+    assert.deepEqual(await persistence.list("rejected"), []);
+    assert.equal((await persistence.listSessions({ parentSessionId: "batch-parent", limit: 10 })).items.length, 1);
+
+    const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [mockProvider()], slots: { store: persistence } });
+    const session = await agent.session({ id: "batch" });
+    const forkStart = statements();
+    const forked = await session.fork();
+    const forkStatements = statements() - forkStart;
+    // One branch read plus one batch append; Task 1 measured 30,001 statements for a 5,000-entry fork.
+    assert.ok(forkStatements <= 3, `fork sent ${forkStatements} statements`);
+    assert.deepEqual(
+      (await persistence.list(forked.id)).map(({ id: _id, parentId: _parentId, sessionId: _sessionId, ...rest }) => rest),
+      (await persistence.list("batch")).map(({ id: _id, parentId: _parentId, sessionId: _sessionId, ...rest }) => rest),
+    );
+    assert.deepEqual(await forked.messages(), await session.messages());
+    await persistence.close();
+  });
+
+  it("append_errors_are_unchanged: missing parent, tip conflict, idempotency duplicate, duplicate id write nothing", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    await persistence.append(msg("r", "err"));
+    await persistence.append(msg("a", "err", "r"), { expectedParentId: "r", tip: true, idempotencyKey: "k" });
+    const conflict = (expect: Record<string, unknown>) => (error: unknown) => {
+      assert.equal((error as { name?: unknown }).name, "SessionAppendConflictError");
+      assert.equal((error as { code?: unknown }).code, "session_append_conflict");
+      const fields = (error as { conflict?: Record<string, unknown> }).conflict ?? {};
+      for (const [key, value] of Object.entries(expect)) assert.deepEqual(fields[key], value, key);
+      return true;
+    };
+    await assert.rejects(
+      () => persistence.append(msg("x1", "err", "missing"), { expectedParentId: "missing" }),
+      conflict({ expectedParentId: "missing" }),
+    );
+    await assert.rejects(
+      () => persistence.append(msg("x2", "err", "r"), { expectedParentId: "r", tip: true }),
+      conflict({ expectedParentId: "r", currentLeafId: "a" }),
+    );
+    await assert.rejects(
+      () => persistence.append(msg("x3", "err", "r"), { expectedParentId: "r", idempotencyKey: "k" }),
+      conflict({ idempotencyDuplicate: true }),
+    );
+    await assert.rejects(() => persistence.append(msg("a", "err", "r"), { expectedParentId: "r" }), /Duplicate session entry id: a/);
+    // A missing parent never creates the session row.
+    await assert.rejects(
+      () => persistence.append(msg("y", "ghost", "nope"), { expectedParentId: "nope" }),
+      conflict({ expectedParentId: "nope" }),
+    );
+    assert.equal((await persistence.querySessions({ id: "ghost" })).items.length, 0);
+    assert.deepEqual(
+      (await persistence.list("err")).map((entry) => entry.id),
+      ["r", "a"],
+    );
+    const search = await pool.query(`SELECT entry_id FROM ${qualifyTable(schema, "prism_session_search")} ORDER BY entry_id`);
+    assert.deepEqual(
+      search.rows.map((row) => row.entry_id),
+      ["a", "r"],
+    );
+    const keys = await pool.query(`SELECT entry_id FROM ${qualifyTable(schema, "prism_session_append_idempotency")}`);
+    assert.deepEqual(
+      keys.rows.map((row) => row.entry_id),
+      ["a"],
+    );
+    await persistence.close();
+  });
+
+  it("statement_failure_surfaces_the_original_error and writes nothing", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const persistence = await createPostgresPersistence({ pool, schema });
+    await persistence.append(msg("r", "fail"));
+    // A search row that violates its own check fails the statement after the entry insert ran.
+    await pool.query(
+      `ALTER TABLE ${qualifyTable(schema, "prism_session_search")} ADD CONSTRAINT no_boom CHECK (body IS NULL OR body NOT LIKE '%boom%')`,
+    );
+    await assert.rejects(
+      () => persistence.append(msg("boom", "fail", "r"), { expectedParentId: "r", tip: true }),
+      (error: unknown) => (error as { code?: unknown }).code === "23514" && (error as { constraint?: unknown }).constraint === "no_boom",
+    );
+    assert.deepEqual(
+      (await persistence.list("fail")).map((entry) => entry.id),
+      ["r"],
+    );
+    await persistence.append(msg("ok", "fail", "r"), { expectedParentId: "r", tip: true });
+    await persistence.close();
+  });
+
+  it("seq_orders_entries_written_in_the_same_millisecond", async () => {
+    const persistence = await createPostgresPersistence({ pool: createPool(), schema: uniqueSchema() });
+    // Ids sort opposite to insertion order, and every timestamp is equal.
+    const ids = Array.from({ length: 40 }, (_, index) => `z${String(99 - index).padStart(2, "0")}`);
+    let parentId: string | undefined;
+    for (const id of ids) {
+      await persistence.append(msg(id, "same-ms", parentId), parentId === undefined ? undefined : { expectedParentId: parentId });
+      parentId = id;
+    }
+    assert.deepEqual(
+      (await persistence.list("same-ms")).map((entry) => entry.id),
+      ids,
+    );
+    // Two root siblings in one millisecond: the latest leaf is the later insert, not the larger id.
+    await persistence.append(msg("b-root", "siblings"));
+    await persistence.append(msg("a-root", "siblings"));
+    const read = persistence.readBranchPath;
+    if (!read) throw new Error("the Postgres store reads branches");
+    assert.deepEqual(
+      (await read({ sessionId: "siblings" })).items.map((entry) => entry.id),
+      ["a-root"],
+    );
+    await persistence.close();
+  });
+
+  it("migration_backfills_seq_in_existing_order: a schema-12 database upgrades, keeps rows, and continues after them", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const entries = qualifyTable(schema, "prism_session_entries");
+    await (await createPostgresPersistence({ pool, schema })).close();
+    await pool.query(`ALTER TABLE ${entries} DROP COLUMN seq;
+      DELETE FROM ${qualifyTable(schema, "prism_migrations")} WHERE name = '013_session_entry_seq'`);
+    await pool.query(
+      `INSERT INTO ${qualifyTable(schema, "prism_sessions")} (id, created_at, updated_at) VALUES ('legacy', '2026-01-01', '2026-01-01')`,
+    );
+    // Insert order differs from both timestamp and id order; same-timestamp rows keep physical order.
+    const legacy = [
+      ["m", null, "2026-01-01T00:00:00.000Z"],
+      ["c", "m", "2026-01-01T00:00:00.001Z"],
+      ["x", "c", "2026-01-01T00:00:00.001Z"],
+      ["a", "x", "2026-01-01T00:00:00.002Z"],
+    ] as const;
+    for (const [id, parent, at] of legacy) {
+      await pool.query(
+        `INSERT INTO ${entries} (id, session_id, parent_id, timestamp, kind, label) VALUES ($1, 'legacy', $2, $3, 'label', $1)`,
+        [id, parent, at],
+      );
+    }
+    const before = (await pool.query(`SELECT * FROM ${entries} ORDER BY timestamp ASC, ctid ASC`)).rows as Record<string, unknown>[];
+    const store = await createPostgresPersistence({ pool, schema });
+    assert.ok((await store.queryMigrations({})).items.some((row) => row.name === "013_session_entry_seq"));
+    const after = (await pool.query(`SELECT * FROM ${entries} ORDER BY seq ASC`)).rows as Record<string, unknown>[];
+    assert.deepEqual(
+      after.map(({ seq: _seq, ...row }) => row),
+      before,
+      "rows are unchanged and seq follows the old list() order",
+    );
+    assert.deepEqual(
+      after.map((row) => Number(row.seq)),
+      [1, 2, 3, 4],
+    );
+    await store.append(msg("next", "legacy", "a"), { expectedParentId: "a", tip: true });
+    assert.deepEqual(
+      (await store.list("legacy")).map((entry) => entry.id),
+      ["m", "c", "x", "a", "next"],
+    );
+    assert.equal(Number((await pool.query(`SELECT seq FROM ${entries} WHERE id = 'next'`)).rows[0]?.seq), 5);
+    // Re-running 013 (its history row removed) keeps the attached identity and every seq.
+    await pool.query(`DELETE FROM ${qualifyTable(schema, "prism_migrations")} WHERE name = '013_session_entry_seq'`);
+    await (await createPostgresPersistence({ pool, schema })).close();
+    assert.deepEqual(
+      (await pool.query(`SELECT id, seq FROM ${entries} ORDER BY seq`)).rows.map((row) => [row.id, Number(row.seq)]),
+      [
+        ["m", 1],
+        ["c", 2],
+        ["x", 3],
+        ["a", 4],
+        ["next", 5],
+      ],
+    );
+    await store.close();
   });
 
   it("postgres_evaluation_store_conformance", async () => {
@@ -352,6 +720,8 @@ describeIntegration("createPostgresPersistence integration", () => {
       "009_run_prompt_version",
       "010_session_links",
       "011_evaluations",
+      "012_session_entry_linear",
+      "013_session_entry_seq",
     ]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
@@ -731,7 +1101,7 @@ describeIntegration("createPostgresPersistence integration", () => {
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
     // Every canonical migration is applied once, even under concurrent setup.
-    assert.equal(migrations.items.length, 11);
+    assert.equal(migrations.items.length, 13);
     await persistence.close();
   });
 

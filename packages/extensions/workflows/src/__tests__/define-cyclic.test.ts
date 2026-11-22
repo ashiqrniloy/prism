@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { defineWorkflow, functionNode, HARD_MAX_SUPERSTEPS, routeNode, WorkflowDefinitionError } from "../index.js";
+import { defineWorkflow, functionNode, routeNode, WorkflowDefinitionError } from "../index.js";
 
 describe("defineWorkflow cyclic and dynamic routing definition surface", () => {
   it("cyclic graph without maxSupersteps throws today's exact message", () => {
@@ -48,9 +48,9 @@ describe("defineWorkflow cyclic and dynamic routing definition surface", () => {
     assert.equal(wf.nodes.reviewer.activation, undefined);
   });
 
-  it("maxSupersteps 0 / -1 / 1.5 / NaN / 257 rejected", () => {
+  it("maxSupersteps 0 / -1 / 1.5 / NaN rejected; any positive host value or null accepted", () => {
     const nodes = { a: functionNode({ execute: async () => 1 }) };
-    const invalidValues = [0, -1, 1.5, Number.NaN, HARD_MAX_SUPERSTEPS + 1, Number.POSITIVE_INFINITY];
+    const invalidValues = [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY];
 
     for (const value of invalidValues) {
       assert.throws(
@@ -61,9 +61,8 @@ describe("defineWorkflow cyclic and dynamic routing definition surface", () => {
     }
 
     assert.doesNotThrow(() => defineWorkflow({ id: "valid-supersteps-min", revision: "1", nodes, limits: { maxSupersteps: 1 } }));
-    assert.doesNotThrow(() =>
-      defineWorkflow({ id: "valid-supersteps-max", revision: "1", nodes, limits: { maxSupersteps: HARD_MAX_SUPERSTEPS } }),
-    );
+    assert.doesNotThrow(() => defineWorkflow({ id: "valid-supersteps-large", revision: "1", nodes, limits: { maxSupersteps: 1_000_000 } }));
+    assert.doesNotThrow(() => defineWorkflow({ id: "valid-supersteps-null", revision: "1", nodes, limits: { maxSupersteps: null } }));
   });
 
   it("self-edge rejected on cyclic graphs too", () => {

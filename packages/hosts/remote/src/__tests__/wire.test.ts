@@ -8,6 +8,7 @@ import {
   MAX_SESSION_LINK_ID_LENGTH,
   type OwnershipScope,
   type Principal,
+  resolveRunLimits,
 } from "@arnilo/prism";
 import { createDispatcher, createMemoryTransportPair, RemoteError, remoteHostUi } from "../index.js";
 import { createServerState, type ServeAgentOptions, serveConnection } from "../serve.js";
@@ -15,6 +16,7 @@ import {
   MAX_APPROVAL_ID_LENGTH,
   MAX_SESSION_LIST_CURSOR_LENGTH,
   parseDecisions,
+  parseRunOptions,
   parseSessionListQuery,
   parseSessionParentLink,
   parseSteerOptions,
@@ -283,7 +285,9 @@ describe("prism-remote wire allow-lists", () => {
     expectSyncInvalidParams(() => parseSessionListQuery({ unknownKey: "x" }));
     expectSyncInvalidParams(() => parseSessionListQuery({ signal: {} }));
     expectSyncInvalidParams(() => parseSessionListQuery({ limit: 0 }));
-    expectSyncInvalidParams(() => parseSessionListQuery({ limit: HARD_MAX_SESSION_LIST_LIMIT + 1 }));
+    expectSyncInvalidParams(() => parseSessionListQuery({ limit: 0 }));
+    // Plan 239 Task 5: the store, not the wire, bounds the page by its own queryLimits.maxListLimit.
+    expect(parseSessionListQuery({ limit: HARD_MAX_SESSION_LIST_LIMIT + 1 })?.limit).toBe(HARD_MAX_SESSION_LIST_LIMIT + 1);
     expectSyncInvalidParams(() => parseSessionListQuery({ limit: 1.5 }));
     expectSyncInvalidParams(() => parseSessionListQuery({ cursor: "" }));
     expectSyncInvalidParams(() => parseSessionListQuery({ cursor: "c".repeat(MAX_SESSION_LIST_CURSOR_LENGTH + 1) }));
@@ -370,5 +374,54 @@ describe("prism-remote wire allow-lists", () => {
     expect(wireSource).not.toContain("as never");
     expect(serveSource).not.toContain("as unknown as readonly Decision[]");
     expect(wireSource).not.toContain("as unknown as readonly Decision[]");
+  });
+});
+
+describe("client run limits (plan 239 Task 5)", () => {
+  const expectInvalid = (run: () => unknown, axis: string) => {
+    try {
+      run();
+      throw new Error("expected invalid_params");
+    } catch (error) {
+      expect(error).toBeInstanceOf(RemoteError);
+      expect((error as RemoteError).code).toBe("invalid_params");
+      expect((error as Error).message).toContain(axis);
+    }
+  };
+
+  test("remote_client_limits_only_narrow", () => {
+    // The agent's own resolved limits: maxTurns 20, maxCost $1, everything else at the kernel defaults.
+    const agentLimits = resolveRunLimits({ maxTurns: 20, maxCost: { amount: 1, currency: "USD" } });
+    const narrowed = parseRunOptions(
+      { limits: { maxTurns: 5, maxResponseBytes: 1024, maxCost: { amount: 0.5, currency: "USD" } } },
+      undefined,
+      undefined,
+      agentLimits,
+    );
+    expect(narrowed.limits).toEqual({ maxTurns: 5, maxResponseBytes: 1024, maxCost: { amount: 0.5, currency: "USD" } });
+    // Raising an axis the agent set, or one it left at the kernel default, is refused.
+    expectInvalid(() => parseRunOptions({ limits: { maxTurns: 21 } }, undefined, undefined, agentLimits), "maxTurns");
+    expectInvalid(
+      () => parseRunOptions({ limits: { maxToolCalls: agentLimits.maxToolCalls! + 1 } }, undefined, undefined, agentLimits),
+      "maxToolCalls",
+    );
+    // A byte cap above the resolved value, and `null` (disable), are refused.
+    expectInvalid(
+      () => parseRunOptions({ limits: { maxResponseBytes: agentLimits.maxResponseBytes + 1 } }, undefined, undefined, agentLimits),
+      "maxResponseBytes",
+    );
+    expectInvalid(() => parseRunOptions({ limits: { maxWallTimeMs: null } }, undefined, undefined, agentLimits), "maxWallTimeMs");
+    expectInvalid(
+      () => parseRunOptions({ limits: { maxCost: { amount: 2, currency: "USD" } } }, undefined, undefined, agentLimits),
+      "maxCost",
+    );
+    expectInvalid(() => parseRunOptions({ limits: { backgroundSettleMs: 1 } }, undefined, undefined, agentLimits), "backgroundSettleMs");
+    // No agent limits given: the kernel defaults are the bound.
+    expectInvalid(() => parseRunOptions({ limits: { maxTurns: 10_000 } }, undefined, undefined), "maxTurns");
+  });
+
+  test("decision count follows the agent's pendingDecisions ceiling", () => {
+    const decision = { approvalId: "a", outcome: "allow_once" };
+    expectInvalid(() => parseDecisions([decision, { ...decision, approvalId: "b" }], { maxDecisions: 1 }), "at most 1");
   });
 });

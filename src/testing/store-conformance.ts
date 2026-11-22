@@ -14,6 +14,7 @@ import {
   SessionNotFoundError,
   type SessionEntry,
   type SessionLinks,
+  type SessionQueryLimits,
   type SessionSearchKind,
   type SessionStore,
   type SessionStoreCapability,
@@ -27,13 +28,19 @@ export type StoreConformanceFactory = () => SessionStore | Promise<SessionStore>
 export const STORE_CONFORMANCE_STEPS = [
   "append-and-read",
   "branch-and-fork",
+  "tip-check",
+  "tail-read",
+  "append-many",
   "package-state",
   "package-state-log",
   "external-state",
   "suspended-run",
+  "run-checkpoint",
+  "session-limits",
   "unknown-entry-kind",
   "search",
   "title",
+  "query-limits",
   "list-and-delete",
   "session-links",
   "restart",
@@ -60,6 +67,11 @@ export interface StoreConformanceOptions {
   readonly reopen?: StoreConformanceFactory;
   /** When true, appends concurrent children of the same parent (fork allowed). */
   readonly exerciseConcurrentParentAppend?: boolean;
+  /**
+   * The `queryLimits` the factory built the store with (plan 239 Task 5). The `query-limits` leg proves the
+   * store honors them: a list page of exactly `maxListLimit` is accepted, one more is refused.
+   */
+  readonly queryLimits?: SessionQueryLimits;
 }
 
 /** Merge-capable adapters (SQLite, Postgres) keep the title in the session record, not only on entries. */
@@ -79,7 +91,7 @@ export async function storeConformance(factory: StoreConformanceFactory, options
   const otherSessionId = options.otherSessionId ?? `${sessionId}-other`;
   const claimed = new Set<SessionStoreCapability>(options.capabilities ?? sessionStoreCapabilities(store));
   for (const capability of claimed) {
-    if (typeof store[capability] !== "function") {
+    if (capability === "tipCheck" ? store.tipCheck !== true : typeof store[capability] !== "function") {
       throw new Error(`[capabilities] the store claims ${capability} but does not implement it`);
     }
   }
@@ -221,6 +233,170 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     if (typeof store.readBranchPath === "function") {
       assertChain(await chainOf("branch-a"), ["root", "branch-a"], "forking must leave the source branch path untouched");
     }
+  });
+
+  await leg("tip-check", async () => {
+    // Plan 230 Task 2. Its own session id, so the linear marks never touch the other legs' branches.
+    const tipSession = `${sessionId}-tip`;
+    const at = (id: string, parentId: string | undefined, n: number): SessionEntry => ({
+      ...entry(id, parentId, n),
+      sessionId: tipSession,
+    });
+    await store.append(at("tip-root", undefined, 13));
+    await store.append(at("tip-a", "tip-root", 14), { expectedParentId: "tip-root", tip: true });
+    // Sibling appends without `tip` stay branches: accepted, and they never block a tip append.
+    await store.append(at("tip-side", "tip-root", 15), { expectedParentId: "tip-root" });
+    // A store that does not claim the guard accepts a stale-tip append as a branch, as before; nothing more to check.
+    if (!claimed.has("tipCheck")) return;
+    const before = (await store.list(tipSession)).length;
+    await reject(
+      () => store.append(at("tip-b", "tip-root", 16), { expectedParentId: "tip-root", tip: true }),
+      (error) =>
+        isSessionAppendConflict(error) &&
+        error.conflict.expectedParentId === "tip-root" &&
+        error.conflict.idempotencyDuplicate !== true &&
+        typeof error.conflict.currentLeafId === "string",
+      "a tip append at a parent that already has a linear child must throw SessionAppendConflictError with the current leaf",
+    );
+    if ((await store.list(tipSession)).length !== before)
+      throw new Error("A rejected tip append wrote entries; the check and the insert must be atomic");
+    // A deliberate branch at the same parent is still accepted.
+    await store.append(at("tip-branch", "tip-root", 17), { expectedParentId: "tip-root" });
+    // The linear chain continues from its own tip, and a branch root's first tip append is accepted.
+    await store.append(at("tip-a2", "tip-a", 18), { expectedParentId: "tip-a", tip: true });
+    await store.append(at("tip-branch2", "tip-branch", 19), { expectedParentId: "tip-branch", tip: true });
+    // An exact retry under one idempotency key is deduplicated before the tip check.
+    await store.append(at("tip-k1", "tip-a2", 20), { expectedParentId: "tip-a2", tip: true, idempotencyKey: "tip-run" });
+    await reject(
+      () => store.append(at("tip-k1-retry", "tip-a2", 21), { expectedParentId: "tip-a2", tip: true, idempotencyKey: "tip-run" }),
+      (error) => isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate === true,
+      "an exact idempotent retry must be deduplicated before the tip check",
+    );
+    const sessions = await store.list(tipSession);
+    for (const id of ["tip-a", "tip-side", "tip-branch", "tip-a2", "tip-branch2", "tip-k1"]) {
+      if (!sessions.some((row) => row.id === id)) throw new Error(`tip-check leg lost entry ${id}`);
+    }
+    if (sessions.some((row) => row.id === "tip-b" || row.id === "tip-k1-retry")) throw new Error("tip-check leg wrote a rejected entry");
+  });
+
+  await leg("tail-read", async () => {
+    // Plan 230 Task 3: `readBranchPath({ from: "compaction" })`. A store may ignore `from` and return the whole branch.
+    const read = store.readBranchPath?.bind(store);
+    if (!read) return;
+    const tailSession = `${sessionId}-tail`;
+    const say = (id: string, parentId: string | undefined, n: number): SessionEntry => ({
+      ...entry(id, parentId, n),
+      sessionId: tailSession,
+      kind: "message",
+      label: undefined,
+      message: { role: "user", content: [{ type: "text", text: id }] },
+    });
+    const compact = (id: string, parentId: string, n: number, data: Record<string, unknown>): SessionEntry => ({
+      ...entry(id, parentId, n),
+      sessionId: tailSession,
+      kind: "compaction",
+      label: undefined,
+      summary: `summary ${id}`,
+      data: data as SessionEntry["data"],
+    });
+    const branch: SessionEntry[] = [
+      say("tail-0", undefined, 30),
+      say("tail-1", "tail-0", 31),
+      compact("tail-c0", "tail-1", 32, { throughEntryId: "tail-0", keepEntryIds: ["tail-1"] }),
+      say("tail-2", "tail-c0", 33),
+      say("tail-3", "tail-2", 34),
+      say("tail-4", "tail-3", 35),
+      say("tail-5", "tail-4", 36),
+      {
+        ...entry("tail-6", "tail-5", 37),
+        sessionId: tailSession,
+        kind: "package_state",
+        label: undefined,
+        data: { schemaVersion: 1, package: "p", key: "k", value: 1 },
+      },
+      compact("tail-c1", "tail-6", 38, { throughEntryId: "tail-4", keepEntryIds: ["tail-2", "tail-5"] }),
+      say("tail-7", "tail-c1", 39),
+      say("tail-8", "tail-7", 40),
+    ];
+    for (const item of branch) await store.append(item, item.parentId === undefined ? undefined : { expectedParentId: item.parentId });
+    const whole = branch.map((item) => item.id);
+    const ids = async (leafId: string) => (await read({ sessionId: tailSession, leafId, from: "compaction" })).items.map((item) => item.id);
+    const accept = (got: readonly string[], tail: readonly string[], full: readonly string[], message: string) => {
+      if (got.join(",") !== tail.join(",") && got.join(",") !== full.join(",")) {
+        throw new Error(`${message}: got [${got.join(", ")}], want [${tail.join(", ")}] (or the whole branch)`);
+      }
+    };
+    // The walk stops at the newest compaction's throughEntryId; the older pinned entry comes first.
+    const tail = ["tail-2", "tail-4", "tail-5", "tail-6", "tail-c1", "tail-7", "tail-8"];
+    accept(await ids("tail-8"), tail, whole, "a tail read must stop at the newest compaction's throughEntryId, pinned entries first");
+    // At an earlier leaf the older compaction bounds the walk; its throughEntryId is the root here.
+    assertChain(await ids("tail-3"), whole.slice(0, 5), "a tail read at an earlier leaf must stop at that branch's newest compaction");
+    // No compaction on the branch: the whole branch.
+    assertChain(await ids("tail-1"), ["tail-0", "tail-1"], "a tail read of a branch with no compaction must return the whole branch");
+  });
+
+  await leg("append-many", async () => {
+    // Plan 230 Task 5: `appendMany` writes every entry or none. Its own session id.
+    const appendMany = store.appendMany?.bind(store);
+    if (!appendMany) return;
+    const manySession = `${sessionId}-many`;
+    const at = (id: string, parentId: string | undefined, n: number, extra: Partial<SessionEntry> = {}): SessionEntry => ({
+      ...entry(id, parentId, n),
+      sessionId: manySession,
+      ...extra,
+    });
+    await appendMany([]);
+    const checkpoint = { version: 1, branchLength: 2, packageState: [], externalState: [], pinnedEntryIds: ["many-1"] };
+    const first = [
+      at("many-0", undefined, 50),
+      at("many-1", "many-0", 51, {
+        kind: "message",
+        label: undefined,
+        message: { role: "user", content: [{ type: "text", text: "many" }] },
+      }),
+      at("many-2", "many-1", 52, {
+        kind: "compaction",
+        label: undefined,
+        summary: "many summary",
+        data: { throughEntryId: "many-0", keepEntryIds: ["many-1"], checkpoint } as SessionEntry["data"],
+      }),
+      at("many-3", "many-2", 53),
+    ];
+    await appendMany(first);
+    const written = await store.list(manySession);
+    assertIds(written, ["many-0", "many-1", "many-2", "many-3"], "appendMany must write the batch in order");
+    const compaction = written.find((row) => row.id === "many-2");
+    if (JSON.stringify(compaction?.data) !== JSON.stringify(first[2]?.data) || compaction?.summary !== "many summary") {
+      throw new Error("appendMany must round-trip a compaction entry's data, checkpoint included");
+    }
+    if (typeof store.readBranchPath === "function") {
+      const chain = await store.readBranchPath({ sessionId: manySession, leafId: "many-3" });
+      assertIds(chain.items, ["many-0", "many-1", "many-2", "many-3"], "appendMany must write a readable branch");
+    }
+    // A batch may continue from an entry the session already holds.
+    await appendMany([at("many-4", "many-3", 54), at("many-5", "many-4", 55)]);
+    const atomic = async (batch: readonly SessionEntry[], match: RegExp | ((error: unknown) => boolean), message: string) => {
+      const before = (await store.list(manySession)).length;
+      await reject(() => appendMany(batch), match, message);
+      if ((await store.list(manySession)).length !== before) throw new Error(`${message}; a rejected batch wrote entries`);
+    };
+    await atomic(
+      [at("many-6", "many-5", 56), at("many-7", "many-missing", 57)],
+      (error) => isSessionAppendConflict(error) && error.conflict.expectedParentId === "many-missing",
+      "appendMany must reject a batch whose parent is not in the session, writing nothing",
+    );
+    await atomic(
+      [at("many-8", "many-5", 58), at("many-0", "many-8", 59)],
+      /Duplicate session entry id/,
+      "appendMany must reject a taken id, writing nothing",
+    );
+    await atomic(
+      [at("many-9", "many-5", 60), { ...at("many-10", "many-9", 61), sessionId: otherSessionId }],
+      /one session/,
+      "appendMany must reject a batch spanning sessions",
+    );
+    // Batch entries are not tip-checked, so the session's first linear append after a batch is accepted.
+    if (claimed.has("tipCheck")) await store.append(at("many-tip", "many-5", 62), { expectedParentId: "many-5", tip: true });
   });
 
   await leg("package-state", async () => {
@@ -377,6 +553,64 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     }
   });
 
+  // Plan 231 Task 3: a turn checkpoint is an ordinary branch entry whose data round-trips unchanged.
+  await leg("run-checkpoint", async () => {
+    const data = {
+      schemaVersion: 1,
+      runId: "run-checkpointed",
+      status: "running",
+      counters: { turns: 2, toolRounds: 1 },
+      deadlineAt: "2026-01-01T00:00:00.000Z",
+      loopState: { name: "default", revision: "1", snapshot: { phase: 1, items: ["a", null] } },
+    };
+    const checkpoint: SessionEntry = {
+      id: "run-checkpoint",
+      parentId: await tip(),
+      sessionId,
+      runId: "run-checkpointed",
+      timestamp: now(32),
+      kind: "run_checkpoint",
+      data,
+    };
+    await store.append(checkpoint);
+    const stored = (await store.list(sessionId)).find((row) => row.id === checkpoint.id);
+    if (stored?.kind !== "run_checkpoint" || stored.runId !== "run-checkpointed" || JSON.stringify(stored.data) !== JSON.stringify(data)) {
+      throw new Error("session store must preserve a run_checkpoint entry, its runId and its data payload unchanged");
+    }
+    if (typeof store.readBranchPath === "function") {
+      const chain = await chainOf("run-checkpoint");
+      if (chain.at(-1) !== "run-checkpoint") throw new Error("a run_checkpoint entry must be part of the branch path");
+    }
+  });
+
+  // Plan 239 Task 8: session-limits counters entry round-trips unchanged and stays part of the branch path.
+  await leg("session-limits", async () => {
+    const data = {
+      schemaVersion: 1,
+      runs: 2,
+      totalTokens: 1500,
+      cost: 0.05,
+      currency: "USD",
+    };
+    const limitsEntry: SessionEntry = {
+      id: "session-limits",
+      parentId: await tip(),
+      sessionId,
+      timestamp: now(33),
+      kind: "session_limits",
+      data,
+    };
+    await store.append(limitsEntry);
+    const stored = (await store.list(sessionId)).find((row) => row.id === limitsEntry.id);
+    if (stored?.kind !== "session_limits" || JSON.stringify(stored.data) !== JSON.stringify(data)) {
+      throw new Error("session store must preserve a session_limits entry and its data payload unchanged");
+    }
+    if (typeof store.readBranchPath === "function") {
+      const chain = await chainOf("session-limits");
+      if (chain.at(-1) !== "session-limits") throw new Error("a session_limits entry must be part of the branch path");
+    }
+  });
+
   // unknown_entry_kind_round_trips (docs/compatibility.md, store rules): an entry of a kind this build does not
   // know, written by a later minor, is persisted and returned unchanged, and never makes the session unreadable.
   const unknownEntry = {
@@ -414,7 +648,7 @@ export async function storeConformance(factory: StoreConformanceFactory, options
       await reject(() => sessions.search({ limit: 5 }), isUnsupportedStoreCapability, unclaimed("searchSessions", "search"));
       return;
     }
-    await assertSessionStoreSearchSessions(store, token);
+    await assertSessionStoreSearchSessions(store, token, options.queryLimits);
   });
 
   await leg("title", async () => {
@@ -446,6 +680,20 @@ export async function storeConformance(factory: StoreConformanceFactory, options
       await reject(() => sessions.list({ limit: 5 }), isUnsupportedStoreCapability, unclaimed("listSessions", "list"));
     }
   });
+
+  if (options.queryLimits?.maxListLimit !== undefined && claimed.has("listSessions")) {
+    const maxListLimit = options.queryLimits.maxListLimit;
+    await leg("query-limits", async () => {
+      await store.listSessions!({ limit: maxListLimit });
+      let refused = false;
+      try {
+        await store.listSessions!({ limit: maxListLimit + 1 });
+      } catch (error) {
+        refused = error instanceof TypeError;
+      }
+      if (!refused) throw new Error(`listSessions must refuse a limit above queryLimits.maxListLimit (${maxListLimit})`);
+    });
+  }
 
   await leg("list-and-delete", async () => {
     await store.append(stamp(mine, 50, tenantA));
@@ -667,6 +915,17 @@ export async function storeConformance(factory: StoreConformanceFactory, options
         (error) => isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate === true,
         "Restarted store must still deduplicate an exact idempotency retry",
       );
+      if (claimed.has("tipCheck")) {
+        await reject(
+          () =>
+            reopened.append(
+              { ...entry("reopen-tip", "tip-root", 61), sessionId: `${sessionId}-tip` },
+              { expectedParentId: "tip-root", tip: true },
+            ),
+          (error) => isSessionAppendConflict(error) && error.conflict.expectedParentId === "tip-root",
+          "a restarted store must still know the linear child of a parent (tip check)",
+        );
+      }
 
       if (claimed.has("listSessions")) {
         const summary = (await reopened.listSessions!({ limit: 100 })).items.find((item) => item.sessionId === sessionId);
@@ -691,8 +950,10 @@ export async function storeConformance(factory: StoreConformanceFactory, options
  * query round-trip (`entryId`/`runId`/`turn`/`snippet`), the `kind` filter, one hit per session, and the
  * ownership bound.
  */
-async function assertSessionStoreSearchSessions(store: SessionStore, token: string): Promise<void> {
+async function assertSessionStoreSearchSessions(store: SessionStore, token: string, queryLimits?: SessionQueryLimits): Promise<void> {
   const search = store.searchSessions!;
+  const maxSearchLimit = queryLimits?.maxSearchLimit ?? HARD_MAX_SESSION_SEARCH_LIMIT;
+  const maxSearchQueryBytes = queryLimits?.maxSearchQueryBytes ?? HARD_MAX_SESSION_SEARCH_QUERY_BYTES;
 
   await reject(
     () => search({ limit: 0 }),
@@ -705,12 +966,12 @@ async function assertSessionStoreSearchSessions(store: SessionStore, token: stri
     "searchSessions must reject NaN limit",
   );
   await reject(
-    () => search({ limit: HARD_MAX_SESSION_SEARCH_LIMIT + 1 }),
+    () => search({ limit: maxSearchLimit + 1 }),
     (error) => error instanceof TypeError,
     "searchSessions must reject oversize limit",
   );
   await reject(
-    () => search({ query: "x".repeat(HARD_MAX_SESSION_SEARCH_QUERY_BYTES + 1) }),
+    () => search({ query: "x".repeat(maxSearchQueryBytes + 1) }),
     (error) => error instanceof TypeError,
     "searchSessions must reject oversize query string",
   );

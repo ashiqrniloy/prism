@@ -1,5 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { type AgentEvent, createAgent, definePackage, type HostUi, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import {
+  type AgentEvent,
+  createAgent,
+  createMemorySessionStore,
+  createSessionEntry,
+  definePackage,
+  type HostUi,
+  providerDone,
+  providerTextDelta,
+  SessionContinueError,
+  toolCallContent,
+} from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import workflows, {
   agentNode,
@@ -29,6 +40,30 @@ const approveUi = (): HostUi & { asked: string[] } => {
 };
 
 describe("connectAgent", () => {
+  test("remote_proxy_continue_round_trips", async () => {
+    // Plan 231 Task 2: served sessions whose runs died before their first answer continue over the wire.
+    const store = createMemorySessionStore();
+    for (const sessionId of ["s", "s2"]) {
+      await store.append(
+        createSessionEntry({ sessionId, kind: "message", message: { role: "user", content: [{ type: "text", text: "hi" }] } }),
+      );
+    }
+    const { build } = gatedAgent({ gate: false, store, text: "continued" });
+    const { proxy } = await connectProxy(await build(), undefined);
+    const session = await proxy.session({ id: "s" });
+    const result = await session.continue();
+    expect(result.status).toBe("completed");
+    expect(result.text).toBe("continued");
+    // Nothing is owed now: the kernel's own error type comes back, from both forms.
+    await expect(session.continue()).rejects.toBeInstanceOf(SessionContinueError);
+    await expect(collect(session.continueStream())).rejects.toBeInstanceOf(SessionContinueError);
+    // The stream form carries `run.started { continued: true }` across the wire.
+    const events = await collect((await proxy.session({ id: "s2" })).continueStream());
+    expect(events.find((event) => event.type === "run.started")).toMatchObject({ continued: true });
+    expect(events.some((event) => event.type === "run.completed")).toBe(true);
+    await proxy.dispose();
+  });
+
   test("connected_events_keep_catalog_type_and_gain_remote", async () => {
     const ui = remoteHostUi();
     const { build } = gatedAgent({ gate: false, ui, text: "hello" });

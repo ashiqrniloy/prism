@@ -340,6 +340,9 @@ function createDefinition() {
       const evaluator = await buildEvaluator(prism);
       const audit = prism.config.audit ? createAudit(prism.config.audit) : undefined;
       install(prism, evaluator, audit, identity);
+      // The `tool-policy` marker: a tool package's unsandboxed default gate leaves the decision to this
+      // package. `approval` provides the same marker; whichever is set up first holds it.
+      if (prism.services.consume("tool-policy") === undefined) prism.services.provide("tool-policy", Object.freeze({ package: PACKAGE }));
     },
   });
 }

@@ -8,6 +8,8 @@ import type { AuthMode, DriverDescriptor } from "./descriptor.js";
 import { DriverError } from "./errors.js";
 import { buildChildEnv } from "./process/env.js";
 
+const DEFAULT_STATUS_TIMEOUT_MS = 15_000;
+
 /** What the kit asks of the vendor's status command. The driver owns the output format. */
 export type ParseStatus = (result: { readonly exitCode: number; readonly stdout: string }) => {
   readonly signedIn: boolean;
@@ -155,7 +157,7 @@ export function createProfiles(options: ProfilesOptions): Profiles {
       const timer = setTimeout(() => {
         child.kill("SIGKILL");
         reject(new DriverError("auth_required", "the status command timed out"));
-      }, options.statusTimeoutMs ?? 15_000);
+      }, options.statusTimeoutMs ?? DEFAULT_STATUS_TIMEOUT_MS);
       child.stdout.on("data", (chunk: Buffer) => {
         if (stdout.length < MAX_STATUS_BYTES) stdout += chunk.toString();
       });

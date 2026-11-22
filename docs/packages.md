@@ -111,12 +111,14 @@ from `{ ...agent.config }` reloads independently.
 | Member | Notes |
 | --- | --- |
 | `name`, `config`, `configSources` | `config` is validated, deeply frozen, and private to the package. `configSources` maps each top-level key to its origin (`default`, `user`, `project`, `code`, or `host`). |
+| `ceilings` | The agent's resolved `AgentConfig.ceilings`, frozen and read-only. A package bounds its own work by them (for example skill file bytes). Only the host sets a ceiling; a package can never raise one. See [limits](limits.md). |
 | `packages.instances(names)` | Returns named loaded packages as `PackageInstance`s in load order after setup. |
-| `tools.list()` | The agent's effective tools (host, kernel, and package contributions, minus `disable`) as frozen copies. It lists every registered tool, not the session-conditional subset (`when`). Throws `state_not_ready` during `setup`. |
+| `tools.list()` | The agent's effective tools (host, kernel, package contributions, and what tool sources supply now, minus `disable`) as frozen copies, each with `package`: the registering package's name, or `host` for the host's own tools (as `agent.tools` reports it). It lists every registered tool, not the session-conditional subset (`when`). Throws `state_not_ready` during `setup`. |
 | `skills.list()` / `skills.get(name)` | The agent's effective skills (host and package, minus `disable`) as frozen copies; `get` returns `undefined` for an absent or disabled name. Throws `state_not_ready` during `setup`. |
 | `hooks` | A `HookRegistrar` bound to the package name. Ids are `<package>:<hook>[#id]`. |
 | `slots.<slot>.provide(impl)` | Claims `loop`, `compaction`, `store`, or `credentials`. Needs `slot:<slot>`. `.default` is the kernel default. |
 | `tools.register(tool, { when? })` | Adds a tool. A name taken by another package, `AgentConfig.tools`, or the kernel names `load_skill` / `search_tools` is `tool_conflict`. |
+| `tools.source(list)` | Registers, during `setup`, a synchronous function that answers the package's current tools. The kernel calls it once at the start of each run, when the run snapshots its tools; see [Tool sources](#tool-sources). |
 | `skills.register(skill)` / `skills.addDir(path)` | Adds a skill (`skill_conflict` on a taken name, `skill_too_large` over the 256 KiB body cap). `addDir` records the path and the loader reads `<dir>/<name>/SKILL.md` after `setup` returns, so a read failure fails that package's setup. |
 | `providers.register(provider)` | Adds a `ModelProvider`, selected by `AgentConfig.model.provider`. This is the only way to give an agent a provider. A duplicate id is `provider_conflict`. |
 | `commands.register(command)` | Adds a `PackageCommand`. A duplicate name is `command_conflict`. |
@@ -125,6 +127,7 @@ from `{ ...agent.config }` reloads independently.
 | `models.decisions(ref?)` | Needs `models`. The model's typed decision adapter, with the resolved model id bound (see [Decisions](decisions.md)). |
 | `credentials.resolve(ref)` | Needs `credentials`. Resolves `env:`/`keyring:` refs through the `credentials` slot and returns a `Secret`. The value is added to the agent's secret set. |
 | `credentials.store(ref, secret)` / `credentials.delete(ref)` | Needs `credentials` **and** `credentials:write`. Writes a rotated credential through the slot, which is the only way a package can persist one (a refresh token rotates, so keeping it in memory loses the login). `env:` refs are never writable (`CredentialRefNotWritableError`, `credential_ref_unsupported`); a slot with no `store` fails closed (`CredentialStoreUnavailableError`, `credential_store_unavailable`); the written value joins the agent's secret set. Without the capability both members are `undefined` rather than throwing. |
+| `sessions.open(options)` | Needs `sessions`. Opens a child session on this agent, linked to `options.parent.sessionId`, which must name a session of this agent that is open now (usually the tool call's `context.sessionId`). See "Child sessions". Throws `state_not_ready` during `setup`. |
 | `state.session(key, initial)` / `state.agent(key, initial)` | Session state persisted as `package_state` entries (needs `session-state`), and process memory. See "Session state and background work". |
 | `services.provide / consume / require` | A duplicate is `service_conflict`. `consume` returns `undefined` when absent, and a later package's service is visible at call time. `require` throws `missing_service`. |
 | `host.ui.request(...)` | Needs `host-ui`. Answers `unavailable` with no UI attached. `package` is stamped by the kernel. |
@@ -135,7 +138,10 @@ from `{ ...agent.config }` reloads independently.
 
 ### Session context
 
-Hook handlers receive `context.session`, a `SessionContext`: `{ id, metadata?, model, entries(), background(name, task) }`.
+Hook handlers receive `context.session`, a `SessionContext`: `{ id, metadata?, model, depth, parentSessionId?, entries(), background(name, task) }`.
+`depth` is the number of parent links between the session and its root (0 for a root) and `parentSessionId` is the
+parent's id; both are synchronous, stamped in the session's links entry when it opened and read back when it resumes.
+A package that should not act on child sessions (a memory tier, an advisor) skips `depth > 0`.
 The kernel binds one view **per owner**, so `entries` (needs `session-state`) and `background` (needs
 `background`) are checked against the calling package's capabilities: a package that has not declared
 one gets `capability_missing`, while a package that has does not. The `host` and `kernel` owners are
@@ -146,6 +152,39 @@ same view, bound to the owning package.
 reopen sees — so a package can page it against its own state. It is one store read per call and never
 cached: call it from a background task or a command, not from `context.build`. It reads the branch
 first when the session has not, so it never throws `state_not_ready`.
+
+### Child sessions
+
+`sessions.open({ parent, actor?, metadata?, ownership?, seed?, id? })` opens a session on the package's own agent, so a
+child runs under the same hooks, packages, store and ledger as its parent, and `agent.sessions.list({ parentSessionId })`
+lists it. It goes through the same path as `agent.session`; it reads nothing from the store.
+
+- `parent` is `{ sessionId, delegationId?, workflowRunId? }`. The kernel writes the links entry with `depth` one more
+  than the parent's (at most `MAX_SESSION_LINK_DEPTH`, 16). Any other link field is refused.
+- The child inherits the parent session's ownership scope. `ownership` may narrow it; a field that changes it throws
+  `OwnershipScopeError`.
+- `seed` holds `{ kind: "message", message }` (user, assistant or tool) and `{ kind: "summary", summary }` entries, at most
+  `MAX_SESSION_SEED_ENTRIES` (512). The kernel stamps their id, chain, session id and scope, and appends them after the
+  links entry. Any other shape is a `TypeError`.
+- Closing the parent closes its open children first.
+- `sessions.open({ parent, id })` reopens a stored child instead: the session must be in the agent's store, in the
+  parent's scope, and linked to `parent.sessionId`, otherwise the open throws (`SessionNotFoundError` for a missing or
+  out-of-scope one, a `TypeError` for another parent's). The child already open under that parent is returned as is.
+  `seed`, `actor` and `metadata` are refused with `id`. This is how a tool's `resumeNested` reaches its suspended
+  child after the parent is resumed in a new process; it costs one branch read.
+
+A child's run picks its model, prompt, tools, skills and limits through `RunOptions` (`model`, `systemPrompt`,
+`tools.only`, `skills`, `limits`). `chargeTo: context.session` bounds the child by the parent run's budget (see
+[Agent](agent.md), "Charging an ancestor run").
+
+```ts
+// capabilities: ["sessions"]
+const child = await prism.sessions.open({ parent: { sessionId: context.sessionId!, delegationId } });
+const result = await child.run(task, { tools: { only: ["read", "grep"] }, skills: false, chargeTo: context.session });
+```
+
+The trust boundary is the parent agent: a child gets every loaded package's gates and observers, and can be narrowed
+by tool and skill only, never by package set.
 
 ### Session state and background work
 
@@ -218,6 +257,19 @@ what the host passed. A host-supplied registry is never mutated. Every `createAg
 packages again, so a `PackageInstance` is reusable across agents and a config cloned from
 `agent.config` does not collide with itself.
 
+- **Tool sources.** <a id="tool-sources"></a>A package whose tools change after `setup` (an MCP server's
+  live list, a child process that can exit) registers `tools.source(() => tools)` instead of calling
+  `register` per tool. Each run calls every source once, when it snapshots its tools, and keeps that set to
+  its end; a change applies at the next run. Each answered tool is checked like `register`: a tool without
+  a name or `execute`, with invalid `effects` or `timeoutMs`, or whose name is taken (a registered tool, a
+  host tool, `load_skill`, or an earlier source's tool) is dropped with one `warn` status note, and a source
+  that throws adds no tools that run plus one note. It never fails a run. Source tools are owned by the
+  package, appear in `agent.tools`, `inspect()`, and `tools.list()`, pass the same `tool.call` gate, and
+  `disable.tools` removes them by name at each snapshot; with a source registered, a `disable.tools` name
+  nothing carries yet is kept instead of failing the load with `unknown_disable_id`. They stay out of the
+  durable-run fingerprint, so a list change does not stop a suspended run from resuming; the resumed run
+  gets its checkpointed grant intersected with what the sources supply then. Cost: one synchronous call per
+  source per run start (and per `agent.tools` read); nothing when no package registers a source.
 - **Tool visibility.** `when(session)` runs once per turn for each tool that has one, at the same
   point `RunOptions.tools` narrows the turn, so the default loop and a custom loop behave alike. A
   hidden tool is not advertised and is not callable unless `allowHiddenToolCalls` is set. A throwing
@@ -328,6 +380,7 @@ load with `definition_invalid`. Defining `capabilitiesFor` without `capabilities
 | `models` | `models.client`, `models.embeddings`, `models.decisions` |
 | `credentials` | `credentials.resolve` |
 | `credentials:write` | `credentials.store`, `credentials.delete` (both are `undefined` without it) |
+| `sessions` | `sessions.open` |
 | `session-state` | `state.session`, `state.log`, `SessionContext.entries` |
 
 ### Errors
@@ -461,9 +514,9 @@ const config = {
 
 A rename, addition, or removal fails `src/__tests__/package-api-freeze.test.ts`, and the failure names this page.
 
-`PackageAPI` members: `name`, `config`, `configSources`, `packages`, `hooks`, `slots`, `tools`, `skills`, `providers`, `commands`, `models`, `credentials`, `state`, `services`, `host`, `events`, `status`, `log`, `onDispose`.
+`PackageAPI` members: `name`, `config`, `configSources`, `ceilings`, `packages`, `hooks`, `slots`, `tools`, `skills`, `providers`, `commands`, `models`, `credentials`, `state`, `services`, `sessions`, `host`, `events`, `status`, `log`, `onDispose`.
 
-`Capability`: `models`, `host-ui`, `session-state`, `background`, `credentials`, `credentials:write`, `slot:loop`, `slot:compaction`, `slot:store`, `slot:credentials`.
+`Capability`: `models`, `host-ui`, `session-state`, `background`, `credentials`, `credentials:write`, `sessions`, `slot:loop`, `slot:compaction`, `slot:store`, `slot:credentials`.
 
 `AgentConfig` package fields: `packages`, `packageConfig`, `disable`.
 

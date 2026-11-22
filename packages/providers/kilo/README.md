@@ -29,6 +29,7 @@ The bare definition uses the schema defaults, so `packages: [kilo]` is the same 
 | `apiKey` | `env:`/`keyring:` ref | `env:KILO_API_KEY` | Resolved per request; wins over the login. A literal key is rejected (`secret_literal`). |
 | `credential` | writable `keyring:` ref | `keyring:kilo` | Where the device login stores its token. An `env:` ref is refused at load. |
 | `baseUrl` | string | `https://ai-gateway.kilo.ai/api/v1` | Gateway base. |
+| `transport` | object | transport defaults | Wire ceilings the host sets; a provider response never raises them. `maxEventBytes` (SSE event, default 256 KiB), `maxBufferBytes` (SSE buffer, default 512 KiB), `maxResponseBodyBytes` (an error body, default 64 KiB). `maxCatalogBytes` bounds the `/models` catalog body (default 4 MiB). |
 | `organizationId` | string | — | Sends `X-KILOCODE-ORGANIZATIONID` and switches discovery to `/organizations/{id}/models`. |
 | `dataCollection` | `"allow"` \| `"deny"` | — | Body `provider.data_collection`, only when set. |
 | `mode` | string | — | `x-kilocode-mode`, sent only on `kilo-auto/*` models. The CLI sends its agent name on every request; Prism deliberately sends fewer invented bytes. |

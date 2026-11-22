@@ -18,9 +18,6 @@ import {
   decryptWithHostKms,
   encryptBytes,
   encryptWithHostKms,
-  HARD_KEYCHAIN_TIMEOUT_MS,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
-  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
   openEncryptedCredentialStore,
   resolveScryptParameters,
   rotateEncryptedCredentialStorePassphrase,
@@ -295,7 +292,7 @@ describe("createEncryptedCredentialStore", () => {
     const path = tempCredentialPath("limits");
     for (const limits of [
       { maxFileBytes: 0 },
-      { maxFileBytes: HARD_MAX_ENVELOPE_FILE_BYTES + 1 },
+      { maxFileBytes: 1.5 },
       { maxVaultBytes: Infinity },
       { maxScryptMemoryBytes: 0 },
       { maxScryptMemoryBytes: 1 },
@@ -384,12 +381,7 @@ describe("keychain credential store", () => {
 
   it("rejects invalid timeout and payload limits before native keychain access", async () => {
     const { createKeychainCredentialStore } = await import("../keychain-store.js");
-    for (const options of [
-      { timeoutMs: 0 },
-      { timeoutMs: HARD_KEYCHAIN_TIMEOUT_MS + 1 },
-      { maxPayloadBytes: Infinity },
-      { maxPayloadBytes: HARD_MAX_KEYCHAIN_PAYLOAD_BYTES + 1 },
-    ])
+    for (const options of [{ timeoutMs: 0 }, { timeoutMs: -1 }, { maxPayloadBytes: Infinity }, { maxPayloadBytes: 0 }])
       assert.throws(() => createKeychainCredentialStore({ service: "test", ...options }));
   });
 

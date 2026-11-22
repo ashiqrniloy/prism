@@ -3,6 +3,8 @@ import type { AuthMode } from "./descriptor.js";
 import { DriverError } from "./errors.js";
 import { isInside, resolveProtected, type ProfileRecord, type Profiles } from "./profiles.js";
 
+const DEFAULT_MAX_CONCURRENT_RUNS = 2;
+
 export interface PolicyGuardOptions {
   readonly vendor: string;
   readonly modes: readonly AuthMode[];
@@ -132,7 +134,7 @@ export function createPolicyGuard(options: PolicyGuardOptions): PolicyGuard {
           );
         }
       }
-      const max = stored.maxConcurrentRuns ?? options.defaultMaxConcurrentRuns ?? 2;
+      const max = stored.maxConcurrentRuns ?? options.defaultMaxConcurrentRuns ?? DEFAULT_MAX_CONCURRENT_RUNS;
       const running = activeByHome.get(home) ?? 0;
       if (running >= max)
         throw new DriverError(

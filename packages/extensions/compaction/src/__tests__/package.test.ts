@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type ProviderRequest, type SessionEntry, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
+import {
+  type ModelProvider,
+  type ProviderEvent,
+  type ProviderRequest,
+  type SessionEntry,
+  createAgent,
+  providerDone,
+  providerTextDelta,
+} from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
 import { createMockProvider, mockProvider, packageConformance } from "@arnilo/prism/testing";
 import definition from "../index.js";
@@ -14,6 +23,20 @@ const reply = (text = "reply") => [providerTextDelta(text), providerDone()];
 /** The last compaction entry's data, which carries the strategy that produced it. */
 function compactionData(entries: readonly SessionEntry[]): { strategy?: string } {
   return (entries.filter((entry) => entry.kind === "compaction").at(-1)?.data ?? {}) as { strategy?: string };
+}
+
+/** A scripted `mock` provider whose catalog alone declares the window, counting catalog reads. */
+function catalogProvider(script: readonly (readonly ProviderEvent[])[], reads: { count: number }) {
+  let turn = 0;
+  const provider: ModelProvider = {
+    id: "mock",
+    models: async () => {
+      reads.count += 1;
+      return [{ provider: "mock", model: "main", limits: { contextWindow: 2_000, maxOutputTokens: 0 } }];
+    },
+    generate: (request) => createMockProvider(script[Math.min(turn++, script.length - 1)] ?? []).generate(request),
+  };
+  return providerPackage("mock-catalog", [provider]);
 }
 
 describe("memory compaction package", () => {
@@ -142,5 +165,42 @@ describe("memory compaction package", () => {
 
     const kinds = (await session.entries()).map((entry) => entry.kind);
     assert.equal(kinds.includes("compaction"), false, "a false vote below the gate overrides the host fallback");
+  });
+
+  it("input_ratio_trigger_resolves_cap_from_provider_catalog", async () => {
+    // Plan 229 Further Actions P2: a bare `"provider/model"` ref carries no window, so the package's
+    // `input_ratio` gate reads the cap from the provider catalog. Cap: 2,000 - 1,024 reserve = 976.
+    const reads = { count: 0 };
+    const agent = await createAgent({
+      model: "mock/main",
+      packages: [
+        definition({ trigger: { type: "input_ratio", ratio: 0.5 } }),
+        catalogProvider([reply("first"), reply("compact summary"), reply("second")], reads),
+      ],
+    });
+    assert.equal(reads.count, 0, "createAgent never reads the catalog");
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("hi");
+    await session.run("y".repeat(4_000));
+
+    assert.equal(compactionData(await session.entries()).strategy, "llm-compaction", "the catalog's window fed the package's gate");
+    assert.equal(reads.count, 1, "the catalog is read once per agent");
+    await agent.dispose();
+  });
+
+  it("compaction_package_without_trigger_uses_kernel_default", async () => {
+    // Plan 229 Task 4: with no `trigger` the package registers no vote, so the kernel's default
+    // (80% of the input cap) decides, and the package's compactor writes the entry. Cap: 2,000 - 1,024 reserve = 976.
+    const agent = await createAgent({
+      model: { ...model, limits: { contextWindow: 2_000, maxOutputTokens: 0 } },
+      packages: [definition(), mockProvider([reply("first"), reply("compact summary"), reply("second")])],
+    });
+    assert.equal((agent.inspect().hooks["compaction.when"] ?? []).length, 0, "no vote without a trigger");
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("hi");
+    await session.run("y".repeat(4_000));
+
+    assert.equal(compactionData(await session.entries()).strategy, "llm-compaction", "the kernel default fired the package's compactor");
+    await agent.dispose();
   });
 });

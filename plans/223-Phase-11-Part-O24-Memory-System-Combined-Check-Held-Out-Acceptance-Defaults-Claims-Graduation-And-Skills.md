@@ -6,6 +6,8 @@
 
 > **Amended 2026-11-13 (owner, memory evaluation; design §14):** gate A reads the cheap baseline arms once with everything else, defaults and claims follow rules fixed before the read, and a mechanism deferred by the R1 checkpoint is listed as not shipped. [plan 218.2](218.2-Phase-11-Part-O19.2-Memory-System-Session-Tier-Hardening-For-Small-Workers-Durable-Signals-Recall-Query-Verdict-Format-And-Baseline-Arms.md) builds the arms.
 
+> **Amended 2026-11-17 (owner, benchmark decision; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) Tasks 4–6):** the session tiers are judged on LOCA-Bench (task success while the environment outgrows the context budget) and on τ-bench policy survival; long-term memory on MemoryArena and AMA-Bench. Their `heldout-a` partitions join Task 2's held-out suites. **If gate A passes, the owner intends a research paper** on the memory model: the claims in Task 3 then carry the protocol a paper needs (same-model baselines, intervals, the held-out read, ablations by tier), and a write-up task is planned after this plan, not inside it.
+
 ## Objectives
 
 - Accept the rebuilt memory system and the wiki **once**, on held-out partitions, and set what ships from the verdicts. This is the work plan 210 Tasks 8 (the freeze), 9, 10 and 11 carried until 2026-11-08, re-pointed at the final product.
@@ -86,7 +88,7 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
 - [ ] Task 2: The one held-out acceptance (gate A, paid; from plan 210 Task 9, re-pointed)
   - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
     - **Baseline arms in the one read.** The held-out families are also run on `memory-off`, `fold` and `llm-summary` for the session-tier rows, and on `session` (LTM written only by the agent) for the Rehearsal rows. They are part of the single read of `heldout-a`; no partition is read twice for them.
-    - **The shipped triggers.** The held-out `long-horizon` sessions run at the package defaults. A row measured only at lowered triggers is reported as such and backs no default.
+    - **The shipped triggers.** The held-out session-tier outcome runs at the package defaults. A row measured only at lowered triggers is reported as such and backs no default. (Amended 2026-11-17: the `long-horizon` family is deleted by plan 218.1 Task 5; the held-out session-tier outcome is LOCA-Bench's `heldout-a`, below.)
     - **Whole-run tokens per successful task** are reported per arm beside every row.
     - Rows deferred by the R1 checkpoint (plan 219 Task 7; plan 220's `l2Deferred`) read `deferred`, not `missing`.
   - Acceptance Criteria:
@@ -107,7 +109,9 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
 
       O3 and R3 are repeated with a person's labels. Plan 202's safety gate (Task 14, with the wiki probes) and growth criterion (Task 15) re-run on the frozen product.
     - Functional: **Held-out external suites (amended 2026-11-12 by plan 218.1, replacing plan 202 Task 5's hand-off of `heldout-a` of `longmemeval-m` and `beam-1m`).** The acceptance arms include, with no subsetting:
-      - a held-out outcome set for S3, to be chosen before gate A: plan 218.1's lean screen uses Compact-Bench's 22 validated task-preservation tasks, so they are no longer held out (deferred, plan 218.1 Further Actions);
+      - ~~a held-out outcome set for S3, to be chosen before gate A~~ (amended 2026-11-17, owner): `heldout-a` of LOCA-Bench at plan 218.1 Task 5's length and budget (seeds 4–5, 30 instances; S3 and M6), on the same arms as the development read;
+      - `heldout-a` of τ-bench retail (55 tasks) and the whole airline domain (50 tasks), under plan 218.1 Task 6's policy-survival protocol (S5);
+      - `heldout-a` of AMA-Bench (beside R5 and T7; added 2026-11-17, owner), once plan 219 adopts it;
       - `heldout-a` of Compact-Bench retention (M5, L4), drawn once that partition is adopted;
       - `heldout-a` of MemoryArena (R5, L4, Z1);
       - `heldout-a` of STATE-Bench's Agent Learning Track (Z1).
@@ -161,7 +165,7 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
 
 - [ ] Task 3: Preset revision, defaults and claims (from plan 210 Task 10, re-pointed)
   - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
-    - **WM default.** It follows gate M-2's rule (plan 218 Task 6) as the held-out read confirms or reverses it: the model policy, or the deterministic policy.
+    - **WM default.** It follows gate M-2's rule (plan 218 Task 6, reading M6 on LOCA-Bench since 2026-11-17) as the held-out read confirms or reverses it: the model policy, or the deterministic policy.
     - **No claim against a cheaper baseline without the interval.** The README says the session tiers beat `fold` or `llm-summary` only where the held-out interval supports it. Where it does not, the README states the measured parity and the whole-run cost of each, and the profile that avoids the cost.
     - **Worker-model guidance** comes from the `full-r-tiered` arm and plan 219.1 Task 2's cue-quality reading: which workers may run on a small model, and which should not.
     - **Deferred mechanisms** (conditioned responses, sensitization, exemplar priming, Sleep's trigger job, when the checkpoint deferred them) are listed as not shipped in 0.13.0, with their backlog entry.

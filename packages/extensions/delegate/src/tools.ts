@@ -1,4 +1,4 @@
-import type { JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
+import { AgentDelegationSuspendedError, type JsonObject, type NestedRunOutcome, type ToolDefinition, type ToolResult } from "@arnilo/prism";
 import type { DelegationMerge } from "./isolation.js";
 import { DelegateError, type DelegateRuntime, type DelegationOutcome } from "./runtime.js";
 import { DEFAULT_RESULT_MAX_CHARS } from "./limits.js";
@@ -49,7 +49,10 @@ function contextNote(context: DelegationOutcome["context"]): string {
 function statusLine(outcome: DelegationOutcome): string {
   const turns = `${outcome.turns} ${outcome.turns === 1 ? "turn" : "turns"}`;
   const tokens = outcome.usage?.totalTokens;
-  const pending = outcome.pending?.length ? `, ${outcome.pending.length} pending` : "";
+  // A suspended child names its session: the host resumes an async child there (a sync one resumes through the parent).
+  const pending = outcome.pending?.length
+    ? `, ${outcome.pending.length} pending${outcome.sessionId === undefined ? "" : `, session ${outcome.sessionId}`}`
+    : "";
   return `[child ${outcome.child}: ${outcome.status}, ${turns}${tokens === undefined ? "" : `, ${tokens.toLocaleString("en-US")} tokens`}${pending}${mergeNote(outcome.merge)}${contextNote(outcome.context)}]`;
 }
 
@@ -139,16 +142,51 @@ export function createDelegateTools(runtime: DelegateRuntime): readonly ToolDefi
           ...(context.session === undefined ? {} : { session: context.session }),
           ...(context.principal === undefined ? {} : { principal: context.principal }),
           ...(context.signal === undefined ? {} : { signal: context.signal }),
+          ...(context.interactive === undefined ? {} : { interactive: context.interactive }),
         });
-        if ("text" in started)
+        if ("text" in started) {
+          // A sync child that suspends suspends the parent run: its asks reach the parent's host through `session.resume`.
+          if (started.status === "suspended" && started.sessionId !== undefined && started.runId !== undefined) {
+            runtime.release(started.delegationId, context.sessionId);
+            throw new AgentDelegationSuspendedError({ runId: started.runId, sessionId: started.sessionId }, started.pending ?? []);
+          }
           return complete(runtime, context.sessionId, outcomeResult("delegate", context.toolCallId, started, capFor(started.child)));
+        }
         return {
           toolCallId: context.toolCallId,
           name: "delegate",
           content: [{ type: "text", text: `[child ${started.child}: running, delegationId ${started.delegationId}]` }],
         };
       } catch (error) {
+        if (error instanceof AgentDelegationSuspendedError) throw error;
         return failure("delegate", context.toolCallId, message(error, "Delegation failed"));
+      }
+    },
+    /** Plan 232 Task 3: the parent's `session.resume` routes the child's decisions here; the child resumes from the store. */
+    async resumeNested(nested, decisions, context): Promise<NestedRunOutcome> {
+      const childSessionId = nested.ref.sessionId;
+      if (childSessionId === undefined)
+        return { status: "failed", code: "ERR_PRISM_DELEGATE", message: "The suspended child has no session" };
+      try {
+        const outcome = await runtime.resume({
+          childSessionId,
+          decisions,
+          parentSessionId: context.sessionId,
+          ...(context.session === undefined ? {} : { session: context.session }),
+          ...(context.principal === undefined ? {} : { principal: context.principal }),
+          ...(context.signal === undefined ? {} : { signal: context.signal }),
+          ...(context.interactive === undefined ? {} : { interactive: context.interactive }),
+        });
+        if (outcome.status === "suspended") {
+          runtime.release(outcome.delegationId, context.sessionId);
+          return { status: "suspended", pendingDecisions: outcome.pending ?? [] };
+        }
+        const page = outcomeResult("delegate", context.toolCallId, outcome, capFor(outcome.child));
+        complete(runtime, context.sessionId, page);
+        const text = page.result.content?.find((block) => block.type === "text");
+        return { status: "completed", value: text?.type === "text" ? text.text : "" };
+      } catch (error) {
+        return { status: "failed", code: "ERR_PRISM_DELEGATE", message: message(error, "The child could not resume") };
       }
     },
   };

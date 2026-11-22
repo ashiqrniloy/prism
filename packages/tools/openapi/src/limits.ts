@@ -36,27 +36,12 @@ export const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits = {
   maxRetries: 0,
 };
 
-export const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits = {
-  maxDocumentBytes: 16 * 1024 * 1024,
-  maxOperations: 1024,
-  maxSchemaDepth: 128,
-  maxRefs: 8192,
-  maxBodyBytes: 16 * 1024 * 1024,
-  maxResponseBytes: 16 * 1024 * 1024,
-  maxPages: 100,
-  maxPaginationItems: 10000,
-  maxRetries: 3,
-};
-
 export function resolveOpenApiLimits(input: OpenApiLimits = {}): ResolvedOpenApiLimits {
   const resolved = { ...DEFAULT_OPENAPI_LIMITS, ...input };
   for (const [key, value] of Object.entries(resolved)) {
     const min = key === "maxRetries" ? 0 : 1;
     if (!Number.isSafeInteger(value) || value < min) {
       throw new OpenApiToolError("ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS", `openapi limit ${key} must be a safe integer >= ${min}`);
-    }
-    if (value > HARD_OPENAPI_LIMITS[key as keyof ResolvedOpenApiLimits]) {
-      throw new OpenApiToolError("ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS", `openapi limit ${key} exceeds its hard cap`);
     }
   }
   return resolved;

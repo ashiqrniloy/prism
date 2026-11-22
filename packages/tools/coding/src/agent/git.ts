@@ -30,16 +30,6 @@ import {
   DEFAULT_MAX_GIT_WORKTREES,
   DEFAULT_MAX_PR_COMMITS,
   DEFAULT_MAX_PR_HANDOFF_BYTES,
-  HARD_MAX_GIT_CHANGED_FILES,
-  HARD_MAX_GIT_DIFF_LINES,
-  HARD_MAX_GIT_MESSAGE_BYTES,
-  HARD_MAX_GIT_OUTPUT_BYTES,
-  HARD_MAX_GIT_PATCH_BYTES,
-  HARD_MAX_GIT_PATHS,
-  HARD_MAX_GIT_REF_BYTES,
-  HARD_MAX_GIT_WORKTREES,
-  HARD_MAX_PR_COMMITS,
-  HARD_MAX_PR_HANDOFF_BYTES,
   validateCodingLimit,
 } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
@@ -72,32 +62,16 @@ export interface ResolvedGitLimits {
 
 export function resolveGitLimits(options?: GitLimitOptions): ResolvedGitLimits {
   return {
-    maxPaths: validateCodingLimit("maxPaths", options?.maxPaths ?? DEFAULT_MAX_GIT_PATHS, HARD_MAX_GIT_PATHS),
-    maxRefBytes: validateCodingLimit("maxRefBytes", options?.maxRefBytes ?? DEFAULT_MAX_GIT_REF_BYTES, HARD_MAX_GIT_REF_BYTES),
-    maxMessageBytes: validateCodingLimit(
-      "maxMessageBytes",
-      options?.maxMessageBytes ?? DEFAULT_MAX_GIT_MESSAGE_BYTES,
-      HARD_MAX_GIT_MESSAGE_BYTES,
-    ),
-    maxOutputBytes: validateCodingLimit(
-      "maxOutputBytes",
-      options?.maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES,
-      HARD_MAX_GIT_OUTPUT_BYTES,
-    ),
-    maxDiffLines: validateCodingLimit("maxDiffLines", options?.maxDiffLines ?? DEFAULT_MAX_GIT_DIFF_LINES, HARD_MAX_GIT_DIFF_LINES),
-    maxChangedFiles: validateCodingLimit(
-      "maxChangedFiles",
-      options?.maxChangedFiles ?? DEFAULT_MAX_GIT_CHANGED_FILES,
-      HARD_MAX_GIT_CHANGED_FILES,
-    ),
-    maxPatchBytes: validateCodingLimit("maxPatchBytes", options?.maxPatchBytes ?? DEFAULT_MAX_GIT_PATCH_BYTES, HARD_MAX_GIT_PATCH_BYTES),
-    maxWorktrees: validateCodingLimit("maxWorktrees", options?.maxWorktrees ?? DEFAULT_MAX_GIT_WORKTREES, HARD_MAX_GIT_WORKTREES),
-    maxPrCommits: validateCodingLimit("maxPrCommits", options?.maxPrCommits ?? DEFAULT_MAX_PR_COMMITS, HARD_MAX_PR_COMMITS),
-    maxPrHandoffBytes: validateCodingLimit(
-      "maxPrHandoffBytes",
-      options?.maxPrHandoffBytes ?? DEFAULT_MAX_PR_HANDOFF_BYTES,
-      HARD_MAX_PR_HANDOFF_BYTES,
-    ),
+    maxPaths: validateCodingLimit("maxPaths", options?.maxPaths ?? DEFAULT_MAX_GIT_PATHS),
+    maxRefBytes: validateCodingLimit("maxRefBytes", options?.maxRefBytes ?? DEFAULT_MAX_GIT_REF_BYTES),
+    maxMessageBytes: validateCodingLimit("maxMessageBytes", options?.maxMessageBytes ?? DEFAULT_MAX_GIT_MESSAGE_BYTES),
+    maxOutputBytes: validateCodingLimit("maxOutputBytes", options?.maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES),
+    maxDiffLines: validateCodingLimit("maxDiffLines", options?.maxDiffLines ?? DEFAULT_MAX_GIT_DIFF_LINES),
+    maxChangedFiles: validateCodingLimit("maxChangedFiles", options?.maxChangedFiles ?? DEFAULT_MAX_GIT_CHANGED_FILES),
+    maxPatchBytes: validateCodingLimit("maxPatchBytes", options?.maxPatchBytes ?? DEFAULT_MAX_GIT_PATCH_BYTES),
+    maxWorktrees: validateCodingLimit("maxWorktrees", options?.maxWorktrees ?? DEFAULT_MAX_GIT_WORKTREES),
+    maxPrCommits: validateCodingLimit("maxPrCommits", options?.maxPrCommits ?? DEFAULT_MAX_PR_COMMITS),
+    maxPrHandoffBytes: validateCodingLimit("maxPrHandoffBytes", options?.maxPrHandoffBytes ?? DEFAULT_MAX_PR_HANDOFF_BYTES),
   };
 }
 

@@ -3,7 +3,7 @@ import { assertSsrfAllowedUrl, MediaContentError } from "@arnilo/prism";
 import { isLoopbackHostname, pinnedFetch } from "@arnilo/prism/net";
 import type { Transport } from "@modelcontextprotocol/client";
 import { createMcpClientAuth, type McpClientAuth, McpOAuthError, type ResolvedMcpOAuthLimits, resolveMcpOAuthLimits } from "./auth.js";
-import { DEFAULT_MAX_HTTP_RESPONSE_BYTES, HARD_MAX_HTTP_RESPONSE_BYTES, validateMcpLimit } from "./limits.js";
+import { DEFAULT_MAX_HTTP_RESPONSE_BYTES, validateMcpLimit } from "./limits.js";
 import type { McpStreamableHttpTransport, McpTransportConfig } from "./types.js";
 import { McpBridgeError } from "./types.js";
 
@@ -148,11 +148,7 @@ async function oauthDiscoveryFetch(
 export function createSecureMcpFetch(config: McpStreamableHttpTransport): typeof globalThis.fetch {
   const endpoint = validateEndpoint(config);
   const allowedOrigins = resolveAllowedOrigins(config.allowedOrigins, config.allowLoopbackHttp === true);
-  const maxResponseBytes = validateMcpLimit(
-    "maxResponseBytes",
-    config.maxResponseBytes ?? DEFAULT_MAX_HTTP_RESPONSE_BYTES,
-    HARD_MAX_HTTP_RESPONSE_BYTES,
-  );
+  const maxResponseBytes = validateMcpLimit("maxResponseBytes", config.maxResponseBytes ?? DEFAULT_MAX_HTTP_RESPONSE_BYTES);
   return async (input, init) => {
     const url = input instanceof URL ? new URL(input.href) : new URL(typeof input === "string" ? input : input.url);
     validateRequestUrl(url, allowedOrigins, config.allowLoopbackHttp === true);

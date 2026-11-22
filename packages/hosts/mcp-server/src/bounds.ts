@@ -1,10 +1,10 @@
 import { McpBridgeError } from "@arnilo/prism-extensions/mcp";
 
 /** Resolves a bounded positive integer option, or throws naming the rule. Shared by `serve`, `server`, and `serve-tools`. */
-export function bounded(value: number | undefined, fallback: number, cap: number, name: string): number {
+/** A host-set server limit: a positive safe integer. The host's value is the cap (plan 239 Task 5). */
+export function bounded(value: number | undefined, fallback: number, name: string): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > cap)
-    throw new McpBridgeError(`${name} must be a positive safe integer <= ${cap}`);
+  if (!Number.isSafeInteger(resolved) || resolved < 1) throw new McpBridgeError(`${name} must be a positive safe integer`);
   return resolved;
 }
 

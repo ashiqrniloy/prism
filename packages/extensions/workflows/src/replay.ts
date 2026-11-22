@@ -165,7 +165,7 @@ export async function replayWorkflow(
             execution: {
               mode: "supersteps" as const,
               superstep: 0,
-              ...(workflow.limits?.maxSupersteps !== undefined ? { maxSupersteps: workflow.limits.maxSupersteps } : {}),
+              ...(typeof workflow.limits?.maxSupersteps === "number" ? { maxSupersteps: workflow.limits.maxSupersteps } : {}),
               pending: {},
             },
           }

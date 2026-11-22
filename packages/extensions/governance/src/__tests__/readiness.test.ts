@@ -167,13 +167,13 @@ describe("host composition inspection and readiness (plan 073 Task 5; moved in p
           packages: [mockProvider([[providerDone()]])],
           redactor: createSecretRedactor([]),
           ownership: { tenantId: "tenant-acme", userId: "worker-1" },
-          ...(identity === undefined ? {} : { identity }),
           hooks: askEveryTool(),
           trust: createStaticTrustPolicy(true),
           validator: () => undefined,
         }),
         store: { kind: "postgres", durable: true },
         connectedApps: { appIds: ["slack"], serverIds: ["slack"] },
+        ...(identity === undefined ? {} : { identity }),
       } satisfies HostCompositionOptions;
 
       const report = inspectHostComposition(options);
@@ -186,16 +186,30 @@ describe("host composition inspection and readiness (plan 073 Task 5; moved in p
     }
   });
 
-  it("rejects connected-app identifier lists above the hard cap", () => {
+  it("readiness_counts_builtin_validation (plan 226)", async () => {
+    const base = {
+      model: { provider: "mock", model: "m" },
+      packages: [mockProvider([[providerDone()]])],
+      redactor: createSecretRedactor([]),
+    };
+    const builtin = await createAgent(base);
+    assert.equal(inspectHostComposition({ agent: builtin }).governance.validator, true);
+    const off = await createAgent({ ...base, tools: { validation: "off" } });
+    assert.equal(inspectHostComposition({ agent: off }).governance.validator, false);
+    const hostValidator = await createAgent({ ...base, tools: { validation: "off" }, validator: () => undefined });
+    assert.equal(inspectHostComposition({ agent: hostValidator }).governance.validator, true);
+    assert.equal(inspectHostComposition({}).governance.validator, false);
+  });
+
+  it("keeps a connected-app identifier list of any length the host composed", () => {
+    // Plan 239 Task 5: the MCP package's host-set `maxApps` bounds the list; the report mirrors it.
+    const report = inspectHostComposition({
+      connectedApps: { appIds: Array.from({ length: 33 }, (_, index) => `app-${index}`), serverIds: [] },
+    });
+    assert.equal(report.connectedApps?.appIds.length, 33);
     assert.throws(
-      () =>
-        inspectHostComposition({
-          connectedApps: {
-            appIds: Array.from({ length: 33 }, (_, index) => `app-${index}`),
-            serverIds: [],
-          },
-        }),
-      (error) => error instanceof HostCompositionError && error.message.includes("at most 32 identifiers"),
+      () => inspectHostComposition({ connectedApps: { appIds: "app" as never, serverIds: [] } }),
+      (error) => error instanceof HostCompositionError,
     );
   });
 

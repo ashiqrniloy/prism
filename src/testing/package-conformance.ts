@@ -104,6 +104,7 @@ function recordingInstance(instance: PackageInstance, used: Set<string>): Packag
         if (prop === "credentials") return gated(target.credentials, "resolve", "credentials");
         if (prop === "state") return gated(target.state, "session", "session-state");
         if (prop === "host") return gated(target.host, "ui", "host-ui");
+        if (prop === "sessions") return gated(target.sessions, "open", "sessions");
         if (prop === "slots") {
           return new Proxy(target.slots, {
             get(slots, slot) {

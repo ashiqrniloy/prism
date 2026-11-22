@@ -4,6 +4,8 @@ import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 
+const DEFAULT_MAX_OUTPUT_BYTES = 16 * 1024 * 1024;
+
 export class DockerCliError extends Error {
   readonly code = "ERR_PRISM_DOCKER_CLI";
   readonly exitCode: number | null;
@@ -77,7 +79,7 @@ export async function runDockerCli(request: DockerCliRequest): Promise<DockerCli
   if (request.signal?.aborted) {
     throw new DockerCliError("Docker CLI aborted before start");
   }
-  const maxOutputBytes = request.maxOutputBytes ?? 16 * 1024 * 1024;
+  const maxOutputBytes = request.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   const redact = request.redact;
 
   return await new Promise<DockerCliResult>((resolve, reject) => {

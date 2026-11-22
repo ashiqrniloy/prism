@@ -1,17 +1,22 @@
 import { WorkflowDefinitionError } from "./errors.js";
 import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowGraphView } from "./graph.js";
-import { HARD_MAX_NODES } from "./limits.js";
+/** Largest graph view the Mermaid and DOT exporters render; `maxNodes` in their options. */
+export const DEFAULT_MAX_EXPORT_NODES = 10_000;
 
 // ─── Export Options ───────────────────────────────────────────────────────────
 
 export interface MermaidExportOptions {
   /** Layout direction. Default `"TD"`. */
   readonly direction?: "TD" | "LR" | "BT" | "RL";
+  /** Largest view rendered. Default 10,000 (`DEFAULT_MAX_EXPORT_NODES`). */
+  readonly maxNodes?: number;
 }
 
 export interface DotExportOptions {
   /** Layout rank direction. Default `"TB"`. */
   readonly rankdir?: "TB" | "LR" | "BT" | "RL";
+  /** Largest view rendered. Default 10,000 (`DEFAULT_MAX_EXPORT_NODES`). */
+  readonly maxNodes?: number;
 }
 
 // ─── Mermaid Escaping ─────────────────────────────────────────────────────────
@@ -61,8 +66,9 @@ function renderMermaidEdge(edge: WorkflowGraphEdge): string {
  * Exports a WorkflowGraphView to a deterministic Mermaid flowchart string.
  */
 export function workflowGraphToMermaid(view: WorkflowGraphView, options: MermaidExportOptions = {}): string {
-  if (view.nodes.length > HARD_MAX_NODES) {
-    throw new WorkflowDefinitionError(`Graph node count (${view.nodes.length}) exceeds maximum limit (${HARD_MAX_NODES})`);
+  const maxNodes = options.maxNodes ?? DEFAULT_MAX_EXPORT_NODES;
+  if (view.nodes.length > maxNodes) {
+    throw new WorkflowDefinitionError(`Graph node count (${view.nodes.length}) exceeds maximum limit (${maxNodes})`);
   }
 
   const direction = options.direction ?? "TD";
@@ -116,8 +122,9 @@ function getDotShape(kind: string): string {
  * Exports a WorkflowGraphView to a deterministic Graphviz DOT string with quoted IDs.
  */
 export function workflowGraphToDot(view: WorkflowGraphView, options: DotExportOptions = {}): string {
-  if (view.nodes.length > HARD_MAX_NODES) {
-    throw new WorkflowDefinitionError(`Graph node count (${view.nodes.length}) exceeds maximum limit (${HARD_MAX_NODES})`);
+  const maxNodes = options.maxNodes ?? DEFAULT_MAX_EXPORT_NODES;
+  if (view.nodes.length > maxNodes) {
+    throw new WorkflowDefinitionError(`Graph node count (${view.nodes.length}) exceeds maximum limit (${maxNodes})`);
   }
 
   const rankdir = options.rankdir ?? "TB";

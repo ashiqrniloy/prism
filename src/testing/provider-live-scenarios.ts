@@ -11,6 +11,7 @@ import type {
   ToolDefinition,
   Usage,
 } from "../contracts.js";
+import { createAgent, createMemorySessionStore } from "../index.js";
 import type { PackageInstance } from "../packages/api.js";
 import {
   assertAbortIsObserved,
@@ -18,6 +19,8 @@ import {
   assertProviderStreamConforms,
   collectProviderEvents,
 } from "../provider-kit/conformance.js";
+import { providerPackage } from "../provider-kit/package.js";
+import { parseStructuredOutput } from "../provider-kit/structured-output.js";
 
 /** Non-sensitive prompt text repeated to exceed typical prefix-cache minimum thresholds (~1 KiB). */
 export const DEFAULT_LIVE_CACHE_PREFIX =
@@ -59,6 +62,8 @@ export interface LiveRouteConfig {
   readonly cacheModel?: string | ModelConfig;
   /** Structured-output prompt, for services that answer the shared schema-less prompt in prose. */
   readonly structuredPrompt?: string;
+  /** Schema the structured-output scenario sends and validates against, paired with `structuredPrompt`. Defaults to `{ ok: boolean }`. */
+  readonly structuredSchema?: JsonObject;
   /** Model used by the error scenario when the service accepts an empty `messages` array. */
   readonly errorModel?: string | ModelConfig;
 }
@@ -67,7 +72,7 @@ export type LiveRouteInput = string | ModelConfig | LiveRouteConfig;
 
 export interface ProviderLiveScenariosOptions {
   /** Restrict probes, e.g. a separately budgeted paid cache row. Absent runs all scenarios. */
-  readonly scenarios?: readonly ("text" | "tool-loop" | "structured-output" | "abort" | "error" | "cache")[];
+  readonly scenarios?: readonly ("text" | "tool-loop" | "structured-output" | "structured-tool-loop" | "abort" | "error" | "cache")[];
   /** Provider instance or factory. If a PackageInstance is given, it is automatically resolved. */
   readonly provider:
     | ModelProvider
@@ -471,13 +476,134 @@ export async function liveScenarioStructuredOutput(options: {
 
   assert.equal(term?.type, "done", "structured output completed with done");
   const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
-  const parsed = JSON.parse(text);
-  assert.ok(typeof parsed === "object" && parsed !== null, "structured output was not valid JSON");
+  const parsed = parseStructuredOutput(text, { name: "probe", schema });
+  assert.ok("output" in parsed, `structured output did not satisfy the schema: ${describeOutputError(parsed)}`);
   const usage = events.find((e) => e.type === "usage")?.usage;
   if (usage) {
     console.info(`[${options.provider.id} live] ${options.route} structured output usage: ${JSON.stringify(usage)}`);
   }
-  return { ok: true, value: parsed };
+  return { ok: true, value: parsed.output };
+}
+
+/** Lists `outputError` paths and messages only; the reply text never enters a failure message. */
+function describeOutputError(parsed: ReturnType<typeof parseStructuredOutput>): string {
+  if (!("outputError" in parsed)) return "";
+  const { code, errors } = parsed.outputError;
+  return `${code}: ${errors.map((e) => `${e.path || "/"} ${e.message}`).join("; ")}`;
+}
+
+/** Schema for the structured tool-loop scenario: both fields come from the weather tool's result. */
+export const LIVE_STRUCTURED_WEATHER_SCHEMA: JsonObject = {
+  type: "object",
+  properties: {
+    location: { type: "string" },
+    temperature: { type: "string" },
+  },
+  required: ["location", "temperature"],
+  additionalProperties: false,
+};
+
+/**
+ * A full session run that calls a tool and ends with a structured reply (plan 235 Further Action P2).
+ * The run resolves `mode: "auto"`: a model declaring the capability gets native mode with `repair: 0`,
+ * so the schema sent next to `tools` on every turn must be honoured without a repair; a model without
+ * it gets prompted mode with the default repair. Asserts that a tool ran, that every request carried
+ * the tools and (native) the schema or (prompted) no schema, and that `RunResult.output` validated.
+ */
+export async function liveScenarioStructuredToolLoop(options: {
+  readonly provider: ModelProvider;
+  readonly model: ModelConfig;
+  readonly route: string;
+  readonly secrets: readonly string[];
+  readonly sessionId?: string;
+  readonly structuredOutput?: "json_schema" | "reject" | boolean;
+  readonly prompt?: string;
+  readonly tool?: ToolDefinition;
+}): Promise<{ readonly mode: "native" | "prompted"; readonly requests: number; readonly toolCalls: number; readonly value: unknown }> {
+  const baseTool = options.tool ?? LIVE_WEATHER_TOOL;
+  let toolCalls = 0;
+  const tool: ToolDefinition = {
+    ...baseTool,
+    execute: (args, ctx) => {
+      toolCalls += 1;
+      return baseTool.execute(args, ctx);
+    },
+  };
+  const forceNative = options.structuredOutput === "json_schema" || options.structuredOutput === true;
+  const model: ModelConfig = forceNative
+    ? { ...options.model, capabilities: { ...(options.model.capabilities ?? {}), structuredOutput: "json_schema" } }
+    : options.structuredOutput === "reject"
+      ? { ...options.model, capabilities: { ...(options.model.capabilities ?? {}), structuredOutput: false } }
+      : options.model;
+  const mode =
+    model.capabilities?.structuredOutput === true || model.capabilities?.structuredOutput === "json_schema" ? "native" : "prompted";
+
+  const requests: ProviderRequest[] = [];
+  // Inherit from the provider (prototype methods included) and record each request.
+  const recording: ModelProvider = Object.assign(Object.create(options.provider) as ModelProvider, {
+    generate(request: ProviderRequest) {
+      requests.push(request);
+      return options.provider.generate(request);
+    },
+  });
+  const agent = await createAgent({
+    model,
+    packages: [providerPackage("live-structured-tool-loop", [recording])],
+    tools: { add: [tool] },
+    slots: { store: createMemorySessionStore() },
+  });
+  try {
+    const session = await agent.session({ id: options.sessionId ?? `live-structured-tools-${Date.now()}`, create: true });
+    const result = await session.run(
+      options.prompt ??
+        "Call the get_weather tool for Tokyo. After it returns, reply with a JSON object giving the location and the temperature it reported.",
+      {
+        providerOptions: {
+          structuredOutput: {
+            name: "weather_report",
+            schema: LIVE_STRUCTURED_WEATHER_SCHEMA,
+            mode: "auto",
+            repair: mode === "native" ? 0 : 1,
+          },
+        },
+      },
+    );
+    await session.close();
+    const serialized = JSON.stringify(result);
+    for (const secret of options.secrets) {
+      if (secret) assert.ok(!serialized.includes(secret), "a live structured tool-loop result must not contain a credential");
+    }
+    assert.equal(
+      result.status,
+      "completed",
+      `structured tool-loop run ended ${result.status}${result.error ? `: ${result.error.message}` : ""}`,
+    );
+    assert.ok(toolCalls > 0, "structured tool-loop run executed no tool call");
+    assert.ok(requests.length >= 2, "structured tool-loop run needs a tool turn and a final turn");
+    for (const [index, request] of requests.entries()) {
+      assert.ok(
+        request.tools?.some((t) => t.name === tool.name),
+        `request ${index + 1} did not carry the tool`,
+      );
+      if (mode === "native") {
+        assert.equal(request.options?.structuredOutput?.name, "weather_report", `native request ${index + 1} did not carry the schema`);
+      } else {
+        assert.equal(request.options?.structuredOutput, undefined, `prompted request ${index + 1} carried a native schema`);
+      }
+    }
+    assert.ok(
+      result.output !== undefined,
+      `structured tool-loop reply did not satisfy the schema (${mode}): ${
+        result.outputError ? describeOutputError({ outputError: result.outputError }) : "no output"
+      }`,
+    );
+    if (result.usage) {
+      console.info(`[${options.provider.id} live] ${options.route} structured tool-loop (${mode}) usage: ${JSON.stringify(result.usage)}`);
+    }
+    return { mode, requests: requests.length, toolCalls, value: result.output };
+  } finally {
+    await agent.dispose();
+  }
 }
 
 export async function liveScenarioAbort(options: {
@@ -762,8 +888,21 @@ export async function executeProviderLiveScenarios(
         sessionId: config.sessionId,
         structuredOutput: config.structuredOutput ?? (model.capabilities?.structuredOutput === "json_schema" ? "json_schema" : undefined),
         prompt: config.structuredPrompt,
+        schema: config.structuredSchema,
       });
       results.push({ scenario: "structured-output", route: routeName, ok: true, details: structRes });
+    }
+
+    if (!options.scenarios || options.scenarios.includes("structured-tool-loop")) {
+      const structToolRes = await liveScenarioStructuredToolLoop({
+        provider,
+        model,
+        route: routeName,
+        secrets,
+        sessionId: config.sessionId,
+        structuredOutput: config.structuredOutput,
+      });
+      results.push({ scenario: "structured-tool-loop", route: routeName, ok: true, details: structToolRes });
     }
 
     if (!options.scenarios || options.scenarios.includes("abort")) {
@@ -937,8 +1076,24 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
             sessionId: routeConfig.sessionId,
             structuredOutput: routeConfig.structuredOutput,
             prompt: routeConfig.structuredPrompt,
+            schema: routeConfig.structuredSchema,
           });
         });
+
+        (!options.scenarios || options.scenarios.includes("structured-tool-loop") ? it : it.skip)(
+          "live_structured_output_with_tool_calls",
+          async () => {
+            await init();
+            await liveScenarioStructuredToolLoop({
+              provider,
+              model,
+              route: routeName,
+              secrets,
+              sessionId: routeConfig.sessionId,
+              structuredOutput: routeConfig.structuredOutput,
+            });
+          },
+        );
 
         (!options.scenarios || options.scenarios.includes("abort") ? it : it.skip)(
           "live_abort_signal_is_observed_before_first_request",

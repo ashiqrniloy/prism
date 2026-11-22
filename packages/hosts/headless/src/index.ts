@@ -1,8 +1,17 @@
 export type { AnswerQuery, RoutedAnswer } from "./answers.js";
 export { createResumeAuthority, type ResumeAuthority } from "./authority.js";
 export { HeadlessError, type HeadlessErrorCode } from "./errors.js";
-export { DEFAULT_MAX_ANSWERS, HARD_MAX_ANSWERS } from "./limits.js";
+export { DEFAULT_MAX_ANSWERS } from "./limits.js";
 export { type PolicyAnswers, policyDefault } from "./policy.js";
+export {
+  type ContinueInterruptedOptions,
+  type ContinueInterruptedOutcome,
+  continueInterrupted,
+  type FindInterruptedRunsOptions,
+  findInterruptedRuns,
+  type InterruptedRun,
+  type RunListing,
+} from "./recover.js";
 export type { ResumeWhenAnsweredOptions, ResumeWhenAnsweredResult } from "./resume.js";
 export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js";
 export {

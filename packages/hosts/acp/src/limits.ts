@@ -1,6 +1,6 @@
 import { AcpError } from "./errors.js";
 
-/** Defaults copied from `packages/ag-ui/src/limits.ts`. A host may narrow them, never raise them. */
+/** Defaults copied from `packages/ag-ui/src/limits.ts`. The host sets each (`serveAcp({ limits })`); its value is the cap. */
 export const ACP_LIMITS = {
   maxEventBytes: 64 * 1024,
   maxTextBytes: 64 * 1024,
@@ -11,18 +11,6 @@ export const ACP_LIMITS = {
   acpLocationsPerUpdate: 32,
   acpImageBytes: 256 * 1024,
   acpCommandsPerUpdate: 32,
-} as const;
-
-const HARD = {
-  maxEventBytes: 1024 * 1024,
-  maxTextBytes: 1024 * 1024,
-  maxReplayEvents: 500,
-  maxStreamEvents: 100_000,
-  maxStreamBytes: 64 * 1024 * 1024,
-  acpDiffBytes: 1024 * 1024,
-  acpLocationsPerUpdate: 128,
-  acpImageBytes: 1024 * 1024,
-  acpCommandsPerUpdate: 128,
 } as const;
 
 export type AcpLimitName = keyof typeof ACP_LIMITS;
@@ -40,10 +28,9 @@ export function resolveAcpLimits(options: AcpLimitOptions = {}): ResolvedAcpLimi
 }
 
 function validate(name: AcpLimitName, value: number): number {
-  const hard = HARD[name];
   const minimum = name.endsWith("Bytes") ? (name === "maxTextBytes" ? 16 : 1024) : 1;
-  if (!Number.isSafeInteger(value) || value < minimum || value > hard) {
-    throw new AcpError("ERR_PRISM_ACP_LIMIT", `${name} must be a safe integer from ${minimum} through ${hard}`);
+  if (!Number.isSafeInteger(value) || value < minimum) {
+    throw new AcpError("ERR_PRISM_ACP_LIMIT", `${name} must be a safe integer of at least ${minimum}`);
   }
   return value;
 }

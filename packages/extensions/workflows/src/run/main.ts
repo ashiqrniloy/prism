@@ -4,13 +4,7 @@ import type { JsonObject } from "@arnilo/prism";
 import { runCheckpointRestoreHooks } from "../checkpoint-restore.js";
 import { buildGraph } from "../define.js";
 import { WorkflowCheckpointError, WorkflowRuntimeError } from "../errors.js";
-import {
-  DEFAULT_MAX_FAN_OUT,
-  HARD_MAX_CONCURRENCY,
-  HARD_MAX_NESTED_DEPTH,
-  validateWorkflowLimit,
-  WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
-} from "../limits.js";
+import { DEFAULT_MAX_FAN_OUT, validateWorkflowLimit, WORKFLOW_CHECKPOINT_SCHEMA_VERSION } from "../limits.js";
 import { LeaseConflictError } from "../memory-leases.js";
 import { createWorkflowRuntime } from "../services.js";
 import type {
@@ -506,15 +500,12 @@ export function resolveMaxFanOut(workflow: WorkflowDefinition, node: WorkflowNod
 
 function validateRunOptions(options: RunWorkflowOptions): void {
   if (options.concurrency !== undefined) {
-    validateWorkflowLimit("concurrency", options.concurrency, HARD_MAX_CONCURRENCY);
+    validateWorkflowLimit("concurrency", options.concurrency);
   }
-  if (
-    options.nestedDepth !== undefined &&
-    (!Number.isSafeInteger(options.nestedDepth) || options.nestedDepth < 0 || options.nestedDepth > HARD_MAX_NESTED_DEPTH)
-  ) {
-    throw new WorkflowRuntimeError(`nestedDepth must be a non-negative safe integer at most ${HARD_MAX_NESTED_DEPTH}`);
+  if (options.nestedDepth !== undefined && (!Number.isSafeInteger(options.nestedDepth) || options.nestedDepth < 0)) {
+    throw new WorkflowRuntimeError("nestedDepth must be a non-negative safe integer");
   }
   if (options.nestedDepthLimit !== undefined) {
-    validateWorkflowLimit("nestedDepthLimit", options.nestedDepthLimit, HARD_MAX_NESTED_DEPTH);
+    validateWorkflowLimit("nestedDepthLimit", options.nestedDepthLimit);
   }
 }

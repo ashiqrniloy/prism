@@ -14,7 +14,7 @@ import {
   rowToTenantQuota as rowToQuota,
 } from "@arnilo/prism-extensions/store-codecs";
 
-export function createSqlitePersistenceLifecycle(db: Database): PersistenceLifecycleStore {
+export function createSqlitePersistenceLifecycle(db: Database, maxPageSize?: number): PersistenceLifecycleStore {
   return {
     async putLegalHold(input) {
       assertOwnership(input);
@@ -68,7 +68,7 @@ export function createSqlitePersistenceLifecycle(db: Database): PersistenceLifec
 
     async listLegalHolds(query) {
       assertOwnership(query);
-      const limit = pageLimit(query.limit);
+      const limit = pageLimit(query.limit, maxPageSize);
       const rows = db
         .prepare(
           `SELECT * FROM prism_legal_holds
@@ -99,7 +99,7 @@ export function createSqlitePersistenceLifecycle(db: Database): PersistenceLifec
 
     async applyRetention(input) {
       assertOwnership(input);
-      const limit = pageLimit(input.limit);
+      const limit = pageLimit(input.limit, maxPageSize);
       const held = new Set(
         (
           db

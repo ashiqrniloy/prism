@@ -42,6 +42,7 @@ export const GATE_FILES = [
   "scripts/benchmark-workflow-loop.test.mjs",
   "scripts/benchmark-redaction.test.mjs",
   "scripts/benchmark-session-turn.test.mjs",
+  "scripts/benchmark-long-job.test.mjs",
   "scripts/sweep-unused.test.mjs",
   "scripts/dead-export-verify.test.mjs",
   "scripts/e2e-coding-journey.test.mjs",
@@ -67,6 +68,8 @@ export const GATE_FILES = [
   "scripts/retired-providers.test.mjs",
   // Plan 215 Task 35: the standing retired-name sweep.
   "scripts/retired-names.test.mjs",
+  // Plan 239 Task 3: the limit inventory gate and docs/limits.md freshness.
+  "scripts/limits-inventory.test.mjs",
   "scripts/phase26-index-benchmark.test.mjs",
   "scripts/obscura-host-conformance.test.mjs",
   "scripts/phase54-package-map.test.mjs",

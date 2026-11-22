@@ -12,6 +12,7 @@ export type Capability =
   | "background"
   | "credentials"
   | "credentials:write"
+  | "sessions"
   | "slot:loop"
   | "slot:compaction"
   | "slot:store"
@@ -24,6 +25,7 @@ export const CAPABILITIES: ReadonlySet<string> = new Set<Capability>([
   "background",
   "credentials",
   "credentials:write",
+  "sessions",
   "slot:loop",
   "slot:compaction",
   "slot:store",

@@ -29,15 +29,15 @@ import { createDiagnosticsTool, type DiagnosticsToolHandle } from "./agent/diagn
 import type { ForgeCredentialResolverSource } from "./agent/forge/index.js";
 import { createGitTools } from "./agent/git-tools.js";
 import { createCodingTools, createReadOnlyTools, type ProcessSandboxBackend, type ToolsOptions } from "./agent/index.js";
-import { getShellConfig } from "./agent/shell.js";
+import { getShellConfig, type ShellConfig } from "./agent/shell.js";
 import { createBackgroundProcesses } from "./agent/shell-background.js";
 import { createTodoContinuationDecision, createTodoWriteTool } from "./agent/todo.js";
 import { createAskUserHostHook } from "./ask-user-host.js";
-import { type ToolsCodingCommandRule, type ToolsCodingConfig, toolsCodingConfigSchema } from "./config.js";
+import { type ToolsCodingConfig, toolsCodingConfigSchema } from "./config.js";
 import { createHardDenyHook } from "./hard-deny.js";
 import { withDurablePrincipal } from "./principal-guard.js";
 import { type CodingSandboxKind, selectCodingSandbox } from "./sandbox.js";
-import { type CommandRule } from "./security/command-rules.js";
+import { compileCommandRules } from "./security/command-rules.js";
 import { createEgressPolicy } from "./security/egress/index.js";
 import { createCodingTargets } from "./targets.js";
 import { createWorkspaceService, createWorktreeRouting, type WorkspaceService, WorkspaceServiceError } from "./workspace/index.js";
@@ -61,7 +61,13 @@ export type {
   ToolsCodingWorkspaceConfig,
 } from "./config.js";
 export { toolsCodingConfigSchema } from "./config.js";
-export { createHardDenyHook, type HardDenyOptions } from "./hard-deny.js";
+export { createHardDenyHook, type HardDenyOptions, UNGUARDED_SHELL_ASK } from "./hard-deny.js";
+
+/**
+ * The service a policy package (`approval`, `governance`) provides to say it decides tool calls, so
+ * the unsandboxed `shell` guard stands down. Its value is a marker `{ package: <name> }`.
+ */
+export const TOOL_POLICY_SERVICE = "tool-policy";
 export {
   durablePrincipalError,
   ERR_PRISM_CODING_PRINCIPAL_MISMATCH,
@@ -73,14 +79,6 @@ export { type CodingSandboxKind, type SelectedCodingSandbox, selectCodingSandbox
 export * from "./security/index.js";
 export { CODING_TOOL_NAMES, type CodingTargets, type CodingTargetsFn, createCodingTargets } from "./targets.js";
 export * from "./workspace/index.js";
-
-function toCommandRules(rules: readonly ToolsCodingCommandRule[] | undefined): readonly CommandRule[] {
-  return (rules ?? []).map((rule) => ({
-    pattern: rule.match,
-    action: rule.decision,
-    ...(rule.reason !== undefined ? { reason: rule.reason } : {}),
-  }));
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -106,7 +104,7 @@ const definition = definePackage<ToolsCodingConfig>({
       throw new Error("prism-tools-coding: config needs root (the workspace root the file tools operate in)");
     }
     const readOnly = prism.config.readOnly === true;
-    const commandRules = toCommandRules(prism.config.commandRules);
+    const commandRules = compileCommandRules(prism.config.commandRules);
     const sandbox: CodingSandboxKind = prism.config.sandbox ?? "none";
     const principalId = prism.config.principal?.id;
 
@@ -131,15 +129,32 @@ const definition = definePackage<ToolsCodingConfig>({
 
     const options: ToolsOptions = {};
     if (prism.config.repository !== undefined) options.repository = prism.config.repository;
+    if (prism.config.ceilings !== undefined) options.ceilings = prism.config.ceilings;
     if (prism.config.shell?.timeoutMs !== undefined) options.shell = { timeout: prism.config.shell.timeoutMs / 1000 };
 
     let toolRoot = resolve(root);
     let shellAvailable = prism.config.shell?.enabled !== false;
+
+    // One shell resolution at setup; every local shell, background process, and the native sandbox use it.
+    let hostShell: ShellConfig | undefined;
+    if (shellAvailable && !readOnly) {
+      try {
+        hostShell = getShellConfig(prism.config.shell?.path);
+      } catch (error) {
+        throw new Error(`prism-tools-coding: invalid shell.path: ${errorMessage(error)}`);
+      }
+      options.shell = { ...(options.shell ?? {}), shell: hostShell };
+    }
     let sandboxTools: readonly ToolDefinition[] | undefined;
     let processBackend: ProcessSandboxBackend | undefined;
 
     if (sandbox !== "none") {
-      const selected = await selectCodingSandbox(sandbox, { root, repository: prism.config.repository, readOnly });
+      const selected = await selectCodingSandbox(sandbox, {
+        root,
+        repository: prism.config.repository,
+        readOnly,
+        ...(hostShell !== undefined ? { shell: hostShell } : {}),
+      });
       if (selected.tools !== undefined) {
         sandboxTools = selected.tools;
         toolRoot = selected.toolRoot;
@@ -159,7 +174,9 @@ const definition = definePackage<ToolsCodingConfig>({
       shellAvailable && !readOnly && (sandbox === "none" || processBackend !== undefined)
         ? createBackgroundProcesses({
             maxProcesses: prism.config.shell?.background?.maxProcesses,
-            shell: getShellConfig(),
+            ...(prism.config.ceilings !== undefined ? { ceilings: prism.config.ceilings } : {}),
+            // A container backend runs its own image's `/bin/sh`, not the host's shell.
+            shell: processBackend !== undefined || hostShell === undefined ? { shell: "/bin/sh", args: ["-c"], family: "sh" } : hostShell,
             ...(processBackend !== undefined ? { sandbox: processBackend } : {}),
           })
         : undefined;
@@ -251,7 +268,22 @@ const definition = definePackage<ToolsCodingConfig>({
     // Approval and the hard-deny hook follow the session's worktree, when it has one.
     const targets = createCodingTargets(toolRoot, prism.config.roots ?? [], workspaceService, () => prism.skills.list());
     prism.services.provide("coding.targets", targets);
-    prism.hooks.on("tool.call", createHardDenyHook({ targets, readOnly, commandRules }), { id: "hard-deny" });
+    // The unsandboxed default asks unless a policy package decides (plan 233 Task 3). The service is
+    // read per call, so a policy package listed after this one still takes over.
+    // A `shell` the host removed (`disable.tools`) never runs, so it is never asked about: the effective
+    // tool list is fixed after setup and read once, on the first gated call.
+    const guard = prism.config.guard ?? "auto";
+    let shellActive: boolean | undefined;
+    const shouldAsk =
+      guard === "auto" && sandbox === "none"
+        ? () => {
+            shellActive ??= prism.tools.list().some((tool) => tool.name === "shell" && tool.package === "@arnilo/prism-tools/coding");
+            return shellActive && prism.services.consume<unknown>(TOOL_POLICY_SERVICE) === undefined;
+          }
+        : undefined;
+    prism.hooks.on("tool.call", createHardDenyHook({ targets, readOnly, commandRules, ...(shouldAsk ? { shouldAsk } : {}) }), {
+      id: "hard-deny",
+    });
 
     // One routing wrapper at registration: a bound session's tools run in its worktree.
     const routing =
@@ -303,8 +335,16 @@ const definition = definePackage<ToolsCodingConfig>({
       // `shell_output` itself is part of the shell tool set; this is only the kill switch.
       prism.hooks.on("session.closed", (event) => background.killSession(event.sessionId), { id: "shell-background" });
     }
+    if (shellRegistered && hostShell !== undefined && sandbox !== "e2b" && sandbox !== "docker") {
+      prism.status.note("info", `shell runs commands in ${hostShell.shell} (POSIX shell, ${hostShell.family ?? "sh"})`);
+    }
     if (sandbox === "none" && shellRegistered) {
-      prism.status.note("warn", "shell runs on the host without a sandbox; pair it with @arnilo/prism-extensions/approval or set sandbox");
+      prism.status.note(
+        "warn",
+        guard === "off"
+          ? "shell runs on the host without a sandbox and guard is off; no ask unless a policy package decides"
+          : "shell asks before each command; add @arnilo/prism-extensions/approval or a sandbox to change that",
+      );
     }
   },
 });

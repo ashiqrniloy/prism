@@ -44,8 +44,8 @@ The `multi-agent-runtime` scenario also covers 10,000 context-budget history row
 5,000 streamed provider deltas. The 0.12 `applyContextBudget` measured the keep-set once,
 advances a history head cursor during eviction, and slices the retained suffix once;
 it never front-mutates the history array. Runtime request/response limit accounting
-uses `Buffer.byteLength(JSON.stringify(value), "utf8")`, so UTF-8 byte limits do not
-allocate an encoded buffer per provider event.
+is described under [Byte accounting](#byte-accounting-plan-228); it never serializes a
+whole request or a streamed delta.
 
 Run with the existing network-free fixture:
 
@@ -60,10 +60,77 @@ processed 5,000 deltas (320,015 serialized response bytes) at 4.253/5.847 ms p50
 with a 4,414,944-byte peak measured heap delta. These are local comparison evidence,
 not portable SLOs; ceilings are in `scripts/budgets.json#multiAgentRuntime`.
 
-`Buffer.byteLength` counts encoded bytes rather than JavaScript string length. A
-serialized provider event at the exact response-byte cap succeeds; one byte below it
-fails closed, including multibyte Unicode deltas. Context-budget omission order and
+Byte limits count UTF-8 bytes rather than JavaScript string length. A provider event
+at the exact response-byte cap succeeds; one byte below it fails closed, including
+multibyte Unicode deltas. Context-budget omission order and
 newest-history preservation remain covered by the root context-budget tests.
+
+## Byte accounting (plan 228)
+
+`maxRequestBytes` and `maxResponseBytes` are per-frame process-safety caps (default 8 MiB, hard cap 64 MiB). Since plan 228 Task 4 they are charged without re-serializing:
+
+- **Request.** `requestBytes` (`src/agent-session/helpers.ts`) sums the serialized size of each message, tool definition and context block, memoized by object identity in one `WeakMap`, plus the small remaining fields stringified per attempt. Each new part is still stringified once, so a request that cannot be serialized still fails with the same `TypeError`. The value equals `JSON.stringify(request)`'s UTF-8 length for plain JSON data.
+- **Response.** `providerEventBytes` charges a streamed text, thinking or tool-argument delta at the UTF-8 length of its strings plus a fixed 64-byte allowance per event. JSON escaping inside those strings is not counted. A whole tool call, media and other rare events are still stringified.
+- **SSE reader.** `readSseEvents` (`src/provider-kit/transport.ts`) adds each decoded chunk's UTF-8 length to a running count and subtracts each consumed frame's, and it searches for the frame delimiter only in the new text plus the previous three characters. A frame spread over many chunks is no longer re-encoded or re-scanned per chunk. `sse_buffer_overflow` and `sse_event_overflow` trip at the same sizes.
+
+Measured 2026-11-15, Bun 1.4.4, Linux x64, load average ~30 (best-of timings; Task 1's baseline was taken on the same machine):
+
+| Workload | Before | After |
+| --- | --- | --- |
+| `maxRequestBytes` on a 217.6 KiB request (80 unicode messages + 20 tool schemas), one new message per attempt | 1.2–1.4 ms | 0.02–0.03 ms |
+| `maxResponseBytes` on 2,000 text deltas | 0.85–1.07 ms | 0.18–0.31 ms |
+| `readSseEvents`, one 240 KB frame in 938 × 256 B chunks | 236–390 ms (72.8 ms unloaded) | 4–9 ms |
+| `readSseEvents`, 2,000 one-frame chunks | 14.6 ms median | 14.8 ms median (parsing dominates; the per-call UTF-8 count halved) |
+
+Gates: `benchmark_byte_accounting_budget` (`scripts/benchmark-session-turn.test.mjs`) holds the kernel-side sized/serialized time ratio under `scripts/budgets.json#byteAccounting.ceilings.maxSizedToSerializedRatio` (0.2, the plan's ≥ 80% drop), and `sse_large_frame_in_small_chunks_is_linear` (`src/__tests__/provider-transport.test.ts`) checks that a 4× larger frame costs well under 16× (quadratic) the time.
+
+## Long sessions: tail snapshots (plan 230 Task 3)
+
+A session snapshot (each run, `messages()`, and the open of `agent.session({ id })`) reads the branch from its
+newest compaction on: `readBranchPath({ from: "compaction" })` walks from the leaf to the compaction's
+`throughEntryId` and stops. The compaction entry's checkpoint stands for the state before it (see
+`docs/slots.md`). The open's read is also the session's first snapshot.
+
+Measured 2026-11-16, Bun 1.4.4, Linux x64, load average ~13–15, on plan 230 Task 1's baseline session: 5,000
+linear entries of ~400 characters, a compaction at entry 4,800 with `throughEntryId` e4779 and 20 kept ids
+(median of 25):
+
+| Store | Before (whole branch) | After (tail) |
+| --- | --- | --- |
+| SQLite | 5,000 rows, 48.2 ms (Task 1 quiet run: 33.7 ms) | 221 rows, 1.56 ms |
+| Postgres 18.6, Unix socket | 5,000 rows, 35.9 ms (Task 1: 78.3 ms) | 221 rows, 2.67 ms (2 statements) |
+
+Both snapshots hold the same 219 messages. A compaction that pins older entries (the coding compactor's plan
+turn) costs one more read by id. The checkpoint carries folded `package_state` `append` logs across
+compactions; `ceilings.stateLogEntries` (default 10,000) bounds per-key log growth, and `log.replace()` /
+`external_state` `replace()` drop pre-rotation records from future checkpoints; superseded `set` values
+are dropped.
+
+## Long runs
+
+`scripts/benchmark-long-job.mjs` drives one agent on a mock provider through 200 runs of 50 turns each
+on one session (10,000 turns, one tool call per tool round) with the default compactor active.
+`scripts/benchmark-long-job.test.mjs` gates the short mode (40 runs × 50 turns = 2,000 turns) in
+`bun run test` against the ratio ceilings in `scripts/budgets.json#longRun` (`maxTurnOverheadRatio: 1.5`,
+`maxHeapGrowthRatio: 1.05`, `maxStoreReadGrowthRatio: 1.25`). Full evidence:
+[`docs/_evidence/long-run-soak.md`](./_evidence/long-run-soak.md).
+
+```bash
+bun scripts/benchmark-long-job.mjs --runs 200 --turns 50 --out docs/_evidence/long-run-soak.md
+```
+
+Measured 2026-11-18, Bun 1.4.4, Linux x64 (`contextWindow: 16000`, `payloadBytes: 512`):
+
+| Store | Workload | Compactions | Turn 100 → end median | Overhead ratio | Heap growth (forced GC) | Store reads/turn (early → late) |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| SQLite (budgeted) | 200 × 50 (10,000 turns) | 181 | 1.5977 → 1.9787 ms | 1.238× | 8.00 → 7.31 MiB (-8.56%, run 50 → 200) | 0.767 (0.772 → 0.756, 0.980×) |
+| JSONL (comparison) | 10 × 50 (500 turns) | 9 | 12.6933 → 13.8433 ms | 1.091× | 9.20 → 11.28 MiB (+22.68%, run 5 → 10) | 11.344 (8.417 → 17.200, 2.044×) |
+
+Compaction reads the branch from `snapshot()` rather than reading the whole branch from root to leaf,
+and run teardown clears per-run buffers (`activeRunMessages`, `activeRunSkills`, `tailSegments`, and
+`activeDurable` on terminal runs) when a run ends. The JSONL store has no `readBranchPath` and caches
+every entry of a session in memory, so store reads and retained heap grow linearly with session length;
+use SQLite or Postgres for long-running jobs.
 
 ## Tool progressive disclosure (plan 041)
 
@@ -452,24 +519,14 @@ const events = session.subscribe(options);
 
 | Field | Default | Purpose |
 | --- | --- | --- |
-| `maxQueuedEvents` | `1024` | Maximum events queued for one subscriber while it is not awaiting `next()`. Values below `1` are clamped to `1`. |
-| `overflow` | `"close"` | Overflow policy: `"close"`, `"drop_oldest"`, or `"drop_newest"`. |
+| `maxQueuedEvents` | `4096` | Maximum events queued for one subscriber while it is not awaiting `next()`. Values below `1` are clamped to `1`; there is no hard cap. |
+| `overflow` | `"coalesce"` | Overflow policy: `"coalesce"`, `"close"`, `"drop_oldest"`, or `"drop_newest"`. |
 
 ## Outputs / response / events
 
-On default overflow, the affected subscriber receives one `event_subscriber_overflow` event and then finishes:
+Under `coalesce` (default), a lagging subscriber's adjacent text and thinking `message.delta` events are merged in its queue (at most 16 KiB of text per merged delta), and only the newest queued `tool.progress` per call is kept. The queue operations are O(1) (a head index, not `Array.prototype.shift`), so a consumer that sleeps 50 ms per event through a 5,000-delta turn does not overflow. When the bound is reached by events that cannot be merged, `coalesce` and `close` reject the iterator with `SubscriberOverflowError` (`droppedEvents`, `maxQueuedEvents`); no synthetic event is queued. An overflow in `session.stream()` / `resume()` does not abort the run, which settles on its own. See [Subscribers and backpressure](events.md#subscribers-and-backpressure).
 
-```json
-{
-  "type": "event_subscriber_overflow",
-  "sessionId": "session_1",
-  "droppedEvents": 257,
-  "maxQueuedEvents": 256,
-  "overflow": "close"
-}
-```
-
-`drop_oldest` keeps the newest queued events. `drop_newest` ignores incoming events while the queue is full. These policies are live-view policies only; they do not affect `RunLedger` writes or stored session entries. Graceful `createEventMultiplexer().close()` (and abort) stop new publishes/sources and drain already-queued events within `maxQueuedEvents` before the subscriber completes. Overflow `close` still drops the backlog, emits one overflow notice, and terminates.
+`drop_oldest` keeps the newest queued events. `drop_newest` ignores incoming events while the queue is full. These policies are live-view policies only; they do not affect `RunLedger` writes or stored session entries. Graceful `createEventMultiplexer().close()` (and abort) stop new publishes/sources and drain already-queued events within `maxQueuedEvents` before the subscriber completes; the multiplexer has its own overflow policy.
 
 ## Request/response example
 
@@ -818,7 +875,7 @@ Kernel cost per run as one session's history grows, network-free: `bun scripts/b
 - Fixture: `scripts/budgets.json#sessionTurnOverhead`. `PRISM_BENCH_RUNS` overrides the run count for both stores, and `PRISM_BENCH_VARIANTS=memory|sqlite` selects one store (for a CPU profile).
 - Gate: `scripts/benchmark-session-turn.test.mjs` runs it at the reduced gate count (300 runs per store) and holds `scripts/budgets.json#sessionTurnOverhead.ceilings`: `storeEntriesReadPerRun` ≤ 1, `growthRatio` ≤ 10 for each store, and p95 ≤ 30 ms (×8 on CI).
 - Since plan 210 Task 0.4 the SQLite branch read walks ancestors by primary key. A cold read of a 2,000-entry branch takes ~6 ms (was ~1.3 s, O(depth × session size)), and the SQLite variant runs the full 1,000 runs in ~12 s. Postgres was checked: its plan already looks each ancestor up by key.
-- Since plan 210 Task 0.3 the session's snapshot cache is extended by its own appends and revalidated with one `store.get` per expired TTL, so a live session reads no branch per turn: `storeEntriesReadPerRun` is 0 (it was ~6,100 at 1,000 runs). On the reference machine the 1,000-run memory variant takes ~13 s (was 87 s), and its last-20 p50 is ~28 ms (was 163 ms). The remaining growth (`growthRatio` ~27) is `jsonBytes` serializing the whole provider request for `maxRequestBytes`, which grows ~4 KB per run on this fixture.
+- Since plan 210 Task 0.3 the session's snapshot cache is extended by its own appends and revalidated with one `store.get` per expired TTL, so a live session reads no branch per turn: `storeEntriesReadPerRun` is 0 (it was ~6,100 at 1,000 runs). On the reference machine the 1,000-run memory variant takes ~13 s (was 87 s), and its last-20 p50 is ~28 ms (was 163 ms). The remaining growth (`growthRatio` ~27) is `jsonBytes` serializing the whole provider request for `maxRequestBytes`, which grows ~4 KB per run on this fixture. Since plan 228 Task 4 that charge is memoized per message (see [Byte accounting](#byte-accounting-plan-228)): at 1,000 runs the memory variant's last-20 p50 went from 68–153 ms to 9–22 ms and its `growthRatio` from 3.8–25 to 2.1–3.4 (three runs each, load average ~30, so wide spreads).
 - Before and after numbers and CPU profiles: [`docs/_evidence/210-task0-hot-paths.md`](_evidence/210-task0-hot-paths.md).
 
 `bun scripts/memory-bench/markdown-scale.mjs` reports `derivedBytesRewrittenPerUpsert` alongside its timings: the bytes of `.index-files.json`, `.index-files.journal.jsonl`, `log.md` and `index.md` written per single-note upsert, averaged over 100 writes, with a per-file split in `derivedBytesRewrittenPerUpsertByFile`. Since plan 210 Task 0.2 the file map takes a constant ~729 B journal append per upsert, and the whole `index.md` rewrite is the remaining O(n) cost. Gate: `markdown_store_write_amplification_within_budget` (`scripts/memory-bench/run.test.mjs`) against `scripts/budgets.json#markdownStore`, which sets the file-map bytes per upsert at 2,000 notes and the 2,000-vs-200-note write p50 ratio.

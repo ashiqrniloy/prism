@@ -1,5 +1,54 @@
 # Migration guide
 
+## 0.13.1 → next (unreleased): default run limits
+
+`DEFAULT_RUN_LIMITS` is sized for agent work (plan 229 Task 2). An axis no layer sets now resolves to:
+
+| Axis | Was | Now |
+| --- | --- | --- |
+| `maxTurns` | 16 | 50 |
+| `maxProviderAttempts` | 24 | 75 (still never below `maxTurns`) |
+| `maxToolRounds` | 8 | 49 |
+| `maxToolCalls` | 32 | 200 |
+| `maxWallTimeMs` | 120,000 | 900,000 (15 min) |
+| `maxInputTokens` / `maxOutputTokens` / `maxTotalTokens` | 40,000 / 10,000 / 50,000 | none (`null`) |
+
+What a host must check:
+
+- **Spend.** A host that set no `maxCost` and no token axis had the old token defaults as an implicit spend guard. It now has none: set `limits.maxTotalTokens` or `limits.maxCost` on the agent.
+- **Side effects.** `maxToolCalls` bounded side-effecting calls (shell, writes) at 32 per run; it is now 200. Set it lower if a run must stay small.
+- **Time.** A run may now take 15 minutes instead of 2. Set `maxWallTimeMs` if a request path needs the old bound.
+- The reference host (`apps/prism-agent`) sets none of these axes, so its coding and research agents get the new defaults. Delegate children keep their own defaults (50 turns, 200 calls, 500,000 total tokens, 15 minutes); they no longer also inherit the kernel's 8 tool rounds and 40,000 input tokens.
+- **Stall axis (plan 239 Task 9).** A new axis, `maxRepeatedToolRounds`, defaults to 5: a run whose tool rounds repeat a recent round (same calls, same results) five times in a row now fails with `limit: "maxRepeatedToolRounds"`. Set it to `null` to keep the old behaviour.
+- Narrowing, `null`, validation and the byte caps are unchanged. `DEFAULT_RUN_LIMITS`'s declared type now allows `null` on the token axes.
+
+## 0.13.1 → next (unreleased): one writer per session
+
+A session's appends at its own tip are tip-checked (plan 230 Task 2). Where a second writer used to fork the
+branch silently, the run now fails with `error.code: "session_conflict"` and writes nothing from that append
+on; the session then moves to the store's current leaf, so the next `run()` continues after the other
+writer. What a host must check:
+
+- **Re-opening at a saved leaf.** `agent.session({ id, leafId })` is a tip-checked writer at that leaf. If the
+  saved leaf is no longer the tip (another process or session appended after it), the first run conflicts.
+  To branch from that entry on purpose, call `await session.checkout(leafId)` before the run. The first
+  append after `checkout(leafId)` is a branch; `fork()` copies are never tip-checked.
+- **Two session objects on one id**, in one process or in two, no longer both append: the second one's run
+  fails with `session_conflict`. Retry it; it reads the real tip.
+- **Custom stores.** `SessionAppendOptions.tip` is new. A store opts in by setting `tipCheck: true` and
+  rejecting a `tip: true` append whose `expectedParentId` already has a tip-checked child (see
+  [slots.md](slots.md)). A store without it behaves as before.
+- **SQL stores.** Migration `012_session_entry_linear` adds `prism_session_entries.linear` (`INTEGER NOT NULL
+  DEFAULT 0`) and the partial unique index `prism_session_entries_linear_parent_unique` on `(session_id,
+  parent_id) WHERE linear = 1`. Existing rows are not rewritten and stay `0`, so existing sibling branches
+  are valid. It runs automatically when the store opens.
+- **PostgreSQL: migration `013_session_entry_seq`** (plan 230 Task 4) adds `prism_session_entries.seq`, a
+  `BIGINT` identity that orders entries instead of `timestamp, ctid`, and the `(session_id, seq)` index.
+  Unlike 012 it **updates every existing entry row once** to number it in the old order, inside the
+  migration's transaction and lock, so on a large table schedule the first open of the new version. On SQLite
+  it is a no-op (`rowid` already orders entries). Nothing else changes for a host: each Postgres append is now
+  one statement, with the same errors.
+
 ## 0.13.0 → 0.13.1 (package model calls run on the hook plane)
 
 **Nothing to change in a host.** 0.13.1 is a patch of the kernel and its bundles; no export moved and every addition is optional.

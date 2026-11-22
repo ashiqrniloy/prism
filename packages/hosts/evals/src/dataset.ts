@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { EvalDatasetError } from "./errors.js";
-import { HARD_DATASET_ITEMS } from "./limits.js";
 import type { Dataset, DefineDatasetInput, Split } from "./types.js";
 import { copySimulatorBinding } from "./user-simulator.js";
 import { canonicalJson } from "./util.js";
@@ -23,7 +22,6 @@ export function defineDataset<TInput = unknown, TExpected = unknown>(
 ): Dataset<TInput, TExpected> {
   if (!input || typeof input.id !== "string" || !input.id.trim()) throw new EvalDatasetError("dataset id is required");
   if (!Array.isArray(input.items)) throw new EvalDatasetError("dataset items must be an array");
-  if (input.items.length > HARD_DATASET_ITEMS) throw new EvalDatasetError(`dataset items exceed ${HARD_DATASET_ITEMS}`);
   if (input.canary !== undefined && (typeof input.canary !== "string" || input.canary.length > 128)) {
     throw new EvalDatasetError("dataset canary must be a string of at most 128 chars");
   }

@@ -3,6 +3,8 @@ import type { ExecutionAction, ExecutionDecision, ExecutionPolicy } from "../age
 import { type CommandRule, evaluateCommandRules } from "./command-rules.js";
 import { assertPathInsideRoots } from "./path-containment.js";
 
+const DEFAULT_APPROVAL_TIMEOUT_MS = 30_000;
+
 export interface CodingApprovalRequest {
   readonly action: ExecutionAction;
   readonly signal?: AbortSignal;
@@ -126,7 +128,7 @@ export function createCodingApprovalPolicy(options: CodingApprovalPolicyOptions)
           const approved = await waitForApproval(
             options.approve,
             { action, signal: readAbortSignal(action) },
-            options.approvalTimeoutMs ?? 30_000,
+            options.approvalTimeoutMs ?? DEFAULT_APPROVAL_TIMEOUT_MS,
           );
           if (key !== undefined && cache) cacheApproval(cache, key, approved);
           if (!approved) {

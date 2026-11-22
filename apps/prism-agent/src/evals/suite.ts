@@ -28,6 +28,7 @@ import {
   type InjectionSpec,
   injectionHooks,
   runExperiment,
+  type Scorer,
   type ScorerInput,
   toExperimentReportRecord,
 } from "@arnilo/prism-hosts/evals";
@@ -57,6 +58,8 @@ export interface RunHostEvalSuiteOptions {
   readonly experimentId?: string;
   /** Fixture regression variant: runs the coding worker with `approval: "auto"` so effects bypass HITL. */
   readonly skipApproval?: boolean;
+  /** Scorers added after the suite's own, for example `createGuardrailFlaggedScorer` in a packs arm. */
+  readonly extraScorers?: readonly Scorer<HostEvalItemInput, HostEvalItemExpected>[];
   /** Override models and packages for the manual live release gate row. */
   readonly live?: {
     readonly model: ModelRef;
@@ -297,6 +300,7 @@ export async function runHostEvalSuite(
         select: (env: unknown) => (env as HostEvalEnvironment).files,
       }),
       createTaskSuccessScorer(),
+      ...(options.extraScorers ?? []),
     ];
 
     return await runExperiment<HostEvalItemInput, HostEvalItemExpected>({

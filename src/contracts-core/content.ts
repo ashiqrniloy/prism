@@ -24,10 +24,11 @@ export interface ErrorInfo {
   readonly name?: string;
   readonly message: string;
   readonly code?: string | number;
-  /** Advisory classification stamped only for provider failures; it never changes retry behavior. */
+  /** Classification stamped for provider failures. The default retry policy never retries `quota`,
+   *  `auth`, `permanent` or `context_overflow`, and retries `transient` and `rate_limited`. */
   readonly failureClass?: ProviderFailureClass;
-  /** Provider backpressure hint (e.g. from a `Retry-After` header); retry policies
-   *  honor it capped at their own `maxDelayMs`. */
+  /** Provider backpressure hint (e.g. from a `Retry-After` header); the default retry policy
+   *  waits exactly this long when it is within `maxRetryAfterMs`, and stops retrying otherwise. */
   readonly retryAfterMs?: number;
   /** The package (or `host` / `kernel`) whose hook handler failed the run; present with `hook`. */
   readonly owner?: string;

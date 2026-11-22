@@ -61,6 +61,8 @@ export interface HooksJsonConfig {
   readonly allowCommands?: "all" | Readonly<Record<string, string>>;
   readonly env?: Readonly<Record<string, string>>;
   readonly additionalContextLimit?: number;
+  /** Characters of a command hook's stdout and stderr kept. Default 1,048,576. */
+  readonly maxOutputChars?: number;
   readonly SessionStart?: readonly unknown[];
   readonly UserPromptSubmit?: readonly unknown[];
   readonly PreToolUse?: readonly unknown[];
@@ -232,7 +234,12 @@ export async function compileHooks(prism: PackageAPI<HooksJsonConfig>, options: 
   }
 
   async function invoke(handler: HookHandler, input: HookHandlerInput): Promise<HookOutcome> {
-    if (handler.type === "command") return runCommandHandler(handler, input, { cwd: options.cwd, env });
+    if (handler.type === "command")
+      return runCommandHandler(handler, input, {
+        cwd: options.cwd,
+        env,
+        ...(prism.config.maxOutputChars === undefined ? {} : { maxOutputChars: prism.config.maxOutputChars }),
+      });
     const call = runMcpToolHandler(handler, input, { mcpClient: options.mcpClient });
     return handler.timeout === undefined ? call : withTimeout(call, handlerTimeoutMs(handler), `${handler.server}/${handler.tool}`);
   }

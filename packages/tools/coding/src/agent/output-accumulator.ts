@@ -4,15 +4,7 @@ import { closeSync, openSync, readSync, writeSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
-  HARD_MAX_BYTES,
-  HARD_MAX_LINES,
-  HARD_MAX_TOTAL_OUTPUT_BYTES,
-  validateCodingLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, DEFAULT_MAX_TOTAL_OUTPUT_BYTES, validateCodingLimit } from "./limits.js";
 import { type TruncationResult, truncateTail } from "./truncate.js";
 
 export interface OutputAccumulatorOptions {
@@ -64,13 +56,9 @@ export class OutputAccumulator {
   private tempFileError?: Error;
 
   constructor(options: OutputAccumulatorOptions = {}) {
-    this.maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
-    this.maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
-    this.maxTotalOutputBytes = validateCodingLimit(
-      "maxTotalOutputBytes",
-      options.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
-      HARD_MAX_TOTAL_OUTPUT_BYTES,
-    );
+    this.maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES);
+    this.maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES);
+    this.maxTotalOutputBytes = validateCodingLimit("maxTotalOutputBytes", options.maxTotalOutputBytes ?? DEFAULT_MAX_TOTAL_OUTPUT_BYTES);
     if (this.maxTotalOutputBytes < this.maxBytes) {
       throw new Error("maxTotalOutputBytes must be at least maxBytes");
     }

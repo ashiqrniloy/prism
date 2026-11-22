@@ -51,8 +51,18 @@ export function createLoadedSkillSet(): LoadedSkillSet {
   };
 }
 
+/** `AgentConfig.skills.catalog` (plan 239 Task 4): how much of the progressive catalog a request renders. */
+export interface SkillCatalogOptions {
+  /** Skills listed in the catalog. Default {@link DEFAULT_MAX_SKILL_CATALOG_ENTRIES}. */
+  readonly maxEntries?: number;
+  /** UTF-8 bytes of one catalog description; longer ones are truncated. Default {@link DEFAULT_MAX_SKILL_DESCRIPTION_BYTES}. */
+  readonly maxDescriptionBytes?: number;
+}
+
 export interface SkillRenderContext {
   readonly disclosure?: SkillsDisclosure;
+  /** Catalog bounds from `AgentConfig.skills.catalog`. */
+  readonly catalog?: SkillCatalogOptions;
   readonly loaded?: LoadedSkillSet;
   /** Budget demotion: render catalog-only even when eager/loaded. */
   readonly demotedBodies?: ReadonlySet<string>;
@@ -74,8 +84,8 @@ export function resolveSkillsDisclosure(run?: SkillsDisclosure, agent?: SkillsDi
   return run ?? agent ?? "progressive";
 }
 
-export function capSkillCatalog(skills: readonly Skill[]): readonly Skill[] {
-  return skills.slice(0, DEFAULT_MAX_SKILL_CATALOG_ENTRIES);
+export function capSkillCatalog(skills: readonly Skill[], maxEntries = DEFAULT_MAX_SKILL_CATALOG_ENTRIES): readonly Skill[] {
+  return skills.slice(0, maxEntries);
 }
 
 /** Skills that should appear in prompt assembly for the given disclosure mode. */
@@ -100,20 +110,19 @@ export function skillPromptText(skill: Skill, context: SkillRenderContext = {}):
     if (!skill.instructions) return undefined;
     return `Skill ${skill.name}:\n${skill.instructions}`;
   }
-  return skillCatalogLine(skill);
+  return skillCatalogLine(skill, context.catalog?.maxDescriptionBytes ?? DEFAULT_MAX_SKILL_DESCRIPTION_BYTES);
 }
 
 /** One catalog line; descriptions are truncated, never rejected, so a skill cannot fail a run. */
-function skillCatalogLine(skill: Skill): string {
+function skillCatalogLine(skill: Skill, maxBytes: number): string {
   const raw = skill.description?.trim() || EMPTY_SKILL_DESCRIPTION;
-  const description =
-    estimateTextBytes(raw) > DEFAULT_MAX_SKILL_DESCRIPTION_BYTES ? truncateUtf8Bytes(raw, DEFAULT_MAX_SKILL_DESCRIPTION_BYTES) : raw;
+  const description = estimateTextBytes(raw) > maxBytes ? truncateUtf8Bytes(raw, maxBytes) : raw;
   return `- ${skill.name}: ${description}`;
 }
 
 export function skillMessages(skills: readonly Skill[] | undefined, context: SkillRenderContext = {}): Message[] {
   const all = selectSkillsForPrompt(skills ?? [], context);
-  const selected = capSkillCatalog(all);
+  const selected = capSkillCatalog(all, context.catalog?.maxEntries);
   const lines: string[] = [];
   const bodies: Message[] = [];
   for (const skill of selected) {
@@ -121,7 +130,7 @@ export function skillMessages(skills: readonly Skill[] | undefined, context: Ski
       const text = skillPromptText(skill, context);
       if (text) bodies.push(textMessage("system", text, skill.metadata));
     } else {
-      lines.push(skillCatalogLine(skill));
+      lines.push(skillCatalogLine(skill, context.catalog?.maxDescriptionBytes ?? DEFAULT_MAX_SKILL_DESCRIPTION_BYTES));
     }
   }
   const unlisted = all.length - selected.length;

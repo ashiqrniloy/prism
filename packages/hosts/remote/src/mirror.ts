@@ -51,7 +51,8 @@ export function createSessionMirror(options: MirrorOptions): SessionMirror {
       ...(tip !== undefined ? { parentId: tip } : {}),
       metadata: stamp,
     };
-    await store.append(full, tip !== undefined ? { expectedParentId: tip } : undefined);
+    // A linear append: a second writer on the mirrored session fails the mirror instead of forking it (plan 230 Task 2).
+    await store.append(full, tip !== undefined ? { expectedParentId: tip, tip: true } : undefined);
     tip = full.id;
   };
 

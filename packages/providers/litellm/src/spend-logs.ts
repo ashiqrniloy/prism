@@ -3,15 +3,15 @@ import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } f
 import { assertLiteLLMBaseUrl } from "./base-url.js";
 import { LITELLM_DEFAULT_BASE_URL } from "./models.js";
 
-/** One page of `/spend/logs/v2` at the largest size the pinned proxy accepts cheaply. */
+/** One page of `/spend/logs/v2` at the largest size the pinned proxy accepts cheaply (`pageSize`). */
 const SPEND_PAGE_SIZE = 100;
-/** `/spend/logs` is unbounded server-side; a 4 GiB body would otherwise be read into memory. */
+/** `/spend/logs` is unbounded server-side; a 4 GiB body would otherwise be read into memory (`maxBodyBytes`). */
 const SPEND_BODY_BYTES = 4_194_304;
-/** Measured write delay was 11.8 s (Task 1b); two flush windows, capped at the acceptance bound. */
+/** Measured write delay was 11.8 s (Task 1b): two flush windows. The host's `waitMs` is the cap. */
 export const LITELLM_SPEND_WAIT_MS = 24_000;
-export const LITELLM_SPEND_WAIT_CAP_MS = 60_000;
 /** Up to 20 ids are read one indexed `request_id` at a time; more use a paged range read. */
 const SPEND_EXACT_ID_LIMIT = 20;
+/** Range-read pages one call reads at most (`maxPages`). */
 const SPEND_PAGE_CAP = 50;
 const DEFAULT_WINDOW_MS = 3_600_000;
 
@@ -43,8 +43,14 @@ export interface LiteLLMSpendLogsOptions {
   readonly since?: string | Date;
   /** Defaults to now. */
   readonly until?: string | Date;
-  /** How long to keep polling for rows the proxy has not flushed yet. Defaults to 24 s, capped at 60 s. */
+  /** How long to keep polling for rows the proxy has not flushed yet. Defaults to 24 s. */
   readonly waitMs?: number;
+  /** Rows per range-read page. Default 100. */
+  readonly pageSize?: number;
+  /** Range-read pages one call reads at most. Default 50. */
+  readonly maxPages?: number;
+  /** Response body ceiling: the proxy's answer is not the host's. Default 4 MiB. */
+  readonly maxBodyBytes?: number;
   /** Delay between polls. */
   readonly pollIntervalMs?: number;
   readonly provider?: string;
@@ -134,7 +140,17 @@ export async function litellmSpendLogs(options: LiteLLMSpendLogsOptions = {}): P
     throw new Error("ERR_LITELLM_SPEND_LOGS: no API key; a virtual key can read its own rows, a proxy without one cannot");
   const fetchImpl = options.fetch ?? fetch;
   const wanted = [...new Set((options.callIds ?? []).map((id) => String(id).trim()).filter((id) => id !== ""))];
-  const waitMs = Math.min(Math.max(options.waitMs ?? LITELLM_SPEND_WAIT_MS, 0), LITELLM_SPEND_WAIT_CAP_MS);
+  const waitMs = Math.max(options.waitMs ?? LITELLM_SPEND_WAIT_MS, 0);
+  const pageSize = options.pageSize ?? SPEND_PAGE_SIZE;
+  const maxPages = options.maxPages ?? SPEND_PAGE_CAP;
+  const maxBodyBytes = options.maxBodyBytes ?? SPEND_BODY_BYTES;
+  for (const [name, value] of [
+    ["pageSize", pageSize],
+    ["maxPages", maxPages],
+    ["maxBodyBytes", maxBodyBytes],
+  ] as const) {
+    if (!Number.isSafeInteger(value) || value < 1) throw new Error(`ERR_LITELLM_SPEND_LOGS: ${name} must be a positive integer`);
+  }
   // A zero interval would spin the proxy for the whole window; 50 ms is the floor, 3 s the default.
   const pollIntervalMs = Math.max(options.pollIntervalMs ?? 3_000, 50);
 
@@ -152,7 +168,7 @@ export async function litellmSpendLogs(options: LiteLLMSpendLogsOptions = {}): P
           : redactSecrets(body, [token]).slice(0, 500);
       throw new Error(`ERR_LITELLM_SPEND_LOGS: ${response.status} ${detail}`);
     }
-    return readBoundedResponseJson<unknown>(response, { maxResponseBodyBytes: SPEND_BODY_BYTES });
+    return readBoundedResponseJson<unknown>(response, { maxResponseBodyBytes: maxBodyBytes });
   };
 
   const collect = (rows: readonly LiteLLMSpendRow[], into: Map<string, LiteLLMSpendRow>): void => {
@@ -178,19 +194,19 @@ export async function litellmSpendLogs(options: LiteLLMSpendLogsOptions = {}): P
     const since = new Date(options.since ?? until.getTime() - DEFAULT_WINDOW_MS);
     if (Number.isNaN(since.getTime()) || Number.isNaN(until.getTime()))
       throw new Error("ERR_LITELLM_SPEND_LOGS: since/until must be valid dates");
-    for (let page = 1; page <= SPEND_PAGE_CAP; page += 1) {
+    for (let page = 1; page <= maxPages; page += 1) {
       const query = new URLSearchParams({
         start_date: since.toISOString(),
         end_date: until.toISOString(),
         page: String(page),
-        page_size: String(SPEND_PAGE_SIZE),
+        page_size: String(pageSize),
       });
       const { data, totalPages } = rowsOf(await get(`/spend/logs/v2?${query.toString()}`));
       collect(
         data.map(normalizeSpendRow).filter((row): row is LiteLLMSpendRow => row !== undefined),
         into,
       );
-      if (data.length < SPEND_PAGE_SIZE || (totalPages !== undefined && page >= totalPages)) return;
+      if (data.length < pageSize || (totalPages !== undefined && page >= totalPages)) return;
     }
   };
 

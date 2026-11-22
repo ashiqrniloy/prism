@@ -6,10 +6,8 @@ import {
   Agent,
   AgentDecisionError,
   AgentRunState,
-  DEFAULT_MAX_STICKY_DECISIONS,
   DecisionScope,
   Guardrail,
-  HARD_MAX_PENDING_DECISIONS,
   JsonObject,
   MAX_DECISION_REASON_BYTES,
   MAX_ELICITATION_BYTES,
@@ -24,6 +22,7 @@ import {
 import { guardrailRefusalText, runGuardrailList } from "./guardrails.js";
 import type { Principal } from "./contracts-core/principal.js";
 import type { DurableRunStateOptions } from "./run-state-cell.js";
+import { ceilingsOf } from "./run-limits.js";
 import { canonicalToolEffectJson } from "./tool-effects.js";
 
 /** Pending decisions of a suspended state, synthesizing the legacy single-approval shape. */
@@ -68,8 +67,12 @@ export async function resolveRunDecisions(input: {
 }): Promise<ResolvedRunDecisions> {
   const { agent, state, decisions } = input;
   if (decisions.length === 0) throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Decision batch must not be empty");
-  if (decisions.length > HARD_MAX_PENDING_DECISIONS) {
-    throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Decision batch exceeds ${HARD_MAX_PENDING_DECISIONS} entries`);
+  const ceilings = ceilingsOf(agent);
+  if (decisions.length > ceilings.pendingDecisions) {
+    throw new AgentDecisionError(
+      "ERR_PRISM_DECISION_LIMIT",
+      `Decision batch exceeds ceilings.pendingDecisions (${ceilings.pendingDecisions})`,
+    );
   }
   const pending = pendingDecisionsOf(state);
   if (!pending?.length) throw new AgentDecisionError("ERR_PRISM_DECISION_UNKNOWN", "No pending approval decisions for this run");
@@ -97,17 +100,31 @@ export async function resolveRunDecisions(input: {
     ) {
       throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Unknown approval outcome");
     }
+    // An attributed (nested) decision names a call of a child run, not of this run: its payload is
+    // bounded here and validated by the child's own resume, never against this run's tools (plan 232 Task 3).
+    const nested = target.attribution !== undefined;
     if (decision.modifiedArguments !== undefined) {
       if (target.kind !== "tool_approval" || !target.toolCallId) {
         throw new AgentDecisionError("ERR_PRISM_DECISION_SCOPE", "Modified arguments apply only to tool approvals");
       }
-      await validateModifiedArguments(agent, registry, state, target, decision.modifiedArguments, input.signal, input.toolInputGuardrails);
+      if (nested) assertBoundedPayload(decision.modifiedArguments, "Modified arguments");
+      else
+        await validateModifiedArguments(
+          agent,
+          registry,
+          state,
+          target,
+          decision.modifiedArguments,
+          input.signal,
+          input.toolInputGuardrails,
+        );
     }
     if (decision.elicitation !== undefined) {
       if (target.kind !== "elicitation") {
         throw new AgentDecisionError("ERR_PRISM_DECISION_SCOPE", "Elicitation payload applies only to elicitation decisions");
       }
-      await validateElicitationPayload(agent, state, target, decision.elicitation, input.signal);
+      if (nested) assertBoundedPayload(decision.elicitation, "Elicitation payload");
+      else await validateElicitationPayload(agent, state, target, decision.elicitation, input.signal);
     }
     decisionsById.set(decision.approvalId, decision);
     if (decision.outcome === "allow_for_run" || decision.outcome === "reject_for_run") {
@@ -124,14 +141,24 @@ export async function resolveRunDecisions(input: {
     }
   }
   const stickyDecisions = [...(state.stickyDecisions ?? []), ...stickies];
-  if (stickyDecisions.length > DEFAULT_MAX_STICKY_DECISIONS) {
-    throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Sticky decisions exceed ${DEFAULT_MAX_STICKY_DECISIONS} per run`);
+  if (stickyDecisions.length > ceilings.stickyDecisions) {
+    throw new AgentDecisionError(
+      "ERR_PRISM_DECISION_LIMIT",
+      `Sticky decisions exceed ceilings.stickyDecisions (${ceilings.stickyDecisions}) per run`,
+    );
   }
   return {
     decisionsById,
     stickyDecisions,
     remaining: pending.filter((entry) => !seen.has(entry.approvalId)),
   };
+}
+
+function assertBoundedPayload(payload: JsonObject, label: string): void {
+  const json = payload !== null && typeof payload === "object" && !Array.isArray(payload) ? JSON.stringify(payload) : undefined;
+  if (json === undefined || Buffer.byteLength(json, "utf8") > MAX_ELICITATION_BYTES) {
+    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", `${label} must be a bounded JSON object`);
+  }
 }
 
 /** Decision-time revalidation of modified arguments: schema, then input guardrails. Policy and trust re-run at dispatch. */

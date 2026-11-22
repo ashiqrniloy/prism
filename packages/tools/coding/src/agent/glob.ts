@@ -4,7 +4,7 @@
 import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import { HARD_MAX_REPO_DEPTH, HARD_MAX_REPO_RESULTS, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
+import { type CodingArgCeilings, resolveCodingArgCeilings, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
   createLocalRepositoryOperations,
   RepositoryError,
@@ -24,6 +24,8 @@ export interface GlobToolOptions {
   exclude?: readonly string[];
   /** Bounded `{a,b}` brace expansion (default true); set `false` to reject braces. */
   braceExpansion?: boolean;
+  /** Ceilings on the model's `maxDepth` and `maxResults` (plan 239 Task 5). */
+  ceilings?: CodingArgCeilings;
 }
 
 function errorResult(toolCallId: string, message: string): ToolResult {
@@ -48,6 +50,7 @@ function formatGlobText(result: RepositoryGlobResult): string {
 }
 
 export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefinition {
+  const ceilings = resolveCodingArgCeilings(options?.ceilings);
   const limits = resolveRepositoryLimits({
     ...options?.repository,
     maxDepth: options?.maxDepth ?? options?.repository?.maxDepth,
@@ -79,11 +82,11 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
         },
         maxDepth: {
           type: "number",
-          description: `Maximum directory depth to descend (default ${limits.maxDepth}, hard ${HARD_MAX_REPO_DEPTH})`,
+          description: `Maximum directory depth to descend (default ${limits.maxDepth}, max ${ceilings.repoDepth})`,
         },
         maxResults: {
           type: "number",
-          description: `Maximum paths returned in this page (default ${limits.maxResults}, hard ${HARD_MAX_REPO_RESULTS})`,
+          description: `Maximum paths returned in this page (default ${limits.maxResults}, max ${ceilings.repoResults})`,
         },
         offset: {
           type: "number",
@@ -108,10 +111,10 @@ export function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefi
       let offset = 0;
       try {
         if (args.maxDepth !== undefined) {
-          maxDepth = validateCodingLimit("maxDepth", args.maxDepth as number, HARD_MAX_REPO_DEPTH);
+          maxDepth = validateCodingLimit("maxDepth", args.maxDepth as number, ceilings.repoDepth);
         }
         if (args.maxResults !== undefined) {
-          maxResults = validateCodingLimit("maxResults", args.maxResults as number, HARD_MAX_REPO_RESULTS);
+          maxResults = validateCodingLimit("maxResults", args.maxResults as number, ceilings.repoResults);
         }
         if (args.offset !== undefined) {
           offset = validateCodingLimitAllowZero("offset", args.offset as number, limits.maxEntries);

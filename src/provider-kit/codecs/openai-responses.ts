@@ -14,7 +14,7 @@ import {
 import { assertStructuredOutputRequestSupported } from "../structured-output.js";
 import { resolveReasoningEffort, stripOwnedCompat } from "../thinking.js";
 import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
-import { isContextOverflowMessage, readSseEvents } from "../transport.js";
+import { type BoundedStreamLimits, isContextOverflowMessage, readSseEvents } from "../transport.js";
 import { normalizeUsage } from "../usage.js";
 
 /**
@@ -91,6 +91,8 @@ export interface OpenAIResponsesEventsOptions {
   readonly secrets?: readonly (string | undefined)[];
   /** Must be the same map that serialized the request. */
   readonly toolNames?: ToolNameMap;
+  /** SSE event and buffer ceilings; default the transport's. Host-set: a provider response never raises them. */
+  readonly streamLimits?: BoundedStreamLimits;
 }
 
 /** What a reasoning `ThinkingContent.data` carries: the wire item plus who produced it. */
@@ -368,7 +370,7 @@ export async function* openAIResponsesEvents(
   let completed = false;
   let stopReason: string | undefined;
 
-  for await (const sseEvent of readSseEvents(body, { signal: options.signal })) {
+  for await (const sseEvent of readSseEvents(body, { ...options.streamLimits, signal: options.signal })) {
     const data = sseEvent.data.trim();
     if (!data || data === "[DONE]") continue;
     let event: JsonObject;

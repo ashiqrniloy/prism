@@ -11,9 +11,6 @@ import {
   assertSessionLinkFilter,
   assertSessionMetadataKey,
   type BranchQuery,
-  DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
-  DEFAULT_SESSION_LIST_LIMIT,
-  HARD_MAX_SESSION_LIST_LIMIT,
   type MigrationQuery,
   type OwnershipScope,
   type PersistencePage,
@@ -24,11 +21,15 @@ import {
   type RunLedger,
   type RunQuery,
   type RunRecord,
+  type ResolvedSessionQueryLimits,
+  resolveSessionListLimit,
+  resolveSessionQueryLimits,
   resolveSessionSearchQuery,
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
+  type SessionAppendManyOptions,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
@@ -44,6 +45,7 @@ import {
   type ToolCallRecord,
   type UsageQuery,
   type UsageRecord,
+  validateSessionAppendBatch,
 } from "@arnilo/prism";
 import {
   prepareEvaluationRecord,
@@ -59,9 +61,11 @@ import {
   ownershipColumns,
   parseSessionMetadata,
   prepareRunFeedback,
+  readBranchTail,
   RunFeedbackError,
   requireRunFeedbackOwnership,
   runFeedbackPageLimit,
+  SESSION_ENTRIES_LINEAR_INDEX,
   SESSION_LINK_COLUMN_NAMES,
   type SessionEntryRow,
   safeSearchMetadata,
@@ -118,6 +122,8 @@ const {
 
 import { DEFAULT_POOL_MAX, DEFAULT_SCHEMA, type PostgresPersistenceOptions } from "./types.js";
 
+const DEFAULT_QUERY_LIMIT = 100;
+
 export interface PostgresPersistence extends SessionStore, RunLedger, ProductionPersistenceStore {
   readonly name: "postgres";
   readonly checkpoints: CheckpointStore;
@@ -149,6 +155,7 @@ export interface PostgresPersistence extends SessionStore, RunLedger, Production
 }
 
 export async function createPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence> {
+  const queryLimits = resolveSessionQueryLimits(options.queryLimits);
   const ownsPool = !options.pool;
   const pool =
     options.pool ??
@@ -171,6 +178,8 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
   const usage = qualifyTable(schema, "prism_usage");
   const feedbackTable = qualifyTable(schema, "prism_run_feedback");
   const searchTable = qualifyTable(schema, "prism_session_search");
+  const appendStatement = buildAppendStatement(sessions, entries, idempotency, searchTable);
+  const appendManyStatement = buildAppendManyStatement(sessions, entries, searchTable);
 
   if (!options.skipMigrations) {
     await applyPostgresMigrations(pool, schema);
@@ -220,7 +229,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     },
     async query(query: EvaluationQuery = {}) {
       query.signal?.throwIfAborted();
-      const limit = query.limit ?? 100;
+      const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
       if (
         !Number.isSafeInteger(limit) ||
         limit < 1 ||
@@ -298,7 +307,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     },
     async query(query: ExperimentReportQuery = {}) {
       query.signal?.throwIfAborted();
-      const limit = query.limit ?? 100;
+      const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
       if (
         !Number.isSafeInteger(limit) ||
         limit < 1 ||
@@ -359,6 +368,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       const duplicate = await pool.query(`SELECT 1 FROM ${feedbackTable} WHERE id = $1 LIMIT 1`, [input.id]);
       if (duplicate.rowCount) throw new RunFeedbackError("Duplicate feedback id", "ERR_PRISM_RUN_FEEDBACK_DUPLICATE");
       const record = await prepareRunFeedback(input, {
+        ...options.feedbackLimits,
         redactor: options.feedbackRedactor,
         resolveRun: async ({ runId, ownership }) => {
           const result = await pool.query(
@@ -426,7 +436,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       return queryTable(
         pool,
         feedbackTable,
-        { ...query, limit: runFeedbackPageLimit(query.limit) },
+        { ...query, limit: runFeedbackPageLimit(query.limit, options.maxPageSize) },
         filters,
         mapFeedbackRow,
         params,
@@ -457,6 +467,48 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       ? `AND EXISTS (SELECT 1 FROM ${sessions} s WHERE s.id = seed.session_id AND ${ownership.filters.map((filter) => `s.${filter}`).join(" AND ")})`
       : "";
 
+    if (query.from === "compaction") {
+      // Plan 230 Task 3: the walk stops at the newest compaction's `throughEntryId`, so a long session's
+      // compacted part is never read: two walks and, when the compaction pins older entries, one read by id.
+      const items = await readBranchTail(
+        {
+          async walk(seedId, stop, seed) {
+            const ownerParams = seed ? ownership.params : [];
+            const clause = seed ? ownerClause : "";
+            const sessionParam = 3 + ownerParams.length;
+            const stopClause =
+              stop === undefined ? "" : "id" in stop ? `WHERE bp.id <> $${sessionParam + 1}` : "WHERE bp.kind <> 'compaction'";
+            const walked = await pool.query(
+              `WITH RECURSIVE branch_path(id, parent_id, kind, depth) AS (
+                 SELECT seed.id, seed.parent_id, seed.kind, 0 FROM ${entries} seed
+                 WHERE seed.id = $1 AND seed.session_id = $2 ${clause}
+                 UNION ALL
+                 SELECT parent.id, parent.parent_id, parent.kind, bp.depth + 1
+                 FROM branch_path bp
+                 INNER JOIN ${entries} parent ON parent.id = bp.parent_id AND parent.session_id = $${sessionParam}
+                 ${stopClause}
+               )
+               SELECT e.* FROM ${entries} e
+               INNER JOIN branch_path bp ON e.id = bp.id
+               ORDER BY bp.depth ASC`,
+              [seedId, query.sessionId, ...ownerParams, query.sessionId, ...(stop !== undefined && "id" in stop ? [stop.id] : [])],
+            );
+            return (walked.rows as SessionEntryRow[]).map(rowToSessionEntry);
+          },
+          async byIds(ids) {
+            const found = await pool.query(`SELECT * FROM ${entries} WHERE session_id = $1 AND id = ANY($2::text[])`, [
+              query.sessionId,
+              [...ids],
+            ]);
+            return (found.rows as SessionEntryRow[]).map(rowToSessionEntry);
+          },
+        },
+        leafId,
+      );
+      const end = query.limit === undefined ? items.length : start + query.limit;
+      return { items: items.slice(start, end), nextCursor: end < items.length ? encodeBranchCursor(end) : undefined };
+    }
+
     // ponytail: no limit preserves full-chain reads; default paging needs the reader's 64-page cap revisited first.
     const result = await pool.query(
       `WITH RECURSIVE branch_path(id, depth) AS (
@@ -484,125 +536,139 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
 
   const persistence: PostgresPersistence = {
     name: "postgres",
-    checkpoints: createPostgresCheckpointStore(pool, schema),
+    checkpoints: createPostgresCheckpointStore(pool, schema, options.maxPageSize),
     events: eventSource,
     leases: createPostgresLeaseStore(pool, schema),
     feedback,
     evaluations,
     experiments,
-    lifecycle: createPostgresPersistenceLifecycle(pool, schema),
+    lifecycle: createPostgresPersistenceLifecycle(pool, schema, options.maxPageSize),
     metadata: { kind: "postgres", multiProcess: true, driver: "pg", schema },
 
     async append(entry: SessionEntry, appendOptions?: SessionAppendOptions): Promise<void> {
       const now = new Date().toISOString();
-      const client = await pool.connect();
+      const linearParent = appendOptions?.tip === true ? appendOptions.expectedParentId : undefined;
+      const row = sessionEntryToRow(entry);
+      const search = entrySearchFields(entry);
+      const links = sessionLinkColumns(entry);
+      let result: { rows: AppendStatementRow[] };
       try {
-        await client.query("BEGIN");
-
-        await client.query(
-          `INSERT INTO ${sessions} (id, created_at, updated_at)
-           VALUES ($1, $2, $3)
-           ON CONFLICT(id) DO UPDATE SET updated_at = EXCLUDED.updated_at
-           WHERE EXCLUDED.updated_at::timestamptz > ${sessions}.updated_at::timestamptz`,
-          [entry.sessionId, now, now],
-        );
-
-        if (appendOptions?.expectedParentId) {
-          const parent = await client.query(`SELECT 1 FROM ${entries} WHERE id = $1 AND session_id = $2 LIMIT 1`, [
-            appendOptions.expectedParentId,
-            entry.sessionId,
-          ]);
-          if (parent.rowCount === 0) {
-            throw new SessionAppendConflictError({
-              code: "session_append_conflict",
-              expectedParentId: appendOptions.expectedParentId,
-            });
-          }
-        }
-
-        const expectedParent = parentKey(appendOptions?.expectedParentId);
-        if (appendOptions?.idempotencyKey) {
-          const existing = await client.query(
-            `SELECT entry_id FROM ${idempotency}
-             WHERE session_id = $1 AND expected_parent_id = $2 AND idempotency_key = $3`,
-            [entry.sessionId, expectedParent, appendOptions.idempotencyKey],
-          );
-          if (existing.rowCount && existing.rowCount > 0) {
-            throw new SessionAppendConflictError({
-              code: "session_append_conflict",
-              idempotencyDuplicate: true,
-            });
-          }
-        }
-
-        const duplicate = await client.query(`SELECT 1 FROM ${entries} WHERE id = $1 LIMIT 1`, [entry.id]);
-        if (duplicate.rowCount && duplicate.rowCount > 0) {
-          throw new Error(`Duplicate session entry id: ${entry.id}`);
-        }
-
-        const row = sessionEntryToRow(entry);
-        await client.query(
-          `INSERT INTO ${entries} (
-            id, session_id, parent_id, run_id, timestamp, kind, schema_version,
-            message, event, model, previous_model, label, summary, data, metadata
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-          [
-            row.id,
-            row.session_id,
-            row.parent_id,
-            row.run_id,
-            row.timestamp,
-            row.kind,
-            row.schema_version,
-            row.message,
-            row.event,
-            row.model,
-            row.previous_model,
-            row.label,
-            row.summary,
-            row.data,
-            row.metadata,
-          ],
-        );
-        // The links entry is the source of truth; the session row's columns only index it.
-        const links = sessionLinkColumns(entry);
-        if (links) {
-          await client.query(
-            `UPDATE ${sessions} SET ${SESSION_LINK_COLUMN_NAMES.map((column, index) => `${column} = $${index + 1}`).join(", ")} WHERE id = $${links.length + 1}`,
-            [...links, entry.sessionId],
-          );
-        }
-        const search = entrySearchFields(entry);
-        await client.query(
-          `INSERT INTO ${searchTable} (entry_id, session_id, label, summary, body)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (entry_id) DO UPDATE SET
-             label = EXCLUDED.label,
-             summary = EXCLUDED.summary,
-             body = EXCLUDED.body`,
-          [row.id, row.session_id, search.label, search.summary, search.body],
-        );
-
-        if (appendOptions?.idempotencyKey) {
-          await client.query(
-            `INSERT INTO ${idempotency} (
-              session_id, expected_parent_id, idempotency_key, entry_id, created_at
-            ) VALUES ($1, $2, $3, $4, $5)`,
-            [entry.sessionId, expectedParent, appendOptions.idempotencyKey, entry.id, now],
-          );
-        }
-
-        await client.query("COMMIT");
+        // Plan 230 Task 4: one autocommit statement, so there is no transaction to roll back and a failure is
+        // always the original error.
+        result = await pool.query(appendStatement, [
+          row.id,
+          row.session_id,
+          row.parent_id,
+          row.run_id,
+          row.timestamp,
+          row.kind,
+          row.schema_version,
+          row.message,
+          row.event,
+          row.model,
+          row.previous_model,
+          row.label,
+          row.summary,
+          row.data,
+          row.metadata,
+          linearParent !== undefined ? 1 : 0,
+          now,
+          appendOptions?.expectedParentId ?? null,
+          parentKey(appendOptions?.expectedParentId),
+          appendOptions?.idempotencyKey ?? null,
+          links !== undefined,
+          ...(links ?? SESSION_LINK_COLUMN_NAMES.map(() => null)),
+          search.label,
+          search.summary,
+          search.body,
+        ]);
       } catch (error) {
-        await client.query("ROLLBACK");
+        // Every CTE reads one snapshot, so a concurrent writer surfaces as a unique violation, not an empty CTE.
+        if (linearParent !== undefined && isUniqueViolation(error, SESSION_ENTRIES_LINEAR_INDEX)) {
+          // Failure path only: the current leaf of the caller's own session.
+          throw new SessionAppendConflictError({
+            code: "session_append_conflict",
+            expectedParentId: linearParent,
+            currentLeafId: await findLatestLeafId(pool, entries, entry.sessionId),
+          });
+        }
+        if (appendOptions?.idempotencyKey && isUniqueViolation(error, idempotencyPrimaryKey)) {
+          throw new SessionAppendConflictError({ code: "session_append_conflict", idempotencyDuplicate: true });
+        }
+        if (isUniqueViolation(error, entriesPrimaryKey)) throw new Error(`Duplicate session entry id: ${entry.id}`);
         throw error;
-      } finally {
-        client.release();
       }
+      const outcome = result.rows[0];
+      if (outcome?.inserted) return;
+      // Nothing was written; report the first failed check in today's order.
+      if (appendOptions?.expectedParentId && !outcome?.parent_found) {
+        throw new SessionAppendConflictError({ code: "session_append_conflict", expectedParentId: appendOptions.expectedParentId });
+      }
+      if (outcome?.key_found) {
+        throw new SessionAppendConflictError({ code: "session_append_conflict", idempotencyDuplicate: true });
+      }
+      throw new Error(`Duplicate session entry id: ${entry.id}`);
+    },
+
+    tipCheck: true,
+
+    async appendMany(batchEntries: readonly SessionEntry[], manyOptions?: SessionAppendManyOptions): Promise<void> {
+      manyOptions?.signal?.throwIfAborted();
+      const batch = validateSessionAppendBatch(batchEntries);
+      if (!batch) return;
+      const columns: unknown[][] = APPEND_MANY_COLUMNS.map(() => []);
+      let links: readonly (string | null)[] | undefined;
+      for (const entry of batchEntries) {
+        const row = sessionEntryToRow(entry);
+        const search = entrySearchFields(entry);
+        const values = [
+          row.id,
+          row.parent_id,
+          row.run_id,
+          row.timestamp,
+          row.kind,
+          row.schema_version,
+          row.message,
+          row.event,
+          row.model,
+          row.previous_model,
+          row.label,
+          row.summary,
+          row.data,
+          row.metadata,
+          search.label,
+          search.summary,
+          search.body,
+        ];
+        for (const [index, value] of values.entries()) columns[index]?.push(value);
+        links = sessionLinkColumns(entry) ?? links;
+      }
+      let result: { rows: AppendManyStatementRow[] };
+      try {
+        result = await pool.query(appendManyStatement, [
+          ...columns,
+          batch.sessionId,
+          new Date().toISOString(),
+          batch.externalParentIds,
+          links !== undefined,
+          ...(links ?? SESSION_LINK_COLUMN_NAMES.map(() => null)),
+        ]);
+      } catch (error) {
+        // A concurrent writer that took a batch id between the check and the insert.
+        if (isUniqueViolation(error, entriesPrimaryKey))
+          throw new Error(`Duplicate session entry id in batch for session ${batch.sessionId}`);
+        throw error;
+      }
+      const outcome = result.rows[0];
+      if (outcome && outcome.inserted === batchEntries.length) return;
+      if (outcome?.missing_parent) {
+        throw new SessionAppendConflictError({ code: "session_append_conflict", expectedParentId: outcome.missing_parent });
+      }
+      throw new Error(`Duplicate session entry id: ${outcome?.taken_id ?? "unknown"}`);
     },
 
     async list(sessionId: string): Promise<readonly SessionEntry[]> {
-      const result = await pool.query(`SELECT * FROM ${entries} WHERE session_id = $1 ORDER BY timestamp ASC, ctid ASC`, [sessionId]);
+      const result = await pool.query(`SELECT * FROM ${entries} WHERE session_id = $1 ORDER BY seq ASC`, [sessionId]);
       return (result.rows as SessionEntryRow[]).map(rowToSessionEntry);
     },
 
@@ -795,11 +861,12 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
           searchTable,
         },
         query,
+        queryLimits,
       );
     },
 
     async listSessions(query: SessionListQuery): Promise<PersistencePage<SessionSummary>> {
-      return listPostgresSessions(pool, { sessions, entries }, query);
+      return listPostgresSessions(pool, { sessions, entries }, query, queryLimits);
     },
 
     async deleteSession(sessionId: string, scope?: OwnershipScope): Promise<boolean> {
@@ -959,7 +1026,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
         }
       }
 
-      const limit = query.limit ?? 100;
+      const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const limitParam = params.length + 1;
       const result = await pool.query(
@@ -1133,6 +1200,171 @@ export async function reopenPostgresPersistence(options: PostgresPersistenceOpti
   return createPostgresPersistence(options);
 }
 
+/** A `pg` unique violation (`23505`) on the named constraint or index. */
+function isUniqueViolation(error: unknown, constraint: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "23505" &&
+    (error as { constraint?: unknown }).constraint === constraint
+  );
+}
+
+interface AppendStatementRow {
+  readonly inserted: boolean;
+  readonly parent_found: boolean;
+  readonly key_found: boolean;
+}
+
+/** Default PostgreSQL primary-key constraint names (`<table>_pkey`); the append maps their violations. */
+const entriesPrimaryKey = "prism_session_entries_pkey";
+const idempotencyPrimaryKey = "prism_session_append_idempotency_pkey";
+
+/**
+ * Plan 230 Task 4: the whole append as one statement of data-modifying CTEs. `ok` holds a row only when the
+ * parent exists (if one is expected), the idempotency key is unused, and the entry id is new; every write
+ * selects from it, so a failed check writes nothing. All CTEs share one snapshot, so a concurrent writer that
+ * passes the same checks surfaces as a unique violation (primary key or the linear index) and aborts the
+ * statement. Foreign keys are checked at the end of the statement, after the session row exists.
+ *
+ * Parameters: $1-$15 entry columns, $16 linear, $17 now, $18 expected parent (or null), $19 idempotency
+ * parent key, $20 idempotency key (or null), $21 links present, $22-$28 link columns, $29-$31 search fields.
+ */
+function buildAppendStatement(sessions: string, entries: string, idempotency: string, searchTable: string): string {
+  const linkParams = SESSION_LINK_COLUMN_NAMES.map((_, index) => `$${22 + index}::text`);
+  return `WITH
+  parent AS (
+    SELECT 1 FROM ${entries} WHERE $18::text IS NOT NULL AND id = $18::text AND session_id = $2::text LIMIT 1
+  ),
+  prior_key AS (
+    SELECT 1 FROM ${idempotency}
+    WHERE $20::text IS NOT NULL AND session_id = $2::text AND expected_parent_id = $19::text AND idempotency_key = $20::text
+  ),
+  ok AS (
+    SELECT 1 WHERE ($18::text IS NULL OR EXISTS (SELECT 1 FROM parent))
+      AND NOT EXISTS (SELECT 1 FROM prior_key)
+      AND NOT EXISTS (SELECT 1 FROM ${entries} WHERE id = $1::text)
+  ),
+  session_row AS (
+    INSERT INTO ${sessions} AS s (id, created_at, updated_at, ${SESSION_LINK_COLUMN_NAMES.join(", ")})
+    SELECT $2::text, $17::text, $17::text, ${linkParams.join(", ")} FROM ok
+    ON CONFLICT (id) DO UPDATE SET
+      updated_at = CASE WHEN EXCLUDED.updated_at::timestamptz > s.updated_at::timestamptz THEN EXCLUDED.updated_at ELSE s.updated_at END,
+      ${SESSION_LINK_COLUMN_NAMES.map((column) => `${column} = CASE WHEN $21::boolean THEN EXCLUDED.${column} ELSE s.${column} END`).join(",\n      ")}
+    WHERE EXCLUDED.updated_at::timestamptz > s.updated_at::timestamptz OR $21::boolean
+    RETURNING s.id
+  ),
+  entry AS (
+    INSERT INTO ${entries} (
+      id, session_id, parent_id, run_id, timestamp, kind, schema_version,
+      message, event, model, previous_model, label, summary, data, metadata, linear
+    )
+    SELECT $1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::integer,
+      $8::text, $9::text, $10::text, $11::text, $12::text, $13::text, $14::text, $15::text, $16::integer
+    FROM ok
+    RETURNING id
+  ),
+  search AS (
+    INSERT INTO ${searchTable} (entry_id, session_id, label, summary, body)
+    SELECT entry.id, $2::text, $29::text, $30::text, $31::text FROM entry
+    ON CONFLICT (entry_id) DO UPDATE SET label = EXCLUDED.label, summary = EXCLUDED.summary, body = EXCLUDED.body
+    RETURNING entry_id
+  ),
+  recorded_key AS (
+    INSERT INTO ${idempotency} (session_id, expected_parent_id, idempotency_key, entry_id, created_at)
+    SELECT $2::text, $19::text, $20::text, entry.id, $17::text FROM entry WHERE $20::text IS NOT NULL
+    RETURNING entry_id
+  )
+SELECT EXISTS (SELECT 1 FROM entry) AS inserted,
+  EXISTS (SELECT 1 FROM parent) AS parent_found,
+  EXISTS (SELECT 1 FROM prior_key) AS key_found`;
+}
+
+interface AppendManyStatementRow {
+  readonly inserted: number;
+  readonly missing_parent: string | null;
+  readonly taken_id: string | null;
+}
+
+/** Entry columns `appendMany` passes as arrays, in `unnest` order; `schema_version` is the one integer array. */
+const APPEND_MANY_COLUMNS = [
+  "id",
+  "parent_id",
+  "run_id",
+  "timestamp",
+  "kind",
+  "schema_version",
+  "message",
+  "event",
+  "model",
+  "previous_model",
+  "label",
+  "summary",
+  "data",
+  "metadata",
+  "search_label",
+  "search_summary",
+  "search_body",
+] as const;
+
+/**
+ * Plan 230 Task 5: a whole `appendMany` batch as one statement. Each column is one array parameter (`unnest
+ * … WITH ORDINALITY`), so the parameter count does not grow with the batch. `ok` holds a row only when every
+ * parent outside the batch is in the session and no batch id is taken; every write selects from it. Rows are
+ * inserted in batch order, so `seq` follows branch order. Copies are not linear.
+ *
+ * Parameters: $1-$17 column arrays ({@link APPEND_MANY_COLUMNS}), $18 session id, $19 now, $20 external parent
+ * ids, $21 links present, $22-$28 link columns.
+ */
+function buildAppendManyStatement(sessions: string, entries: string, searchTable: string): string {
+  const arrays = APPEND_MANY_COLUMNS.map((column, index) => `$${index + 1}::${column === "schema_version" ? "integer" : "text"}[]`);
+  const linkParams = SESSION_LINK_COLUMN_NAMES.map((_, index) => `$${22 + index}::text`);
+  return `WITH
+  input AS (
+    SELECT * FROM unnest(${arrays.join(", ")}) WITH ORDINALITY AS t(${APPEND_MANY_COLUMNS.join(", ")}, ord)
+  ),
+  missing_parent AS (
+    SELECT p.id FROM unnest($20::text[]) AS p(id)
+    WHERE NOT EXISTS (SELECT 1 FROM ${entries} e WHERE e.id = p.id AND e.session_id = $18::text)
+    LIMIT 1
+  ),
+  taken AS (
+    SELECT e.id FROM ${entries} e JOIN input i ON i.id = e.id LIMIT 1
+  ),
+  ok AS (
+    SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM missing_parent) AND NOT EXISTS (SELECT 1 FROM taken)
+  ),
+  session_row AS (
+    INSERT INTO ${sessions} AS s (id, created_at, updated_at, ${SESSION_LINK_COLUMN_NAMES.join(", ")})
+    SELECT $18::text, $19::text, $19::text, ${linkParams.join(", ")} FROM ok
+    ON CONFLICT (id) DO UPDATE SET
+      updated_at = CASE WHEN EXCLUDED.updated_at::timestamptz > s.updated_at::timestamptz THEN EXCLUDED.updated_at ELSE s.updated_at END,
+      ${SESSION_LINK_COLUMN_NAMES.map((column) => `${column} = CASE WHEN $21::boolean THEN EXCLUDED.${column} ELSE s.${column} END`).join(",\n      ")}
+    WHERE EXCLUDED.updated_at::timestamptz > s.updated_at::timestamptz OR $21::boolean
+    RETURNING s.id
+  ),
+  entry AS (
+    INSERT INTO ${entries} (
+      id, session_id, parent_id, run_id, timestamp, kind, schema_version,
+      message, event, model, previous_model, label, summary, data, metadata, linear
+    )
+    SELECT i.id, $18::text, i.parent_id, i.run_id, i.timestamp, i.kind, i.schema_version,
+      i.message, i.event, i.model, i.previous_model, i.label, i.summary, i.data, i.metadata, 0
+    FROM input i CROSS JOIN ok
+    ORDER BY i.ord
+    RETURNING id
+  ),
+  search AS (
+    INSERT INTO ${searchTable} (entry_id, session_id, label, summary, body)
+    SELECT i.id, $18::text, i.search_label, i.search_summary, i.search_body FROM input i JOIN entry ON entry.id = i.id
+    ON CONFLICT (entry_id) DO UPDATE SET label = EXCLUDED.label, summary = EXCLUDED.summary, body = EXCLUDED.body
+    RETURNING entry_id
+  )
+SELECT (SELECT count(*) FROM entry)::integer AS inserted,
+  (SELECT id FROM missing_parent) AS missing_parent,
+  (SELECT id FROM taken) AS taken_id`;
+}
+
 async function findLatestLeafId(pool: Pool, entriesTable: string, sessionId: string): Promise<string | undefined> {
   const result = await pool.query(
     `SELECT e.id FROM ${entriesTable} e
@@ -1141,7 +1373,7 @@ async function findLatestLeafId(pool: Pool, entriesTable: string, sessionId: str
          SELECT 1 FROM ${entriesTable} child
          WHERE child.session_id = e.session_id AND child.parent_id = e.id
        )
-     ORDER BY e.timestamp DESC, e.id DESC
+     ORDER BY e.seq DESC
      LIMIT 1`,
     [sessionId],
   );
@@ -1205,12 +1437,10 @@ async function listPostgresSessions(
   pool: Pool,
   tables: { sessions: string; entries: string },
   query: SessionListQuery,
+  limits: ResolvedSessionQueryLimits,
 ): Promise<PersistencePage<SessionSummary>> {
   query.signal?.throwIfAborted();
-  const limit = query.limit ?? DEFAULT_SESSION_LIST_LIMIT;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_SESSION_LIST_LIMIT) {
-    throw new TypeError(`SessionListQuery.limit must be a safe integer from 1 to ${HARD_MAX_SESSION_LIST_LIMIT}`);
-  }
+  const limit = resolveSessionListLimit(query, limits);
   const order = query.order ?? "desc";
   if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
 
@@ -1258,12 +1488,12 @@ async function listPostgresSessions(
   const messageCountBySession = new Map<string, number>();
   if (pageRows.length > 0) {
     const sessionIds = pageRows.map((row) => row.session_id);
-    // Leaves order per session (timestamp desc, id desc); the first row wins for each session.
+    // Leaves order per session (newest insert first); the first row wins for each session.
     const leafRows = await pool.query(
       `SELECT e.session_id, e.id FROM ${tables.entries} e
        WHERE e.session_id = ANY($1::text[])
          AND NOT EXISTS (SELECT 1 FROM ${tables.entries} child WHERE child.session_id = e.session_id AND child.parent_id = e.id)
-       ORDER BY e.session_id ASC, e.timestamp DESC, e.id DESC`,
+       ORDER BY e.session_id ASC, e.seq DESC`,
       [sessionIds],
     );
     for (const row of leafRows.rows as Array<{ session_id: string; id: string }>) {
@@ -1306,8 +1536,9 @@ async function searchPostgresSessions(
   pool: Pool,
   tables: { sessions: string; entries: string; runs: string; searchTable: string },
   query: SessionSearchQuery,
+  limits: ResolvedSessionQueryLimits,
 ): Promise<PersistencePage<SessionSearchHit>> {
-  const q = resolveSessionSearchQuery(query);
+  const q = resolveSessionSearchQuery(query, limits);
   q.signal?.throwIfAborted();
 
   const filters: string[] = [];
@@ -1374,17 +1605,17 @@ async function searchPostgresSessions(
   const limitParam = `$${params.length}`;
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
   const result = await pool.query(
-    `${buildPostgresSearchCte(tables, ftsParam, kindFilter)}
+    `${buildPostgresSearchCte(tables, ftsParam, kindFilter, limits.ftsCandidates)}
      SELECT s.id AS session_id, s.updated_at, s.metadata,
        (
          SELECT e.label FROM ${tables.entries} e
          WHERE e.session_id = s.id AND e.label IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
+         ORDER BY e.seq DESC LIMIT 1
        ) AS label,
        (
          SELECT e.summary FROM ${tables.entries} e
          WHERE e.session_id = s.id AND e.summary IS NOT NULL
-         ORDER BY e.timestamp DESC, e.id DESC LIMIT 1
+         ORDER BY e.seq DESC LIMIT 1
        ) AS summary${
          q.query
            ? `,
@@ -1434,7 +1665,7 @@ async function searchPostgresSessions(
       updatedAt: row.updated_at,
       label: row.label ?? undefined,
       summary: row.summary ?? undefined,
-      snippet: clipSearchSnippet(row.match_snippet ?? row.label ?? row.summary ?? undefined),
+      snippet: clipSearchSnippet(row.match_snippet ?? row.label ?? row.summary ?? undefined, limits.searchSnippetBytes),
       metadata: safeSearchMetadata(parseSessionMetadata(row.metadata)),
       entryId: row.entry_id ?? undefined,
       runId: row.run_id ?? undefined,
@@ -1453,6 +1684,7 @@ function buildPostgresSearchCte(
   tables: { entries: string; searchTable: string },
   ftsParam: string | undefined,
   kindFilter: string,
+  ftsCandidates: number,
 ): string {
   if (ftsParam === undefined) return "";
   return `WITH ranked AS (
@@ -1470,7 +1702,7 @@ function buildPostgresSearchCte(
        JOIN ${tables.entries} e ON e.id = sr.entry_id
        WHERE sr.search_vector @@ plainto_tsquery('english', ${ftsParam}) ${kindFilter}
        ORDER BY score DESC, sr.entry_id
-       LIMIT ${DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES}
+       LIMIT ${ftsCandidates}
      ),
      best AS (
        SELECT DISTINCT ON (session_id) session_id, entry_id, score, snippet
@@ -1524,7 +1756,7 @@ async function queryTable<T>(
     }
   }
 
-  const limit = query.limit ?? 100;
+  const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
   const where = allFilters.length ? `WHERE ${allFilters.join(" AND ")}` : "";
   const limitParam = allParams.length + 1;
   const result = await pool.query(

@@ -156,7 +156,12 @@ export interface ConnectMcpToolsOptions {
    */
   readonly protocolVersion?: McpProtocolNegotiation;
   readonly listCacheTtlMs?: number;
+  /** Per-request timeout (default 60 000); each progress notification on a tool call resets it. */
   readonly callTimeoutMs?: number;
+  /** Absolute bound on one tool call regardless of progress (default `max(300_000, callTimeoutMs)`). */
+  readonly maxCallTimeMs?: number;
+  /** Bounds `connect` and the first `tools/list` only (default `callTimeoutMs`). */
+  readonly connectTimeoutMs?: number;
   readonly maxResultBytes?: number;
   readonly maxListPages?: number;
   readonly maxTools?: number;
@@ -168,6 +173,12 @@ export interface ConnectMcpToolsOptions {
   readonly maxJsonDepth?: number;
   readonly maxJsonProperties?: number;
   readonly signal?: AbortSignal;
+  /**
+   * Called once when the connection drops without `close()`: a stdio child exits, or an HTTP request fails
+   * with a closed connection, a network error, or a 404 session expiry. The bridge is closed by then
+   * (`isClosed` is true whether or not this is set).
+   */
+  readonly onConnectionLost?: (error: unknown) => void;
 }
 
 /** Protocol-era negotiation selector (see {@linkcode ConnectMcpToolsOptions.protocolVersion}). */
@@ -209,12 +220,13 @@ export interface ConnectMcpCapabilitiesOptions extends ConnectMcpToolsOptions {
   readonly sampling?: (request: PrismMcpSamplingRequest) => unknown | Promise<unknown>;
   /** Active capability: form/URL elicitation, fulfilled through SDK MRTR auto-fulfilment on the modern era and direct server-to-client dispatch on legacy. */
   readonly elicitation?: (request: PrismMcpElicitationRequest) => unknown | Promise<unknown>;
-  /**
-   * Maximum multi-round-trip (MRTR) fulfilment rounds per operation when a modern server answers `input_required`.
-   * Defaults to 10 (the SDK's own default); the hard cap is 10, so this option only ever tightens the bound.
-   */
+  /** Maximum multi-round-trip (MRTR) fulfilment rounds per operation when a modern server answers `input_required`. Default 10. */
   readonly maxMrtrRounds?: number;
   readonly maxCapabilityBytes?: number;
+  /** Pages one `resources/list` or `prompts/list` may take. Default 20. */
+  readonly maxCapabilityPages?: number;
+  /** Items one `resources/list` or `prompts/list` may return in all. Default 500. */
+  readonly maxCapabilityItems?: number;
 }
 
 export interface McpCapabilityBridge extends McpToolBridge {

@@ -19,29 +19,13 @@ export const DEFAULT_CHANNEL_LIMITS: ResolvedChannelLimits = {
   maxAttachmentBytes: 1024 * 1024,
 };
 
-export const HARD_CHANNEL_LIMITS: ResolvedChannelLimits = {
-  maxInputBytes: 64 * 1024,
-  maxResponseBytes: 128 * 1024,
-  maxPendingPerBinding: 32,
-  maxPendingPerProcess: 500,
-  maxActiveSessions: 16,
-  maxRoutes: 10_000,
-  maxSeenEventsPerConnection: 10_000,
-  stopDeadlineMs: 5 * 60_000,
-  retentionDays: 90,
-  maxJournalPage: 500,
-  maxJournalRecordBytes: 512 * 1024,
-  leaseTtlMs: 5 * 60_000,
-  approvalTtlMs: 5 * 60_000,
-  maxAttachmentBytes: 4 * 1024 * 1024,
-};
-
 export function resolveChannelLimits(input: ChannelLimits = {}): ResolvedChannelLimits {
   const out = {} as Record<keyof ResolvedChannelLimits, number>;
   for (const key of Object.keys(DEFAULT_CHANNEL_LIMITS) as (keyof ResolvedChannelLimits)[]) {
     const value = input[key] ?? DEFAULT_CHANNEL_LIMITS[key];
-    if (!Number.isFinite(value) || value < 1 || value > HARD_CHANNEL_LIMITS[key]) {
-      throw new TypeError(`Channel limit ${key} must be a positive number no greater than ${HARD_CHANNEL_LIMITS[key]}`);
+    // Host-set: the host's value is the cap (plan 239 Task 5).
+    if (!Number.isFinite(value) || value < 1) {
+      throw new TypeError(`Channel limit ${key} must be a positive number`);
     }
     out[key] = value;
   }

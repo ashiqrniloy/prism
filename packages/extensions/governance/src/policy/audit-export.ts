@@ -3,7 +3,11 @@ import { createHash, createPublicKey, verify as verifySignature } from "node:cry
 import { canonicalJson } from "./canonical.js";
 import { PolicyError } from "./errors.js";
 
-export const AUDIT_EXPORT_HARD_LIMITS = {
+/**
+ * Default batch bounds and the chain digest. The host sets `maxRecords` / `maxBytes` per `exportNext`, the
+ * SIEM retry queue on `createAuditExporter`, and the verifier's bounds on `verifyAuditBatch`; its value is the cap.
+ */
+export const AUDIT_EXPORT_LIMITS = {
   maxRecordsPerBatch: 1_000,
   maxBytesPerBatch: 10 * 1024 * 1024,
   maxPendingSiemBatches: 8,
@@ -11,7 +15,7 @@ export const AUDIT_EXPORT_HARD_LIMITS = {
   digestLength: 64,
 } as const;
 
-const GENESIS_DIGEST = "0".repeat(AUDIT_EXPORT_HARD_LIMITS.digestLength);
+const GENESIS_DIGEST = "0".repeat(AUDIT_EXPORT_LIMITS.digestLength);
 
 export class AuditExportError extends PolicyError {
   constructor(message: string, code = "ERR_PRISM_POLICY_AUDIT") {
@@ -147,6 +151,8 @@ export interface AuditExporterOptions {
   readonly siemSink?: AuditSiemSink;
   /** Applied before hashing; when absent records are exported unredacted. */
   readonly redact?: AuditRedactionPolicy;
+  /** Batches kept for a SIEM retry when the SIEM sink fails. Default 8. */
+  readonly maxPendingSiemBatches?: number;
 }
 
 export interface AuditExportBatchInput {
@@ -185,15 +191,15 @@ interface AuditRecordEnvelope {
 }
 
 function sha256(text: string): string {
-  return createHash(AUDIT_EXPORT_HARD_LIMITS.digestAlgorithm).update(text, "utf8").digest("hex");
+  return createHash(AUDIT_EXPORT_LIMITS.digestAlgorithm).update(text, "utf8").digest("hex");
 }
 
 function digestOfBytes(bytes: Uint8Array): string {
-  return createHash(AUDIT_EXPORT_HARD_LIMITS.digestAlgorithm).update(bytes).digest("hex");
+  return createHash(AUDIT_EXPORT_LIMITS.digestAlgorithm).update(bytes).digest("hex");
 }
 
 function assertDigest(value: string, label: string): void {
-  const length = AUDIT_EXPORT_HARD_LIMITS.digestLength;
+  const length = AUDIT_EXPORT_LIMITS.digestLength;
   if (!/^[0-9a-f]+$/.test(value) || value.length !== length) {
     throw new AuditExportError(`${label} must be a ${length}-character lowercase hex digest`, "ERR_PRISM_POLICY_AUDIT_STATE");
   }
@@ -230,7 +236,7 @@ function documentBytes(
       schemaVersion: 1,
       tenantId,
       batchId,
-      algorithm: AUDIT_EXPORT_HARD_LIMITS.digestAlgorithm,
+      algorithm: AUDIT_EXPORT_LIMITS.digestAlgorithm,
       firstSequence,
       lastSequence,
       previousDigest,
@@ -371,11 +377,8 @@ export function createAuditExporter(options: AuditExporterOptions): AuditExporte
   return {
     async exportNext(input) {
       input.signal?.throwIfAborted();
-      const maxRecords = Math.min(
-        input.maxRecords ?? AUDIT_EXPORT_HARD_LIMITS.maxRecordsPerBatch,
-        AUDIT_EXPORT_HARD_LIMITS.maxRecordsPerBatch,
-      );
-      const maxBytes = Math.min(input.maxBytes ?? AUDIT_EXPORT_HARD_LIMITS.maxBytesPerBatch, AUDIT_EXPORT_HARD_LIMITS.maxBytesPerBatch);
+      const maxRecords = input.maxRecords ?? AUDIT_EXPORT_LIMITS.maxRecordsPerBatch;
+      const maxBytes = input.maxBytes ?? AUDIT_EXPORT_LIMITS.maxBytesPerBatch;
       const loaded = await cursorStore.load(input.tenantId);
       const cursor: AuditCursor = loaded ?? {
         tenantId: input.tenantId,
@@ -446,7 +449,7 @@ export function createAuditExporter(options: AuditExporterOptions): AuditExporte
           // Durable WORM acknowledgement already obtained; record a replayable
           // pending status without duplicating chain entries on a later retry.
           const entry: AuditSiemPending = { batchId: built.batchId, digest, firstSequence, lastSequence };
-          siemPending = [entry, ...siemPending].slice(0, AUDIT_EXPORT_HARD_LIMITS.maxPendingSiemBatches);
+          siemPending = [entry, ...siemPending].slice(0, options.maxPendingSiemBatches ?? AUDIT_EXPORT_LIMITS.maxPendingSiemBatches);
           siemStatus = "pending";
         }
       }
@@ -528,6 +531,10 @@ export interface VerifyAuditBatchInput {
   readonly previousDigest?: string;
   readonly expectedFirstSequence?: number;
   readonly expectedLastSequence?: number;
+  /** Largest batch accepted, in records. Default 1,000; set it to the exporter's `maxRecords` when that is larger. */
+  readonly maxRecords?: number;
+  /** Largest batch document accepted, in bytes. Default 10 MiB. */
+  readonly maxBytes?: number;
 }
 
 export interface VerifyAuditBatchResult {
@@ -622,7 +629,11 @@ export function verifyAuditBatch(input: VerifyAuditBatchInput): VerifyAuditBatch
   } catch {
     return fail("document is not valid JSON");
   }
-  const bounds = AUDIT_EXPORT_HARD_LIMITS;
+  const bounds = {
+    digestAlgorithm: AUDIT_EXPORT_LIMITS.digestAlgorithm,
+    maxRecordsPerBatch: input.maxRecords ?? AUDIT_EXPORT_LIMITS.maxRecordsPerBatch,
+    maxBytesPerBatch: input.maxBytes ?? AUDIT_EXPORT_LIMITS.maxBytesPerBatch,
+  };
   if (document.schemaVersion !== 1) return fail(`unsupported schema version ${document.schemaVersion}`);
   if (document.algorithm !== bounds.digestAlgorithm) return fail(`unexpected digest algorithm ${document.algorithm}`);
   if (!Array.isArray(document.records) || document.records.length === 0) return fail("document has no records");

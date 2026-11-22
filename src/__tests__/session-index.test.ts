@@ -6,8 +6,6 @@ import {
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   DEFAULT_SESSION_SEARCH_LIMIT,
   HARD_MAX_SESSION_SEARCH_LIMIT,
-  HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
-  HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
   isSessionSearchUnsupported,
   resolveSessionSearchQuery,
@@ -193,17 +191,17 @@ describe("SessionSearchIndex contracts", () => {
     await oneByte.append(createSessionEntry({ id: "second", sessionId: "cap-session-0", kind: "label", label: "needle" }));
     assert.equal((await oneByte.searchSessions!({ label: "needle", limit: 10 })).items.length, 0);
 
-    // Out of bounds (below 1, non-integer, or above the hard cap) fails at construction, not at search time.
+    // Not a positive safe integer fails at construction, not at search time. The store is host-constructed,
+    // so a large value is the host raising its own ceiling (plan 239 Task 4).
     for (const search of [
       { maxLinearSessions: 0 },
-      { maxLinearSessions: HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS + 1 },
       { maxLinearSessions: 1.5 },
       { maxLinearEntries: Number.NaN },
       { maxLinearEntries: -1 },
-      { maxLinearBytes: HARD_MAX_SESSION_SEARCH_LINEAR_BYTES + 1 },
     ]) {
       assert.throws(() => createMemorySessionStore([], { search }), TypeError);
     }
+    assert.doesNotThrow(() => createMemorySessionStore([], { search: { maxLinearSessions: 100_000, maxLinearBytes: 1 << 30 } }));
   });
 
   it("memory unsupported mode throws typed error, not empty page", async () => {

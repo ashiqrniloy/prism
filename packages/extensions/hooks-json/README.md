@@ -38,7 +38,7 @@ const agent = await createAgent({
 });
 ```
 
-`allowCommands: "all"` runs every command and records a warning. `mcpClient`, `cwd`, and `onWarning` are factory arguments on `hooksJson({ ... })`, not config.
+`allowCommands: "all"` runs every command and records a warning. `additionalContextLimit` (default 2,500 estimated tokens, `0` unlimited) caps injected context per handler; `maxOutputChars` (default 1,048,576) caps the characters of a command hook's stdout and stderr kept. A handler's `timeout` (seconds, default 600) bounds one run. `mcpClient`, `cwd`, and `onWarning` are factory arguments on `hooksJson({ ... })`, not config.
 
 ## Security
 

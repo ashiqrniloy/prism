@@ -33,7 +33,7 @@ import type {
   TurnBudgets,
   Usage,
 } from "./contracts-core.js";
-import type { AgentRunInterruption, PendingDecision } from "./contracts-run-state.js";
+import type { AgentRunInterruption, PendingDecision, ResumeNestedRun } from "./contracts-run-state.js";
 import type { BudgetExhaustionAttribution } from "./run-limits.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { ToolValidator } from "./tools.js";
@@ -109,7 +109,26 @@ export interface RunOptions {
    * Empty → no tools this run. Unknown names fail closed. Cannot widen the agent registry or a
    * checkpointed grant; resume intersects this list with current authority.
    */
-  readonly tools?: { readonly only?: readonly string[] };
+  readonly tools?: {
+    readonly only?: readonly string[];
+    /** Narrows `AgentConfig.tools.concurrency` for this run (integer 1–16); it cannot raise it. */
+    readonly concurrency?: number;
+  };
+  /**
+   * Narrows this run's skills to a subset of the agent's (after `requiresTools` filtering against the run's tools).
+   * `false` means no skills; `{ only }` names the skills to keep, and an unknown name fails the run closed before
+   * any event. Omitted → every agent skill.
+   */
+  readonly skills?: false | { readonly only: readonly string[] };
+  /**
+   * Also charges every usage this run records to the active run of another session: its limits (a breach there
+   * aborts this run), its run usage, and one ledger row of scope `child_run`. The target must be a view of an
+   * ancestor of this session on the same agent (by `SessionOptions.parent` links), such as the `context.session`
+   * a package tool received; anything else fails the run closed before any event. The ancestor's own `chargeTo`
+   * applies in turn, so a tree is charged up to its root. When the ancestor has no active run (an async child
+   * outliving its parent's run), no `child_run` ledger row is written while its session limits (if any) are still charged.
+   */
+  readonly chargeTo?: import("./session-context.js").SessionContext;
   /** Opt-in: tools hidden by `RunOptions.tools` stay callable by name (default off). Overrides agent config. */
   readonly allowHiddenToolCalls?: true;
   readonly inputLayout?: InputAssemblyLayout;
@@ -221,6 +240,8 @@ export type AgentEventPayload =
       readonly runId: string;
       /** A durable resume of a suspended run, rather than a fresh run. */
       readonly resumed?: boolean;
+      /** A `session.continue()` run: no new input, picking up a branch that stopped partway. */
+      readonly continued?: boolean;
       /** Plan 094 Task 3: audit of the external-state restore hooks that ran before this claim. */
       readonly restore?: CheckpointRestoreAudit;
     }
@@ -235,6 +256,10 @@ export type AgentEventPayload =
       readonly stopReason?: AgentFinishReason;
       /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). Present only with `stopReason: "hook_stop"`. */
       readonly stopDetail?: string;
+      /** Same as `RunResult.output`: the validated structured-output value. */
+      readonly output?: unknown;
+      /** Same as `RunResult.outputError`: paths and expected shapes, never reply content. */
+      readonly outputError?: import("./contracts-run-state.js").RunOutputError;
     }
   | {
       /**
@@ -540,6 +565,17 @@ export interface ToolDefinition {
   readonly kind?: ToolKind;
   readonly description?: string;
   readonly parameters?: JsonObject;
+  /**
+   * `false` skips the kernel's built-in check of arguments against `parameters`, for a tool that
+   * repairs its own arguments (a JSON-string `edits`, a legacy field) before using them. Default: checked.
+   */
+  readonly validateArguments?: boolean;
+  /**
+   * Bound on one call's `execute`, in ms (positive safe integer). On expiry the call settles with
+   * `error.code: "tool_timeout"` and `context.signal` is aborted; the tool's promise is detached, so a
+   * tool that ignores its signal keeps running unobserved. `limits.maxToolTimeMs` clamps it. Default: none.
+   */
+  readonly timeoutMs?: number;
   /** Force any provider turn containing this tool to dispatch sequentially. */
   readonly exclusive?: boolean;
   /** Optional side-effect declaration. Omitted tools retain legacy unmanaged dispatch. */
@@ -552,6 +588,14 @@ export interface ToolDefinition {
   /** Optional elicitation contract for durable gating; return undefined to fall back to plain tool approval. */
   readonly elicitation?: (args: JsonObject, context: ToolExecutionContext) => ToolElicitationRequest | undefined;
   execute(args: JsonObject, context: ToolExecutionContext): Promise<ToolResult> | ToolResult;
+  /**
+   * Plan 232 Task 3: resume a child run this tool started. `execute` throws
+   * `AgentDelegationSuspendedError` when the child suspends; the parent run then suspends with the
+   * child's decisions (attributed to this call), and `session.resume` on the parent calls this with
+   * the decisions for that child, keyed by the child's own approval ids. Returning `suspended` suspends
+   * the parent again. A tool that throws the error without this member fails closed.
+   */
+  readonly resumeNested?: ResumeNestedRun;
 }
 
 export interface ToolRegistry {
@@ -575,6 +619,11 @@ export interface ToolExecutionContext {
   readonly idempotencyKey?: string;
   /** The session as the executing tool's owner sees it (`when` predicates and package tools). */
   readonly session?: import("./session-context.js").SessionContext;
+  /**
+   * The calling run's `RunOptions.interactive` (default `true`). A tool that runs a child session passes it on, so a
+   * headless parent gets a child whose asks suspend instead of prompting the host.
+   */
+  readonly interactive?: boolean;
   progress?(progress?: unknown, metadata?: Readonly<Record<string, unknown>>): void | Promise<void>;
 }
 
@@ -785,8 +834,13 @@ export interface ToolCallRecord extends OwnershipScope {
  * `package_call` is the final usage of a model call a package made inside a run (`models.client` with a `session`).
  * It is separate from `provider_turn` so a host that sums only run turns is unchanged; add it to a sum that should
  * count side calls.
+ *
+ * `child_run` is usage a child session's run recorded and mirrored onto this session's active run
+ * (`RunOptions.chargeTo`). The child's own `provider_turn` and `package_call` rows already hold it, so a total that
+ * sums rows across sessions must exclude `child_run`; a per-session total that should include the session's children
+ * adds it.
  */
-export type UsageScope = "provider_turn" | "run_total" | "package_call";
+export type UsageScope = "provider_turn" | "run_total" | "package_call" | "child_run";
 
 /** Stored usage row. `scope` prevents provider-turn and aggregate totals from being summed together. */
 export interface UsageRecord extends OwnershipScope {

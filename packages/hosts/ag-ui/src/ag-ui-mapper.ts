@@ -54,6 +54,8 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
   let activeMessage: string | undefined;
   let activeReasoning: string | undefined;
   let messageHasDelta = false;
+  /** Messages a failed attempt left open, named by the next `prism.retry` so a client can drop them. */
+  let discarded: string[] = [];
   let messageSequence = 0;
   let reasoningSequence = 0;
   let terminal = false;
@@ -347,6 +349,21 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           const stepName = `turn:${event.turn}`;
           activeSteps.add(stepName);
           emit(events, { type: EventType.STEP_STARTED, stepName });
+          if (event.retry) {
+            // AG-UI cannot retract: the failed attempt's messages are already ended, and this names them.
+            await custom(events, "prism.retry", {
+              turn: event.turn,
+              attempt: event.attempt ?? event.metadata.attempt ?? 2,
+              delayMs: event.retry.delayMs,
+              error: {
+                message: text(event.retry.error.message, limits.maxErrorBytes),
+                ...(event.retry.error.code === undefined ? {} : { code: text(String(event.retry.error.code), limits.maxErrorBytes) }),
+                ...(event.retry.error.failureClass === undefined ? {} : { failureClass: event.retry.error.failureClass }),
+              },
+              discardMessageIds: discarded,
+            });
+          }
+          discarded = [];
           break;
         }
         case "message.delta":
@@ -428,7 +445,16 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           // The turn step closes on its own completion; the attempt's usage and error ride here too.
           if (activeSteps.delete(`turn:${event.turn}`)) emit(events, { type: EventType.STEP_FINISHED, stepName: `turn:${event.turn}` });
           if (event.usage) await custom(events, "prism.usage", usage(event.usage));
-          if (event.error) error(events, event.error);
+          // A failed attempt is not the run's end: the run may retry it (plan 227 Task 4), and a final
+          // failure arrives as `run.failed`. End what the attempt opened; `prism.retry` names it.
+          if (event.error) {
+            if (activeReasoning) discarded.push(activeReasoning);
+            if (activeMessage) discarded.push(activeMessage);
+            closeReasoning(events);
+            if (activeMessage) emit(events, { type: EventType.TEXT_MESSAGE_END, messageId: activeMessage });
+            activeMessage = undefined;
+            messageHasDelta = false;
+          }
           break;
         case "compaction.started":
           await custom(events, "prism.compaction", { status: "started" });

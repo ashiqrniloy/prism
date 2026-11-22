@@ -51,7 +51,7 @@ const answer = await session.run("How does approval protect tool execution?");
 
 | Key | Meaning |
 | --- | --- |
-| `sources` | `{ path, glob? }` local files or `{ url }` HTTP(S) pages. |
+| `sources` | `{ path, glob?, maxFiles? }` local files or `{ url }` HTTP(S) pages. `maxFiles` (default 4,096) bounds one directory walk; reaching it fails the source. |
 | `embeddings` | `{ model, dimensions?, batchSize? }` builds an `Embedder` over the model's kernel embeddings adapter, or `{ service }` consumes another package's `Embedder`. |
 | `store` | `"memory"` (default) or `{ postgres: { connection, schema?, table? } }`. `connection` is a ref. |
 | `context` | Register the `context.build` block. Default `false`. |
@@ -78,8 +78,11 @@ const answer = await session.run("How does approval protect tool execution?");
 - **Untrusted content.** Retrieved text is stamped `untrusted`, `inert`, and `injectionCapable`; a
   URL source is fetched only through the `web.fetch` service, and a URL source with no service is
   skipped with a note.
-- **Bounded.** File walks cap at `HARD_MAX_SOURCE_FILES`; documents, chunks, results, and rerank
-  bodies are bounded by the shared `HARD_*` caps; ACL constraints are enforced on retrieval results.
+- **Bounded.** A local source's file walk stops at `sources[].maxFiles` (default 4,096,
+  `DEFAULT_MAX_SOURCE_FILES`); a `rag_search` query is bounded by `maxQueryChars` (default 16,384);
+  documents, chunks, results, and rerank bodies are bounded by the `DEFAULT_*` limits, and the host's
+  value is the cap ([docs/limits.md](../../../docs/limits.md)); ACL constraints are enforced on
+  retrieval results.
 - **Fail closed.** An unknown reranker kind, an unresolvable ref, or a model without
   `capabilities.embeddings` writes a `warn` status note and registers nothing rather than running
   half-configured.

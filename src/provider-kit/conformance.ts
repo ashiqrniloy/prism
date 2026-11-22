@@ -755,6 +755,8 @@ export async function providerConformance(
     const sampleReq = requestFromWire(exchanges[0]?.requestBody, modelsList, provider.id, exchanges[0]?.path);
     await assertAbortIsObserved({ provider: makeProvider(), request: sampleReq });
 
+    if (scenarioResults.length === 0) await assertStalledStreamTimesOut(factory, sampleReq, "text/event-stream");
+
     scenarioResults.push({
       name: scenarioName,
       ok: true,
@@ -766,6 +768,58 @@ export async function providerConformance(
     ok: true,
     scenarios: scenarioResults,
   };
+}
+
+/**
+ * A provider whose transport stalls must fail the request with `code: "ETIMEDOUT"` and
+ * `failureClass: "transient"` under the request's `timeouts`: once with no response headers (connect),
+ * once with headers and a body that never sends a byte (idle). Proves the provider's turn fetch goes
+ * through `fetchWithStreamTimeouts` and keeps `request.options.timeouts`.
+ */
+async function assertStalledStreamTimesOut(
+  factory: (fetchImpl?: typeof fetch, options?: { fetch?: typeof fetch }) => ModelProvider,
+  request: ProviderRequest,
+  contentType: string,
+): Promise<void> {
+  const stalls: Record<"connect" | "idle", typeof fetch> = {
+    connect: ((_input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+      })) as unknown as typeof fetch,
+    idle: (async () =>
+      new Response(new ReadableStream<Uint8Array>({ pull: () => new Promise<void>(() => {}) }), {
+        status: 200,
+        headers: { "content-type": contentType },
+      })) as unknown as typeof fetch,
+  };
+  for (const kind of ["connect", "idle"] as const) {
+    const stall = stalls[kind];
+    const timeouts = kind === "connect" ? { connectMs: 30, idleMs: null } : { connectMs: null, idleMs: 30 };
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = stall;
+    let guard: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const provider = factory(stall, { fetch: stall });
+      const events = await Promise.race([
+        collectProviderEvents(provider, {
+          ...request,
+          options: { sessionId: "conformance-session", ...request.options, timeouts },
+        }),
+        new Promise<never>((_resolve, reject) => {
+          guard = setTimeout(() => reject(new Error(`providerConformance: a stalled ${kind} did not time out within 5 s`)), 5_000);
+        }),
+      ]);
+      const terminal = events.at(-1);
+      if (terminal?.type !== "error" || terminal.error.code !== "ETIMEDOUT" || terminal.error.failureClass !== "transient") {
+        throw new Error(
+          `providerConformance: a stalled ${kind} must end with an ETIMEDOUT transient error; got ${JSON.stringify(terminal)}`,
+        );
+      }
+    } finally {
+      clearTimeout(guard);
+      globalThis.fetch = originalFetch;
+    }
+  }
 }
 
 export function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage {
@@ -1419,6 +1473,14 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
       }
     }
   }
+
+  // Stalled transport: connect and idle timeouts fail the decision call as transient ETIMEDOUT.
+  await assertStalledStreamTimesOut(
+    (fetchImpl) => options.factory(fetchImpl, { apiKey: async () => "conformance-stall-key", fetch: fetchImpl }),
+    baseRequest,
+    "application/json",
+  );
+  scenarios.push({ name: "stalled-stream", ok: true });
 
   return { ok: true, scenarios };
 }

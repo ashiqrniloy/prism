@@ -1,61 +1,62 @@
 import { WorkflowDefinitionError } from "./errors.js";
 import type { WorkflowLimits } from "./types.js";
 
-/** Workflow defaults and hard caps. */
+/**
+ * Workflow defaults. Every value is the host's to set (plan 239 Task 5): a workflow definition, a run option or an
+ * adapter option carries it, and the host's value is the cap. There is no hidden ceiling above it.
+ */
 
 export const DEFAULT_MAX_NODES = 1000;
-export const HARD_MAX_NODES = 10_000;
 export const DEFAULT_MAX_FAN_OUT = 64;
-export const HARD_MAX_FAN_OUT = 1_024;
-export const HARD_MAX_LOOP_ITERATIONS = 64;
+/** A gate node's `maxIterations` when it sets none. A loop node must set its own. */
+export const DEFAULT_MAX_GATE_ITERATIONS = 64;
 export const WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION = 1 as const;
 export const DEFAULT_MAX_CONCURRENCY = 8;
-export const HARD_MAX_CONCURRENCY = 256;
 export const DEFAULT_MAX_NODE_OUTPUT_BYTES = 4 * 1024 * 1024;
-export const HARD_MAX_NODE_OUTPUT_BYTES = 16 * 1024 * 1024;
 export const DEFAULT_MAX_CHECKPOINT_BYTES = 1 * 1024 * 1024;
-export const HARD_MAX_CHECKPOINT_BYTES = 8 * 1024 * 1024;
-export const HARD_MAX_NODE_RETRIES = 100;
-export const HARD_MAX_NODE_TIMEOUT_MS = 86_400_000;
 export const DEFAULT_EVENT_BUFFER = 2048;
 export const DEFAULT_LIST_PAGE_SIZE = 100;
-export const HARD_LIST_PAGE_CAP = 500;
+/** Largest `list({ limit })` page a checkpoint adapter returns; `createWorkflowCheckpointAdapter({ maxListLimit })`. */
+export const DEFAULT_MAX_LIST_LIMIT = 500;
 export const DEFAULT_MAX_NESTED_DEPTH = 8;
-export const HARD_MAX_NESTED_DEPTH = 32;
 export const DEFAULT_MAX_STATE_BYTES = 64 * 1024;
-export const HARD_MAX_STATE_BYTES = 512 * 1024;
 export const DEFAULT_MAX_STATE_HISTORY = 32;
-export const HARD_MAX_STATE_HISTORY = 128;
 export const DEFAULT_MAX_REPLAY_DEPTH = 8;
-export const HARD_MAX_REPLAY_DEPTH = 32;
-export const HARD_MAX_SUPERSTEPS = 256;
+/** Retry wait per attempt of a failed node; `node.retryBackoff.stepMs`. */
+export const DEFAULT_RETRY_BACKOFF_STEP_MS = 25;
+/** Longest retry wait of a failed node; `node.retryBackoff.maxMs`. */
+export const DEFAULT_MAX_RETRY_BACKOFF_MS = 1000;
 
 export const WORKFLOW_CHECKPOINT_SCHEMA_VERSION = 2 as const;
 
-const LIMIT_CAPS: Readonly<Record<keyof WorkflowLimits, number>> = {
-  maxNodes: HARD_MAX_NODES,
-  maxFanOut: HARD_MAX_FAN_OUT,
-  maxConcurrency: HARD_MAX_CONCURRENCY,
-  maxSupersteps: HARD_MAX_SUPERSTEPS,
-  maxNodeOutputBytes: HARD_MAX_NODE_OUTPUT_BYTES,
-  maxCheckpointBytes: HARD_MAX_CHECKPOINT_BYTES,
-  maxNestedDepth: HARD_MAX_NESTED_DEPTH,
-  maxStateBytes: HARD_MAX_STATE_BYTES,
-  maxStateHistory: HARD_MAX_STATE_HISTORY,
-  maxReplayDepth: HARD_MAX_REPLAY_DEPTH,
-};
+const LIMIT_NAMES: readonly (keyof WorkflowLimits)[] = [
+  "maxNodes",
+  "maxFanOut",
+  "maxConcurrency",
+  "maxSupersteps",
+  "maxNodeOutputBytes",
+  "maxCheckpointBytes",
+  "maxNestedDepth",
+  "maxStateBytes",
+  "maxStateHistory",
+  "maxReplayDepth",
+  "maxIterationRecords",
+];
 
-export function validateWorkflowLimit(name: string, value: number, hardCap: number): number {
-  if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {
-    throw new WorkflowDefinitionError(`${name} must be a positive safe integer at most ${hardCap}`);
+/** A configured workflow limit: a positive safe integer. The host's value is the cap. */
+export function validateWorkflowLimit(name: string, value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new WorkflowDefinitionError(`${name} must be a positive safe integer`);
   }
   return value;
 }
 
 export function validateWorkflowLimits(limits?: WorkflowLimits): void {
   if (!limits) return;
-  for (const [name, hardCap] of Object.entries(LIMIT_CAPS) as [keyof WorkflowLimits, number][]) {
+  for (const name of LIMIT_NAMES) {
     const value = limits[name];
-    if (value !== undefined) validateWorkflowLimit(name, value, hardCap);
+    // `maxSupersteps: null` is the host's explicit choice to leave a cyclic workflow unbounded.
+    if (value === null && name === "maxSupersteps") continue;
+    if (value !== undefined) validateWorkflowLimit(name, value as number);
   }
 }

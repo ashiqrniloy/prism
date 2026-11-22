@@ -109,7 +109,11 @@ test("former_names_are_retired_once_bundled and deleted_baseline_name_stays_reti
   const generated = generate({ root });
   for (const bundle of active) {
     for (const row of bundle.subpaths.filter(
-      (row, index) => row.formerName !== bundle.name && bundle.subpaths.findIndex((entry) => entry.formerName === row.formerName) === index,
+      // A new subpath (no `formerName`) retired nothing.
+      (row, index) =>
+        row.formerName !== undefined &&
+        row.formerName !== bundle.name &&
+        bundle.subpaths.findIndex((entry) => entry.formerName === row.formerName) === index,
     )) {
       assert.ok(generated.packages.includes(row.formerName));
       assert.equal(generated.successors[row.formerName], bundle.name + (row.path === "." ? "" : row.path.slice(1)));

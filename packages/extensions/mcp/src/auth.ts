@@ -84,21 +84,13 @@ const DEFAULT_MCP_OAUTH_LIMITS: ResolvedMcpOAuthLimits = Object.freeze({
   handshakeTimeoutMs: 60_000,
 });
 
-const HARD_MCP_OAUTH_LIMITS: ResolvedMcpOAuthLimits = Object.freeze({
-  discoveryBytes: 256 * 1024,
-  discoveryCacheEntries: 64,
-  discoveryCacheTtlMs: 3_600_000,
-  tokenRecordBytes: 64 * 1024,
-  stateBytes: 16 * 1024,
-  handshakeTimeoutMs: 300_000,
-});
-
 export function resolveMcpOAuthLimits(input: McpOAuthLimitsInput = {}): ResolvedMcpOAuthLimits {
   const out = {} as ResolvedMcpOAuthLimits;
   for (const key of Object.keys(DEFAULT_MCP_OAUTH_LIMITS) as (keyof ResolvedMcpOAuthLimits)[]) {
     const value = input[key] ?? DEFAULT_MCP_OAUTH_LIMITS[key];
-    if (!Number.isSafeInteger(value) || value < 1 || value > HARD_MCP_OAUTH_LIMITS[key]) {
-      throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_STATE", `${key} must be a positive safe integer <= ${HARD_MCP_OAUTH_LIMITS[key]}`);
+    // Host-set: the host's value is the cap (plan 239 Task 5).
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw new McpOAuthError("ERR_PRISM_MCP_OAUTH_STATE", `${key} must be a positive safe integer`);
     }
     out[key] = value;
   }

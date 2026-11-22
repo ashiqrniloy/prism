@@ -13,6 +13,8 @@ import type {
 import { ownershipScopeMatches } from "./ownership.js";
 import { deepFreeze } from "./util.js";
 
+const DEFAULT_QUERY_LIMIT = 100;
+
 export const HARD_EVALUATION_RECORD_BYTES = 1024 * 1024;
 export const HARD_EXPERIMENT_REPORT_BYTES = 1024 * 1024;
 
@@ -214,7 +216,7 @@ export function prepareExperimentReportRecord(
 }
 
 function page<T extends { id: string; createdAt: string }>(records: readonly T[], query: PersistenceQuery): PersistencePage<T> {
-  const limit = query.limit ?? 100;
+  const limit = query.limit ?? DEFAULT_QUERY_LIMIT;
   check(Number.isSafeInteger(limit) && limit >= 1 && limit <= 1000, "Page limit must be in [1, 1000]");
   check(query.order === undefined || query.order === "asc" || query.order === "desc", "Invalid order");
   const direction = query.order === "desc" ? -1 : 1;

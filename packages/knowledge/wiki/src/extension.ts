@@ -11,14 +11,16 @@ import { createCurator, reportJson } from "./consolidate/curator.js";
 import type { WikiPassReport } from "./consolidate/pass.js";
 import { WIKI_TRIGGERS, type WikiTrigger } from "./consolidate/triggers.js";
 import { createWikiPointer, WIKI_CONTEXT_HOOK_ID } from "./context.js";
-import { MAX_BIND_THRESHOLD } from "./ontology/bind.js";
 import { type LtmPort, MEMORY_LTM_SERVICE } from "./ontology/ltm.js";
 import { createWikiOntology } from "./ontology/port.js";
-import { DEFAULT_MAX_CLAIMS_RENDERED, MAX_CLAIMS_RENDERED_LIMIT, resolveMaxClaimsRendered } from "./ontology/render.js";
+import { DEFAULT_MAX_CLAIMS_RENDERED, resolveMaxClaimsRendered } from "./ontology/render.js";
 import { createMarkdownWikiStore, createMemoryWikiStore } from "./store.js";
 import { createWikiIngestTool } from "./tools/ingest.js";
-import { createWikiReadTool, createWikiSearchTool } from "./tools/knowledge.js";
+import { createWikiReadTool, createWikiSearchTool, DEFAULT_MAX_WIKI_READ_IDS, DEFAULT_MAX_WIKI_SEARCH_HITS } from "./tools/knowledge.js";
 import type { WikiExtensionOptions, WikiIngestFetch, WikiIngestUrlHookInput } from "./types.js";
+
+const DEFAULT_MAX_SUBJECTS_PER_PASS = 8;
+const DEFAULT_MAX_CLAIMS_PER_CONCEPT = 40;
 
 /** The `web.fetch` service the wiki consumes for `url` ingest. The wiki never fetches on its own. */
 const WEB_FETCH_SERVICE = "web.fetch";
@@ -45,7 +47,7 @@ export interface WikiConsolidateConfig {
   readonly workerLimits?: MemoryWorkerLimitOptions;
 }
 
-/** Source-ingest caps. Both can only be lowered: the defaults are the hard caps. */
+/** Source-ingest caps. Defaults 32 MiB input, 2 MiB extract; the host's value is the cap. */
 export interface WikiIngestConfig {
   readonly maxInputBytes?: number;
   readonly maxExtractBytes?: number;
@@ -53,8 +55,12 @@ export interface WikiIngestConfig {
 
 /** `wiki.search` tuning. */
 export interface WikiSearchConfig {
-  /** Claims one concept hit shows, chosen by term overlap with the query. Default 8, in [1,32]. */
+  /** Claims one concept hit shows, chosen by term overlap with the query. Default 8. */
   readonly maxClaimsRendered?: number;
+  /** Ceiling on the model's `wiki.search` `limit`. Default 8. */
+  readonly maxSearchHits?: number;
+  /** Ceiling on the ids one `wiki.read` takes. Default 8. */
+  readonly maxReadIds?: number;
 }
 
 /** JSON config for `@arnilo/prism-knowledge/wiki`; `setup` applies the defaults below. */
@@ -66,7 +72,7 @@ export interface WikiConfig {
   readonly consolidate?: WikiConsolidateConfig;
   readonly ingest?: WikiIngestConfig;
   readonly search?: WikiSearchConfig;
-  /** Matched tokens of one subject name that bind evidence to that subject. Default 2, in [1,8]. */
+  /** Matched tokens of one subject name that bind evidence to that subject. Default 2. */
   readonly bindThreshold?: number;
   /** Add the passive concept pointer to `context.build`. Default true. */
   readonly pointer?: boolean;
@@ -92,12 +98,10 @@ interface ResolvedWikiConfig {
   readonly root: string;
   readonly store: "markdown" | "memory";
   readonly maxClaimsRendered: number;
+  readonly toolCeilings: { readonly maxSearchHits?: number; readonly maxReadIds?: number };
   readonly bindThreshold?: number;
   readonly pointer: boolean;
 }
-
-const WIKI_MAX_INPUT_BYTES = 32 * 1024 * 1024;
-const WIKI_MAX_EXTRACT_BYTES = 2 * 1024 * 1024;
 
 function resolveWikiConfig(config: WikiConfig | undefined, workspaceRoot: string): ResolvedWikiConfig {
   const consolidate = config?.consolidate;
@@ -108,8 +112,8 @@ function resolveWikiConfig(config: WikiConfig | undefined, workspaceRoot: string
       minCoReads: consolidate?.minCoReads ?? 2,
       ...(consolidate?.triggers === undefined ? {} : { triggers: consolidate.triggers }),
       minIntervalTurns: consolidate?.minIntervalTurns ?? 5,
-      maxSubjectsPerPass: consolidate?.maxSubjectsPerPass ?? 8,
-      maxClaimsPerConcept: consolidate?.maxClaimsPerConcept ?? 40,
+      maxSubjectsPerPass: consolidate?.maxSubjectsPerPass ?? DEFAULT_MAX_SUBJECTS_PER_PASS,
+      maxClaimsPerConcept: consolidate?.maxClaimsPerConcept ?? DEFAULT_MAX_CLAIMS_PER_CONCEPT,
       ...(consolidate?.maxOutputTokens === undefined ? {} : { maxOutputTokens: consolidate.maxOutputTokens }),
       ...(consolidate?.workerLimits === undefined ? {} : { workerLimits: consolidate.workerLimits }),
     },
@@ -118,6 +122,10 @@ function resolveWikiConfig(config: WikiConfig | undefined, workspaceRoot: string
     root: resolve(config?.root ?? join(config?.workspaceRoot ?? workspaceRoot, ".prism", "wiki")),
     store: config?.store ?? "markdown",
     maxClaimsRendered: resolveMaxClaimsRendered(config?.search?.maxClaimsRendered),
+    toolCeilings: {
+      ...(config?.search?.maxSearchHits === undefined ? {} : { maxSearchHits: config.search.maxSearchHits }),
+      ...(config?.search?.maxReadIds === undefined ? {} : { maxReadIds: config.search.maxReadIds }),
+    },
     ...(config?.bindThreshold === undefined ? {} : { bindThreshold: config.bindThreshold }),
     pointer: config?.pointer ?? true,
   };
@@ -171,23 +179,25 @@ export const definition = definePackage<WikiConfig>({
         type: "object",
         additionalProperties: false,
         properties: {
-          maxClaimsRendered: { type: "integer", minimum: 1, maximum: MAX_CLAIMS_RENDERED_LIMIT, default: DEFAULT_MAX_CLAIMS_RENDERED },
+          maxClaimsRendered: { type: "integer", minimum: 1, default: DEFAULT_MAX_CLAIMS_RENDERED },
+          maxSearchHits: { type: "integer", minimum: 1, default: DEFAULT_MAX_WIKI_SEARCH_HITS },
+          maxReadIds: { type: "integer", minimum: 1, default: DEFAULT_MAX_WIKI_READ_IDS },
         },
       },
-      bindThreshold: { type: "integer", minimum: 1, maximum: MAX_BIND_THRESHOLD },
+      bindThreshold: { type: "integer", minimum: 1 },
       pointer: { type: "boolean", default: true },
       consolidate: {
         type: "object",
         additionalProperties: false,
         properties: {
           model: { type: "string", minLength: 1 },
-          minNotes: { type: "integer", minimum: 1, maximum: 100, default: 5 },
-          minCoReads: { type: "integer", minimum: 1, maximum: 20, default: 2 },
+          minNotes: { type: "integer", minimum: 1, default: 5 },
+          minCoReads: { type: "integer", minimum: 1, default: 2 },
           triggers: { type: "array", items: { type: "string", enum: [...WIKI_TRIGGERS] }, maxItems: WIKI_TRIGGERS.length },
-          minIntervalTurns: { type: "integer", minimum: 1, maximum: 1000, default: 5 },
-          maxSubjectsPerPass: { type: "integer", minimum: 1, maximum: 32, default: 8 },
-          maxClaimsPerConcept: { type: "integer", minimum: 1, maximum: 200, default: 40 },
-          maxOutputTokens: { type: "integer", minimum: 256, maximum: 16384 },
+          minIntervalTurns: { type: "integer", minimum: 1, default: 5 },
+          maxSubjectsPerPass: { type: "integer", minimum: 1, default: DEFAULT_MAX_SUBJECTS_PER_PASS },
+          maxClaimsPerConcept: { type: "integer", minimum: 1, default: DEFAULT_MAX_CLAIMS_PER_CONCEPT },
+          maxOutputTokens: { type: "integer", minimum: 256 },
           workerLimits: {
             type: "object",
             additionalProperties: false,
@@ -210,8 +220,8 @@ export const definition = definePackage<WikiConfig>({
         type: "object",
         additionalProperties: false,
         properties: {
-          maxInputBytes: { type: "integer", minimum: 1, maximum: WIKI_MAX_INPUT_BYTES },
-          maxExtractBytes: { type: "integer", minimum: 1, maximum: WIKI_MAX_EXTRACT_BYTES },
+          maxInputBytes: { type: "integer", minimum: 1 },
+          maxExtractBytes: { type: "integer", minimum: 1 },
         },
       },
       workspaceRoot: { type: "string" },
@@ -258,8 +268,9 @@ export const definition = definePackage<WikiConfig>({
       },
     });
     prism.tools.register(createWikiIngestTool(bound));
-    prism.tools.register(createWikiSearchTool({ port, maxClaimsRendered: config.maxClaimsRendered }));
-    prism.tools.register(createWikiReadTool({ port, maxClaimsRendered: config.maxClaimsRendered }));
+    const toolOptions = { port, maxClaimsRendered: config.maxClaimsRendered, ...config.toolCeilings };
+    prism.tools.register(createWikiSearchTool(toolOptions));
+    prism.tools.register(createWikiReadTool(toolOptions));
     prism.commands.register(
       createWikiStatusCommand(port, (session) => {
         const live = curator.last();

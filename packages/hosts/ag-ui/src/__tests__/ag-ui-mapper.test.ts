@@ -118,6 +118,75 @@ describe("@arnilo/prism-hosts/ag-ui", () => {
     assert.deepEqual(await failed.map({ type: "future" } as unknown as AgentEvent), []);
   });
 
+  it("ag_ui_mapper_discards_failed_attempt_text", async () => {
+    // Plan 227 Task 4: a failed attempt ends its message and is not the run's end; the retry names
+    // the message to drop, and the retried attempt's text opens a new one.
+    const mapper = createAgUiEventMapper({ includeCustomEvents: true });
+    const metadata = { providerId: "mock", model: { provider: "mock", model: "demo" } };
+    const base = { sessionId: "s1", runId: "r1" } as const;
+    const events = [
+      ...(await mapper.map({ type: "run.started", ...base })),
+      ...(await mapper.map({ type: "turn.started", ...base, turn: 1, metadata: { ...metadata, attempt: 1 } })),
+      ...(await mapper.map({ type: "message.delta", ...base, content: { type: "text", text: "partial" } })),
+      ...(await mapper.map({
+        type: "turn.completed",
+        ...base,
+        turn: 1,
+        metadata,
+        error: { message: "socket reset", code: "ECONNRESET", failureClass: "transient" },
+      })),
+      ...(await mapper.map({
+        type: "turn.started",
+        ...base,
+        turn: 1,
+        attempt: 2,
+        metadata: { ...metadata, attempt: 2 },
+        retry: { delayMs: 0, error: { message: "socket reset", code: "ECONNRESET", failureClass: "transient" } },
+      })),
+      ...(await mapper.map({ type: "message.delta", ...base, content: { type: "text", text: "ok" } })),
+      ...(await mapper.map({ type: "message.completed", ...base, message: { id: "m1", role: "assistant", content: [] } })),
+      ...(await mapper.map({ type: "turn.completed", ...base, turn: 1, metadata })),
+      ...(await mapper.map({ type: "run.completed", ...base, status: "completed" })),
+    ];
+    for (const mapped of events) assert.equal(EventSchemas.safeParse(mapped).success, true);
+    assert.equal(
+      events.some((event) => event.type === EventType.RUN_ERROR),
+      false,
+      "a retried attempt is not a run error",
+    );
+    assert.equal(events.at(-1)?.type, EventType.RUN_FINISHED);
+    const starts = events.filter((event) => event.type === EventType.TEXT_MESSAGE_START) as { messageId: string }[];
+    assert.equal(starts.length, 2);
+    const ends = events.filter((event) => event.type === EventType.TEXT_MESSAGE_END) as { messageId: string }[];
+    assert.deepEqual(
+      ends.map((event) => event.messageId),
+      starts.map((event) => event.messageId),
+    );
+    const retry = events.find((event) => event.type === EventType.CUSTOM && (event as { name: string }).name === "prism.retry") as
+      | { value: { attempt: number; discardMessageIds: string[] } }
+      | undefined;
+    assert.ok(retry);
+    assert.equal(retry.value.attempt, 2);
+    assert.deepEqual(retry.value.discardMessageIds, [starts[0]?.messageId]);
+    const content = events.filter((event) => event.type === EventType.TEXT_MESSAGE_CONTENT) as { messageId: string; delta: string }[];
+    assert.deepEqual(
+      content.map((event) => [event.messageId === starts[1]?.messageId, event.delta]),
+      [
+        [false, "partial"],
+        [true, "ok"],
+      ],
+    );
+
+    // A final failure still ends the run with one RUN_ERROR, from `run.failed`.
+    const failed = createAgUiEventMapper();
+    await failed.map({ type: "run.started", ...base });
+    const settled = [
+      ...(await failed.map({ type: "turn.completed", ...base, turn: 1, metadata, error: { message: "bad", code: 400 } })),
+      ...(await failed.map({ type: "run.failed", ...base, error: { message: "bad", code: 400 } })),
+    ];
+    assert.deepEqual(settled.filter((event) => event.type === EventType.RUN_ERROR).length, 1);
+  });
+
   it("maps every current standard event family through explicit host projections", async () => {
     const mapper = createAgUiEventMapper({
       projection: {
@@ -233,7 +302,7 @@ describe("@arnilo/prism-hosts/ag-ui", () => {
   it("enforces finite limits and truncates oversized text before schema output", async () => {
     assert.equal(packageName, "@arnilo/prism-hosts/ag-ui");
     assert.throws(() => resolveAgUiLimits({ maxEventBytes: 1_000 }), /maxEventBytes/);
-    assert.throws(() => resolveAgUiLimits({ maxErrorBytes: 65_537 }), /maxErrorBytes/);
+    assert.equal(resolveAgUiLimits({ maxErrorBytes: 65_537 }).maxErrorBytes, 65_537);
     const mapper = createAgUiEventMapper();
     const events = await mapper.map({
       type: "message.delta",

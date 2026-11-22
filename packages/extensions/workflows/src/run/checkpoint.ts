@@ -104,7 +104,7 @@ async function saveCheckpoint(
     execution = {
       mode: "supersteps",
       superstep: state.superstep ?? 0,
-      ...(state.workflow.limits?.maxSupersteps !== undefined ? { maxSupersteps: state.workflow.limits.maxSupersteps } : {}),
+      ...(typeof state.workflow.limits?.maxSupersteps === "number" ? { maxSupersteps: state.workflow.limits.maxSupersteps } : {}),
       pending: serializePendingActivations(state.pendingActivations),
     };
   }

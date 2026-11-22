@@ -4,8 +4,10 @@ import {
   defineProviderPackage,
   modelsProperty,
   providerPackageInstance,
+  type ProviderTransportConfig,
   refSource,
   secretRefProperty,
+  transportProperty,
 } from "@arnilo/prism/provider-kit";
 import { assertLiteLLMBaseUrl } from "./base-url.js";
 import { createLiteLLMProvider } from "./provider.js";
@@ -14,6 +16,8 @@ import { LITELLM_DEFAULT_BASE_URL, listLiteLLMModels } from "./models.js";
 export const LITELLM_DEFAULT_API_KEY_REF = "env:LITELLM_API_KEY";
 
 export interface LiteLLMProviderConfig {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); each defaults to the transport's. */
+  readonly transport?: ProviderTransportConfig;
   /** An `env:`/`keyring:` ref; defaults to {@link LITELLM_DEFAULT_API_KEY_REF}. */
   readonly apiKey?: string;
   /** Proxy base; `http:` only for a loopback host. Defaults to `http://127.0.0.1:4000`. */
@@ -33,6 +37,7 @@ const configSchema: JsonSchema = {
   properties: {
     apiKey: secretRefProperty(LITELLM_DEFAULT_API_KEY_REF),
     baseUrl: baseUrlProperty("LiteLLM Proxy base; defaults to http://127.0.0.1:4000. Plain http is accepted only for loopback."),
+    transport: transportProperty(),
     models: modelsProperty("Static catalog; otherwise each models() call fetches /model/info."),
   },
 };
@@ -52,12 +57,27 @@ function definitionFor(options: LiteLLMProviderPackageOptions) {
       // A proxy started without a master key accepts anonymous requests, so no key is not an error.
       if ((await resolve(ref)) === undefined)
         prism.status.note("info", `litellm: no key at ${ref}; requests are sent without Authorization`);
-      const provider = createLiteLLMProvider({ id, baseUrl, apiKey, fetch: options.fetch });
+      const provider = createLiteLLMProvider({
+        ...(prism.config.transport === undefined ? {} : { transport: prism.config.transport }),
+        id,
+        baseUrl,
+        apiKey,
+        fetch: options.fetch,
+      });
       prism.providers.register({
         ...provider,
         auth: [{ kind: "api-key", ref }],
         async models() {
-          return prism.config.models ?? listLiteLLMModels({ provider: id, baseUrl, apiKey, fetch: options.fetch });
+          return (
+            prism.config.models ??
+            listLiteLLMModels({
+              ...(prism.config.transport?.maxCatalogBytes === undefined ? {} : { maxBodyBytes: prism.config.transport.maxCatalogBytes }),
+              provider: id,
+              baseUrl,
+              apiKey,
+              fetch: options.fetch,
+            })
+          );
         },
       });
     },
@@ -93,7 +113,6 @@ export {
   type LiteLLMSpendLogsOptions,
   type LiteLLMSpendLogsResult,
   type LiteLLMSpendRow,
-  LITELLM_SPEND_WAIT_CAP_MS,
   LITELLM_SPEND_WAIT_MS,
   litellmSpendLogs,
   normalizeSpendRow,

@@ -245,7 +245,7 @@ test("repeated-trial aggregate runs N times with sampleCount and standard_error"
   assert.equal(report.trials.sampleCount, 3);
 });
 
-test("omitted trials still one run; cap 16 fails closed", async () => {
+test("omitted trials still one run; invalid trials fail closed", async () => {
   let runs = 0;
   const agent = makeMockAgent(["ok"], () => {
     runs += 1;
@@ -260,8 +260,9 @@ test("omitted trials still one run; cap 16 fails closed", async () => {
   assert.equal(report.trials, undefined);
   assert.equal(report.evaluations[0]?.metadata?.trialIndex, undefined);
 
-  assert.throws(() => resolveTrialsConfig(17), /trials must be an integer/);
-  await assert.rejects(() => runExperiment({ agent, dataset, scorers: [scorer], trials: 17 }), /trials must be an integer/);
+  assert.throws(() => resolveTrialsConfig(0), /trials must be a positive integer/);
+  assert.equal(resolveTrialsConfig(17).count, 17);
+  await assert.rejects(() => runExperiment({ agent, dataset, scorers: [scorer], trials: 0 }), /trials must be a positive integer/);
 });
 
 test("seed drives experiment random, not LLM determinism", async () => {
@@ -379,7 +380,8 @@ test("experiment_factory_receives_failure_injection_hooks", async () => {
           },
         ],
       },
-      ...extra,
+      hooks: extra.hooks,
+      slots: extra.slots,
     });
 
   const denied = await runExperiment({
@@ -427,7 +429,7 @@ test("too_many_turns_throws_before_run", async () => {
     (error: unknown) => error instanceof EvalError && error.code === "ERR_PRISM_EVAL_SCENARIO_BOUNDS",
   );
   await assert.rejects(
-    () => runScenario({ ...scenario, maxTurns: 33 }, factory),
+    () => runScenario({ ...scenario, maxTurns: 0 }, factory),
     (error: unknown) => error instanceof EvalError && error.code === "ERR_PRISM_EVAL_SCENARIO_BOUNDS",
   );
   assert.equal(factoryCalls, 0, "the bound is checked before the agent is built");
@@ -924,7 +926,8 @@ test("scenario items forward factory options and slice timelines without losing 
       return createAgent({
         model: { provider: "mock", model: "demo" },
         packages: [providerPackage("test-provider", [provider])],
-        ...extra,
+        hooks: extra.hooks,
+        slots: extra.slots,
       });
     },
     hooks,

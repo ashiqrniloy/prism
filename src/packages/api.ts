@@ -9,7 +9,12 @@ import type {
   ModelRef,
   ProviderEvent,
   ProviderRequest,
+  OwnershipScope,
+  ResolvedAgentCeilings,
   Secret,
+  Session,
+  SessionActor,
+  SessionSeedEntry,
   Skill,
   ToolDefinition,
 } from "../contracts.js";
@@ -93,6 +98,33 @@ export interface ModelClient {
   generate(request: Omit<ProviderRequest, "model">, options?: ModelCallOptions): AsyncIterable<ProviderEvent>;
 }
 
+/** A tool as `PackageAPI.tools.list()` returns it: the definition plus the package that registered it. */
+export type PackageToolListing = Readonly<ToolDefinition> & {
+  /** The registering package's name, or `host` for the host's own tools (as `agent.tools` reports it). */
+  readonly package: string;
+};
+
+/** Options of {@link PackageAPI.sessions}`.open`. */
+export interface PackageSessionOpenOptions {
+  /**
+   * The session the child belongs to: `sessionId` must name a session of this agent that is open now (usually the
+   * `context.sessionId` of the tool call opening it). `delegationId` and `workflowRunId` are recorded with the link.
+   */
+  readonly parent: { readonly sessionId: string; readonly delegationId?: string; readonly workflowRunId?: string };
+  readonly actor?: SessionActor;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  /** Narrows the parent session's ownership scope; a field that changes it throws `OwnershipScopeError`. */
+  readonly ownership?: OwnershipScope;
+  /** Conversation the child starts with, appended after its links entry (at most `MAX_SESSION_SEED_ENTRIES`). */
+  readonly seed?: readonly SessionSeedEntry[];
+  /**
+   * Reopens a stored child instead of opening a new one: the session must exist in the agent's store, in the parent's
+   * scope, and its links must name `parent.sessionId`; otherwise the open throws. The child already open under that
+   * parent is returned as is. Not allowed with `seed`, `actor` or `metadata`, which only a new session records.
+   */
+  readonly id?: string;
+}
+
 /** What a package gets in `setup` (roadmap §2.6). */
 export interface PackageAPI<C = Readonly<Record<string, never>>> {
   readonly name: string;
@@ -100,6 +132,11 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
   readonly config: C;
   /** Where each top-level config key came from. Frozen, key names only. */
   readonly configSources: Readonly<Record<string, PackageConfigSource>>;
+  /**
+   * The agent's resolved process-safety ceilings (`AgentConfig.ceilings`, plan 239 Task 4). Frozen and
+   * read-only: a package bounds its own work by them (for example skill file bytes) and can never raise one.
+   */
+  readonly ceilings: Readonly<ResolvedAgentCeilings>;
   /** Loaded package inspection and dependency instances. */
   readonly packages: {
     /** Returns named loaded packages as PackageInstances in load order. Throws state_not_ready during setup. */
@@ -112,11 +149,32 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
     /** A name taken by another package, the host, or the kernel gives `tool_conflict`. */
     register(tool: ToolDefinition, options?: PackageToolOptions): void;
     /**
-     * The agent's effective tools: the host's, the kernel's, and every package's, minus `AgentConfig.disable`.
-     * Read-only frozen copies, in registration order. It lists every registered tool, not the session-conditional
-     * subset (`PackageToolOptions.when`). Throws `state_not_ready` during `setup`.
+     * Registers, during `setup`, a function that answers this package's current tools. The kernel calls it once per
+     * run, when the run snapshots its tools, so the set can change between runs (an MCP server's live list) and a
+     * run keeps the set it started with. It must be synchronous and cheap. Each tool is checked like `register`: a
+     * tool that is invalid or whose name is taken (a registered tool, a host tool, a reserved name, or an earlier
+     * source's tool) is dropped with one `warn` status note, and a source that throws adds nothing that run. Source
+     * tools are owned by this package, pass the same `tool.call` gate, and stay out of the durable-run fingerprint.
      */
-    list(): readonly ToolDefinition[];
+    source(list: () => readonly ToolDefinition[]): void;
+    /**
+     * The agent's effective tools: the host's, the kernel's, every package's, and what tool sources answer now,
+     * minus `AgentConfig.disable`.
+     * Read-only frozen copies, in registration order, each naming its registering `package`. It lists every
+     * registered tool, not the session-conditional subset (`PackageToolOptions.when`). Throws `state_not_ready`
+     * during `setup`.
+     */
+    list(): readonly PackageToolListing[];
+  };
+  /** Needs `"sessions"`. */
+  readonly sessions: {
+    /**
+     * Opens a child session on this agent, linked to an open parent session (`SessionLinks`, one level deeper). The
+     * child inherits the parent's ownership scope and closes when the parent closes. It runs under this agent's
+     * hooks, packages and store, so `agent.sessions.list({ parentSessionId })` lists it. Throws `state_not_ready`
+     * during `setup`.
+     */
+    open(options: PackageSessionOpenOptions): Promise<Session>;
   };
   readonly skills: {
     /** A name taken by another package or the host gives `skill_conflict`. */

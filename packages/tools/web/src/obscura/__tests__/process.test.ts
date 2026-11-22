@@ -80,7 +80,7 @@ test("invalid config fails closed", () => {
     (e: ObscuraError) => e.code === "ERR_OBSCURA_INPUT",
   );
   assert.throws(
-    () => spawnObscuraProcess({ command: process.execPath, limits: { startupTimeoutMs: 1_000_000 } }),
+    () => spawnObscuraProcess({ command: process.execPath, limits: { startupTimeoutMs: -1 } }),
     (e: ObscuraError) => e.code === "ERR_OBSCURA_LIMIT",
   );
 });

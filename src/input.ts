@@ -25,6 +25,7 @@ import {
   skillHasRenderableBody,
   skillMessages as buildSkillMessages,
   type LoadedSkillSet,
+  type SkillCatalogOptions,
   type SkillsDisclosure,
 } from "./skill-disclosure.js";
 export type AgentInput = string | Message | readonly Message[];
@@ -132,6 +133,8 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly input: AgentInput;
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: SkillsDisclosure;
+  /** `AgentConfig.skills.catalog`: catalog entry and description bounds. */
+  readonly skillsCatalog?: SkillCatalogOptions;
   readonly loadedSkills?: LoadedSkillSet;
   /** @internal Session runs render the catalog through `kernel:context.build`. */
   readonly deferSkillsCatalog?: boolean;
@@ -198,8 +201,13 @@ function buildProviderMessages(request: PromptComposition): readonly Message[] {
     : buildSkillMessages(
         request.skills,
         request.tailSkillBodies
-          ? { disclosure: "progressive", tools: toolNameSet(request.tools) }
-          : { disclosure: request.skillsDisclosure, loaded: request.loadedSkills, tools: toolNameSet(request.tools) },
+          ? { disclosure: "progressive", tools: toolNameSet(request.tools), catalog: request.skillsCatalog }
+          : {
+              disclosure: request.skillsDisclosure,
+              loaded: request.loadedSkills,
+              tools: toolNameSet(request.tools),
+              catalog: request.skillsCatalog,
+            },
       );
   const declarations = toolMessages(tools);
   // Default input assembly keeps stable instruction messages at the front. Keep that
@@ -216,6 +224,7 @@ interface PromptComposition {
   readonly context?: readonly ContextBlock[];
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: SkillsDisclosure;
+  readonly skillsCatalog?: SkillCatalogOptions;
   readonly loadedSkills?: LoadedSkillSet;
   readonly tailSkillBodies?: boolean;
   readonly tools?: readonly ToolDefinition[];
@@ -258,6 +267,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       messages,
       options.runId,
       toolNameSet(tools),
+      options.skillsCatalog,
     );
     messages = [...messages, ...tailMessages(tailSegments, activeTailSegments)];
   }
@@ -267,6 +277,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     deferSkillsCatalog: options.deferSkillsCatalog,
     skills,
     skillsDisclosure: options.skillsDisclosure,
+    skillsCatalog: options.skillsCatalog,
     loadedSkills: options.loadedSkills,
     tailSkillBodies,
     tools,
@@ -291,6 +302,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       loaded: tailSkillBodies ? undefined : options.loadedSkills,
       // The turn's advertised tools, not `draft.tools`: a `context.build` handler cannot widen a skill's availability.
       tools: toolNameSet(tools),
+      catalog: options.skillsCatalog,
     });
   }
   return request;
@@ -434,9 +446,10 @@ function appendSkillTailSegments(
   messages: readonly Message[],
   runId: string | undefined,
   tools: ReadonlySet<string>,
+  catalog: SkillCatalogOptions | undefined,
 ): void {
-  const renderContext = { disclosure, loaded, tools };
-  const selected = capSkillCatalog(selectSkillsForPrompt(skills ?? [], renderContext));
+  const renderContext = { disclosure, loaded, tools, catalog };
+  const selected = capSkillCatalog(selectSkillsForPrompt(skills ?? [], renderContext), catalog?.maxEntries);
   const byName = new Map(selected.map((skill) => [skill.name, skill]));
   if (disclosure === "eager") {
     for (const skill of selected) {

@@ -14,15 +14,18 @@
 ./rag DEFAULT_INGESTION_STATUS_PAGE_SIZE	const DEFAULT_INGESTION_STATUS_PAGE_SIZE = 50
 ./rag DEFAULT_LOCAL_RERANK_MODEL	const DEFAULT_LOCAL_RERANK_MODEL = "Xenova/bge-reranker-base"
 ./rag DEFAULT_MAX_CHUNKS	const DEFAULT_MAX_CHUNKS = 2048
+./rag DEFAULT_MAX_CHUNK_CHARS	const DEFAULT_MAX_CHUNK_CHARS = 16384
 ./rag DEFAULT_MAX_CONTEXT_TOKENS	const DEFAULT_MAX_CONTEXT_TOKENS = 2000
 ./rag DEFAULT_MAX_DOCUMENT_BYTES	const DEFAULT_MAX_DOCUMENT_BYTES = 1048576
 ./rag DEFAULT_MAX_DOCUMENT_CHARS	const DEFAULT_MAX_DOCUMENT_CHARS = 1048576
 ./rag DEFAULT_MAX_METADATA_BYTES	const DEFAULT_MAX_METADATA_BYTES: number
 ./rag DEFAULT_MAX_PARSE_MS	const DEFAULT_MAX_PARSE_MS = 30000
 ./rag DEFAULT_MAX_PDF_PAGES	const DEFAULT_MAX_PDF_PAGES = 256
+./rag DEFAULT_MAX_QUERY_CHARS	const DEFAULT_MAX_QUERY_CHARS = 16384
 ./rag DEFAULT_MAX_RERANK_BYTES	const DEFAULT_MAX_RERANK_BYTES: number
 ./rag DEFAULT_MAX_RERANK_MS	const DEFAULT_MAX_RERANK_MS = 2000
 ./rag DEFAULT_MAX_RESULT_BYTES	const DEFAULT_MAX_RESULT_BYTES: number
+./rag DEFAULT_MAX_SOURCE_FILES	const DEFAULT_MAX_SOURCE_FILES = 4096
 ./rag DEFAULT_MAX_VECTOR_DIMENSIONS	const DEFAULT_MAX_VECTOR_DIMENSIONS = 4096
 ./rag DEFAULT_QUERY_CANDIDATES	const DEFAULT_QUERY_CANDIDATES = 20
 ./rag DEFAULT_RAG_EMBED_BATCH	const DEFAULT_RAG_EMBED_BATCH = 64
@@ -40,28 +43,6 @@
 ./rag DriveAccessMapping	interface DriveAccessMapping { readonly groupId?: string; readonly principalId?: string; }
 ./rag DrivePermission	interface DrivePermission { readonly emailAddress?: string; readonly id?: string; readonly role?: string; readonly type?: string; }
 ./rag GoogleDriveConnectorOptions	interface GoogleDriveConnectorOptions { readonly allowLoopback?: boolean; readonly baseUrl?: string; readonly driveId?: string; readonly fetch?: typeof globalThis.fetch; readonly folderId?: string; readonly maxResponseBytes?: number; readonly resolveAccess: (permission: DrivePermission) => DriveAccessMapping | undefined; readonly signal?: AbortSignal; readonly ssrf?: SsrfPolicy; readonly tokenProvider: (input?: { readonly signal?: AbortSignal; }) => Promise<string> | string; }
-./rag HARD_CHUNK_OVERLAP_CAP	const HARD_CHUNK_OVERLAP_CAP = 4096
-./rag HARD_CHUNK_SIZE_CAP	const HARD_CHUNK_SIZE_CAP = 16384
-./rag HARD_EMBED_BATCH_SIZE_CAP	const HARD_EMBED_BATCH_SIZE_CAP = 128
-./rag HARD_INGESTION_STATUS_PAGE_SIZE_CAP	const HARD_INGESTION_STATUS_PAGE_SIZE_CAP = 200
-./rag HARD_MAX_CHUNKS_CAP	const HARD_MAX_CHUNKS_CAP = 8192
-./rag HARD_MAX_CONTEXT_TOKENS_CAP	const HARD_MAX_CONTEXT_TOKENS_CAP = 8000
-./rag HARD_MAX_DOCUMENT_BYTES_CAP	const HARD_MAX_DOCUMENT_BYTES_CAP: number
-./rag HARD_MAX_DOCUMENT_CHARS_CAP	const HARD_MAX_DOCUMENT_CHARS_CAP = 8388608
-./rag HARD_MAX_METADATA_BYTES_CAP	const HARD_MAX_METADATA_BYTES_CAP: number
-./rag HARD_MAX_PARSE_MS_CAP	const HARD_MAX_PARSE_MS_CAP = 30000
-./rag HARD_MAX_PDF_PAGES_CAP	const HARD_MAX_PDF_PAGES_CAP = 256
-./rag HARD_MAX_RERANK_BYTES_CAP	const HARD_MAX_RERANK_BYTES_CAP: number
-./rag HARD_MAX_RERANK_MS_CAP	const HARD_MAX_RERANK_MS_CAP = 10000
-./rag HARD_MAX_RESULT_BYTES_CAP	const HARD_MAX_RESULT_BYTES_CAP: number
-./rag HARD_MAX_SOURCE_FILES	const HARD_MAX_SOURCE_FILES = 4096
-./rag HARD_QUERY_CANDIDATES_CAP	const HARD_QUERY_CANDIDATES_CAP = 128
-./rag HARD_RERANK_CONCURRENCY_CAP	const HARD_RERANK_CONCURRENCY_CAP = 8
-./rag HARD_RETRIEVE_SCOPE_CAP	const HARD_RETRIEVE_SCOPE_CAP = 8
-./rag HARD_SYNC_MAX_PAGES_CAP	const HARD_SYNC_MAX_PAGES_CAP = 64
-./rag HARD_SYNC_PAGE_SIZE_CAP	const HARD_SYNC_PAGE_SIZE_CAP = 200
-./rag HARD_SYNC_RETRIES_CAP	const HARD_SYNC_RETRIES_CAP = 8
-./rag HARD_TOP_K_CAP	const HARD_TOP_K_CAP = 32
 ./rag IndexChunksOptions	interface IndexChunksOptions { readonly batchSize?: number; readonly chunks: readonly RagChunk[]; readonly contentHash?: string; readonly embedder: Embedder; readonly maxChunkChars?: number; readonly maxChunks?: number; readonly maxMetadataBytes?: number; readonly maxVectorDimensions?: number; readonly redactor?: SecretRedactor; readonly reuseEmbeddings?: ReadonlyMap<string, ReusableEmbedding>; readonly scope: RagScope; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly statusStore?: IngestionStatusStore; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly telemetryParent?: RagTelemetrySpan; }
 ./rag IndexChunksResult	interface IndexChunksResult { readonly indexed: number; readonly sourceIds: readonly string[]; }
 ./rag IndexSourcesOptions	interface IndexSourcesOptions { readonly embedder: Embedder; readonly onSkip?: (source: RagSourceConfig, reason: string) => void; readonly scope: RagScope; readonly signal?: AbortSignal; readonly sources: readonly RagSourceConfig[]; readonly store: TransactionalVectorStore; readonly webFetch?: WebFetchService; }
@@ -102,7 +83,7 @@
 ./rag RagScopeConfig	interface RagScopeConfig { readonly corpusId?: string; readonly resourceId?: string; readonly tenantId?: string; }
 ./rag RagScopeError	class RagScopeError extends RagError { constructor(message: string); }
 ./rag RagSearchToolOptions	interface RagSearchToolOptions { readonly name?: string; readonly retrieve: (query: string, signal?: AbortSignal) => Promise<RagContextResult>; }
-./rag RagSourceConfig	interface RagSourceConfig { readonly glob?: string; readonly path?: string; readonly url?: string; }
+./rag RagSourceConfig	interface RagSourceConfig { readonly glob?: string; readonly maxFiles?: number; readonly path?: string; readonly url?: string; }
 ./rag RagSyncCursorError	class RagSyncCursorError extends RagError { constructor(message?: string); }
 ./rag RagSyncThrottleError	class RagSyncThrottleError extends RagError { constructor(retryAfterMs?: number, message?: string); readonly retryAfterMs: number; }
 ./rag RagTelemetry	interface RagTelemetry { startSpan(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>, parent?: RagTelemetrySpan): RagTelemetrySpan; }
@@ -114,7 +95,7 @@
 ./rag Reranker	interface Reranker { rerank(input: { readonly query: string; readonly hits: readonly RagHit[]; readonly signal?: AbortSignal; }): Promise<readonly RagHit[]>; }
 ./rag RerankerConfig	type RerankerConfig = { readonly kind: "none"; } | { readonly kind: "fake"; } | ({ readonly kind: "local"; } & CreateLocalRerankerOptions) | ({ readonly kind: "tei"; } & CreateTeiRerankerOptions) | ({ readonly kind: "openai-compatible"; } & CreateOpenAiCompatibleRerankerOptions) | ({ readonly kind: "voyage"; } & CreateVoyageRerankerOptions)
 ./rag ResolvedRagConfig	interface ResolvedRagConfig { readonly context: boolean; readonly embeddings?: RagEmbeddingsConfig | RagEmbeddingsServiceConfig; readonly reranker?: RagRerankerConfig; readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly corpusId: string; }; readonly sources: readonly RagSourceConfig[]; readonly store: "memory" | { readonly postgres?: RagPostgresStoreConfig; }; readonly topK?: number; }
-./rag RetrieveContextOptions	interface RetrieveContextOptions { readonly authorization?: RagAccessConstraint; readonly embedder: Embedder; readonly filter?: JsonObject; readonly fusion?: "rrf"; readonly lexical?: "fts" | "bm25" | "off"; readonly maxContextTokens?: number; readonly maxMetadataBytes?: number; readonly maxRerankBytes?: number; readonly maxRerankMs?: number; readonly maxResultBytes?: number; readonly maxVectorDimensions?: number; readonly onAccessDenied?: (denial: AccessDenial) => void; readonly queryCandidates?: number; readonly redactor?: SecretRedactor; readonly rerankConcurrency?: number; readonly reranker?: Reranker; readonly rrfK?: number; readonly scope?: RagScope; readonly scopes?: readonly RagScope[]; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly topK?: number; }
+./rag RetrieveContextOptions	interface RetrieveContextOptions { readonly authorization?: RagAccessConstraint; readonly embedder: Embedder; readonly filter?: JsonObject; readonly fusion?: "rrf"; readonly lexical?: "fts" | "bm25" | "off"; readonly maxContextTokens?: number; readonly maxMetadataBytes?: number; readonly maxQueryChars?: number; readonly maxRerankBytes?: number; readonly maxRerankMs?: number; readonly maxResultBytes?: number; readonly maxVectorDimensions?: number; readonly onAccessDenied?: (denial: AccessDenial) => void; readonly queryCandidates?: number; readonly redactor?: SecretRedactor; readonly rerankConcurrency?: number; readonly reranker?: Reranker; readonly rrfK?: number; readonly scope?: RagScope; readonly scopes?: readonly RagScope[]; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly topK?: number; }
 ./rag ReusableEmbedding	interface ReusableEmbedding { readonly embedding: readonly number[]; readonly text: string; }
 ./rag SourceAccessGrant	reexport SourceAccessGrant from "@arnilo/prism-memory-system/core"
 ./rag SourceFile	interface SourceFile { readonly path: string; readonly sourceId: string; }
@@ -199,7 +180,7 @@
 ./wiki WikiPassReport	interface WikiPassReport { readonly at: string; readonly binds: number; readonly cacheReadTokens: number; readonly correctionCalls: number; readonly declined: number; readonly due: number; readonly edits: number; readonly failures: Readonly<Record<string, number>>; readonly inputTokens: number; readonly left: number; readonly modelCalls: number; readonly outputTokens: number; readonly pass: string; readonly rejected: { readonly trust: number; readonly secret: number; readonly invalid: number; }; readonly scopes: readonly string[]; readonly subjects: number; readonly trigger: "auto" | "manual"; }
 ./wiki WikiReconcileReport	interface WikiReconcileReport { readonly archived: number; readonly concepts: number; readonly removed: number; readonly stale: number; }
 ./wiki WikiScopeLevel	type WikiScopeLevel = "user" | "project" | "agent" | "team"
-./wiki WikiSearchConfig	interface WikiSearchConfig { readonly maxClaimsRendered?: number; }
+./wiki WikiSearchConfig	interface WikiSearchConfig { readonly maxClaimsRendered?: number; readonly maxReadIds?: number; readonly maxSearchHits?: number; }
 ./wiki WikiSourceRecord	interface WikiSourceRecord { readonly contentHash: string; readonly createdAt: string; readonly id: string; readonly keywords: readonly string[]; readonly path: string; readonly refused?: string; readonly title: string; }
 ./wiki WikiStatusReport	interface WikiStatusReport { readonly dirty: number; readonly last?: WikiPassReport; readonly memory: boolean; readonly scopes: readonly WikiStatusScope[]; readonly sources: number; readonly subjects: number; }
 ./wiki WikiStatusScope	interface WikiStatusScope { readonly dirty: number; readonly reasons: Readonly<Record<string, number>>; readonly scope: string; readonly subjects: number; }

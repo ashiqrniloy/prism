@@ -237,7 +237,7 @@ test("oversized UTF-8 write input fails before policy or filesystem mutation", a
 test("write maxInputBytes rejects invalid limits", async () => {
   const cwd = await tmp();
   try {
-    for (const value of [0, Infinity, Number.MAX_SAFE_INTEGER, 64 * 1024 * 1024 + 1]) {
+    for (const value of [0, Infinity, Number.MAX_SAFE_INTEGER + 1, 1.5]) {
       assert.throws(() => createWriteTool(cwd, { maxInputBytes: value }), /positive safe integer/);
     }
   } finally {

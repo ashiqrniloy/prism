@@ -5,6 +5,9 @@
  */
 import type { CheckpointKey, CheckpointQuery, CheckpointRecord, CheckpointStore, OwnershipScope } from "./contracts.js";
 
+const DEFAULT_MAX_PAGE_SIZE = 500;
+const DEFAULT_PAGE_LIMIT = 100;
+
 export const CHECKPOINT_CONFLICT_CODE = "ERR_PRISM_CHECKPOINT_CONFLICT";
 
 export class CheckpointConflictError extends Error {
@@ -30,7 +33,7 @@ const DEFAULT_MAX_CHECKPOINT_VALUE_BYTES = 1024 * 1024;
 /** In-process reference implementation of the generic checkpoint contract. */
 export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOptions = {}): CheckpointStore {
   const records = new Map<string, CheckpointRecord>();
-  const maxPageSize = Math.max(1, options.maxPageSize ?? 500);
+  const maxPageSize = Math.max(1, options.maxPageSize ?? DEFAULT_MAX_PAGE_SIZE);
   const maxRecords = Math.max(1, options.maxRecords ?? DEFAULT_MAX_CHECKPOINT_RECORDS);
   const maxValueBytes = Math.max(1, options.maxValueBytes ?? DEFAULT_MAX_CHECKPOINT_VALUE_BYTES);
 
@@ -101,7 +104,7 @@ export function createMemoryCheckpointStore(options: MemoryCheckpointStoreOption
     async listCheckpoints(query: CheckpointQuery = {}) {
       throwIfAborted(query.signal);
       const offset = decodeCursor(query.cursor);
-      const limit = Math.min(Math.max(1, query.limit ?? 100), maxPageSize);
+      const limit = Math.min(Math.max(1, query.limit ?? DEFAULT_PAGE_LIMIT), maxPageSize);
       const categories =
         query.category === undefined ? undefined : new Set(Array.isArray(query.category) ? query.category : [query.category]);
       const items = [...records.values()]

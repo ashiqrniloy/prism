@@ -4,13 +4,7 @@ import type { Secret, CredentialRecord, CredentialRequest, OAuthCredentials } fr
 import type { StoredCredentialStore } from "./encrypted-store.js";
 import { CredentialStoreError } from "./errors.js";
 import { assertCredentialFileMode, atomicWriteFile, readFileIfExists } from "./file-io.js";
-import {
-  DEFAULT_MAX_ENVELOPE_FILE_BYTES,
-  DEFAULT_MAX_VAULT_BYTES,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
-  HARD_MAX_VAULT_BYTES,
-  validateCredentialLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_ENVELOPE_FILE_BYTES, DEFAULT_MAX_VAULT_BYTES, validateCredentialLimit } from "./limits.js";
 import type { CredentialVault } from "./types.js";
 import { DEFAULT_FILE_MODE } from "./types.js";
 import {
@@ -63,16 +57,8 @@ export interface FileCredentialStore extends StoredCredentialStore {
 export function createFileCredentialStore(options: FileCredentialStoreOptions): FileCredentialStore {
   const fileMode = options.fileMode ?? DEFAULT_FILE_MODE;
   assertCredentialFileMode(fileMode);
-  const maxFileBytes = validateCredentialLimit(
-    "limits.maxFileBytes",
-    options.limits?.maxFileBytes ?? DEFAULT_MAX_ENVELOPE_FILE_BYTES,
-    HARD_MAX_ENVELOPE_FILE_BYTES,
-  );
-  const maxVaultBytes = validateCredentialLimit(
-    "limits.maxVaultBytes",
-    options.limits?.maxVaultBytes ?? DEFAULT_MAX_VAULT_BYTES,
-    HARD_MAX_VAULT_BYTES,
-  );
+  const maxFileBytes = validateCredentialLimit("limits.maxFileBytes", options.limits?.maxFileBytes ?? DEFAULT_MAX_ENVELOPE_FILE_BYTES);
+  const maxVaultBytes = validateCredentialLimit("limits.maxVaultBytes", options.limits?.maxVaultBytes ?? DEFAULT_MAX_VAULT_BYTES);
   let vault: CredentialVault = createEmptyVault();
 
   const persist = (next: CredentialVault): void => {

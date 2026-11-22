@@ -2,9 +2,11 @@ import type { Message as AgUiMessage } from "@ag-ui/core";
 import type { AgentEvent } from "@arnilo/prism";
 import type { AgUiProjection } from "./projection.js";
 
+const DEFAULT_MAX_STATE_BYTES = 64 * 1024;
+const DEFAULT_MAX_PATCH_OPERATIONS = 128;
+
 /** Default / hard caps for standard message projectors (Task 0 freeze). */
 export const DEFAULT_MAX_PROJECTOR_MESSAGES = 128;
-export const HARD_MAX_PROJECTOR_MESSAGES = 1024;
 
 /** Host-owned run-state snapshot source. Prism starts no watcher. */
 export interface AgUiStateStore {
@@ -36,7 +38,7 @@ export interface CreateActivityFromToolProgressProjectionOptions {
  * (host `getMessages`) or when the live stream finishes a message.
  */
 export function createMessagesFromSessionProjection(options: CreateMessagesFromSessionProjectionOptions = {}): AgUiProjection {
-  const maxMessages = clamp(options.maxMessages, DEFAULT_MAX_PROJECTOR_MESSAGES, HARD_MAX_PROJECTOR_MESSAGES);
+  const maxMessages = clamp(options.maxMessages, DEFAULT_MAX_PROJECTOR_MESSAGES);
   const accumulated: AgUiMessage[] = [];
   let lastKey: string | undefined;
 
@@ -84,8 +86,8 @@ export function createMessagesFromSessionProjection(options: CreateMessagesFromS
  * Prism starts no background watcher.
  */
 export function createStateFromStoreProjection(store: AgUiStateStore, options: CreateStateFromStoreProjectionOptions = {}): AgUiProjection {
-  const maxBytes = options.maxStateBytes ?? 64 * 1024;
-  const maxOps = options.maxPatchOperations ?? 128;
+  const maxBytes = options.maxStateBytes ?? DEFAULT_MAX_STATE_BYTES;
+  const maxOps = options.maxPatchOperations ?? DEFAULT_MAX_PATCH_OPERATIONS;
   let last: unknown;
   let snapped = false;
   let dirty = true;
@@ -265,8 +267,8 @@ function withinBytes(value: unknown, maxBytes: number): boolean {
   }
 }
 
-function clamp(value: number | undefined, fallback: number, hard: number): number {
+function clamp(value: number | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   if (!Number.isFinite(value) || value < 1) return fallback;
-  return Math.min(Math.floor(value), hard);
+  return Math.floor(value);
 }

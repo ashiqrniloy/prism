@@ -1,13 +1,6 @@
 import { type RunResult, resolveRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import {
-  DEFAULT_CANDIDATE_MAX_BYTES,
-  DEFAULT_COMPARISON_CANDIDATES,
-  DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
-  HARD_CANDIDATE_MAX_BYTES,
-  HARD_COMPARISON_CANDIDATES,
-  HARD_JUDGE_MAX_OUTPUT_BYTES,
-} from "./limits.js";
+import { DEFAULT_CANDIDATE_MAX_BYTES, DEFAULT_COMPARISON_CANDIDATES, DEFAULT_JUDGE_MAX_OUTPUT_BYTES } from "./limits.js";
 import { resolveTrialsConfig } from "./scenarios.js";
 import { bootstrapInterval, bradleyTerry } from "./stats.js";
 import type { ComparisonRecord, ComparisonReport, RunComparisonOptions } from "./types.js";
@@ -19,30 +12,19 @@ export async function runComparison<TInput = unknown, TExpected = unknown>(
 ): Promise<ComparisonReport> {
   const candidates = Object.keys(options.candidates).sort();
   const maxCandidates = options.maxCandidates ?? DEFAULT_COMPARISON_CANDIDATES;
-  if (!Number.isInteger(maxCandidates) || maxCandidates < 2 || maxCandidates > HARD_COMPARISON_CANDIDATES) {
-    throw new EvalError(`maxCandidates must be an integer in [2, ${HARD_COMPARISON_CANDIDATES}]`, "ERR_PRISM_EVAL_COMPARISON_BOUNDS");
+  if (!Number.isInteger(maxCandidates) || maxCandidates < 2) {
+    throw new EvalError("maxCandidates must be an integer of at least 2", "ERR_PRISM_EVAL_COMPARISON_BOUNDS");
   }
   if (candidates.length < 2 || candidates.length > maxCandidates || !options.scorers.length) {
     throw new EvalError("comparison requires bounded candidates and at least one scorer", "ERR_PRISM_EVAL_COMPARISON");
   }
-  const boundedBytes = (value: number | undefined, fallback: number, hard: number, name: string) => {
+  const boundedBytes = (value: number | undefined, fallback: number, name: string) => {
     const selected = value ?? fallback;
-    if (!Number.isInteger(selected) || selected < 1 || selected > hard)
-      throw new EvalError(`${name} is out of bounds`, "ERR_PRISM_EVAL_COMPARISON_BOUNDS");
+    if (!Number.isInteger(selected) || selected < 1) throw new EvalError(`${name} is out of bounds`, "ERR_PRISM_EVAL_COMPARISON_BOUNDS");
     return selected;
   };
-  const maxCandidateBytes = boundedBytes(
-    options.maxCandidateBytes,
-    DEFAULT_CANDIDATE_MAX_BYTES,
-    HARD_CANDIDATE_MAX_BYTES,
-    "maxCandidateBytes",
-  );
-  const maxScorerOutputBytes = boundedBytes(
-    options.maxScorerOutputBytes,
-    DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
-    HARD_JUDGE_MAX_OUTPUT_BYTES,
-    "maxScorerOutputBytes",
-  );
+  const maxCandidateBytes = boundedBytes(options.maxCandidateBytes, DEFAULT_CANDIDATE_MAX_BYTES, "maxCandidateBytes");
+  const maxScorerOutputBytes = boundedBytes(options.maxScorerOutputBytes, DEFAULT_JUDGE_MAX_OUTPUT_BYTES, "maxScorerOutputBytes");
   const { count: trials } = resolveTrialsConfig(options.trials, options.seed);
   if (options.seed !== undefined && !Number.isSafeInteger(options.seed))
     throw new EvalError("seed must be a safe integer", "ERR_PRISM_EVAL_TRIALS");

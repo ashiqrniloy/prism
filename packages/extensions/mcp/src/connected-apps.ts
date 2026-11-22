@@ -1,12 +1,10 @@
 import { type ToolDefinition } from "@arnilo/prism";
 import { connectMcpTools } from "./bridge.js";
-import { HARD_MAX_TOOL_NAME_BYTES, HARD_MAX_TOOLS } from "./limits.js";
 import { assertValidServerId, defaultMcpNamePrefix, formatMcpToolName } from "./names.js";
 import type { ConnectedAppBinding, ConnectedAppSession, CreateConnectedAppSessionOptions, McpToolBridge } from "./types.js";
 import { McpBridgeError } from "./types.js";
 import { type AgentIdentity, assertIdentityActive } from "@arnilo/prism-extensions/governance";
 const DEFAULT_MAX_APPS = 8;
-const HARD_MAX_APPS = 32;
 
 interface BoundApp {
   readonly appId: string;
@@ -112,10 +110,9 @@ function assertBinding(binding: ConnectedAppBinding): void {
   assertValidServerId(binding.serverId);
   if (binding.allowTools === undefined) return;
   if (!Array.isArray(binding.allowTools)) throw new McpBridgeError("allowTools must be an array");
-  if (binding.allowTools.length > HARD_MAX_TOOLS) throw new McpBridgeError(`allowTools exceeds ${HARD_MAX_TOOLS} entries`);
+  // Host config: the client's own `maxTools` / `maxToolNameBytes` bound what a server lists, so no second cap here.
   for (const name of binding.allowTools) {
-    if (typeof name !== "string" || !name || Buffer.byteLength(name, "utf8") > HARD_MAX_TOOL_NAME_BYTES)
-      throw new McpBridgeError(`allowTools entries must be non-empty strings <= ${HARD_MAX_TOOL_NAME_BYTES} bytes`);
+    if (typeof name !== "string" || !name) throw new McpBridgeError("allowTools entries must be non-empty strings");
   }
 }
 
@@ -148,8 +145,7 @@ function serverBound(apps: ReadonlyMap<string, BoundApp>, serverId: string): boo
 
 function validateMaxApps(maxApps: number | undefined): number {
   const value = maxApps ?? DEFAULT_MAX_APPS;
-  if (!Number.isSafeInteger(value) || value < 1 || value > HARD_MAX_APPS)
-    throw new McpBridgeError(`maxApps must be a positive safe integer <= ${HARD_MAX_APPS}`);
+  if (!Number.isSafeInteger(value) || value < 1) throw new McpBridgeError("maxApps must be a positive safe integer");
   return value;
 }
 

@@ -1,3 +1,4 @@
+import { DEFAULT_MAX_STORE_PAGE_SIZE } from "./lifecycle.js";
 import type {
   AppendRunFeedbackInput,
   DeleteRunFeedbackInput,
@@ -9,15 +10,10 @@ import type {
 } from "@arnilo/prism";
 
 export const DEFAULT_MAX_FEEDBACK_COMMENT_BYTES = 4096;
-export const HARD_MAX_FEEDBACK_COMMENT_BYTES = 16384;
 export const DEFAULT_MAX_FEEDBACK_TAGS = 16;
-export const HARD_MAX_FEEDBACK_TAGS = 64;
 export const DEFAULT_MAX_FEEDBACK_LINKS = 16;
-export const HARD_MAX_FEEDBACK_LINKS = 64;
 export const DEFAULT_MAX_FEEDBACK_METADATA_BYTES = 16384;
-export const HARD_MAX_FEEDBACK_METADATA_BYTES = 65536;
 export const DEFAULT_FEEDBACK_PAGE_SIZE = 100;
-export const HARD_FEEDBACK_PAGE_SIZE = 500;
 export const MAX_FEEDBACK_TAG_LENGTH = 64;
 export const MAX_FEEDBACK_ID_LENGTH = 128;
 
@@ -80,20 +76,10 @@ export async function prepareRunFeedback(input: AppendRunFeedbackInput, options:
   if (input.rating !== undefined && (!Number.isFinite(input.rating) || input.rating < -1 || input.rating > 1)) {
     throw new RunFeedbackError("rating must be a finite number in [-1, 1]", "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
   }
-  const maxCommentBytes = boundedLimit(
-    options.maxCommentBytes,
-    DEFAULT_MAX_FEEDBACK_COMMENT_BYTES,
-    HARD_MAX_FEEDBACK_COMMENT_BYTES,
-    "maxCommentBytes",
-  );
-  const maxTags = boundedLimit(options.maxTags, DEFAULT_MAX_FEEDBACK_TAGS, HARD_MAX_FEEDBACK_TAGS, "maxTags");
-  const maxLinks = boundedLimit(options.maxLinks, DEFAULT_MAX_FEEDBACK_LINKS, HARD_MAX_FEEDBACK_LINKS, "maxLinks");
-  const maxMetadataBytes = boundedLimit(
-    options.maxMetadataBytes,
-    DEFAULT_MAX_FEEDBACK_METADATA_BYTES,
-    HARD_MAX_FEEDBACK_METADATA_BYTES,
-    "maxMetadataBytes",
-  );
+  const maxCommentBytes = boundedLimit(options.maxCommentBytes, DEFAULT_MAX_FEEDBACK_COMMENT_BYTES, "maxCommentBytes");
+  const maxTags = boundedLimit(options.maxTags, DEFAULT_MAX_FEEDBACK_TAGS, "maxTags");
+  const maxLinks = boundedLimit(options.maxLinks, DEFAULT_MAX_FEEDBACK_LINKS, "maxLinks");
+  const maxMetadataBytes = boundedLimit(options.maxMetadataBytes, DEFAULT_MAX_FEEDBACK_METADATA_BYTES, "maxMetadataBytes");
   const tags = normalizeList(input.tags, maxTags, MAX_FEEDBACK_TAG_LENGTH, "tag");
   const scorerIds = normalizeList(input.scorerIds, maxLinks, MAX_FEEDBACK_ID_LENGTH, "scorer id", true);
   const evaluationIds = normalizeList(input.evaluationIds, maxLinks, MAX_FEEDBACK_ID_LENGTH, "evaluation id", true);
@@ -136,7 +122,7 @@ export async function prepareRunFeedback(input: AppendRunFeedbackInput, options:
 export function createMemoryRunFeedbackStore(options: MemoryRunFeedbackStoreOptions): RunFeedbackStore {
   const records = new Map<string, RunFeedbackRecord>();
   for (const record of options.initial ?? []) records.set(record.id, freezeRecord(record));
-  const maxPageSize = boundedLimit(options.maxPageSize, DEFAULT_FEEDBACK_PAGE_SIZE, HARD_FEEDBACK_PAGE_SIZE, "maxPageSize");
+  const maxPageSize = boundedLimit(options.maxPageSize, DEFAULT_FEEDBACK_PAGE_SIZE, "maxPageSize");
   return {
     async append(input) {
       if (records.has(input.id)) throw new RunFeedbackError("Duplicate feedback id", "ERR_PRISM_RUN_FEEDBACK_DUPLICATE");
@@ -171,7 +157,7 @@ export function requireRunFeedbackOwnership(input: OwnershipScope): Required<Pic
   return requireOwnership(input);
 }
 
-export function runFeedbackPageLimit(limit: number | undefined, maximum = HARD_FEEDBACK_PAGE_SIZE): number {
+export function runFeedbackPageLimit(limit: number | undefined, maximum = DEFAULT_MAX_STORE_PAGE_SIZE): number {
   return pageLimit(limit, maximum);
 }
 
@@ -211,10 +197,11 @@ function normalizeList(values: readonly string[] | undefined, maximum: number, m
   return result;
 }
 
-function boundedLimit(value: number | undefined, fallback: number, hard: number, label: string): number {
+/** A host-set feedback limit: a positive integer. The host's value is the cap (plan 239 Task 5). */
+function boundedLimit(value: number | undefined, fallback: number, label: string): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard) {
-    throw new RunFeedbackError(`${label} must be an integer in [1, ${hard}]`, "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
+  if (!Number.isSafeInteger(resolved) || resolved < 1) {
+    throw new RunFeedbackError(`${label} must be a positive integer`, "ERR_PRISM_RUN_FEEDBACK_BOUNDS");
   }
   return resolved;
 }

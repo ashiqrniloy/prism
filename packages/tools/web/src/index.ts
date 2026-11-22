@@ -223,6 +223,7 @@ const definition = definePackage<ToolsWebConfig>({
       ...(domains === undefined ? {} : { domains }),
       cache,
       ...(prompt === undefined ? {} : { prompt }),
+      ...(prism.config.fetch?.maxChars === undefined ? {} : { maxFetchChars: prism.config.fetch.maxChars }),
     };
 
     const validateUrl = (url: URL): void => assertSsrfAllowedUrl(url.toString());
@@ -300,6 +301,7 @@ const definition = definePackage<ToolsWebConfig>({
           cache,
           ...(prompt === undefined ? {} : { prompt }),
           ...(domains === undefined ? {} : { domains }),
+          ...(prism.config.fetch?.maxChars === undefined ? {} : { maxFetchChars: prism.config.fetch.maxChars }),
         }).tools,
       );
       if (fetchTools) {

@@ -16,10 +16,8 @@ import type { FetchCache, WebDocument, WebFetchOptions } from "./types.js";
 export const DEFAULT_CACHE_MAX_ENTRIES = 64;
 /** `cache.maxBytes` default: 16 MiB of Markdown per agent process. */
 export const DEFAULT_CACHE_MAX_BYTES = 16 * 1024 * 1024;
-/** Hard bounds, so a config cannot turn the cache into unbounded memory. */
-export const HARD_CACHE_TTL_SECONDS = 86_400;
-export const HARD_CACHE_MAX_ENTRIES = 4_096;
-export const HARD_CACHE_MAX_BYTES = 64 * 1024 * 1024;
+/** Bytes the anonymous paging memo keeps (no host `cache` config). */
+export const MEMO_MAX_BYTES = 64 * 1024 * 1024;
 /** The anonymous paging memo kept when no `cache` is configured (plan 192's values). */
 export const MEMO_TTL_SECONDS = 600;
 export const MEMO_MAX_ENTRIES = 8;
@@ -44,18 +42,18 @@ export function resolveFetchCache(config: ToolsWebCacheConfig | undefined): Reso
     return {
       ttlMs: MEMO_TTL_SECONDS * 1_000,
       maxEntries: MEMO_MAX_ENTRIES,
-      maxBytes: HARD_CACHE_MAX_BYTES,
+      maxBytes: MEMO_MAX_BYTES,
       annotated: false,
     };
   const ttl = config.ttlSeconds;
-  if (!Number.isSafeInteger(ttl) || ttl < 1 || ttl > HARD_CACHE_TTL_SECONDS)
-    throw new WebToolError("ERR_PRISM_WEB_INPUT", `cache.ttlSeconds must be an integer between 1 and ${HARD_CACHE_TTL_SECONDS}`);
+  // Host config: the host's value is the cap (plan 239 Task 5).
+  if (!Number.isSafeInteger(ttl) || ttl < 1) throw new WebToolError("ERR_PRISM_WEB_INPUT", "cache.ttlSeconds must be a positive integer");
   const maxEntries = config.maxEntries ?? DEFAULT_CACHE_MAX_ENTRIES;
-  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > HARD_CACHE_MAX_ENTRIES)
-    throw new WebToolError("ERR_PRISM_WEB_INPUT", `cache.maxEntries must be an integer between 1 and ${HARD_CACHE_MAX_ENTRIES}`);
+  if (!Number.isSafeInteger(maxEntries) || maxEntries < 1)
+    throw new WebToolError("ERR_PRISM_WEB_INPUT", "cache.maxEntries must be a positive integer");
   const maxBytes = config.maxBytes ?? DEFAULT_CACHE_MAX_BYTES;
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > HARD_CACHE_MAX_BYTES)
-    throw new WebToolError("ERR_PRISM_WEB_INPUT", `cache.maxBytes must be an integer between 1 and ${HARD_CACHE_MAX_BYTES}`);
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
+    throw new WebToolError("ERR_PRISM_WEB_INPUT", "cache.maxBytes must be a positive integer");
   return { ttlMs: ttl * 1_000, maxEntries, maxBytes, annotated: true };
 }
 

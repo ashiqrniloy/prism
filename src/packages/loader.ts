@@ -1,5 +1,6 @@
 import type {
   AgentConfig,
+  ResolvedAgentCeilings,
   AgentEvent,
   CredentialContext,
   JsonObject,
@@ -15,10 +16,10 @@ import type {
   ToolDefinition,
   Usage,
 } from "../contracts.js";
-import { assertDecisionRequest, DecisionsError, modelSupportsDecisions } from "../contracts-core/decisions.js";
+import { assertDecisionRequest, type DecisionRequest, DecisionsError, modelSupportsDecisions } from "../contracts-core/decisions.js";
 import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embeddings.js";
 import { HookError, type HookBus, type HookRegistrar } from "../hooks/index.js";
-import { PACKAGE_CALL_SEAM, type PackageCallSeam } from "../package-call-seam.js";
+import { PACKAGE_CALL_SEAM, type PackageCallSeam, packageCallSeamOf } from "../package-call-seam.js";
 import { RunLimitError } from "../run-limits.js";
 import { requestHostUi } from "../host/response.js";
 import type {
@@ -39,7 +40,7 @@ import { errorToErrorInfo, redactSecrets, type SecretRedactor } from "../redacti
 import { createAgentState, createSessionLog, createSessionState } from "../session/state.js";
 import type { SessionContext } from "../session-context.js";
 import { estimateTextBytes } from "../models/estimate.js";
-import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
+import { resolveCeilings } from "../run-limits.js";
 import { createSkillRegistry, isSameSkill } from "../skills.js";
 import { SLOT_NAMES, type SlotAssignments, type SlotName, type SlotRegistry } from "../slots/index.js";
 import { createToolRegistry } from "../tools.js";
@@ -57,7 +58,7 @@ import { type Capability, requireCapability } from "./capabilities.js";
 import { type PackageConfigSource, resolvePackageConfig } from "./config.js";
 import { type NormalizedPackage, normalizePackageInput } from "./define.js";
 import { PackageLoadError } from "./errors.js";
-import { assertJsonSchemaSupported, SECRET_REF, toJsonValue, validateJsonSchema } from "./schema.js";
+import { assertJsonSchemaSupported, compileToolSchema, SECRET_REF, toJsonValue, validateJsonSchema } from "./schema.js";
 import { parseRange, parseVersion, satisfies } from "./semver.js";
 import { SUPPORTED_API_LEVELS } from "../version.js";
 
@@ -78,6 +79,8 @@ export interface LoadPackagesOptions {
    * provider resolution `models.client` shares with sessions. Never mutated.
    */
   readonly hostConfig?: Partial<Pick<AgentConfig, "model" | "tools" | "skills" | "retry" | "disable">>;
+  /** The agent's resolved ceilings (plan 239 Task 4): read-only to packages as `prism.ceilings`. Shipped defaults when absent. */
+  readonly ceilings?: Readonly<ResolvedAgentCeilings>;
   /** Values resolved through `credentials.resolve`. Shared with the hook bus so its errors are redacted too. */
   readonly secrets?: string[];
   /** The built-in provider's `fetch`; defaults to the global. */
@@ -93,6 +96,8 @@ export interface LoadPackagesOptions {
   readonly registry?: {
     readonly tools: () => readonly ToolDefinition[];
     readonly skills: () => readonly Skill[];
+    /** `PackageAPI.sessions.open` (plan 232 Task 2): the agent's own session path. */
+    readonly openSession?: (options: import("./api.js").PackageSessionOpenOptions) => Promise<import("../contracts.js").Session>;
   };
 }
 
@@ -144,6 +149,15 @@ export interface LoadedPackages {
   statusNotes(): readonly PackageStatusNote[];
   /** Tools packages registered, after `disable`. Read live, so a disposed package's tools are gone. */
   tools(): readonly PackageToolEntry[];
+  /**
+   * Calls every `tools.source` once and answers the valid, non-conflicting tools they supply now, minus `disable`.
+   * A dropped tool or a throwing source adds one `warn` status note; this never throws.
+   */
+  sourceTools(): readonly PackageToolEntry[];
+  /** Whether a package registered a `tools.source`. */
+  readonly hasToolSources: boolean;
+  /** The package whose source supplied `tool` at the latest `sourceTools()` read. */
+  sourceToolOwner(tool: string): string | undefined;
   /** Skills packages registered (and `addDir` read), after `disable`. */
   skills(): readonly Skill[];
   /** The same skills with the package that registered each. */
@@ -154,6 +168,13 @@ export interface LoadedPackages {
   providers(): readonly { readonly owner: string; readonly provider: ModelProvider }[];
   /** The agent's provider resolution: the model's provider id picks from the registry. Throws `Unknown provider: <id>`. */
   resolveProvider(model: ModelConfig): ModelProvider;
+  /**
+   * Kernel-internal seam (plan 229 Task 4): `spec` filled in from its provider's catalog, read at most once per
+   * provider per agent. No entry, or no catalog, answers `spec` as given. Never called during `createAgent`.
+   */
+  describeModel(spec: ModelSpec): Promise<ModelSpec>;
+  /** Kernel-internal seam: records a status note under the `kernel` owner on the `package.status` channel. */
+  kernelNote(level: "info" | "warn", message: string): void;
   /** Commands packages registered, after `disable`. */
   commands(): readonly PackageCommandEntry[];
   /** Host tool and skill names `disable` removed. They stay in the host's registry and are filtered from every view. */
@@ -211,6 +232,16 @@ function declareStateKey(state: State, kind: "session" | "log" | "agent", key: s
 function listNames(value: { list(): readonly { readonly name: string }[] } | readonly { readonly name: string }[] | undefined): string[] {
   if (!value) return [];
   return (("list" in value ? value.list() : value) as readonly { readonly name: string }[]).map((item) => item.name);
+}
+
+/**
+ * The request a decision call is estimated from when its provider reports no usage: its state and question
+ * instructions as one user message. Only the run's usage estimator reads it; it is never sent.
+ */
+function decisionEstimateRequest(model: ModelConfig, request: DecisionRequest): ProviderRequest {
+  const parts = [request.state, ...Object.values(request.questions).map((question) => question.instructions)];
+  const text = parts.map((part) => (part === undefined ? "" : typeof part === "string" ? part : JSON.stringify(part))).join("\n");
+  return { model, messages: [{ id: "decision", role: "user", content: [{ type: "text", text }] }] };
 }
 
 function disableIds(label: string, ids: unknown): readonly string[] {
@@ -293,6 +324,7 @@ function orderPackages(entries: readonly Entry[]): Entry[] {
 export async function loadPackages(options: LoadPackagesOptions): Promise<LoadedPackages> {
   const { bus, slots, redactor } = options;
   const hostConfig = options.hostConfig ?? {};
+  const ceilings = options.ceilings ?? resolveCeilings();
   // Values `credentials.resolve` returned. The same array reaches the bus, so its errors redact them too.
   const secrets = options.secrets ?? [];
   const redact = (text: string): string => redactSecrets(redactor?.redact(text) ?? text, secrets);
@@ -392,7 +424,11 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   const capabilitiesOf = new Map(ordered.map((entry) => [entry.name, entry.capabilities]));
   const packageTools = createToolRegistry([], { duplicate: "error" });
   const toolEntries = new Map<string, PackageToolEntry>();
-  const packageSkills = createSkillRegistry([], { duplicate: "error" });
+  const toolSources: { readonly owner: string; readonly list: () => readonly ToolDefinition[] }[] = [];
+  const sourceOwners = new Map<string, string>();
+  const sourceNotes = new Set<string>();
+  const schemaNoted = new Set<string>();
+  const packageSkills = createSkillRegistry([], { duplicate: "error", maxInstructionBytes: ceilings.skillInstructionBytes });
   const skillOwners = new Map<string, string>();
   // The kernel's own provider is entry zero, so a package registering its id fails as `provider_conflict`.
   const providerEntries = new Map<string, { readonly owner: string; readonly provider: ModelProvider }>([
@@ -453,6 +489,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       toolEntries.delete(tool);
       packageTools.unregister?.(tool);
     }
+    removeToolSources(name);
     for (const [skill, owner] of skillOwners) {
       if (owner !== name) continue;
       skillOwners.delete(skill);
@@ -565,16 +602,115 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     }
     packageTools.register(tool);
     toolEntries.set(tool.name, { owner, tool, ...(when ? { when } : {}) });
+    noteIgnoredSchemaKeywords(owner, tool);
+  };
+
+  const registerToolSource = (owner: string, list: () => readonly ToolDefinition[]): void => {
+    if (setupComplete) {
+      throw new PackageLoadError("registration_closed", "tools.source registered after package setup was complete.", { package: owner });
+    }
+    if (typeof list !== "function") throw new TypeError("tools.source requires a function");
+    toolSources.push({ owner, list });
+  };
+
+  const removeToolSources = (owner: string): void => {
+    for (let i = toolSources.length - 1; i >= 0; i--) if (toolSources[i]?.owner === owner) toolSources.splice(i, 1);
+    for (const [tool, holder] of sourceOwners) if (holder === owner) sourceOwners.delete(tool);
+  };
+
+  /** A source note is recorded once per distinct message, so a standing conflict does not repeat every run. */
+  const noteSourceOnce = (owner: string, level: "info" | "warn", message: string): void => {
+    const key = `${owner}\u0000${message}`;
+    if (sourceNotes.has(key)) return;
+    if (sourceNotes.size >= MAX_STATUS_NOTES) sourceNotes.clear();
+    sourceNotes.add(key);
+    note(owner, level, message);
+  };
+
+  /**
+   * Plan 234 Task 4: one read of every tool source, checked as `registerTool` checks (shape, effects, timeout, and
+   * names taken by the kernel, a registered tool, the host, or an earlier source). Never throws: a bad tool or a
+   * throwing source is dropped with a note. Names in `disable.tools` are removed here, at each snapshot.
+   */
+  const snapshotSourceTools = (): readonly PackageToolEntry[] => {
+    if (toolSources.length === 0) return [];
+    const hostNames = new Set(listNames(hostConfig.tools?.add));
+    const taken = new Map<string, string>();
+    const out: PackageToolEntry[] = [];
+    const owners = new Map<string, string>();
+    for (const { owner, list } of toolSources) {
+      let tools: readonly ToolDefinition[];
+      try {
+        const answered = list();
+        if (!Array.isArray(answered)) throw new TypeError("tools.source must answer an array");
+        tools = answered;
+      } catch (error) {
+        noteSourceOnce(
+          owner,
+          "warn",
+          `tools.source failed and added no tools this run: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        continue;
+      }
+      for (const tool of tools) {
+        if (
+          typeof tool !== "object" ||
+          tool === null ||
+          typeof tool.name !== "string" ||
+          tool.name.length === 0 ||
+          typeof tool.execute !== "function"
+        ) {
+          noteSourceOnce(owner, "warn", "tools.source answered a tool without a name and an execute function; it was dropped");
+          continue;
+        }
+        if (disabled.tools.has(tool.name)) continue;
+        const holder = RESERVED_TOOL_NAMES.has(tool.name)
+          ? "the kernel"
+          : (toolEntries.get(tool.name)?.owner ?? (hostNames.has(tool.name) ? "the host" : taken.get(tool.name)));
+        if (holder !== undefined) {
+          noteSourceOnce(owner, "warn", `tool ${tool.name} from tools.source was dropped: the name is already taken by ${holder}`);
+          continue;
+        }
+        try {
+          createToolRegistry([tool]);
+        } catch (error) {
+          noteSourceOnce(
+            owner,
+            "warn",
+            `tool ${tool.name} from tools.source was dropped: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          continue;
+        }
+        taken.set(tool.name, owner);
+        owners.set(tool.name, owner);
+        out.push({ owner, tool });
+        if (!schemaNoted.has(tool.name)) {
+          schemaNoted.add(tool.name);
+          noteIgnoredSchemaKeywords(owner, tool);
+        }
+      }
+    }
+    sourceOwners.clear();
+    for (const [tool, owner] of owners) sourceOwners.set(tool, owner);
+    return out;
+  };
+
+  /** One `info` note when the built-in argument check ignores part of a tool's `parameters` (plan 226 Task 2). */
+  const noteIgnoredSchemaKeywords = (owner: string, tool: ToolDefinition): void => {
+    if (hostConfig.tools?.validation === "off" || tool.validateArguments === false || !tool.parameters) return;
+    const skipped = compileToolSchema(tool.parameters).skipped;
+    if (skipped.length === 0) return;
+    note(owner, "info", `tool ${tool.name}: argument validation ignores part of its parameters schema (${skipped.slice(0, 5).join("; ")})`);
   };
 
   const registerSkill = (owner: string, skill: Skill): void => {
     if (typeof skill !== "object" || skill === null || typeof skill.name !== "string" || skill.name.length === 0) {
       throw new TypeError("skills.register requires a skill with a name");
     }
-    if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
+    if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > ceilings.skillInstructionBytes) {
       throw new PackageLoadError(
         "skill_too_large",
-        `Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes).`,
+        `Skill ${skill.name} instructions exceed ceilings.skillInstructionBytes (${ceilings.skillInstructionBytes} bytes).`,
         { package: owner },
       );
     }
@@ -884,6 +1020,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       name,
       config: deepFreeze(cloneJson(entry.config)),
       configSources: state.entry.configSources,
+      ceilings,
       packages: {
         instances(names: readonly string[]): readonly PackageInstance[] {
           if (!setupComplete) {
@@ -928,9 +1065,23 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       slots: slotRegistrar,
       tools: {
         register: (tool, toolOptions) => registerTool(name, tool, toolOptions?.when),
+        source: (list) => registerToolSource(name, list),
         list: () => {
           assertReadable(name, "tools.list");
-          return Object.freeze((options.registry?.tools() ?? []).map((tool) => Object.freeze({ ...tool })));
+          return Object.freeze(
+            (options.registry?.tools() ?? []).map((tool) =>
+              Object.freeze({ ...tool, package: toolEntries.get(tool.name)?.owner ?? sourceOwners.get(tool.name) ?? HOST_OWNER }),
+            ),
+          );
+        },
+      },
+      sessions: {
+        async open(openOptions) {
+          requireCapability(name, entry.capabilities, "sessions", "sessions.open");
+          assertReadable(name, "sessions.open");
+          const open = options.registry?.openSession;
+          if (!open) throw new PackageLoadError("state_not_ready", "sessions.open has no agent to open a session on.", { package: name });
+          return open(openOptions);
         },
       },
       skills: {
@@ -1002,10 +1153,16 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           const adapter = provider.decisions();
           return {
             id: adapter.id,
-            decide(request) {
+            async decide(request, callOptions) {
               const bound = { ...request, model: model.model };
               assertDecisionRequest(bound, model);
-              return adapter.decide(bound);
+              const result = await adapter.decide(bound);
+              // Plan 237 Task 3: with a session in a run, the call is charged like a package `generate` call. No
+              // `model.request`/`model.call` hook runs: their payloads are a `ProviderRequest` and a stream. A missing
+              // usage report falls back to the run's estimate of the state the call sent.
+              const seam = callOptions?.session ? packageCallSeamOf(callOptions.session) : undefined;
+              if (seam?.recordUsage) await seam.recordUsage(model, result.usage, decisionEstimateRequest(model, bound));
+              return result;
             },
           };
         },
@@ -1108,6 +1265,8 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     for (const id of disableIds("tools", disable.tools)) {
       if (toolEntries.delete(id)) packageTools.unregister?.(id);
       else if (listNames(hostConfig.tools?.add).includes(id)) disabled.tools.add(id);
+      // A source may supply the name later: defer it to each snapshot instead of failing the load.
+      else if (toolSources.length > 0) disabled.tools.add(id);
       else throw unknown("tools", id);
     }
     for (const id of disableIds("skills", disable.skills)) {
@@ -1132,6 +1291,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           packageTools.unregister?.(toolName);
         }
       }
+      removeToolSources(id);
       for (const [skillName, owner] of [...skillOwners.entries()]) {
         if (owner === id) {
           skillOwners.delete(skillName);
@@ -1152,7 +1312,8 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     // The host's own `tools.add` / `skills.add` are validated here, so a duplicate name fails the
     // load closed (the check `createSecureAgent` used to get from `createToolRegistry`).
     createToolRegistry(hostConfig.tools?.add ?? [], { duplicate: "error" });
-    createSkillRegistry(hostConfig.skills?.add ?? [], { duplicate: "error" });
+    for (const tool of hostConfig.tools?.add ?? []) noteIgnoredSchemaKeywords("kernel", tool);
+    createSkillRegistry(hostConfig.skills?.add ?? [], { duplicate: "error", maxInstructionBytes: ceilings.skillInstructionBytes });
     // 6. Run `setup` in order. Packages first, then the inline host package.
     for (const entry of ordered) {
       const state: State = { entry, disposers: [], skillDirs: [], stateKeys: new Set() };
@@ -1220,11 +1381,18 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     capabilities,
     statusNotes: () => [...notes],
     tools: () => [...toolEntries.values()],
+    sourceTools: () => (disposed ? [] : snapshotSourceTools()),
+    get hasToolSources() {
+      return toolSources.length > 0;
+    },
+    sourceToolOwner: (tool) => sourceOwners.get(tool),
     skills: () => packageSkills.list(),
     skillEntries: () => packageSkills.list().map((skill) => ({ owner: skillOwners.get(skill.name) ?? "", skill })),
     provider: (id) => providerEntries.get(id)?.provider,
     providers: () => [...[...providerEntries.values()].map((entry) => ({ owner: entry.owner, provider: entry.provider }))],
     resolveProvider,
+    describeModel,
+    kernelNote: (level, message) => note(KERNEL_OWNER, level, message),
     commands: () => [...commandEntries.values()],
     disabled,
     hostFor,

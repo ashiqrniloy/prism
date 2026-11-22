@@ -361,4 +361,29 @@ describe("OpenRouter", () => {
       else process.env[env] = previous;
     }
   });
+
+  // Plan 239 Task 6: the provider wire ceilings reach the host through the package's `transport` config.
+  it("provider_wire_cap_is_host_configurable", async () => {
+    const run = async (transport?: { maxEventBytes?: number }) => {
+      const provider = createOpenRouterProvider({
+        apiKey: async () => secret,
+        ...(transport === undefined ? {} : { transport }),
+        fetch: (async () => completion()) as typeof fetch,
+      });
+      return collectProviderEvents(provider, request);
+    };
+    // The default event ceiling admits the completion frame.
+    assert.equal((await run()).at(-1)?.type, "done");
+    // A host-lowered ceiling refuses the same frame: a provider response never raises the host's value.
+    const error = errorEvent(await run({ maxEventBytes: 64 }));
+    assert.match(error.message, /SSE event exceeded 64 bytes/);
+    // The package config carries it: an unknown key or a non-positive value fails validation at load.
+    const schema = definition.config as { properties: Record<string, { properties?: Record<string, unknown> }> };
+    assert.deepEqual(Object.keys(schema.properties.transport?.properties ?? {}).sort(), [
+      "maxBufferBytes",
+      "maxCatalogBytes",
+      "maxEventBytes",
+      "maxResponseBodyBytes",
+    ]);
+  });
 });

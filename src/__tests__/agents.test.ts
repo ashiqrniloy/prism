@@ -88,7 +88,7 @@ describe("agent session runtime", () => {
       packages: [mockProvider([[providerTextDelta("a"), providerTextDelta("b"), providerTextDelta("c"), providerDone()]])],
     });
     const session = await agent.session({ id: "overflow-session", create: true });
-    const iterator = session.subscribe({ maxQueuedEvents: 2 })[Symbol.asyncIterator]();
+    const iterator = session.subscribe({ maxQueuedEvents: 2, overflow: "close" })[Symbol.asyncIterator]();
 
     await session.run("Hi");
 
@@ -236,7 +236,7 @@ describe("agent session runtime", () => {
     const session = await agent.session();
     const reader = collect(session.subscribe());
 
-    const result = await session.run("Hi", { limits: { maxToolRounds: null } });
+    const result = await session.run("Hi", { limits: { maxToolRounds: null, maxRepeatedToolRounds: null } });
     const events = await reader;
 
     assert.equal(result.status, "completed");
@@ -964,7 +964,7 @@ describe("agent session runtime", () => {
     const run = session.run("one");
     await ready;
     for (let i = 0; i < 8; i += 1) session.steer(`msg-${i}`);
-    assert.throws(() => session.steer("overflow"), /max pending messages/);
+    assert.throws(() => session.steer("overflow"), /ceilings\.pendingSteers \(8\)/);
     release();
     await run;
   });
@@ -1428,9 +1428,12 @@ describe("agent session runtime", () => {
       | "entries"
       | "checkout"
       | "contextMeter"
+      | "limits"
       | "getLoadedSkillNames"
       | "restoreLoadedSkills"
-      | "resume";
+      | "resume"
+      | "continue"
+      | "continueStream";
     type Exactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
     const exact: Exactly<keyof Session, Documented> = true;
     assert.equal(exact, true);
@@ -1923,16 +1926,18 @@ describe("agent session runtime", () => {
 
     assert.equal(calls, 2);
     assert.equal(
-      events.some((event) => event.type === "turn.started" && event.attempt === 1 && event.retry?.delayMs === 0),
+      events.some((event) => event.type === "turn.started" && event.attempt === 2 && event.retry?.delayMs === 0),
       true,
     );
+    // One `turn.started` per attempt (plan 227 Task 4): the retry rides the next attempt's own opener.
+    assert.equal(events.filter((event) => event.type === "turn.started").length, 2);
     assert.equal(
       events.some((event) => event.type === "message.delta" && event.content.type === "text" && event.content.text === "ok"),
       true,
     );
   });
 
-  it("does not retry after observable output", async () => {
+  it("does not retry after observable output when retry.afterOutput is false", async () => {
     let calls = 0;
     const provider: ModelProvider = {
       id: "mock",
@@ -1946,7 +1951,7 @@ describe("agent session runtime", () => {
       await createAgent({
         model: { provider: "mock", model: "demo" },
         packages: [providerPackage("test-provider", [provider])],
-        retry: { baseDelayMs: 0, maxAttempts: 2 },
+        retry: { baseDelayMs: 0, maxAttempts: 2, afterOutput: false },
       })
     ).session();
     const reader = collect(session.subscribe());

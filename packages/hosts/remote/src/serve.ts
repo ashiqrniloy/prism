@@ -12,9 +12,15 @@ import {
   OwnershipScopeError,
   type PendingDecision,
   type Principal,
+  resolveCeilings,
+  type ResolvedRunLimits,
+  resolveRunLimits,
+  type RunStateBounds,
+  runStateBounds,
   type RunOptions,
   type RunResult,
   type Session,
+  SESSION_NOTHING_TO_CONTINUE_CODE,
 } from "@arnilo/prism";
 import { createDispatcher, type Dispatcher, type RemoteHandler } from "./dispatcher.js";
 import { RemoteError } from "./errors.js";
@@ -98,6 +104,12 @@ export interface ServerState {
   readonly resuming: Set<string>;
   readonly active: Set<string>;
   readonly limits: ResolvedRemoteLimits;
+  /** The agent's own resolved run limits; a client's `limits` may only narrow them. */
+  readonly agentLimits: Readonly<ResolvedRunLimits>;
+  /** The agent's `ceilings.pendingDecisions`: most decisions one resume carries. */
+  readonly maxDecisions: number;
+  /** The agent's run-state bounds, so a raised `ceilings.runStateBytes` still lists its pending decisions. */
+  readonly runStateBounds: RunStateBounds;
   readonly hostUi?: HostUi;
 }
 
@@ -143,6 +155,9 @@ export function createServerState(
     resuming: new Set(),
     active: new Set(),
     limits: resolveRemoteLimits(options.limits),
+    agentLimits: resolveRunLimits(agent.config?.limits, undefined, resolveCeilings(agent.config?.ceilings)),
+    maxDecisions: resolveCeilings(agent.config?.ceilings).pendingDecisions,
+    runStateBounds: runStateBounds(resolveCeilings(agent.config?.ceilings)),
     ...(options.hostUi ? { hostUi: options.hostUi } : {}),
   };
   if (options.hostUi) {
@@ -219,6 +234,9 @@ export interface ConnectionOptions {
 function mapOwnershipError(error: unknown): unknown {
   if (isSessionNotFound(error) || error instanceof OwnershipScopeError) {
     return new RemoteError("session_not_found", "session not found");
+  }
+  if (error instanceof Error && (error as { code?: unknown }).code === SESSION_NOTHING_TO_CONTINUE_CODE) {
+    return new RemoteError("nothing_to_continue", "session has nothing to continue");
   }
   return error;
 }
@@ -380,7 +398,7 @@ export function serveConnection(state: ServerState, transport: RemoteTransport, 
     if (state.resuming.has(target.id) || state.active.has(target.id)) return;
     delivering.add(target.id);
     try {
-      const pending: readonly PendingDecision[] = pendingDecisionsOf(await target.entries());
+      const pending: readonly PendingDecision[] = pendingDecisionsOf(await target.entries(), state.runStateBounds);
       if (pending.length === 0) return;
       const decisions: Decision[] = [];
       for (const item of pending) {
@@ -457,27 +475,47 @@ export function serveConnection(state: ServerState, transport: RemoteTransport, 
     },
     async "sessions.list"(params) {
       const listQuery = parseSessionListQuery(params.query, ownership);
-      return (await agent.sessions.list(listQuery)) as unknown as JsonValue;
+      try {
+        return (await agent.sessions.list(listQuery)) as unknown as JsonValue;
+      } catch (error) {
+        // The store bounds the page by its own `queryLimits.maxListLimit` and refuses a larger one with a TypeError.
+        if (error instanceof TypeError && /limit/.test(error.message)) throw new RemoteError("invalid_params", error.message);
+        throw error;
+      }
     },
     async "sessions.messages"(params) {
       return { messages: (await session(str(params, "sessionId")).messages()) as unknown as JsonValue[] };
     },
     async "sessions.resume"(params) {
       const target = session(str(params, "sessionId"));
-      const pending = typeof target.entries === "function" ? pendingDecisionsOf(await target.entries()) : [];
+      const pending = typeof target.entries === "function" ? pendingDecisionsOf(await target.entries(), state.runStateBounds) : [];
       return resume(
         target,
         parseDecisions(params.decisions, {
           allowModifiedArguments: state.allowModifiedArguments === true,
           pending,
+          maxDecisions: state.maxDecisions,
         }),
-        parseRunOptions(params.options, principal, ownership),
+        parseRunOptions(params.options, principal, ownership, state.agentLimits),
       );
+    },
+    async "sessions.continue"(params) {
+      const target = session(str(params, "sessionId"));
+      const runOptions = parseRunOptions(params.options, principal, ownership, state.agentLimits);
+      if (state.resuming.has(target.id) || state.active.has(target.id))
+        throw new RemoteError("busy", "session already has a run in progress");
+      state.active.add(target.id);
+      try {
+        return await startRun(target, target.continueStream({ ...runOptions, maxQueuedEvents: limits.maxQueuedEvents }));
+      } catch (error) {
+        state.active.delete(target.id);
+        throw mapOwnershipError(error);
+      }
     },
     async run(params) {
       const target = session(str(params, "sessionId"));
       const input = parseInput(params.input);
-      const runOptions = parseRunOptions(params.options, principal, ownership);
+      const runOptions = parseRunOptions(params.options, principal, ownership, state.agentLimits);
       if (state.resuming.has(target.id) || state.active.has(target.id))
         throw new RemoteError("busy", "session already has a run in progress");
       state.active.add(target.id);

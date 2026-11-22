@@ -7,6 +7,7 @@ import {
   type CompactionTriggerContext,
   createAgent,
   createMemorySessionStore,
+  DEFAULT_COMPACTION_TRIGGER,
   type HookRegistrar,
   type ModelConfig,
   type ProviderRequest,
@@ -392,6 +393,128 @@ describe("session auto-compaction trigger", () => {
     await session.run("first");
 
     assert.deepEqual(failures, ["Agent session already has an active run"]);
+  });
+});
+
+/**
+ * Plan 229 Task 4: with `compaction` unset, the kernel's fallback trigger is
+ * `DEFAULT_COMPACTION_TRIGGER` (80% of the model's input cap). `cappedModel`'s cap is
+ * 2000 - 0 - 1024 (default reserve) = 976 tokens, so the default fires at 780.8.
+ */
+describe("kernel default compaction trigger", () => {
+  const big = "y".repeat(4_000); // ~1,000 estimated tokens: over 80% of 976
+  const medium = "m".repeat(3_400); // ~850 estimated tokens: over 80%, under 90%
+
+  it("default_agent_compacts_at_eighty_percent_of_cap", async () => {
+    assert.deepEqual(DEFAULT_COMPACTION_TRIGGER, { type: "input_ratio", ratio: 0.8 });
+    const { provider } = recordingProvider();
+    const agent = await createAgent({ model: cappedModel, packages: [providerPackage("test-provider", [provider])] });
+    const session = await agent.session({ id: "s1", create: true });
+
+    await session.run("hi");
+    assert.equal(compactionEntries(await session.entries()).length, 0, "a small branch stays under 80%");
+    await session.run(medium);
+    assert.equal(compactionEntries(await session.entries()).length, 1, "the branch crossed 80% of the cap with no configuration");
+    await agent.dispose();
+  });
+
+  it("compaction_false_never_auto_compacts", async () => {
+    const { provider } = recordingProvider();
+    const agent = await createAgent({ model: cappedModel, packages: [providerPackage("test-provider", [provider])], compaction: false });
+    const session = await agent.session({ id: "s1", create: true });
+
+    await session.run(big);
+    await session.run(big);
+    assert.equal(compactionEntries(await session.entries()).length, 0);
+
+    // A run-level `false` turns the default off for that run too.
+    const other = await createAgent({ model: cappedModel, packages: [providerPackage("test-provider", [recordingProvider().provider])] });
+    const otherSession = await other.session({ id: "s2", create: true });
+    await otherSession.run(big, { compaction: false });
+    assert.equal(compactionEntries(await otherSession.entries()).length, 0);
+    await agent.dispose();
+    await other.dispose();
+  });
+
+  it("explicit_threshold_replaces_the_default", async () => {
+    const { provider } = recordingProvider();
+    const agent = await createAgent({
+      model: cappedModel,
+      packages: [providerPackage("test-provider", [provider])],
+      compaction: { thresholdEntries: 1_000 },
+    });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run(big);
+    assert.equal(compactionEntries(await session.entries()).length, 0, "an unmet thresholdEntries beats the default ratio");
+
+    // An explicit trigger replaces the default the same way: 0.9 does not fire where 0.8 would.
+    const ratio = await createAgent({
+      model: cappedModel,
+      packages: [providerPackage("test-provider", [recordingProvider().provider])],
+      compaction: { trigger: { type: "input_ratio", ratio: 0.9 } },
+    });
+    const ratioSession = await ratio.session({ id: "s2", create: true });
+    await ratioSession.run(medium);
+    assert.equal(compactionEntries(await ratioSession.entries()).length, 0, "the configured 0.9 ratio holds");
+    await ratioSession.run(big);
+    assert.equal(compactionEntries(await ratioSession.entries()).length, 1, "and fires past it");
+    await agent.dispose();
+    await ratio.dispose();
+  });
+
+  it("when_handler_veto_still_wins", async () => {
+    const { provider } = recordingProvider();
+    const agent = await createAgent({
+      model: cappedModel,
+      packages: [providerPackage("test-provider", [provider])],
+      hooks: (hooks) => hooks.on("compaction.when", () => ({ compact: false })),
+    });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run(big);
+    assert.equal(compactionEntries(await session.entries()).length, 0, "a false vote vetoes the default trigger");
+    await agent.dispose();
+  });
+
+  it("model_without_cap_gets_a_note_and_no_trigger", async () => {
+    const { provider } = recordingProvider();
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])] });
+    const first = await agent.session({ id: "s1", create: true });
+    const second = await agent.session({ id: "s2", create: true });
+
+    const results = [await first.run(big), await first.run(big), await second.run(big)];
+    assert.deepEqual(
+      results.map((result) => result.status),
+      ["completed", "completed", "completed"],
+      "no cap never fails a run",
+    );
+    assert.equal(compactionEntries(await first.entries()).length, 0);
+    const notes = agent.inspect().statusNotes.filter((note) => note.package === "kernel");
+    assert.equal(notes.length, 1, "one note per agent, across sessions and turns");
+    assert.equal(notes[0]?.level, "info");
+    assert.match(notes[0]?.message ?? "", /mock\/demo declares no context window/);
+    await agent.dispose();
+  });
+
+  it("string_model_ref_resolves_cap_from_provider_catalog", async () => {
+    let catalogReads = 0;
+    const { provider: base } = recordingProvider();
+    const provider: ModelProvider = {
+      ...base,
+      models: async () => {
+        catalogReads += 1;
+        return [{ provider: "mock", model: "demo", limits: { contextWindow: 2_000, maxOutputTokens: 0 } }];
+      },
+    };
+    const agent = await createAgent({ model: "mock/demo", packages: [providerPackage("test-provider", [provider])] });
+    assert.equal(catalogReads, 0, "createAgent never reads the catalog");
+    const session = await agent.session({ id: "s1", create: true });
+
+    await session.run("hi");
+    await session.run(medium);
+    assert.equal(compactionEntries(await session.entries()).length, 1, "the catalog's window feeds the default trigger");
+    assert.equal(catalogReads, 1, "the catalog is read once per agent");
+    assert.equal(agent.inspect().statusNotes.filter((note) => note.package === "kernel").length, 0);
+    await agent.dispose();
   });
 });
 

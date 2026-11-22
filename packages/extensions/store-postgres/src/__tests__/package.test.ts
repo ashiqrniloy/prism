@@ -144,7 +144,7 @@ describeIntegration("postgres store package with a database", () => {
     assert.equal(view.slots.store, "@arnilo/prism-extensions/store-postgres");
     assert.deepEqual(view.store, {
       owner: "@arnilo/prism-extensions/store-postgres",
-      capabilities: ["listSessions", "deleteSession", "searchSessions"],
+      capabilities: ["listSessions", "deleteSession", "searchSessions", "appendMany", "tipCheck"],
     });
 
     const session = await agent.session({ id: "package-store", create: true });

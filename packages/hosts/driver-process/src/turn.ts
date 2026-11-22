@@ -78,7 +78,11 @@ export function createTurn(
         }
         if (decoded.sessionId !== undefined) {
           encoding.sessionId = decoded.sessionId;
-          if (adapter.session.strategy === "vendor") await run.state("vendor-session").append([redact(decoded.sessionId)]);
+          if (adapter.session.strategy === "vendor") {
+            const state = run.state("vendor-session");
+            const payload = [redact(decoded.sessionId)];
+            await (state.replace ? state.replace(payload) : state.append(payload));
+          }
         }
         if (decoded.turnId !== undefined) encoding.turnId = decoded.turnId;
         if (decoded.stop) {

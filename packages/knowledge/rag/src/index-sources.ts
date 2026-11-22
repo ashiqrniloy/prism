@@ -17,8 +17,12 @@ import { htmlParser, markdownParser, pdfParser, textParser } from "./parsers.js"
 import { replaceDocument } from "./sources.js";
 import type { DocumentLoader, Parser, RagScope, TransactionalVectorStore } from "./types.js";
 
-/** Hard ceiling on files one local source may contribute, so a stray glob cannot walk a filesystem. */
-export const HARD_MAX_SOURCE_FILES = 4096;
+/**
+ * Files one local source may contribute by default, so a stray glob cannot walk a filesystem. The
+ * directory's contents are not the host's, so this stays a ceiling; the host raises it per source
+ * with `sources[].maxFiles`.
+ */
+export const DEFAULT_MAX_SOURCE_FILES = 4096;
 
 export interface IndexSourcesOptions {
   readonly sources: readonly RagSourceConfig[];
@@ -104,7 +108,7 @@ export interface SourceFile {
   readonly sourceId: string;
 }
 
-/** Absolute local files a source contributes, capped at {@link HARD_MAX_SOURCE_FILES}. */
+/** Absolute local files a source contributes, capped at `source.maxFiles` (default {@link DEFAULT_MAX_SOURCE_FILES}). */
 export async function resolveSourceFiles(source: RagSourceConfig, signal?: AbortSignal): Promise<readonly SourceFile[]> {
   const root = resolve(source.path!);
   const info = await stat(root).catch(() => undefined);
@@ -112,10 +116,11 @@ export async function resolveSourceFiles(source: RagSourceConfig, signal?: Abort
   if (info.isFile()) return [{ path: root, sourceId: basename(root) }];
   if (!info.isDirectory()) throw new RagValidationError(`source path is neither a file nor a directory: ${root}`);
   const matcher = globToRegExp(source.glob ?? DEFAULT_RAG_GLOB);
+  const maxFiles = source.maxFiles ?? DEFAULT_MAX_SOURCE_FILES;
   const files: SourceFile[] = [];
   const walk = async (dir: string, prefix: string): Promise<void> => {
     signal?.throwIfAborted();
-    if (files.length >= HARD_MAX_SOURCE_FILES) throw new RagValidationError(`source exceeds ${HARD_MAX_SOURCE_FILES} files`);
+    if (files.length >= maxFiles) throw new RagValidationError(`source exceeds ${maxFiles} files`);
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;

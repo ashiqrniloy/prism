@@ -216,6 +216,40 @@ describe("createAgUiHandler", () => {
     assert.deepEqual(executed, []);
   });
 
+  it("ag_ui_slow_client_does_not_abort_the_run", async () => {
+    // Plan 228 Task 3: a client that reads nothing while 500 deltas stream used to overflow the 128-event
+    // `close` queue and abort the run. The handler now coalesces, with a 4096 default.
+    const parts = Array.from({ length: 500 }, (_, index) => `p${index} `);
+    const agent = await createAgent({
+      id: "slow-client-agent",
+      model: { provider: "mock", model: "mock" },
+      slots: { store: createMemorySessionStore() },
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              for (const part of parts) yield providerTextDelta(part);
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
+    });
+    const handler = createAgUiHandler(agent, { authorize: () => authorization });
+    const response = await handler(request(body({ threadId: "slow-thread" })));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const output = await events(response);
+    assert.equal(output.at(-1)?.type, EventType.RUN_FINISHED);
+    const streamed = output
+      .filter((event) => event.type === EventType.TEXT_MESSAGE_CONTENT)
+      .map((event) => event.delta)
+      .join("");
+    assert.equal(streamed, parts.join(""));
+    const messages = await (await agent.session({ id: "slow-thread", ownership: authorization.ownership })).messages();
+    assert.equal(messages.at(-1)?.role, "assistant");
+  });
+
   it("ag_ui_handler_never_emits_secret", async () => {
     const redactor = createSecretRedactor(["sekret"]);
     const agent = await createAgent({

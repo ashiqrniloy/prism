@@ -57,6 +57,8 @@ export interface KiloModelEntry {
 }
 
 export interface ListKiloModelsOptions {
+  /** Catalog body ceiling (`transport.maxCatalogBytes`); default KILO_CATALOG_BYTES. */
+  readonly maxBodyBytes?: number;
   readonly provider?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -104,7 +106,9 @@ export function mapKiloModel(entry: KiloModelEntry, options: { readonly provider
       // Kilo's own `supportsTools` treats an empty list as tool-capable.
       tools: params.length === 0 || params.includes("tools"),
       reasoning: params.includes("reasoning") || params.includes("reasoning_effort") || params.includes("include_reasoning"),
-      structuredOutput: params.includes("structured_outputs") || params.includes("response_format") ? "json_schema" : false,
+      // The Messages wire has no JSON-schema response format (plan 235 Task 3): only Chat/Responses routes declare it.
+      structuredOutput:
+        route !== "messages" && (params.includes("structured_outputs") || params.includes("response_format")) ? "json_schema" : false,
       streaming: true,
     },
     limits: {
@@ -230,7 +234,9 @@ export async function listKiloModels(options: ListKiloModelsOptions = {}): Promi
     const body = await readBoundedResponseText(response, { secrets: [token] });
     throw new Error(`Kilo model discovery failed: ${response.status} ${redactSecrets(body, [token])}`);
   }
-  const payload = await readBoundedResponseJson<{ data?: KiloModelEntry[] }>(response, { maxResponseBodyBytes: KILO_CATALOG_BYTES });
+  const payload = await readBoundedResponseJson<{ data?: KiloModelEntry[] }>(response, {
+    maxResponseBodyBytes: options.maxBodyBytes ?? KILO_CATALOG_BYTES,
+  });
   if (!Array.isArray(payload.data)) throw new Error("Kilo model discovery response missing data array");
   return payload.data.map((entry) => mapKiloModel(entry, { provider }));
 }

@@ -5,6 +5,7 @@ import {
   createSystemOneDecisionProvider,
   DEFAULT_MAX_BUFFER_BYTES,
   ProviderRequirementError,
+  type ProviderTransportConfig,
   type RoutedProviderRoute,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
@@ -31,6 +32,8 @@ export const OLLAMA_CLOUD_CHAT_ROUTE: RoutedProviderRoute<"openai-chat"> = {
 };
 
 export interface OllamaCloudProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -49,7 +52,9 @@ export function createOllamaCloudProvider(options: OllamaCloudProviderOptions = 
   const id = options.id ?? "ollama-cloud";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? OLLAMA_CLOUD_DEFAULT_BASE_URL);
   const route = options.route ?? "native";
+  const maxStructuredBytes = options.transport?.maxBufferBytes ?? DEFAULT_MAX_BUFFER_BYTES;
   const compat = createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id,
     baseUrl,
     apiKey: options.apiKey,
@@ -77,7 +82,13 @@ export function createOllamaCloudProvider(options: OllamaCloudProviderOptions = 
       }
       const selected = routeForOllamaCloudRequest(request, route);
       if (selected === "native") {
-        yield* ollamaCloudNativeEvents(request, { id, baseUrl, apiKey: options.apiKey, fetch: options.fetch });
+        yield* ollamaCloudNativeEvents(request, {
+          id,
+          baseUrl,
+          apiKey: options.apiKey,
+          fetch: options.fetch,
+          ...(options.transport?.maxEventBytes === undefined ? {} : { maxLineBytes: options.transport.maxEventBytes }),
+        });
         return;
       }
       if (selected === "openai") {
@@ -91,8 +102,8 @@ export function createOllamaCloudProvider(options: OllamaCloudProviderOptions = 
         for await (const event of compat.generate(request)) {
           if (event.type === "content_delta" && event.content.type === "text") {
             text += event.content.text;
-            if (new TextEncoder().encode(text).byteLength > DEFAULT_MAX_BUFFER_BYTES)
-              throw new Error(`Ollama Cloud structured output exceeded ${DEFAULT_MAX_BUFFER_BYTES} bytes`);
+            if (new TextEncoder().encode(text).byteLength > maxStructuredBytes)
+              throw new Error(`Ollama Cloud structured output exceeded ${maxStructuredBytes} bytes`);
             continue;
           }
           if (text) {

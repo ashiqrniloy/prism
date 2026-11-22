@@ -39,7 +39,8 @@ async function seedTree(root: string): Promise<void> {
 }
 
 test("resolveRepositoryLimits rejects values above hard caps", () => {
-  assert.throws(() => resolveRepositoryLimits({ maxDepth: 10_000 }), /maxDepth/);
+  assert.throws(() => resolveRepositoryLimits({ maxDepth: 0 }), /maxDepth/);
+  assert.equal(resolveRepositoryLimits({ maxDepth: 10_000 }).maxDepth, 10_000);
   assert.throws(() => resolveRepositoryLimits({ maxMatches: 0 }), /maxMatches/);
 });
 

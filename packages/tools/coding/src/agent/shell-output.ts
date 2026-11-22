@@ -9,7 +9,7 @@
 import type { JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
 
 import { CODING_UNSUPPORTED_EFFECT } from "./effects.js";
-import { type BackgroundProcesses, HARD_MAX_BACKGROUND_WAIT_SECONDS } from "./shell-background.js";
+import type { BackgroundProcesses } from "./shell-background.js";
 
 export interface ShellOutputToolOptions {
   readonly background: BackgroundProcesses;
@@ -28,14 +28,14 @@ export function createShellOutputTool(options: ShellOutputToolOptions): ToolDefi
     kind: "execute",
     effect: CODING_UNSUPPORTED_EFFECT,
     effects: ["execute"],
-    description: `Read, wait on, or kill a background process started by shell({ background: true }). Returns the output produced since the previous shell_output call for that id (tail-capped), whether the process is still running, and its exit code once it ended. waitSeconds (default 0, max ${HARD_MAX_BACKGROUND_WAIT_SECONDS}) waits for new output or exit; kill: true ends the process. An id from another session is an error.`,
+    description: `Read, wait on, or kill a background process started by shell({ background: true }). Returns the output produced since the previous shell_output call for that id (tail-capped), whether the process is still running, and its exit code once it ended. waitSeconds (default 0, max ${background.maxWaitSeconds}) waits for new output or exit; kill: true ends the process. An id from another session is an error.`,
     parameters: {
       type: "object",
       properties: {
         id: { type: "string", description: "Process id returned by shell({ background: true })" },
         waitSeconds: {
           type: "number",
-          description: `Seconds to wait for new output or exit (default 0, max ${HARD_MAX_BACKGROUND_WAIT_SECONDS})`,
+          description: `Seconds to wait for new output or exit (default 0, max ${background.maxWaitSeconds})`,
         },
         kill: { type: "boolean", description: "End the process before reading its remaining output" },
       },

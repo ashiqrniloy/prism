@@ -15,6 +15,7 @@ import {
   type ContextDraft,
   type JsonObject,
   type JsonValue,
+  type ModelProvider,
   type PackageAPI,
   type PackageInstance,
   type ProviderEvent,
@@ -33,6 +34,7 @@ import {
   providerToolCall,
   toolCallContent,
 } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 import contextEngineering, {
   type ContextEngineeringConfig,
@@ -106,13 +108,15 @@ interface HarnessOptions {
   readonly events?: AgentEvent[];
   /** Host compaction options, so a test can prove which vote wins against the kernel fallback. */
   readonly compaction?: { readonly thresholdEntries?: number };
+  /** The session model's declared window, so the kernel's default compaction trigger can resolve a cap. */
+  readonly limits?: { readonly contextWindow: number; readonly maxOutputTokens: number };
 }
 
 async function harness(options: HarnessOptions = {}) {
   const requests: ProviderRequest[] = [];
   const provider = mockProvider(options.script ?? [reply()], { onRequest: (request) => requests.push(request) });
   const agent = await createAgent({
-    model: { provider: "mock", model: "main" },
+    model: { provider: "mock", model: "main", ...(options.limits ? { limits: options.limits } : {}) },
     packages: [provider, contextEngineering(options.config ?? {}), ...(options.extraPackages ?? [])],
     ...(options.tools?.length ? { tools: { add: [...options.tools] } } : {}),
     ...(options.compaction ? { compaction: options.compaction } : {}),
@@ -326,9 +330,69 @@ describe("@arnilo/prism-extensions/context-engineering package (plan 158 Task 7)
     await agent.dispose();
   });
 
-  it("context_engineering_below_ratio_abstains_and_host_trigger_fires", async () => {
-    // Attention is an extra reason to compact, never a veto: below `compactRatio` it abstains, so the
-    // host's `thresholdEntries` fallback still decides.
+  it("attention_below_its_gate_vetoes_the_kernel_default", async () => {
+    // Plan 229 Task 4: below `compactRatio` attention votes `false`, so the kernel's default trigger
+    // (80% of the cap) cannot compact before attention's own 0.9 gate. Both caps are 10,000 tokens:
+    // the model's window is 10,000 + the kernel's 1,024 default reserve.
+    const config = { attention: { maxInputTokens: 10_000, triggerRatio: 0.8, compactRatio: 0.9 } };
+    const limits = { contextWindow: 11_024, maxOutputTokens: 0 };
+    const between = "y".repeat(34_000); // ~8,500 estimated tokens: past 0.8, under 0.9
+
+    const { agent } = await harness({ config, limits, script: [reply("first"), reply("summary"), reply("second")] });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run(between);
+    assert.equal(
+      (await session.entries()).some((entry) => entry.kind === "compaction"),
+      false,
+      "attention vetoes the kernel default below its gate",
+    );
+    await agent.dispose();
+
+    // The same branch without attention: the kernel default fires.
+    const plain = await createAgent({
+      model: { provider: "mock", model: "main", limits },
+      packages: [mockProvider([reply("first"), reply("summary"), reply("second")])],
+    });
+    const plainSession = await plain.session({ id: "s2", create: true });
+    await plainSession.run(between);
+    assert.equal(
+      (await plainSession.entries()).some((entry) => entry.kind === "compaction"),
+      true,
+      "the kernel default fires at the same size",
+    );
+    await plain.dispose();
+  });
+
+  it("attention_resolves_cap_from_provider_catalog", async () => {
+    // Plan 229 Further Actions P2: with a bare `"provider/model"` ref and no `maxInputTokens`, the
+    // attention compiler reads the window from the provider catalog. Cap: 11,024 - 1,024 reserve = 10,000.
+    let reads = 0;
+    let turn = 0;
+    const script = [reply("first"), reply("summary"), reply("second")];
+    const provider: ModelProvider = {
+      id: "mock",
+      models: async () => {
+        reads += 1;
+        return [{ provider: "mock", model: "main", limits: { contextWindow: 11_024, maxOutputTokens: 0 } }];
+      },
+      generate: (request) => createMockProvider(script[Math.min(turn++, script.length - 1)] ?? []).generate(request),
+    };
+    const agent = await createAgent({
+      model: "mock/main",
+      packages: [providerPackage("mock-catalog", [provider]), contextEngineering({ attention: { triggerRatio: 0.8, compactRatio: 0.9 } })],
+    });
+    assert.equal(reads, 0, "createAgent never reads the catalog");
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("y".repeat(40_000));
+
+    const kinds = (await session.entries()).map((entry) => entry.kind);
+    assert.equal(kinds.includes("compaction"), true, "the catalog's window fed the attention gate");
+    assert.equal(reads, 1, "the catalog is read once per agent");
+    await agent.dispose();
+  });
+
+  it("context_engineering_below_ratio_vetoes_the_host_trigger", async () => {
+    // Below `compactRatio` attention owns the decision, the same as the compaction and memory voters.
     const { agent } = await harness({
       config: { attention: { maxInputTokens: 10_000, triggerRatio: 0.8, compactRatio: 0.9 } },
       compaction: { thresholdEntries: 0 },
@@ -338,7 +402,7 @@ describe("@arnilo/prism-extensions/context-engineering package (plan 158 Task 7)
     await session.run("short");
 
     const kinds = (await session.entries()).map((entry) => entry.kind);
-    assert.equal(kinds.includes("compaction"), true, "the host trigger fires when attention abstains");
+    assert.equal(kinds.includes("compaction"), false, "attention's false vote wins over the host's fallback trigger");
     await agent.dispose();
   });
 

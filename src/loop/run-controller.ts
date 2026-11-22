@@ -37,6 +37,8 @@ import {
   type RunTurnResult,
 } from "./types.js";
 
+const DEFAULT_CONTROLLER_TOOL_CONCURRENCY = 1;
+
 /** How an `ask` decision resolved: execute, refuse, or (no UI) suspend the round. */
 export type AskResolution = { readonly kind: "allow" } | { readonly kind: "deny"; readonly reason: string } | { readonly kind: "suspend" };
 
@@ -79,7 +81,11 @@ export interface RunControllerInternals {
   readonly inputMessages: readonly Message[];
   readonly maxToolRounds: number;
   readonly maxContinuations: number | null;
+  /** The run's resolved round concurrency; only the default loop reads it (see {@link runToolConcurrency}). */
+  readonly toolConcurrency?: number;
   readonly restoredLoopState?: JsonValue;
+  /** `run.checkpoint(value)`: keep the latest loop state by reference for the kernel to persist. */
+  recordLoopState?(value: JsonValue): void;
   /** Provider turns already completed in this run (resume). */
   readonly startTurn?: number;
   emit(event: AgentEvent): void;
@@ -88,6 +94,14 @@ export interface RunControllerInternals {
   assemble(nextInput: AgentInput, turn: number, options: RunTurnOptions): Promise<ProviderRequest>;
   generate(request: ProviderRequest, requestSecrets?: readonly (string | undefined)[]): Promise<ProviderTurnResult>;
   chargeToolRound?(calls: readonly ToolCallContent[]): void | Promise<void>;
+  /**
+   * A tool round settled with these results (plan 239 Task 9: the stall axis). Runs inside `executeTools`
+   * before `onToolRoundComplete`, so every loop is charged and the turn checkpoint carries the window. A
+   * throw (a `maxRepeatedToolRounds` breach) fails the run.
+   */
+  onToolRoundSettled?(calls: readonly ToolCallContent[], results: readonly ToolResult[]): void;
+  /** A tool round's results are all appended (plan 231 Task 3: the kernel's turn checkpoint). A throw fails the run. */
+  onToolRoundComplete?(): Promise<void>;
   dispatchToolCall(call: ToolCallContent, origin?: EventOrigin): Promise<ToolResult>;
   isToolCallExclusive?(call: ToolCallContent): boolean;
   /** Capabilities reported to `tool.call` for a call's tool. */
@@ -113,6 +127,12 @@ export interface RunControllerInternals {
   applyPendingSteers?(): Promise<boolean>;
   /** Queue a `run.end` continuation through the steer path. */
   queueContinuation(decision: { readonly reason: string; readonly steer?: string | Message }): void;
+  /**
+   * Structured-output repair (plan 235 Task 3): after `run.end` declined to continue, the violation
+   * message for an invalid final reply while repairs remain, else `undefined`. The kernel owns the
+   * count, apart from `maxContinuations`.
+   */
+  structuredOutputRepair?(): string | undefined;
   setFinishReason(reason: AgentFinishReason | undefined, detail?: string): void;
   finishReason(): AgentFinishReason | undefined;
   usage(): Usage | undefined;
@@ -123,6 +143,13 @@ export interface RunControllerInternals {
  * own keys are exactly the primitives — no registry, provider, or dispatch handle leaks — while
  * kernel code reaches the loop's own bookkeeping through {@link RUN_CONTROLLER_INTERNALS}.
  */
+const toolConcurrencies = new WeakMap<RunController, number>();
+
+/** The run's resolved `tools.concurrency`, for the default loop. A custom loop passes its own `concurrency`. */
+export function runToolConcurrency(controller: RunController): number {
+  return toolConcurrencies.get(controller) ?? 1;
+}
+
 export function createRunController(internals: RunControllerInternals): RunController {
   let turnCount = internals.startTurn ?? 0;
   let nextInput = internals.input;
@@ -350,9 +377,9 @@ export function createRunController(internals: RunControllerInternals): RunContr
       throw error;
     }
     try {
-      return await dispatchToolCallsInOrder(calls, {
+      const results = await dispatchToolCallsInOrder(calls, {
         signal: internals.signal,
-        toolConcurrency: options?.concurrency ?? 1,
+        toolConcurrency: options?.concurrency ?? DEFAULT_CONTROLLER_TOOL_CONCURRENCY,
         ...(internals.chargeToolRound ? { chargeToolRound: internals.chargeToolRound } : {}),
         dispatchToolCall: (call) => {
           // An unresolved ask is not dispatched: it is staged as a pending decision and the run
@@ -368,6 +395,10 @@ export function createRunController(internals: RunControllerInternals): RunContr
         },
         settled: emitSettled,
       });
+      for (const call of calls) outstanding.delete(call.id);
+      internals.onToolRoundSettled?.(calls, results);
+      await internals.onToolRoundComplete?.();
+      return results;
     } finally {
       // The dispatch seam answered this round, or left a call to its suspension: none is outstanding.
       for (const call of calls) outstanding.delete(call.id);
@@ -471,7 +502,15 @@ export function createRunController(internals: RunControllerInternals): RunContr
       continuations,
     });
     const asked = (decision as RunEndDecision | undefined)?.continue;
-    if (!asked || typeof asked.reason !== "string" || asked.reason.length === 0) return { continue: false };
+    if (!asked || typeof asked.reason !== "string" || asked.reason.length === 0) {
+      // The hook declined: an invalid structured-output reply gets a bounded repair turn. In the
+      // primitive, so every loop that calls `run.end()` gets it; it never touches `continuations`.
+      const repair = internals.structuredOutputRepair?.();
+      if (repair === undefined) return { continue: false };
+      internals.queueContinuation({ reason: repair });
+      nextInput = [];
+      return { continue: true, reason: repair };
+    }
     if (internals.maxContinuations !== null && continuations >= internals.maxContinuations) {
       internals.setFinishReason("hook_limit");
       return { continue: false };
@@ -684,7 +723,12 @@ export function createRunController(internals: RunControllerInternals): RunContr
     ask,
     steers,
     emit: (name, data) => internals.emit(packageEventFor(internals.loopOwner, internals.sessionId, internals.runId, name, data)),
+    checkpoint: (value) => {
+      internals.recordLoopState?.(value);
+    },
+    restored: internals.restoredLoopState,
   };
   settlers.set(controller, settleOutstanding);
+  toolConcurrencies.set(controller, internals.toolConcurrency ?? DEFAULT_CONTROLLER_TOOL_CONCURRENCY);
   return controller;
 }

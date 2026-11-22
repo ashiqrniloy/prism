@@ -20,7 +20,7 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
 
 ## Tasks
 
-- [ ] Task 1: Phase review (read-only)
+- [x] Task 1: Phase review (read-only)
   - Acceptance Criteria:
     - Functional: The task note records, citing `file:line`:
       - (a) **Timeouts.** Every use of `callTimeoutMs` and `maxTotalTimeout` in `packages/extensions/mcp/src/bridge.ts` (`:73-74`, `:135-136`, `:435-447`, `:571-598`) and `capabilities.ts:32`, the SDK options they map to (`timeout`, `maxTotalTimeout`, `resetTimeoutOnProgress`) at the pinned `@modelcontextprotocol/client` version, and `HARD_CALL_TIMEOUT_MS` (`limits.ts`).
@@ -58,13 +58,95 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
       - none
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-17):
+    - Read-only. No code, tests, docs, or baselines changed. The SDK was read in `node_modules/@modelcontextprotocol/client` at **2.4.0** (the range is `^2.3.0`, `packages/extensions/package.json:103`; `bun.lock:275` pins 2.4.0).
+    - **(a) Timeouts.**
+      - The package reuses one value for both limits. `package.ts:177` sets `timeoutMs` from `connectTimeoutMs` (default 15 000, `package.ts:11`). That value aborts connect (`package.ts:178-179`) and becomes the bridge's `callTimeoutMs` (`package.ts:187`).
+      - The bridge applies `callTimeoutMs` everywhere as both `timeout` and `maxTotalTimeout`, with no progress reset: connect (`bridge.ts:71-75`); every `tools/list` page (`bridge.ts:133-137`), including the refreshes after `list_changed`; tool calls (`bridge.ts:442-449`); App `resources/list` (`:570-573`) and `resources/read` (`:596-599`); and capability connect (`capabilities.ts:32`).
+      - Tool calls also have a **second, bridge-owned timer**: `bridge.ts:434-437` aborts the call's `AbortController` at `callTimeoutMs` whatever the SDK does. A progress reset in the SDK alone would not lengthen a call; Task 2 must move this timer to `maxCallTimeMs` or drop it.
+      - Library default: `DEFAULT_CALL_TIMEOUT_MS = 60_000` (`constants.ts:3`), the same as the SDK's `DEFAULT_REQUEST_TIMEOUT_MSEC` (60 000). Hard cap: `HARD_CALL_TIMEOUT_MS = 30 * 60_000` (`limits.ts:22`). It is enforced by `validateMcpLimit` (`limits.ts:68-73`, `:106`) when the bridge is built, **not** at config load. The config schema has `connectTimeoutMs: { type: "integer", minimum: 1 }` with no maximum (`config.ts:98`, `:114`), so a value over 30 minutes fails only at connect, and only for that server.
+      - SDK 2.4.0 `RequestOptions` (`dist/index-eUeYt8-s.d.cts:1821-1849`):
+        - `timeout`: per request, default 60 s.
+        - `resetTimeoutOnProgress`: default `false`.
+        - `maxTotalTimeout`: an absolute bound that ignores progress; unset means no bound.
+        - `onprogress`: the callback. **A `progressToken` is attached only when `onprogress` is set** (`src-ohtppAR3.cjs:6189-6197`), and the reset happens in `_onprogress` only when `resetTimeoutOnProgress` is set (`:6041-6042`). Task 2 therefore passes a no-op (or forwarding) `onprogress` together with `resetTimeoutOnProgress: true`.
+      - Cancellation on timeout or abort (`src-ohtppAR3.cjs:6201-6217`): the SDK sends `notifications/cancelled` unless the request has its own HTTP stream (the 2026-07-28 era over Streamable HTTP, `:6180`). In that case it aborts the HTTP request instead. Task 2's `timeout_cancels_the_server_request` must assert the right mechanism for each era.
+    - **(b) OAuth library surface.**
+      - `McpClientAuthOptions` (`auth.ts:156-177`) takes:
+        - `state` (required);
+        - `strategy`;
+        - `scopes`;
+        - `redirectUri`;
+        - `onRedirectRequired(url)`;
+        - `limits`, `fetch`, and `now`;
+        - `onInsufficientScope`.
+      - `McpClientAuthState` (`auth.ts:129-154`) persists **five records**: tokens and client information (both keyed by issuer), discovery, the PKCE verifier, and the optional authorization-state round trip. Its `clear(scope)` method erases them. If `saveAuthorizationState`/`loadAuthorizationState` are missing, `finishAuth(URLSearchParams)` fails closed (`auth.ts:349-365`).
+      - Registration strategies (`auth.ts:112-121`): `static` (`clientId`, optional secret), `cimd` (`clientMetadataUrl`, preferred), and `dcr` (marked deprecated under 2026-07-28; `application_type: "native"` is filled in, `auth.ts:256-268`).
+      - `redirectToAuthorization` (`auth.ts:317-336`) saves `state` and the AS origin, then calls `onRedirectRequired`. Without it, it throws `ERR_PRISM_MCP_OAUTH_STATE`.
+      - The code comes back through `McpClientAuth.finishAuth(callbackParams)` (`auth.ts:495-531`), which:
+        - requires `redirectUri`;
+        - checks the saved `state`, then the RFC 9207 `iss`;
+        - surfaces only the bare `error` code;
+        - runs `auth()` with the code.
+      - The bare-string form skips the state and `iss` checks. The package must never use it for the loopback path. It is acceptable only for `paste` when the user pastes a bare code, and Task 3 should require the full callback URL there too.
+      - `createMcpOAuthTransport` (`transport.ts:42-62`) builds `StreamableHTTPClientTransport` with `authProvider`. It is used only when `McpStreamableHttpTransport.auth` is set (`transport.ts:25`). The package never sets it (`package.ts:168-174`).
+      - What happens on a 401: the SDK auth fetch (`index.cjs:743-760`) runs `auth()`. A result of `REDIRECT` (after `onRedirectRequired`) throws `UnauthorizedError("…redirect initiated")`. The connect path (`index.cjs:1130-1147`) retries once, then rejects with `UnauthorizedError`, or `SdkHttpError(ClientHttpAuthentication)` after a re-auth. Refresh is handled inside `auth()` when tokens have a `refresh_token`.
+      - So the package's flow is: connect → `UnauthorizedError` → wait for the callback → `finishAuth` → connect again on a fresh transport.
+      - Today the package only matches `/401|unauthori[sz]ed|www-authenticate/` and writes a note (`package.ts:217-220`).
+    - **(c) Tool registration: the proof.**
+      - `registerTool` throws `registration_closed` once `setupComplete` is set (`src/packages/loader.ts:551-556`; set at `:1228`). `tools.register` is the only `PackageAPI` path that adds a tool (`loader.ts:945`).
+      - `PackageToolOptions.when` (`src/packages/api.ts:39-46`) can only hide an entry already in `toolEntries`. It is evaluated **per turn**, not per run (`src/agent-session/session/assemble.ts:437-443`, `hiddenPackageTools` `:657-679`); a throw hides the tool.
+      - A run snapshots tools once (`assemble.ts:342-345`, whose comment already says "MCP refresh must not mutate this registry"):
+        - `activeTools(agent)` (`src/agent-tool-dispatch.ts:104-111`) → `agentToolList` (`src/agent-session/runtime-registry.ts:95-97`), which merges `AgentConfig.tools.add` (host input, fixed), package `toolEntries`, and `disable`;
+        - then `selectRunTools` (`src/tools.ts:274-291`) filters by `RunOptions.tools.only` and the checkpoint grant;
+        - then the run registry is built (`assemble.ts:356`).
+      - Every dispatch goes through `RunController.executeTools(calls)` (`src/loop/types.ts:133-136`), which accepts calls, not definitions. A custom loop therefore cannot add a tool either.
+      - Hooks and context engineering can narrow what is advertised, but a tool that is not in the run registry is not dispatchable.
+      - Views: `toolInfos` (`src/agent/views.ts:16-27`) and `prism.tools.list()` (`loader.ts:946-953`) read the same merged list.
+      - **Proof holds**: `when` can hide a registered tool, and no existing hook, slot, `PackageAPI` member, or `RunController` primitive can add a tool after setup. Task 4 stays a kernel addition.
+    - **(d) Who else needs a late tool set.**
+      - `packages/tools/computer-use` (`src/create.ts:73-77`, `src/index.ts:143`) is MCP-backed. Its tools are a fixed allow-list registered once, and their `execute` closes over one stdio bridge. When the child exits, every tool dies until the agent is recreated. A source lets its tools exist exactly while the bridge is open and come back after a respawn. **This is the second package**, so the rule is met: MCP plus computer-use.
+      - `packages/tools/web/src/obscura/mcp.ts:63-104` is a host-built library surface with a live `tools` getter and `refresh()`. No package registers it (`packages/tools/web/src/index.ts:376` registers only the CDP and fetch tools). If one ever did, it would be a source consumer.
+      - `packages/tools/openapi/src/index.ts:111`: the spec is fixed at setup, so it is not a consumer.
+      - `packages/extensions/context-engineering` `search_tools` (`src/index.ts:179`, `src/handler.ts:208`) indexes the turn's offered tools and narrows by name. It never adds tools, and it sees source tools automatically once they are in the run snapshot.
+    - **(e) List-change handling today.**
+      - The bridge builds its client with `listChanged.tools = { autoRefresh: false, onChanged }` (`bridge.ts:57-62`, `:305`), which force-refreshes the bounded list (`refreshBridgeTools`, `:356-395`) and replaces `state.tools`.
+      - `createBridgeState` also sets its own `notifications/tools/list_changed` handler that marks the list stale (`bridge.ts:331-333`). The SDK installs its own handler **after initialize** (`public-C-9H-ftO.cjs:3000`, `:4008-4033`) and overwrites that one when the server advertises `tools.listChanged`. The bridge's handler survives only for servers that don't advertise it. Both behaviors are acceptable.
+      - TTL (`effectiveListTtlMs`, `bridge.ts:221-225`): hint-less servers refetch on every `refresh()`.
+      - **The package never reads the refreshed list.** `entry.tools` is set only in `connectServer` (`package.ts:209`), and tools are registered once from it (`package.ts:231-237`). A tool added through `list_changed` is invisible. A removed tool stays advertised and returns "MCP tool was revoked" (`bridge.ts:407-414`).
+    - **(f) Close detection.**
+      - The bridge sets `state.closed` only through `closeBridge` (`bridge.ts:501-518`): an explicit close, or a connect-time abort (`:65-68`). It never sets `client.onclose`.
+      - For **stdio**, the child's `close` event → transport `onclose` (`stdio.cjs:98-101`) → `Client._onclose` (`src-ohtppAR3.cjs:5873-5890`), which rejects in-flight requests with `SdkError(ConnectionClosed)` and calls `client.onclose`, but nothing listens. After that, `state.closed` stays `false`, the package `entry.state` stays `"connected"`, and later calls fail inside the SDK with `"Not connected"` (`:6167-6169`), which comes back as a tool error.
+      - For **Streamable HTTP**, `onclose` fires only on an explicit `close()` (`index.cjs:1680-1686`). A dead server shows up as failed requests and `onerror` (including `Maximum reconnection attempts` from the SSE reconnect, `index.cjs:1567-1571`), never as `onclose`.
+      - `McpBridgeClosedError` / `assertOpen` (`bridge.ts:520-522`, `:260`) therefore detect only a bridge Prism closed itself.
+      - Task 5 needs the bridge to:
+        - set `client.onclose` to mark itself closed and notify;
+        - count HTTP request failures (`ConnectionClosed`, network errors, a 404 session-expired) as a drop.
+    - **Trust rule for late tools.** A tool that appears after setup comes only from a server that already passed `isServerAllowed` and `checkServerTrust` (`package.ts:80-92`). Its owner is the MCP package. Its `effects` come from the server's `readOnly` setting (`package.ts:194`; `["read"]` or `["external"]`), and its durable `effect` is the bridge default `external_mutation/unsupported` (`bridge.ts:251`, `:269-271`). Nothing in the server's own tool annotations is trusted. Source tools pass the same `tool.call` gate, because the run registry is the only thing dispatch uses.
+    - **Findings that change later tasks** (applied to their text below):
+      - Bug found by reading, not by a test: after `mcp:reconnect`, every registered MCP tool still holds the **old** bridge's `execute` closure. The bridge tools are spread into `mappedTools` (`package.ts:192-195`), and their `execute` checks the old state's `isClosed` (`bridge.ts:259-261`). Every call therefore throws `McpBridgeClosedError` until the agent is recreated. `mcp_reconnect_and_close_commands` (`__tests__/package.test.ts:393-468`) never calls a tool after reconnecting. Task 4's source fixes this: it reads `entry.bridge.tools` live at each snapshot, guarded because the getter throws once the bridge is closed (`bridge.ts:339-342`). Task 4 adds a test for it.
+      - Task 4 must also decide three things the kernel already depends on:
+        - `agentFingerprint` (`src/agent-run-state.ts:110-146`) hashes `agentToolList`. If source tools join that list, any server list change alters the fingerprint, and suspended runs fail to resume. Source tools must stay out of the fingerprint; resume already intersects the checkpoint grant with what is available (`tools.ts:286-290`).
+        - `applyDisable` (`loader.ts:1133-1142`) throws `unknown_disable_id` at load for a name nothing has registered yet. A `disable.tools` entry naming a source-only tool would fail the load, so names must be deferred when a source exists.
+        - `packagesAffectTools` (`runtime-registry.ts:85-88`) short-circuits when no package registered tools, so it must also count sources.
+      - Task 3:
+        - One `tokens` ref must hold all five `McpClientAuthState` records as a single JSON record in `Secret.metadata`, following openai-codex's `oauthMetadata` (`packages/providers/openai-codex/src/oauth.ts:180-187`). It is bounded by `tokenRecordBytes`. `prism.credentials.delete` exists for logout (`src/packages/api.ts:213-214`).
+        - openai-codex names its callback modes `"listen" | "paste"` (`oauth.ts:122-124`), and Task 3 now uses the same names.
+        - `package.ts:172` hard-sets `allowLoopbackHttp: true` for every HTTP server, and `oauthDiscoveryFetch` would then accept plain-HTTP loopback AS and token endpoints (`transport.ts:100-112`). Task 3 must allow loopback only when the server URL is itself loopback.
+        - The sign-in wait must run outside the 15 s connect timer.
+        - With a random loopback port, a client registered through DCR holds the old `redirect_uris`. A port change must clear `client` and register again, or reuse the saved port.
+      - Task 5:
+        - `knownTrustedServers` is keyed by `server.id` (`trust.ts:131-172`), and the config is fixed for the agent's lifetime, so the fingerprint cannot change during a reconnect. "Changed fingerprint asks again" is therefore made concrete: the trust cache is keyed by `mcpServerFingerprint` (`trust.ts:56-64`), and the test exercises `checkServerTrust` with a changed config.
+        - The current states are `connected | failed | disabled | closed` (`status.ts:5`); Task 5 adds `reconnecting`.
+    - Commands run: `graft grep selectRunTools|activeTools|agentToolList`, `graft skeleton`-equivalent reads, and greps over the SDK `dist/`. ctx7 was not needed: the pinned SDK's own type declarations and source were read directly.
 
-- [ ] Task 2: Call timeouts are separate from the connect timeout
+- [x] Task 2: Call timeouts are separate from the connect timeout
   - Acceptance Criteria:
     - Functional:
       - Config gains `callTimeoutMs` (plane and `servers[]`, integer, default 60,000) and `maxCallTimeMs` (default 300,000, hard cap from `HARD_CALL_TIMEOUT_MS`). `connectTimeoutMs` applies to `connect` and the first `tools/list` only.
-      - A tool call times out after `callTimeoutMs` without progress; each progress notification resets that timer, and the call ends at `maxCallTimeMs` regardless.
-      - A timed-out call returns a tool error naming the server and the limit, and the request is cancelled on the server (`notifications/cancelled`, as the SDK does on abort).
+      - A tool call times out after `callTimeoutMs` without progress; each progress notification resets that timer, and the call ends at `maxCallTimeMs` regardless. (Task 1(a): pass `onprogress` together with `resetTimeoutOnProgress: true`, because SDK 2.4.0 sends a progress token only when `onprogress` is set. Move the bridge's own abort timer (`bridge.ts:434-437`) to `maxCallTimeMs`. `tools/list` refreshes after connect use `callTimeoutMs`.)
+      - A timed-out call returns a tool error naming the server and the limit, and the request is cancelled on the server. The SDK sends `notifications/cancelled`, except on a 2026-07-28 request with its own HTTP stream, where it aborts the HTTP request (Task 1(a)). The test asserts the mechanism for each era.
+      - `connectTimeoutMs`, `callTimeoutMs`, and `maxCallTimeMs` get a schema `maximum` of `HARD_CALL_TIMEOUT_MS`, so an over-cap value fails the load instead of failing one server at connect.
       - The run's abort still cancels a call at once.
     - Performance: No added request.
     - Code Quality: One mapping from package config to bridge limits; `package.ts` no longer reuses `timeoutMs` for two purposes.
@@ -83,16 +165,17 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
                       "callTimeoutMs": 120000 }], "maxCallTimeMs": 600000 }
       ```
     - Files to Create/Edit:
-      - `packages/extensions/mcp/src/{package,config,limits,bridge}.ts`, `README.md`
-      - `packages/extensions/mcp/src/__tests__/call-timeout.test.ts`: new
+      - `packages/extensions/mcp/src/{package,config,limits,bridge,constants,types,capabilities}.ts`, `README.md`
+      - `packages/extensions/mcp/src/__tests__/call-timeout.test.ts`: new; `__tests__/bridge.test.ts`: the bound-enumeration tests cover the two new limits
     - References:
       - Evaluation finding M3
   - Test Cases to Write:
-    - `tool_call_outlives_the_connect_timeout`: a 20 s call with a 15 s connect timeout completes (fake clock).
+    - `tool_call_outlives_the_connect_timeout`: a 150 ms call with a 40 ms connect timeout completes through the package and a scripted run (scaled real clock; see Notes).
     - `call_times_out_at_call_timeout_without_progress`.
     - `progress_extends_a_call_up_to_max_call_time`.
-    - `timeout_cancels_the_server_request`.
-    - `config_above_hard_cap_fails_the_load`.
+    - `timeout_cancels_the_server_request`: one case per era.
+    - `run_abort_still_cancels_a_call_at_once`.
+    - `config_above_hard_cap_fails_the_load`: also `maxCallTimeMs < callTimeoutMs`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — config fields and a default
     - Docs pages to create/edit:
@@ -100,11 +183,42 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
       - `CHANGELOG.md`: `## [Unreleased]`, Fixed
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-17):
+    - **What changed.**
+      - `package.ts`: one mapping, `mcpServerTimeouts(config, server)` (server value, then plane value, then default), returns `connectTimeoutMs` (15 000), `callTimeoutMs` (60 000), and `maxCallTimeMs` (`max(300 000, callTimeoutMs)`). The connect abort timer uses `connectTimeoutMs`, and all three go to the bridge. `setup` fails the load with `config_invalid` when a server's resolved `maxCallTimeMs` is below its `callTimeoutMs`.
+      - `config.ts`: `callTimeoutMs` and `maxCallTimeMs` on the plane and on every server kind. All three time fields share one schema, `{ integer, minimum: 1, maximum: HARD_CALL_TIMEOUT_MS }`, so an over-cap value fails the load.
+      - `limits.ts`: `McpClientLimitsInput` gains `maxCallTimeMs` and `connectTimeoutMs` (default `callTimeoutMs`), both validated against `HARD_CALL_TIMEOUT_MS`, and `maxCallTimeMs < callTimeoutMs` throws. The resolved values sit on an internal `ResolvedMcpBridgeLimits extends ResolvedMcpClientLimits`. The public `ResolvedMcpClientLimits` is unchanged, because the compat gate counts new required fields on it as a break.
+      - `bridge.ts`:
+        - Connect and the first `tools/list` use `connectTimeoutMs` (new `timeoutMs` option on `refreshBridgeTools` and `listAllMcpToolsWithHint`). Later refreshes, including `list_changed` refreshes, use `callTimeoutMs`.
+        - A tool call passes `timeout: callTimeoutMs`, `maxTotalTimeout: maxCallTimeMs`, `resetTimeoutOnProgress: true`, and a no-op `onprogress`.
+        - The bridge's own abort timer moved from `callTimeoutMs` to `maxCallTimeMs`. It stays: the SDK checks `maxTotalTimeout` only when progress arrives, so without it a call could run up to `maxCallTimeMs + callTimeoutMs`.
+        - A timeout error now names the server and the limit: `MCP server "<id>" tool call timed out after callTimeoutMs (<n>ms) without progress`, or `… exceeded maxCallTimeMs (<n>ms)`. It is read from `SdkError.data.timeout` / `.maxTotalTimeout`, or from the bridge's own abort reason, which the SDK would otherwise wrap as `String(reason)`.
+        - App `resources/list`/`read` keep `callTimeoutMs` as both bounds.
+      - `capabilities.ts`: `connectMcpCapabilities` connects with `connectTimeoutMs ?? callTimeoutMs`. `types.ts`: `ConnectMcpToolsOptions.maxCallTimeMs` / `connectTimeoutMs`. `constants.ts`: `DEFAULT_MAX_CALL_TIME_MS` (internal).
+    - **Tests.**
+      - `call-timeout.test.ts`: 7 tests.
+        - The legacy-era cancel test asserts that the server handler's `ctx.mcpReq.signal` aborts, which is how `notifications/cancelled` arrives.
+        - The 2026-07-28 case runs a raw modern HTTP server. It asserts that the `tools/call` response closed before it ended, and that no `notifications/cancelled` body was posted.
+      - Timings are a scaled-down real clock (ms instead of s). The repo has no fake-timer harness, and the SDK's request timers run on real `setTimeout`.
+      - `bridge.test.ts`: the invalid-value and hard-boundary tests list the two new limits.
+    - **Checks.**
+      - `bun test --timeout=0 mcp/` (in `packages/extensions`): 108 pass.
+      - `bun run typecheck`: clean.
+      - `src/__tests__/docs.test.ts`: 69 pass.
+      - `bun scripts/release.mjs gate`: the MCP compat change is **additive**: `ConnectMcpToolsOptions`, `McpClientLimitsInput`, and the four config types. No baseline was regenerated. The gate still exits 1 on two failures that this task did not cause, both from other uncommitted work in the tree:
+        - `@arnilo/prism-ai changed since v0.13.0 … (bump required)`;
+        - kernel `packedBytes` +2,599 / `unpackedBytes` +6,463 over `budgets.json`. This task touched no kernel file.
+    - **Findings for later tasks.**
+      - Task 3: the sign-in wait must not run under `mcpServerTimeouts(...).connectTimeoutMs`. Start the wait after the connect timer is cleared, then connect again with a fresh timer.
+      - Task 5: a reconnect should reuse `mcpServerTimeouts` so that each attempt gets the same connect bound.
+      - The bridge still uses the SDK's `Not connected` error for a dropped stdio server (Task 1(f)). A timed-out call does not count as a drop, and Task 5 must not treat `RequestTimeout` as one.
 
-- [ ] Task 3: The package signs in to OAuth-protected servers
+- [x] Task 3: The package signs in to OAuth-protected servers
   - Acceptance Criteria:
     - Functional:
-      - `servers[].auth: { kind: "oauth", tokens: "keyring:<name>", scopes?, clientId?, callback?: "loopback" | "paste" }`. `tokens` is a ref the credentials slot can write; an `env:` ref or a literal fails the load.
+      - `servers[].auth: { kind: "oauth", tokens: "keyring:<name>", scopes?, clientId?, callback?: "listen" | "paste" }`. The mode names match openai-codex (Task 1 findings). `tokens` is a ref the credentials slot can write; an `env:` ref or a literal fails the load. That one ref holds every `McpClientAuthState` record (tokens, client, discovery, verifier, authorization state) as one bounded JSON record in `Secret.metadata`.
+      - The sign-in wait runs outside the connect timer. The `paste` path takes the full callback URL so `state` and `iss` are checked; a bare code is refused. When the loopback port changes, a DCR client is registered again.
+      - Loopback HTTP for discovery and token endpoints is allowed only when the server URL is itself loopback. Today `package.ts:172` hard-sets `allowLoopbackHttp: true`.
       - On a 401 or an explicit `mcp:login { id }` command, the package starts the library flow: discovery, dynamic registration or the configured client, PKCE. It sends the authorization URL through `host.ui` as `open-url`. The code returns through a loopback listener on `127.0.0.1` with a random port and a 5-minute limit, or through a `host.ui` `input` request when `callback: "paste"`.
       - Tokens are stored and refreshed through `prism.credentials.store` and read through `resolve`. They never appear in events, status notes, `inspect()`, or errors.
       - With no `host.ui`, or an `unavailable` or dismissed answer, the server is `failed` with `reason: "auth_required"` and nothing is opened.
@@ -129,8 +243,9 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
                       "auth": { "kind": "oauth", "tokens": "keyring:mcp-tracker" } }] }
       ```
     - Files to Create/Edit:
-      - `packages/extensions/mcp/src/{package,config,commands,status}.ts`; `packages/extensions/mcp/src/oauth-callback.ts`: new
+      - `packages/extensions/mcp/src/{package,config,commands,trust,index}.ts`; `packages/extensions/mcp/src/oauth-callback.ts` and `oauth-state.ts`: new
       - `packages/extensions/mcp/src/__tests__/oauth-package.test.ts`: new (a fake authorization server)
+      - `src/__tests__/docs.test.ts`: the example joins the demo list
       - `packages/extensions/mcp/README.md`
       - `examples/mcp-oauth.ts`: new, offline; `examples/README.md`, `scripts/e2e-coverage.json`
     - References:
@@ -144,6 +259,7 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
     - `callback_rejects_a_wrong_state`.
     - `literal_or_env_token_ref_fails_the_load`.
     - `logout_deletes_tokens_and_closes_the_bridge`.
+    - `paste_refuses_a_bare_code`, `auth_on_a_stdio_server_fails_the_load`, `login_signs_in_again_through_host_ui`, `busy_callback_port_registers_the_client_again`: added during execution.
     - `examples_demos_run_to_completion_and_emit_no_secret` covers the example.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — config, two commands, a capability
@@ -153,14 +269,47 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: Kernel tool sources, and MCP tools that follow the server
+  - Notes (executed 2026-11-17):
+    - **What changed.**
+      - `config.ts`: `McpOAuthConfig` and `servers[].auth`. The schema accepts `tokens` only as `^keyring:…`, so an `env:` ref or a literal fails the load with `config_invalid`. `setup` also refuses `auth` on a non-HTTP server.
+      - `oauth-state.ts` (new): `loadMcpOAuthSessionState(ref, slot)` implements `McpClientAuthState` over one record in `Secret.metadata.mcpOAuth` (`{ v: 1, redirectUri, tokens, client, discovery, verifier, authorizationState }`). The access token is the secret value (`type: "bearer"`), so the kernel redacts it; before tokens exist the value is a `custom` marker, because the keyring requires one. Writes are ordered and go through `prism.credentials.store`; `clear("all")` deletes the ref. The whole record is bounded at 64 KiB, the hard `tokenRecordBytes` cap, because it holds five records, not one.
+      - `oauth-callback.ts` (new): the one-shot `127.0.0.1` listener (saved port first, random port if busy; first `/callback` request settles it, `state` is checked, then it closes), `callbackParamsFromUrl` for the paste path (full URL only; origin, path, and `state` checked), and `reserveLoopbackPort`.
+      - `package.ts`:
+        - An OAuth server builds its transport with `createMcpOAuthTransport` and hands the bridge a `raw` transport, so the package keeps the `McpClientAuth` handle for `finishAuth`.
+        - `redirectUri` and the DCR `clientMetadata` are getters, so a port change carries into the next registration and authorization URL.
+        - Connect runs under its own connect timer. If it fails after `onRedirectRequired` fired, `signIn` runs **outside** that timer: listener, `open-url`, then the callback within 5 minutes, then `finishAuth(URLSearchParams)`. The package then connects again on a fresh transport that re-reads the record.
+        - `McpAuthRequiredError` maps to `failed` with `reason: "auth_required"` for: no UI, an `unavailable` or dismissed answer, or a timeout.
+        - The authorization URL must be https (http only when it and the server are loopback) before it is opened.
+        - `allowLoopbackHttp` is now `isLoopbackHostname(serverUrl)` instead of `true` for every HTTP server.
+        - The "this package does not run the OAuth flow" note is gone. A server without `auth` that answers 401 gets a note naming the `auth` field.
+        - Static and CIMD clients come from `clientId` (an `https://` value means CIMD); without it, DCR with `token_endpoint_auth_method: "none"`.
+      - Capabilities: `credentials:write` is declared and narrowed away by `capabilitiesFor` when no server has `auth` (least privilege). If `credentials.store`/`delete` are still missing, `setup` throws `capability_missing` naming `credentials:write`.
+      - `commands.ts`: `mcp:login { id }` (drops stored tokens, signs in, reconnects) and `mcp:logout { id }` (closes the bridge, deletes the ref, `state: "closed"`, `reason: "signed_out"`). Both are registered only when some server has `auth`.
+      - `trust.ts`: an `auth` entry adds `["oauth", tokens]` to the HTTP fingerprint, so a project manifest that adds `auth` to a host-trusted URL asks again. Fingerprints of servers without `auth` are unchanged.
+      - `index.ts` exports `McpOAuthConfig`. `examples/mcp-oauth.ts` (offline) is in `examples/README.md`, the `docs.test.ts` demo list, and `scripts/e2e-coverage.json` `./mcp`.
+    - **Tests.** `oauth-package.test.ts`: 12 tests against a fake AS (discovery, DCR, a PKCE-checked code exchange, refresh) plus a bearer-gated MCP server. The browser is simulated by the scripted `open-url` handler following the redirect. Three repeated runs were stable.
+    - **Checks.**
+      - `bun test --timeout=0 mcp/` (in `packages/extensions`): 120 pass.
+      - `bun run typecheck`: clean.
+      - `src/__tests__/docs.test.ts`: 69 pass.
+      - `bun scripts/e2e-coverage-gate.mjs`: 82/86, baseline mode, unchanged.
+      - `bun scripts/release.mjs gate`: the MCP compat change is **additive**: `McpHttpServerConfig` and the other config types are compatible, and `./mcp#McpOAuthConfig` is added. No baseline was regenerated. The gate still exits 1 on the same two failures from other uncommitted work, now larger: `@arnilo/prism-ai … (bump required)`, and kernel `packedBytes` +3,180 / `unpackedBytes` +7,929. This task touched no kernel file.
+    - **Findings for later tasks** (applied below):
+      - Sign-in runs inside `setup` so that its tools register. A server that needs sign-in therefore holds `createAgent` until the person finishes, up to 5 minutes, the same way the trust prompt already does. A server that becomes `connected` later, through `mcp:login` after an `auth_required` setup, has **no registered tools** until Task 4's source exists, because registration is closed. Task 4 removes both limits, and can move the interactive wait out of `setup`.
+      - Task 5: an automatic reconnect must not start an interactive sign-in on its own. On a 401 that refresh cannot fix, it should report `auth_required` and stop. `connectServer` needs a non-interactive option for that path. `connectServer` already re-reads the credential record on each attempt, which meets Task 5's "resolved again on each reconnect" for OAuth servers.
+      - `mcp:logout` deletes the record but does not revoke at the authorization server. `McpClientAuth.revoke()` (RFC 7009) exists, and is recorded under Further Actions.
+
+- [x] Task 4: Kernel tool sources, and MCP tools that follow the server
   - Acceptance Criteria:
     - Functional:
       - `PackageAPI.tools.source(list)` registers, during `setup`, a function that returns the package's current tools. The kernel calls each source once at the start of a run, when it snapshots the run's tools; the result is validated like `register` (name, `execute`, effects) and checked for conflicts with registered tools, host tools, reserved names, and other sources. A conflicting or invalid tool is dropped with one `warn` status note; it never fails the run.
       - A run keeps its snapshot; a change during a run takes effect at the next run.
-      - `agent.tools`, `inspect()`, `prism.tools.list()`, and `AgentConfig.disable.tools` include source tools. `disable` applies by name at each snapshot.
+      - `agent.tools`, `inspect()`, `prism.tools.list()`, and `AgentConfig.disable.tools` include source tools. `disable` applies by name at each snapshot. When a source is registered, `applyDisable` (`loader.ts:1133-1142`) does not throw `unknown_disable_id` for a name no registered tool carries; it defers that name to the snapshot. `packagesAffectTools` counts sources.
+      - Source tools stay out of `agentFingerprint` (`src/agent-run-state.ts:110-146`), so a server list change does not break resuming a suspended run. On resume, the run gets the checkpoint grant intersected with the tools the sources supply now (`selectRunTools`).
+      - The MCP source reads `entry.bridge.tools` live at each snapshot, guarded for a closed bridge. This fixes the Task 1 finding that tools stop working after `mcp:reconnect`, because their `execute` still closes over the closed bridge.
       - A source that throws contributes no tools for that run and adds a `warn` note.
       - The MCP package registers one source per server instead of registering tools in `setup`. `tools/list_changed` and a reconnect update the server's list; the "recreate the agent" note is removed.
+      - (Task 3 finding) A server that signs in after `setup` (`mcp:login` after `auth_required`) supplies its tools at the next run. With a source in place, the interactive OAuth wait can leave `setup`: `setup` reports `auth_required` and starts the sign-in in the background, so `createAgent` no longer waits up to 5 minutes. Test: `mcp_tools_appear_after_login_next_run`.
       - Each MCP tool's `effects` still come from `readOnly`; a tool whose name collides is dropped as above.
     - Performance: A source is a synchronous in-memory read; the kernel adds no await to run start. With no source registered, run start is unchanged.
     - Code Quality: Sources share the registry's validation and conflict code. The kernel names no package.
@@ -187,7 +336,7 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
       - `src/testing/package-conformance.ts`: a source case
       - `src/__tests__/tool-sources.test.ts`: new
       - `packages/extensions/mcp/src/package.ts`, `README.md`, tests
-      - `packages/tools/computer-use/src/…`: move to a source if Task 1(d) shows it benefits
+      - `packages/tools/computer-use/src/index.ts`: moves to a source, so its tools exist only while its stdio bridge is open. Task 1(d) shows it is the second consumer, which is what makes this kernel addition generic.
       - `scripts/compat-baseline/*.txt`: regenerated (`bun scripts/release.mjs gate --update-baseline`), additive diff in the task note; `src/__tests__/public-export-contract.test.ts`
     - References:
       - Evaluation finding M2
@@ -201,6 +350,11 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
     - `mcp_tool_added_after_list_changed_is_callable_next_run`.
     - `mcp_tool_removed_by_the_server_disappears_next_run`.
     - `inspect_lists_source_tools_with_their_package`.
+    - `mcp_tool_is_callable_after_reconnect`: regression for the Task 1 finding.
+    - `source_tool_change_does_not_break_resume`.
+    - `disable_names_a_source_only_tool_without_failing_the_load`.
+    - `mcp_tools_appear_after_login_next_run`: Task 3 finding.
+    - `source_registration_closes_after_setup`, `conformance_passes_for_a_tool_source_package`, `setup_does_not_wait_for_sign_in`, `tools_computer_use_tools_leave_when_the_bridge_closes`: added during execution.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — a `PackageAPI` member and MCP behavior
     - Docs pages to create/edit:
@@ -208,16 +362,73 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
       - `docs/tools.md`: when the tool set is fixed for a run
       - `packages/extensions/mcp/README.md`: "What it changes"
       - `CHANGELOG.md`: `## [Unreleased]`, Added
+      - `packages/tools/computer-use/README.md`, `examples/mcp-oauth.ts`: added during execution
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-17):
+    - **What changed (kernel).**
+      - `PackageAPI.tools.source(list)` (`src/packages/api.ts`). The loader (`src/packages/loader.ts`) keeps a source list per owner:
+        - `registerToolSource` throws `registration_closed` after setup.
+        - `teardown` and `disable.packages` remove the owner's sources.
+        - `snapshotSourceTools` calls each source once and never throws. It checks shape, then `disable.tools`, then names taken by the kernel, a registered tool, the host, or an earlier source, then effects and timeout through `createToolRegistry([tool])`. A drop or a throw adds one `warn` note, deduplicated by message so a standing conflict is noted once rather than every run. The schema-keyword `info` note is also once per name.
+      - `LoadedPackages` gains `sourceTools()`, `hasToolSources`, and `sourceToolOwner(name)`. The owner map is refreshed at each read; `toolOwner` falls back to it, so a source tool's `context.session` is its package's view.
+      - `applyDisable` defers an unknown `disable.tools` name to `disabled.tools` when any source exists, instead of `unknown_disable_id`.
+      - `runtime-registry.ts`:
+        - `packagesAffectTools` counts sources.
+        - `toolListFor`/`agentToolList` take `{ sources?: boolean }` and append source tools after registered ones.
+        - `agentFingerprint` passes `sources: false` (`src/agent-run-state.ts`).
+      - The run snapshot is unchanged in shape: `activeTools` in `assemble.ts` reads the merged list once per run.
+      - Found during execution: `agent.tools` was cached per agent (`create-agent.ts` `toolView`), so a source change never showed there. With a source present, the view is now computed on every read; agents without a source keep the cache.
+    - **What changed (MCP).**
+      - `status.ts`: `InternalServerEntry.tools` is gone. `currentServerTools(entry)` reads `entry.bridge.tools` live; a closed bridge's getter throws and reads as empty. Effects come from `readOnly`, and the mapping is cached while the bridge answers the same array. `toolCount` comes from it.
+      - `package.ts`:
+        - One `prism.tools.source` per server replaces the `register`+`when` loop.
+        - `markConnected`/`markFailed` were extracted. The reconnect note "recreate the agent" is gone; `added` is still counted against `connectedNames`.
+        - The interactive OAuth wait left `setup`. `connectServer(…, { interactive: "background" })` throws `McpSignInDeferred` after the connect that asked for sign-in. The server is marked `failed`/`auth_required` with the new `signingIn: true` status field, and the sign-in continues in a tracked task (`backgroundSignIns`).
+        - Dispose aborts and awaits those tasks. `mcp:login`, `mcp:logout`, and `mcp:reconnect` cancel a pending one first.
+        - Found during execution: the `open-url` request itself was unbounded. A host that never answered held the sign-in, and therefore dispose, forever. It now runs under `withSignInTimeout(…, signal)` too.
+      - `oauth-package.test.ts`: `startAgent` waits for `signingIn` to clear. `examples/mcp-oauth.ts` polls the same way; without that, the docs demo test hung on the undisposed agent.
+    - **What changed (computer-use).** `ComputerUseLinuxTools.isClosed?` (a getter over `bridge.isClosed`), and the package registers `tools.source(() => desktop.isClosed ? [] : desktop.tools)`. Until Task 5 wires `client.onclose`, a stdio child that exits on its own does not yet flip `isClosed` (Task 1(f)). Task 5 makes this effective.
+    - **Tests.**
+      - `src/__tests__/tool-sources.test.ts`: 11 tests (the gate case runs on the default and a custom loop).
+      - `package-conformance.test.ts`: +1.
+      - MCP: `package.test.ts` +3 (list_changed add, removal, callable after reconnect) and `oauth-package.test.ts` +2.
+      - computer-use: +1.
+    - **Checks.**
+      - `bun run typecheck`: clean.
+      - Focused kernel suites (tool-sources, package-loader, -contributions, -api-freeze, -conformance, durable-loops, tool-gate-integrity, public-export-contract): pass.
+      - `bun test --timeout=0 mcp/`: 125 pass. `--filter @arnilo/prism-extensions test`: 1146 pass, 0 fail.
+      - `computer-use/`: 32 pass. `src/__tests__/docs.test.ts`: 69 pass.
+      - The full `bun test src/` run and `--filter @arnilo/prism-tools test` had timing-budget failures in code this task does not reach:
+        - `tool-argument-validation` "large argument object quickly" (<50 ms);
+        - coding `hard_deny_decision_budget`;
+        - the document-reader page envelope;
+        - two browser tests, which pass alone.
+        The machine load average was 25–37 from other jobs. The first three still miss their budgets when run alone under that load. Rerun them on a quiet machine.
+    - **Baseline diff** (`bun scripts/release.mjs gate --update-baseline`). Only plan 234 surfaces changed:
+      - `arnilo__prism.txt`: `PackageAPI.tools` gains `source(list: () => readonly ToolDefinition[]): void`. The gate counts any `PackageAPI` member as a shape change; a hand-built `PackageAPI` test double must add it.
+      - `arnilo__prism-extensions.txt`:
+        - Tasks 2–3 (not regenerated then): `ConnectMcpToolsOptions`/`McpClientLimitsInput` `connectTimeoutMs?`/`maxCallTimeMs?`; the server and package configs gain `callTimeoutMs?`/`maxCallTimeMs?`, and `McpHttpServerConfig.auth?`; `McpOAuthConfig` is added.
+        - This task: `McpServerStatus.signingIn?`.
+      - `arnilo__prism-tools.txt`: `ComputerUseLinuxTools.isClosed?`.
+      - No removals.
+    - **Gate leftovers, not this task.** `@arnilo/prism-ai … (bump required)`, and the kernel budgets: `packedBytes` +6,441, `unpackedBytes` +18,750, `sourceLines` +122. They come from other uncommitted kernel work plus this task's ~140 kernel lines. `budgets.json` was not rebaselined, because the growth is mixed with work this task does not own.
+    - **Findings for Task 5** (applied below):
+      - Tools of a server that is not `connected` already leave new runs through the source. Task 5 only needs to set `entry.state` and emit status.
+      - The reconnect loop must cancel a pending background sign-in, as `mcp:reconnect` now does (`cancelBackgroundSignIn`).
+      - `connectServer` already takes `interactive`. The non-interactive path Task 5 needs is a third value, `"never"`, which reports `auth_required` on `McpSignInDeferred` without starting a sign-in.
+      - Bridge close detection (`client.onclose`) also makes computer-use's `isClosed` effective.
 
-- [ ] Task 5: A dropped server reconnects by itself
+- [x] Task 5: A dropped server reconnects by itself
   - Acceptance Criteria:
     - Functional:
       - `reconnect: { attempts, baseDelayMs, maxDelayMs }` (default 5 attempts, 1 s doubling to 30 s; `attempts: 0` disables). When the bridge reports a closed transport, the package reconnects with that backoff. Each state change emits `mcp.status` (`reconnecting`, `connected`, `failed`).
       - While a server is not connected its tools are absent from new runs (Task 4), and a call in a running run returns a tool error naming the server state.
-      - Trust is not asked again for a server already trusted; a server whose fingerprint changed is treated as new and asks.
+      - The bridge detects a drop. For stdio, it sets `client.onclose` to mark itself closed and notify the package. For HTTP, a `ConnectionClosed` error, a network error, or a 404 session expiry counts as a drop, because that transport fires `onclose` only on an explicit close (Task 1(f)).
+      - Trust is not asked again for a server already trusted; a server whose fingerprint changed is treated as new and asks. The trust cache (`knownTrustedServers`, keyed by `server.id` today) is keyed by `mcpServerFingerprint` instead (Task 1 findings).
       - Disposal cancels pending reconnects.
+      - (Task 3 finding) An automatic reconnect never starts an interactive OAuth sign-in. A 401 that refresh cannot fix ends the attempts with `failed` / `reason: "auth_required"`, and `mcp:login` is the way back. `connectServer` gains a non-interactive option for this path: `interactive: "never"`, next to Task 4's `"inline"` and `"background"`. A reconnect first cancels any pending background sign-in (`cancelBackgroundSignIn`).
+      - (Task 4 finding) The bridge's `client.onclose` must flip `McpToolBridge.isClosed`, so `@arnilo/prism-tools/computer-use` (a tool source gated on `isClosed`) drops its tools when its stdio child exits.
     - Performance: At most `attempts` connects per drop; no polling while connected.
     - Code Quality: One reconnect loop shared with the `mcp:reconnect` command.
     - Security: Credentials are resolved again on each reconnect, so a rotated secret is picked up and a removed one fails closed.
@@ -233,8 +444,9 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
       { "reconnect": { "attempts": 5, "baseDelayMs": 1000, "maxDelayMs": 30000 } }
       ```
     - Files to Create/Edit:
-      - `packages/extensions/mcp/src/{package,config,status}.ts`, `README.md`
-      - `packages/extensions/mcp/src/__tests__/reconnect.test.ts`: new
+      - `packages/extensions/mcp/src/{package,config,status,bridge,types,trust,commands,index}.ts`, `README.md`
+      - `packages/extensions/mcp/src/__tests__/reconnect.test.ts`: new; `oauth-package.test.ts`: the OAuth case
+      - `scripts/compat-baseline/arnilo__prism-extensions.txt`: regenerated with `--allow-break` (owner decision, see Notes)
     - References:
       - Evaluation finding M4
   - Test Cases to Write:
@@ -244,6 +456,8 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
     - `changed_fingerprint_asks_for_trust_again`.
     - `dispose_cancels_pending_reconnects`.
     - `attempts_zero_disables_reconnect`.
+    - `reconnect_never_prompts_for_oauth_sign_in`: Task 3 finding.
+    - `close_command_cancels_a_pending_reconnect`, `reconnect_config_is_bounded`, `stdio_child_exit_closes_the_bridge_and_reports_the_drop`: added during execution.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — config and status states
     - Docs pages to create/edit:
@@ -251,6 +465,50 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
       - `CHANGELOG.md`: `## [Unreleased]`, Added
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-17):
+    - **What changed (bridge).**
+      - `createBridgeState` chains `client.onclose`, so a stdio child that exits closes the bridge: `isClosed` turns true and the tools getter throws. This also makes `@arnilo/prism-tools/computer-use`'s source drop its tools (Task 4 finding).
+      - An HTTP request error also counts as a drop when it is one of these:
+        - the SDK's `CONNECTION_CLOSED` or `NOT_CONNECTED`;
+        - an HTTP 404 (the server dropped the session);
+        - a network error code or message (`ECONNREFUSED`, `ECONNRESET`, `fetch failed`, `Unable to connect`, …), checked down the `cause` chain.
+
+        `RequestTimeout` and server errors do not count (Task 2 finding). The check runs on a failed tool call and on a failed `list_changed` refresh.
+      - `dropBridge` closes the bridge and calls the new `ConnectMcpToolsOptions.onConnectionLost` once. An explicit `close()` sets `closed` first and is never reported. `isClosed` flips whether or not the callback is set.
+    - **What changed (package).**
+      - `config.ts`: plane-level `reconnect: { attempts (0–100), baseDelayMs, maxDelayMs }`. The defaults are 5 attempts and 1 s doubling to 30 s, and the delays use the same hard cap as the timeouts. `McpReconnectConfig` is exported.
+      - `status.ts`:
+        - `McpServerState` gains `"reconnecting"`, and the status gains `attempt`/`attempts`.
+        - `currentServerTools` wraps each tool's `execute`. A run that snapshotted the tools, and calls one after its bridge is gone, gets a tool error such as `MCP server "<id>" is reconnecting`, or "reconnected; its tools are available from the next run".
+      - `package.ts`: one `reconnectServer(entry, { automatic })` path. `mcp:reconnect` and `mcp:login` make one interactive attempt (`automatic: false`). A drop runs the loop:
+        - It emits `reconnecting` with the attempt number, waits `min(maxDelayMs, baseDelayMs·2^(n-1))`, then calls `connectServer(…, { interactive: "never", signal, retrying })`.
+        - A plain connect failure with attempts left is not reported, so no `failed` event or note appears between attempts. The last attempt reports `failed`.
+        - A non-retryable outcome stops the loop: `auth_required`, `credential_unavailable`, untrusted or `disabled`, or a missing transport.
+        - `attempts: 0` gives `failed` with `reason: "connection_lost"`.
+        - `connectServer` re-resolves credentials on each attempt. `interactive: "never"` turns a sign-in request into `McpAuthRequiredError`, so nothing is opened.
+        - The connect timer is linked to the loop's signal, so dispose does not wait out a connect.
+      - `cancelPending` (the reconnect loop, then any background sign-in) runs before `mcp:reconnect`, `mcp:login`, `mcp:logout`, and `mcp:close`. `mcp:close` now takes a `closeServer` action from the package, so a closed server stays closed. Dispose aborts and awaits pending reconnects.
+      - `trust.ts`: `knownTrustedServers` is keyed by `mcpServerFingerprint`.
+    - **Tests.**
+      - `reconnect.test.ts`: 9 tests, all on a scaled real clock.
+        - The backoff gaps are measured.
+        - The mid-run drop happens on the provider's first request, after the run snapshotted its tools.
+        - The stdio case spawns `bun -e` with an MCP server whose `exit` tool exits the process.
+      - `oauth-package.test.ts` +1 (`reconnect_never_prompts_for_oauth_sign_in`). The fixture gained `refuseRefresh()` and `dropNextRequest()` (a 404), so the drop is detected over real HTTP.
+    - **Checks.**
+      - `bun run typecheck`: clean. `bun run build:core`: clean.
+      - `bun test --timeout=0 mcp/`: 135 pass. `--filter @arnilo/prism-extensions test`: 1156 pass, 0 fail.
+      - `src/__tests__/tool-sources.test.ts`: 11 pass. `--filter @arnilo/prism-agent test`: 0 fail. `computer-use/`: pass.
+      - `--filter @arnilo/prism-tools test`: 2 fail, the same timing budgets recorded in Task 4 (`hard_deny_decision_budget`, the document-reader page envelope). The load average was 30–95.
+      - `src/__tests__/docs.test.ts`: 68 pass, 1 fail. `examples_demos_run_to_completion_and_emit_no_secret` hit its 60 s budget while running `advisor.ts`, near the end of the list. The MCP demos run in 1.2–1.4 s each when run alone, and every demo timed alone exits 0. Rerun on a quiet machine.
+    - **Compat (owner decision 2026-11-17).** The gate counts the wider `./mcp#McpServerState` union as a break.
+      - The owner chose `--allow-break` plus a note. The CHANGELOG entry says that hosts switching exhaustively over the state must handle `"reconnecting"`. There is no version bump.
+      - `bun scripts/release.mjs gate --update-baseline --allow-break` also rewrote surfaces from other uncommitted work in the tree (compaction, delegate, store codecs, hosts, coding, and kernel members). Those lines were reverted to `HEAD`. The baselines now hold only plan 234 lines:
+        - `arnilo__prism-extensions.txt` `./mcp`: Tasks 2–5;
+        - `arnilo__prism-tools.txt`: `ComputerUseLinuxTools.isClosed?`;
+        - `arnilo__prism.txt` `PackageAPI.tools.source`, spliced into the `HEAD` line without the other work's `sessions` member and `PackageToolListing` change.
+      - Task 5 diff: `+./mcp McpReconnectConfig`; `McpPackageConfig.reconnect?`; `McpServerStatus.attempt?`/`attempts?`; `ConnectMcpToolsOptions.onConnectionLost?`; `McpServerState` + `"reconnecting"` (the allowed break). No removals.
+      - A plain gate run now reports no `./mcp` entry. It still fails on other work: `@arnilo/prism-ai` bump required, kernel budgets, and shape changes in `@arnilo/prism`, `-extensions` (delegate, store-codecs), `-hosts`, and `-tools` (coding).
 
 ## Verification (whole plan)
 
@@ -266,8 +524,20 @@ Cost knobs: reconnect attempts and token refreshes make requests only on failure
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- **The verification run is incomplete because of load and other work.**
+  - `bun run test` (the full suite) was not run as one command. Its parts were run instead: extensions, tools, agent, tool-sources, docs, and `build:core`.
+  - The docs demo test (60 s budget) and two prism-tools timing budgets failed under a load average of 30–95. All three are in code this plan does not reach.
+  - The release gate fails only on other uncommitted work (see Task 5 Notes). `budgets.json` was not rebaselined.
+- **`McpServerState` widened without a version bump.** The owner allowed the break (Task 5). Hosts that switch exhaustively over the state must add `"reconnecting"`.
+- **A run in progress is not routed to a reconnected bridge.** It keeps its snapshot, and a call on a dropped bridge returns a tool error naming the state (or "reconnected; next run") instead of calling the new bridge by name.
+- **HTTP drop detection is a classifier.** It matches SDK codes, a 404, and a list of network error codes and messages. A transport error outside that list leaves the server `connected` with failing calls until `mcp:reconnect`. An idle HTTP server that goes away is noticed only at the next request.
+- **`reconnect` is plane-level only.** There is no per-server override, unlike the timeouts.
+- **A `raw` server reconnects by asking the `mcp.transport` service again.** A service that hands back the same closed transport fails every attempt.
+- **Timings in the tests are a scaled real clock.** There is no fake-timer harness (Task 2).
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- (P3) Route a call from a run in progress to the reconnected bridge's tool of the same name when its identity digest is unchanged, so a drop during a long run does not cost the call.
+- (P3) An HTTP liveness signal (for example the SSE stream's `onerror` "Maximum reconnection attempts", Task 1(f)) so an idle HTTP server's drop is noticed before the next call.
+- (P4) A per-server `reconnect` override, matching the timeouts.
+- (From Task 3, low) `mcp:logout` could call `McpClientAuth.revoke()` (RFC 7009) before deleting the record, so the refresh token also dies at the authorization server. It was left out because the task asked only for local deletion, and revocation adds a network call that can fail.

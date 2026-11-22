@@ -4,22 +4,16 @@ import type { DeckModel, DocModel, DocumentModel, SheetModel } from "./types.js"
 // --- Default and Hard Ceiling Constants ---
 
 export const DEFAULT_MAX_DOCUMENT_BYTES = 32 * 1024 * 1024; // 32 MiB
-export const HARD_MAX_DOCUMENT_BYTES = 512 * 1024 * 1024; // 512 MiB
 
 export const DEFAULT_MAX_BLOCKS = 10_000;
-export const HARD_MAX_BLOCKS = 50_000;
 
 export const DEFAULT_MAX_CELLS = 500_000;
-export const HARD_MAX_CELLS = 2_000_000;
 
 export const DEFAULT_MAX_SLIDES = 500;
-export const HARD_MAX_SLIDES = 2_000;
 
 export const DEFAULT_MAX_SHEETS = 100;
-export const HARD_MAX_SHEETS = 1_000;
 
 export const DEFAULT_MAX_IMAGES = 100;
-export const HARD_MAX_IMAGES = 1_000;
 
 export interface DocumentCaps {
   /** Maximum generated or parsed file size in bytes (default 32 MiB, hard 512 MiB). */
@@ -45,10 +39,11 @@ export interface ResolvedDocumentCaps {
   readonly maxImages: number;
 }
 
-function resolveCap(name: string, value: number | undefined, defaultVal: number, hardCap: number): number {
+/** A host-set cap: a positive integer. The host's value is the cap (plan 239 Task 5). */
+function resolveCap(name: string, value: number | undefined, defaultVal: number): number {
   if (value === undefined) return defaultVal;
-  if (!Number.isInteger(value) || value <= 0 || value > hardCap) {
-    throw new RangeError(`documents cap ${name} must be an integer in (0, ${hardCap}], got ${value}`);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new RangeError(`documents cap ${name} must be a positive integer, got ${value}`);
   }
   return value;
 }
@@ -58,12 +53,12 @@ function resolveCap(name: string, value: number | undefined, defaultVal: number,
  */
 export function resolveDocumentCaps(caps?: DocumentCaps): ResolvedDocumentCaps {
   return {
-    maxBytes: resolveCap("maxBytes", caps?.maxBytes, DEFAULT_MAX_DOCUMENT_BYTES, HARD_MAX_DOCUMENT_BYTES),
-    maxBlocks: resolveCap("maxBlocks", caps?.maxBlocks, DEFAULT_MAX_BLOCKS, HARD_MAX_BLOCKS),
-    maxCells: resolveCap("maxCells", caps?.maxCells, DEFAULT_MAX_CELLS, HARD_MAX_CELLS),
-    maxSlides: resolveCap("maxSlides", caps?.maxSlides, DEFAULT_MAX_SLIDES, HARD_MAX_SLIDES),
-    maxSheets: resolveCap("maxSheets", caps?.maxSheets, DEFAULT_MAX_SHEETS, HARD_MAX_SHEETS),
-    maxImages: resolveCap("maxImages", caps?.maxImages, DEFAULT_MAX_IMAGES, HARD_MAX_IMAGES),
+    maxBytes: resolveCap("maxBytes", caps?.maxBytes, DEFAULT_MAX_DOCUMENT_BYTES),
+    maxBlocks: resolveCap("maxBlocks", caps?.maxBlocks, DEFAULT_MAX_BLOCKS),
+    maxCells: resolveCap("maxCells", caps?.maxCells, DEFAULT_MAX_CELLS),
+    maxSlides: resolveCap("maxSlides", caps?.maxSlides, DEFAULT_MAX_SLIDES),
+    maxSheets: resolveCap("maxSheets", caps?.maxSheets, DEFAULT_MAX_SHEETS),
+    maxImages: resolveCap("maxImages", caps?.maxImages, DEFAULT_MAX_IMAGES),
   };
 }
 

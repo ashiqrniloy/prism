@@ -20,7 +20,7 @@ Host and package examples come first. Each runs offline on the mock provider.
 - [`headless-host.ts`](headless-host.ts): a headless host with approval suspend and resume.
 - [`external-agent.ts`](external-agent.ts) and [`custom-adapter.ts`](custom-adapter.ts): drive an external agent through `@arnilo/prism/driver-kit`.
 - [`build-workflow.ts`](build-workflow.ts): the `/build` orchestration over external agents, offline. The execution gate runs it.
-- Host libraries: [`acp.ts`](acp.ts), [`ag-ui-server.ts`](ag-ui-server.ts), [`mcp-server.ts`](mcp-server.ts), [`remote-agent.ts`](remote-agent.ts).
+- Host libraries: [`a2a-server.ts`](a2a-server.ts), [`a2a-client.ts`](a2a-client.ts), [`channel-slack.ts`](channel-slack.ts), [`channel-discord.ts`](channel-discord.ts), [`acp.ts`](acp.ts), [`ag-ui-server.ts`](ag-ui-server.ts), [`mcp-server.ts`](mcp-server.ts), [`remote-agent.ts`](remote-agent.ts).
 
 Examples import only `@arnilo/prism`, its public subpaths, and published packages
 (`examples/adapters/` is host code on `prism-driver-process`).
@@ -68,6 +68,7 @@ node examples/execution-timeline.ts
 node examples/host-step-loop-timeline.ts
 node examples/behavior-evaluation.ts
 node examples/guardrail-packs.ts
+node examples/guardrail-content.ts
 node examples/governance-deny.ts
 node examples/coding-browser-evaluation.ts
 node examples/web-research.ts
@@ -75,6 +76,7 @@ node examples/run-feedback.ts
 node examples/delegate.ts
 node examples/advisor.ts
 node examples/validator.ts
+node examples/structured-output.ts
 node examples/semantic-memory.ts
 node examples/rag.ts
 node examples/drive-rag-sync.ts
@@ -84,6 +86,7 @@ node examples/mcp-server.ts
 node examples/serve-tools.ts
 node examples/acp.ts
 node examples/connected-slack-mcp.ts
+node examples/mcp-oauth.ts
 node examples/workflow-research-and-review.ts
 node examples/workflow-multimodal-document.ts
 node examples/workflow-postgres-resume.ts # skips unless PRISM_TEST_POSTGRES_URL is set
@@ -93,10 +96,13 @@ node examples/coding-tools-capability-gaps.ts
 node examples/phase9-coding-intelligence.ts
 node examples/agent-durable-approval.ts
 node examples/durable-loops-and-approvals.ts
+node examples/continue-after-failure.ts
+node examples/long-running-job.ts
 node examples/custom-loop.ts
 node examples/define-package.ts
 node examples/manifest.ts
 node examples/session.ts
+node examples/parallel-tools.ts
 node examples/approval.ts
 node examples/coding-approval.ts
 node examples/sqlite-resume.ts
@@ -108,6 +114,10 @@ node examples/side-call.ts
 node examples/decision-models.ts
 node examples/durable-investigation.ts
 node examples/ag-ui-server.ts
+node examples/a2a-server.ts
+bun examples/a2a-client.ts # Bun-only (Bun.serve loopback peer)
+node examples/channel-slack.ts
+node examples/channel-discord.ts
 node examples/ag-ui-a2ui.ts
 node examples/ag-ui-mcp-apps.ts
 node examples/secure-agent.ts
@@ -139,7 +149,10 @@ Each demo prints a single JSON line with its result.
 - `manifest.ts` — **demo**: `install` a `file:` fixture package, `loadManifest` it into an agent, `setEnabled(false)` and reload, then show a skipped untrusted project manifest, `configure` refusing a literal secret, and `integrity_mismatch` after one byte changes (`@arnilo/prism/manifest`, real `bun add`).
 - `define-package.ts` — **demo**: two `definePackage` packages on one agent with no host wiring — a `tool.call` deny, an observer, a status note, a config schema with an `env:` secret ref, a per-session `when` tool, a command, `package_state` session state kept across a fork and a reopen, a tracked background task, then `agent.inspect()` (which shows the ref, never the value) and `dispose()` (network-free).
 - `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
+- `continue-after-failure.ts` — **demo** (plan 231): a run fails after a tool round when its provider goes down; a second agent over the same store calls `session.continue()` with no new input, the tool is not run again, and a second `continue()` rejects with `nothing_to_continue` (network-free).
+- `long-running-job.ts` — **demo** (plan 239): a 30-run job through `runAgentJob` with session limits (`sessionLimits`) as the spend guard and the stall axis at its default; the process "dies" inside run 12, after its tool round, and a fresh agent over the same JSONL session directory resumes it with `resumeAgentJob`, which continues the in-flight run (its tool is not run again) and runs to `done` (network-free).
 - `session.ts` — **demo** (Phase 3): `agent.session()`, a streamed run, the `RunResult` status and the messages it appended, then the same session reopened by id through the `store` slot and listed through `agent.sessions` (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
+- `parallel-tools.ts` — **demo** (plan 226): four tool calls of one model turn run at once under the default `tools.concurrency`, `concurrency: 1` restores serial dispatch, and one `exclusive` tool keeps its round serial; results append in call order (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
 - `coding-approval.ts` — **demo**: `toolsCoding` + `approval` in `ask` mode + `contextFiles` on one agent (a scripted host answers, the file changes), then `disable: { tools: ["shell"] }` removes the shell and a scripted call is blocked as an unknown tool (network-free).
 - `approval.ts` — **demo** (Phase 3): a tool gated by a host `tool.call` hook returning `{ ask }`, resolved inline by a scripted `HostUi`, then with no UI: the run suspends (`status: "suspended"`, `pending`) and a new agent over the same store finishes it with `agent.session({ id })` and `session.resume(decisions)` (network-free).
 - `sqlite-resume.ts` — **demo** (Phase 6): a session survives a process restart on `sqliteStore({ path })` — process A runs two turns and bumps a counter kept in `prism.state.session`, then spawns process B, which reopens the session with `agent.session({ id })` and reads the same messages and counter; A asserts B's output (imports only `@arnilo/prism`, `@arnilo/prism/testing`, and `@arnilo/prism-extensions/store-sqlite`, network-free).
@@ -151,6 +164,10 @@ Each demo prints a single JSON line with its result.
 - `decision-models.ts` — **demo** (Phase 18): a `models`-capability package calls `prism.models.decisions()` from a `run.input` hook to route a ticket with `noul`/`choice`/`score` questions, prints the raw probabilities, and proves a model without `decisions` throws `DecisionsError("unsupported_model")` (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
 - `custom-loop.ts` — **demo**: plan-then-act `LoopStrategy` through `slots.loop` with a host `tool.call` gate denying a `network` tool, the denial reaching the model as a tool result (network-free).
 - `durable-investigation.ts` — **demo**: `checkpointPolicy: "every-turn"` turn checkpoints, simulated worker death, and `decision: "continue"` crash recovery with no tool re-dispatch (network-free).
+- `a2a-server.ts` — **demo**: `serveA2A` serves an approval-gated agent to A2A 1.0 peers over JSON-RPC: the Agent Card, a blocking `SendMessage` that stops at `TASK_STATE_INPUT_REQUIRED`, a decision through the Prism decisions extension, and a streamed second task (network-free).
+- `channel-slack.ts` — **demo**: `connectSlack` binds an approval-gated agent to a Slack app over the Events API on a scripted Web API: a signed `app_mention` runs a turn that posts Allow/Deny buttons in the thread, an unsigned request answers 401, and the signed button click resumes the run once (network-free).
+- `channel-discord.ts` — **demo**: `connectDiscord` binds an approval-gated agent to a Discord bot on a scripted Gateway and REST API: the client identifies with the message-content intents and becomes ready, a guild mention runs a turn that posts Allow/Deny buttons, another user's click is refused, and the bound user's click resumes the run once (network-free).
+- `a2a-client.ts` — **demo**: `connectA2A` reads a loopback `serveA2A` peer's Agent Card and returns an `Agent` proxy; the peer's `TASK_STATE_INPUT_REQUIRED` becomes a suspended run that `session.resume` answers, and streamed events carry `origin.kind: "external"` (Bun-only, loopback).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
 - `ag-ui-a2ui.ts` — opt-in A2UI painting middleware: tool-result `a2ui_operations` → `a2ui-surface` ACTIVITY_SNAPSHOT.
 - `ag-ui-mcp-apps.ts` — **demo**: authenticated single-bridge MCP Apps resource proxy plus separate-origin sandbox/CSP configuration (network-free).
@@ -161,6 +178,7 @@ Each demo prints a single JSON line with its result.
 - `execution-timeline.ts` — **demo**: offline workflow execution timeline projection, cockpit summary, and Mermaid diagram export (network-free).
 - `host-step-loop-timeline.ts` — **demo**: eight-step host loop correlating host action/attempt ids with Prism session/run ids, incremental per-step `ExecutionTimeline` projection, metadata-only NDJSON host ledger with `sha256:` tool-arg hashes, display-only legacy prose beside structural fields, and external host commit evidence kept out of Prism effects (network-free).
 - `guardrail-packs.ts` — **demo**: guardrail packs end to end — two built-in packs refusing a `shell`/`write` call with the rule named, `createGuardrailPackScorer()` grading the denial, a durable `ask` rule suspending and being approved, and a `secrets-hygiene` refusal that never echoes the token (network-free).
+- `guardrail-content.ts` — **demo**: guardrail content stages — `pii` redacting an email address in model output before the append, `injection-markers` flagging an instruction-override phrase in an untrusted tool result, and the same pack with `action: "deny"` turning that result into a `guardrail_denied` error result while the run continues (network-free).
 - `external-agent.ts` — **demo** (Phase 13): an external agent driven through `@arnilo/prism/driver-kit` against the scripted `jsonl-stream` CLI, offline. An account profile signs in through a scripted `terminal` request; a run shows a replaced prompt, two bridged tools, a materialized skill, thinking and text deltas, a skill activation, a nested sub-agent, a steer, a write gated through `prism relay` (then a fail-closed write with the broker stopped), a suspension resumed with `allow_once`, a `createSessionIndex` search, and the `plan_login_not_permitted`, `profile_principal_mismatch`, and `profile_busy` refusals. `--conformance` runs `driverConformance` on the same driver for both dialects (network-free).
 - `serve-tools.ts` — **demo** (Phase 14): serving a run's tools to an external agent's own loop, offline. Inside one `session.run` an inline `defineDriver` driver binds a `workspace` worktree for the run's session, materializes the vendor's MCP config into it with `excludeOverlay`, and serves `read`, `edit`, and the permission tool with `serveTools` over `loopback-http` and then `stdio-relay`, driving the scripted `jsonl-stream` CLI as the vendor binary. It shows an allowed `edit` that changes the file in the worktree, a declined `edit` under `@arnilo/prism-extensions/approval` in `ask` mode, permission-tool deny and allow, an unserved name as a JSON-RPC error, a call after `close()` refused, the served calls' `origin` on the run's events, the worktree diff with the overlay excluded, and a conflicting `merge` reported unresolved (network-free).
 - `custom-adapter.ts` — **demo** (Phase 15 Part B): extending a reference adapter with `extendAdapter`. A host derives a new adapter from `adapters/rpc-server.ts` — one extra launch flag, one bound-worktree overlay, a decoder that turns the base's `agent.raw` frame into `agent.file`, and a policy narrowed to the base's api-key modes — then runs it through `processDriver` with `@arnilo/prism-tools/coding` and `@arnilo/prism-extensions/approval` (`ask`). The rpc-server dialect calls the served `edit` twice (one allowed, one declined by a scripted `HostUi`) and emits the custom frame, and the example prints the captured activity with its `origin`, both decisions, the worktree diff with the overlay excluded, the materialized skill, and `agent.inspect()` notes naming the base and the extension (network-free).
@@ -170,9 +188,10 @@ Each demo prints a single JSON line with its result.
 - `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
 - `web-no-key.ts` — **demo**: a `toolsWeb` package whose `env:` key ref does not resolve registers no `web_*` tool and writes a `warn` status note naming the ref (the run still completes on the coding tools), and `toolsWeb({ backend: "native" })` registering `web_fetch` with no key and no status note; both halves are network-free.
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, safe low-cardinality OpenTelemetry projection, and judge calibration against a human rating with mock providers.
-- `delegate.ts` — **demo**: `@arnilo/prism-extensions/delegate` `delegate` tool; the `reviewer` child inherits only `@arnilo/prism-tools/coding` (its tool list proves the subset), the parent gets the child's answer as the tool result, and `delegate.step` events record start and finish. The second half runs a `coder` child with `isolation: "worktree"` in a throwaway repository: it writes in its own worktree and the delegate merges its commit into `main` (network-free, needs `git`).
+- `delegate.ts` — **demo**: `@arnilo/prism-extensions/delegate` `delegate` tool; the `reviewer` child is a session of the same agent linked to the parent session, with only the tools of `@arnilo/prism-tools/coding` (its tool list proves the subset); the parent gets the child's answer as the tool result, `delegate.step` events record start and finish, and the child's transcript stays in the store under the parent. The second half runs a `coder` child with `isolation: "worktree"` in a throwaway repository: it writes in its own worktree and the delegate merges its commit into `main` (network-free, needs `git`) The third half is a two-level tree (`maxDepth: 2`) under `report: "stream"`: the `lead` child delegates to a `worker` grandchild, each level's activity arrives as `delegate.activity` events, and the root run's usage holds every level's turns.
 - `advisor.ts` — **demo**: `@arnilo/prism-extensions/advisor` — the parent model calls `advise` once (one model call, no tools, over the branch slice) and gets the advice plus an `[advisor: …]` line; `triggers.beforeFinish` then reviews the final answer, says `revise`, and the run continues with that advice as a steer before a second review says `proceed`. The `advisor.consult` events are printed (network-free).
 - `validator.ts` — **demo**: completion validation with `validate`: the run's task is captured and pinned, the first validator review answers `incomplete` with what is missing (the run continues with that list as a steer), the second answers `complete`, and the host reads `verified` from the last `validator.verdict` event (network-free; the child engine variant uses a hidden `delegate` child with its own tools).
+- `structured-output.ts` — **demo**: `providerOptions.structuredOutput` on a model without the capability: `mode: "auto"` sends the schema as one prompted instruction block, the first reply misses a required field, the kernel sends one repair message listing the violation's path, and the second reply (fenced) lands in `RunResult.output` (network-free).
 - `semantic-memory.ts` — semantic recall with a hash embedder, adjacent entries, and context injection (long-term working memory was retired in 0.13.0; see the memory system's WM component).
 - `long-term-memory.ts` — **demo**: `memory:consolidate` turns an explicit statement into a typed, scored candidate note (`memorySystem({ ltm: { promote: {...} } })`), a second agent over the same markdown store recalls it, and a third agent rooted in another project at that store sees the shared user preference but not the first project's fact (network-free).
 - `memory-lifecycle.ts` — **demo** (plans 188.4, 188.5): one note's whole life in a single deterministic run — a user preference written in project A and cited in B, a procedure verified by use in both projects (the `agent` scope stays closed to model tools), a project exception that shadows the preference, an unused episode archived by the two strengths and revived through archive search, and a capacity budget that folds duplicates then evicts the weakest note; the scope clock is the store's session counter, so time is sessions, never calendar days. It then drives the three delivery tiers through a real agent: the standing rules in the prefix stay byte-identical across ten quiet turns, a `read` under a path note's glob injects that note in the tail exactly once, and `memory:share` writes a team note after a scripted `host.ui` confirm (network-free, no model call).
@@ -184,6 +203,7 @@ Each demo prints a single JSON line with its result.
 - `mcp-server.ts` — **demo**: serve a Prism agent over MCP as one `prompt` tool with `serveMcp` + `mcpHost`; runs over in-memory (default) or stdio (`--stdio`), with a commented modern HTTP wiring through `createPrismMcpWebHandler`.
 - `host-builder-agent.ts` — **demo** (plan 215 Task 19): a Prism agent as the builder of a host. `prism-host-builder install --target prism` copies the skill into a temp project, then an agent with `tools-coding`, `contextFiles` (which discovers the skill under `.agents/skills`) and `@arnilo/prism-extensions/mcp` (stdio to `prism-host-builder mcp --root <project> --entry src/agent.ts#createInspectionAgent`, started by the host) runs a scripted turn: `load_skill`, `prism_api({ symbol: "createAgent" })` and `prism_inspect_host`. Mock provider, no credential, no network; one MCP server and one check child.
 - `connected-slack-mcp.ts` — **demo**: network-free connected-app Slack MCP wrap with read/write effect classification and an exact allowlist.
+- `mcp-oauth.ts` — **demo**: an MCP server behind OAuth is signed in to through `host.ui` (`open-url`, then a loopback callback), the whole sign-in record lands in one `keyring:` ref through the credentials slot, no token reaches events or `inspect()`, and `mcp:logout` deletes the record (network-free).
 - `mcp-trust.ts` — **demo**: an untrusted project stdio server never spawns (host.ui `confirm` denied) and a `env:` header ref is never echoed into events, `inspect()`, or command results (network-free).
 - `open-connector-sidecar.ts` — **demo**: network-free Open Connector sidecar admission — loopback `streamable-http` transport, exact `allowTools`, unclassified `execute_action`, and a denied `select` (recipe in [`open-connector-sidecar/`](open-connector-sidecar/README.md)).
 - `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
@@ -216,7 +236,7 @@ Each demo prints a single JSON line with its result.
 - `session-search.ts` — **demo**: workspace-scoped session search — SQLite FTS5 hit pointers (`entryId`/`runId`/`turn`/`score`/snippet), annotation search via `kind`, and the JSONL linear-scan fallback returning the same hits (network-free).
 - `compaction.ts` — **demo**: LLM compaction with a mock summarizer provider.
 - `memory-system.ts` — **demo** (plan 216 Task 6): `@arnilo/prism-memory-system`'s four partial-use profiles, each on its own agent — `ltm` (long-term memory alone: no session tiers, no `compaction` slot claim), `session` (`stm` + `wm`: observed and reflected, no `memory.*` tool), `stm` (observed, never reflected) and `full` (observed, reflected, rehearsed, plus a long-term note); per profile it asserts the tools, commands, slot claim and capabilities the package holds and reads the `memory.system` service's `status()` (inline mock provider, network-free).
-- `session-memory.ts` — **demo** (Phase 8; plan 216 Task 4): `@arnilo/prism-memory-system`'s session tiers on a temp SQLite store — the STM worker on `mock/observer` while the turns run on `mock/main`, `session.compact()` summarizing from the ledger, the per-session `memory:session` toggle, a second process resuming the session (toggle, worker model, ledger, `recall`), and the `compaction`-slot conflict failing closed (imports only `@arnilo/prism`, the two memory packages, and `@arnilo/prism-extensions/store-sqlite`, network-free).
+- `session-memory.ts` — **demo** (Phase 8; plan 216 Task 4): `@arnilo/prism-memory-system`'s session tiers on a temp SQLite store — the STM worker on `mock/observer` while the turns run on `mock/main`, `session.compact()` summarizing from the ledger, the per-session `memory:session` toggle, a second process resuming the session (toggle, worker model, ledger, `recall`), and a second compaction system failing closed beside session memory's (imports only `@arnilo/prism`, the two memory packages, and `@arnilo/prism-extensions/store-sqlite`, network-free).
 - `coding-compaction.ts` — **demo**: coding-focused LLM compaction preset with a mock summarizer; raw history remains intact.
 - `external-app-db-backed.ts` — **demo**: end-to-end external app with a DB-backed
   adapter reference mock (`SessionStore` + `RunLedger` + `ProductionPersistenceStore`

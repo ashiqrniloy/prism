@@ -40,15 +40,7 @@ import type { ExecutionPolicy } from "./execution-policy.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import type { CodingLifecycleEvent } from "./lifecycle-events.js";
-import {
-  DEFAULT_MAX_EDIT_FILE_BYTES,
-  DEFAULT_MAX_EDIT_INPUT_BYTES,
-  DEFAULT_MAX_EDITS,
-  HARD_MAX_EDIT_FILE_BYTES,
-  HARD_MAX_EDIT_INPUT_BYTES,
-  HARD_MAX_EDITS,
-  validateCodingLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_EDIT_FILE_BYTES, DEFAULT_MAX_EDIT_INPUT_BYTES, DEFAULT_MAX_EDITS, validateCodingLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
 import { type ReadBeforeWriteOptions, refuseReadBeforeWrite } from "./read-path-set.js";
 
@@ -160,13 +152,9 @@ function validateEdits(edits: unknown, maxEdits: number, maxInputBytes: number):
 
 export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefinition {
   const ops = options?.operations ?? defaultEditOperations;
-  const maxFileBytes = validateCodingLimit("maxFileBytes", options?.maxFileBytes ?? DEFAULT_MAX_EDIT_FILE_BYTES, HARD_MAX_EDIT_FILE_BYTES);
-  const maxInputBytes = validateCodingLimit(
-    "maxInputBytes",
-    options?.maxInputBytes ?? DEFAULT_MAX_EDIT_INPUT_BYTES,
-    HARD_MAX_EDIT_INPUT_BYTES,
-  );
-  const maxEdits = validateCodingLimit("maxEdits", options?.maxEdits ?? DEFAULT_MAX_EDITS, HARD_MAX_EDITS);
+  const maxFileBytes = validateCodingLimit("maxFileBytes", options?.maxFileBytes ?? DEFAULT_MAX_EDIT_FILE_BYTES);
+  const maxInputBytes = validateCodingLimit("maxInputBytes", options?.maxInputBytes ?? DEFAULT_MAX_EDIT_INPUT_BYTES);
+  const maxEdits = validateCodingLimit("maxEdits", options?.maxEdits ?? DEFAULT_MAX_EDITS);
   const guard = options?.requireReadBeforeWrite === true;
 
   return {
@@ -209,6 +197,8 @@ export function createEditTool(cwd: string, options?: EditToolOptions): ToolDefi
       required: ["path", "edits"],
       additionalProperties: false,
     } as JsonObject,
+    // `prepareEditArguments` repairs a JSON-string `edits` and legacy `oldText`/`newText`; the schema would reject both.
+    validateArguments: false,
     async execute(args, context: ToolExecutionContext): Promise<ToolResult> {
       const toolCallId = context.toolCallId;
       if (typeof args.edits === "string" && Buffer.byteLength(args.edits, "utf-8") > maxInputBytes) {

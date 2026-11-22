@@ -37,6 +37,6 @@ describe("@arnilo/prism-tools/research package", () => {
 
   it("unknown_config_key_rejected", async () => {
     await assert.rejects(() => createAgent({ model: MODEL, packages: [toolsResearch({ nope: true } as never)] }), /unknown key "nope"/);
-    await assert.rejects(() => createAgent({ model: MODEL, packages: [toolsResearch({ maxRepairs: 4 })] }), /maxRepairs/);
+    await assert.rejects(() => createAgent({ model: MODEL, packages: [toolsResearch({ maxRepairs: -1 })] }), /maxRepairs/);
   });
 });

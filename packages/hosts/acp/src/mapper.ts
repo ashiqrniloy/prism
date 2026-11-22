@@ -150,6 +150,17 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
   let messageId: string | undefined;
   let textDeltaSeen = false;
   let thoughtDeltaSeen = false;
+  /**
+   * Plan 227 Task 4: ACP chunks are append-only, and a provider attempt that fails after output is
+   * retried. Between `turn.started` and `turn.completed` the attempt's chunks are held, then sent when
+   * it completes cleanly or dropped when it ends with `error`. Deltas outside an attempt pass through.
+   */
+  let attempt: SessionUpdate[] | undefined;
+  const live = (update: SessionUpdate): SessionUpdate[] => {
+    if (!attempt) return [update];
+    attempt.push(update);
+    return [];
+  };
 
   const text = (value: string, maxBytes = limits.maxTextBytes) =>
     truncate(options.redactor?.redact(value) ?? value, Math.min(maxBytes, limits.maxEventBytes));
@@ -269,12 +280,12 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
           if (event.content.type === "thinking") {
             messageId ??= `${text(event.runId)}:message`;
             thoughtDeltaSeen = true;
-            return [thought(messageId ?? `${text(event.runId)}:message`, text(event.content.text))];
+            return live(thought(messageId ?? `${text(event.runId)}:message`, text(event.content.text)));
           }
           if (event.content.type !== "text") return [];
           messageId ??= `${text(event.runId)}:message`;
           textDeltaSeen = true;
-          return [message(messageId ?? `${text(event.runId)}:message`, text(event.content.text))];
+          return live(message(messageId ?? `${text(event.runId)}:message`, text(event.content.text)));
         case "message.completed": {
           if (event.message.role !== "assistant") return [];
           const id = messageId ?? text(event.message.id ?? `${event.runId}:message`);
@@ -305,11 +316,21 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
               event.status === "finished" ? event.result : undefined,
             ),
           ];
-        case "turn.completed":
+        case "turn.started":
+          attempt = [];
+          return [];
+        case "turn.completed": {
           // B2: a failed provider turn is a request-level condition, not transcript content;
           // the agent's forward() throws ERR_PRISM_ACP_RUN when the run ends in a terminal
-          // `error` event (retryable turn failures stay silent here and may recover).
-          return event.usage && event.metadata ? await usage(event.usage, event.metadata.model.model) : [];
+          // `error` event. A failed attempt's held chunks are dropped: the run may retry it.
+          const held = event.error ? [] : (attempt ?? []);
+          attempt = undefined;
+          if (event.error) {
+            textDeltaSeen = false;
+            thoughtDeltaSeen = false;
+          }
+          return [...held, ...(event.usage && event.metadata ? await usage(event.usage, event.metadata.model.model) : [])];
+        }
         case "decision.resolved":
           return event.decisions.some((decision) => decision.outcome === "deny")
             ? [message(`${text(event.runId)}:status`, "Run denied")]

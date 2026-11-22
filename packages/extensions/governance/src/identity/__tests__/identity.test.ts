@@ -9,7 +9,6 @@ import {
   assertIdentityMatchesOwnership,
   assertIdentityPropagation,
   DEFAULT_IDENTITY_LIMITS,
-  HARD_IDENTITY_LIMITS,
   IdentityError,
   type IdentityVerifier,
   identityTelemetryAttributes,
@@ -104,9 +103,10 @@ describe("identity contracts", () => {
     assert.ok(!JSON.stringify(attrs).includes("resolver:key"));
   });
 
-  it("enforces frozen identity byte/field caps", () => {
+  it("enforces identity byte/field caps; the host sets them", () => {
     assert.equal(resolveIdentityLimits().maxScopes, DEFAULT_IDENTITY_LIMITS.maxScopes);
-    assert.throws(() => resolveIdentityLimits({ maxScopes: HARD_IDENTITY_LIMITS.maxScopes + 1 }), RangeError);
+    assert.throws(() => resolveIdentityLimits({ maxScopes: 0 }), RangeError);
+    assert.equal(resolveIdentityLimits({ maxScopes: 10_000 }).maxScopes, 10_000);
     assert.throws(
       () =>
         assertIdentityActive(

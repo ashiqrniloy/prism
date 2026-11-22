@@ -18,8 +18,27 @@ export interface PackageCallSeam {
   /** The active run's id, or `""` between runs. */
   readonly runId: string;
   /**
-   * Charges one finished package call to the active run: price, limits, run usage, ledger. Defined only while a run
-   * is active. A limit breach aborts the run and throws.
+   * Charges one finished model call to the active run: price, limits, run usage, one ledger row of `scope`
+   * (`package_call` by default; `child_run` when a child session's run mirrors its usage here through
+   * `RunOptions.chargeTo`). Defined only while a run is active. A limit breach aborts the run and throws.
    */
-  readonly recordUsage?: (model: ModelConfig, usage: Usage | undefined, request: ProviderRequest) => Promise<void>;
+  readonly recordUsage?: (
+    model: ModelConfig,
+    usage: Usage | undefined,
+    request: ProviderRequest | undefined,
+    scope?: PackageUsageScope,
+  ) => Promise<void>;
+  /**
+   * Kernel-internal: charges usage to this session's session-wide limits when no run is active on it
+   * (for example an async child run outliving its parent's run via `RunOptions.chargeTo`).
+   */
+  readonly recordSessionUsage?: (model: ModelConfig, usage: Usage | undefined) => Promise<void>;
+}
+
+/** The ledger scopes a session's usage seam records under. */
+export type PackageUsageScope = "package_call" | "child_run";
+
+/** The kernel seam a view carries, or `undefined` for a hand-built `SessionContext`. */
+export function packageCallSeamOf(view: object): PackageCallSeam | undefined {
+  return (view as { [PACKAGE_CALL_SEAM]?: PackageCallSeam })[PACKAGE_CALL_SEAM];
 }

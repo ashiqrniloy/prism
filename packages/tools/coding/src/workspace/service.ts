@@ -32,9 +32,6 @@ import {
   DEFAULT_MAX_GIT_WORKTREES,
   DEFAULT_MAX_WORKSPACE_DIFF_BYTES,
   DEFAULT_MAX_WORKSPACE_DIFF_FILES,
-  HARD_MAX_GIT_WORKTREES,
-  HARD_MAX_WORKSPACE_DIFF_BYTES,
-  HARD_MAX_WORKSPACE_DIFF_FILES,
   validateCodingLimit,
 } from "../agent/limits.js";
 import { type FileChange, type WorkspaceDiffBounds, workspaceDiff } from "./diff.js";
@@ -185,22 +182,10 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
   }
 
   const worktreeRoot = resolve(options.worktreeRoot ?? defaultWorktreeRoot(root));
-  const maxWorktrees = validateCodingLimit(
-    "workspace.maxWorktrees",
-    options.maxWorktrees ?? DEFAULT_MAX_GIT_WORKTREES,
-    HARD_MAX_GIT_WORKTREES,
-  );
+  const maxWorktrees = validateCodingLimit("workspace.maxWorktrees", options.maxWorktrees ?? DEFAULT_MAX_GIT_WORKTREES);
   const diffBounds: WorkspaceDiffBounds = {
-    maxFiles: validateCodingLimit(
-      "workspace.diff.maxFiles",
-      options.diff?.maxFiles ?? DEFAULT_MAX_WORKSPACE_DIFF_FILES,
-      HARD_MAX_WORKSPACE_DIFF_FILES,
-    ),
-    maxBytes: validateCodingLimit(
-      "workspace.diff.maxBytes",
-      options.diff?.maxBytes ?? DEFAULT_MAX_WORKSPACE_DIFF_BYTES,
-      HARD_MAX_WORKSPACE_DIFF_BYTES,
-    ),
+    maxFiles: validateCodingLimit("workspace.diff.maxFiles", options.diff?.maxFiles ?? DEFAULT_MAX_WORKSPACE_DIFF_FILES),
+    maxBytes: validateCodingLimit("workspace.diff.maxBytes", options.diff?.maxBytes ?? DEFAULT_MAX_WORKSPACE_DIFF_BYTES),
   };
 
   const emitter = createCodingLifecycleEmitter(options.onEvent === undefined ? {} : { onEvent: options.onEvent });
@@ -239,7 +224,7 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
           execFile: options.execFile,
           commitIdentity: await configuredIdentity(),
           // The main tree is listed too, so the git layer's count must admit the service's own cap on top of it.
-          maxWorktrees: Math.min(maxWorktrees + 1, HARD_MAX_GIT_WORKTREES),
+          maxWorktrees: maxWorktrees + 1,
         }))();
       ops.set(key, cached);
     }

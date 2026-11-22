@@ -200,6 +200,16 @@ function install(prism: PackageAPI<ApprovalConfig>, gate: LiveGate): void {
   });
 }
 
+/**
+ * Provide the `tool-policy` marker, so a tool package's unsandboxed default gate (for example the
+ * coding package's `shell` ask) leaves the decision to this package. `governance` provides the same
+ * marker; when both are loaded the first one set up holds it and the other skips, instead of a
+ * `service_conflict`.
+ */
+function provideToolPolicy(prism: PackageAPI<ApprovalConfig>): void {
+  if (prism.services.consume("tool-policy") === undefined) prism.services.provide("tool-policy", Object.freeze({ package: PACKAGE }));
+}
+
 function createDefinition(gate: LiveGate) {
   return definePackage<ApprovalConfig>({
     name: PACKAGE,
@@ -215,6 +225,7 @@ function createDefinition(gate: LiveGate) {
         gate.ruleKeys = new Set(gate.rules.map(ruleKey));
       }
       install(prism, gate);
+      provideToolPolicy(prism);
     },
   });
 }

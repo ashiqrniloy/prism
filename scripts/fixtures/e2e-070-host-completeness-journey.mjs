@@ -64,7 +64,8 @@ mark("TRAP_A OK");
 
 // --- R05 personal / business composition ---
 const redactor = createSecretRedactor(["packed-secret"]);
-const validator = { validate: () => ({ ok: true }) };
+// A `ToolValidator` is a function; `undefined` passes the call. Plan 229 Task 3 rejects the old `{ validate }` object.
+const validator = () => undefined;
 // Plan 159 Task 7: `createSecureAgent` is gone; the same explicit config with a plain `createAgent`.
 const personal = await createAgent({
   id: "personal-assistant",
@@ -332,17 +333,20 @@ const denied = await runExperiment({
     model: { provider: "mock", model: "demo" },
     packages: [providerPackage("test-provider", [oneShot("drop_database")])],
     hooks: failureInjection({ denyTools: ["drop_database"] }),
-    tools: [
-      {
-        name: "drop_database",
-        description: "drop",
-        parameters: { type: "object", properties: {} },
-        async execute(_args, ctx) {
-          deniedRan += 1;
-          return { toolCallId: ctx.toolCallId, name: "drop_database", value: { dropped: true } };
+    // Plan 229 Task 3: host tools go under `tools.add`; an array used to be ignored silently.
+    tools: {
+      add: [
+        {
+          name: "drop_database",
+          description: "drop",
+          parameters: { type: "object", properties: {} },
+          async execute(_args, ctx) {
+            deniedRan += 1;
+            return { toolCallId: ctx.toolCallId, name: "drop_database", value: { dropped: true } };
+          },
         },
-      },
-    ],
+      ],
+    },
   }),
   dataset: defineDataset({ id: "deny", items: [{ id: "i", input: "drop" }] }),
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
@@ -356,18 +360,21 @@ const unknown = await runExperiment({
     model: { provider: "mock", model: "demo" },
     packages: [providerPackage("test-provider", [oneShot("move_money")])],
     hooks: failureInjection({ unknownEffect: true }),
-    tools: [
-      {
-        name: "move_money",
-        description: "move",
-        parameters: { type: "object", properties: {} },
-        effect: { kind: "external_mutation", idempotency: "required" },
-        async execute(_args, ctx) {
-          unknownRan += 1;
-          return { toolCallId: ctx.toolCallId, name: "move_money", value: { moved: true } };
+    // Plan 229 Task 3: host tools go under `tools.add`; an array used to be ignored silently.
+    tools: {
+      add: [
+        {
+          name: "move_money",
+          description: "move",
+          parameters: { type: "object", properties: {} },
+          effect: { kind: "external_mutation", idempotency: "required" },
+          async execute(_args, ctx) {
+            unknownRan += 1;
+            return { toolCallId: ctx.toolCallId, name: "move_money", value: { moved: true } };
+          },
         },
-      },
-    ],
+      ],
+    },
   }),
   dataset: defineDataset({ id: "unknown", items: [{ id: "i", input: "move" }] }),
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
@@ -527,8 +534,8 @@ mark("VOICE OK");
 
 // --- R16 observational memory package + fabric reflection promotion ---
 const scopeStore = createMemorySessionStore();
-// One worker provider serves both roles: the loop offers `record_event` to STM and the verdict tools
-// (`summarize` among them) to WM, and each prompt lists its inputs as `[id]`.
+// One worker provider serves both roles: the loop offers `record_event` to STM and `judge` to WM. STM's prompt lists
+// its entries as `[id]`; WM's lists its records as ordinals (`[r1]`).
 const observerProvider = {
   id: "memory",
   async *generate(request) {
@@ -538,13 +545,13 @@ const observerProvider = {
     const sourceEntryIds = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]);
     const toolNames = new Set((request.tools ?? []).map((tool) => tool.name));
     if (!alreadyCalled && sourceEntryIds.length > 0) {
-      if (toolNames.has("summarize")) {
-        const stmIds = [...text.matchAll(/^- \[([a-f0-9]{12})\] \d{4}-/gm)].map((match) => match[1]);
+      if (toolNames.has("judge")) {
+        const of = [...text.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));
         yield providerToolCall({
           type: "tool_call",
           id: "c1",
-          name: "summarize",
-          arguments: { stmIds, text: "Task one prefers the smallest retry budget.", relevance: "high" },
+          name: "judge",
+          arguments: { summaries: [{ of, text: "Task one prefers the smallest retry budget.", relevance: "high" }] },
         });
       } else if (toolNames.has("record_event")) {
         yield providerToolCall({
@@ -566,7 +573,9 @@ const scopeAgent = await createAgent({
     memorySystem({
       stm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
       wm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
-      context: { compactAt: { maxTokens: 999_999 } },
+      // WM runs only under a host-set scope (plan 218.3 Task 7); without one the session is STM-only.
+      scope: { text: "Observational-memory journey: keep the retry budget small." },
+      context: { compactAfterRun: { maxTokens: 999_999 } },
       worker: { maxTurns: 1 },
     }),
   ],

@@ -3,26 +3,27 @@ import {
   type CompactionResult,
   type Compactor,
   createSessionEntry,
+  estimateTextTokens,
+  formatFileOperations,
   type Message,
   type ModelClient,
   type ProviderRequest,
   redactSecrets,
+  resolveInputCap,
 } from "@arnilo/prism";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism/provider-kit";
-import { formatFileOperations } from "./file-ops.js";
+import { chunkCompactionEntries } from "./chunk.js";
 import {
+  DEFAULT_MAX_CHUNKS,
   DEFAULT_MAX_SUMMARY_ERROR_BYTES,
   DEFAULT_MAX_SUMMARY_TOKENS,
   DEFAULT_RESERVE_TOKENS,
-  HARD_MAX_SUMMARY_ERROR_BYTES,
-  HARD_MAX_SUMMARY_TOKENS,
-  HARD_RESERVE_TOKENS,
   truncateUtf8,
   validateCompactionLimit,
 } from "./limits.js";
 import { type LlmCompactionPreparation, type PrepareLlmCompactionOptions, prepareLlmCompaction } from "./prepare.js";
 import { SUMMARIZATION_SYSTEM_PROMPT, TURN_PREFIX_SYSTEM_PROMPT } from "./prompts.js";
-import { type SerializeCompactionConversationOptions, serializeCompactionConversation } from "./serialize.js";
+import { type SerializeCompactionConversationOptions, serializeCompactionConversation, truncate } from "./serialize.js";
 
 /** A synchronous or asynchronous rewrite of the summarization request. */
 /**
@@ -48,13 +49,25 @@ export interface LlmCompactorOptions extends PrepareLlmCompactionOptions, Serial
   readonly maxSummaryTokens?: number;
   readonly maxErrorBytes?: number;
   readonly includeFileOperations?: boolean;
+  /**
+   * Summary calls one compaction may make when the history does not fit the summary model's input cap.
+   * Default {@link DEFAULT_MAX_CHUNKS}. Past it the newest chunks are
+   * summarized and the summary states the omission.
+   */
+  readonly maxChunks?: number;
 }
 
 interface ResolvedSummaryLimits {
   readonly maxSummaryTokens: number;
   readonly reserveTokens: number;
   readonly maxErrorBytes: number;
+  readonly maxChunks: number;
 }
+
+/** A chunk smaller than this leaves the summary model no useful room: the compaction falls back instead. */
+const MIN_CHUNK_TOKENS = 256;
+/** Estimator slack per request: the estimate of a joined prompt can exceed the sum of its parts by a few tokens. */
+const CHUNK_SLACK_TOKENS = 16;
 
 export function createLlmCompactor(options: LlmCompactorOptions): Compactor {
   const name = options.name ?? "llm-compaction";
@@ -103,16 +116,101 @@ async function summarizeHistory(
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
 ): Promise<string> {
-  const conversation = serializeCompactionConversation(prep.entriesToSummarize, { ...options, secrets });
-  const sections = [
-    prep.previousSummary && `<previous-summary>\n${prep.previousSummary}\n</previous-summary>`,
+  const systemPrompt = options.summaryPrompt ?? SUMMARIZATION_SYSTEM_PROMPT;
+  const serializeOptions = { ...options, secrets };
+  const conversation = serializeCompactionConversation(prep.entriesToSummarize, serializeOptions);
+  const prompt = historyPrompt(prep.previousSummary, conversation, options, secrets);
+  const client = options.clientFor(outputBudget(options, 0.8, limits), context);
+  const cap = await summaryInputCap(client);
+  // A history that fits (or a summary model with no resolvable window) is one call, as before.
+  if (cap === undefined || estimateTextTokens(systemPrompt) + estimateTextTokens(prompt) <= cap)
+    return runSummaryProvider(context, client, systemPrompt, prompt, secrets, limits);
+  return summarizeInChunks(context, prep, options, secrets, limits, { client, cap, systemPrompt });
+}
+
+/**
+ * The rolling summary over bounded chunks (plan 229 Task 6). Each call carries the previous call's summary
+ * as `<previous-summary>` and one chunk of the history, sized so the request stays under the summary model's
+ * input cap; the last summary is the result. Past `maxChunks` the oldest chunks are omitted and the summary
+ * says so. Any failing chunk fails the compaction, so the package's fallback runs once.
+ */
+async function summarizeInChunks(
+  context: CompactionContext,
+  prep: LlmCompactionPreparation,
+  options: LlmCompactorOptions,
+  secrets: readonly (string | undefined)[],
+  limits: ResolvedSummaryLimits,
+  call: { readonly client: ModelClient; readonly cap: number; readonly systemPrompt: string },
+): Promise<string> {
+  const serializeOptions = { ...options, secrets };
+  // A rolling summary is held to the call's output budget, so the room reserved for it is known up front.
+  const rollingTokens = Math.min(limits.maxSummaryTokens, requestedOutput(call.client.model) ?? limits.maxSummaryTokens);
+  const previousTokens = Math.max(rollingTokens, estimateTextTokens(prep.previousSummary ?? ""));
+  const overhead = estimateTextTokens(call.systemPrompt) + estimateTextTokens(historyPrompt(" ", " ", options, secrets));
+  const budget = call.cap - overhead - previousTokens - CHUNK_SLACK_TOKENS;
+  if (budget < MIN_CHUNK_TOKENS)
+    throw new Error(`Summarization failed: the summary model's input cap (${call.cap} tokens) leaves no room for a history chunk`);
+
+  const chunks = chunkCompactionEntries(
+    prep.entriesToSummarize,
+    budget,
+    (entry) => estimateTextTokens(serializeCompactionConversation([entry], serializeOptions)) + 1,
+  );
+  const omitted = Math.max(0, chunks.length - limits.maxChunks);
+  let previous = prep.previousSummary;
+  for (const chunk of chunks.slice(omitted)) {
+    // One entry alone over the budget is cut to it, so no request exceeds the cap.
+    const conversation = truncate(serializeCompactionConversation(chunk, serializeOptions), budget * 4);
+    const summary = await runSummaryProvider(
+      context,
+      call.client,
+      call.systemPrompt,
+      historyPrompt(previous, conversation, options, secrets),
+      secrets,
+      limits,
+    );
+    previous = capSummary(summary, rollingTokens);
+  }
+  const notice =
+    omitted > 0
+      ? `[Earlier history omitted: the oldest ${omitted} of ${chunks.length} chunks were not summarized (maxChunks ${limits.maxChunks}).]\n\n`
+      : "";
+  return `${notice}${previous ?? ""}`;
+}
+
+function historyPrompt(
+  previousSummary: string | undefined,
+  conversation: string,
+  options: LlmCompactorOptions,
+  secrets: readonly (string | undefined)[],
+): string {
+  return [
+    previousSummary && `<previous-summary>\n${previousSummary}\n</previous-summary>`,
     `<conversation>\n${conversation}\n</conversation>`,
     options.customInstructions && `Additional focus: ${redactSecrets(options.customInstructions, secrets)}`,
   ]
     .filter(Boolean)
     .join("\n\n");
+}
 
-  return runSummaryProvider(context, options, options.summaryPrompt ?? SUMMARIZATION_SYSTEM_PROMPT, sections, 0.8, secrets, limits);
+/** The output budget `clientFor` put on the model (`parameters.maxTokens`), when it is a positive integer. */
+function requestedOutput(model: ModelClient["model"]): number | undefined {
+  const value = model.parameters?.maxTokens;
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
+
+/**
+ * The summary model's input cap for this call: its described window less the output this call requests
+ * and the kernel reserve. `undefined` when the model declares no window, so the call is not chunked.
+ */
+async function summaryInputCap(client: ModelClient): Promise<number | undefined> {
+  try {
+    const described = client.resolve ? await client.resolve() : client.model;
+    const output = requestedOutput(client.model) ?? described.limits?.maxOutputTokens;
+    return resolveInputCap({}, { limits: { ...described.limits, ...(output === undefined ? {} : { maxOutputTokens: output }) } });
+  } catch {
+    return undefined;
+  }
 }
 
 async function summarizeTurnPrefix(
@@ -129,15 +227,15 @@ async function summarizeTurnPrefix(
   ]
     .filter(Boolean)
     .join("\n\n");
-  return runSummaryProvider(context, options, TURN_PREFIX_SYSTEM_PROMPT, prompt, 0.5, secrets, limits);
+  const client = options.clientFor(outputBudget(options, 0.5, limits), context);
+  return runSummaryProvider(context, client, TURN_PREFIX_SYSTEM_PROMPT, prompt, secrets, limits);
 }
 
 async function runSummaryProvider(
   context: CompactionContext,
-  options: LlmCompactorOptions,
+  client: ModelClient,
   systemPrompt: string,
   prompt: string,
-  reserveRatio: number,
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
 ): Promise<string> {
@@ -148,7 +246,6 @@ async function runSummaryProvider(
   let retainedChars = 0;
   let truncated = false;
   let eventCount = 0;
-  const client = options.clientFor(outputBudget(options, reserveRatio, limits), context);
   const providerSignal = context.signal ? AbortSignal.any([context.signal, providerAbort.signal]) : providerAbort.signal;
   let request: ProviderRequest = {
     model: client.model,
@@ -213,16 +310,12 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
 }
 
 function resolveSummaryLimits(options: LlmCompactorOptions): ResolvedSummaryLimits {
-  if (options.maxSummaryTokens !== undefined)
-    validateCompactionLimit("maxSummaryTokens", options.maxSummaryTokens, HARD_MAX_SUMMARY_TOKENS);
+  if (options.maxSummaryTokens !== undefined) validateCompactionLimit("maxSummaryTokens", options.maxSummaryTokens);
   return {
     maxSummaryTokens: options.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
-    reserveTokens: validateCompactionLimit("reserveTokens", options.reserveTokens ?? DEFAULT_RESERVE_TOKENS, HARD_RESERVE_TOKENS),
-    maxErrorBytes: validateCompactionLimit(
-      "maxErrorBytes",
-      options.maxErrorBytes ?? DEFAULT_MAX_SUMMARY_ERROR_BYTES,
-      HARD_MAX_SUMMARY_ERROR_BYTES,
-    ),
+    reserveTokens: validateCompactionLimit("reserveTokens", options.reserveTokens ?? DEFAULT_RESERVE_TOKENS),
+    maxErrorBytes: validateCompactionLimit("maxErrorBytes", options.maxErrorBytes ?? DEFAULT_MAX_SUMMARY_ERROR_BYTES),
+    maxChunks: validateCompactionLimit("maxChunks", options.maxChunks ?? DEFAULT_MAX_CHUNKS),
   };
 }
 
@@ -253,7 +346,7 @@ export function fallbackReason(
   secrets: readonly (string | undefined)[],
   maxBytes = DEFAULT_MAX_SUMMARY_ERROR_BYTES,
 ): string {
-  return safeError(error, secrets, validateCompactionLimit("maxErrorBytes", maxBytes, HARD_MAX_SUMMARY_ERROR_BYTES));
+  return safeError(error, secrets, validateCompactionLimit("maxErrorBytes", maxBytes));
 }
 
 function safeSlice(text: string, maxChars: number): string {

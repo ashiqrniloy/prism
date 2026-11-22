@@ -3,11 +3,8 @@ import { WorkflowCheckpointError } from "./errors.js";
 import {
   DEFAULT_LIST_PAGE_SIZE,
   DEFAULT_MAX_CHECKPOINT_BYTES,
+  DEFAULT_MAX_LIST_LIMIT,
   DEFAULT_MAX_NODE_OUTPUT_BYTES,
-  HARD_LIST_PAGE_CAP,
-  HARD_MAX_CHECKPOINT_BYTES,
-  HARD_MAX_LOOP_ITERATIONS,
-  HARD_MAX_NODE_OUTPUT_BYTES,
   validateWorkflowLimit,
   WORKFLOW_CHECKPOINT_SCHEMA_VERSION,
   WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
@@ -28,8 +25,8 @@ export function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
-export function resolveListLimit(limit?: number): number {
-  return Math.min(Math.max(1, limit ?? DEFAULT_LIST_PAGE_SIZE), HARD_LIST_PAGE_CAP);
+export function resolveListLimit(limit?: number, maxListLimit = DEFAULT_MAX_LIST_LIMIT): number {
+  return Math.min(Math.max(1, limit ?? DEFAULT_LIST_PAGE_SIZE), maxListLimit);
 }
 
 export function normalizeStatuses(
@@ -107,22 +104,16 @@ export function prepareCheckpointRecord(
 export function adapterByteLimits(options: WorkflowCheckpointAdapterOptions = {}): {
   readonly maxCheckpointBytes: number;
   readonly maxNodeOutputBytes: number;
+  readonly maxListLimit: number;
 } {
   return {
-    maxCheckpointBytes: validateWorkflowLimit(
-      "maxCheckpointBytes",
-      options.maxCheckpointBytes ?? DEFAULT_MAX_CHECKPOINT_BYTES,
-      HARD_MAX_CHECKPOINT_BYTES,
-    ),
-    maxNodeOutputBytes: validateWorkflowLimit(
-      "maxNodeOutputBytes",
-      options.maxNodeOutputBytes ?? DEFAULT_MAX_NODE_OUTPUT_BYTES,
-      HARD_MAX_NODE_OUTPUT_BYTES,
-    ),
+    maxCheckpointBytes: validateWorkflowLimit("maxCheckpointBytes", options.maxCheckpointBytes ?? DEFAULT_MAX_CHECKPOINT_BYTES),
+    maxNodeOutputBytes: validateWorkflowLimit("maxNodeOutputBytes", options.maxNodeOutputBytes ?? DEFAULT_MAX_NODE_OUTPUT_BYTES),
+    maxListLimit: validateWorkflowLimit("maxListLimit", options.maxListLimit ?? DEFAULT_MAX_LIST_LIMIT),
   };
 }
 
-export function parseCheckpointValue(raw: unknown, maxNodeOutputBytes = HARD_MAX_NODE_OUTPUT_BYTES): WorkflowCheckpointValue {
+export function parseCheckpointValue(raw: unknown, maxNodeOutputBytes = DEFAULT_MAX_NODE_OUTPUT_BYTES): WorkflowCheckpointValue {
   const value =
     typeof raw === "string"
       ? (JSON.parse(raw) as WorkflowCheckpointValue)
@@ -145,33 +136,35 @@ export function parseCheckpointValue(raw: unknown, maxNodeOutputBytes = HARD_MAX
 
 function validateLoopCheckpointFields(node: WorkflowNodeCheckpoint, maxNodeOutputBytes: number): void {
   if (!node || typeof node !== "object") throw new WorkflowCheckpointError("Malformed workflow node checkpoint");
-  if (
-    node.iteration !== undefined &&
-    (!Number.isSafeInteger(node.iteration) || node.iteration < 0 || node.iteration > HARD_MAX_LOOP_ITERATIONS)
-  ) {
+  if (node.iteration !== undefined && (!Number.isSafeInteger(node.iteration) || node.iteration < 0)) {
     throw new WorkflowCheckpointError(`Node ${node.nodeId} has an invalid loop iteration count`);
   }
   if (node.iterations === undefined) return;
-  if (!Array.isArray(node.iterations) || node.iterations.length > HARD_MAX_LOOP_ITERATIONS) {
-    throw new WorkflowCheckpointError(`Node ${node.nodeId} exceeds ${HARD_MAX_LOOP_ITERATIONS} loop iteration records`);
+  // The record count follows the node's own `maxIterations`; the checkpoint as a whole is bounded by `maxCheckpointBytes`.
+  if (!Array.isArray(node.iterations)) {
+    throw new WorkflowCheckpointError(`Node ${node.nodeId} has malformed loop iteration records`);
   }
+  // `WorkflowLimits.maxIterationRecords` keeps only the newest records, so the ledger may start past 0.
+  const first = (node.iteration ?? node.iterations.length) - node.iterations.length;
   for (const [index, iteration] of node.iterations.entries()) {
     if (
       !iteration ||
       typeof iteration !== "object" ||
       iteration.schemaVersion !== WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION ||
-      iteration.iteration !== index ||
       typeof iteration.iterationId !== "string" ||
       typeof iteration.done !== "boolean" ||
       iteration.iterationId.length === 0
     ) {
       throw new WorkflowCheckpointError(`Node ${node.nodeId} has malformed loop iteration record`);
     }
+    if (iteration.iteration !== first + index) {
+      throw new WorkflowCheckpointError(`Node ${node.nodeId} loop iteration count does not match its records`);
+    }
     if (iteration.output !== undefined) {
       assertWithinBytes(iteration.output, maxNodeOutputBytes, `Node ${node.nodeId} iteration ${index} output`);
     }
   }
-  if (node.iteration !== node.iterations.length) {
+  if (node.iteration === undefined || first < 0) {
     throw new WorkflowCheckpointError(`Node ${node.nodeId} loop iteration count does not match its records`);
   }
 }

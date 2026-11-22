@@ -25,6 +25,8 @@ prism add @arnilo/prism-extensions/store-sqlite
 | --- | --- | --- | --- |
 | `path` | `string` | none (required) | SQLite database file. A relative path resolves against the process cwd; `:memory:` is supported for tests. Missing `path` fails the package load with a field-naming error. |
 | `busyTimeoutMs` | `number` | `5000` (`DEFAULT_BUSY_TIMEOUT_MS`) | `busy_timeout` pragma, in milliseconds, before a locked database fails. |
+| `queryLimits` | `object` | kernel defaults | Store query limits: `maxListLimit` (100), `maxSearchLimit` (100), `maxSearchQueryBytes`, `maxSearchCursorBytes`, `searchSnippetBytes` (512), `ftsCandidates` (1,000). Host-only; a list or search page above the store's limit is refused. |
+| `maxPageSize` | `integer` | `500` | Largest checkpoint, lifecycle or run-feedback page. |
 
 The factory options that are not JSON — `wal`, `fileMode`, `skipMigrations`, `database`,
 `feedbackRedactor` — stay code-only on `createSqlitePersistence(options)`.
@@ -71,6 +73,27 @@ consumer) gets durable checkpoints and leases with no second database handle.
 
 `["slot:store"]`. The package depends on `@arnilo/prism-extensions/store-codecs` for the shared row codecs and
 ownership helpers.
+
+The store declares `tipCheck` (plan 230 Task 2): a `tip: true` append is stored with `linear = 1`, and a second
+one at the same parent fails with `SessionAppendConflictError` naming the current leaf, inside the append
+transaction. The partial unique index `prism_session_entries_linear_parent_unique` on `(session_id,
+parent_id) WHERE linear = 1` backs the check across connections and processes. Migration
+`012_session_entry_linear` adds the column with `DEFAULT 0` (no row rewrite) and the index; existing sibling
+branches stay valid.
+
+`readBranchPath({ from: "compaction" })` (plan 230 Task 3) reads only the branch's tail: one primary-key walk from
+the leaf stops at the newest compaction, a second goes on to its `throughEntryId`, and the older entries its
+`keepEntryIds` name are read by id. The kernel uses it for every session snapshot, so a long compacted session
+no longer reads its whole branch per run (5,000 entries compacted at 4,800: 221 rows and ~1.6 ms instead of
+5,000 rows and ~48 ms). No schema change.
+
+Entries are listed, and the latest leaf chosen, in insertion order by `rowid` (plan 230 Task 4), so entries
+written in the same millisecond keep their order. Migration `013_session_entry_seq` is a no-op here: it adds
+PostgreSQL's `seq` column, which SQLite's stable `rowid` already provides.
+
+`appendMany` (plan 230 Task 5) writes a batch in one transaction: the parents outside the batch and the ids are
+checked first, and a failure writes nothing. Batch rows are not linear. `session.fork()` uses it, so a fork is
+one transaction instead of one per copied entry.
 
 ## Cost, security, and failure behavior
 

@@ -24,7 +24,7 @@ export {
   type GoogleWorkspaceHttpAdapterOptions,
 } from "./google-workspace-http.js";
 export { createMemoryIdempotencyStore, identityKey } from "./idempotency.js";
-export { DEFAULT_WORK_LIMITS, HARD_WORK_LIMITS, resolveWorkLimits } from "./limits.js";
+export { DEFAULT_WORK_LIMITS, resolveWorkLimits } from "./limits.js";
 export {
   buildMicrosoft365Argv,
   createMicrosoft365CliAdapter,

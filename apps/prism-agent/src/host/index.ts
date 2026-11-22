@@ -7,4 +7,4 @@ export { connectRemoteWorker, REMOTE_ENDPOINT, REMOTE_WORKER_BIN, type RemoteWor
 export { createResearchWorker } from "./research.js";
 export { BRIEF_SCHEDULE, BUILD_SCHEDULE, clockFromEnv, createHostScheduler, fileClock, SCHEDULE_OWNERSHIP } from "./schedule.js";
 export { HostStartError, startAgent } from "./start.js";
-export { sessionIndex, sqlitePackage } from "./store.js";
+export { runLedgerConfig, sessionIndex, sqlitePackage } from "./store.js";

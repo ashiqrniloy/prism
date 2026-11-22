@@ -28,6 +28,8 @@ export interface DiscoveryOptions {
   readonly roots?: readonly DiscoveryRoot[];
   readonly permission?: PermissionPolicy;
   readonly trust?: TrustPolicy;
+  /** Per-skill byte cap (the agent's `ceilings.skillInstructionBytes`); defaults to `HARD_MAX_SKILL_INSTRUCTION_BYTES`. Oversize skills are skipped. */
+  readonly maxSkillBytes?: number;
 }
 
 /**
@@ -95,7 +97,7 @@ async function scanDirectoryEntries(
     if (!(await isPathInsideReal(scanDir, dir))) continue;
 
     await assertPermission(options.permission, { kind: "resource", action: "load", target: dir });
-    const entry = await readEntry(dir, name, kind, origin);
+    const entry = await readEntry(dir, name, kind, origin, options.maxSkillBytes ?? HARD_MAX_SKILL_INSTRUCTION_BYTES);
     if (entry) out.push(entry);
   }
   return out;
@@ -106,10 +108,11 @@ async function readEntry(
   fallbackName: string,
   kind: ContributionFileKind,
   origin: "global" | "workspace",
+  maxSkillBytes: number,
 ): Promise<DiscoveredContribution | undefined> {
   switch (kind) {
     case "skill":
-      return readSkillEntry(dir, fallbackName, origin);
+      return readSkillEntry(dir, fallbackName, origin, maxSkillBytes);
     default:
       // tool / context / instructions → manifest.json declaration
       return readManifestEntry(dir, fallbackName, kind, origin);
@@ -120,14 +123,15 @@ async function readSkillEntry(
   dir: string,
   _fallbackName: string,
   origin: "global" | "workspace",
+  maxSkillBytes: number,
 ): Promise<DiscoveredContribution | undefined> {
   const path = resolve(dir, "SKILL.md");
   if (!(await isPathInsideReal(dir, path))) return undefined;
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
-  if (Buffer.byteLength(text, "utf8") > HARD_MAX_SKILL_INSTRUCTION_BYTES) return undefined; // oversize: skip, never fail the scan
+  if (Buffer.byteLength(text, "utf8") > maxSkillBytes) return undefined; // oversize: skip, never fail the scan
   const skill = parseSkillFile(text, path);
-  if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) return undefined;
+  if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > maxSkillBytes) return undefined;
   return { kind: "skill", name: skill.name, origin, path, skill };
 }
 
@@ -156,7 +160,7 @@ export async function readOptionalFile(path: string): Promise<string | undefined
 }
 
 export interface LoadSkillDirectoryOptions {
-  /** Per-file byte cap; defaults to `HARD_MAX_SKILL_INSTRUCTION_BYTES` (262 144). */
+  /** Per-file byte cap (the agent's `ceilings.skillInstructionBytes`); defaults to `HARD_MAX_SKILL_INSTRUCTION_BYTES` (262 144). */
   readonly maxSkillBytes?: number;
 }
 
@@ -200,11 +204,8 @@ export async function loadSkillDirectory(directory: string, options: LoadSkillDi
       throw new PackageLoadError("skill_too_large", `Skill ${name}: file exceeds ${maxBytes} byte cap`);
     }
     const skill = parseSkillFile(text, path);
-    if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
-      throw new PackageLoadError(
-        "skill_too_large",
-        `Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes).`,
-      );
+    if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > maxBytes) {
+      throw new PackageLoadError("skill_too_large", `Skill ${skill.name} instructions exceed the ${maxBytes} byte cap.`);
     }
     skills.push(skill);
   }

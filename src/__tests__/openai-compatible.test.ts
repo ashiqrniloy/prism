@@ -160,12 +160,17 @@ describe("openai-compatible provider", () => {
   });
 
   it("passes abort signal to fetch", async () => {
+    // fetch sees the request's timeout signal, which follows the caller's abort.
     const controller = new AbortController();
     let seen: AbortSignal | null | undefined;
+    let abortedInFetch = false;
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
       fetch: (async (_url, init) => {
         seen = init?.signal as AbortSignal | null | undefined;
+        assert.equal(seen?.aborted, false);
+        controller.abort();
+        abortedInFetch = (seen as AbortSignal).aborted;
         return new Response(sse(["[DONE]"]), { status: 200 });
       }) as typeof fetch,
     });
@@ -178,7 +183,8 @@ describe("openai-compatible provider", () => {
       // drain
     }
 
-    assert.equal(seen, controller.signal);
+    assert.ok(seen);
+    assert.equal(abortedInFetch, true);
   });
 
   it("redacts api key from errors", async () => {
@@ -465,5 +471,34 @@ describe("openai-compatible provider", () => {
       type: "json_schema",
       json_schema: { name: "answer", schema, strict: true },
     });
+  });
+
+  it("openai_compatible_forwards_reasoning_replay", async () => {
+    // Plan 227 Further Action: the factory forwards `reasoningReplay`; unset, the codec default (`drop`) applies.
+    const request: ProviderRequest = {
+      model: { provider: "openai-compatible", model: "demo", capabilities: { reasoning: true } },
+      messages: [
+        { role: "user", content: [{ type: "text", text: "Hello" }] },
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "plan" },
+            { type: "tool_call", id: "c1", name: "lookup", arguments: {} },
+          ],
+        },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "c1", name: "lookup", result: "ok" }] },
+      ],
+    };
+    const assistant = async (reasoningReplay?: "reasoning_content") => {
+      const provider = createOpenAICompatibleProvider({ baseUrl: "https://example.test/v1", reasoningReplay });
+      const body = await provider.encode(request);
+      return (body.messages as readonly Record<string, unknown>[])[1]!;
+    };
+    const replayed = await assistant("reasoning_content");
+    assert.equal(replayed.reasoning_content, "plan");
+    assert.equal(replayed.content, null);
+    const dropped = await assistant();
+    assert.equal("reasoning_content" in dropped, false);
+    assert.equal(dropped.content, null);
   });
 });

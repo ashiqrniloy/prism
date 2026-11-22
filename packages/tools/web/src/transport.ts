@@ -3,6 +3,8 @@ import { isLoopbackHostname } from "@arnilo/prism/net";
 import { resolveWebLimits } from "./limits.js";
 import type { ResolvedWebLimits, WebAdapterOptions, WebProvider, WebProviderMetadata } from "./types.js";
 
+const RATE_LIMIT_BACKOFF_BASE_MS = 250;
+
 export class WebToolError extends Error {
   readonly code: string;
   constructor(code: string, message: string) {
@@ -194,7 +196,10 @@ export function createWebTransport(
         const metadata = responseMetadata(response);
         if (mayRetryStatus(response.status) && attempt < limits.maxRetries) {
           await response.body?.cancel();
-          await sleep(Math.min(metadata?.rate?.retryAfterMs ?? 250 * 2 ** attempt, limits.maxRateLimitDelayMs), signal);
+          await sleep(
+            Math.min(metadata?.rate?.retryAfterMs ?? RATE_LIMIT_BACKOFF_BASE_MS * 2 ** attempt, limits.maxRateLimitDelayMs),
+            signal,
+          );
           continue;
         }
         if (!response.ok) {

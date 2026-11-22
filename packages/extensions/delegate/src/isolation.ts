@@ -1,13 +1,11 @@
 /**
- * Worktree isolation for a delegated coding child (plan 191 Task 5).
+ * Worktree isolation for a delegated coding child (plan 191 Task 5, plan 232 Task 4).
  *
- * The child's own `workspace` service binds one worktree to the child's session, and every inherited
- * coding tool already routes a bound session there (plan 165 Task 7): the delegate only has to *reach*
- * that service. A package sees the services the packages loaded before it provided, so the probe is
- * appended after the inherited instances. Nothing here names `tools-coding`: this is the same
- * `workspace` service contract `@arnilo/prism-extensions/workflows` consumes.
+ * The agent's `workspace` service binds one worktree to the child's session, and every coding tool
+ * already routes a bound session there (plan 165 Task 7). The child is a session of the parent's own
+ * agent, so the delegate consumes that service at call time. Nothing here names `tools-coding`: this
+ * is the same `workspace` service contract `@arnilo/prism-extensions/workflows` consumes.
  */
-import { definePackage, type PackageInstance } from "@arnilo/prism";
 
 export interface IsolatedWorktree {
   readonly path: string;
@@ -39,18 +37,6 @@ export type DelegationMerge =
   | { readonly status: "conflict"; readonly files: readonly string[]; readonly branch: string }
   | { readonly status: "refused"; readonly reason: string; readonly branch: string }
   | { readonly status: "skipped"; readonly branch: string };
-
-/** Captures the child's `workspace` service during `createAgent`; `undefined` means the child has none. */
-export function isolationProbe(capture: { workspace?: IsolationWorkspace }): PackageInstance {
-  return definePackage({
-    name: "@arnilo/prism-extensions/delegate-isolation",
-    version: "0.0.0",
-    requires: { api: 1 },
-    setup(prism) {
-      capture.workspace ??= prism.services.consume<IsolationWorkspace>("workspace");
-    },
-  })();
-}
 
 /** The merge commit's subject: which child, and the first line of what it was asked. */
 export function mergeMessage(child: string, input: string): string {

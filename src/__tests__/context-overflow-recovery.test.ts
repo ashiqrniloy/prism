@@ -174,10 +174,51 @@ describe("Context-overflow recovery (plan 194 Task 3)", () => {
     });
     const session = await agent.session({ id: "s-overflow-compaction-fails", create: true });
     const result = await session.run("a long request");
-    const failed = await failedRun(Promise.resolve(result), /after compaction/, "failed");
+    // Plan 218.3 Task 5: a compaction that throws (failed or declined) sent no compacted request, so the message says so.
+    const failed = await failedRun(Promise.resolve(result), /rejected and compaction could not shrink it/, "failed");
     assert.equal(failed.error?.code, "context_overflow");
+    assert.doesNotMatch(failed.error?.message ?? "", /after compaction/);
     assert.equal(requests.length, 1, "no retry without a compacted branch");
     assert.equal((await session.entries()).filter((entry) => entry.kind === "compaction").length, 0);
+  });
+
+  it("a declining compactor ends the run without a retry under a custom loop too", async () => {
+    const custom: LoopStrategy = {
+      name: "overflow-decline-custom",
+      revision: "1",
+      async run(run) {
+        for (;;) {
+          const turn = await run.turn();
+          if (turn.stopped) return;
+          if (turn.toolCalls.length > 0) {
+            await run.executeTools(turn.toolCalls);
+            continue;
+          }
+          const end = await run.end();
+          if (!end.continue) return;
+        }
+      },
+    };
+    const { provider, requests } = scriptedProvider(["overflow", "ok"]);
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: {
+        loop: custom,
+        compaction: {
+          name: "declines-overflow",
+          compact(context) {
+            if (context.trigger === "overflow") throw new Error("the newest entry alone exceeds the window");
+            return { summary: "unused" };
+          },
+        },
+      },
+    });
+    const session = await agent.session({ id: "s-overflow-decline-custom", create: true });
+    const result = await session.run("a long request");
+    const failed = await failedRun(Promise.resolve(result), /compaction could not shrink it/, "failed");
+    assert.equal(failed.error?.code, "context_overflow");
+    assert.equal(requests.length, 1, "no second provider attempt for a request known not to fit");
   });
 
   it("aborts during recovery without appending anything", async () => {

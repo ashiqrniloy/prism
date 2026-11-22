@@ -9,15 +9,10 @@
 import { fileURLToPath } from "node:url";
 
 export const DEFAULT_MAX_EXTRACTION_BYTES = 32 * 1024 * 1024;
-export const HARD_MAX_EXTRACTION_BYTES = 512 * 1024 * 1024;
 export const DEFAULT_MAX_EXTRACTION_TEXT_BYTES = 2 * 1024 * 1024;
-export const HARD_MAX_EXTRACTION_TEXT_BYTES = 64 * 1024 * 1024;
 export const DEFAULT_MAX_OCR_PAGES = 32;
-export const HARD_MAX_OCR_PAGES = 256;
 export const DEFAULT_OCR_TIMEOUT_MS = 120_000;
-export const HARD_OCR_TIMEOUT_MS = 600_000;
 export const DEFAULT_MAX_OCR_STDERR_BYTES = 1024 * 1024;
-export const HARD_MAX_OCR_STDERR_BYTES = 4 * 1024 * 1024;
 
 /** Packaged helper. Host runner executes it; this module does not. */
 export const doclingOcrHelperPath = fileURLToPath(new URL("../../docling/ocr.py", import.meta.url));
@@ -132,9 +127,10 @@ interface AnydocApi {
   toMarkdownBytes(bytes: Uint8Array, format?: string | null): Promise<string>;
 }
 
-function validateCap(name: string, value: number, hard: number): number {
-  if (!Number.isInteger(value) || value <= 0 || value > hard) {
-    throw new RangeError(`document-extraction ${name} must be an integer in (0, ${hard}], got ${value}`);
+/** A host-set cap: a positive integer. The host's value is the cap (plan 239 Task 5). */
+function validateCap(name: string, value: number): number {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new RangeError(`document-extraction ${name} must be a positive integer, got ${value}`);
   }
   return value;
 }
@@ -376,15 +372,11 @@ async function runOcr(
 }
 
 export async function createDocumentExtractor(options: CreateDocumentExtractorOptions = {}): Promise<DocumentExtractor> {
-  const maxBytes = validateCap("maxBytes", options.maxBytes ?? DEFAULT_MAX_EXTRACTION_BYTES, HARD_MAX_EXTRACTION_BYTES);
-  const maxTextBytes = validateCap(
-    "maxTextBytes",
-    options.maxTextBytes ?? DEFAULT_MAX_EXTRACTION_TEXT_BYTES,
-    HARD_MAX_EXTRACTION_TEXT_BYTES,
-  );
-  const maxPages = validateCap("maxPages", options.maxPages ?? DEFAULT_MAX_OCR_PAGES, HARD_MAX_OCR_PAGES);
-  const ocrTimeoutMs = validateCap("ocrTimeoutMs", options.ocrTimeoutMs ?? DEFAULT_OCR_TIMEOUT_MS, HARD_OCR_TIMEOUT_MS);
-  const maxStderrBytes = validateCap("maxStderrBytes", options.maxStderrBytes ?? DEFAULT_MAX_OCR_STDERR_BYTES, HARD_MAX_OCR_STDERR_BYTES);
+  const maxBytes = validateCap("maxBytes", options.maxBytes ?? DEFAULT_MAX_EXTRACTION_BYTES);
+  const maxTextBytes = validateCap("maxTextBytes", options.maxTextBytes ?? DEFAULT_MAX_EXTRACTION_TEXT_BYTES);
+  const maxPages = validateCap("maxPages", options.maxPages ?? DEFAULT_MAX_OCR_PAGES);
+  const ocrTimeoutMs = validateCap("ocrTimeoutMs", options.ocrTimeoutMs ?? DEFAULT_OCR_TIMEOUT_MS);
+  const maxStderrBytes = validateCap("maxStderrBytes", options.maxStderrBytes ?? DEFAULT_MAX_OCR_STDERR_BYTES);
   if (options.ocr !== undefined && typeof options.ocr !== "function") {
     throw new TypeError("document extraction ocr runner must be a function");
   }

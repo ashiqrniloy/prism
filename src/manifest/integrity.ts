@@ -21,10 +21,15 @@ export interface HashPackageTreeContext {
   readonly name: string;
   readonly rootPackage?: string;
   readonly dependency?: string;
+  /** Files a tree may hold before it is refused. Default {@link MAX_TREE_FILES}. */
+  readonly maxTreeFiles?: number;
+  /** Bytes a tree may hold before it is refused. Default {@link MAX_TREE_BYTES}. */
+  readonly maxTreeBytes?: number;
 }
 
 async function walk(root: string, context: HashPackageTreeContext): Promise<Walked[]> {
   const { scope, name, rootPackage, dependency } = context;
+  const maxFiles = context.maxTreeFiles ?? MAX_TREE_FILES;
   const pkgName = rootPackage ?? name;
   const rootStat = await lstat(root);
   if (rootStat.isSymbolicLink()) {
@@ -61,12 +66,12 @@ async function walk(root: string, context: HashPackageTreeContext): Promise<Walk
       if (entry.isDirectory()) await visit(abs, rel);
       else if (entry.isFile()) {
         files.push({ rel, abs });
-        if (files.length > MAX_TREE_FILES) {
+        if (files.length > maxFiles) {
           throw new ManifestError(
             "integrity_mismatch",
             dependency
-              ? `Package ${pkgName} (${scope}) dependency ${dependency} has more than ${MAX_TREE_FILES} files.`
-              : `Package ${pkgName} (${scope}) has more than ${MAX_TREE_FILES} files.`,
+              ? `Package ${pkgName} (${scope}) dependency ${dependency} has more than ${maxFiles} files.`
+              : `Package ${pkgName} (${scope}) has more than ${maxFiles} files.`,
             {
               scope,
               package: pkgName,
@@ -90,6 +95,7 @@ export async function hashPackageTree(dir: string, context: HashPackageTreeConte
   const { scope, name, rootPackage, dependency } = context;
   const pkgName = rootPackage ?? name;
   const files = await walk(dir, context);
+  const maxBytes = context.maxTreeBytes ?? MAX_TREE_BYTES;
   files.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
   const hasher = createHash("sha512");
   let total = 0;
@@ -100,12 +106,12 @@ export async function hashPackageTree(dir: string, context: HashPackageTreeConte
     batch.forEach((file, index) => {
       const bytes = contents[index] as Buffer;
       total += bytes.length;
-      if (total > MAX_TREE_BYTES) {
+      if (total > maxBytes) {
         throw new ManifestError(
           "integrity_mismatch",
           dependency
-            ? `Package ${pkgName} (${scope}) dependency ${dependency} is larger than ${MAX_TREE_BYTES} bytes.`
-            : `Package ${pkgName} (${scope}) is larger than ${MAX_TREE_BYTES} bytes.`,
+            ? `Package ${pkgName} (${scope}) dependency ${dependency} is larger than ${maxBytes} bytes.`
+            : `Package ${pkgName} (${scope}) is larger than ${maxBytes} bytes.`,
           {
             scope,
             package: pkgName,
@@ -172,6 +178,9 @@ async function resolveDependencyDir(
 
 export interface HashPackageClosureOptions {
   readonly maxClosurePackages?: number;
+  /** Per-package tree bounds, passed to `hashPackageTree`. Defaults {@link MAX_TREE_FILES} and {@link MAX_TREE_BYTES}. */
+  readonly maxTreeFiles?: number;
+  readonly maxTreeBytes?: number;
 }
 
 /**
@@ -284,6 +293,8 @@ export async function hashPackageClosure(
       name: pkg.name,
       rootPackage: rootName,
       dependency: pkg.dependency,
+      ...(options.maxTreeFiles === undefined ? {} : { maxTreeFiles: options.maxTreeFiles }),
+      ...(options.maxTreeBytes === undefined ? {} : { maxTreeBytes: options.maxTreeBytes }),
     });
     hashes.push({ name: pkg.name, hash, dir: pkg.dir });
   }

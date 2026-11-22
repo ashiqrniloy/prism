@@ -1,10 +1,14 @@
 import type { Agent } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import { HARD_JUDGE_MAX_INPUT_BYTES } from "./limits.js";
+
+/** Input tokens allowed beyond the prompt itself, for the agent's system prompt. */
+const SYSTEM_PROMPT_TOKEN_ALLOWANCE = 4096;
 
 /** @internal One attempt; the host retains ownership of the agent. */
 export async function runToollessSession(agent: Agent, prompt: string, signal: AbortSignal, timeoutMs: number): Promise<string> {
   signal.throwIfAborted();
+  // The caller bounded the prompt by its host-set `maxInputBytes`; a token is at least one byte, plus room for the system prompt.
+  const inputTokens = Buffer.byteLength(prompt, "utf8") + SYSTEM_PROMPT_TOKEN_ALLOWANCE;
   const session = await agent.session();
   try {
     signal.throwIfAborted();
@@ -18,9 +22,9 @@ export async function runToollessSession(agent: Agent, prompt: string, signal: A
         maxToolRounds: 1,
         maxContinuations: 0,
         maxWallTimeMs: timeoutMs,
-        maxInputTokens: HARD_JUDGE_MAX_INPUT_BYTES,
+        maxInputTokens: inputTokens,
         maxOutputTokens: 4096,
-        maxTotalTokens: HARD_JUDGE_MAX_INPUT_BYTES + 4096,
+        maxTotalTokens: inputTokens + 4096,
       },
     });
     if (result.status !== "completed") {

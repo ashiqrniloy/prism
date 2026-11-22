@@ -36,9 +36,17 @@ const agent = await createAgent({ model: "mock/main", packages: [memoryCompactio
 | --- | --- | --- | --- |
 | `model` | `"provider/model"` \| model object | the session's model | Summary model. A model object is a `ModelRef`, not a credential: the provider's key comes from the credentials slot like any run. |
 | `profile` | `"default"` \| `"coding"` | `"default"` | `"coding"` adds read/modified file reporting to the summary and keeps the latest plan turn (`todo_write` result) out of the cut, so a long run's plan survives compaction. |
-| `keepRecentTokens` | `integer` 0…131072 | `20000` | Tokens of recent history the cut keeps verbatim. |
-| `maxSummaryTokens` | `integer` 1…131072 | `16384` | Summary cap in tokens, and the per-call provider output budget. |
+| `keepRecentTokens` | `integer` ≥ 0 | `20000` | Tokens of recent history the cut keeps verbatim. |
+| `maxSummaryTokens` | `integer` ≥ 1 | `16384` | Summary cap in tokens, and the per-call provider output budget. |
+| `trigger` | `CompactionTrigger` | none: the kernel's trigger decides (80% of the input cap unless `AgentConfig.compaction` sets one) | The package's own `compaction.when` gate. |
 | `summaryPrompt` | `string` | the package's summarization prompt | Replaces the summarization system prompt. The split-turn prompt stays the package's own. |
+| `maxChunks` | `integer` ≥ 1 | `6` | Summary calls per compaction when the history does not fit the summary model's input cap (see [Oversized histories](#oversized-histories)). |
+| `reserveTokens` | `integer` ≥ 1 | `16384` | Tokens kept free for the summary call's own prompt and output. |
+| `maxErrorBytes` | `integer` ≥ 1 | `1024` | Bytes of a failed summary call's error kept in the fallback note. |
+| `maxToolResultChars` | `integer` ≥ 0 | `2000` | Characters of one tool result in the serialized history. |
+| `maxTextBlockChars` | `integer` ≥ 0 | `8000` | Characters of one text, thinking or tool-call block in the serialized history; `0` disables the cut. |
+
+Every bound is the host's: there is no hidden ceiling above a configured value.
 
 An unknown key fails `createAgent` with the kernel's config error naming the key. Every key is
 optional: with no config the compactor summarizes with the session's own model.
@@ -49,8 +57,15 @@ optional: with no config the compactor summarizes with the session's own model.
   `AgentConfig.slots.compaction` assignment still wins, and `AgentConfig.compaction` keeps sizing the
   cut (`keepRecentEntries`, `maxSummaryChars`, `secrets`).
 - With `trigger` set, registers the session's `compaction.when` vote: `{ compact: true }` past the
-  gate and `{ compact: false }` below it, so the kernel's `compaction.thresholdEntries` fallback —
-  which only runs on unanimous abstention — cannot override the package's gate.
+  gate and `{ compact: false }` below it, so the kernel's fallback trigger — which only runs on
+  unanimous abstention — cannot override the package's gate. An `input_ratio` or `custom` gate reads
+  the session model's window, else its provider's catalog (once per provider per agent, at the first
+  check), so a bare `"provider/model"` ref works.
+- Without `trigger` the package registers no vote, and the kernel's trigger decides when this
+  compactor runs: `AgentConfig.compaction.trigger` or `thresholdEntries` when set, else 80% of the
+  model's input cap (`DEFAULT_COMPACTION_TRIGGER`). Each compaction costs one summary call, as before.
+  The default is a safety net against provider rejection; for a model whose quality drops well before
+  its window fills, set a measured `threshold_tokens` trigger (see `docs/slots.md`).
 - Calls the model through `prism.models.client(config.model ?? ctx.session.model)`, so the summary
   rides the agent's provider resolution, retry policy, and credentials slot. It never takes a
   provider or a key as config.
@@ -68,6 +83,30 @@ nothing.
 agent.subscribe(); // package.event { package: "@arnilo/prism-extensions/compaction", name: "compaction.fallback", data: { strategy, reason } }
 ```
 
+### Oversized histories
+
+The summary request must fit the **summary** model's own input cap: its context window (from the
+model ref, else its provider's catalog) less the call's output budget and the kernel's 1,024-token
+reserve. When the serialized history fits, the compactor makes one call, exactly as before. When it
+does not, it splits the history at message boundaries into chunks sized to that cap and summarizes
+them in order as a rolling summary: each call receives the previous call's summary as
+`<previous-summary>`, and the last summary is the result. There is no separate merge call, so the
+result can never overflow a merge request.
+
+| | Calls per compaction |
+| --- | --- |
+| History fits the summary model's cap, or the model declares no window | 1 |
+| History larger than the cap | `ceil(history tokens / chunk tokens)`, at most `maxChunks` (default 6) |
+| Split turn (one oversized turn straddles the cut) | one more call for the turn prefix |
+
+Past `maxChunks` the newest chunks are summarized and the summary opens with
+`[Earlier history omitted: the oldest N of M chunks were not summarized (maxChunks K).]`. A failing
+chunk fails the compaction once: the package falls back to the kernel compactor as below.
+
+The serialization caps each text block, thinking block, and tool-call argument string at 8,000
+characters, and each tool result at 2,000, with a `[..., N characters truncated]` marker, so one huge
+block cannot fill a chunk. Redaction runs over every chunk request and over the final summary.
+
 ## Events and slots
 
 | Surface | Name | Payload |
@@ -78,7 +117,8 @@ agent.subscribe(); // package.event { package: "@arnilo/prism-extensions/compact
 ## Cost, security, and failure behavior
 
 Installing the package is the opt-in: without it the kernel compactor makes no model call. Each
-compaction makes one model call (two when one oversized turn has to be split) through
+compaction makes one model call (two when one oversized turn has to be split; up to `maxChunks` when
+the history does not fit the summary model's window, see [Oversized histories](#oversized-histories)) through
 `prism.models.client`, passing the compacting session when the slot has one, so the summary runs `model.request`/`model.call` and counts against the run's limits. A failed summary falls back to the kernel compactor and never fails the run.
 The package has no secret config field; the key is the credentials slot's, and the summary is
 redacted before it is stored or emitted.

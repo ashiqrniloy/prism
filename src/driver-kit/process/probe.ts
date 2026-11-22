@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import { buildChildEnv, type ChildEnvOptions } from "./env.js";
 
+const DEFAULT_PROBE_TIMEOUT_MS = 5000;
+
 /**
  * Runs `<binary> <args>` once with a built environment and returns the first stdout line (trimmed), for a
  * version string. Undefined when the binary is missing, exits non-zero, or exceeds `timeoutMs` (default 5 s).
@@ -22,7 +24,7 @@ export function probeBinary(
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
       finish(undefined);
-    }, options.timeoutMs ?? 5000);
+    }, options.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS);
     let out = "";
     child.stdout.on("data", (chunk: Buffer) => {
       if (out.length < 4096) out += chunk.toString();

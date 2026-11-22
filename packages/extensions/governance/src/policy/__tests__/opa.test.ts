@@ -355,9 +355,12 @@ describe("@arnilo/prism-extensions/governance OPA adapter", () => {
     assert.equal(fetchApi.calls, 0);
   });
 
-  it("rejects out-of-bounds caps at construction", () => {
+  it("rejects invalid caps at construction; the host's value is the cap", () => {
+    assert.doesNotThrow(() =>
+      createOpaPolicyEvaluator({ url: ISSUER_URL, policyId: "p", policyVersion: "v", maxRetries: 5, timeoutMs: 120_000 }),
+    );
     assert.throws(
-      () => createOpaPolicyEvaluator({ url: ISSUER_URL, policyId: "p", policyVersion: "v", maxRetries: 5 }),
+      () => createOpaPolicyEvaluator({ url: ISSUER_URL, policyId: "p", policyVersion: "v", maxRetries: -1 }),
       (error: unknown) => error instanceof PolicyError && error.code === "ERR_PRISM_POLICY_LIMITS",
     );
     assert.throws(

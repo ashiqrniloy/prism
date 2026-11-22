@@ -37,10 +37,13 @@ export function foldClearAtLeastTokensFor(ref: ModelRef): number {
   return budget === undefined ? 4_096 : Math.max(1, Math.round(budget.inputTokens * 0.1));
 }
 
-/** OM's gate: 0.6 of the input cap, never above the measured budget. */
-export function sessionCompactAtFor(ref: ModelRef): { ratio: number; maxTokens?: number } {
+/**
+ * Session memory's between-loop trigger: the measured budget when the model has one; unlisted models keep the package
+ * default (80,000 tokens). The mid-loop trigger stays the package default, 0.8 of the input cap.
+ */
+export function sessionCompactAfterRunFor(ref: ModelRef): { maxTokens: number } | undefined {
   const budget = contextBudgetFor(ref);
-  return budget === undefined ? { ratio: 0.6 } : { ratio: 0.6, maxTokens: budget.inputTokens };
+  return budget === undefined ? undefined : { maxTokens: budget.inputTokens };
 }
 
 /** Notes the unlisted-model fallback once per agent; listed models note nothing. */

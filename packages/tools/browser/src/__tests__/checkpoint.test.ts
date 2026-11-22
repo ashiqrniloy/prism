@@ -12,11 +12,11 @@ function input(overrides: Partial<{ runId: string; url: string; domainStateHash:
 }
 
 describe("resolveBrowserCheckpointLimits", () => {
-  it("resolves frozen defaults and rejects caps above the hard ceiling", () => {
+  it("resolves defaults; the host value is the cap", () => {
     const limits = resolveBrowserCheckpointLimits();
     assert.equal(limits.maxCheckpointsPerRun, DEFAULT_MAX_CHECKPOINTS_PER_RUN);
-    assert.throws(() => resolveBrowserCheckpointLimits({ maxUrlBytes: 16 * 1024 + 1 }), BrowserError);
-    assert.throws(() => resolveBrowserCheckpointLimits({ maxCheckpointsPerRun: 64 + 1 }), BrowserError);
+    assert.throws(() => resolveBrowserCheckpointLimits({ maxUrlBytes: 0 }), BrowserError);
+    assert.equal(resolveBrowserCheckpointLimits({ maxCheckpointsPerRun: 65 }).maxCheckpointsPerRun, 65);
   });
 });
 

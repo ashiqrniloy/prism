@@ -24,6 +24,7 @@ prism add @arnilo/prism-extensions/store-jsonl
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `dir` | `string` | none (required) | Directory holding the session files. A relative path resolves against the process cwd. Missing `dir` fails the package load with a field-naming error. |
+| `queryLimits` | `object` | kernel defaults | Store query limits: `maxListLimit` (100), `maxSearchLimit` (100), `maxSearchQueryBytes`, `maxSearchCursorBytes`, `searchSnippetBytes` (512), `ftsCandidates` (1,000). Host-only; a list or search page above the store's limit is refused. |
 
 ## What it changes
 
@@ -45,7 +46,13 @@ Exact-retry dedup (`idempotencyKey` with the same `expectedParentId`) is persist
 no tools, skills, commands, providers, hooks, or services, and writes no session state of its own.
 
 `listSessions`, `deleteSession`, and `searchSessions` are implemented, so `agent.sessions.list()`,
-`.delete()`, and `.search()` are available. `mergeSessionMetadata` is not implemented: the title is
+`.delete()`, and `.search()` are available. The store declares `tipCheck` (plan 230 Task 2): a `tip: true`
+append whose parent already has a tip-checked child fails with `SessionAppendConflictError`. The mark is a
+store-private `_prismLinear` field on the line, stripped on read and kept across a reopen. The check is
+serialized by the instance's append chain, so it holds within one store instance only and does not
+coordinate two processes writing the same directory. `appendMany` (plan 230 Task 5) writes the session's
+whole new file beside it and renames it into place, so a reader or a crash sees the old file or the new one,
+never part of the batch; `session.fork()` uses it. `mergeSessionMetadata` is not implemented: the title is
 read from `metadata.title` on a session's entries.
 
 ## Cost, security, and failure behavior

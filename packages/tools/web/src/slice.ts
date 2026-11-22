@@ -10,7 +10,8 @@ import type { JsonObject } from "@arnilo/prism";
 import { WebToolError } from "./transport.js";
 
 export const DEFAULT_FETCH_CHARS = 32_000;
-export const HARD_FETCH_CHARS = 100_000;
+/** Default ceiling on a model's `web_fetch` `max_chars`; the host sets `fetch.maxChars`. */
+export const DEFAULT_MAX_FETCH_CHARS = 100_000;
 
 export interface FetchSlice {
   /** The slice, without the header lines. */
@@ -31,12 +32,12 @@ export interface FetchSliceArgs {
 }
 
 /** The `web_fetch` parameters: a URL plus the slice window. Every fetch backend registers this. */
-export function fetchParameters(cached = false, prompt = false): JsonObject {
+export function fetchParameters(cached = false, prompt = false, maxChars = DEFAULT_MAX_FETCH_CHARS): JsonObject {
   return {
     type: "object",
     properties: {
       url: { type: "string", format: "uri" },
-      max_chars: { type: "integer", minimum: 1, maximum: HARD_FETCH_CHARS, default: DEFAULT_FETCH_CHARS },
+      max_chars: { type: "integer", minimum: 1, maximum: maxChars, default: Math.min(DEFAULT_FETCH_CHARS, maxChars) },
       offset: { type: "integer", minimum: 0, default: 0 },
       ...(cached
         ? { refresh: { type: "boolean", description: "Fetch the page again instead of reusing this session's cached copy" } }
@@ -58,13 +59,14 @@ export function fetchParameters(cached = false, prompt = false): JsonObject {
 }
 
 /** `max_chars` and `offset` as the caller gave them, validated. Bad input names the argument. */
-export function fetchSliceArgs(args: JsonObject): FetchSliceArgs {
+/** `maxChars` is the host's ceiling (`fetch.maxChars`); the model never raises it. */
+export function fetchSliceArgs(args: JsonObject, maxCharsCeiling = DEFAULT_MAX_FETCH_CHARS): FetchSliceArgs {
   const offset = args.offset ?? 0;
   if (!Number.isSafeInteger(offset) || (offset as number) < 0)
     throw new WebToolError("ERR_PRISM_WEB_INPUT", "offset must be a non-negative integer");
-  const maxChars = args.max_chars ?? DEFAULT_FETCH_CHARS;
-  if (!Number.isSafeInteger(maxChars) || (maxChars as number) < 1 || (maxChars as number) > HARD_FETCH_CHARS)
-    throw new WebToolError("ERR_PRISM_WEB_INPUT", `max_chars must be an integer between 1 and ${HARD_FETCH_CHARS}`);
+  const maxChars = args.max_chars ?? Math.min(DEFAULT_FETCH_CHARS, maxCharsCeiling);
+  if (!Number.isSafeInteger(maxChars) || (maxChars as number) < 1 || (maxChars as number) > maxCharsCeiling)
+    throw new WebToolError("ERR_PRISM_WEB_INPUT", `max_chars must be an integer between 1 and ${maxCharsCeiling}`);
   return { offset: offset as number, maxChars: maxChars as number };
 }
 

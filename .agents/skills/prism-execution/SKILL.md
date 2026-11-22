@@ -67,7 +67,7 @@ Mixed tasks: pick the area that owns the entry point. Read at most the architect
 **Safety:**
 - **Fail closed at trust boundaries.** This covers validation, permissions, unknown config, slot conflicts, missing services, throwing gates, and `host.ui` answering `unavailable`. Never weaken a fail-closed test to pass a change; fix the boundary and its tests together.
 - **Secrets stay refs.** Config and the manifest hold `env:` / `keyring:` refs. Secrets never appear in argv, logs, events, `inspect()`, errors, or tests.
-- **Byte hard caps stay.** Do not raise or remove `maxRequestBytes` / `maxResponseBytes`.
+- **Ceilings are raised by the host only.** A hard ceiling (for example `maxRequestBytes` / `maxResponseBytes`) is raised only by the host, at `createAgent` or package config. A run, a package, or the model never raises it. Defaults stay.
 
 **Change discipline:**
 - **Leave the tree green after every task.** A rename updates every caller in the same task (`graft callers --depth all`).

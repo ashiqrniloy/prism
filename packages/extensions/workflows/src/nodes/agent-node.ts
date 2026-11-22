@@ -208,7 +208,7 @@ function worktreeRequest(node: AgentNodeDefinition, ctx: WorkflowNodeContext): {
  * Continues the child's suspended run with the reviewer's complete decision batch (`resume.input`).
  * `session.resume` rejects a partial, unknown, or duplicated batch, so the workflow never guesses.
  */
-async function resumeChild(session: Session, ctx: WorkflowNodeContext, runOptions: object): Promise<RunResult> {
+export async function resumeChild(session: Session, ctx: WorkflowNodeContext, runOptions: object): Promise<RunResult> {
   const decisions = ctx.resume?.input;
   if (!Array.isArray(decisions)) {
     throw new WorkflowRuntimeError(
@@ -224,6 +224,11 @@ async function resumeChild(session: Session, ctx: WorkflowNodeContext, runOption
     else if (event.type === "run.failed") status = "failed";
     else if (event.type === "run.completed") status = event.status;
   }
+  return branchRunResult(session, status, runId);
+}
+
+/** A `RunResult` read back from the branch: the final assistant message, for a run whose own result was not kept. */
+export async function branchRunResult(session: Session, status: RunResult["status"], runId: string): Promise<RunResult> {
   const messages = await session.messages();
   const message = [...messages].reverse().find((entry) => entry.role === "assistant");
   const content = message?.content ?? [];

@@ -1,4 +1,12 @@
-import type { AgentEvent, Decision, Message, RunOptions, RunResult, Session } from "@arnilo/prism";
+import {
+  type AgentEvent,
+  type Decision,
+  type Message,
+  type RunOptions,
+  type RunResult,
+  type Session,
+  SessionContinueError,
+} from "@arnilo/prism";
 import { type AttributionSource, attribute } from "./attribution.js";
 import { type Channel, createChannel } from "./channel.js";
 import type { Dispatcher } from "./dispatcher.js";
@@ -132,7 +140,7 @@ export function createSessionProxy(
 
   /** Registers the run before the request goes out, so no early notification is lost. */
   const start = (
-    method: "run" | "sessions.resume",
+    method: "run" | "sessions.resume" | "sessions.continue",
     body: Record<string, unknown>,
     options: RunOptions | undefined,
     withEvents: boolean,
@@ -150,9 +158,17 @@ export function createSessionProxy(
     if (signal?.aborted) abortRemote();
     else signal?.addEventListener("abort", abortRemote, { once: true });
     const wire = wireOptions(options);
-    void dispatcher
-      .request(method, { sessionId, ...body, ...(wire ? { options: wire as never } : {}) } as never)
-      .catch((error) => fail(run, error instanceof Error ? error : new RemoteError("internal_error", "request failed")));
+    void dispatcher.request(method, { sessionId, ...body, ...(wire ? { options: wire as never } : {}) } as never).catch((error) =>
+      fail(
+        run,
+        // The kernel's own error type, so `continue()` rejects the same way locally and over the wire.
+        error instanceof RemoteError && error.code === "nothing_to_continue"
+          ? new SessionContinueError(sessionId)
+          : error instanceof Error
+            ? error
+            : new RemoteError("internal_error", "request failed"),
+      ),
+    );
     return run;
   };
 
@@ -174,6 +190,10 @@ export function createSessionProxy(
     },
     stream: (input: Input, options) => streamOf(start("run", { input }, options, true)),
     resume: (decisions: readonly Decision[], options) => streamOf(start("sessions.resume", { decisions }, options, true)),
+    async continue(options?: RunOptions) {
+      return start("sessions.continue", {}, options, false).settled.promise;
+    },
+    continueStream: (options) => streamOf(start("sessions.continue", {}, options, true)),
     steer(input: Input, options) {
       if (!active) throw new RemoteError("invalid_params", "no active run to steer");
       void dispatcher.request("steer", { sessionId, input, ...(options ? { options } : {}) } as never).catch(() => {});
@@ -213,6 +233,9 @@ export function createSessionProxy(
     },
     contextMeter() {
       throw unsupported("contextMeter()");
+    },
+    async limits() {
+      throw unsupported("limits()");
     },
   };
   return { session, handle };

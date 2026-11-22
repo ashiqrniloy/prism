@@ -26,7 +26,6 @@ import type {
 import {
   capToolResultSummary,
   foldedToolResultHeader,
-  HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES,
   inferToolResultTurns,
   type ResolvedToolResultFoldOptions,
   toolResultFoldText,
@@ -54,8 +53,9 @@ export const DEFAULT_ATTENTION_KEEP_LAST = 3;
 export const DEFAULT_ATTENTION_RESERVE_TOKENS = 1024;
 
 /** Matches the run allow-list caps in the kernel's tool table: no more names than a run could hold. */
-const MAX_EXCLUDE_TOOL_NAMES = 1_024;
 const MAX_TOOL_NAME_CHARS = 256;
+/** Largest fold stub the attention ledger stores; a larger stub is re-summarized when its row folds again. */
+const MAX_ATTENTION_FOLD_BODY_BYTES = 4_096;
 
 function resolveRatio(value: unknown, fallback: number, name: string): number {
   if (value === undefined) return fallback;
@@ -111,9 +111,6 @@ export function resolveInputCap(options: AttentionInputCapOptions = {}, model?: 
 function resolveExcludeTools(value: unknown): readonly string[] {
   if (value === undefined) return Object.freeze([]);
   if (!Array.isArray(value)) throw new TypeError("attention.excludeTools must be an array of tool names");
-  if (value.length > MAX_EXCLUDE_TOOL_NAMES) {
-    throw new TypeError(`attention.excludeTools exceeds ${MAX_EXCLUDE_TOOL_NAMES} entries`);
-  }
   const out: string[] = [];
   const seen = new Set<string>();
   for (const name of value) {
@@ -744,7 +741,7 @@ function trimOldest(bodies: Map<string, string>, max: number): void {
 /** Record one folded body, keeping the live ledger inside its caps. Returns `false` for a body
  *  too large to be worth a store byte (the fold's own cap makes this host-only in practice). */
 function rememberFold(ledger: AttentionFoldLedger | undefined, toolCallId: string, body: string): boolean {
-  if (!ledger || estimateTextBytes(body) > HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES) return false;
+  if (!ledger || estimateTextBytes(body) > MAX_ATTENTION_FOLD_BODY_BYTES) return false;
   ledger.bodies.delete(toolCallId);
   ledger.bodies.set(toolCallId, body);
   trimOldest(ledger.bodies, MAX_ATTENTION_FOLD_BODIES);
@@ -780,7 +777,7 @@ export function restoreAttentionFoldLedger(value: unknown): AttentionFoldLedger 
     if (typeof entry !== "object" || entry === null) continue;
     const { id, body } = entry as { id?: unknown; body?: unknown };
     if (typeof id !== "string" || id.length === 0 || id.length > MAX_ATTENTION_TOOL_CALL_ID_CHARS || id.includes("\u0000")) continue;
-    if (typeof body !== "string" || body.length === 0 || estimateTextBytes(body) > HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES) continue;
+    if (typeof body !== "string" || body.length === 0 || estimateTextBytes(body) > MAX_ATTENTION_FOLD_BODY_BYTES) continue;
     ledger.bodies.delete(id);
     ledger.bodies.set(id, body);
   }

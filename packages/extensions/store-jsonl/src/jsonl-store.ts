@@ -3,9 +3,10 @@ import { join } from "node:path";
 import {
   assertSessionLinkFilter,
   createMemorySessionStore,
-  DEFAULT_SESSION_LIST_LIMIT,
-  HARD_MAX_SESSION_LIST_LIMIT,
   isSessionEntryKind,
+  resolveSessionListLimit,
+  resolveSessionQueryLimits,
+  type SessionQueryLimits,
   type Message,
   type Logger,
   type ModelConfig,
@@ -22,6 +23,7 @@ import {
   sessionLinksMatch,
   sessionLinksOf,
   summaryLinkFields,
+  validateSessionAppendBatch,
 } from "@arnilo/prism";
 
 const IDEMPOTENCY_SEEN_MAX = 4_096;
@@ -53,6 +55,8 @@ export interface JsonlSessionStoreOptions {
    * `schemaVersion` greater than this build's `SESSION_ENTRY_SCHEMA_VERSION`. The package passes its own logger.
    */
   readonly logger?: Pick<Logger, "warn">;
+  /** Store query limits (plan 239 Task 5): list and search page sizes, search text, cursor and snippet bytes. Host-only. */
+  readonly queryLimits?: SessionQueryLimits;
 }
 
 export interface SessionEntryParseError {
@@ -65,6 +69,14 @@ export interface SessionEntryReadResult {
   readonly entries: SessionEntry[];
   readonly errors: SessionEntryParseError[];
 }
+
+/**
+ * Store-private line field marking a tip-checked (linear) append (plan 230 Task 2). It is stripped on read, so
+ * it never reaches a `SessionEntry`; lines without it (every line written before) are not linear.
+ */
+const LINEAR_FIELD = "_prismLinear";
+/** Parsed entries whose line carried {@link LINEAR_FIELD}. Keyed by object, so it costs nothing on `SessionEntry`. */
+const linearEntries = new WeakSet<SessionEntry>();
 
 /** Test-only counters on the store instance. Not `SessionStore` fields. */
 export const JSONL_FILE_READS = Symbol.for("prism.jsonl.fileReads");
@@ -107,9 +119,11 @@ interface SessionEdges {
  *
  * ponytail: single-process only. Appends are serialized by one in-process chain and the idempotency
  * set is in memory, so two processes writing the same directory can still race and a restart forgets
- * exact retries. Multi-writer safety is host-owned (a database adapter or an external lock).
+ * exact retries. Multi-writer safety is host-owned (a database adapter or an external lock). The tip
+ * check (`tipCheck`) holds within one store instance only: it does not coordinate across processes.
  */
 export function createJsonlSessionStore(options: JsonlSessionStoreOptions): SessionStore {
+  const queryLimits = resolveSessionQueryLimits(options.queryLimits);
   const dir = options.dir;
   let appendChain = Promise.resolve();
   const idempotencySeen = new Set<string>();
@@ -261,6 +275,7 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
   }
 
   const store: SessionStore = {
+    tipCheck: true,
     append(entry, appendOptions) {
       const operation = appendChain
         .catch(() => undefined)
@@ -293,6 +308,15 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
               expectedParentId: appendOptions.expectedParentId,
             });
           }
+          // Plan 230 Task 2: within this instance the chain serializes the check and the write.
+          const linear = appendOptions?.tip === true && appendOptions.expectedParentId !== undefined;
+          if (linear && entries.some((existing) => existing.parentId === appendOptions.expectedParentId && linearEntries.has(existing))) {
+            throw new SessionAppendConflictError({
+              code: SESSION_APPEND_CONFLICT_CODE,
+              expectedParentId: appendOptions.expectedParentId,
+              currentLeafId: entries.at(-1)?.id,
+            });
+          }
           if (entries.some((existing) => existing.id === entry.id)) {
             throw new Error(`Duplicate session entry id: ${entry.id}`);
           }
@@ -300,14 +324,56 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
             rememberIdempotencyKey(idempotencySeen, dedupKey);
             await persistIdempotencyKeys();
           }
-          const line = `${JSON.stringify(entry)}\n`;
+          const line = `${JSON.stringify(linear ? { ...entry, [LINEAR_FIELD]: true } : entry)}\n`;
           await appendFile(path, line, "utf8");
           const info = await stat(path);
           if (info.size === beforeSize + Buffer.byteLength(line)) {
+            if (linear) linearEntries.add(entry);
             cache.set(entry.sessionId, { size: info.size, mtimeMs: info.mtimeMs, entries: entries.concat(entry) });
           } else {
             cache.delete(entry.sessionId);
           }
+        });
+      appendChain = operation.catch(() => undefined);
+      return operation;
+    },
+    appendMany(batchEntries, manyOptions) {
+      const operation = appendChain
+        .catch(() => undefined)
+        .then(async () => {
+          manyOptions?.signal?.throwIfAborted();
+          const batch = validateSessionAppendBatch(batchEntries);
+          if (!batch) return;
+          const path = sessionPath(dir, batch.sessionId);
+          await mkdir(dir, { recursive: true });
+          let before = "";
+          try {
+            before = await readFile(path, "utf8");
+          } catch (error) {
+            if (!isNodeErrorCode(error, "ENOENT")) throw error;
+          }
+          const readResult = await readParsed(path);
+          const parseError = readResult.errors[0];
+          if (parseError) throw new Error(`Invalid JSONL at line ${parseError.line}: ${parseError.message}`);
+          const existing = new Set(readResult.entries.map((entry) => entry.id));
+          for (const parentId of batch.externalParentIds) {
+            if (!existing.has(parentId)) {
+              throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, expectedParentId: parentId });
+            }
+          }
+          for (const entry of batchEntries) if (existing.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+          // Plan 230 Task 5: the whole file is written beside the session and renamed over it, so a reader or a crash
+          // sees the old file or the new one, never part of the batch. Copies are not linear.
+          const separator = before.length > 0 && !before.endsWith("\n") ? "\n" : "";
+          const temp = `${path}.${process.pid}.${Date.now()}.tmp`;
+          try {
+            await writeFile(temp, `${before}${separator}${batchEntries.map((entry) => `${JSON.stringify(entry)}\n`).join("")}`, "utf8");
+            await rename(temp, path);
+          } catch (error) {
+            await unlink(temp).catch(() => undefined);
+            throw error;
+          }
+          cache.delete(batch.sessionId);
         });
       appendChain = operation.catch(() => undefined);
       return operation;
@@ -326,17 +392,14 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
     async searchSessions(query) {
       // ponytail: no index. Every search reads and parses the whole directory, then reuses the kernel's
       // linear matcher and caps through a scratch memory store, so JSONL and memory results stay identical.
-      const scratch = createMemorySessionStore(await readAllEntries());
+      const scratch = createMemorySessionStore(await readAllEntries(), { queryLimits: options.queryLimits ?? {} });
       const search = scratch.searchSessions;
       if (!search) throw new Error("the kernel memory store must implement searchSessions");
       return search.call(scratch, query);
     },
     async listSessions(query) {
       query.signal?.throwIfAborted();
-      const limit = query.limit ?? DEFAULT_SESSION_LIST_LIMIT;
-      if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_SESSION_LIST_LIMIT) {
-        throw new TypeError(`SessionListQuery.limit must be a safe integer from 1 to ${HARD_MAX_SESSION_LIST_LIMIT}`);
-      }
+      const limit = resolveSessionListLimit(query, queryLimits);
       const order = query.order ?? "desc";
       if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
       assertSessionLinkFilter(query);
@@ -478,7 +541,16 @@ function parseEntry(line: string, lineNumber: number): { ok: true; entry: Sessio
   } catch (error) {
     return { ok: false, error: { line: lineNumber, message: `Invalid JSON: ${errorMessage(error)}`, raw: line } };
   }
-  return validateSessionEntry(parsed, lineNumber, line);
+  // The store-private linear marker never reaches the entry.
+  let linear = false;
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) && LINEAR_FIELD in parsed) {
+    const { [LINEAR_FIELD]: marker, ...rest } = parsed as Record<string, unknown>;
+    linear = marker === true;
+    parsed = rest;
+  }
+  const result = validateSessionEntry(parsed, lineNumber, line);
+  if (linear && result.ok) linearEntries.add(result.entry);
+  return result;
 }
 
 function validateSessionEntry(
@@ -561,7 +633,9 @@ function validateSessionEntry(
       }
       break;
     case "suspended_run":
-      // `data` is parsed fail-closed by the kernel's resume path, so the line only has to be well-formed JSON.
+    case "run_checkpoint":
+    case "session_limits":
+      // `data` is parsed fail-closed by the kernel's resume, continue and session-limits paths, so the line only has to be well-formed JSON.
       break;
   }
   return { ok: true, entry: entry as unknown as SessionEntry };

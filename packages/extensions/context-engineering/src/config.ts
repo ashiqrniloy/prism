@@ -43,6 +43,10 @@ export interface ContextEngineeringFoldConfig {
 export interface ContextEngineeringToolSearchConfig {
   readonly disclosure?: "all" | "search";
   readonly topK?: number;
+  /** Largest tool list the search index scores; a larger list discloses every tool. Default 1,024. */
+  readonly maxIndexTools?: number;
+  /** Ceiling on a model's `search_tools` query, in bytes. Default 65,536. */
+  readonly maxQueryBytes?: number;
 }
 
 /** Attention compiler settings, in the JSON-safe subset of the library's options. */
@@ -89,7 +93,12 @@ export interface ResolvedContextEngineeringConfig {
     readonly excludeTools: readonly string[];
     readonly clearAtLeastTokens: number;
   };
-  readonly toolSearch?: { readonly disclosure: "all" | "search"; readonly topK: number };
+  readonly toolSearch?: {
+    readonly disclosure: "all" | "search";
+    readonly topK: number;
+    readonly maxIndexTools?: number;
+    readonly maxQueryBytes?: number;
+  };
   readonly attention?: ContextEngineeringAttentionConfig;
 }
 
@@ -126,8 +135,8 @@ export const contextEngineeringConfigSchema: JsonSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        maxInputTokens: { type: "integer", minimum: 1, maximum: 2_000_000, description: "Token cap for the whole draft." },
-        maxInputBytes: { type: "integer", minimum: 1, maximum: 33_554_432, description: "Byte cap for the whole draft." },
+        maxInputTokens: { type: "integer", minimum: 1, description: "Token cap for the whole draft." },
+        maxInputBytes: { type: "integer", minimum: 1, description: "Byte cap for the whole draft." },
         reportOmissions: { type: "boolean", description: "Emit context.omissions for every dropped row." },
       },
       description: "Input budget for the whole draft (mutually exclusive with attention).",
@@ -136,15 +145,14 @@ export const contextEngineeringConfigSchema: JsonSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        minAgeTurns: { type: "integer", minimum: 1, maximum: 1_024 },
-        minBytes: { type: "integer", minimum: 1, maximum: 33_554_432 },
-        maxSummaryBytes: { type: "integer", minimum: 1, maximum: 4_096 },
-        keepLast: { type: "integer", minimum: 0, maximum: 1_024, description: "Newest tool results batch mode never folds." },
-        excludeTools: { type: "array", items: { type: "string", minLength: 1, maxLength: 256 }, maxItems: 1_024 },
+        minAgeTurns: { type: "integer", minimum: 1 },
+        minBytes: { type: "integer", minimum: 1 },
+        maxSummaryBytes: { type: "integer", minimum: 1 },
+        keepLast: { type: "integer", minimum: 0, description: "Newest tool results batch mode never folds." },
+        excludeTools: { type: "array", items: { type: "string", minLength: 1, maxLength: 256 } },
         clearAtLeastTokens: {
           type: "integer",
           minimum: 0,
-          maximum: 2_000_000,
           description: "Clear in batches of at least this many tokens; 0 folds every eligible result per turn.",
         },
         summarize: {
@@ -167,7 +175,9 @@ export const contextEngineeringConfigSchema: JsonSchema = {
       additionalProperties: false,
       properties: {
         disclosure: { type: "string", enum: ["all", "search"] },
-        topK: { type: "integer", minimum: 1, maximum: 64 },
+        topK: { type: "integer", minimum: 1 },
+        maxIndexTools: { type: "integer", minimum: 1, description: "Largest tool list the index scores; larger discloses all." },
+        maxQueryBytes: { type: "integer", minimum: 1, description: "Ceiling on a model's search_tools query, in bytes." },
       },
       description: 'Narrow the draft to the selected tools and register search_tools ("search").',
     },
@@ -176,12 +186,12 @@ export const contextEngineeringConfigSchema: JsonSchema = {
       additionalProperties: false,
       properties: {
         maxInputTokens: { type: "integer", minimum: 1, description: "Host input cap; wins over the model window." },
-        reserveTokens: { type: "integer", minimum: 0, maximum: 1_000_000 },
+        reserveTokens: { type: "integer", minimum: 0 },
         triggerRatio: { type: "number", minimum: 0, maximum: 1.75 },
         compactRatio: { type: "number", minimum: 0, maximum: 1.9 },
-        thinkingKeepTurns: { type: "integer", minimum: 0, maximum: 1_024 },
-        keepLast: { type: "integer", minimum: 0, maximum: 1_024 },
-        excludeTools: { type: "array", items: { type: "string", minLength: 1, maxLength: 256 }, maxItems: 1_024 },
+        thinkingKeepTurns: { type: "integer", minimum: 0 },
+        keepLast: { type: "integer", minimum: 0 },
+        excludeTools: { type: "array", items: { type: "string", minLength: 1, maxLength: 256 } },
         trigger: {
           anyOf: [
             { type: "object", additionalProperties: true },
@@ -245,6 +255,8 @@ export function resolveContextEngineeringConfig(config: ContextEngineeringConfig
     ? {
         disclosure: config.toolSearch.disclosure ?? ("all" as const),
         topK: config.toolSearch.topK ?? DEFAULT_TOOL_SEARCH_TOP_K,
+        ...(config.toolSearch.maxIndexTools === undefined ? {} : { maxIndexTools: config.toolSearch.maxIndexTools }),
+        ...(config.toolSearch.maxQueryBytes === undefined ? {} : { maxQueryBytes: config.toolSearch.maxQueryBytes }),
       }
     : undefined;
   return {

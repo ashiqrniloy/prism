@@ -9,8 +9,6 @@ import {
   DEFAULT_MAX_CAPABILITY_ITEMS,
   DEFAULT_MAX_CAPABILITY_PAGES,
   DEFAULT_MAX_MRTR_ROUNDS,
-  HARD_MAX_CAPABILITY_BYTES,
-  HARD_MAX_MRTR_ROUNDS,
   validateMcpLimit,
 } from "./limits.js";
 import { createMcpTransport } from "./transport.js";
@@ -29,7 +27,8 @@ export async function connectMcpCapabilities(options: ConnectMcpCapabilitiesOpti
   const transport = createMcpTransport(options.transport);
   const client = createMcpCapabilityClient(options);
   try {
-    await client.connect(transport, { signal: options.signal, timeout: options.callTimeoutMs, maxTotalTimeout: options.callTimeoutMs });
+    const connectTimeoutMs = options.connectTimeoutMs ?? options.callTimeoutMs;
+    await client.connect(transport, { signal: options.signal, timeout: connectTimeoutMs, maxTotalTimeout: connectTimeoutMs });
     return await attachMcpCapabilities(client, transport, options);
   } catch (error) {
     try {
@@ -50,13 +49,12 @@ export async function connectMcpCapabilities(options: ConnectMcpCapabilitiesOpti
 export async function attachMcpCapabilities(
   client: Client,
   transport: Transport,
-  options: AttachMcpToolBridgeOptions & Pick<ConnectMcpCapabilitiesOptions, "maxCapabilityBytes">,
+  options: AttachMcpToolBridgeOptions &
+    Pick<ConnectMcpCapabilitiesOptions, "maxCapabilityBytes" | "maxCapabilityPages" | "maxCapabilityItems">,
 ): Promise<McpCapabilityBridge> {
-  const maxBytes = validateMcpLimit(
-    "maxCapabilityBytes",
-    options.maxCapabilityBytes ?? DEFAULT_MAX_CAPABILITY_BYTES,
-    HARD_MAX_CAPABILITY_BYTES,
-  );
+  const maxBytes = validateMcpLimit("maxCapabilityBytes", options.maxCapabilityBytes ?? DEFAULT_MAX_CAPABILITY_BYTES);
+  const maxPages = validateMcpLimit("maxCapabilityPages", options.maxCapabilityPages ?? DEFAULT_MAX_CAPABILITY_PAGES);
+  const maxItems = validateMcpLimit("maxCapabilityItems", options.maxCapabilityItems ?? DEFAULT_MAX_CAPABILITY_ITEMS);
   const capabilities = (client.getServerCapabilities() ?? {}) as Readonly<Record<string, unknown>>;
   const tools = capabilities.tools ? await attachMcpToolBridge(client, transport, options) : undefined;
   if (tools) toolsRefreshes.set(client, () => tools.refresh());
@@ -68,7 +66,7 @@ export async function attachMcpCapabilities(
     const out: unknown[] = [];
     const seen = new Set<string>();
     let cursor: string | undefined;
-    for (let page = 0; page < DEFAULT_MAX_CAPABILITY_PAGES; page += 1) {
+    for (let page = 0; page < maxPages; page += 1) {
       const pageResult =
         name === "resources"
           ? await client
@@ -78,15 +76,14 @@ export async function attachMcpCapabilities(
               .listPrompts(cursor ? { cursor } : undefined)
               .then((result) => ({ items: result.prompts as readonly unknown[], nextCursor: result.nextCursor, raw: result }));
       bounded(pageResult.raw, maxBytes, `MCP ${name}/list`);
-      if (out.length + pageResult.items.length > DEFAULT_MAX_CAPABILITY_ITEMS)
-        throw new McpBridgeError(`MCP ${name}/list exceeds ${DEFAULT_MAX_CAPABILITY_ITEMS} items`);
+      if (out.length + pageResult.items.length > maxItems) throw new McpBridgeError(`MCP ${name}/list exceeds ${maxItems} items`);
       out.push(...pageResult.items);
       cursor = pageResult.nextCursor;
       if (!cursor) return out;
       if (seen.has(cursor)) throw new McpBridgeError(`MCP ${name}/list repeated a pagination cursor`);
       seen.add(cursor);
     }
-    throw new McpBridgeError(`MCP ${name}/list exceeds ${DEFAULT_MAX_CAPABILITY_PAGES} pages`);
+    throw new McpBridgeError(`MCP ${name}/list exceeds ${maxPages} pages`);
   };
   return {
     get tools() {
@@ -119,11 +116,7 @@ export async function attachMcpCapabilities(
 }
 
 export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions): Client {
-  const maxBytes = validateMcpLimit(
-    "maxCapabilityBytes",
-    options.maxCapabilityBytes ?? DEFAULT_MAX_CAPABILITY_BYTES,
-    HARD_MAX_CAPABILITY_BYTES,
-  );
+  const maxBytes = validateMcpLimit("maxCapabilityBytes", options.maxCapabilityBytes ?? DEFAULT_MAX_CAPABILITY_BYTES);
   const { Client } = require("@modelcontextprotocol/client") as typeof import("@modelcontextprotocol/client");
   const client = new Client(
     { name: "prism-mcp-bridge", version: manifest.version },
@@ -157,7 +150,7 @@ export function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions
       // and retries the original call (fresh wire IDs, shrinking total budget).
       inputRequired: {
         autoFulfill: true,
-        maxRounds: validateMcpLimit("maxMrtrRounds", options.maxMrtrRounds ?? DEFAULT_MAX_MRTR_ROUNDS, HARD_MAX_MRTR_ROUNDS),
+        maxRounds: validateMcpLimit("maxMrtrRounds", options.maxMrtrRounds ?? DEFAULT_MAX_MRTR_ROUNDS),
       },
     },
   );

@@ -211,7 +211,7 @@ export interface EstimateOnlineOptions {
   readonly scorerId?: string;
   /** Bootstrap seed, default 0. */
   readonly seed?: number;
-  /** Bootstrap resamples, default 2,000, maximum HARD_STATS_RESAMPLES. */
+  /** Bootstrap resamples, default 2,000. */
   readonly resamples?: number;
   /** Interval coverage in (0, 1), default 0.95. */
   readonly confidence?: number;
@@ -360,7 +360,7 @@ export interface CompareExperimentsOptions {
   readonly scorers?: readonly string[];
   readonly byTag?: boolean;
   readonly seed?: number;
-  /** Bootstrap default 2,000; permutation default 10,000. Maximum HARD_STATS_RESAMPLES. */
+  /** Bootstrap default 2,000; permutation default 10,000. */
   readonly resamples?: number;
   /** BH-adjusted significance level, default 0.05. Does not change ci95 coverage. */
   readonly alpha?: number;

@@ -17,27 +17,16 @@ import { qualifyTable } from "./identifiers.js";
 
 const CHANNEL = "prism_agent_events";
 const DEFAULT_MAX_EVENT_BYTES = 64 * 1024;
-const HARD_MAX_EVENT_BYTES = 1024 * 1024;
 const DEFAULT_MAX_PAGE_SIZE = 100;
-const HARD_MAX_PAGE_SIZE = 500;
 const DEFAULT_MAX_CURSOR_BYTES = 4 * 1024;
-const HARD_MAX_CURSOR_BYTES = 16 * 1024;
 const DEFAULT_MAX_QUEUED_EVENTS = 128;
-const HARD_MAX_QUEUED_EVENTS = 4096;
 const DEFAULT_MAX_SUBSCRIBERS = 256;
-const HARD_MAX_SUBSCRIBERS = 4096;
 const DEFAULT_POLL_INTERVAL_MS = 1000;
-const HARD_POLL_INTERVAL_MS = 30_000;
 const DEFAULT_RECONNECT_INITIAL_MS = 100;
-const HARD_RECONNECT_INITIAL_MS = 5000;
 const DEFAULT_RECONNECT_MAX_MS = 5000;
-const HARD_RECONNECT_MAX_MS = 30_000;
 const DEFAULT_MAX_RETAINED_EVENTS_PER_RUN = 100_000;
-const HARD_MAX_RETAINED_EVENTS_PER_RUN = 1_000_000;
 const DEFAULT_MAX_RETENTION_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-const HARD_MAX_RETENTION_AGE_MS = 365 * 24 * 60 * 60 * 1000;
 const DEFAULT_CLEANUP_BATCH = 100;
-const HARD_CLEANUP_BATCH = 500;
 
 type Cursor = {
   readonly v: 1;
@@ -104,7 +93,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
       const client = await options.pool.connect();
       try {
         await client.query("BEGIN");
-        const existing = await selectEvent(client, events, record.id, true);
+        const existing = await selectEvent(client, events, record.id, true, limits.maxEventBytes);
         if (existing) {
           if (!sameRecord(existing, record)) throw inputError();
           await client.query("COMMIT");
@@ -151,7 +140,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
       } catch (error) {
         await rollback(client);
         if (postgresCode(error) === "23505") {
-          const existing = await selectEvent(options.pool, events, record.id, false);
+          const existing = await selectEvent(options.pool, events, record.id, false, limits.maxEventBytes);
           if (existing && sameRecord(existing, record)) return existing;
           if (existing) throw inputError();
         }
@@ -244,7 +233,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
          LIMIT $${params.length}`,
         params,
       );
-      const rows = result.rows.map(mapEventRow);
+      const rows = result.rows.map((row) => mapEventRow(row, limits.maxEventBytes));
       const hasMore = rows.length > read.limit;
       const selected = hasMore ? rows.slice(0, read.limit) : rows;
       const lastSelected = selected.at(-1);
@@ -269,7 +258,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
       throwIfAborted(input.signal);
       const ownership = normalizeOwnership(input.ownership);
       const before = parseTimestamp(input.before, "input");
-      const limit = bounded(input.limit, DEFAULT_CLEANUP_BATCH, HARD_CLEANUP_BATCH, "cleanup limit");
+      const limit = bounded(input.limit, DEFAULT_CLEANUP_BATCH, "cleanup limit");
       const params: unknown[] = [ownership.tenantId];
       const where = ["tenant_id = $1"];
       if (ownership.accountId === undefined) where.push("account_id IS NULL");
@@ -383,7 +372,7 @@ export function createPostgresAgentEventSource(options: PostgresAgentEventSource
       ],
     );
     if (!result.rows[0]) throw retentionError();
-    return mapEventRow(result.rows[0]);
+    return mapEventRow(result.rows[0], limits.maxEventBytes);
   }
 
   function decodeCursor(encoded: string, input: NormalizedRead): Cursor {
@@ -627,9 +616,10 @@ async function selectEvent(
   events: string,
   id: string,
   lock: boolean,
+  maxEventBytes: number,
 ): Promise<DurableAgentEventRecord | undefined> {
   const result = await source.query(`SELECT * FROM ${events} WHERE id = $1 LIMIT 1${lock ? " FOR UPDATE" : ""}`, [id]);
-  return result.rows[0] ? mapEventRow(result.rows[0]) : undefined;
+  return result.rows[0] ? mapEventRow(result.rows[0], maxEventBytes) : undefined;
 }
 
 async function rollback(client: PoolClient): Promise<void> {
@@ -660,11 +650,17 @@ function detachListener(client: PoolClient, notification: (notification: { chann
   client.removeListener("end", failure);
 }
 
-function mapEventRow(row: Record<string, unknown>): DurableAgentEventRecord {
+function mapEventRow(row: Record<string, unknown>, maxEventBytes: number): DurableAgentEventRecord {
   try {
     const record = rowToAgentEventRecord(row as unknown as AgentEventRow<boolean>);
     const sequence = record.sequence;
-    if (!record.runId || typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence < 1 || !isValidStoredRecord(record)) {
+    if (
+      !record.runId ||
+      typeof sequence !== "number" ||
+      !Number.isSafeInteger(sequence) ||
+      sequence < 1 ||
+      !isValidStoredRecord(record, maxEventBytes)
+    ) {
       throw new Error();
     }
     return { ...record, runId: record.runId, sequence };
@@ -675,21 +671,16 @@ function mapEventRow(row: Record<string, unknown>): DurableAgentEventRecord {
 
 function resolveLimits(options: AgentEventSourceOptions): Limits {
   const limits = {
-    maxEventBytes: bounded(options.maxEventBytes, DEFAULT_MAX_EVENT_BYTES, HARD_MAX_EVENT_BYTES, "maxEventBytes"),
-    maxPageSize: bounded(options.maxPageSize, DEFAULT_MAX_PAGE_SIZE, HARD_MAX_PAGE_SIZE, "maxPageSize"),
-    maxCursorBytes: bounded(options.maxCursorBytes, DEFAULT_MAX_CURSOR_BYTES, HARD_MAX_CURSOR_BYTES, "maxCursorBytes"),
-    maxQueuedEvents: bounded(options.maxQueuedEvents, DEFAULT_MAX_QUEUED_EVENTS, HARD_MAX_QUEUED_EVENTS, "maxQueuedEvents"),
-    maxSubscribers: bounded(options.maxSubscribers, DEFAULT_MAX_SUBSCRIBERS, HARD_MAX_SUBSCRIBERS, "maxSubscribers"),
-    pollIntervalMs: bounded(options.pollIntervalMs, DEFAULT_POLL_INTERVAL_MS, HARD_POLL_INTERVAL_MS, "pollIntervalMs"),
-    reconnectInitialMs: bounded(options.reconnectInitialMs, DEFAULT_RECONNECT_INITIAL_MS, HARD_RECONNECT_INITIAL_MS, "reconnectInitialMs"),
-    reconnectMaxMs: bounded(options.reconnectMaxMs, DEFAULT_RECONNECT_MAX_MS, HARD_RECONNECT_MAX_MS, "reconnectMaxMs"),
-    maxRetainedEventsPerRun: bounded(
-      options.maxRetainedEventsPerRun,
-      DEFAULT_MAX_RETAINED_EVENTS_PER_RUN,
-      HARD_MAX_RETAINED_EVENTS_PER_RUN,
-      "maxRetainedEventsPerRun",
-    ),
-    maxRetentionAgeMs: bounded(options.maxRetentionAgeMs, DEFAULT_MAX_RETENTION_AGE_MS, HARD_MAX_RETENTION_AGE_MS, "maxRetentionAgeMs"),
+    maxEventBytes: bounded(options.maxEventBytes, DEFAULT_MAX_EVENT_BYTES, "maxEventBytes"),
+    maxPageSize: bounded(options.maxPageSize, DEFAULT_MAX_PAGE_SIZE, "maxPageSize"),
+    maxCursorBytes: bounded(options.maxCursorBytes, DEFAULT_MAX_CURSOR_BYTES, "maxCursorBytes"),
+    maxQueuedEvents: bounded(options.maxQueuedEvents, DEFAULT_MAX_QUEUED_EVENTS, "maxQueuedEvents"),
+    maxSubscribers: bounded(options.maxSubscribers, DEFAULT_MAX_SUBSCRIBERS, "maxSubscribers"),
+    pollIntervalMs: bounded(options.pollIntervalMs, DEFAULT_POLL_INTERVAL_MS, "pollIntervalMs"),
+    reconnectInitialMs: bounded(options.reconnectInitialMs, DEFAULT_RECONNECT_INITIAL_MS, "reconnectInitialMs"),
+    reconnectMaxMs: bounded(options.reconnectMaxMs, DEFAULT_RECONNECT_MAX_MS, "reconnectMaxMs"),
+    maxRetainedEventsPerRun: bounded(options.maxRetainedEventsPerRun, DEFAULT_MAX_RETAINED_EVENTS_PER_RUN, "maxRetainedEventsPerRun"),
+    maxRetentionAgeMs: bounded(options.maxRetentionAgeMs, DEFAULT_MAX_RETENTION_AGE_MS, "maxRetentionAgeMs"),
   };
   if (limits.reconnectInitialMs > limits.reconnectMaxMs) throw inputError("reconnectInitialMs must not exceed reconnectMaxMs");
   return limits;
@@ -729,8 +720,15 @@ function normalizeRead(input: AgentEventSourceRead, maxPageSize: number): Normal
     ownership: normalizeOwnership(input.ownership),
     sessionId: requiredText(input.sessionId),
     runId: requiredText(input.runId),
-    limit: bounded(input.limit, maxPageSize, maxPageSize, "page limit"),
+    limit: pageLimit(input.limit, maxPageSize),
   };
+}
+
+/** A read's page size: the caller's `limit`, at most the host's `maxPageSize`. */
+function pageLimit(value: number | undefined, maxPageSize: number): number {
+  const resolved = bounded(value, maxPageSize, "page limit");
+  if (resolved > maxPageSize) throw inputError("page limit is outside its allowed range");
+  return resolved;
 }
 
 function normalizeOwnership(input: OwnershipScope | undefined): Required<Pick<OwnershipScope, "tenantId">> & OwnershipScope {
@@ -744,9 +742,9 @@ function normalizeOwnership(input: OwnershipScope | undefined): Required<Pick<Ow
   };
 }
 
-function isValidStoredRecord(record: AgentEventRecord): boolean {
+function isValidStoredRecord(record: AgentEventRecord, maxEventBytes: number): boolean {
   try {
-    normalizeRecord(record, HARD_MAX_EVENT_BYTES);
+    normalizeRecord(record, maxEventBytes);
     return true;
   } catch {
     return false;
@@ -817,9 +815,10 @@ function parseTimestamp(value: unknown, kind: "input" | "cursor"): number {
   return parsed;
 }
 
-function bounded(value: number | undefined, fallback: number, hard: number, name: string): number {
+/** A host-set event-source limit: a positive safe integer. The host's value is the cap (plan 239 Task 5). */
+function bounded(value: number | undefined, fallback: number, name: string): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard) throw inputError(`${name} is outside its allowed range`);
+  if (!Number.isSafeInteger(resolved) || resolved < 1) throw inputError(`${name} is outside its allowed range`);
   return resolved;
 }
 

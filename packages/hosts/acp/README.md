@@ -25,6 +25,8 @@ serveAcp(agent, { stream, authorize? });
 
 ## Outputs / response / events
 
+ACP chunks are append-only, so the mapper holds each provider attempt's `agent_message_chunk` and `agent_thought_chunk` updates until its `turn.completed` and drops them when it ends with `error`: the run may retry an attempt that failed after output ([Events](../../../docs/events.md#failed-attempts)). Clients receive each attempt's chunks when it completes rather than token by token.
+
 `serveAcp` returns `{ closed, close() }`. A prompt resolves with an ACP `StopReason`:
 
 | Run | StopReason |
@@ -77,7 +79,7 @@ await server.closed;
 
 Unknown session, rejected or cancelled permission, a client without elicitation, and `authorize: false` fail closed. Nothing is allowed by default. Package titles and elicitation text are sent as plain text. Events pass through the agent's redactor.
 
-No work per connection beyond the agent's own runs. Notification text is capped at 64 KiB (`maxTextBytes`). A prompt stops forwarding after 10,000 updates (`maxStreamEvents`). Load replays at most 100 message chunks (`maxReplayEvents`). Diffs are capped at 64 KiB, images at 256 KiB, and command lists at 32. These are the `packages/ag-ui/src/limits.ts` defaults.
+No work per connection beyond the agent's own runs. Notification text is capped at 64 KiB (`maxTextBytes`). A prompt stops forwarding after 10,000 updates (`maxStreamEvents`). Load replays at most 100 message chunks (`maxReplayEvents`). Diffs are capped at 64 KiB, images at 256 KiB, and command lists at 32. These are the `ACP_LIMITS` defaults; `serveAcp(agent, { limits })` sets each, and the host's value is the cap.
 
 ## Related APIs
 

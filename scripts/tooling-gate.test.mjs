@@ -261,6 +261,12 @@ describe("tooling gates fail on violations", () => {
     const RETIRED_NPM = /\bnpm\s+(?:install|i|add|test|start|run|ci|exec|x|init|update|audit)\b/;
     // This scanner's own fixtures spell the banned shapes, exactly like the node-spawn scan above.
     const SELF = "scripts/tooling-gate.test.mjs";
+    // Third-party benchmark environments installed from a committed npm lock into the cache, never into the workspace:
+    // LOCA-Bench's MCP servers (plan 218.1 Task 4) and Mem0 (plan 218.3 Task 10). `npm ci` only, nothing else.
+    const BENCH_NPM_CI = new Set([
+      "scripts/memory-bench/external/loca-bench/fetch.mjs",
+      "scripts/memory-bench/session-bench/arms/third-party.mjs",
+    ]);
     const spawnSite = /(?:spawnSync|spawn|execFileSync|execFile|execSync|exec|run)\s*\(\s*["']npm["']\s*,\s*\[/g;
     const helperSite = /[^\w.]npm\s*\(\s*\[\s*["']([\w-]+)["']/g;
     const computedSpawn = /(?:spawnSync|spawn|execFileSync|execFile|execSync|exec|run)\s*\(\s*["']npm["']\s*,\s*(?!\[)\S/g;
@@ -311,10 +317,16 @@ describe("tooling gates fail on violations", () => {
           const line = source.slice(0, match.index).split("\n").at(-1) + match[0];
           // This benchmark's wrong answer is a negative control, never an emitted command.
           if (rel === "scripts/memory-bench/work-outcome/personas.mjs" && /^\s*wrong: "npm test",$/.test(line)) continue;
+          if (BENCH_NPM_CI.has(rel) && !/\bnpm\s+(?!ci\b)(?:install|i|add|test|start|run|exec|x|init|update|audit)\b/.test(match[0]))
+            continue;
           if (RETIRED_NPM.test(match[0])) offenders.push(`${rel}: ${match[0].trim()} is retired (plan 125 Task 5)`);
         }
       }
       const computed = [...source.matchAll(computedSpawn)];
+      if (BENCH_NPM_CI.has(rel) && !computed.length && ops.every((site) => site.op === "ci")) {
+        sites.push(...ops.map((site) => `${rel}:${site.line} npm ci (benchmark cache install)`));
+        continue;
+      }
       if (!ops.length && !computed.length) continue;
       sites.push(...ops.map((site) => `${rel}:${site.line} npm ${site.op}`));
       if (!source.includes(BOUNDARY_COMMENT)) offenders.push(`${rel}: npm call site without the release-host comment`);

@@ -515,7 +515,12 @@ export function createInstrumentationParts(options: OpenTelemetryInstrumentation
       case "package.event":
         safe(() => {
           if (!tracer) return;
-          if (event.name === "delegate.step" || event.name === "router.decision" || event.name === "mcp.status") {
+          if (
+            event.name === "delegate.step" ||
+            event.name === "delegate.activity" ||
+            event.name === "router.decision" ||
+            event.name === "mcp.status"
+          ) {
             // Bounded scalar fields only; never the event's free-form data.
             const data = event.data && typeof event.data === "object" && !Array.isArray(event.data) ? event.data : {};
             const picked: Record<string, string | number | boolean> = { "prism.package": event.package };
@@ -523,6 +528,13 @@ export function createInstrumentationParts(options: OpenTelemetryInstrumentation
               const value = (data as Record<string, unknown>)[field];
               if (typeof value === "number" || typeof value === "boolean") picked[`prism.event.${field}`] = value;
               else if (typeof value === "string") picked[`prism.event.${field}`] = value.slice(0, 128);
+            }
+            // A child's activity names its kind and tool, never its text: the tracer keeps scalars from a fixed list only.
+            if (event.name === "delegate.activity") {
+              for (const field of ["kind", "tool"] as const) {
+                const value = (data as Record<string, unknown>)[field];
+                if (typeof value === "string") picked[`prism.event.${field}`] = value.slice(0, 128);
+              }
             }
             // A delegate step attributes its child through `origin` (K3), never a bare `child` field.
             const origin = (data as { origin?: unknown }).origin;

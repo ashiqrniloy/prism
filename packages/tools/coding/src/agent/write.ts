@@ -24,7 +24,7 @@ import type { ExecutionPolicy } from "./execution-policy.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import type { CodingLifecycleEvent } from "./lifecycle-events.js";
-import { DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
+import { DEFAULT_MAX_WRITE_BYTES, validateCodingLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
 import { type ReadBeforeWriteOptions, refuseReadBeforeWrite } from "./read-path-set.js";
 
@@ -71,7 +71,7 @@ function countLines(content: string): number {
 
 export function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition {
   const ops = options?.operations ?? defaultWriteOperations;
-  const maxInputBytes = validateCodingLimit("maxInputBytes", options?.maxInputBytes ?? DEFAULT_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES);
+  const maxInputBytes = validateCodingLimit("maxInputBytes", options?.maxInputBytes ?? DEFAULT_MAX_WRITE_BYTES);
   const guard = options?.requireReadBeforeWrite === true;
 
   return {

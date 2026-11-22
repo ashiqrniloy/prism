@@ -324,6 +324,11 @@
       "line": "lockstep",
       "subpaths": [
         {
+          "path": "./a2a",
+          "dir": "a2a",
+          "kind": "library"
+        },
+        {
           "path": "./acp",
           "dir": "acp",
           "formerName": "@arnilo/prism-acp",
@@ -357,6 +362,16 @@
           "path": "./channels/signal",
           "dir": "channels",
           "formerName": "@arnilo/prism-channels",
+          "kind": "library"
+        },
+        {
+          "path": "./channels/slack",
+          "dir": "channels",
+          "kind": "library"
+        },
+        {
+          "path": "./channels/discord",
+          "dir": "channels",
           "kind": "library"
         },
         {

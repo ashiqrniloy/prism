@@ -12,15 +12,10 @@ import type { DocumentParser } from "./index.js";
 export const DEFAULT_OCR_MODEL = "mistral-ocr-latest";
 export const DEFAULT_OCR_BASE_URL = "https://api.mistral.ai";
 export const DEFAULT_OCR_TIMEOUT_MS = 60_000;
-export const HARD_OCR_TIMEOUT_MS = 180_000;
 export const DEFAULT_OCR_MAX_BYTES = 8 * 1024 * 1024;
-export const HARD_OCR_MAX_BYTES = 50 * 1024 * 1024;
 export const DEFAULT_OCR_MAX_PAGES = 32;
-export const HARD_OCR_MAX_PAGES = 10_000;
 export const DEFAULT_OCR_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-export const HARD_OCR_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 export const DEFAULT_OCR_MAX_CONCURRENT = 1;
-export const HARD_OCR_MAX_CONCURRENT = 4;
 
 const PDF_MAGIC = "%PDF-";
 
@@ -60,9 +55,10 @@ export interface CreateMistralOcrParserOptions {
   readonly recordUsage?: (usage: OcrUsage) => void | Promise<void>;
 }
 
-function cap(name: string, value: number, hard: number): number {
-  if (!Number.isInteger(value) || value <= 0 || value > hard) {
-    throw new RangeError(`mistral-ocr ${name} must be an integer in (0, ${hard}], got ${value}`);
+/** A host-set cap: a positive integer. The host's value is the cap (plan 239 Task 5). */
+function cap(name: string, value: number): number {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new RangeError(`mistral-ocr ${name} must be a positive integer, got ${value}`);
   }
   return value;
 }
@@ -220,11 +216,11 @@ export function createMistralOcrParser(options: CreateMistralOcrParserOptions): 
   if (!apiKey) throw new DocumentReaderError("mistral-ocr requires apiKey");
   const model = options.model?.trim() || DEFAULT_OCR_MODEL;
   const origin = originUrl(options.baseUrl?.trim() || DEFAULT_OCR_BASE_URL);
-  const timeoutMs = cap("timeoutMs", options.timeoutMs ?? DEFAULT_OCR_TIMEOUT_MS, HARD_OCR_TIMEOUT_MS);
-  const maxBytes = cap("maxBytes", options.maxBytes ?? DEFAULT_OCR_MAX_BYTES, HARD_OCR_MAX_BYTES);
-  const parserMaxPages = cap("maxPages", options.maxPages ?? DEFAULT_OCR_MAX_PAGES, HARD_OCR_MAX_PAGES);
-  const maxResponseBytes = cap("maxResponseBytes", options.maxResponseBytes ?? DEFAULT_OCR_MAX_RESPONSE_BYTES, HARD_OCR_MAX_RESPONSE_BYTES);
-  const maxConcurrent = cap("maxConcurrent", options.maxConcurrent ?? DEFAULT_OCR_MAX_CONCURRENT, HARD_OCR_MAX_CONCURRENT);
+  const timeoutMs = cap("timeoutMs", options.timeoutMs ?? DEFAULT_OCR_TIMEOUT_MS);
+  const maxBytes = cap("maxBytes", options.maxBytes ?? DEFAULT_OCR_MAX_BYTES);
+  const parserMaxPages = cap("maxPages", options.maxPages ?? DEFAULT_OCR_MAX_PAGES);
+  const maxResponseBytes = cap("maxResponseBytes", options.maxResponseBytes ?? DEFAULT_OCR_MAX_RESPONSE_BYTES);
+  const maxConcurrent = cap("maxConcurrent", options.maxConcurrent ?? DEFAULT_OCR_MAX_CONCURRENT);
   const documentUrl = options.documentUrl?.trim();
   if (documentUrl) {
     try {

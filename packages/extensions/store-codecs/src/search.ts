@@ -21,11 +21,15 @@ export function entrySearchFields(entry: SessionEntry): { label: string; summary
   };
 }
 
-export function clipSearchSnippet(value: string | undefined): string | undefined {
+/** A hit's snippet cut to `maxBytes` UTF-8 bytes (a store's `queryLimits.searchSnippetBytes`). */
+export function clipSearchSnippet(
+  value: string | undefined,
+  maxBytes: number = DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+): string | undefined {
   if (!value) return undefined;
   const bytes = new TextEncoder().encode(value);
-  if (bytes.byteLength <= DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES) return value;
-  return new TextDecoder().decode(bytes.slice(0, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES));
+  if (bytes.byteLength <= maxBytes) return value;
+  return new TextDecoder().decode(bytes.slice(0, maxBytes));
 }
 
 export function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined {

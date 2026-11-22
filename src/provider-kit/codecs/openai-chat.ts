@@ -46,7 +46,9 @@ import {
   thinkingObject,
 } from "../thinking.js";
 import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
-import { ProviderTransportError, readSseEvents } from "../transport.js";
+import { type BoundedStreamLimits, ProviderTransportError, readSseEvents } from "../transport.js";
+
+const DEFAULT_MAX_CACHE_BREAKPOINTS = 4;
 
 export {
   applyOpenAIChatStructuredOutput,
@@ -74,8 +76,8 @@ export interface OpenAIChatCodecOptions {
    * How historical thinking blocks are replayed on the wire:
    * - "reasoning_content": emitted as top-level `reasoning_content` on assistant messages (needed for reasoning continuity on gateways)
    * - "reasoning_details": emitted as `assistant.reasoning_details` entries, unchanged and in order
-   * - "fold": folded into `content` as text (default)
-   * - "drop": dropped completely from the wire message
+   * - "fold": folded into `content` as text (opt-in; the model reads it as assistant output)
+   * - "drop": dropped completely from the wire message (default)
    */
   readonly reasoningReplay?: "reasoning_content" | "fold" | "drop" | "reasoning_details";
 
@@ -162,6 +164,8 @@ export interface OpenAIChatEventsOptions {
   readonly secrets?: readonly (string | undefined)[];
   /** Must be the same map that serialized the request, so calls resolve to product tool names. */
   readonly toolNames?: ToolNameMap;
+  /** SSE event and buffer ceilings; default the transport's. Host-set: a provider response never raises them. */
+  readonly streamLimits?: BoundedStreamLimits;
 }
 
 /**
@@ -172,7 +176,7 @@ export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCode
   const toolNames = options.toolNames ?? createToolNameMap(request.tools);
 
   const preserve = (options.preserveThinking ?? resolvePreserveThinking)(request);
-  const reasoningReplay = options.reasoningReplay ?? "fold";
+  const reasoningReplay = options.reasoningReplay ?? "drop";
   const imageInput = options.imageInput ?? "capability-gated";
   const maxTokensField = options.maxTokensField ?? "max_tokens";
 
@@ -307,7 +311,7 @@ export function serializeOpenAIChatMessage(
     return serializeOpenAIChatMessageWithCodec(
       message,
       { provider: "openai", model: "model", capabilities },
-      { preserveThinking: preserve, reasoningReplay: "fold", imageInput: "capability-gated" },
+      { preserveThinking: preserve, reasoningReplay: "drop", imageInput: "capability-gated" },
     );
   }
 
@@ -318,7 +322,7 @@ export function serializeOpenAIChatMessage(
   };
   return serializeOpenAIChatMessageWithCodec(message, model, {
     preserveThinking: options.preserveThinking ? options.preserveThinking({ model, messages: [message] }) : true,
-    reasoningReplay: options.reasoningReplay ?? "fold",
+    reasoningReplay: options.reasoningReplay ?? "drop",
     imageInput: options.imageInput ?? "capability-gated",
   });
 }
@@ -450,7 +454,7 @@ export async function* openAIChatEvents(
   const reasoningDetails: ReasoningDetail[] = [];
   let sawReasoningDetails = false;
 
-  for await (const sseEvent of readSseEvents(body, { signal: options.signal })) {
+  for await (const sseEvent of readSseEvents(body, { ...options.streamLimits, signal: options.signal })) {
     if (options.onComment && sseEvent.comments?.length) {
       for (const text of sseEvent.comments) {
         const commentEvent = options.onComment(text);
@@ -709,7 +713,7 @@ function chatCachePlan(
   const ttl = retention === "long" && request.model.cache?.longRetention !== false ? "1h" : undefined;
   return resolvePromptCachePlan(messages, request.options?.cache?.breakpoints ?? DEFAULT_CHAT_CACHE_BREAKPOINTS, {
     ...(ttl ? { ttl } : {}),
-    maxBreakpoints: request.model.cache?.maxBreakpoints ?? 4,
+    maxBreakpoints: request.model.cache?.maxBreakpoints ?? DEFAULT_MAX_CACHE_BREAKPOINTS,
     hasTools: Boolean(request.tools?.length),
   });
 }

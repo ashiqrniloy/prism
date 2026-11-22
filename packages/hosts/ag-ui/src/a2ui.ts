@@ -14,13 +14,9 @@ export const A2UI_ERROR_EVENT = "prism.a2ui.error";
 const OP_KEYS = ["createSurface", "updateComponents", "updateDataModel", "deleteSurface"] as const;
 
 export const DEFAULT_MAX_A2UI_OPS_PER_MESSAGE = 64;
-export const HARD_MAX_A2UI_OPS_PER_MESSAGE = 512;
 export const DEFAULT_MAX_A2UI_OPERATION_BYTES = 64 * 1024;
-export const HARD_MAX_A2UI_OPERATION_BYTES = 1024 * 1024;
 export const DEFAULT_MAX_A2UI_SURFACES_PER_RUN = 16;
-export const HARD_MAX_A2UI_SURFACES_PER_RUN = 64;
 export const DEFAULT_MAX_A2UI_COMPONENT_DEPTH = 32;
-export const HARD_MAX_A2UI_COMPONENT_DEPTH = 64;
 
 export interface AgUiA2UiLimitOptions {
   readonly maxOperationsPerMessage?: number;
@@ -62,30 +58,10 @@ export interface AgUiA2UiPainter {
 
 export function resolveAgUiA2UiLimits(options: AgUiA2UiLimitOptions = {}): ResolvedAgUiA2UiLimits {
   return {
-    maxOperationsPerMessage: clamp(
-      options.maxOperationsPerMessage ?? DEFAULT_MAX_A2UI_OPS_PER_MESSAGE,
-      1,
-      HARD_MAX_A2UI_OPS_PER_MESSAGE,
-      "maxOperationsPerMessage",
-    ),
-    maxOperationBytes: clamp(
-      options.maxOperationBytes ?? DEFAULT_MAX_A2UI_OPERATION_BYTES,
-      1_024,
-      HARD_MAX_A2UI_OPERATION_BYTES,
-      "maxOperationBytes",
-    ),
-    maxSurfacesPerRun: clamp(
-      options.maxSurfacesPerRun ?? DEFAULT_MAX_A2UI_SURFACES_PER_RUN,
-      1,
-      HARD_MAX_A2UI_SURFACES_PER_RUN,
-      "maxSurfacesPerRun",
-    ),
-    maxComponentDepth: clamp(
-      options.maxComponentDepth ?? DEFAULT_MAX_A2UI_COMPONENT_DEPTH,
-      1,
-      HARD_MAX_A2UI_COMPONENT_DEPTH,
-      "maxComponentDepth",
-    ),
+    maxOperationsPerMessage: clamp(options.maxOperationsPerMessage ?? DEFAULT_MAX_A2UI_OPS_PER_MESSAGE, 1, "maxOperationsPerMessage"),
+    maxOperationBytes: clamp(options.maxOperationBytes ?? DEFAULT_MAX_A2UI_OPERATION_BYTES, 1_024, "maxOperationBytes"),
+    maxSurfacesPerRun: clamp(options.maxSurfacesPerRun ?? DEFAULT_MAX_A2UI_SURFACES_PER_RUN, 1, "maxSurfacesPerRun"),
+    maxComponentDepth: clamp(options.maxComponentDepth ?? DEFAULT_MAX_A2UI_COMPONENT_DEPTH, 1, "maxComponentDepth"),
   };
 }
 
@@ -549,9 +525,10 @@ function jsonDepth(value: unknown, depth = 0): number {
   return max;
 }
 
-function clamp(value: number, min: number, hard: number, name: string): number {
-  if (!Number.isSafeInteger(value) || value < min || value > hard) {
-    throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", `${name} must be a safe integer from ${min} through ${hard}`);
+/** A host-set A2UI limit. The host's value is the cap (plan 239 Task 5); model operations are bounded by it. */
+function clamp(value: number, min: number, name: string): number {
+  if (!Number.isSafeInteger(value) || value < min) {
+    throw new AgUiError("ERR_PRISM_AG_UI_LIMIT", `${name} must be a safe integer of at least ${min}`);
   }
   return value;
 }

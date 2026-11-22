@@ -33,11 +33,6 @@ export {
   DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES,
   DEFAULT_MAX_ASK_USER_DECISION_OPTIONS,
   DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES,
-  HARD_MAX_ASK_USER_DECISION_BULLET_BYTES,
-  HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES,
-  HARD_MAX_ASK_USER_DECISION_LABEL_BYTES,
-  HARD_MAX_ASK_USER_DECISION_OPTIONS,
-  HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES,
   parseAskUserDecisionArgs,
   resolveAskUserDecisionAnswer,
   resolveAskUserDecisionLimits,
@@ -342,6 +337,7 @@ export type {
   BashSpawnContext,
   BashSpawnHook,
   ShellConfig,
+  ShellResolutionProbe,
   ShellToolOptions,
 } from "./shell.js";
 export {
@@ -349,6 +345,7 @@ export {
   createShellTool,
   getShellConfig,
   killProcessTree,
+  POSIX_SHELL_NAMES,
   waitForChildProcess,
 } from "./shell.js";
 export type {
@@ -363,8 +360,7 @@ export {
   BACKGROUND_FIRST_OUTPUT_MS,
   createBackgroundProcesses,
   DEFAULT_MAX_BACKGROUND_PROCESSES,
-  HARD_MAX_BACKGROUND_PROCESSES,
-  HARD_MAX_BACKGROUND_WAIT_SECONDS,
+  DEFAULT_MAX_BACKGROUND_TOTAL_PROCESSES,
 } from "./shell-background.js";
 export type { ShellOutputToolOptions } from "./shell-output.js";
 export { createShellOutputTool } from "./shell-output.js";
@@ -387,12 +383,6 @@ export {
   DEFAULT_MAX_TODO_STEER_BYTES,
   DEFAULT_MAX_TODO_STEER_ITEMS,
   formatTodoList,
-  HARD_MAX_TODO_CONTENT_BYTES,
-  HARD_MAX_TODO_ID_BYTES,
-  HARD_MAX_TODO_ITEMS,
-  HARD_MAX_TODO_NO_PROGRESS,
-  HARD_MAX_TODO_STEER_BYTES,
-  HARD_MAX_TODO_STEER_ITEMS,
   latestTodoList,
   parseTodoListMetadata,
   parseTodoWriteArgs,
@@ -420,7 +410,6 @@ export {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_CHECK_CONCURRENCY,
   DEFAULT_MAX_CHECK_DIAGNOSTIC_LINES,
-  DEFAULT_MAX_CHECK_NAMES,
   DEFAULT_MAX_CHECK_OUTPUT_BYTES,
   DEFAULT_MAX_CHECK_SUMMARY_BYTES,
   DEFAULT_MAX_CODING_ARTIFACT_BYTES,
@@ -482,75 +471,11 @@ export {
   DEFAULT_MAX_TOTAL_OUTPUT_BYTES,
   DEFAULT_MAX_WRITE_BYTES,
   DEFAULT_SHELL_TIMEOUT_SECONDS,
-  HARD_CHECK_TIMEOUT_MS,
-  HARD_GIT_TIMEOUT_MS,
-  HARD_MAX_BYTES,
-  HARD_MAX_CHECK_CONCURRENCY,
-  HARD_MAX_CHECK_DIAGNOSTIC_LINES,
-  HARD_MAX_CHECK_NAMES,
-  HARD_MAX_CHECK_OUTPUT_BYTES,
-  HARD_MAX_CHECK_SUMMARY_BYTES,
-  HARD_MAX_CODING_ARTIFACT_BYTES,
-  HARD_MAX_CODING_ARTIFACTS,
-  HARD_MAX_CODING_CHECKPOINT_BYTES,
-  HARD_MAX_EDIT_FILE_BYTES,
-  HARD_MAX_EDIT_INPUT_BYTES,
-  HARD_MAX_EDITS,
-  HARD_MAX_FORGE_COMMENTS_PER_REVIEW,
-  HARD_MAX_FORGE_PAGES_PER_OPERATION,
-  HARD_MAX_FORGE_PAYLOAD_BYTES,
-  HARD_MAX_FORGE_REQUEST_CONCURRENCY,
-  HARD_MAX_FORGE_REQUEST_TIMEOUT_MS,
-  HARD_MAX_GIT_CHANGED_FILES,
-  HARD_MAX_GIT_DIFF_LINES,
-  HARD_MAX_GIT_MESSAGE_BYTES,
-  HARD_MAX_GIT_OUTPUT_BYTES,
-  HARD_MAX_GIT_PATCH_BYTES,
-  HARD_MAX_GIT_PATHS,
-  HARD_MAX_GIT_REF_BYTES,
-  HARD_MAX_GIT_WORKTREES,
-  HARD_MAX_IMAGE_BYTES,
-  HARD_MAX_LINES,
-  HARD_MAX_LS_FILES_OUTPUT_BYTES,
-  HARD_MAX_LSP_DIAGNOSTICS_PER_FILE,
-  HARD_MAX_LSP_MESSAGE_BYTES,
-  HARD_MAX_LSP_PENDING_REQUESTS,
-  HARD_MAX_LSP_RESULTS_PER_QUERY,
-  HARD_MAX_LSP_SERVERS,
-  HARD_MAX_LSP_TIMEOUT_MS,
-  HARD_MAX_PLAN_BYTES,
-  HARD_MAX_PR_COMMITS,
-  HARD_MAX_PR_HANDOFF_BYTES,
-  HARD_MAX_PROCESS_INPUT_BYTES,
-  HARD_MAX_PROCESS_LIFETIME_MS,
-  HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES,
-  HARD_MAX_PROCESS_SESSIONS,
-  HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES,
-  HARD_MAX_PTY_ATTACH_TIMEOUT_MS,
-  HARD_MAX_PTY_BACKEND_METADATA_BYTES,
-  HARD_MAX_REPO_CONCURRENCY,
-  HARD_MAX_REPO_DEPTH,
-  HARD_MAX_REPO_ENTRIES,
-  HARD_MAX_REPO_FILES,
-  HARD_MAX_REPO_RESULTS,
-  HARD_MAX_SEARCH_CONTEXT_LINES,
-  HARD_MAX_SEARCH_FILE_BYTES,
-  HARD_MAX_SEARCH_LINE_BYTES,
-  HARD_MAX_SEARCH_MATCHES,
-  HARD_MAX_SEARCH_PATTERN_BYTES,
-  HARD_MAX_SEARCH_SCAN_BYTES,
-  HARD_MAX_SEARCH_TIME_MS,
-  HARD_MAX_TERMINAL_COLUMNS,
-  HARD_MAX_TERMINAL_RESIZES_PER_MINUTE,
-  HARD_MAX_TERMINAL_ROWS,
-  HARD_MAX_TERMINAL_TERM_BYTES,
-  HARD_MAX_TEXT_SCAN_BYTES,
-  HARD_MAX_TODO_TEXT_BYTES,
-  HARD_MAX_TODOS,
-  HARD_MAX_TOTAL_OUTPUT_BYTES,
-  HARD_MAX_WRITE_BYTES,
-  HARD_SHELL_TIMEOUT_SECONDS,
   LSP_RESTARTS_PER_SERVER,
+  type CodingArgCeilings,
+  DEFAULT_CODING_ARG_CEILINGS,
+  type ResolvedCodingArgCeilings,
+  resolveCodingArgCeilings,
 } from "./limits.js";
 
 // --- aggregators ---
@@ -564,6 +489,7 @@ import type { ExecutionPolicy } from "./execution-policy.js";
 import type { GlobToolOptions } from "./glob.js";
 import { createGlobTool } from "./glob.js";
 import type { GrepToolOptions } from "./grep.js";
+import type { CodingArgCeilings } from "./limits.js";
 import { createGrepTool } from "./grep.js";
 import type { MoveToolOptions } from "./move.js";
 import { createMoveTool } from "./move.js";
@@ -600,6 +526,16 @@ export interface ToolsOptions {
    * Per-tool `search` / `glob` options override these when both are set.
    */
   repository?: RepositoryLimitOptions & { operations?: RepositoryOperations };
+  /**
+   * Ceilings on values the model passes as tool arguments (plan 239 Task 5): grep matches and context, glob
+   * results and depth, shell timeout, delete fan-out. A per-tool `ceilings` wins.
+   */
+  ceilings?: CodingArgCeilings;
+}
+
+function withCeilings<T extends { ceilings?: CodingArgCeilings }>(toolOptions: T, shared?: CodingArgCeilings): T {
+  if (shared === undefined || toolOptions.ceilings !== undefined) return toolOptions;
+  return { ...toolOptions, ceilings: shared };
 }
 
 function withSharedExecutionPolicy<T extends { executionPolicy?: ExecutionPolicy }>(
@@ -639,17 +575,17 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): readonly
     createReadTool(cwd, withSharedExecutionPolicy(options?.read, policy)),
     createWriteTool(cwd, withSharedExecutionPolicy(options?.write, policy)),
     createEditTool(cwd, withSharedExecutionPolicy(options?.edit, policy)),
-    createGrepTool(cwd, withSharedExecutionPolicy(searchOpts, policy)),
-    createGlobTool(cwd, withSharedExecutionPolicy(globOpts, policy)),
+    createGrepTool(cwd, withCeilings(withSharedExecutionPolicy(searchOpts, policy), options?.ceilings)),
+    createGlobTool(cwd, withCeilings(withSharedExecutionPolicy(globOpts, policy), options?.ceilings)),
   ];
   if (options?.shellAvailable === false) {
     return [
       ...fileTools,
-      createDeleteTool(cwd, withSharedExecutionPolicy(options.delete, policy)),
+      createDeleteTool(cwd, withCeilings(withSharedExecutionPolicy(options.delete, policy), options.ceilings)),
       createMoveTool(cwd, withSharedExecutionPolicy(options.move, policy)),
     ];
   }
-  const shellOptions = withSharedExecutionPolicy(options?.shell, policy);
+  const shellOptions = withCeilings(withSharedExecutionPolicy(options?.shell, policy), options?.ceilings);
   return [
     createShellTool(cwd, shellOptions),
     ...fileTools,
@@ -665,8 +601,8 @@ export function createReadOnlyTools(cwd: string, options?: ToolsOptions): readon
   const globOpts = withRepositoryDefaults(options?.glob, options?.repository) as GlobToolOptions;
   return [
     createReadTool(cwd, withSharedExecutionPolicy(options?.read, policy)),
-    createGrepTool(cwd, withSharedExecutionPolicy(searchOpts, policy)),
-    createGlobTool(cwd, withSharedExecutionPolicy(globOpts, policy)),
+    createGrepTool(cwd, withCeilings(withSharedExecutionPolicy(searchOpts, policy), options?.ceilings)),
+    createGlobTool(cwd, withCeilings(withSharedExecutionPolicy(globOpts, policy), options?.ceilings)),
   ];
 }
 

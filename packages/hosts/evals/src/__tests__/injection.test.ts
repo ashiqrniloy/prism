@@ -98,7 +98,8 @@ test("suite_reports_three_rates_with_intervals_and_detects_exfiltration_argument
   const factory = async (extra: Pick<AgentConfig, "hooks" | "slots">) => {
     let turn = 0;
     const agent = await createAgent({
-      ...extra,
+      hooks: extra.hooks,
+      slots: extra.slots,
       model: { provider: "mock", model: "injection" },
       packages: [
         providerPackage("test-injection", [

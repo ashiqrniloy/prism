@@ -102,10 +102,10 @@ describe("session subscriber ownership (plan 104 Task 5)", () => {
 
   it("applies the same overflow rules to an acrossRuns subscriber", async () => {
     const overflowed = await mockSession("across-runs-overflow");
-    const closing = overflowed.subscribe({ acrossRuns: true, maxQueuedEvents: 1 })[Symbol.asyncIterator]();
+    const closing = overflowed.subscribe({ acrossRuns: true, maxQueuedEvents: 1, overflow: "close" })[Symbol.asyncIterator]();
     await overflowed.run("one");
     // maxQueuedEvents: 1 keeps the first queued event; the next overflow fails the iterator loudly
-    // under the default "close" policy, even though the subscription outlives the run.
+    // under the "close" policy, even though the subscription outlives the run.
     await assert.rejects(
       async () => {
         for (;;) {

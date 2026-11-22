@@ -1,3 +1,4 @@
+import type { SessionQueryLimits } from "@arnilo/prism";
 /**
  * `@arnilo/prism-extensions/store-jsonl` — one JSONL file per session under a directory, as the `store` slot.
  *
@@ -40,12 +41,24 @@ export {
 /** Validated `packageConfig` for this package. The host resolves `dir` against the process cwd. */
 export interface JsonlStoreConfig {
   readonly dir: string;
+  /** Store query limits (plan 239 Task 5); each defaults to the kernel's value. */
+  readonly queryLimits?: SessionQueryLimits;
 }
 
 const configSchema: JsonSchema = {
   type: "object",
   properties: {
     dir: { type: "string", minLength: 1, maxLength: 4096 },
+    queryLimits: {
+      type: "object",
+      description: "Store query limits: largest list and search page, search text, cursor and snippet bytes, full-text candidates.",
+      properties: Object.fromEntries(
+        ["maxListLimit", "maxSearchLimit", "maxSearchQueryBytes", "maxSearchCursorBytes", "searchSnippetBytes", "ftsCandidates"].map(
+          (key) => [key, { type: "integer", minimum: 1 }],
+        ),
+      ),
+      additionalProperties: false,
+    },
   },
   // `dir` is checked in setup rather than declared required: a config schema whose defaults cannot
   // validate would fail package conformance, and the setup error names the field (plan 152 Task 6).
@@ -64,7 +77,13 @@ const definition = definePackage<JsonlStoreConfig>({
     if (typeof dir !== "string" || dir.length === 0) {
       throw new Error("prism-store-jsonl: config needs dir (the directory holding one JSONL file per session)");
     }
-    prism.slots.store.provide(createJsonlSessionStore({ dir, logger: prism.log }));
+    prism.slots.store.provide(
+      createJsonlSessionStore({
+        dir,
+        logger: prism.log,
+        ...(prism.config.queryLimits === undefined ? {} : { queryLimits: prism.config.queryLimits }),
+      }),
+    );
   },
 });
 

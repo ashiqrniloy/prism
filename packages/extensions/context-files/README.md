@@ -32,7 +32,7 @@ const agent = await createAgent({
 | `globalRoot` | none | Reads `<globalRoot>/.prism/agent/SYSTEM.md`. **No home-directory scan without it.** |
 | `trustedRoots` | `[root]` | Extra trusted roots for the file trust gate. |
 | `files` | `[]` | Extra explicit instruction files, treated as project (`source: "app"`) layers and trusted by being named. |
-| `nested` | `true` | Load a subtree's `AGENTS.md` / `CLAUDE.md` after a tool result first touches it. `false` restores root-only behavior; an object accepts `maxFileBytes` (default 16,384, hard cap 65,536) and `maxFiles` (default and hard cap 16). |
+| `nested` | `true` | Load a subtree's `AGENTS.md` / `CLAUDE.md` after a tool result first touches it. `false` restores root-only behavior; an object accepts `maxFileBytes` (default 16,384) and `maxFiles` (default 16); the host's values are the caps. |
 | `skills.enabled` | `true` | Discover and register `SKILL.md` files at setup. |
 | `skills.roots` | standard roots | Skill roots, relative to `root` unless absolute. **Replaces** the default roots. |
 

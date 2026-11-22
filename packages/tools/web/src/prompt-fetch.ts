@@ -33,8 +33,6 @@ export const PROMPT_SYSTEM_PROMPT = [
 export const DEFAULT_PROMPT_INPUT_CHARS = 100_000;
 /** `fetch.prompt.maxOutputTokens` default. */
 export const DEFAULT_PROMPT_OUTPUT_TOKENS = 1_024;
-export const HARD_PROMPT_INPUT_CHARS = 1_000_000;
-export const HARD_PROMPT_OUTPUT_TOKENS = 32_768;
 
 /** The configured model with its output budget lowered, never raised, to `maxTokens`. */
 export function withOutputBudget(model: ModelConfig, maxTokens: number): ModelConfig {

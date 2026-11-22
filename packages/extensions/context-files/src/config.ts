@@ -68,14 +68,12 @@ export const contextFilesConfigSchema: JsonSchema = {
             maxFileBytes: {
               type: "integer",
               minimum: 1,
-              maximum: 65_536,
               default: 16_384,
               description: "Largest nested AGENTS.md / CLAUDE.md file read.",
             },
             maxFiles: {
               type: "integer",
               minimum: 1,
-              maximum: 16,
               default: 16,
               description: "Most distinct nested instruction files inserted per session.",
             },

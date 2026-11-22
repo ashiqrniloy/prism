@@ -6,7 +6,7 @@ import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } fro
 import { validateGlobPattern } from "./glob-match.js";
 import { CODING_OBSERVATION_EFFECT } from "./effects.js";
 import { enforceExecutionPolicy } from "./execution-policy.js";
-import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
+import { type CodingArgCeilings, resolveCodingArgCeilings, validateCodingLimit, validateCodingLimitAllowZero } from "./limits.js";
 import {
   createLocalRepositoryOperations,
   literalMatcher,
@@ -33,6 +33,8 @@ export interface GrepToolOptions {
   exclude?: readonly string[];
   /** Modes the tool exposes (default `["literal"]`); indexed modes require a host index via `operations`. */
   modes?: readonly RepoSearchMode[];
+  /** Ceilings on the model's `maxMatches` and `context` (plan 239 Task 5). */
+  ceilings?: CodingArgCeilings;
 }
 
 const ALL_MODES: readonly RepoSearchMode[] = ["literal", "indexed_literal", "semantic"];
@@ -282,6 +284,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
     exclude: options?.exclude ?? options?.repository?.exclude,
   });
   const ops = options?.operations ?? createLocalRepositoryOperations(limits);
+  const ceilings = resolveCodingArgCeilings(options?.ceilings);
   const modes = validateModes(options?.modes);
   const indexedEnabled = modes.some((m) => m !== "literal");
   const modeDescriptions = modes.map((m) => (m === "literal" ? "literal substring match only" : INDEX_MODE_LABEL[m])).join("; ");
@@ -299,11 +302,11 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
     includeHidden: { type: "boolean", description: "Include dotfile/dotdir names (default false)" },
     context: {
       type: "number",
-      description: `Context lines before/after each match (default 0, hard ${HARD_MAX_SEARCH_CONTEXT_LINES})`,
+      description: `Context lines before/after each match (default 0, max ${ceilings.searchContextLines})`,
     },
     maxMatches: {
       type: "number",
-      description: `Maximum matches to retain (default ${limits.maxMatches}, hard ${HARD_MAX_SEARCH_MATCHES})`,
+      description: `Maximum matches to retain (default ${limits.maxMatches}, max ${ceilings.searchMatches})`,
     },
     outputMode: {
       type: "string",
@@ -360,9 +363,9 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): ToolDefi
       let maxMatches: number | undefined;
       try {
         contextLines =
-          args.context === undefined ? 0 : validateCodingLimitAllowZero("context", args.context as number, HARD_MAX_SEARCH_CONTEXT_LINES);
+          args.context === undefined ? 0 : validateCodingLimitAllowZero("context", args.context as number, ceilings.searchContextLines);
         if (args.maxMatches !== undefined) {
-          maxMatches = validateCodingLimit("maxMatches", args.maxMatches as number, HARD_MAX_SEARCH_MATCHES);
+          maxMatches = validateCodingLimit("maxMatches", args.maxMatches as number, ceilings.searchMatches);
         }
       } catch (error) {
         return errorResult(toolCallId, error instanceof Error ? error.message : String(error));

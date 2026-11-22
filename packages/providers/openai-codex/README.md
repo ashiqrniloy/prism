@@ -32,6 +32,7 @@ The bare definition uses the schema defaults, so `packages: [openaiCodex]` is th
 | `credential` | `keyring:` ref | `keyring:openai-codex` | Where the grant is kept. An `env:` ref is refused at load: a sign-in writes this ref. |
 | `appName` | string, 1–64 | — | The host's name for this app, sent as `agent_name_hint` on first sign-in. Required to sign in; a missing value fails the login, not the load. |
 | `baseUrl` | string | `https://api.openai.com/v1` | The base the grant is scoped to. |
+| `transport` | object | transport defaults | Wire ceilings the host sets; a provider response never raises them. `maxEventBytes` (SSE event, default 256 KiB), `maxBufferBytes` (SSE buffer, default 512 KiB), `maxResponseBodyBytes` (an error body, default 64 KiB). `maxCatalogBytes` bounds the `/models` catalog body (default 2,000,000 bytes). |
 | `models` | `ModelConfig[]` | — | Static catalog. When absent, `models()` asks `GET /models` with the grant. |
 | `callbackPort` | integer | `1455` | Loopback port the sign-in listener tries first; a busy port falls back to an ephemeral one. |
 

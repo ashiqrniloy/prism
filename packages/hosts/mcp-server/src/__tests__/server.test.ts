@@ -342,7 +342,7 @@ describe("dual-era MCP serving", () => {
 
   it("bounds modern subscriptions and keepalive options", async () => {
     await assert.rejects(
-      createPrismMcpWebHandler(echoFactory, { maxSubscriptions: 5000 }),
+      createPrismMcpWebHandler(echoFactory, { maxSubscriptions: 0 }),
       /maxSubscriptions must be a positive safe integer/,
     );
     await assert.rejects(createPrismMcpWebHandler(echoFactory, { keepAliveMs: -1 }), /keepAliveMs must be a safe integer/);

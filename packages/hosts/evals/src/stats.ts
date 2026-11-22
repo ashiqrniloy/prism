@@ -1,6 +1,5 @@
 import type { EvaluationRecord } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import { HARD_STATS_RESAMPLES } from "./limits.js";
 import { mulberry32 } from "./scenarios.js";
 import type { EstimateOnlineOptions, OnlineEstimate } from "./types.js";
 
@@ -114,7 +113,6 @@ function probability(value: number): void {
 
 function resampling(resamples: number, seed: number): () => number {
   integer(resamples, 1);
-  check(resamples <= HARD_STATS_RESAMPLES, `resamples must not exceed ${HARD_STATS_RESAMPLES}`);
   check(Number.isSafeInteger(seed), "seed must be a safe integer");
   return mulberry32(seed);
 }

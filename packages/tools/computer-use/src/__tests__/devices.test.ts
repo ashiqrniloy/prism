@@ -8,8 +8,6 @@ import {
   DEFAULT_DEVICE_MAX_CHUNK_BYTES,
   DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
   DevicePolicyError,
-  HARD_DEVICE_MAX_CHUNK_BYTES,
-  HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
   redactDeviceTelemetry,
   resolveDevicePolicy,
   runDevicePolicyConformance,
@@ -44,13 +42,10 @@ describe("resolveDevicePolicy", () => {
     assert.equal(resolveDevicePolicy(adapter({ enabled: true }), { runLimits }).enabled, true);
   });
 
-  it("rejects unknown device kinds and caps above the hard ceiling", () => {
+  it("rejects unknown device kinds and invalid caps", () => {
     assert.throws(() => resolveDevicePolicy({ ...adapter(), kind: "brain" } as unknown as DeviceAdapter), DevicePolicyError);
-    assert.throws(() => resolveDevicePolicy(adapter(), { maxChunkBytes: HARD_DEVICE_MAX_CHUNK_BYTES + 1, runLimits }), DevicePolicyError);
-    assert.throws(
-      () => resolveDevicePolicy(adapter(), { maxConcurrentSessions: HARD_DEVICE_MAX_CONCURRENT_SESSIONS + 1, runLimits }),
-      DevicePolicyError,
-    );
+    assert.throws(() => resolveDevicePolicy(adapter(), { maxChunkBytes: 0, runLimits }), DevicePolicyError);
+    assert.throws(() => resolveDevicePolicy(adapter(), { maxConcurrentSessions: 1.5, runLimits }), DevicePolicyError);
   });
 });
 

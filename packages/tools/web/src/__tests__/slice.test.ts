@@ -6,7 +6,7 @@ import {
   fetchSliceArgs,
   fetchSliceText,
   fetchSliceValue,
-  HARD_FETCH_CHARS,
+  DEFAULT_MAX_FETCH_CHARS,
   sliceMarkdown,
   truncateUtf8Bytes,
 } from "../slice.js";
@@ -59,7 +59,10 @@ describe("sliceMarkdown", () => {
     );
     assert.throws(() => fetchSliceArgs({ offset: 1.5 }), /offset/);
     assert.throws(() => fetchSliceArgs({ max_chars: 0 }), /max_chars/);
-    assert.throws(() => fetchSliceArgs({ max_chars: HARD_FETCH_CHARS + 1 }), /max_chars/);
+    assert.throws(() => fetchSliceArgs({ max_chars: DEFAULT_MAX_FETCH_CHARS + 1 }), /max_chars/);
+    // Plan 239 Task 5: the host sets the ceiling on the model's max_chars, lower or higher.
+    assert.throws(() => fetchSliceArgs({ max_chars: 501 }, 500), /between 1 and 500/);
+    assert.equal(fetchSliceArgs({ max_chars: 400_000 }, 1_000_000).maxChars, 400_000);
     assert.throws(() => fetchSliceArgs({ max_chars: "10" }), /max_chars/);
     assert.throws(() => sliceMarkdown("abc", args(3)), /offset/);
     assert.equal(sliceMarkdown("", args(0)).markdown, "", "an empty page has one empty slice");

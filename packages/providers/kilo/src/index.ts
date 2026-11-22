@@ -20,7 +20,9 @@ import {
   defineProviderPackage,
   modelsProperty,
   providerPackageInstance,
+  type ProviderTransportConfig,
   secretRefProperty,
+  transportProperty,
 } from "@arnilo/prism/provider-kit";
 import { KILO_DEFAULT_CREDENTIAL_REF, kiloAuth } from "./auth.js";
 import { listKiloModels } from "./models.js";
@@ -29,6 +31,8 @@ import { createKiloProvider } from "./provider.js";
 export const KILO_DEFAULT_API_KEY_REF = "env:KILO_API_KEY";
 
 export interface KiloProviderConfig {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); each defaults to the transport's. */
+  readonly transport?: ProviderTransportConfig;
   /** An `env:`/`keyring:` ref; defaults to {@link KILO_DEFAULT_API_KEY_REF}. Wins over the login. */
   readonly apiKey?: string;
   /** Writable `keyring:` ref where a device login stores its token; defaults to `keyring:kilo`. */
@@ -56,6 +60,7 @@ const configSchema: JsonSchema = {
     apiKey: secretRefProperty(KILO_DEFAULT_API_KEY_REF),
     credential: secretRefProperty(KILO_DEFAULT_CREDENTIAL_REF, "A writable `keyring:` ref where the device login stores its token."),
     baseUrl: baseUrlProperty("Defaults to `https://ai-gateway.kilo.ai/api/v1`."),
+    transport: transportProperty(),
     organizationId: { type: "string", minLength: 1, description: "Organization id; also switches discovery to the org catalog." },
     dataCollection: {
       type: "string",
@@ -110,6 +115,7 @@ function definitionFor(options: KiloProviderPackageOptions) {
         ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
       });
       const provider = createKiloProvider({
+        ...(prism.config.transport === undefined ? {} : { transport: prism.config.transport }),
         id,
         ...(baseUrl !== undefined ? { baseUrl } : {}),
         resolveApiKey: async () => {
@@ -128,6 +134,7 @@ function definitionFor(options: KiloProviderPackageOptions) {
         async models() {
           if (configured !== undefined) return configured;
           return listKiloModels({
+            ...(prism.config.transport?.maxCatalogBytes === undefined ? {} : { maxBodyBytes: prism.config.transport.maxCatalogBytes }),
             provider: id,
             ...(baseUrl !== undefined ? { baseUrl } : {}),
             apiKey: async () => await resolveApiKey(),

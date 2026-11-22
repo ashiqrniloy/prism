@@ -29,6 +29,8 @@ export interface LiteLLMModelInfoEntry {
 }
 
 export interface ListLiteLLMModelsOptions {
+  /** Catalog body ceiling (`transport.maxCatalogBytes`); default LITELLM_CATALOG_BYTES. */
+  readonly maxBodyBytes?: number;
   readonly provider?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -155,7 +157,7 @@ export async function listLiteLLMModels(options: ListLiteLLMModelsOptions = {}):
   const { response, token } = await discover(options, "/model/info");
   if (response.ok) {
     const payload = await readBoundedResponseJson<{ data?: LiteLLMModelInfoEntry[] }>(response, {
-      maxResponseBodyBytes: LITELLM_CATALOG_BYTES,
+      maxResponseBodyBytes: options.maxBodyBytes ?? LITELLM_CATALOG_BYTES,
     });
     if (!Array.isArray(payload.data)) throw new Error("LiteLLM model discovery response missing data array");
     return groupLiteLLMModelInfo(payload.data, { provider });
@@ -170,7 +172,7 @@ export async function listLiteLLMModels(options: ListLiteLLMModelsOptions = {}):
     throw new Error(`LiteLLM model discovery failed: ${fallback.response.status} ${redactSecrets(body, [fallback.token])}`);
   }
   const payload = await readBoundedResponseJson<{ data?: readonly { id?: string }[] }>(fallback.response, {
-    maxResponseBodyBytes: LITELLM_CATALOG_BYTES,
+    maxResponseBodyBytes: options.maxBodyBytes ?? LITELLM_CATALOG_BYTES,
   });
   if (!Array.isArray(payload.data)) throw new Error("LiteLLM model discovery response missing data array");
   return payload.data

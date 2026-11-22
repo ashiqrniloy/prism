@@ -1,5 +1,5 @@
 import { WorkflowDefinitionError, WorkflowLoopLimitError, WorkflowRuntimeError } from "../errors.js";
-import { HARD_MAX_LOOP_ITERATIONS } from "../limits.js";
+import { DEFAULT_MAX_GATE_ITERATIONS } from "../limits.js";
 import type { SchedulerState } from "../run/main.js";
 import { suspend } from "../run/main.js";
 import { WORKFLOWS_SERVICE, type WorkflowRuntime } from "../services.js";
@@ -41,7 +41,7 @@ export function gatePassTargets(
 }
 
 function assertWithinBound(state: SchedulerState, nodeId: string, node: GateNodeDefinition | HumanGateNodeDefinition): void {
-  const max = node.maxIterations ?? HARD_MAX_LOOP_ITERATIONS;
+  const max = node.maxIterations ?? DEFAULT_MAX_GATE_ITERATIONS;
   const nodeState = state.nodes.get(nodeId);
   if ((nodeState?.iteration ?? 0) >= max) throw new WorkflowLoopLimitError(nodeId, max, nodeState?.lastOutput);
 }

@@ -6,8 +6,6 @@ import { redactSecrets } from "@arnilo/prism";
 
 /** The wall-clock limit of one check when the host sets none, in milliseconds. */
 export const DEFAULT_CHECK_TIMEOUT_MS = 30_000;
-/** The most a host may raise the limit to. */
-export const MAX_CHECK_TIMEOUT_MS = 120_000;
 /** The most bytes of the child's result, and of each of its output streams, that the runner keeps. */
 export const MAX_CHECK_OUTPUT_BYTES = 1024 * 1024;
 
@@ -99,7 +97,8 @@ function tail(text: string, secrets: readonly string[]): string {
  * masked with the values of the `--pass-env` variables.
  */
 export async function runCheck<T>(options: RunCheckOptions): Promise<CheckOutcome<T>> {
-  const timeoutMs = Math.min(options.timeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS, MAX_CHECK_TIMEOUT_MS);
+  // Host-set: the host's value is the cap (plan 239 Task 5), never clamped.
+  const timeoutMs = options.timeoutMs ?? DEFAULT_CHECK_TIMEOUT_MS;
   const env = childEnv(options.passEnv, options.env);
   const secrets = (options.passEnv ?? [])
     .map((name) => (options.env ?? process.env)[name])

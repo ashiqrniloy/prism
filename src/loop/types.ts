@@ -163,6 +163,14 @@ export interface RunController {
   steers(): AsyncIterable<Message>;
   /** Emit one `package.event` owned by the loop's slot owner. A catalog event name throws `emit_reserved_name`. */
   emit(name: string, data: JsonValue): void;
+  /**
+   * Record this run's loop state (a `state: "run"` loop). The kernel keeps the latest value by reference and
+   * JSON-normalizes, redacts and bounds it only when it persists: on a suspension and on a `durability: "turn"`
+   * checkpoint. It reaches the resumed or continued run as {@link restored}.
+   */
+  checkpoint(value: JsonValue): void;
+  /** The loop state of the run being resumed or continued; `undefined` on a fresh run. */
+  readonly restored: JsonValue | undefined;
 }
 
 /** The loop contract (roadmap §2.5). `revision` joins the durable fingerprint. */
@@ -173,7 +181,17 @@ export interface LoopStrategy {
   readonly usesModel?: false;
   /** `"none"`: a `RunOptions.model` fails the run with `run_model_unsupported`. `"passthrough"` (default) exposes it as `run.model`. */
   readonly runModel?: "passthrough" | "none";
+  /**
+   * `"run"`: the loop keeps its state on the run (`run.checkpoint` / `run.restored`), so one strategy object
+   * serves any number of concurrent runs and the loop counts as durable without `snapshot`/`restore`.
+   * Declared statically because durability is decided before `run()` starts.
+   */
+  readonly state?: "run";
   run(run: RunController): Promise<void>;
+  /**
+   * Strategy-level state for one run at a time. A second concurrent run on the same strategy object fails
+   * closed with `ERR_PRISM_LOOP_SHARED_STATE`; declare `state: "run"` instead.
+   */
   snapshot?(): JsonValue;
   restore?(snapshot: JsonValue): void;
 }

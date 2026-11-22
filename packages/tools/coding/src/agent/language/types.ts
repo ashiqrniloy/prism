@@ -5,12 +5,6 @@ import {
   DEFAULT_MAX_LSP_RESULTS_PER_QUERY,
   DEFAULT_MAX_LSP_SERVERS,
   DEFAULT_MAX_LSP_TIMEOUT_MS,
-  HARD_MAX_LSP_DIAGNOSTICS_PER_FILE,
-  HARD_MAX_LSP_MESSAGE_BYTES,
-  HARD_MAX_LSP_PENDING_REQUESTS,
-  HARD_MAX_LSP_RESULTS_PER_QUERY,
-  HARD_MAX_LSP_SERVERS,
-  HARD_MAX_LSP_TIMEOUT_MS,
   LSP_RESTARTS_PER_SERVER,
   validateCodingLimit,
 } from "../limits.js";
@@ -105,32 +99,15 @@ export interface ResolvedLanguageIntelligenceLimits {
 
 export function resolveLanguageIntelligenceLimits(options?: LanguageIntelligenceLimits): ResolvedLanguageIntelligenceLimits {
   return {
-    maxMessageBytes: validateCodingLimit(
-      "maxMessageBytes",
-      options?.maxMessageBytes ?? DEFAULT_MAX_LSP_MESSAGE_BYTES,
-      HARD_MAX_LSP_MESSAGE_BYTES,
-    ),
+    maxMessageBytes: validateCodingLimit("maxMessageBytes", options?.maxMessageBytes ?? DEFAULT_MAX_LSP_MESSAGE_BYTES),
     maxDiagnosticsPerFile: validateCodingLimit(
       "maxDiagnosticsPerFile",
       options?.maxDiagnosticsPerFile ?? DEFAULT_MAX_LSP_DIAGNOSTICS_PER_FILE,
-      HARD_MAX_LSP_DIAGNOSTICS_PER_FILE,
     ),
-    maxPendingRequests: validateCodingLimit(
-      "maxPendingRequests",
-      options?.maxPendingRequests ?? DEFAULT_MAX_LSP_PENDING_REQUESTS,
-      HARD_MAX_LSP_PENDING_REQUESTS,
-    ),
-    maxResultsPerQuery: validateCodingLimit(
-      "maxResultsPerQuery",
-      options?.maxResultsPerQuery ?? DEFAULT_MAX_LSP_RESULTS_PER_QUERY,
-      HARD_MAX_LSP_RESULTS_PER_QUERY,
-    ),
-    requestTimeoutMs: validateCodingLimit(
-      "requestTimeoutMs",
-      options?.requestTimeoutMs ?? DEFAULT_MAX_LSP_TIMEOUT_MS,
-      HARD_MAX_LSP_TIMEOUT_MS,
-    ),
-    maxServers: validateCodingLimit("maxServers", options?.maxServers ?? DEFAULT_MAX_LSP_SERVERS, HARD_MAX_LSP_SERVERS),
+    maxPendingRequests: validateCodingLimit("maxPendingRequests", options?.maxPendingRequests ?? DEFAULT_MAX_LSP_PENDING_REQUESTS),
+    maxResultsPerQuery: validateCodingLimit("maxResultsPerQuery", options?.maxResultsPerQuery ?? DEFAULT_MAX_LSP_RESULTS_PER_QUERY),
+    requestTimeoutMs: validateCodingLimit("requestTimeoutMs", options?.requestTimeoutMs ?? DEFAULT_MAX_LSP_TIMEOUT_MS),
+    maxServers: validateCodingLimit("maxServers", options?.maxServers ?? DEFAULT_MAX_LSP_SERVERS),
     maxRestartsPerServer: validateCodingLimit(
       "maxRestartsPerServer",
       options?.maxRestartsPerServer ?? LSP_RESTARTS_PER_SERVER,

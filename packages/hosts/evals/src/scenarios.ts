@@ -1,6 +1,6 @@
 import { EvalError } from "./errors.js";
+import { DEFAULT_TRIALS_COUNT } from "./limits.js";
 import { type FailureInjectionOptions, failingStore, failureInjection } from "./failure-injection.js";
-import { HARD_MAX_TRIALS } from "./limits.js";
 import type { ExperimentReport, EvalManifest, ExperimentTrials } from "./types.js";
 
 export { type FailureInjectionOptions, failingStore, failureInjection };
@@ -51,7 +51,7 @@ export function validateReleaseEvalManifest(manifest: EvalManifest, report?: Exp
 }
 
 export type { AgentFactory, ScenarioDefinition, ScenarioTurn, RunScenarioOptions, ScenarioResult } from "./scenario-runner.js";
-export { runScenario, collectWhileRunning, DEFAULT_MAX_SCENARIO_TURNS, HARD_MAX_SCENARIO_TURNS } from "./scenario-runner.js";
+export { runScenario, collectWhileRunning, DEFAULT_MAX_SCENARIO_TURNS } from "./scenario-runner.js";
 
 // ─── Trials Resolution (R-E12) ────────────────────────────────────────────────
 
@@ -67,9 +67,9 @@ export function mulberry32(seed: number): () => number {
 }
 
 export function resolveTrialsConfig(trials?: number, seed?: number): Omit<ExperimentTrials, "sampleCount"> {
-  const count = trials ?? 1;
-  if (!Number.isInteger(count) || count < 1 || count > HARD_MAX_TRIALS) {
-    throw new EvalError(`trials must be an integer in [1, ${HARD_MAX_TRIALS}]`, "ERR_PRISM_EVAL_TRIALS");
+  const count = trials ?? DEFAULT_TRIALS_COUNT;
+  if (!Number.isInteger(count) || count < 1) {
+    throw new EvalError("trials must be a positive integer", "ERR_PRISM_EVAL_TRIALS");
   }
   if (seed !== undefined && !Number.isInteger(seed)) {
     throw new EvalError("seed must be an integer", "ERR_PRISM_EVAL_TRIALS");

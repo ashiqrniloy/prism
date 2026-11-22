@@ -3,8 +3,15 @@
 // awaits the conflicting op and then asserts state — never setTimeout/sleeps.
 
 import assert from "node:assert/strict";
-import type { AgentEventRecord, AgentEventSource, Principal, ProductionPersistenceStore, SessionRecord } from "../contracts.js";
-import { isSessionMetadataConflict } from "../contracts-core.js";
+import type {
+  AgentEventRecord,
+  AgentEventSource,
+  Principal,
+  ProductionPersistenceStore,
+  SessionRecord,
+  SessionStore,
+} from "../contracts.js";
+import { isSessionAppendConflict, isSessionMetadataConflict } from "../contracts-core.js";
 
 /**
  * Narrow router-state seam (structurally satisfied by
@@ -148,6 +155,11 @@ export interface StateConcurrencyFactories {
   readonly idempotency?: () => StateConcurrencyIdempotencyStore | Promise<StateConcurrencyIdempotencyStore>;
   /** Router budget reservation seam: oversubscription + unknown-outcome probes. */
   readonly routerState?: StateConcurrencyRouterFactory;
+  /**
+   * Session-entry seam: the tip race probe (plan 230 Task 2). Concurrent `tip: true` appends at one parent
+   * admit exactly one. The store must declare `tipCheck`.
+   */
+  readonly appends?: () => SessionStore | Promise<SessionStore>;
 }
 
 /**
@@ -169,6 +181,10 @@ export async function assertStateConcurrencyConforms(factories: StateConcurrency
   if (factories.idempotency) {
     await idempotencyRetryProbe(await factories.idempotency());
     executed.push("idempotency-retry");
+  }
+  if (factories.appends) {
+    await tipRaceProbe(await factories.appends());
+    executed.push("tip-race");
   }
   if (factories.routerState) {
     await reservationOversubscriptionProbe(await factories.routerState.create());
@@ -264,6 +280,36 @@ async function idempotencyRetryProbe(idempotency: StateConcurrencyIdempotencySto
     "ERR_PRISM_WORK_IDEMPOTENCY_CONFLICT",
     "a stale-version second complete must be rejected",
   );
+}
+
+/**
+ * Tip race: two writers (here eight) that saw the same tip each append with `tip: true`. Exactly one lands;
+ * every other one is a `SessionAppendConflictError` naming the parent, and writes nothing.
+ */
+async function tipRaceProbe(store: SessionStore): Promise<void> {
+  assert.equal(store.tipCheck, true, "the tip race probe needs a store that declares tipCheck");
+  const sessionId = `tip-race-${Math.random().toString(36).slice(2, 10)}`;
+  const timestamp = "2026-08-03T00:00:00.000Z";
+  await store.append({ id: `${sessionId}-root`, sessionId, timestamp, kind: "label", label: "root" });
+  const racers = await Promise.allSettled(
+    Array.from({ length: 8 }, (_, index) =>
+      store.append(
+        { id: `${sessionId}-racer-${index}`, parentId: `${sessionId}-root`, sessionId, timestamp, kind: "label", label: `racer-${index}` },
+        { expectedParentId: `${sessionId}-root`, tip: true },
+      ),
+    ),
+  );
+  const winners = racers.filter((result) => result.status === "fulfilled");
+  assert.equal(winners.length, 1, "concurrent tip appends at one parent must admit exactly one");
+  for (const result of racers) {
+    if (result.status === "fulfilled") continue;
+    const reason = (result as PromiseRejectedResult).reason;
+    assert.ok(
+      isSessionAppendConflict(reason) && reason.conflict.expectedParentId === `${sessionId}-root`,
+      `a losing tip append must be session_append_conflict: ${String(reason)}`,
+    );
+  }
+  assert.equal((await store.list(sessionId)).length, 2, "losing tip appends must write nothing");
 }
 
 /** Router reservation: parallel admissions cannot oversubscribe; commit/release reconcile actuals. */

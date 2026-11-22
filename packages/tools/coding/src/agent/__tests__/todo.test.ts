@@ -15,7 +15,6 @@ import {
   createTodoWriteTool,
   DEFAULT_MAX_TODO_NO_PROGRESS,
   formatTodoList,
-  HARD_MAX_TODO_ITEMS,
   latestTodoList,
   parseTodoListMetadata,
   parseTodoWriteArgs,
@@ -110,7 +109,8 @@ test("createTodoWriteTool rejects invalid lists with a model-facing error", () =
 
 test("parseTodoWriteArgs accepts an empty list (clear) and enforces hard caps", () => {
   assert.deepEqual(parseTodoWriteArgs({ todos: [] }), []);
-  assert.throws(() => createTodoWriteTool({ maxItems: HARD_MAX_TODO_ITEMS + 1 }), /maxItems must be a positive safe integer/);
+  assert.throws(() => createTodoWriteTool({ maxItems: 0 }), /maxItems must be a positive safe integer/);
+  assert.doesNotThrow(() => createTodoWriteTool({ maxItems: 10_000 }));
   const limits = resolveTodoWriteLimits();
   assert.equal(limits.maxItems > 0, true);
 });

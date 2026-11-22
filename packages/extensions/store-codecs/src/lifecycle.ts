@@ -16,12 +16,15 @@ export type PersistenceResourceKind =
   | "connector_operation";
 
 export const DEFAULT_LIFECYCLE_PAGE_SIZE = 100;
-export const HARD_LIFECYCLE_PAGE_SIZE = 500;
+/**
+ * Default largest page of a checkpoint, lifecycle or feedback listing in the SQL stores; the host sets
+ * `createSqlitePersistence({ maxPageSize })` / `createPostgresPersistence({ maxPageSize })`.
+ */
+export const DEFAULT_MAX_STORE_PAGE_SIZE = 500;
 /**
  * @deprecated No replacement: nothing reads it since the 0.13 split. Kept for the deprecation
  * wave and removed at the next breaking cut (docs/_evidence/dead-export-verification-2026-09-03.md).
  */
-export const DEFAULT_MAX_HOLD_REASON_BYTES = 1024;
 export const HARD_MAX_HOLD_REASON_BYTES = 8 * 1024;
 
 export class PersistenceLifecycleError extends Error {
@@ -154,10 +157,11 @@ export function assertHoldReason(reason: string): string {
   return reason;
 }
 
-export function lifecyclePageLimit(limit?: number): number {
-  const resolved = limit ?? DEFAULT_LIFECYCLE_PAGE_SIZE;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > HARD_LIFECYCLE_PAGE_SIZE) {
-    throw new PersistenceLifecycleError(`limit must be 1..${HARD_LIFECYCLE_PAGE_SIZE}`, "ERR_PRISM_LIFECYCLE_LIMITS");
+/** A lifecycle listing's page size: the caller's `limit`, at most the store's `maxPageSize` (default 500). */
+export function lifecyclePageLimit(limit?: number, maxPageSize: number = DEFAULT_MAX_STORE_PAGE_SIZE): number {
+  const resolved = limit ?? Math.min(DEFAULT_LIFECYCLE_PAGE_SIZE, maxPageSize);
+  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > maxPageSize) {
+    throw new PersistenceLifecycleError(`limit must be 1..${maxPageSize}`, "ERR_PRISM_LIFECYCLE_LIMITS");
   }
   return resolved;
 }

@@ -26,6 +26,9 @@ import type {
 import { requireSimulator, nextSimulatedUser } from "./user-simulator.js";
 import { toErrorInfo } from "./util.js";
 
+const DEFAULT_SIMULATED_USER_MAX_TURNS = 8;
+const DEFAULT_SIMULATED_RUN_MAX_TURNS = 32;
+
 // ─── Multi-Turn Scenarios (R-E12) ─────────────────────────────────────────────
 
 export interface ScenarioTurn {
@@ -74,7 +77,6 @@ export interface ScenarioResult {
 }
 
 export const DEFAULT_MAX_SCENARIO_TURNS = 8;
-export const HARD_MAX_SCENARIO_TURNS = 32;
 
 /** Collect session events until `work` settles, then close the subscriber. No timeout drain. */
 export async function collectWhileRunning<T>(
@@ -263,8 +265,8 @@ export function validateScenario(options: {
   }
   const requestedMax = options.maxTurns ?? DEFAULT_MAX_SCENARIO_TURNS;
   // Bound violations are configuration errors: a silently truncated scenario passes for the wrong reason.
-  if (!Number.isInteger(requestedMax) || requestedMax < 1 || requestedMax > HARD_MAX_SCENARIO_TURNS) {
-    throw new EvalError(`maxTurns must be an integer in [1, ${HARD_MAX_SCENARIO_TURNS}]`, "ERR_PRISM_EVAL_SCENARIO_BOUNDS");
+  if (!Number.isInteger(requestedMax) || requestedMax < 1) {
+    throw new EvalError("maxTurns must be a positive integer", "ERR_PRISM_EVAL_SCENARIO_BOUNDS");
   }
   if (options.turns && options.turns.length > requestedMax) {
     throw new EvalError(`scenario has ${options.turns!.length} turns but maxTurns is ${requestedMax}`, "ERR_PRISM_EVAL_SCENARIO_BOUNDS");
@@ -289,7 +291,9 @@ export async function executeScenario(
     stopReason,
     simulatorModel: user!.simulatorModel,
   });
-  const maxTurns = user ? Math.min(user.maxTurns ?? 8, options.maxTurns ?? 32) : options.turns!.length;
+  const maxTurns = user
+    ? Math.min(user.maxTurns ?? DEFAULT_SIMULATED_USER_MAX_TURNS, options.maxTurns ?? DEFAULT_SIMULATED_RUN_MAX_TURNS)
+    : options.turns!.length;
   for (let turnIndex = 0; turnIndex < maxTurns; turnIndex++) {
     const turn = user ? await nextSimulatedUser(user, turns, redactor, options.signal) : options.turns![turnIndex]!;
     if (user && turn === user.stop) return simulation("goal_reached");

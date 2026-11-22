@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { parseErrorBody, providerHttpError, RETRYABLE_STATUSES, readRetryAfterMs } from "../provider-kit/retry-http.js";
+import { parseErrorBody, providerHttpError, RETRYABLE_STATUSES } from "../provider-kit/retry-http.js";
+import { parseRetryAfterMs } from "../provider-kit/transport.js";
 
 describe("@arnilo/prism/provider-kit (retry-http)", () => {
   it("retry_http_status_table_covers_429_and_5xx_only", () => {
@@ -10,26 +11,26 @@ describe("@arnilo/prism/provider-kit (retry-http)", () => {
   });
 
   it("retry_http_reads_retry_after_from_header_objects_and_headers_instances", () => {
-    assert.equal(readRetryAfterMs({ "retry-after": "2" }), 2000);
-    assert.equal(readRetryAfterMs({ "Retry-After": "2" }), 2000, "header names are case-insensitive");
-    assert.equal(readRetryAfterMs({ "retry-after": "1.5" }), 1500, "fractional seconds round to ms");
-    assert.equal(readRetryAfterMs(new Headers({ "retry-after": "3" })), 3000);
-    assert.equal(readRetryAfterMs({ "retry-after": " 4 " }), 4000, "surrounding whitespace is tolerated");
+    assert.equal(parseRetryAfterMs({ "retry-after": "2" }), 2000);
+    assert.equal(parseRetryAfterMs({ "Retry-After": "2" }), 2000, "header names are case-insensitive");
+    assert.equal(parseRetryAfterMs({ "retry-after": "1.5" }), 1500, "fractional seconds round to ms");
+    assert.equal(parseRetryAfterMs(new Headers({ "retry-after": "3" })), 3000);
+    assert.equal(parseRetryAfterMs({ "retry-after": " 4 " }), 4000, "surrounding whitespace is tolerated");
   });
 
   it("retry_http_returns_no_hint_for_absent_or_malformed_values", () => {
-    assert.equal(readRetryAfterMs(undefined), undefined);
-    assert.equal(readRetryAfterMs({}), undefined);
-    assert.equal(readRetryAfterMs({ "retry-after": "" }), undefined);
-    assert.equal(readRetryAfterMs({ "retry-after": "   " }), undefined);
-    assert.equal(readRetryAfterMs({ "retry-after": "soon" }), undefined);
-    assert.equal(readRetryAfterMs({ "retry-after": "-1" }), undefined, "negative delays are not a hint");
+    assert.equal(parseRetryAfterMs(undefined), undefined);
+    assert.equal(parseRetryAfterMs({}), undefined);
+    assert.equal(parseRetryAfterMs({ "retry-after": "" }), undefined);
+    assert.equal(parseRetryAfterMs({ "retry-after": "   " }), undefined);
+    assert.equal(parseRetryAfterMs({ "retry-after": "soon" }), undefined);
+    assert.equal(parseRetryAfterMs({ "retry-after": "-1" }), undefined, "negative delays are not a hint");
     // The body fallback is off unless the caller passes it (NeuralWatt's `error.retry_after`).
-    assert.equal(readRetryAfterMs({}, 5), 5000);
-    assert.equal(readRetryAfterMs({}, "5"), 5000);
-    assert.equal(readRetryAfterMs({}, Number.NaN), undefined);
-    assert.equal(readRetryAfterMs({}, { seconds: 5 }), undefined);
-    assert.equal(readRetryAfterMs({ "retry-after": "1" }, 9), 1000, "an explicit header wins over the body field");
+    assert.equal(parseRetryAfterMs({}, 5), 5000);
+    assert.equal(parseRetryAfterMs({}, "5"), 5000);
+    assert.equal(parseRetryAfterMs({}, Number.NaN), undefined);
+    assert.equal(parseRetryAfterMs({}, { seconds: 5 }), undefined);
+    assert.equal(parseRetryAfterMs({ "retry-after": "1" }, 9), 1000, "an explicit header wins over the body field");
   });
 
   it("retry_http_parse_error_body_accepts_only_object_envelopes", () => {

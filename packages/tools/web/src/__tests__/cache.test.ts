@@ -131,13 +131,7 @@ test("cache_defaults_and_validation", () => {
   assert.equal(configured.maxBytes, DEFAULT_CACHE_MAX_BYTES);
   assert.equal(configured.annotated, true);
 
-  for (const config of [
-    { ttlSeconds: 0 },
-    { ttlSeconds: 86_401 },
-    { ttlSeconds: 1.5 },
-    { ttlSeconds: 60, maxEntries: 0 },
-    { ttlSeconds: 60, maxBytes: 0 },
-  ])
+  for (const config of [{ ttlSeconds: 0 }, { ttlSeconds: 1.5 }, { ttlSeconds: 60, maxEntries: 0 }, { ttlSeconds: 60, maxBytes: 0 }])
     assert.throws(
       () => resolveFetchCache(config as never),
       (error: unknown) => error instanceof WebToolError && error.code === "ERR_PRISM_WEB_INPUT" && /cache\./u.test(error.message),

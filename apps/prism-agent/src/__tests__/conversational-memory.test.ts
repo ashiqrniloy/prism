@@ -100,14 +100,8 @@ test("reference_host_memory_opt_in_loads_the_memory_system_with_ltm", async () =
           agent.inspect().commands.some((command) => command.name === "memory:session"),
           "the session tiers' toggle",
         );
-        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), [
-          "background",
-          "credentials",
-          "host-ui",
-          "models",
-          "session-state",
-          "slot:compaction",
-        ]);
+        // LLM compaction is the workers' default compaction system, so the memory system claims no slot (plan 218.3 Task 2).
+        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), ["background", "credentials", "host-ui", "models", "session-state"]);
         assert.equal(names.includes("@arnilo/prism-extensions/compaction"), true, "compaction stays on the compaction slot");
       }
       assert.equal(
@@ -251,6 +245,35 @@ test("ontology_option_is_validated_in_the_config_file", () => {
     assert.equal(load({ ontology: true }).ontology, true, "the wiki needs no memory");
     assert.throws(() => load({ memory: "coding", ontology: "yes" }), /ontology must be a boolean/);
     assert.throws(() => load({ memory: "coding", ontologyModel: "openai/gpt-5-mini" }), /ontologyModel needs ontology/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("compaction_option_picks_one_system_and_session_memory_needs_memory", () => {
+  const root = mkdtempSync(join(tmpdir(), "pa-compaction-config-"));
+  const path = join(root, "prism-agent.json");
+  const write = (extra: Record<string, unknown>) =>
+    writeFileSync(
+      path,
+      JSON.stringify({
+        models: { orchestrator: MODEL, coding: MODEL, research: MODEL },
+        storePath: join(root, "sessions.db"),
+        workspace: join(root, "workspace"),
+        approval: "ask",
+        web: { backend: "obscura" },
+        ...extra,
+      }),
+    );
+  try {
+    write({ compaction: "fold" });
+    assert.throws(() => loadHostConfig(path), /compaction must be llm or session-memory/);
+    write({ compaction: "session-memory" });
+    assert.throws(() => loadHostConfig(path), /compaction: session-memory needs memory/);
+    write({ memory: "conversational", compaction: "session-memory" });
+    assert.equal(loadHostConfig(path).compaction, "session-memory");
+    write({ memory: "conversational" });
+    assert.equal(loadHostConfig(path).compaction, undefined, "unset means LLM compaction");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -37,20 +37,22 @@ per call. Without memory it runs on its own sources, and `wiki:status` says so.
 |---|---|---|---|
 | `root` | string | `<workspaceRoot>/.prism/wiki` | Contract. Where the store lives and sources are staged. One root serves one project's memory; keep it outside memory's `tools.root`, which mirrors the files under it as notes. |
 | `store` | `"markdown" \| "memory"` | `"markdown"` | Contract. `memory` keeps the wiki for one process (tests, demos). |
-| `search.maxClaimsRendered` | integer 1–32 | `8` | Tuning. Claims one concept hit shows in `wiki.search`, chosen by term overlap with the query. |
-| `bindThreshold` | integer 1–8 | `2` | Tuning. Matched tokens of one subject name (slug, title or alias) that bind evidence to that subject when exactly one subject qualifies; a whole multi-token name always qualifies. |
+| `search.maxClaimsRendered` | integer ≥ 1 | `8` | Tuning. Claims one concept hit shows in `wiki.search`, chosen by term overlap with the query. |
+| `search.maxSearchHits` | integer ≥ 1 | `8` | Tuning. Ceiling on the model's `wiki.search` `limit`; the model's argument never raises it. |
+| `search.maxReadIds` | integer ≥ 1 | `8` | Tuning. Ceiling on the ids one `wiki.read` call takes. |
+| `bindThreshold` | integer ≥ 1 | `2` | Tuning. Matched tokens of one subject name (slug, title or alias) that bind evidence to that subject when exactly one subject qualifies; a whole multi-token name always qualifies. |
 | `pointer` | boolean | `true` | Contract. Add the passive concept pointer to `context.build`. |
 | `consolidate.model` | string | the agent's model | Model ref for the concept pass. Never a secret. |
-| `consolidate.minNotes` | integer 1–100 | `5` | Tuning. A bound subject with this many uncited notes, or this many unbound notes sharing a keyword, is due. |
-| `consolidate.minCoReads` | integer 1–20 | `2` | Tuning. Notes read and used together in this many answering turns are due. |
+| `consolidate.minNotes` | integer ≥ 1 | `5` | Tuning. A bound subject with this many uncited notes, or this many unbound notes sharing a keyword, is due. |
+| `consolidate.minCoReads` | integer ≥ 1 | `2` | Tuning. Notes read and used together in this many answering turns are due. |
 | `consolidate.triggers` | `("co-read" \| "accumulation" \| "repair")[]` | all three | Contract. Which policies start a pass. `repair` cannot be removed. |
-| `consolidate.minIntervalTurns` | integer 1–1000 | `5` | Tuning. Check for due work at most once per this many completed turns. |
-| `consolidate.maxSubjectsPerPass` | integer 1–32 | `8` | Tuning. Subjects and clusters consolidated per pass: at most one model call each, plus one repair. |
-| `consolidate.maxClaimsPerConcept` | integer 1–200 | `40` | Tuning. Claims a concept may hold. At the cap only merging and retiring are accepted. |
-| `consolidate.maxOutputTokens` | integer 256–16384 | provider default | Output cap for one concept call, capped by the model's own limit. |
-| `consolidate.workerLimits` | object | memory-core's limits | The worker-loop limits (`maxTurns`, `maxMessageBytes`, …), the same names and hard caps as `resolveMemoryWorkerLimits` in `@arnilo/prism-memory-system/core`. |
-| `ingest.maxInputBytes` | integer | 33554432 (32 MiB) | Input cap for `wiki_ingest`. Can only be lowered. |
-| `ingest.maxExtractBytes` | integer | 2097152 (2 MiB) | Extract cap; a larger extract is truncated. Can only be lowered. |
+| `consolidate.minIntervalTurns` | integer ≥ 1 | `5` | Tuning. Check for due work at most once per this many completed turns. |
+| `consolidate.maxSubjectsPerPass` | integer ≥ 1 | `8` | Tuning. Subjects and clusters consolidated per pass: at most one model call each, plus one repair. |
+| `consolidate.maxClaimsPerConcept` | integer ≥ 1 | `40` | Tuning. Claims a concept may hold. At the cap only merging and retiring are accepted. |
+| `consolidate.maxOutputTokens` | integer ≥ 256 | provider default | Output cap for one concept call, capped by the model's own limit. |
+| `consolidate.workerLimits` | object | memory-core's limits | The worker-loop limits (`maxTurns`, `maxMessageBytes`, …), the same names and defaults as `resolveMemoryWorkerLimits` in `@arnilo/prism-memory-system/core`. |
+| `ingest.maxInputBytes` | integer | 33554432 (32 MiB) | Input cap for `wiki_ingest`. The host's value is the cap. |
+| `ingest.maxExtractBytes` | integer | 2097152 (2 MiB) | Extract cap; a larger extract is truncated. The host's value is the cap. |
 | `workspaceRoot` | string | `process.cwd()` | Root that `path` ingest sources must resolve inside. |
 
 Unknown fields are rejected, so a 0.12 config fails at load. The 0.12 fields are gone (`docs/migrate-to-0.13.md`). Tuning fields may change between minor versions; `consolidate.model`, `consolidate.triggers` and the edit vocabulary below are contract.

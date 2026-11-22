@@ -15,10 +15,10 @@ import type { WikiConceptRecord } from "../store.js";
 
 export const WIKI_SEARCH_TOOL = "wiki.search";
 export const WIKI_READ_TOOL = "wiki.read";
-/** Concepts one search returns at most. */
-export const MAX_WIKI_SEARCH_HITS = 8;
-/** Ids one `wiki.read` takes. */
-export const MAX_WIKI_READ_IDS = 8;
+/** Concepts one search returns at most, by default. The model picks `limit`; the host sets this ceiling (`search.maxSearchHits`). */
+export const DEFAULT_MAX_WIKI_SEARCH_HITS = 8;
+/** Ids one `wiki.read` takes, by default. The model picks the ids; the host sets this ceiling (`search.maxReadIds`). */
+export const DEFAULT_MAX_WIKI_READ_IDS = 8;
 /** Cited ids one search checks for readability. */
 const MAX_CITE_CHECK_IDS = 256;
 
@@ -26,6 +26,10 @@ export interface WikiKnowledgeToolOptions {
   readonly port: () => WikiOntologyPort;
   /** Claims one concept hit shows (`search.maxClaimsRendered`). */
   readonly maxClaimsRendered: number;
+  /** Ceiling on the model's `wiki.search` `limit`. Default {@link DEFAULT_MAX_WIKI_SEARCH_HITS}. */
+  readonly maxSearchHits?: number;
+  /** Ceiling on the ids one `wiki.read` takes. Default {@link DEFAULT_MAX_WIKI_READ_IDS}. */
+  readonly maxReadIds?: number;
 }
 
 const ok = (name: string, toolCallId: string, text: string, value: JsonObject): ToolResult => ({
@@ -68,6 +72,7 @@ function readableOnly(doc: ConceptDoc, readable: ReadonlySet<string>): ConceptDo
 }
 
 export function createWikiSearchTool(options: WikiKnowledgeToolOptions): ToolDefinition {
+  const maxHits = options.maxSearchHits ?? DEFAULT_MAX_WIKI_SEARCH_HITS;
   return {
     name: WIKI_SEARCH_TOOL,
     kind: "read",
@@ -80,14 +85,14 @@ export function createWikiSearchTool(options: WikiKnowledgeToolOptions): ToolDef
       properties: {
         query: { type: "string", minLength: 1, maxLength: 2000, description: "What to look for." },
         scope: { type: "string", enum: [...WIKI_SCOPE_LEVELS], description: "Only this scope; defaults to every readable scope." },
-        limit: { type: "integer", minimum: 1, maximum: MAX_WIKI_SEARCH_HITS, description: "Concepts to return; default 3." },
+        limit: { type: "integer", minimum: 1, maximum: maxHits, description: "Concepts to return; default 3." },
       },
     },
     async execute(args, context) {
       const port = options.port();
       await port.refresh(context.signal === undefined ? {} : { signal: context.signal });
       if (typeof args.query !== "string" || args.query.trim().length === 0) throw new MemoryValidationError("query is required");
-      const limit = typeof args.limit === "number" ? Math.min(Math.max(1, Math.trunc(args.limit)), MAX_WIKI_SEARCH_HITS) : 3;
+      const limit = typeof args.limit === "number" ? Math.min(Math.max(1, Math.trunc(args.limit)), maxHits) : 3;
       const terms = lexicalTerms(args.query);
       const ranked: { record: WikiConceptRecord; doc: ConceptDoc | undefined; score: number }[] = [];
       for (const scope of scopesArg(port, args.scope)) {
@@ -130,17 +135,17 @@ export function createWikiSearchTool(options: WikiKnowledgeToolOptions): ToolDef
 }
 
 export function createWikiReadTool(options: WikiKnowledgeToolOptions): ToolDefinition {
+  const maxIds = options.maxReadIds ?? DEFAULT_MAX_WIKI_READ_IDS;
   return {
     name: WIKI_READ_TOOL,
     kind: "read",
-    description:
-      "Read a wiki concept (by id or subject) with its claim ids and citations, or up to 8 cited notes by id (memory notes or wiki sources).",
+    description: `Read a wiki concept (by id or subject) with its claim ids and citations, or up to ${maxIds} cited notes by id (memory notes or wiki sources).`,
     parameters: {
       type: "object",
       additionalProperties: false,
       properties: {
         id: { type: "string", pattern: "^[0-9a-f]{12}$", description: "A concept or cited note id." },
-        ids: { type: "array", items: { type: "string", pattern: "^[0-9a-f]{12}$" }, maxItems: MAX_WIKI_READ_IDS },
+        ids: { type: "array", items: { type: "string", pattern: "^[0-9a-f]{12}$" }, maxItems: maxIds },
         subject: { type: "string", pattern: "^[a-z0-9.-]{1,64}$", description: "A concept's subject." },
         scope: { type: "string", enum: [...WIKI_SCOPE_LEVELS], description: "Only this scope; defaults to every readable scope." },
       },
@@ -155,7 +160,7 @@ export function createWikiReadTool(options: WikiKnowledgeToolOptions): ToolDefin
       ];
       const subject = typeof args.subject === "string" ? args.subject : undefined;
       if (ids.length === 0 && subject === undefined) throw new MemoryValidationError("wiki.read needs id, ids or subject");
-      if (ids.length > MAX_WIKI_READ_IDS) throw new MemoryValidationError(`wiki.read takes at most ${MAX_WIKI_READ_IDS} ids`);
+      if (ids.length > maxIds) throw new MemoryValidationError(`wiki.read takes at most ${maxIds} ids`);
       const parts: string[] = [];
       const found: JsonObject[] = [];
       const wanted = new Set(ids);

@@ -2,8 +2,9 @@ import type { JsonObject, ModelProvider, ProviderEvent, ProviderRequest, Usage }
 import {
   createRoutedProvider,
   mapOpenAIChatUsage,
+  parseRetryAfterMs,
   providerHttpError,
-  readRetryAfterMs,
+  type ProviderTransportConfig,
   type RoutedProviderRoute,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
@@ -14,6 +15,8 @@ import { LITELLM_DEFAULT_BASE_URL } from "./models.js";
 export const LITELLM_CALL_ID_METADATA = "litellmCallId";
 
 export interface LiteLLMProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -78,7 +81,7 @@ export function litellmHttpError(response: Response, bodyText: string, secrets: 
     : redacted;
   return providerHttpError(
     "LiteLLM",
-    { status: response.status, code: response.status, retryAfterMs: readRetryAfterMs(response.headers) },
+    { status: response.status, code: response.status, retryAfterMs: parseRetryAfterMs(response.headers) },
     hint + normalized,
     secrets,
   );
@@ -130,6 +133,7 @@ export function createLiteLLMProvider(options: LiteLLMProviderOptions = {}): Mod
   }) as typeof fetch;
 
   const provider = createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "litellm",
     baseUrl: options.baseUrl ?? LITELLM_DEFAULT_BASE_URL,
     ...(options.apiKey !== undefined ? { apiKey: options.apiKey } : {}),

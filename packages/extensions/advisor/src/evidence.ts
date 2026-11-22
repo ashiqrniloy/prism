@@ -15,13 +15,12 @@ export interface ValidationEvidence {
 export const MAX_EVIDENCE_BLOCKS = 16;
 /** Character budget for all evidence text together. */
 export const DEFAULT_EVIDENCE_MAX_CHARS = 48_000;
-export const HARD_EVIDENCE_MAX_CHARS = 120_000;
 /** Cap on the task and on the criteria text, each. */
 export const MAX_TASK_CHARS = 16_000;
 const MAX_LABEL_CHARS = 64;
 
-export const clampEvidenceMaxChars = (value: number | undefined): number =>
-  Math.max(1, Math.min(Math.floor(value ?? DEFAULT_EVIDENCE_MAX_CHARS), HARD_EVIDENCE_MAX_CHARS));
+/** The host's evidence budget (config or service call), or the default. The host's value is the cap. */
+export const clampEvidenceMaxChars = (value: number | undefined): number => Math.max(1, Math.floor(value ?? DEFAULT_EVIDENCE_MAX_CHARS));
 
 /** Throws a `TypeError` on a malformed list; callers turn it into `invalid_input`. */
 export function checkEvidence(evidence: unknown): readonly ValidationEvidence[] {
