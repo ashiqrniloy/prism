@@ -73,7 +73,10 @@ describe("LLM compaction fits its kept tail to the window (plan 240 Task 5)", ()
     const all = prepareLlmCompaction({ entries, inputCapTokens: 8_000 }, { keepRecentTokens: 20_000, maxKeptShare: 1 });
     assert.ok(all.entriesToKeep.some((entry) => entry.id === "a1"));
     const fit = prepareLlmCompaction({ entries, inputCapTokens: 8_000 }, { keepRecentTokens: 20_000 });
-    assert.equal(fit.entriesToKeep.some((entry) => entry.id === "a1"), false);
+    assert.equal(
+      fit.entriesToKeep.some((entry) => entry.id === "a1"),
+      false,
+    );
   });
 
   it("default_kept_tail_is_a_share_of_the_input_cap", () => {

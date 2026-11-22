@@ -121,7 +121,8 @@ export const memoryCompactionConfigSchema: JsonSchema = {
       minimum: 0.01,
       maximum: 1,
       default: MAX_KEPT_SHARE,
-      description: "Largest share of the model's input cap the kept tail may take; past it the oldest kept entries are summarized. 1 lets it take the whole cap.",
+      description:
+        "Largest share of the model's input cap the kept tail may take; past it the oldest kept entries are summarized. 1 lets it take the whole cap.",
     },
     trigger: {
       description: 'Auto-compaction gate, e.g. { "type": "input_ratio", "ratio": 0.8 }. Omitted: the kernel threshold applies.',

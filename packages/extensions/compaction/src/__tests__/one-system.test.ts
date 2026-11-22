@@ -37,7 +37,10 @@ describe("one compaction system per agent", () => {
 
   it("one_compaction_system_error_names_the_switch", async () => {
     // Plan 240 Task 5: whichever loads second, the refusal tells the host how to keep the other one.
-    await assert.rejects(createAgent({ model, packages: [memorySystem({}), compaction({})] }), failsWith(/set its context\.compaction: false/));
+    await assert.rejects(
+      createAgent({ model, packages: [memorySystem({}), compaction({})] }),
+      failsWith(/set its context\.compaction: false/),
+    );
     await assert.rejects(createAgent({ model, packages: [compaction({}), memorySystem({})] }), failsWith(/set context\.compaction: false/));
   });
 
