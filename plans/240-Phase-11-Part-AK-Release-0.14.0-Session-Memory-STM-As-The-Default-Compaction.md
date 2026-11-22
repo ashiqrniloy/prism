@@ -661,7 +661,7 @@
     - **Spend:** about 13M Session-Bench tokens plus the smokes, under the 30M ceiling.
     - **Evidence:** `docs/_evidence/memory-bench/240/release-defaults-check.json`.
 
-- [ ] Task 11: Release preflight on a clean tree
+- [x] Task 11: Release preflight on a clean tree
   - Acceptance Criteria:
     - Functional:
       - From a clean `main` (no untracked or modified files), these pass:
@@ -688,6 +688,19 @@
     - Docs pages to create/edit: none.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22):
+    - **`bun run sdk:ready` on a clean tree:**
+      - typecheck, lint, format check and `bun run test` (9/9 stages, including the timing benchmarks and build race that failed under load earlier) pass.
+      - The first run failed typecheck on the new `empty-summary-retry.test.ts` (`assert.rejects` needs an async thunk); fixed.
+      - `test:coverage` failed: the new `@arnilo/prism-hosts/a2a` (plan 236) had no row in `scripts/coverage-thresholds.json`. It measured 90.28 lines / 92.13 functions, so the row is 87.28 lines (the standard 3pp margin), with a dated note. Coverage then passes.
+      - `pack:dry-run` passes.
+      - `release:gate` stops only at `checkReleaseEvidence` (`PRISM_TEST_POSTGRES_URL` not set), as at 0.13.1. That evidence comes from CI's `integration-postgres` job in `release.yml`. `bun scripts/release.mjs gate` (compat, ranges, tarballs, budgets) exits 0.
+    - **`security:threat-suites`:** 3 failures in `scripts/phase21-security.test.mjs` (truncated streams). The cause was in the tests: they passed one `Response` object to several providers, so the second provider read an already-consumed body ("ReadableStream is locked").
+      - A direct check with a fresh response per fetch shows the product contract holds: one fetch each time; the strict default rejects "without completion evidence"; `strictCompletion: false` completes.
+      - The tests now build a fresh truncated response per fetch, and all 52 pass, including the blocker-accounting test.
+    - **`bun scripts/sbom.mjs`** passes.
+    - **Left to the owner (Task 12):** confirm the npm trusted publishers for all seven names (hosts had expired at 0.13.1), and give the word for the push and the tags.
 
 - [ ] Task 12: Bump, tag and publish 0.14.0 (owner-gated), then verify
   - Acceptance Criteria:

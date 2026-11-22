@@ -52,11 +52,12 @@ function sseResponse(events) {
 
 describe("phase21 security conformance (plan 021 Task 7, built public entrypoints)", () => {
   it("T1/T2/T14: truncated streams reject by default; strictCompletion:false is the documented opt-out", async () => {
-    const truncated = sseResponse(["data: [DONE]"]);
+    // A Response body can be read once: each fetch answers a fresh truncated stream.
+    const truncated = () => sseResponse(["data: [DONE]"]);
     const provider = createOpenAICompatibleProvider({
       apiKey: async () => "key",
       baseUrl: "https://api.example.com/v1",
-      fetch: async () => truncated,
+      fetch: async () => truncated(),
     });
     const events = [];
     for await (const event of provider.generate({ ...request, model: { provider: "mock", model: "demo" } })) events.push(event);
@@ -74,7 +75,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
       apiKey: async () => "key",
       baseUrl: "https://api.example.com/v1",
       strictCompletion: false,
-      fetch: async () => truncated,
+      fetch: async () => truncated(),
     });
     const permissiveEvents = [];
     for await (const event of permissive.generate({ ...request, model: { provider: "mock", model: "demo" } })) permissiveEvents.push(event);
@@ -86,10 +87,11 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
   });
 
   it("T1: inheriting adapters reject truncated streams (built constructors)", async () => {
-    const truncated = sseResponse(["data: [DONE]"]);
+    // A Response body can be read once: each fetch answers a fresh truncated stream.
+    const truncated = () => sseResponse(["data: [DONE]"]);
     const adapters = [
-      createHyperProvider({ apiKey: async () => "phase21-truncation-key", fetch: async () => truncated }),
-      createOpenCodeGoProvider({ apiKey: async () => "phase21-truncation-key", fetch: async () => truncated }),
+      createHyperProvider({ apiKey: async () => "phase21-truncation-key", fetch: async () => truncated() }),
+      createOpenCodeGoProvider({ apiKey: async () => "phase21-truncation-key", fetch: async () => truncated() }),
     ];
     for (const provider of adapters) {
       const events = [];
