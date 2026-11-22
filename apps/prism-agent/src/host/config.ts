@@ -47,10 +47,10 @@ export interface HostConfig {
   /** Opt-in memory for the research and coding workers. `coding` adds standing decisions and path rules. */
   readonly memory?: "conversational" | "coding";
   /**
-   * The workers' compaction system; one runs per agent (plan 218.3 Task 2). `"llm"` (default): LLM compaction with
-   * tool-result folding, and session memory (when `memory` is set) only records and recalls. `"session-memory"` (needs
-   * `memory`): session memory is on for every session and is the only compaction, on its two triggers; LLM compaction
-   * and folding are not listed.
+   * The workers' compaction system; one runs per agent (plan 218.3 Task 2). `"session-memory"` (default since plan 240
+   * Task 6): session memory's STM records every session and is the only compaction, on its two triggers; working memory
+   * stays off, and `memory` adds long-term memory. `"llm"`: LLM compaction with tool-result folding; session memory loads
+   * only with `memory`, and then only records and recalls.
    */
   readonly compaction?: "llm" | "session-memory";
   /**
@@ -276,9 +276,6 @@ export function loadHostConfig(path: string): HostConfig {
   }
   if (parsed.compaction !== undefined && parsed.compaction !== "llm" && parsed.compaction !== "session-memory") {
     throw new Error("prism-agent config compaction must be llm or session-memory");
-  }
-  if (parsed.compaction === "session-memory" && parsed.memory === undefined) {
-    throw new Error("prism-agent config compaction: session-memory needs memory");
   }
   if (parsed.ontology !== undefined && typeof parsed.ontology !== "boolean") {
     throw new Error("prism-agent config ontology must be a boolean");

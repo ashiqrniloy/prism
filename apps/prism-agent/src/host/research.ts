@@ -9,7 +9,7 @@ import { toolsWeb } from "@arnilo/prism-tools/web";
 import type { HostConfig, HostDeps } from "./config.js";
 import { sessionLimitsConfig } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
-import { memoryProfileFor, sessionMemoryCompacts } from "./memory.js";
+import { memoryPackagesFor, sessionMemoryCompacts } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
 import { runLedgerConfig, sqlitePackage } from "./store.js";
 
@@ -51,7 +51,7 @@ export async function createResearchWorker(config: HostConfig, deps: HostDeps = 
       // Experimental packages load only on an opt-in: `embeddings` for the RAG tier, `memory` for the memory
       // system (session tiers and long-term memory). With both unset the worker loads none (plan 215 Task 3).
       ...(config.embeddings === undefined ? [] : [memoryRag({ embeddings: { model: config.embeddings.model } })]),
-      ...(config.memory === undefined ? [] : [memoryProfileFor({ ...config, memory: config.memory }, config.models.research)]),
+      ...memoryPackagesFor(config, config.models.research),
       ...ontologyPackages(config, config.workspace),
       toolsResearch({ maxRepairs: repairs }),
       approvalPackage({ mode: "ask", rules: ALLOWED.map((tool) => ({ tool })) }),

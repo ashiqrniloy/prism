@@ -10,7 +10,7 @@ import { toolsCoding } from "@arnilo/prism-tools/coding";
 import type { HostConfig, HostDeps } from "./config.js";
 import { hostPortOf, sessionLimitsConfig } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
-import { memoryProfileFor, sessionMemoryCompacts } from "./memory.js";
+import { memoryPackagesFor, sessionMemoryCompacts } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
 import { runLedgerConfig, sqlitePackage } from "./store.js";
 
@@ -42,8 +42,8 @@ export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}
       sqlitePackage(config.storePath),
       toolsCoding({ root: config.workspace, principal: { id: "prism-agent" } }),
       approvalPackage({ mode: config.approval }),
-      // Memory is the experimental opt-in: unset, the worker loads no experimental package (plan 215 Task 3).
-      ...(config.memory === undefined ? [] : [memoryProfileFor({ ...config, memory: config.memory }, config.models.coding)]),
+      // Session memory is the default compaction system (plan 240 Task 6); `memory` adds long-term memory.
+      ...memoryPackagesFor(config, config.models.coding),
       ...ontologyPackages(config, config.workspace),
       contextFiles({ root: config.workspace }),
       hooksFromWorkspace(config.workspace),

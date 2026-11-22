@@ -383,6 +383,18 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
+  - Notes (in progress 2026-11-22):
+    - **Host: done.**
+      - `sessionMemoryCompacts` is true unless `compaction: "llm"`.
+      - The new `memoryPackagesFor` lists the memory system with `enabled: true`, no `wm`, and `ltm` only with `memory`. Under `"llm"`, it lists the memory system only with `memory`, with session compaction off.
+      - The "session-memory needs memory" refusal is removed.
+      - Tests: LLM-specific tests opt into `compaction: "llm"`; the default test asserts session memory (enabled, no WM, slot owner); `reference_host_llm_compaction_is_opt_in` is added. prism-agent passes 74.
+      - The README's `compaction` paragraph is updated.
+    - **Left:**
+      - README rows 24–25 and 42–51 and the experimental banner (`:118-122`);
+      - the kit's `SKILL.md:52`, `choosing.md`, `recipes.md` and `pitfalls.md:41-42`, then `bun scripts/host-builder-index.mjs` and the evals' criteria lock;
+      - the full gate.
+
 - [ ] Task 7: The memory bundle leaves the experimental line (per D1)
   - Acceptance Criteria:
     - Functional:

@@ -145,12 +145,11 @@ runs on `ontologyModel` (a model ref, never a key) when the config names one and
 model otherwise. The host adds the package and nothing else. The wiki is unmeasured, which is why it is
 not the default.
 
-`compaction` picks the workers' compaction system; one runs per agent. `"llm"` (the default) keeps LLM compaction
-(`@arnilo/prism-extensions/compaction`) with tool-result folding, and the memory system's session tiers only record
-and recall (`context: { compaction: false }`; a session turns them on with `memory:session`). `"session-memory"`
-(needs `memory`) turns session memory on for every session and makes it the only compaction, on its two triggers:
-mid-loop at 0.8 of the input cap, and between loops at the model's measured budget (below), else 80,000 tokens. The
-workers then list neither LLM compaction nor folding.
+`compaction` picks the workers' compaction system; one runs per agent. `"session-memory"` (the default) lists the memory
+system with every session on (`enabled: true`): STM records the session and is the only compaction, on its two triggers,
+and working memory stays off. `memory` adds long-term memory to it. `"llm"` opts into LLM compaction
+(`@arnilo/prism-extensions/compaction`) with tool-result folding; the memory system then loads only with `memory`, and
+only records and recalls (`context: { compaction: false }`).
 
 The markdown store lives under `<dirname(storePath)>/memory`, inside the host's data directory, and
 the fabric jails it to that `tools.root`. Exchanges are shared by every session on one store: the

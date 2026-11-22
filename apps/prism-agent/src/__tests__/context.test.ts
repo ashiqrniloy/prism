@@ -41,7 +41,7 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
   const root = mkdtempSync(join(tmpdir(), "prism-agent-budget-"));
   mkdirSync(join(root, "workspace"));
   try {
-    const agent = await createCodingWorker(config(root, BUDGET_MODEL), { packages: packages("opencode-go") });
+    const agent = await createCodingWorker({ ...config(root, BUDGET_MODEL), compaction: "llm" }, { packages: packages("opencode-go") });
     try {
       const compaction = packageConfig(agent, "@arnilo/prism-extensions/compaction");
       assert.equal(compaction.profile, "coding");
@@ -50,7 +50,7 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
       assert.equal(
         agent.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-system"),
         false,
-        "the observational memory is part of the experimental memory opt-in, not the default path",
+        "with compaction: llm and no memory opt-in, the memory system is not listed",
       );
 
       const engineering = packageConfig(agent, "@arnilo/prism-extensions/context-engineering");
@@ -75,7 +75,7 @@ test("memory_opt_in_keeps_llm_compaction_and_turns_session_compaction_off", asyn
   try {
     for (const create of [createCodingWorker, createResearchWorker]) {
       const agent = await create(
-        { ...config(root, BUDGET_MODEL, BUDGET_MODEL), memory: "conversational" },
+        { ...config(root, BUDGET_MODEL, BUDGET_MODEL), memory: "conversational", compaction: "llm" },
         { packages: packages("opencode-go") },
       );
       try {
@@ -127,7 +127,10 @@ test("research_worker_caps_block_share", async () => {
   const root = mkdtempSync(join(tmpdir(), "prism-agent-research-context-"));
   mkdirSync(join(root, "workspace"));
   try {
-    const agent = await createResearchWorker(config(root, MOCK, BUDGET_MODEL), { packages: packages("opencode-go") });
+    const agent = await createResearchWorker(
+      { ...config(root, MOCK, BUDGET_MODEL), compaction: "llm" },
+      { packages: packages("opencode-go") },
+    );
     try {
       const engineering = packageConfig(agent, "@arnilo/prism-extensions/context-engineering");
       assert.deepEqual(engineering.blocks, { maxShare: 0.2 });
@@ -150,7 +153,7 @@ test("unlisted_model_uses_ratio_and_notes_once", async () => {
   const root = mkdtempSync(join(tmpdir(), "prism-agent-unlisted-"));
   mkdirSync(join(root, "workspace"));
   try {
-    const agent = await createCodingWorker(config(root), { packages: packages("mock") });
+    const agent = await createCodingWorker({ ...config(root), compaction: "llm" }, { packages: packages("mock") });
     try {
       assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/compaction").trigger, { type: "input_ratio", ratio: 0.6 });
       assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/context-engineering").fold, {
@@ -200,7 +203,7 @@ test("long_session_stays_bounded", async () => {
   const model: ModelConfig = { provider: "mock", model: "long-session", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
   const started = performance.now();
   try {
-    const result = await longSession(config(root, model));
+    const result = await longSession({ ...config(root, model), compaction: "llm" });
     const elapsed = performance.now() - started;
     assert.equal(result.completed, true);
     assert.ok(elapsed < 30_000, `long session took ${Math.round(elapsed)} ms`);
@@ -255,7 +258,7 @@ test("long_session_recovers_from_overflow", async () => {
   mkdirSync(join(root, "workspace"));
   const model: ModelConfig = { provider: "mock", model: "long-session", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
   try {
-    const result = await longSession(config(root, model));
+    const result = await longSession({ ...config(root, model), compaction: "llm" });
     assert.equal(result.completed, true);
     assert.ok(
       compactions(result).some((event) => event.type === "compaction.completed" && event.trigger === "overflow"),

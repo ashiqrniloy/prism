@@ -42,12 +42,8 @@ test("conversational_memory_scenario_recalls_across_sessions_and_forgets", async
   }
 });
 
-const EXPERIMENTAL = [
-  "@arnilo/prism-memory-system/core",
-  "@arnilo/prism-memory-system",
-  "@arnilo/prism-knowledge/wiki",
-  "@arnilo/prism-knowledge/rag",
-];
+// Plan 240 Task 7: the memory bundle left the experimental line at 0.14.0; the knowledge bundle stays on it.
+const EXPERIMENTAL = ["@arnilo/prism-knowledge/wiki", "@arnilo/prism-knowledge/rag"];
 
 test("reference_host_default_loads_no_experimental_package", async () => {
   const root = mkdtempSync(join(tmpdir(), "pa-memory-default-"));
@@ -67,8 +63,23 @@ test("reference_host_default_loads_no_experimental_package", async () => {
           "a default agent loads no experimental package",
         );
       }
-      const compaction = research.inspect().packages.find((entry) => entry.name === "@arnilo/prism-extensions/compaction");
-      assert.ok(compaction, "memory-compaction owns compaction on the default path");
+      // Plan 240 Task 6: session memory is the workers' default compaction system; LLM compaction is the opt-in.
+      for (const agent of [coding, research]) {
+        const names = agent.inspect().packages.map((entry) => entry.name);
+        assert.equal(names.includes("@arnilo/prism-memory-system"), true, "session memory is listed by default");
+        assert.equal(names.includes("@arnilo/prism-extensions/compaction"), false, "LLM compaction is the opt-in");
+        assert.equal(agent.inspect().slots.compaction, "@arnilo/prism-memory-system");
+        const memory = agent.inspect().packages.find((entry) => entry.name === "@arnilo/prism-memory-system");
+        const memoryConfig = memory?.config as { enabled?: boolean; wm?: unknown; ltm?: unknown } | undefined;
+        assert.equal(memoryConfig?.enabled, true, "every session is on");
+        assert.equal(memoryConfig?.wm ?? null, null, "working memory stays off");
+        assert.equal(memoryConfig?.ltm ?? null, null, "no long-term memory without the memory opt-in");
+      }
+      assert.equal(
+        orchestrator.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-system"),
+        false,
+        "the orchestrator keeps the kernel default compactor",
+      );
     } finally {
       await Promise.all([coding.dispose(), research.dispose(), orchestrator.dispose()]);
     }
@@ -90,8 +101,7 @@ test("reference_host_memory_opt_in_loads_the_memory_system_with_ltm", async () =
         assert.equal(names.includes("@arnilo/prism-memory-system"), true);
         const memory = agent.inspect().packages.find((entry) => entry.name === "@arnilo/prism-memory-system");
         assert.notEqual((memory?.config as { ltm?: unknown } | undefined)?.ltm ?? null, null, "the memory opt-in configures ltm");
-        // Plan 216 Task 6: the opt-in is the `ltm` profile plus the `session` profile (stm + wm, OM's per-session
-        // opt-in), with rehearsal resolved on, as before the components existed.
+        // Plan 240 Task 6: the opt-in adds long-term memory to the default session memory (STM, no WM).
         assert.ok(
           agent.inspect().tools.some((tool) => tool.name === "memory.recall"),
           "ltm's tools",
@@ -100,9 +110,16 @@ test("reference_host_memory_opt_in_loads_the_memory_system_with_ltm", async () =
           agent.inspect().commands.some((command) => command.name === "memory:session"),
           "the session tiers' toggle",
         );
-        // LLM compaction is the workers' default compaction system, so the memory system claims no slot (plan 218.3 Task 2).
-        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), ["background", "credentials", "host-ui", "models", "session-state"]);
-        assert.equal(names.includes("@arnilo/prism-extensions/compaction"), true, "compaction stays on the compaction slot");
+        // Session memory is the workers' default compaction system, so the memory system claims the slot (plan 240 Task 6).
+        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), [
+          "background",
+          "credentials",
+          "host-ui",
+          "models",
+          "session-state",
+          "slot:compaction",
+        ]);
+        assert.equal(names.includes("@arnilo/prism-extensions/compaction"), false, "one compaction system per agent");
       }
       assert.equal(
         research.inspect().packages.some((entry) => entry.name === "@arnilo/prism-knowledge/rag"),
@@ -123,7 +140,10 @@ test("research_worker_loads_memory_rag_only_with_embeddings", async () => {
   mkdirSync(join(root, "workspace"));
   try {
     const provider = mockProvider([[providerDone()]]);
-    const research = await createResearchWorker({ ...config(root), embeddings: { model: "mock/embed" } }, { packages: [provider] });
+    const research = await createResearchWorker(
+      { ...config(root), embeddings: { model: "mock/embed" }, compaction: "llm" },
+      { packages: [provider] },
+    );
     try {
       const names = research.inspect().packages.map((entry) => entry.name);
       assert.equal(names.includes("@arnilo/prism-knowledge/rag"), true);
@@ -216,7 +236,7 @@ test("reference_host_ontology_off_by_default", async () => {
       assert.equal(list.includes("@arnilo/prism-knowledge/wiki"), true, "ontology: true adds the wiki beside long-term memory");
     }
     // The wiki runs without memory on its own sources (plan 216 Task 3).
-    for (const list of await names({ ...config(root), ontology: true })) {
+    for (const list of await names({ ...config(root), ontology: true, compaction: "llm" })) {
       assert.equal(list.includes("@arnilo/prism-knowledge/wiki"), true);
       assert.equal(list.includes("@arnilo/prism-memory-system"), false);
     }
@@ -250,7 +270,7 @@ test("ontology_option_is_validated_in_the_config_file", () => {
   }
 });
 
-test("compaction_option_picks_one_system_and_session_memory_needs_memory", () => {
+test("compaction_option_picks_one_system_and_defaults_to_session_memory", () => {
   const root = mkdtempSync(join(tmpdir(), "pa-compaction-config-"));
   const path = join(root, "prism-agent.json");
   const write = (extra: Record<string, unknown>) =>
@@ -268,12 +288,37 @@ test("compaction_option_picks_one_system_and_session_memory_needs_memory", () =>
   try {
     write({ compaction: "fold" });
     assert.throws(() => loadHostConfig(path), /compaction must be llm or session-memory/);
+    // Plan 240 Task 6: session memory needs no long-term memory opt-in.
     write({ compaction: "session-memory" });
-    assert.throws(() => loadHostConfig(path), /compaction: session-memory needs memory/);
-    write({ memory: "conversational", compaction: "session-memory" });
     assert.equal(loadHostConfig(path).compaction, "session-memory");
+    write({ compaction: "llm" });
+    assert.equal(loadHostConfig(path).compaction, "llm");
     write({ memory: "conversational" });
-    assert.equal(loadHostConfig(path).compaction, undefined, "unset means LLM compaction");
+    assert.equal(loadHostConfig(path).compaction, undefined, "unset means session memory");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reference_host_llm_compaction_is_opt_in", async () => {
+  // Plan 240 Task 6: `compaction: "llm"` replaces session memory with LLM compaction; one compaction system per agent.
+  const root = mkdtempSync(join(tmpdir(), "pa-llm-optin-"));
+  mkdirSync(join(root, "workspace"));
+  try {
+    const provider = mockProvider([[providerDone()]]);
+    const coding = await createCodingWorker({ ...config(root), compaction: "llm" }, { packages: [provider] });
+    const research = await createResearchWorker({ ...config(root), compaction: "llm" }, { packages: [provider] });
+    try {
+      for (const agent of [coding, research]) {
+        const names = agent.inspect().packages.map((entry) => entry.name);
+        assert.equal(names.includes("@arnilo/prism-extensions/compaction"), true);
+        assert.equal(names.includes("@arnilo/prism-memory-system"), false, "no memory opt-in: no memory package");
+        assert.equal(agent.inspect().slots.compaction, "@arnilo/prism-extensions/compaction");
+      }
+    } finally {
+      await coding.dispose();
+      await research.dispose();
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
