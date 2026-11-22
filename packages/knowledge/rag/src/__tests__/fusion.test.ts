@@ -81,7 +81,7 @@ test("core fusion defaults k to 60, isolates scopes, and rejects invalid k", () 
   ];
   assert.deepEqual(fuseRankings(lists), fuseRankings(lists, { k: 60 }));
   assert.equal(fuseRankings(lists).length, 2);
-  assert.equal(fuseRankings(lists)[0]!.hit, b);
+  assert.equal(fuseRankings(lists)[0]?.hit, b);
   assert.throws(() => fuseRankings(lists, { k: -1 }), /fusion k/);
   assert.throws(() => fuseRankings(lists, { k: Number.NaN }), /fusion k/);
 });

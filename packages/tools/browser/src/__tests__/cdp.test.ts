@@ -114,20 +114,20 @@ describe("cdp session layer", () => {
     await cdpEmulationSetUserAgent(session, "FakeUA");
     await cdpEmulationClearDeviceMetrics(session);
     const byMethod = (m: string) => session.sent.filter((s) => s.method === m);
-    assert.deepEqual(byMethod("Network.setBlockedURLs")[0]!.params, { urls: ["*://ads.example/*"] });
-    assert.deepEqual(byMethod("Network.emulateNetworkConditions")[0]!.params, {
+    assert.deepEqual(byMethod("Network.setBlockedURLs")[0]?.params, { urls: ["*://ads.example/*"] });
+    assert.deepEqual(byMethod("Network.emulateNetworkConditions")[0]?.params, {
       offline: true,
       latency: 250,
       downloadThroughput: 125_000,
       uploadThroughput: 62_500,
     });
-    assert.deepEqual(byMethod("Emulation.setDeviceMetricsOverride")[0]!.params, {
+    assert.deepEqual(byMethod("Emulation.setDeviceMetricsOverride")[0]?.params, {
       width: 390,
       height: 844,
       mobile: true,
       deviceScaleFactor: 3,
     });
-    assert.deepEqual(byMethod("Emulation.setUserAgentOverride")[0]!.params, { userAgent: "FakeUA" });
+    assert.deepEqual(byMethod("Emulation.setUserAgentOverride")[0]?.params, { userAgent: "FakeUA" });
     assert.equal(byMethod("Emulation.clearDeviceMetricsOverride").length, 1);
   });
 });
@@ -141,7 +141,7 @@ describe("cdp act actions", () => {
     const session = await cdpSessionOf(browser);
     const block = session.sent.filter((s) => s.method === "Network.setBlockedURLs");
     assert.equal(block.length, 1);
-    assert.deepEqual(block[0]!.params, { urls: ["*://a.test/*", "*://b.test/*"] });
+    assert.deepEqual(block[0]?.params, { urls: ["*://a.test/*", "*://b.test/*"] });
 
     await manager.act("run-1", { action: "unblock_urls" });
     const unblock = session.sent.filter((s) => s.method === "Network.setBlockedURLs").at(-1)!;
@@ -170,7 +170,7 @@ describe("cdp act actions", () => {
     await manager.act("run-1", { action: "throttle", latencyMs: 500, downloadKbps: 1_000, uploadKbps: 500 });
     const session = await cdpSessionOf(browser);
     const sent = session.sent.filter((s) => s.method === "Network.emulateNetworkConditions");
-    assert.deepEqual(sent[0]!.params, { offline: false, latency: 500, downloadThroughput: 125_000, uploadThroughput: 62_500 });
+    assert.deepEqual(sent[0]?.params, { offline: false, latency: 500, downloadThroughput: 125_000, uploadThroughput: 62_500 });
     await manager.act("run-1", { action: "throttle", reset: true });
     const reset = session.sent.filter((s) => s.method === "Network.emulateNetworkConditions").at(-1)!;
     assert.deepEqual(reset.params, { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
@@ -201,7 +201,7 @@ describe("cdp act actions", () => {
     await manager.act("run-1", { action: "emulate", width: 390, height: 844, mobile: true, deviceScaleFactor: 3, userAgent: "FakeUA" });
     const session = await cdpSessionOf(browser);
     const metrics = session.sent.filter((s) => s.method === "Emulation.setDeviceMetricsOverride");
-    assert.deepEqual(metrics[0]!.params, { width: 390, height: 844, mobile: true, deviceScaleFactor: 3 });
+    assert.deepEqual(metrics[0]?.params, { width: 390, height: 844, mobile: true, deviceScaleFactor: 3 });
     const ua = session.sent.filter((s) => s.method === "Emulation.setUserAgentOverride");
     assert.equal(ua.length, 1);
     await manager.act("run-1", { action: "emulate", reset: true });
@@ -243,7 +243,7 @@ describe("cdp act actions", () => {
     await manager.open("run-1");
     await manager.act("run-1", { action: "click", target: { css: "#e4" } });
     await manager.act("run-1", { action: "click", target: { xpath: "//button[@ref='e4']" } });
-    const page = browser.contexts[0]!.pages()[0] as FakePage;
+    const page = browser.contexts[0]?.pages()[0] as FakePage;
     assert.ok(page.actions.some((a) => a.startsWith("click:e4")));
     assert.throws(() => normalizeTarget({ selector: ".x" }), /selector/);
     assert.throws(() => normalizeTarget({ evaluate: "1" }), /selector/);

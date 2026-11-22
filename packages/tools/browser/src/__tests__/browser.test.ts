@@ -95,9 +95,9 @@ describe("@arnilo/prism-tools/browser", () => {
     await manager.closeRun("run-a");
     assert.equal(manager.hasRun("run-a"), false);
     assert.equal(manager.hasRun("run-b"), true);
-    assert.equal(browser.contexts[0]!.closed, true);
+    assert.equal(browser.contexts[0]?.closed, true);
     await manager.close();
-    assert.equal(browser.contexts[1]!.closed, true);
+    assert.equal(browser.contexts[1]?.closed, true);
   });
 
   it("idleRunTtlMs reaps untouched runs, disposes the context, and fails later calls closed", async () => {
@@ -225,7 +225,7 @@ describe("@arnilo/prism-tools/browser", () => {
       /No element matched/,
     );
     // Add duplicate buttons to force ambiguity.
-    const page = browser.contexts[0]!.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
+    const page = browser.contexts[0]?.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
     page.elements.push({ ref: "e9", role: "button", name: "Go" });
     await assert.rejects(
       () =>
@@ -252,7 +252,7 @@ describe("@arnilo/prism-tools/browser", () => {
     const results = await Promise.allSettled(tasks);
     assert.equal(results[0]?.status, "fulfilled");
     // Either later tasks succeed via role or fail stale — but queue preserves order: fill first.
-    const page = browser.contexts[0]!.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
+    const page = browser.contexts[0]?.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
     assert.equal(page.actions[0], "goto:https://example.com/");
     assert.ok(page.actions.some((a) => a.startsWith("fill:e3:")));
     const fillIdx = page.actions.findIndex((a) => a.startsWith("fill:e3:"));
@@ -277,7 +277,7 @@ describe("@arnilo/prism-tools/browser", () => {
     const browser = new FakeBrowser();
     const manager = mgr(browser);
     await manager.open("run-1");
-    const page = browser.contexts[0]!.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
+    const page = browser.contexts[0]?.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
     const dialog = new FakeDialog("alert", "hello");
     await page.emitDialog(dialog);
     await manager.act("run-1", { action: "dialog", dialogResponse: "accept" });
@@ -308,13 +308,13 @@ describe("@arnilo/prism-tools/browser", () => {
       assert.deepEqual(tool.effects, expected[tool.name], `${tool.name} must declare its effects`);
     }
 
-    const open = await tools[0]!.execute({}, ctx("tools-1"));
+    const open = await tools[0]?.execute({}, ctx("tools-1"));
     assert.equal(open.error, undefined);
-    const acted = await tools[2]!.execute({ action: "click", target: { role: "button", name: "Go" } }, ctx("tools-1"));
+    const acted = await tools[2]?.execute({ action: "click", target: { role: "button", name: "Go" } }, ctx("tools-1"));
     assert.equal(acted.error, undefined);
-    const snap = await tools[1]!.execute({}, ctx("tools-1"));
+    const snap = await tools[1]?.execute({}, ctx("tools-1"));
     assert.equal(snap.error, undefined);
-    const closed = await tools[3]!.execute({}, ctx("tools-1"));
+    const closed = await tools[3]?.execute({}, ctx("tools-1"));
     assert.equal(closed.error, undefined);
   });
 

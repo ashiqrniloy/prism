@@ -347,7 +347,7 @@ describe("RunLedger runtime wiring", () => {
     })();
     await session.run("say one thing");
     await collecting;
-    const runId = live.find((e) => e.type === "run.started")!.runId;
+    const runId = live.find((e) => e.type === "run.started")?.runId;
 
     const runEvents = events.filter((e) => e.runId === runId);
     assert.ok(runEvents.length > 0, "ledger events scoped to the run id");

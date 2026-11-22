@@ -2,12 +2,12 @@ import { test, expect } from "bun:test";
 import { benjaminiHochberg, compareExperiments, EvalError, type ExperimentReport } from "../index.js";
 
 function report(scores: Record<string, number[][]>): ExperimentReport {
-  const count = Object.values(scores)[0]!.length;
+  const count = Object.values(scores)[0]?.length;
   const items = Array.from({ length: count }, (_, i) => ({
     item: { id: `item-${i}`, input: i },
     trials: [],
     evaluations: Object.entries(scores).flatMap(([scorerId, rows]) =>
-      rows[i]!.map((score, trial) => ({
+      rows[i]?.map((score, trial) => ({
         id: `${scorerId}-${i}-${trial}`,
         scorerId,
         itemId: `item-${i}`,
@@ -74,13 +74,13 @@ test("continuous_and_repeated_binary_scores_use_item_averages_and_sign_flips", (
     ],
   });
   const stats = compareExperiments(a, b, { seed: 2 }).scorers;
-  expect(stats.continuous!.baselineMean).toBe(0.25);
-  expect(stats.continuous!.difference).toBe(0.5);
-  expect(stats.continuous!.pValue).toBe(0.5);
-  expect(stats.continuous!.test).toBe("paired_permutation");
-  expect(stats.repeated!.test).toBe("paired_permutation");
+  expect(stats.continuous?.baselineMean).toBe(0.25);
+  expect(stats.continuous?.difference).toBe(0.5);
+  expect(stats.continuous?.pValue).toBe(0.5);
+  expect(stats.continuous?.test).toBe("paired_permutation");
+  expect(stats.repeated?.test).toBe("paired_permutation");
   const partial = report({ success: binary(3) });
-  expect(compareExperiments({ ...partial, trials: { count: 2, sampleCount: 3 } }, partial).scorers.success!.test).toBe(
+  expect(compareExperiments({ ...partial, trials: { count: 2, sampleCount: 3 } }, partial).scorers.success?.test).toBe(
     "paired_permutation",
   );
 });
@@ -114,8 +114,8 @@ test("shared_items_are_compared_and_bh_controls_across_scorers", () => {
   const result = compareExperiments(a, b, { seed: 1 });
   const stats = Object.values(result.scorers);
   expect(stats.map((row) => row.qValue)).toEqual(benjaminiHochberg(stats.map((row) => row.pValue)));
-  expect(result.scorers.strong!.significant).toBe(true);
-  expect(result.scorers.weak!.significant).toBe(false);
+  expect(result.scorers.strong?.significant).toBe(true);
+  expect(result.scorers.weak?.significant).toBe(false);
   expect(compareExperiments(a, b, { scorers: ["weak"] }).scorers).toHaveProperty("weak");
   expect(compareExperiments(a, { ...b, items: b.items.slice(1) }).pairedItems).toBe(39);
   expect(JSON.parse(JSON.stringify(result))).toEqual(result);
@@ -155,9 +155,9 @@ test("by_tag_comparison_controls_bh_across_all_tag_scorer_pairs", () => {
   const stats = Object.values(result.byTag!).flatMap((tag) => Object.values(tag.scorers));
   expect(stats.map((x) => x.qValue)).toEqual(benjaminiHochberg(stats.map((x) => x.pValue)));
   function assertTagCounts(tags: NonNullable<typeof result.byTag>) {
-    expect(tags.first!.pairedItems).toBe(20);
-    expect(tags.last!.pairedItems).toBe(20);
-    expect(tags.all!.pairedItems).toBe(40);
+    expect(tags.first?.pairedItems).toBe(20);
+    expect(tags.last?.pairedItems).toBe(20);
+    expect(tags.all?.pairedItems).toBe(40);
   }
 });
 

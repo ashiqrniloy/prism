@@ -75,17 +75,17 @@ test("queries are URL-encoded; extraction JS stays constant; results normalize w
     value.results.map((r) => r.url),
     ["https://example.com/a?q=node%20rust%20%22quotes%22%20%26%20spaces", "https://example.com/b", "https://example.com/c"],
   );
-  assert.ok(value.results[0]!.citationId.startsWith("web:obscura:"));
-  assert.equal(value.results[0]!.title, "A");
-  assert.equal(value.results[0]!.snippet, "first");
-  assert.equal(value.results[1]!.snippet, "second");
+  assert.ok(value.results[0]?.citationId.startsWith("web:obscura:"));
+  assert.equal(value.results[0]?.title, "A");
+  assert.equal(value.results[0]?.snippet, "first");
+  assert.equal(value.results[1]?.snippet, "second");
 });
 
 test("obscura_fetch_text_is_sliced", async () => {
   const toolSet = tools({ env: { ...process.env, OBSCURA_FAKE: "oversize" } });
   const result = await call(toolSet, "obscura_fetch", { url: "https://example.com/long", dump: "text" });
   const value = result.value as { content: string; url: string; dump: string };
-  const text = (result.content as readonly { text: string }[])[0]!.text;
+  const text = (result.content as readonly { text: string }[])[0]?.text;
   assert.equal(result.error, undefined);
   assert.equal(value.dump, "text", "the value keeps the whole structure");
   assert.ok(value.content.length > 32_000, "the dumped page is longer than one slice");
@@ -97,7 +97,7 @@ test("obscura_scrape_returns_numbered_text", async () => {
   const toolSet = tools();
   const result = await call(toolSet, "obscura_scrape", { urls: ["https://example.com/a"] });
   assert.equal(result.error, undefined);
-  const text = (result.content as readonly { text: string }[])[0]!.text;
+  const text = (result.content as readonly { text: string }[])[0]?.text;
   assert.match(text, /^1\. https:\/\/example\.com\/a\n {3}\{/u);
 });
 
@@ -147,7 +147,7 @@ test("obscura_scrape preserves input association and reports missing rows", asyn
     ["https://a.example.com", "https://b.example.com"],
   );
   assert.equal(value.results[0]!.data!.index, 0);
-  assert.ok(Number(value.results[0]!.data!.concurrency) >= 1);
+  assert.ok(Number(value.results[0]?.data?.concurrency) >= 1);
 });
 
 test("obscura_scrape enforces url count, concurrency, and URL policy", async () => {
@@ -215,8 +215,8 @@ test("default_profile_decodes_uddg_links", () => {
     page.results.map((r) => r.url),
     ["https://bun.sh/docs/", "https://example.com/plain", "javascript:alert(1)"],
   );
-  assert.equal(page.results[0]!.title, "Bun documentation");
-  assert.match(page.results[0]!.snippet, /all-in-one JavaScript runtime/);
+  assert.equal(page.results[0]?.title, "Bun documentation");
+  assert.match(page.results[0]?.snippet, /all-in-one JavaScript runtime/);
 });
 
 test("default_profile_skips_ads", () => {

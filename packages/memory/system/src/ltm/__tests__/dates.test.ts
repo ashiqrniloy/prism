@@ -56,7 +56,7 @@ describe("time-scoped recall", () => {
       ordered.hits.map((hit) => hit.id),
       [january.id, february.id, march.id],
     );
-    assert.equal(ordered.hits[1]!.dates?.[0]?.text, "last month");
+    assert.equal(ordered.hits[1]?.dates?.[0]?.text, "last month");
 
     await assert.rejects(() => fabric.recall("checkup", { from: "2026-03-01", to: "2026-02-01" }), MemoryValidationError);
     await assert.rejects(() => fabric.recall("checkup", { order: "newest" as "time" }), MemoryValidationError);

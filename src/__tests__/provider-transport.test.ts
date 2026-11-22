@@ -82,8 +82,8 @@ describe("provider transport primitives", () => {
     const body = stream(["data: line1\r\n", "data: line2\r\n\r\ndata: ok\n\n"]);
     const events = await collectEvents(body);
     assert.equal(events.length, 2);
-    assert.equal(events[0]!.data, "line1\nline2");
-    assert.equal(events[1]!.data, "ok");
+    assert.equal(events[0]?.data, "line1\nline2");
+    assert.equal(events[1]?.data, "ok");
   });
 
   it("reconstructs UTF-8 split across chunks", async () => {
@@ -98,9 +98,9 @@ describe("provider transport primitives", () => {
     const body = stream([': energy {"energy_joules":1}\n\ndata: {"ok":true}\n\n']);
     const events = await collectEvents(body);
     assert.equal(events.length, 2);
-    assert.deepEqual(events[0]!.comments, ['energy {"energy_joules":1}']);
+    assert.deepEqual(events[0]?.comments, ['energy {"energy_joules":1}']);
     assert.equal(events[0]!.data, "");
-    assert.equal(events[1]!.data, '{"ok":true}');
+    assert.equal(events[1]?.data, '{"ok":true}');
   });
 
   it("flushes a final partial event without trailing blank line", async () => {

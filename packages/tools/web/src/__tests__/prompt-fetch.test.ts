@@ -87,7 +87,7 @@ test("web_fetch_prompt_returns_model_answer", async () => {
   assert.equal(value.title, "Doc");
   assert.equal(value.inputChars, "Page body text.".length);
   assert.equal(value.sourceTruncated, false);
-  assert.equal((result.content as readonly { text: string }[])[0]!.text, value.answer);
+  assert.equal((result.content as readonly { text: string }[])[0]?.text, value.answer);
   assert.equal(requests.length, 1, "one model call per prompt use");
   assert.equal(calls.length, 1, "the page is fetched once");
 });
@@ -96,11 +96,11 @@ test("web_fetch_prompt_makes_one_model_call_with_no_tools", async () => {
   const { webFetch, requests } = tools("Page body.");
   await webFetch.execute({ url: "https://example.com/doc", prompt: "Summarise." }, context);
   assert.equal(requests.length, 1);
-  assert.equal(requests[0]!.tools, undefined, "the sub-request carries no tools");
-  const messages = requests[0]!.messages;
-  assert.equal(messages[0]!.role, "system");
-  assert.ok(JSON.stringify(messages[0]!.content).includes(PROMPT_SYSTEM_PROMPT.slice(0, 30)));
-  const user = JSON.stringify(messages[1]!.content);
+  assert.equal(requests[0]?.tools, undefined, "the sub-request carries no tools");
+  const messages = requests[0]?.messages;
+  assert.equal(messages[0]?.role, "system");
+  assert.ok(JSON.stringify(messages[0]?.content).includes(PROMPT_SYSTEM_PROMPT.slice(0, 30)));
+  const user = JSON.stringify(messages[1]?.content);
   assert.match(user, /<untrusted_external_content tool=\\"web_fetch\\"/u, "the page is wrapped in the kernel envelope");
   assert.match(user, /Question: Summarise\./u);
 });
@@ -111,7 +111,7 @@ test("web_fetch_prompt_bounds_input_chars", async () => {
   const value = result.value as { inputChars: number; sourceTruncated: boolean };
   assert.equal(value.inputChars, 25);
   assert.equal(value.sourceTruncated, true, "the page was cut for the model");
-  const user = JSON.stringify(requests[0]!.messages[1]!.content);
+  const user = JSON.stringify(requests[0]?.messages[1]?.content);
   assert.ok(!/A{26}/u.test(user), "only maxInputChars of the page reach the model");
   assert.ok(/A{25}/u.test(user), "and the whole window does");
 });
@@ -147,7 +147,7 @@ test("web_fetch_prompt_page_injection_does_not_reach_tools", async () => {
   const { webFetch, requests } = tools(`# Notes\n\n${injection}`);
   const result = await webFetch.execute({ url: "https://example.com/doc", prompt: "What does the page say to do?" }, context);
   assert.equal(requests.length, 1);
-  assert.equal(requests[0]!.tools, undefined, "the page cannot add a tool to the sub-request");
+  assert.equal(requests[0]?.tools, undefined, "the page cannot add a tool to the sub-request");
   assert.equal(result.metadata?.trust, UNTRUSTED_EXTERNAL_TRUST);
   assert.equal((result.value as { answer: string }).answer, "The answer from the page.");
 });

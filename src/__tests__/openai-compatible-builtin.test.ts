@@ -5,7 +5,7 @@ import type { AgentConfig, CredentialResolver } from "../index.js";
 
 let stub: typeof fetch | undefined;
 const createAgent = (config: AgentConfig) =>
-  createAgentWith(config, { fetch: ((...args: Parameters<typeof fetch>) => stub!(...args)) as typeof fetch });
+  createAgentWith(config, { fetch: ((...args: Parameters<typeof fetch>) => stub?.(...args)) as typeof fetch });
 
 const KEY = "sk-live-canary-0123456789";
 const sse = (body: string) => new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });

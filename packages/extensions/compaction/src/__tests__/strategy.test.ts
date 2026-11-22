@@ -53,8 +53,8 @@ test("llm_compaction_strategy_builds_provider_request_and_returns_compaction_ent
   assert.equal(result.summary, "## Goal\nSummarized");
   assert.equal(result.entries?.[0]?.kind, "compaction");
   assert.equal(result.entries?.[0]?.parentId, "u3");
-  assert.equal((result.entries?.[0]?.data as { strategy?: string })!.strategy, "llm-compaction");
-  assert.equal((result.entries?.[0]?.data as { trigger?: string })!.trigger, "manual", "the context trigger is stamped");
+  assert.equal((result.entries?.[0]?.data as { strategy?: string })?.strategy, "llm-compaction");
+  assert.equal((result.entries?.[0]?.data as { trigger?: string })?.trigger, "manual", "the context trigger is stamped");
   assert.equal(request?.model.parameters?.maxTokens, 80);
   assert.equal(request?.options?.sessionId, "s1");
   assert.equal(request?.options?.cacheKey, "s1");
@@ -93,11 +93,11 @@ test("llm_compaction_strategy_updates_previous_summary_and_split_turn_prefix", a
   const result = await strategy.compact({ sessionId: "s1", entries });
 
   assert.equal(requests.length, 2);
-  const historyPrompt = requests[0]!.messages[1]!.content[0];
+  const historyPrompt = requests[0]?.messages[1]?.content[0];
   assert.equal(historyPrompt.type, "text");
   assert.match(historyPrompt.text, /<previous-summary>\nprevious summary/);
   assert.match(result.summary, /\*\*Turn Context \(split turn\):\*\*/);
-  assert.equal((result.entries?.[0]?.data as { isSplitTurn?: boolean })!.isSplitTurn, true);
+  assert.equal((result.entries?.[0]?.data as { isSplitTurn?: boolean })?.isSplitTurn, true);
 });
 
 test("llm_compaction_strategy_maps_max_summary_tokens_to_request_budget", async () => {

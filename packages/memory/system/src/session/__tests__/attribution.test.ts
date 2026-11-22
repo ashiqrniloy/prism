@@ -174,7 +174,7 @@ describe("speaker attribution (plan 218 Task 4.1)", () => {
     assert.equal(byCited.get(action.id)?.attribution, undefined, "an assistant action is not a proposal");
     assert.equal(byCited.get(legacy.id)?.attribution, undefined, "a source without attribution leaves the item without one");
     const text = renderObservationalMemory(items, [], { advertiseRecall: false });
-    assert.match(text, new RegExp(`\\[${byCited.get(proposal.id)!.id}\\] .*event \\(assistant proposal\\): `));
-    assert.match(text, new RegExp(`\\[${byCited.get(decision.id)!.id}\\] .*summary \\(user \\+ assistant\\): `));
+    assert.match(text, new RegExp(`\\[${byCited.get(proposal.id)?.id}\\] .*event \\(assistant proposal\\): `));
+    assert.match(text, new RegExp(`\\[${byCited.get(decision.id)?.id}\\] .*summary \\(user \\+ assistant\\): `));
   });
 });

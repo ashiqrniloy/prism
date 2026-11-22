@@ -211,7 +211,7 @@ describe("process recovery", () => {
       await sessions.start({ command: "/bin/sleep", args: ["1"], pty: true });
       const page = await h.checkpoints.listCheckpoints({ namespace: PROCESS_RECOVERY_NAMESPACE, keyPrefix: "proc_" });
       assert.equal(page.items.length, 1);
-      const record = page.items[0]!.value as {
+      const record = page.items[0]?.value as {
         state: string;
         backendRef?: string;
         pty?: { columns: number; rows: number };
@@ -240,15 +240,15 @@ describe("process recovery", () => {
       const report = await b.recover();
       assert.equal(report.attached, 0);
       assert.equal(report.unknown, 1);
-      assert.equal(report.records[0]!.outcome, "unknown");
+      assert.equal(report.records[0]?.outcome, "unknown");
       assert.equal(report.records[0]!.exitCode, null);
       const loaded = await loadProcessRecoveryRecord({
         checkpoints: h.checkpoints,
-        id: report.records[0]!.id,
+        id: report.records[0]?.id,
         limits: resolveProcessRecoveryLimits(),
         ownership,
       });
-      assert.equal(loaded!.record.state, "unknown");
+      assert.equal(loaded?.record.state, "unknown");
       assert.equal(loaded!.record.exitCode, null);
       await a.dispose();
       await b.dispose();
@@ -267,7 +267,7 @@ describe("process recovery", () => {
       const b = makeSessions(h, "replica-b");
       const report = await b.recover();
       assert.equal(report.terminal, 1);
-      assert.equal(report.records[0]!.state, "killed");
+      assert.equal(report.records[0]?.state, "killed");
       assert.equal(report.records[0]!.exitCode, null);
       await a.dispose();
       await b.dispose();
@@ -286,14 +286,14 @@ describe("process recovery", () => {
       const report = await b.recover();
       assert.equal(report.attached, 1);
       assert.equal(h.attachCalls.length, 1);
-      const attached = b.get(report.records[0]!.id);
+      const attached = b.get(report.records[0]?.id);
       assert.equal(attached.state, "running");
       assert.equal(attached.metadata().terminal?.columns, 120);
       const handle = [...h.handles].reverse().find((candidate) => candidate.ref === "pty-1");
       await attached.input(Buffer.from("x"));
-      assert.equal(handle!.writes.length, 1);
+      assert.equal(handle?.writes.length, 1);
       await attached.kill();
-      assert.equal(handle!.killed, true);
+      assert.equal(handle?.killed, true);
       await waitForRecordState(h.checkpoints, attached.id, (state) => state === "killed");
       await a.dispose();
       await b.dispose();
@@ -315,11 +315,11 @@ describe("process recovery", () => {
       assert.equal(report.unknown, 1);
       const loaded = await loadProcessRecoveryRecord({
         checkpoints: h.checkpoints,
-        id: report.records[0]!.id,
+        id: report.records[0]?.id,
         limits: resolveProcessRecoveryLimits(),
         ownership,
       });
-      assert.equal(loaded!.record.state, "unknown");
+      assert.equal(loaded?.record.state, "unknown");
       await a.dispose();
       await b.dispose();
     } finally {
@@ -339,7 +339,7 @@ describe("process recovery", () => {
       };
       const report = await b.recover();
       assert.equal(report.unknown, 1);
-      assert.equal(report.records[0]!.error, "ERR_PRISM_RECOVERY_UNKNOWN");
+      assert.equal(report.records[0]?.error, "ERR_PRISM_RECOVERY_UNKNOWN");
       assert.ok(!JSON.stringify(report).includes("secret-host-token"));
       await a.dispose();
       await b.dispose();
@@ -358,7 +358,7 @@ describe("process recovery", () => {
       h.attachImpl = () => new Promise<FakeHandle | null>(() => {});
       const report = await b.recover();
       assert.equal(report.unknown, 1);
-      assert.equal(report.records[0]!.error, "ERR_PRISM_RECOVERY_TIMEOUT");
+      assert.equal(report.records[0]?.error, "ERR_PRISM_RECOVERY_TIMEOUT");
       await a.dispose();
       await b.dispose();
     } finally {
@@ -383,20 +383,20 @@ describe("process recovery", () => {
       assert.ok(held);
       const b = makeSessions(h, "replica-b");
       const report = await b.recover();
-      assert.equal(report.records[0]!.outcome, "unknown");
+      assert.equal(report.records[0]?.outcome, "unknown");
       assert.equal(report.records[0]!.error, undefined);
       const loaded = await loadProcessRecoveryRecord({
         checkpoints: h.checkpoints,
-        id: report.records[0]!.id,
+        id: report.records[0]?.id,
         limits: resolveProcessRecoveryLimits(),
         ownership,
       });
-      assert.equal(loaded!.record.state, "running"); // untouched by replica B
+      assert.equal(loaded?.record.state, "running"); // untouched by replica B
       await a.dispose();
       await b.dispose();
       await h.leases.releaseLease({
         namespace: "prism.coding-agent.process.lease.v1",
-        key: `recover:${report.records[0]!.id}`,
+        key: `recover:${report.records[0]?.id}`,
         ownerId: "replica-c",
         token: held.token,
         ...ownership,
@@ -424,9 +424,9 @@ describe("process recovery", () => {
         () =>
           saveProcessRecoveryRecord({
             checkpoints: h.checkpoints,
-            record: { ...loaded!.record, state: "unknown", fencingToken: 0, updatedAt: new Date().toISOString() },
-            expectedVersion: loaded!.version,
-            version: loaded!.version + 1,
+            record: { ...loaded?.record, state: "unknown", fencingToken: 0, updatedAt: new Date().toISOString() },
+            expectedVersion: loaded?.version,
+            version: loaded?.version + 1,
             ownership,
           }),
         (error: unknown) => error instanceof ProcessRecoveryError && error.code === "ERR_PRISM_RECOVERY_FENCE",
@@ -446,7 +446,7 @@ describe("process recovery", () => {
       const b = makeSessions(h, "replica-b");
       const report = await b.recover();
       assert.equal(report.attached, 1);
-      const attached = b.get(report.records[0]!.id);
+      const attached = b.get(report.records[0]?.id);
       await b.cancelOwned("tenant-a::");
       assert.equal(attached.state, "killed"); // reached the attached backend
       // Unattached durable record (never recovered) also becomes unknown.
@@ -464,7 +464,7 @@ describe("process recovery", () => {
         limits: resolveProcessRecoveryLimits(),
         ownership,
       });
-      assert.equal(loaded!.record.state, "unknown");
+      assert.equal(loaded?.record.state, "unknown");
       await b.dispose();
       await c.dispose();
       await d.dispose();
@@ -526,7 +526,7 @@ describe("process recovery", () => {
       h.attachImpl = async () => null;
       const report = await b.recover();
       assert.equal(report.records.length, 1); // only the legitimate record
-      assert.equal(report.records[0]!.id, session.id);
+      assert.equal(report.records[0]?.id, session.id);
       await a.dispose();
       await b.dispose();
     } finally {

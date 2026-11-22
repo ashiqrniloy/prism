@@ -84,7 +84,7 @@ describe("attachMcpToolBridge", () => {
     assert.equal(bridge.tools[0]?.name, "mcp:demo:echo");
     assert.equal(bridge.tools[0]?.description, "echo text");
 
-    const result = await bridge.tools[0]!.execute({ text: "hi" }, executionContext);
+    const result = await bridge.tools[0]?.execute({ text: "hi" }, executionContext);
     assert.equal(result.content?.[0]?.type, "text");
     if (result.content?.[0]?.type === "text") {
       assert.equal(result.content[0].text, "echo:hi");
@@ -158,7 +158,7 @@ describe("attachMcpToolBridge", () => {
 
     const failTool = bridge.tools.find((tool) => tool.name === "mcp:demo:fail");
     assert.ok(failTool);
-    const result = await failTool!.execute({}, executionContext);
+    const result = await failTool?.execute({}, executionContext);
     assert.ok(result.error);
     assert.match(result.error.message, /nope/);
     await bridge.close();
@@ -180,7 +180,7 @@ describe("attachMcpToolBridge", () => {
       callTimeoutMs: 10,
     });
 
-    const result = await bridge.tools[0]!.execute({}, executionContext);
+    const result = await bridge.tools[0]?.execute({}, executionContext);
     // Deterministic barrier: only the abort path can produce /timed out|abort/;
     // a regression that waits for the remote response fails the error asserts,
     // and a hang trips the test-level timeout instead of a wall-clock delta.
@@ -286,7 +286,7 @@ describe("attachMcpToolBridge", () => {
         if (request.method === "tools/call") return remoteResult;
         throw new Error("unexpected request");
       });
-      const result = await bridge.tools[0]!.execute({}, executionContext);
+      const result = await bridge.tools[0]?.execute({}, executionContext);
       assert.match(result.error?.message ?? "", /exceeds 64 bytes/);
       assert.equal(result.value, undefined);
       await bridge.close();
@@ -312,7 +312,7 @@ describe("attachMcpToolBridge", () => {
         maxJsonProperties: 10,
       });
       setClientRequest(fixture.client, async () => remoteResult);
-      const result = await bridge.tools[0]!.execute({}, executionContext);
+      const result = await bridge.tools[0]?.execute({}, executionContext);
       assert.ok(result.error);
       assert.equal(result.value, undefined);
       await bridge.close();
@@ -444,12 +444,12 @@ describe("MCP Apps bridge", () => {
         ["refresh", "ui://weather/view", ["app"]],
       ],
     );
-    const listed = await bridge.apps!.listResources();
+    const listed = await bridge.apps?.listResources();
     assert.equal(listed[0]?.uri, "ui://weather/view");
-    const resource = await bridge.apps!.readResource("ui://weather/view");
+    const resource = await bridge.apps?.readResource("ui://weather/view");
     assert.equal(resource.html.includes("<html"), true);
     assert.deepEqual(resource.ui?.csp?.connectDomains, ["https://read.example"]);
-    const result = await bridge.apps!.callTool("refresh", {}, executionContext);
+    const result = await bridge.apps?.callTool("refresh", {}, executionContext);
     assert.equal(result.name, "mcp:weather:refresh");
   });
 

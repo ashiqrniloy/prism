@@ -41,8 +41,8 @@ describe("createTeiReranker", () => {
         );
         // Same object references — provenance/trust untouched.
         assert.equal(ordered[0], hits[2]);
-        assert.equal(ordered[0]!.provenance, hits[2]!.provenance);
-        assert.equal(ordered[0]!.trust, hits[2]!.trust);
+        assert.equal(ordered[0]?.provenance, hits[2]?.provenance);
+        assert.equal(ordered[0]?.trust, hits[2]?.trust);
       },
     );
   });

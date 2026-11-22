@@ -44,7 +44,7 @@ describe("tool search scoring", () => {
       ...fixtureTools(24),
     ];
     const index = createToolSearchIndex(tools);
-    assert.equal(scoreTools(index, "deploy_service", 5)[0]!.name, "deploy_service");
+    assert.equal(scoreTools(index, "deploy_service", 5)[0]?.name, "deploy_service");
   });
 
   it("multi-term IDF ordering is stable and deterministic", () => {

@@ -165,7 +165,7 @@ describe("manager.evaluate", () => {
     const browser = new FakeBrowser();
     const tools = createBrowserTools({ browser, limits: { closeGraceMs: 1 }, networkPolicy: testNetwork });
     const context = { sessionId: "s1", runId: "run-1", toolCallId: "call-1" };
-    await tools[0]!.execute({}, context); // open
+    await tools[0]?.execute({}, context); // open
     const evaluate = tools[4]!;
     assert.equal(evaluate.name, "browser_evaluate");
     const declared = evaluate.effect;
@@ -178,6 +178,6 @@ describe("manager.evaluate", () => {
     assert.equal(ok.metadata?.trust, "untrusted_external");
     const missing = await evaluate.execute({}, context);
     assert.match(missing.error?.message ?? "", /expression is required/);
-    await tools[3]!.execute({}, context);
+    await tools[3]?.execute({}, context);
   });
 });

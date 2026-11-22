@@ -147,7 +147,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
       hooks: (hooks) => hooks.on("session.opened", (payload) => void hooked.push(`opened:${payload.restored}`)),
     });
     const seen: AgentEvent[] = [];
-    const subscription = agent.subscribe!();
+    const subscription = agent.subscribe?.();
     const reader = (async () => {
       for await (const event of subscription) {
         seen.push(event);

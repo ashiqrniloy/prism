@@ -81,7 +81,7 @@ test("createReadOnlyTools applies shared executionPolicy before filesystem acces
         },
       },
     });
-    const result = await read!.execute(
+    const result = await read?.execute(
       { path },
       {
         toolCallId: "call-1",

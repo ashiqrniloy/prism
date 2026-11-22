@@ -124,7 +124,7 @@ async function harness(options: HarnessOptions = {}) {
     ...(options.events
       ? {
           hooks: (hooks: { on: (name: "package.event", handler: (payload: unknown) => void) => void }) =>
-            hooks.on("package.event", (payload) => options.events!.push(payload as AgentEvent)),
+            hooks.on("package.event", (payload) => options.events?.push(payload as AgentEvent)),
         }
       : {}),
   });
@@ -159,7 +159,7 @@ function handlerDeps(
     foldLog: {
       entries: (session: SessionContext) => logs.get(session.id) ?? [],
       append: async (session: SessionContext, value: JsonValue) =>
-        void (logs.get(session.id) ?? logs.set(session.id, []).get(session.id))!.push(value),
+        void (logs.get(session.id) ?? logs.set(session.id, []).get(session.id))?.push(value),
     },
     activatedState: {
       get: (session: SessionContext) => (values.get(`tools:${session.id}`) ?? {}) as JsonObject,

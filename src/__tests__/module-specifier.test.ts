@@ -126,8 +126,8 @@ describe("module specifiers", () => {
     const second = await install("@acme/bundle/nested/two@^2.0.0", options);
     const manifest = (await readManifest(dirs))!;
     assert.notEqual(second.integrity, first.integrity);
-    assert.equal(manifest.packages[0]!.integrity, second.integrity);
-    assert.equal(manifest.packages[0]!.version, second.version);
+    assert.equal(manifest.packages[0]?.integrity, second.integrity);
+    assert.equal(manifest.packages[0]?.version, second.version);
     assert.equal(second.version, "^2.0.0");
     assert.ok((await verify({ root, trustProject: () => true })).every((x) => x.ok));
     assert.deepEqual(
@@ -152,8 +152,8 @@ describe("module specifiers", () => {
       (e: unknown) => e instanceof ManifestError && e.code === "capabilities_drift" && e.package === second.name,
     );
     const drift = await verify({ root, trustProject: () => true });
-    assert.equal(drift[0]!.ok, true);
-    assert.equal(drift[1]!.issues[0]!.code, "capabilities_drift");
+    assert.equal(drift[0]?.ok, true);
+    assert.equal(drift[1]?.issues[0]?.code, "capabilities_drift");
     await writeManifest(dirs, {
       ...manifest,
       packages: manifest.packages.map((e) =>
@@ -200,7 +200,7 @@ describe("module specifiers", () => {
     assert.equal(await readFile(managed, "utf8"), before);
     assert.equal(await readFile(join(scopeDirs(options).packagesDir, "bun.lock"), "utf8"), lock);
     await integrity.verifyInstalled(first, scopeDirs(options).packagesDir, "project");
-    assert.equal((await readManifest(scopeDirs(options)))!.packages.length, 1);
+    assert.equal((await readManifest(scopeDirs(options)))?.packages.length, 1);
   });
   it("exports_patterns_and_conditions_resolve_without_loading_siblings", async () => {
     const root = await tmp();

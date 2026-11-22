@@ -43,8 +43,8 @@ describe("driver kit stays vendor-neutral", () => {
       seen.add(file);
       const text = readFileSync(file, "utf8");
       for (const match of text.matchAll(/(?:from\s*|import\s*\(\s*)["'](\.[^"']+)["']/g)) {
-        const target = join(file, "..", match[1]!.replace(/\.js$/, ".ts"));
-        queue.push(existsSync(target) ? target : join(file, "..", match[1]!.replace(/\.js$/, ""), "index.ts"));
+        const target = join(file, "..", match[1]?.replace(/\.js$/, ".ts"));
+        queue.push(existsSync(target) ? target : join(file, "..", match[1]?.replace(/\.js$/, ""), "index.ts"));
       }
     }
     const leaked = [...seen].filter((file) => file.startsWith("src/driver-kit/"));

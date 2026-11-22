@@ -86,10 +86,10 @@ describe("the cut (plan 218.3 Task 3)", () => {
     const tokens = (ids: string[]) =>
       entries.filter((item) => ids.includes(item.id)).reduce((sum, item) => sum + JSON.stringify(item.message).length / 4, 0);
     // Mid-loop: the newest tool round (a3, t2, a4) always stays.
-    assert.equal(entries[keptTailStart(entries, { point: "mid-loop", keepRecentTokens: 0 })]!.id, "a3");
+    assert.equal(entries[keptTailStart(entries, { point: "mid-loop", keepRecentTokens: 0 })]?.id, "a3");
     // A budget that reaches t1 but not a1 would split c1 from its result: the cut keeps neither.
     const budget = Math.ceil(tokens(["t1", "a2", "u2", "a3", "t2", "a4"])) + 2;
-    const start = entries[keptTailStart(entries, { point: "mid-loop", keepRecentTokens: budget })]!.id;
+    const start = entries[keptTailStart(entries, { point: "mid-loop", keepRecentTokens: budget })]?.id;
     assert.ok(start === "a2" || start === "a1", `the cut lands on a2 (pair removed) or a1 (pair kept), not ${start}`);
     // A budget large enough for everything keeps everything.
     assert.equal(keptTailStart(entries, { point: "mid-loop", keepRecentTokens: 1_000_000 }), 0);
@@ -97,7 +97,7 @@ describe("the cut (plan 218.3 Task 3)", () => {
 
   it("between_loops_keeps_only_the_new_input", () => {
     const entries = branch([entry("a4", "assistant", "done"), entry("u3", "user", "next task")]);
-    assert.equal(entries[keptTailStart(entries, { point: "between-loops", keepRecentTokens: 1_000_000 })]!.id, "u3");
+    assert.equal(entries[keptTailStart(entries, { point: "between-loops", keepRecentTokens: 1_000_000 })]?.id, "u3");
     const ended = branch([entry("a4", "assistant", "done")]);
     assert.equal(keptTailStart(ended, { point: "between-loops", keepRecentTokens: 0 }), ended.length, "no new input: nothing");
   });

@@ -46,8 +46,8 @@ test("worker_events_carry_correct_origin", async () => {
       assert.deepEqual(local.remote, [], `${local.agentId} must not carry a remote endpoint`);
       assert.ok(local.bare > 0, `${local.agentId} events should be this agent (no foreign origin)`);
     }
-    assert.deepEqual(external!.executedBy, ["external"]);
-    assert.deepEqual(remote!.remote, [REMOTE_ENDPOINT]);
+    assert.deepEqual(external?.executedBy, ["external"]);
+    assert.deepEqual(remote?.remote, [REMOTE_ENDPOINT]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

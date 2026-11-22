@@ -21,7 +21,7 @@ test("read-path persistence: save then restore into a fresh set (plan 015 Task 4
   assert.equal(await persistence.restore(again), 2);
   // Record is ownership-scoped and namespaced.
   const record = await checkpoints.loadCheckpoint({ namespace: READ_PATH_SET_NAMESPACE, key: "session-1" });
-  assert.deepEqual(record!.value, ["/abs/a.ts", "/abs/b.ts"]);
+  assert.deepEqual(record?.value, ["/abs/a.ts", "/abs/b.ts"]);
 });
 
 test("read-path persistence: restore under a different ownership scope fails closed (plan 015 Task 4)", async () => {

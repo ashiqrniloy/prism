@@ -66,10 +66,10 @@ describe("humanGate", () => {
     assert.equal(result.status, "succeeded");
     assert.equal(result.outputs.execute, "executed");
     assert.equal(scripted.requests.length, 1);
-    assert.equal(scripted.requests[0]!.package, "@arnilo/prism-extensions/workflows");
+    assert.equal(scripted.requests[0]?.package, "@arnilo/prism-extensions/workflows");
     const gates = events.filter((event) => event.name === WORKFLOW_EVENTS.gate);
     assert.equal(gates.length, 1);
-    assert.equal(gates[0]!.data.pass, true);
+    assert.equal(gates[0]?.data.pass, true);
   });
 
   it("human_gate_declined_routes_back", async () => {

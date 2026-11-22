@@ -93,7 +93,7 @@ describe("decision-model gates (plan 202 Task 12)", () => {
     });
     const result = await decisions.evaluateTurn({ text: "What changed?", candidates });
     assert.equal(calls.length, 1, "P3/P4/P7 share one batched request");
-    assert.equal(Object.keys(calls[0]!.questions).length, 34);
+    assert.equal(Object.keys(calls[0]?.questions).length, 34);
     assert.equal(result.needed, undefined);
     assert.equal(result.instructionLike, undefined);
     assert.equal(result.irrelevant?.size ?? 0, 0);

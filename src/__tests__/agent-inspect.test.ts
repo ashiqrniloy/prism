@@ -78,7 +78,7 @@ describe("agent.inspect()", () => {
         ["@acme/flaky", "1.0.0", "skipped", true],
       ],
     );
-    assert.deepEqual(view.packages[0]!.capabilities, ["host-ui"]);
+    assert.deepEqual(view.packages[0]?.capabilities, ["host-ui"]);
     assert.deepEqual(view.tools, [
       { name: "read", package: "host" },
       { name: "audit_log", package: "@acme/audit" },
@@ -91,7 +91,7 @@ describe("agent.inspect()", () => {
     assert.deepEqual(view.disabled, { tools: ["shell", "audit_drop"], skills: [], commands: [], hooks: [] });
     // Same priority: package order, host last. A higher priority runs first.
     assert.deepEqual(
-      view.hooks["tool.call"]!.map((hook) => hook.id),
+      view.hooks["tool.call"]?.map((hook) => hook.id),
       ["@acme/audit:tool.call", "host:tool.call"],
     );
     assert.deepEqual(view.slots, { loop: "@acme/loop", compaction: "kernel", store: "kernel", credentials: "kernel" });
@@ -157,8 +157,8 @@ describe("agent.inspect()", () => {
       for (const field of ["spec-host.example", "SPEC_KEY", "spec-option"])
         assert.equal(text.includes(field), false, `ModelSpec ${field} is never listed`);
       assert.equal(text.includes(SECRET), false, "the env value and a secret in a non-secret field are not");
-      assert.equal(agent.inspect().packages[0]!.configSources.apiKey, "code");
-      assert.equal(agent.inspect().packages[0]!.source, "code");
+      assert.equal(agent.inspect().packages[0]?.configSources.apiKey, "code");
+      assert.equal(agent.inspect().packages[0]?.source, "code");
       // A value `credentials.resolve` returned is masked too.
       const resolver = pkg(
         "@acme/resolver",
@@ -189,7 +189,7 @@ describe("agent.inspect()", () => {
       view,
       view.packages,
       view.packages[0],
-      view.packages[0]!.configSources,
+      view.packages[0]?.configSources,
       view.hooks,
       view.slots,
       view.statusNotes,

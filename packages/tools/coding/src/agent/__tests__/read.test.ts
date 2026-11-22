@@ -140,7 +140,7 @@ test("offset beyond end of file → error result naming total lines", async () =
     const tool = createReadTool(cwd);
     const r = await tool.execute({ path: "small.txt", offset: 99 }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /Offset 99 is beyond end of file \(2 lines total\)/);
+    assert.match(r.error?.message, /Offset 99 is beyond end of file \(2 lines total\)/);
     assert.match(textOf(r), /Offset 99 is beyond end of file/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -165,7 +165,7 @@ test("empty/missing path arg → error result naming the requirement", async () 
     const tool = createReadTool(cwd);
     const r = await tool.execute({ path: "" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /path is required/);
+    assert.match(r.error?.message, /path is required/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -361,7 +361,7 @@ test("aborted signal before read → error result", async () => {
     ac.abort();
     const r = await tool.execute({ path: "a.txt" }, ctx(ac.signal));
     assert.ok(r.error);
-    assert.match(r.error!.message, /aborted/i);
+    assert.match(r.error?.message, /aborted/i);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -389,7 +389,7 @@ test("image over maxImageBytes → error result without image content", async ()
     const tool = createReadTool(cwd, { maxImageBytes: ONE_PX_PNG.length - 1 });
     const r = await tool.execute({ path: "big.png" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /exceeds/i);
+    assert.match(r.error?.message, /exceeds/i);
     assert.equal(imageData(r), undefined);
     assert.equal(
       r.content?.find((b) => b.type === "image"),
@@ -473,7 +473,7 @@ test("transformImage failure → error result without image content", async () =
     });
     const r = await tool.execute({ path: "px.png" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /resize failed/);
+    assert.match(r.error?.message, /resize failed/);
     assert.equal(imageData(r), undefined);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -491,7 +491,7 @@ test("transformed image over maxImageBytes → error result", async () => {
     });
     const r = await tool.execute({ path: "px.png" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /Transformed image/i);
+    assert.match(r.error?.message, /Transformed image/i);
     assert.equal(imageData(r), undefined);
   } finally {
     await rm(cwd, { recursive: true, force: true });

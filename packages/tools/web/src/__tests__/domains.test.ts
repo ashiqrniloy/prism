@@ -66,7 +66,7 @@ test("domain_allow_filters_search_results", async () => {
     ["https://allowed.test/a"],
   );
   assert.equal(value.filtered, 1);
-  const text = (result.content as readonly { text: string }[])[0]!.text;
+  const text = (result.content as readonly { text: string }[])[0]?.text;
   assert.ok(!text.includes("blocked.test"), "a filtered result never reaches the rendered text");
 });
 

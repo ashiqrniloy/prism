@@ -700,7 +700,7 @@ describe("agent session runtime", () => {
         seenSignal = request.signal!;
         seen();
         await new Promise<void>((_resolve, reject) =>
-          request.signal!.addEventListener("abort", () => reject(request.signal!.reason), { once: true }),
+          request.signal?.addEventListener("abort", () => reject(request.signal?.reason), { once: true }),
         );
       },
     };
@@ -803,7 +803,7 @@ describe("agent session runtime", () => {
     assert.equal(result.status, "completed");
     assert.equal(result.runId, events.find((e) => e.type === "run.started")?.runId);
     assert.equal(requests.length, 2);
-    const steered = requests[1]!.messages.some(
+    const steered = requests[1]?.messages.some(
       (message) =>
         message.role === "user" && message.content.some((block) => block.type === "text" && block.text.includes("Prefer SQLite")),
     );
@@ -905,7 +905,7 @@ describe("agent session runtime", () => {
           while (!request.signal?.aborted) {
             await new Promise((resolve) => setTimeout(resolve, 5));
           }
-          throw request.signal!.reason;
+          throw request.signal?.reason;
         }
         yield providerTextDelta("steered-ok");
         yield providerDone();
@@ -928,7 +928,7 @@ describe("agent session runtime", () => {
     assert.equal(requests.length, 2);
     assert.equal(result.runId, events.find((e) => e.type === "run.started")?.runId);
     assert.equal(
-      requests[1]!.messages.some(
+      requests[1]?.messages.some(
         (message) =>
           message.role === "user" && message.content.some((block) => block.type === "text" && block.text.includes("fix tests first")),
       ),
@@ -1254,7 +1254,7 @@ describe("agent session runtime", () => {
     });
 
     await session.run("first");
-    const firstLeaf = (await session.entries()).at(-1)!.id;
+    const firstLeaf = (await session.entries()).at(-1)?.id;
     await session.run("second");
     await session.checkout(firstLeaf);
     await session.run("branch");
@@ -1721,7 +1721,7 @@ describe("agent session runtime", () => {
     });
 
     await session.run("old");
-    const previousLeaf = (await session.entries()).at(-1)!.id;
+    const previousLeaf = (await session.entries()).at(-1)?.id;
     const result = await session.compact({ keepRecentEntries: 1 });
     const entries = await session.entries();
 
@@ -1768,7 +1768,7 @@ describe("agent session runtime", () => {
     await session.run("new");
 
     assert.equal(
-      requests[1]!.messages.filter((message) => message.role === "user").length,
+      requests[1]?.messages.filter((message) => message.role === "user").length,
       1,
       "reordered keys must not duplicate the trailing input after auto-compaction",
     );
@@ -1794,12 +1794,12 @@ describe("agent session runtime", () => {
     await session.run("old");
     await session.run("new");
 
-    const text = requests[1]!.messages
+    const text = requests[1]?.messages
       .flatMap((message) => message.content)
       .map((block) => (block.type === "text" ? block.text : ""))
       .join("\n");
     assert.equal(text.includes("Summary:"), true);
-    assert.equal(requests[1]!.messages.filter((message) => message.role === "user").length, 1);
+    assert.equal(requests[1]?.messages.filter((message) => message.role === "user").length, 1);
     assert.equal(text.includes("new"), true);
   });
 

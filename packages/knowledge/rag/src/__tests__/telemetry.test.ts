@@ -137,7 +137,7 @@ describe("RAG telemetry seam", () => {
 
     const first = recordingTelemetry();
     await replaceSource({ sourceId: "doc", chunks, embedder, store, scope, contentHash: "ab".repeat(32), telemetry: first.telemetry });
-    assert.equal(first.nodes[0]!.attributes["rag.index_generation"], 1);
+    assert.equal(first.nodes[0]?.attributes["rag.index_generation"], 1);
 
     const second = recordingTelemetry();
     await replaceSource({
@@ -149,12 +149,12 @@ describe("RAG telemetry seam", () => {
       contentHash: "ef".repeat(32),
       telemetry: second.telemetry,
     });
-    assert.equal(second.nodes[0]!.attributes["rag.index_generation"], 2);
+    assert.equal(second.nodes[0]?.attributes["rag.index_generation"], 2);
 
     const retrieval = recordingTelemetry();
     await retrieveContext("generation aware body two", { embedder, store, scope, telemetry: retrieval.telemetry });
-    assert.equal(retrieval.nodes[0]!.name, "rag_request");
-    assert.equal(retrieval.nodes[0]!.attributes["rag.index_generation"], 2);
+    assert.equal(retrieval.nodes[0]?.name, "rag_request");
+    assert.equal(retrieval.nodes[0]?.attributes["rag.index_generation"], 2);
   });
 
   it("opens rag_index with an embedded.index child and skips the child when unchanged", async () => {
@@ -168,8 +168,8 @@ describe("RAG telemetry seam", () => {
       first.nodes.map((node) => node.name),
       ["rag_index", "embedding.index"],
     );
-    assert.equal(first.nodes[0]!.attributes["rag.source_id"], "doc");
-    assert.equal(first.nodes[1]!.parent, "rag_index");
+    assert.equal(first.nodes[0]?.attributes["rag.source_id"], "doc");
+    assert.equal(first.nodes[1]?.parent, "rag_index");
 
     const second = recordingTelemetry();
     const result = await replaceSource({
@@ -186,7 +186,7 @@ describe("RAG telemetry seam", () => {
       second.nodes.map((node) => node.name),
       ["rag_index"],
     );
-    assert.ok(second.nodes[0]!.ended);
+    assert.ok(second.nodes[0]?.ended);
   });
 
   it("records rag.scope_count and per-hit tenant/corpus on multi-scope retrieve", async () => {

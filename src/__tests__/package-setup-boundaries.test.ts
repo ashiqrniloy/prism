@@ -36,7 +36,7 @@ describe("optional package setup boundaries", () => {
     for (const [, factory, , options, specifier] of providerPackages) {
       let fetchCalls = 0;
       const mod = (await import(specifier)) as Record<string, (options: unknown) => unknown>;
-      const instance = mod[factory]!({
+      const instance = mod[factory]?.({
         ...options,
         fetch: (() => {
           fetchCalls++;
@@ -57,7 +57,7 @@ describe("optional package setup boundaries", () => {
       const fetchStub = (() => {
         throw new Error("network disabled");
       }) as typeof fetch;
-      const instance = mod[factory]!({ ...options, fetch: fetchStub }) as { readonly config?: Readonly<Record<string, unknown>> };
+      const instance = mod[factory]?.({ ...options, fetch: fetchStub }) as { readonly config?: Readonly<Record<string, unknown>> };
 
       assert.ok(
         instance.config === undefined || !("fetch" in instance.config),

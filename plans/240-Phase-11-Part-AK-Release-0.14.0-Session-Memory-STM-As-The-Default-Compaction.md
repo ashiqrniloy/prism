@@ -515,7 +515,7 @@
     - **`bun scripts/release.mjs gate` exits 0.** The full `bun run test` after the fix shows only timing tests failing at bun's 5 s default under a load average of about 25: `markdown_store_write_amplification`, and build-race scenarios 3–4 when run outside the gate's timeout. Task 11 re-runs them on a quiet machine. Lint and format are clean.
     - **Left to Task 9:** the roadmap version table (including the native-packages row's old "a kernel 0.14 or 0.15 needs no package change"), the migration note, and the CHANGELOG `[0.14.0]` sections.
 
-- [ ] Task 8a: Reduce the non-null assertions before the release (owner D10)
+- [x] Task 8a: Reduce the non-null assertions before the release (owner D10)
   - Acceptance Criteria:
     - Functional:
       - The non-null assertion total in `scripts/budgets.json` is back at or under its pre-consolidation value of 2,261, against 2,537 now.
@@ -539,7 +539,27 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 9: Release docs: roadmap, migration note, CHANGELOG, PRODUCT
+  - Notes (executed 2026-11-22):
+    - **Total:** non-null assertions went from 2,537 to **2,091**, under the 2,261 target. By directory:
+
+      | Directory | Before → after |
+      | --- | --- |
+      | `packages/memory/system/src/session` | 232 → 199 |
+      | `src` | 598 → 542 |
+      | `packages/extensions/mcp/src` | 34 → 16 |
+      | `packages/extensions/workflows/src` | 54 → 48 |
+      | `packages/hosts/evals/src` | 237 → 204 |
+      | `packages/extensions/compaction/src` | 8 → 3 |
+
+      Every other allowlisted directory went down. `packages/tools/openapi/src` reached 0, so its `biome.json` allowlist entry and budget row are removed.
+    - **Method:**
+      - Test files only: Biome's `noNonNullAssertion` fix (`x!.y` → `x?.y`), kept per file only when every workspace typecheck and `biome lint` passed. 65 files were reverted for typecheck and 33 for lint.
+      - 38 negative assertions were restored to `!` (`, undefined)`, `assert.ok(!…)`, `doesNotMatch`, `.not.`, throws), where `?.` would pass silently on a missing value.
+      - No `x?.call()` statement was introduced, so no test call can be skipped silently.
+      - No source file changed and no helper was added; about 150 test files are touched.
+    - **Checks:** `budgets.json` `nonNullAssertions` is set to the measured counts with a dated reason. The full gate passes 9/9 stages, with lint and format clean, after Task 9's kernel byte rebaseline (1,452,914 → 1,454,721 packed, 4,801,525 → 4,806,054 unpacked: the CHANGELOG section, the migration note and the roadmap table).
+
+- [x] Task 9: Release docs: roadmap, migration note, CHANGELOG, PRODUCT
   - Acceptance Criteria:
     - Functional:
       - **`roadmap.md`:**
@@ -570,6 +590,29 @@
     - Docs pages to create/edit: listed above.
     - `docs/index.md` update: yes (the memory and compaction sentences).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22):
+    - **`docs/migration.md`:**
+      - A new lead section, "0.13.x → 0.14.0: a breaking release", covers:
+        - semver 0.x, API level 2 and `^0.14.0` peers;
+        - session memory as the compaction system: it installs off (`enabled: true`), WM is off (`wm: {}`), the policy is deterministic, verbatim records come with `stm.verbatimUserChars: 0` as the way back, the chunk store is removed, and experimental config is marked;
+        - LLM compaction as the alternative (one system per agent, the `keepRecentTokens` default, `maxKeptShare`);
+        - the removed exports by family: about 350 limit constants now in host config (pointing to `docs/limits.md`), the provider-kit helpers (`readRetryAfterMs` → `parseRetryAfterMs`), and `AUDIT_EXPORT_HARD_LIMITS`;
+        - the reference host and the kit.
+      - The two running "0.13.1 → next (unreleased)" sections are now "0.13.x → 0.14.0".
+    - **CHANGELOGs:**
+      - The root `## [0.14.0] - 2026-11-22` is assembled from `[Unreleased]`, with a highlights paragraph, and an empty `[Unreleased]` sits above it.
+      - Each bundle CHANGELOG has its version section: extensions, hosts, memory and providers at 0.14.0, and knowledge at `0.14.0-experimental.0`.
+      - Tools gets a new top `[Unreleased]` and a `[0.14.0]` pointer section; its old 0.13.0-era lower section is left as history.
+      - Task 12 corrects the date if the publish lands on another day.
+    - **`roadmap.md` version table:**
+      - the native-packages row states the semver 0.x rule (it said "a kernel 0.14 or 0.15 needs no package change");
+      - the memory row is now 0.14.0 on `latest`, graduated with experimental config paths;
+      - the knowledge row is `0.14.0-experimental.N` with a range dependency;
+      - a new 0.14.0 row;
+      - Phase 19's "publish … as 0.14.0" now says the defects shipped as 0.13.1 and Parts B–M and O ship in 0.14.0.
+    - `PRODUCT.md`, `README.md` and `docs/index.md` were done in Task 7, and the index banner in Task 8.
+    - `docs.test.ts`: 69 pass. The kernel byte budget is rebaselined with Task 8a's budget edit (one file).
 
 - [ ] Task 10: Paid live check of the release defaults (owner's word, ceiling per D7)
   - Acceptance Criteria:

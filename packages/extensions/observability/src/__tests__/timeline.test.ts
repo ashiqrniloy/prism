@@ -234,15 +234,15 @@ test("workflow: 2-node DAG, checkpoint outputs appear only with checkpoint + red
   const metadataTimeline = projectWorkflowTimeline(events);
   const nodeSteps = metadataTimeline.steps.filter((s) => s.kind === "workflow_node");
   assert.equal(nodeSteps.length, 2);
-  assert.equal(nodeSteps[0]!.output, undefined, "metadata mode must not have node output");
-  assert.equal(nodeSteps[1]!.output, undefined, "metadata mode must not have node output");
+  assert.equal(nodeSteps[0]?.output, undefined, "metadata mode must not have node output");
+  assert.equal(nodeSteps[1]?.output, undefined, "metadata mode must not have node output");
 
   // With checkpoint + redacted_io — outputs present.
   const ioTimeline = projectWorkflowTimeline(events, { content: "redacted_io", checkpoint });
   const ioNodeSteps = ioTimeline.steps.filter((s) => s.kind === "workflow_node");
   assert.equal(ioNodeSteps.length, 2);
-  assert.deepStrictEqual(ioNodeSteps[0]!.output, { value: "resultA" }, "checkpoint output must appear with redacted_io");
-  assert.deepStrictEqual(ioNodeSteps[1]!.output, { value: "resultB" }, "checkpoint output must appear with redacted_io");
+  assert.deepStrictEqual(ioNodeSteps[0]?.output, { value: "resultA" }, "checkpoint output must appear with redacted_io");
+  assert.deepStrictEqual(ioNodeSteps[1]?.output, { value: "resultB" }, "checkpoint output must appear with redacted_io");
 
   // Verify workflowId and revision from checkpoint.
   assert.equal(ioTimeline.workflowId, wfId);
@@ -323,7 +323,7 @@ test("unknown event types are ignored, not thrown", () => {
   const timeline = projectAgentTimeline(events);
   // Only run step from agent_started.
   assert.equal(timeline.steps.length, 1);
-  assert.equal(timeline.steps[0]!.kind, "run");
+  assert.equal(timeline.steps[0]?.kind, "run");
 });
 
 test("workflow timeline folder matches one-shot project", () => {

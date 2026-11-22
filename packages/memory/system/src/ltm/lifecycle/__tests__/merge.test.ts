@@ -55,7 +55,7 @@ describe("capacity merging (plan 188.4 Task 5)", () => {
     assert.equal(groups.length, 2);
     // Pass 1 is by key, whatever the text says; the survivor is the stronger note, then the lower id.
     assert.deepEqual(
-      groups[0]!.others.map((note) => note.id),
+      groups[0]?.others.map((note) => note.id),
       ["bbbbbbbbbbbb"],
       "the higher id folds into the lower one on a strength tie",
     );

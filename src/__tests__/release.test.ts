@@ -127,7 +127,7 @@ test("release graph validates exact versions and uses deterministic dependency o
 test("registry preflight rejects collisions and resume skips only matching manifests", async () => {
   const root = fixture();
   const release = loadRelease(root);
-  const core = release.byName.get("@arnilo/prism")!.manifest;
+  const core = release.byName.get("@arnilo/prism")?.manifest;
   await assert.rejects(runRelease({ release, version: VERSION, mode: "check", fetcher: published(core) }), /already exists/);
 
   const called: string[] = [];

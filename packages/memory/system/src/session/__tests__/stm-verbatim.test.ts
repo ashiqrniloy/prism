@@ -116,7 +116,7 @@ describe("STM keeps user messages word for word (fix 1)", () => {
               kind: "statement",
               description: "Ship day changed Monday → Tuesday",
               sourceEntryIds: ["u3"],
-              supersedes: old!.id,
+              supersedes: old?.id,
               corrects: true,
             },
           },
@@ -145,7 +145,7 @@ describe("STM keeps user messages word for word (fix 1)", () => {
     );
     const kept = records.filter((item) => item.verbatim);
     assert.equal(kept.length, 1);
-    assert.equal(kept[0]!.fallback, undefined, "the user's words were not guessed at");
+    assert.equal(kept[0]?.fallback, undefined, "the user's words were not guessed at");
     assert.equal(records.filter((item) => item.description.includes("ember-93")).length, 1, "no second, truncated copy");
     assert.ok(
       records.some((item) => item.fallback === "worker_error"),
@@ -211,7 +211,7 @@ describe("a user correction ranks with what it replaces (fix 3)", () => {
     assert.equal(statement?.relevance, "critical", "not below the record it replaces");
     assert.equal(statement?.durable, "constraint");
     assert.deepEqual(records, [
-      { type: OBSERVATIONS_DROPPED, observationIds: [old.id], reason: "superseded", supersededBy: statement!.id },
+      { type: OBSERVATIONS_DROPPED, observationIds: [old.id], reason: "superseded", supersededBy: statement?.id },
     ]);
   });
 

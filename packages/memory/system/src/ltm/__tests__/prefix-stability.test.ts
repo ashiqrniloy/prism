@@ -138,7 +138,7 @@ it("new_session_and_refresh_see_writes_from_another_memory_instance", async () =
   const before = (await h.build()).context;
   const other = createMemory(h.scope);
   await other.remember(
-    { entries: [{ id: "bbbbbbbbbbbb", text: "external orchard", metadata: (await h.memory.getEntry(h.seed.id))!.metadata }] },
+    { entries: [{ id: "bbbbbbbbbbbb", text: "external orchard", metadata: (await h.memory.getEntry(h.seed.id))?.metadata }] },
     { wait: true },
   );
   assert.deepEqual((await h.build()).context, before);
@@ -238,7 +238,7 @@ it("imported_tombstones_break_an_existing_epoch", async () => {
 it("candidate_inserts_and_evidence_patches_stay_reachable_without_retracting", async () => {
   const h = await epochHarness();
   const before = (await h.build()).context;
-  const metadata = (await h.memory.getEntry(h.seed.id))!.metadata;
+  const metadata = (await h.memory.getEntry(h.seed.id))?.metadata;
   await h.memory.remember(
     { entries: [{ id: "bbbbbbbbbbbb", text: "candidate orchard rule", metadata: { ...metadata, status: "candidate" } }] },
     { wait: true },
@@ -323,7 +323,7 @@ it("another_instances_additive_write_keeps_the_prefix_pinned", async () => {
   const mine = revalidationHarness(h);
   const before = (await mine.build()).context;
   await createMemory(h.scope).remember(
-    { entries: [{ id: "bbbbbbbbbbbb", text: "external orchard", metadata: (await h.memory.getEntry(h.seed.id))!.metadata }] },
+    { entries: [{ id: "bbbbbbbbbbbb", text: "external orchard", metadata: (await h.memory.getEntry(h.seed.id))?.metadata }] },
     { wait: true },
   );
   assert.deepEqual((await mine.build()).context, before);
@@ -435,8 +435,8 @@ it("prefix_identical_between_compactions_across_wm_passes", async () => {
     assert.equal(new Set(requests.map(blocks)).size, 1, "every turn sends the same context blocks and tools");
     // The transcript only grows at its tail: each request's messages start with the previous request's, byte for byte.
     for (let index = 1; index < requests.length; index += 1) {
-      const before = requests[index - 1]!.messages;
-      const after = requests[index]!.messages;
+      const before = requests[index - 1]?.messages;
+      const after = requests[index]?.messages;
       assert.ok(after.length > before.length, "newer material stays in the transcript tail");
       assert.equal(JSON.stringify(after.slice(0, before.length)), JSON.stringify(before), `turn ${index} keeps the prefix`);
     }

@@ -336,7 +336,7 @@ describe("team project store (plan 188.5 Task 3)", () => {
       };
       assert.equal(shared.ok, true);
       assert.equal(scripted.requestsOf("confirm").length, 1, "the person approved through host.ui");
-      assert.match(scripted.requestsOf("confirm")[0]!.detail ?? "", /The release train deploys on Thursdays\./);
+      assert.match(scripted.requestsOf("confirm")[0]?.detail ?? "", /The release train deploys on Thursdays\./);
       assert.ok(existsSync(join(teamDir, shared.path)), "the shared note lands in the checked-in team tree");
       const after = (await agent.commands.run("memory:status", {} as JsonObject, { session })) as { text: string };
       assert.match(after.text, /Team store: 1 verified, 1 candidate \(1 quarantined\)/);

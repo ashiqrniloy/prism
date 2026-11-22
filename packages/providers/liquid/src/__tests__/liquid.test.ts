@@ -58,11 +58,13 @@ describe("@arnilo/prism-ai/liquid", () => {
         { status: 200, headers: { "content-type": "application/json" } },
       );
     }) as typeof fetch;
-    await createLiquidProvider({ apiKey: async () => "reviewed-path-key", fetch: fetchImpl }).decisions!().decide({
-      model: "d1.1",
-      state: "ticket",
-      questions: { verdict: { type: "choice", instructions: "How?", criteria: { run: null, reject: null } } },
-    });
+    await createLiquidProvider({ apiKey: async () => "reviewed-path-key", fetch: fetchImpl })
+      .decisions?.()
+      .decide({
+        model: "d1.1",
+        state: "ticket",
+        questions: { verdict: { type: "choice", instructions: "How?", criteria: { run: null, reject: null } } },
+      });
     assert.equal(url, `${LIQUID_DEFAULT_BASE_URL}${LIQUID_DEFAULT_PATH}`);
     assert.equal(LIQUID_DEFAULT_PATH, "/decisions/v1/systemone");
   });

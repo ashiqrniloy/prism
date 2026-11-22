@@ -212,7 +212,7 @@ describe("../index.js", () => {
       provider: "openai",
       model: "gpt",
       success: true,
-      circuitProbeToken: probe!.value.circuitProbeToken,
+      circuitProbeToken: probe?.value.circuitProbeToken,
     });
     await circuitRouter.resolve({ model: model("openai", "gpt"), identity });
   });

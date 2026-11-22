@@ -74,16 +74,16 @@ test("conformance: rerankRecallHits blends per-hit and keeps the documented tie-
     score,
   });
   const reranked = rerankRecallHits([hit("low", 1, 0.4, 0.9), hit("high", 1, 0.9, 0.5)], scoring, now);
-  assert.equal(reranked[0]!.id, "high"); // 0.9 blended beats 0.9 similarity only
-  assert.equal(reranked[0]!.similarity, 0.5);
-  assert.equal(reranked[0]!.importance, 0.9);
+  assert.equal(reranked[0]?.id, "high"); // 0.9 blended beats 0.9 similarity only
+  assert.equal(reranked[0]?.similarity, 0.5);
+  assert.equal(reranked[0]?.importance, 0.9);
   // equal blended score → sequence ascending tie-break (score desc, sequence asc, id asc)
   const tie = rerankRecallHits([hit("a", 2, 1, 0.5), hit("b", 1, 1, 0.5)], scoring, now);
-  assert.equal(tie[0]!.id, "b");
-  assert.equal(tie[1]!.id, "a");
+  assert.equal(tie[0]?.id, "b");
+  assert.equal(tie[1]?.id, "a");
   // recency component: fresh now → 1, decays with age using halfLifeMs
   const fresh = rerankRecallHits([hit("f", 1, 0, 0)], scoring, Date.parse("2026-01-01T00:00:00.000Z"));
-  assert.equal(fresh[0]!.recency, 1);
+  assert.equal(fresh[0]?.recency, 1);
 });
 
 test("conformance: public createMemory accepts the scoring surface; plain recall stays component-free", async () => {

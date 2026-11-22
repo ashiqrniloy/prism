@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+## [0.14.0] - 2026-11-22
+
+Requires `@arnilo/prism` `^0.14.0` (kernel API level 2). The 0.14.0 changes to this bundle are listed in the root
+[CHANGELOG](../../CHANGELOG.md) `[0.14.0]` section:
+- `./coding`: command rules that hold, a POSIX shell and a guarded quick start (plan 233);
+- every `HARD_*`/`DEFAULT_*` limit is now host config, mostly in `./browser` (plan 239).
+
 ## [0.13.2] - 2026-11-14
 
 Requires `@arnilo/prism` 0.13.1 for the metering below; against 0.13.0 the `session` option is ignored and the call is unmetered, as before.

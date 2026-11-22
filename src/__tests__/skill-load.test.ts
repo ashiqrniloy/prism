@@ -139,12 +139,12 @@ describe("skill load", () => {
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
 
     assert.equal(requests.length, 2);
-    const firstText = requests[0]!.messages
+    const firstText = requests[0]?.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
     const secondJson = JSON.stringify(requests[1]?.messages ?? []);
-    const secondText = requests[1]!.messages
+    const secondText = requests[1]?.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");

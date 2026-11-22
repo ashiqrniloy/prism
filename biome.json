@@ -210,16 +210,6 @@
       }
     },
     {
-      "includes": ["packages/tools/openapi/src/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noNonNullAssertion": "off"
-          }
-        }
-      }
-    },
-    {
       "includes": ["packages/tools/computer-use/src/**"],
       "linter": {
         "rules": {

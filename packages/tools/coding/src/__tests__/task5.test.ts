@@ -290,7 +290,7 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
       assert.equal(first.pending?.[0]?.kind, "elicitation");
       const events: AgentEvent[] = [];
       for await (const event of session.resume(
-        first.pending!.map((pending) => ({
+        first.pending?.map((pending) => ({
           approvalId: pending.approvalId,
           outcome: "allow_once" as const,
           elicitation: { selectedId: "sqlite" },

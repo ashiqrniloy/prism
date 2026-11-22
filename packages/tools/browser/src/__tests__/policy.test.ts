@@ -140,13 +140,13 @@ describe("browser Task 6 policy", () => {
         },
         uploads: { roots: [root] },
       });
-      await tools[0]!.execute({}, ctx());
+      await tools[0]?.execute({}, ctx());
       // An allowed upload fires the side-effect hook.
-      const uploaded = await tools[2]!.execute({ action: "upload", target: { role: "button", name: "Upload" }, paths: [allowed] }, ctx());
+      const uploaded = await tools[2]?.execute({ action: "upload", target: { role: "button", name: "Upload" }, paths: [allowed] }, ctx());
       assert.equal(uploaded.error, undefined);
       assert.deepEqual(seen, ["upload"], "the side-effect hook saw the mutating action");
       // A path outside the approved roots is denied before the hook, even with hostile page text.
-      const denied = await tools[2]!.execute(
+      const denied = await tools[2]?.execute(
         {
           action: "upload",
           target: { role: "button", name: "Upload" },
@@ -157,12 +157,12 @@ describe("browser Task 6 policy", () => {
         ctx(),
       );
       assert.ok(denied.error);
-      assert.match(denied.error!.message, /escapes approved roots/);
+      assert.match(denied.error?.message, /escapes approved roots/);
       assert.deepEqual(seen, ["upload"], "a denied upload never reaches the side-effect hook");
       // Snapshot observation still allowed.
-      const snap = await tools[1]!.execute({}, ctx());
+      const snap = await tools[1]?.execute({}, ctx());
       assert.equal(snap.error, undefined);
-      await tools[3]!.execute({}, ctx());
+      await tools[3]?.execute({}, ctx());
     } finally {
       await rm(root, { recursive: true, force: true });
       await rm(outside, { recursive: true, force: true });
@@ -181,7 +181,7 @@ describe("browser Task 6 policy", () => {
       const budget = createUploadBudget();
       const approved = await approveUploadPaths([join(root, "ok.txt")], { roots: [root] }, limits, budget);
       assert.equal(approved.length, 1);
-      assert.equal(approved[0]!.bytes, 5);
+      assert.equal(approved[0]?.bytes, 5);
 
       await assert.rejects(
         () => approveUploadPaths([join(root, "escape.txt")], { roots: [root] }, limits, createUploadBudget()),
@@ -224,7 +224,7 @@ describe("browser Task 6 policy", () => {
       limits: { closeGraceMs: 1, maxScreenshotMegapixels: 1, maxScreenshotBytes: 1024 * 1024 },
     });
     await manager.open("run-1");
-    const page = browser.contexts[0]!.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
+    const page = browser.contexts[0]?.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
     page.screenshotBuffer = ONE_PX_PNG;
     const result = await manager.act("run-1", { action: "screenshot" });
     assert.equal(result.screenshotBytes, ONE_PX_PNG.byteLength);
@@ -262,7 +262,7 @@ describe("browser Task 6 policy", () => {
         paths: [file],
       });
       assert.equal(result.uploads?.[0]?.bytes, 7);
-      const page = browser.contexts[0]!.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
+      const page = browser.contexts[0]?.pages()[0] as unknown as import("./fake-playwright.js").FakePage;
       assert.ok(page.actions.some((a) => a.startsWith("upload:e7:")));
       await manager.close();
     } finally {
@@ -288,9 +288,9 @@ describe("browser Task 6 policy", () => {
         },
       });
       await manager.open("run-1");
-      assert.equal(browser.contexts[0]!.createdWith.acceptDownloads, true);
+      assert.equal(browser.contexts[0]?.createdWith.acceptDownloads, true);
       const download = new FakeDownload("https://example.com/r.bin", "report.bin", Buffer.from("report"));
-      await browser.contexts[0]!.emitDownload(download);
+      await browser.contexts[0]?.emitDownload(download);
       // Queue still works while download settles.
       await manager.act("run-1", { action: "click", target: { role: "button", name: "Go" } });
       const listed = await waitFor(

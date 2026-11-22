@@ -279,7 +279,7 @@ describe("end-to-end draft lifecycle with tools and adapters", () => {
       identityKey: resumedDraft.identityKey,
       approvedAt: new Date().toISOString(),
     };
-    await adapter2.approveDraft!(approval);
+    await adapter2.approveDraft?.(approval);
 
     // Worker resumes approved draft via tool send without re-specifying payload
     const send = createWorkTools({
@@ -339,10 +339,10 @@ describe("end-to-end draft lifecycle with tools and adapters", () => {
       identityKey: draft.identityKey,
       approvedAt: new Date().toISOString(),
     };
-    adapter.approveDraft!(approval);
+    adapter.approveDraft?.(approval);
 
     // Edit the draft
-    const updated = adapter.updateDraft!(
+    const updated = adapter.updateDraft?.(
       draft.draftId,
       { to: "colleague@contoso.com", subject: "Changed Subject", bodyContents: "Draft body" },
       { expectedRevision: 1 },
@@ -620,7 +620,7 @@ describe("end-to-end draft lifecycle with tools and adapters", () => {
       identityKey: draft.identityKey,
       approvedAt: new Date().toISOString(),
     };
-    await gws.approveDraft!(approval);
+    await gws.approveDraft?.(approval);
 
     // 3. Resume approved draft via tool
     const calendarAdd = createWorkTools({

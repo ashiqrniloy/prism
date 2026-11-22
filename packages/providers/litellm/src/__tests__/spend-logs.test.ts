@@ -50,8 +50,8 @@ describe("litellmSpendLogs", () => {
     });
     // One indexed read, and the row the proxy volunteered for another tenant is gone.
     assert.equal(urls.length, 1);
-    assert.equal(urls[0]!.pathname, "/spend/logs");
-    assert.equal(urls[0]!.searchParams.get("request_id"), matchId);
+    assert.equal(urls[0]?.pathname, "/spend/logs");
+    assert.equal(urls[0]?.searchParams.get("request_id"), matchId);
   });
 
   it("spend_logs_date_range_for_many_ids pages a range and filters locally", async () => {
@@ -72,9 +72,9 @@ describe("litellmSpendLogs", () => {
     );
     assert.equal(result.missing.length, 19);
     assert.equal(urls.length, 1);
-    assert.equal(urls[0]!.pathname, "/spend/logs/v2");
-    assert.equal(urls[0]!.searchParams.get("page_size"), "100");
-    assert.equal(urls[0]!.searchParams.get("start_date"), "2026-10-31T22:00:00.000Z");
+    assert.equal(urls[0]?.pathname, "/spend/logs/v2");
+    assert.equal(urls[0]?.searchParams.get("page_size"), "100");
+    assert.equal(urls[0]?.searchParams.get("start_date"), "2026-10-31T22:00:00.000Z");
   });
 
   it("spend_logs_date_range_for_many_ids stops at the page cap", async () => {
@@ -136,8 +136,8 @@ describe("litellmSpendLogs", () => {
     const serialized = JSON.stringify(result);
     for (const canary of ["PROMPT-CANARY", "RESPONSE-CANARY", "HASHED-KEY-CANARY", "CACHE-KEY-CANARY", "authorization", "metadata"])
       assert.ok(!serialized.includes(canary), `leaked ${canary}`);
-    assert.equal(result.rows[0]!.callId, "bbbbbbbb-2222-4000-8000-000000000001");
-    assert.equal(result.rows[0]!.cacheReadTokens, 12);
+    assert.equal(result.rows[0]?.callId, "bbbbbbbb-2222-4000-8000-000000000001");
+    assert.equal(result.rows[0]?.cacheReadTokens, 12);
     assert.equal(result.rows[0]!.spend, 0);
   });
 
@@ -175,7 +175,7 @@ describe("litellmSpendLogs", () => {
   it("spend_logs_without_ids_reads_a_range", async () => {
     const { urls, fetch } = stub(() => json(fixture("v2-range")));
     const result = await litellmSpendLogs({ baseUrl: "http://127.0.0.1:4000", apiKey: async () => secret, waitMs: 0, fetch });
-    assert.equal(urls[0]!.pathname, "/spend/logs/v2");
+    assert.equal(urls[0]?.pathname, "/spend/logs/v2");
     assert.deepEqual(
       result.rows.map((row) => row.callId),
       ["aaaaaaaa-1111-4000-8000-000000000001", "aaaaaaaa-1111-4000-8000-000000000002", "ffffffff-0000-4000-8000-000000000002"],

@@ -125,7 +125,7 @@ describe("A2UI renderer binding", () => {
     const surface = model("s", [{ id: "root", component: "Button", label: "Go", actionName: "go", payload: { x: 1 } }]);
     const actions: unknown[] = [];
     const node = renderA2UiSurface(surface, DEFAULT_A2UI_CATALOG, stubDom, { onAction: (a) => actions.push(a) }) as StubNode;
-    node.first!.click();
+    node.first?.click();
     assert.deepEqual(actions, [{ type: "a2ui-action", surfaceId: "s", actionName: "go", payload: { x: 1 } }]);
   });
 

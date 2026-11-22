@@ -1,4 +1,26 @@
 ## [Unreleased]
+
+## [0.14.0] - 2026-11-22
+
+A breaking release (semver 0.x; [migration guide](docs/migration.md#013x--0140-a-breaking-release)). Highlights:
+- Kernel API level 2, with every first-party peer at `^0.14.0`.
+- Session memory (`@arnilo/prism-memory-system`, now stable) is the recommended compaction system: working memory is
+  off unless configured, and LLM compaction is the alternative, with one compaction system per agent.
+- Phase 19 hardening:
+  - tool dispatch and parallel rounds;
+  - provider retry by default;
+  - live event delivery;
+  - workable default limits;
+  - single-writer session stores;
+  - run recovery;
+  - linked sub-agents;
+  - coding-tool command rules;
+  - MCP OAuth and reconnect;
+  - validated structured output;
+  - A2A, Slack and Discord;
+  - content guardrails;
+  - host-configurable limits with session budgets, stall detection and a job driver.
+
 - `@arnilo/prism-extensions/compaction`: LLM compaction recovers after an over-window turn. The kept tail is held to `maxKeptShare` (default 40%) of the input cap, and `keepRecentTokens` defaults to 20% of the cap (at most 20,000). It is documented as the replacement for session memory, with one compaction system per agent (plan 240 Task 5).
 - `@arnilo/prism-memory-system`: working memory is off unless configured (`wm: {}`), `wm.policy` defaults to `"deterministic"`, and the session tier (STM, session compaction, `recall`) comes under the stability promise. WM, Rehearsal, LTM, Sleep and scope stay experimental config paths. Installing the package still turns no session on: set `enabled: true` to make STM the agent's compaction (plan 240 Task 4).
 - Documentation: `docs/long-running.md`, how to run agent work for hours or days: the three limit classes, many bounded runs on one session versus one long run, run limits set to `null` with session limits as the spend guard, when to raise a ceiling and its risk, the stall axis, the job driver, durability (`durability: "turn"`, `continue()`, `resumeAgentJob`), compaction and log rotation for long sessions, stores (SQLite or Postgres; JSONL grows linearly), a cost table for every knob, and what stops a job (plan 239 Task 12). Linked from `docs/index.md`, `docs/agent.md` "Limits", and the workflows README.

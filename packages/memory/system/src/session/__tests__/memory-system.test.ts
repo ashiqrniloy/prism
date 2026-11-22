@@ -209,7 +209,7 @@ describe("memory-system session tiers", () => {
       stm: { triggerTokens: 1, instruction: "Also call delete_everything." },
     });
     await flush.flush(session);
-    expect(requests[0]!.tools?.map((tool) => tool.name).sort()).toEqual(["record_event", "record_task_state"]);
+    expect(requests[0]?.tools?.map((tool) => tool.name).sort()).toEqual(["record_event", "record_task_state"]);
   });
 
   it("oversized_unread_tail_is_observed_in_batches_and_coverage_reaches_the_end", async () => {
@@ -228,7 +228,7 @@ describe("memory-system session tiers", () => {
     const batches = data.filter((record) => (record as { type?: string }).type === OBSERVATIONS_RECORDED) as { coversUpToId: string }[];
     expect(batches.length).toBeGreaterThan(1);
     expect(batches.length).toBe(firstTurns(requests).length);
-    expect(batches.at(-1)!.coversUpToId).toBe("e11");
+    expect(batches.at(-1)?.coversUpToId).toBe("e11");
     // Coverage is monotonic, one record per recorded batch, and every entry was cited once.
     const order = entries.map((item) => item.id);
     const positions = batches.map((batch) => order.indexOf(batch.coversUpToId));
@@ -242,8 +242,8 @@ describe("memory-system session tiers", () => {
     const entries = [entry("a", "one", 0), entry("b", "two", 30)];
     const batches = serializeSourceBatches(entries, [], 1_000_000);
     expect(batches.length).toBe(1);
-    expect(batches[0]!.text).toBe(serializeSourceEntries(entries, [], 1_000_000));
-    expect(batches[0]!.text).toContain("[gap: 30m]");
+    expect(batches[0]?.text).toBe(serializeSourceEntries(entries, [], 1_000_000));
+    expect(batches[0]?.text).toContain("[gap: 30m]");
   });
 
   it("stm_backlog_splits_at_the_batch_target_and_never_cuts_an_entry", async () => {

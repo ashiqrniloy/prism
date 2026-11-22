@@ -19,10 +19,10 @@ test("unrated importance is neutral half; accessed recency falls back to creatio
     lastAccessedAt: new Date(1000).toISOString(),
   };
   const scoring = resolveRecallScoring({ recencyWeight: 1, halfLifeMs: 1000 })!;
-  assert.equal(rerankRecallHits([hit], scoring, 2000)[0]!.recency, 0.5);
-  assert.equal(rerankRecallHits([{ ...hit, lastAccessedAt: undefined }], scoring, 2000)[0]!.recency, 0.25);
+  assert.equal(rerankRecallHits([hit], scoring, 2000)[0]?.recency, 0.5);
+  assert.equal(rerankRecallHits([{ ...hit, lastAccessedAt: undefined }], scoring, 2000)[0]?.recency, 0.25);
   assert.equal(
-    rerankRecallHits([hit], resolveRecallScoring({ recencyWeight: 1, halfLifeMs: 1000, recencyBasis: "created" })!, 2000)[0]!.recency,
+    rerankRecallHits([hit], resolveRecallScoring({ recencyWeight: 1, halfLifeMs: 1000, recencyBasis: "created" })!, 2000)[0]?.recency,
     0.25,
   );
   assert.throws(() => resolveRecallScoring({ recencyBasis: "bad" as never }), /recencyBasis/);
@@ -38,7 +38,7 @@ test("tail context preserves prefix and user anchor across tool rounds, with met
   assert.equal(result.messages[0], prefix);
   assert.equal(result.messages[2], user);
   assert.equal(result.messages[3], tool);
-  assert.deepEqual(result.messages[1]!.metadata?.contextBlocks, [{ title: "Memory", source: "fabric", itemIds: ["a"], tokens: 3 }]);
+  assert.deepEqual(result.messages[1]?.metadata?.contextBlocks, [{ title: "Memory", source: "fabric", itemIds: ["a"], tokens: 3 }]);
   assert.equal(withTailContext({ messages: [prefix] }, blocks).messages.length, 2);
   assert.equal(withTailContext(draft, []), draft);
 });

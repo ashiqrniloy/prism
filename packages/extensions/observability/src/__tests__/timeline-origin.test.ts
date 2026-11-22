@@ -59,6 +59,6 @@ test("workflow timeline groups child agent steps; node steps stay unattributed",
     { ...base, type: "workflow_finished", status: "succeeded", sequence: 6 },
   ] as never);
   assert.equal(timeline.byOrigin?.length, 1);
-  assert.equal(timeline.byOrigin![0].observed, true);
+  assert.equal(timeline.byOrigin?.[0].observed, true);
   assert.equal(timeline.steps.find((s) => s.kind === "workflow_node")?.origin, undefined);
 });

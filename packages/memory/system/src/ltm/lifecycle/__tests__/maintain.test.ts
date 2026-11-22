@@ -99,7 +99,7 @@ function stack(
 }
 
 async function advance(store: VectorStore, resourceId: string, sessions: number): Promise<void> {
-  for (let index = 0; index < sessions; index += 1) await store.scopeCounter!.increment({ tenantId: TENANT, resourceId, name: "sessions" });
+  for (let index = 0; index < sessions; index += 1) await store.scopeCounter?.increment({ tenantId: TENANT, resourceId, name: "sessions" });
 }
 
 describe("lifecycle maintenance (plan 188.4 Tasks 4-5)", () => {

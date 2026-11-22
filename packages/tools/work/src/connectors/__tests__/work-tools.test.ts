@@ -469,7 +469,7 @@ describe("idempotency claim state", () => {
     const unknown = await store.get(input);
     assert.equal(unknown?.status, "unknown");
     assert.equal((await store.begin(input)).outcome, "existing");
-    const resolved = await store.resolveUnknown({ ...input, expectedVersion: unknown!.version, status: "failed_terminal" });
+    const resolved = await store.resolveUnknown({ ...input, expectedVersion: unknown?.version, status: "failed_terminal" });
     assert.equal(resolved.status, "failed_terminal");
     await assert.rejects(() => store.begin({ ...input, key: "x".repeat(2_049) }), /bounded/);
   });

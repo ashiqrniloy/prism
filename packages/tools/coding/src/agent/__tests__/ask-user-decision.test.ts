@@ -261,7 +261,7 @@ test("ask_user_unavailable_suspends_then_resumes", async () => {
 
       const events: string[] = [];
       for await (const event of session.resume([
-        { approvalId: pending!.approvalId, outcome: "allow_once", elicitation: { selectedId: "postgres" } },
+        { approvalId: pending?.approvalId, outcome: "allow_once", elicitation: { selectedId: "postgres" } },
       ])) {
         events.push(event.type);
       }

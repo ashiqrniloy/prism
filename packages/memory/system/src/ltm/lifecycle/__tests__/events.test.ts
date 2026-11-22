@@ -86,7 +86,7 @@ describe("lifecycle counters", () => {
     assert.deepEqual(await lifecycle.recordUses("session-1", [note.id], { clock: 1 }), [], "one session counts once");
     let meta = parseMemoryNoteMetadata((await memory.getEntry(note.id))?.metadata);
     assert.equal(meta?.useSessions, 1);
-    assert.deepEqual(meta?.uses, [{ s: 1, at: meta!.uses![0]!.at }], "one logged use");
+    assert.deepEqual(meta?.uses, [{ s: 1, at: meta?.uses?.[0]?.at }], "one logged use");
     assert.equal((await memory.getEntry(note.id))?.metadata?.status, "candidate");
 
     assert.deepEqual(await lifecycle.recordUses("session-2", [note.id], { clock: 2 }), [note.id]);

@@ -448,6 +448,6 @@ describe("ACP mapper diff and locations (Task 6)", () => {
     const update = output[0] as { sessionUpdate: string; locations?: unknown; content?: Array<{ content?: { text?: string } }> };
     assert.equal(update.sessionUpdate, "tool_call_update");
     assert.deepEqual(update.locations, [{ path: "/x.ts" }]);
-    assert.equal(update.content![0]!.content!.text, "7");
+    assert.equal(update.content?.[0]?.content?.text, "7");
   });
 });

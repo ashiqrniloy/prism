@@ -71,7 +71,7 @@ test("connectOverCDP is the only Playwright entrypoint used", async () => {
     });
     assert.deepEqual(record.calls, [`ws://127.0.0.1:${port}`]);
     await session.close();
-    assert.equal(record.browsers[0]!.closeCount, 1);
+    assert.equal(record.browsers[0]?.closeCount, 1);
     assert.equal(session.process, undefined);
   } finally {
     server.close();
@@ -101,7 +101,7 @@ test("managed serve retries until ready, connects once, and close kills only the
     const exited = session.process.exited;
     await session.close();
     await exited;
-    assert.equal(record.browsers[0]!.closeCount, 1);
+    assert.equal(record.browsers[0]?.closeCount, 1);
   } finally {
     server.close();
   }

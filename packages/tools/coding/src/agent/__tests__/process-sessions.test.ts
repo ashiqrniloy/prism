@@ -361,7 +361,7 @@ function createFakeSandbox(opts?: { startProcess?: boolean; statusState?: () => 
     return {
       async write(data) {
         await new Promise<void>((resolveWrite, rejectWrite) => {
-          child.stdin!.write(Buffer.from(data), (err) => (err ? rejectWrite(err) : resolveWrite()));
+          child.stdin?.write(Buffer.from(data), (err) => (err ? rejectWrite(err) : resolveWrite()));
         });
       },
       async signal(name) {

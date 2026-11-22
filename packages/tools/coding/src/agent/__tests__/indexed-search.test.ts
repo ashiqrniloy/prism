@@ -166,7 +166,7 @@ test("default parity: literal routes to the fallback and is not labeled untruste
   const { composite, calls } = makeComposite({});
   const result = (await composite.search({ root, query: "needle", mode: "literal" })) as RepositorySearchResult;
   assert.equal(result.matches.length, 1);
-  assert.equal(result.matches[0]!.path, "a.ts");
+  assert.equal(result.matches[0]?.path, "a.ts");
   assert.equal(result.untrusted_index, undefined);
   assert.equal(calls.searches.length, 0, "literal mode never touches the index");
 });
@@ -181,7 +181,7 @@ test("indexed_literal query: freshness gate, validated hits, provenance metadata
   assert.equal(result.indexed?.sourceRevision, "abc123");
   assert.ok(result.indexed?.updatedAt !== undefined);
   assert.equal(result.matches.length, 2); // src/a.ts + src/b.ts (vendor/x.ts misses)
-  assert.equal(result.matches[0]!.score, 0.75);
+  assert.equal(result.matches[0]?.score, 0.75);
   assert.equal(result.matches[0]!.line, 0);
 });
 
@@ -295,8 +295,8 @@ test("hostile backend: duplicate paths deduped, snippets bounded, results capped
     result.matches.map((m) => m.path),
     ["a.ts", "b.ts"],
   );
-  assert.ok(Buffer.byteLength(result.matches[0]!.text, "utf8") <= 4096, "snippet truncated to the byte cap");
-  assert.equal(result.matches[1]!.text, "ok");
+  assert.ok(Buffer.byteLength(result.matches[0]?.text, "utf8") <= 4096, "snippet truncated to the byte cap");
+  assert.equal(result.matches[1]?.text, "ok");
 
   const capped = makeComposite({
     limits: { maxResults: 2 },
@@ -343,15 +343,15 @@ test("update lifecycle: add/edit route to update, delete/rename route to remove"
   await composite.index.update({ repositoryId: "repo-1", worktreeId: "wt-1", sourceRevision: "rev-9", changes });
   assert.equal(calls.updates.length, 1);
   assert.equal(calls.removes.length, 1);
-  assert.equal(calls.updates[0]!.changes.length, 3, "add+edit+rename-as-add");
+  assert.equal(calls.updates[0]?.changes.length, 3, "add+edit+rename-as-add");
   assert.deepEqual(
-    calls.updates[0]!.changes.map((c) => c.path),
+    calls.updates[0]?.changes.map((c) => c.path),
     ["src/a.ts", "src/a.ts", "src/new.ts"],
   );
-  assert.deepEqual(calls.removes[0]!.paths, ["src/gone.ts", "src/old.ts"]);
-  assert.equal(calls.updates[0]!.repositoryId, "repo-1");
-  assert.equal(calls.updates[0]!.worktreeId, "wt-1");
-  assert.equal(calls.updates[0]!.sourceRevision, "rev-9");
+  assert.deepEqual(calls.removes[0]?.paths, ["src/gone.ts", "src/old.ts"]);
+  assert.equal(calls.updates[0]?.repositoryId, "repo-1");
+  assert.equal(calls.updates[0]?.worktreeId, "wt-1");
+  assert.equal(calls.updates[0]?.sourceRevision, "rev-9");
 });
 
 test("update caps: change count, byte budget, identity/revision bounds, bad paths", async () => {
@@ -392,7 +392,7 @@ test("update caps: change count, byte budget, identity/revision bounds, bad path
   // facade remove validates and routes
   const { composite: c2, calls: c2calls } = makeComposite({});
   await c2.index.remove({ paths: ["a.ts", "b/c.ts"] });
-  assert.deepEqual(c2calls.removes[0]!.paths, ["a.ts", "b/c.ts"]);
+  assert.deepEqual(c2calls.removes[0]?.paths, ["a.ts", "b/c.ts"]);
   await expectIndexError(c2.index.remove({ paths: ["../x"] }), "ERR_PRISM_INDEX_UNTRUSTED");
 
   // status/dispose passthrough

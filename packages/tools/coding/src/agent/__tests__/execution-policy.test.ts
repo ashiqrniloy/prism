@@ -27,7 +27,7 @@ test("execution policy denial blocks shell before spawn", async () => {
     assert.equal(tool.exclusive, true);
     const r = await tool.execute({ command: "echo hi" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /shell blocked/);
+    assert.match(r.error?.message, /shell blocked/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -61,7 +61,7 @@ test("execution policy denial blocks write before filesystem mutation", async ()
     const target = join(cwd, "out.txt");
     const r = await tool.execute({ path: target, content: "x" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /write blocked/);
+    assert.match(r.error?.message, /write blocked/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -78,7 +78,7 @@ test("execution policy denial blocks read before access", async () => {
     const tool = createReadTool(cwd, { executionPolicy: policy });
     const r = await tool.execute({ path: file }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /read blocked/);
+    assert.match(r.error?.message, /read blocked/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

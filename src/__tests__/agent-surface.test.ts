@@ -339,7 +339,7 @@ describe("agent.subscribe", () => {
               name: "start",
               description: "starts a task",
               run: (_args, ctx) => {
-                ctx.session!.background("fast", async () => "done");
+                ctx.session?.background("fast", async () => "done");
                 return "started";
               },
             });

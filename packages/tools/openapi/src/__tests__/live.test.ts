@@ -44,7 +44,7 @@ describe.skipIf(!FLAG)("openapi live (real public spec + API)", () => {
     const response = await fetch(SPEC_URL);
     const document = await response.json();
     const [listCountries] = createOpenApiTools({ document, operations: ["listCountries"], server: SERVER });
-    const result = await listCountries!.execute({}, context("call-live-1"));
+    const result = await listCountries?.execute({}, context("call-live-1"));
     const value = result.value as { status: number; body: unknown };
     assert.equal(value.status, 200);
     assert.ok(value.body !== undefined && value.body !== "", "real API must return content");
@@ -72,7 +72,7 @@ describe.skipIf(!FLAG)("openapi live (real public spec + API)", () => {
     });
     await assert.rejects(
       async () => {
-        await getCountryByIso!.execute({}, context("call-live-2"));
+        await getCountryByIso?.execute({}, context("call-live-2"));
       },
       (error: unknown) => {
         assert.ok(error instanceof OpenApiToolError);
@@ -87,7 +87,7 @@ describe.skipIf(!FLAG)("openapi live (real public spec + API)", () => {
     const response = await fetch(SPEC_URL);
     const document = await response.json();
     const [getCountryByIso] = createOpenApiTools({ document, operations: ["getCountryByIso"], server: SERVER });
-    const result = await getCountryByIso!.execute({ iso: "zz" }, context("call-live-3"));
+    const result = await getCountryByIso?.execute({ iso: "zz" }, context("call-live-3"));
     const value = result.value as { status: number };
     assert.equal(value.status, 404, `expected the real API's 404, got ${JSON.stringify(value).slice(0, 120)}`);
     assert.equal(result.metadata?.trust, "untrusted_external");

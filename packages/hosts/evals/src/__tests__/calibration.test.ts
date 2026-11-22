@@ -22,7 +22,7 @@ import { mockProvider } from "@arnilo/prism/testing";
 
 const result: RunResult = { sessionId: "s", runId: "r", status: "completed", text: "answer", content: [], messages: [] };
 const items = [0, 1, 0, 1].map((humanScore, i) => ({ item: { id: String(i), input: "question" }, result, humanScore }));
-const judge: Scorer<string> = { id: "j", score: ({ item }) => ({ score: Number(item!.id) % 2 }) };
+const judge: Scorer<string> = { id: "j", score: ({ item }) => ({ score: Number(item?.id) % 2 }) };
 
 test("perfect_judge_kappa_one and constant_judge_kappa_zero", async () => {
   const report = await calibrateJudge({ judge, items, scale: "ordinal", seed: 1 });
@@ -140,14 +140,14 @@ test("feedback_loader_respects_ownership and excludes comments and labels from j
   const input = sources();
   const loaded = await labeledItemsFromFeedback({ ...input, query: { tag: "graded" }, secrets: ["SECRET"] });
   assert.equal(loaded[0]!.humanScore, 0);
-  assert.equal(loaded[0]!.result.status, "completed");
+  assert.equal(loaded[0]?.result.status, "completed");
   assert.ok(!JSON.stringify(loaded).includes("PRIVATE COMMENT"));
   assert.ok(!JSON.stringify(loaded).includes("SECRET"));
   assert.deepEqual(input.queries, [{ tag: "graded", ...ownership, limit: 100, cursor: undefined, signal: undefined }]);
   await assert.rejects(labeledItemsFromFeedback({ ...sources([{ ...feedback, tenantId: "other" }]) }), /ownership/);
   await assert.rejects(labeledItemsFromFeedback({ ...sources(), query: { tenantId: "other" } as never }), /ownership/);
   assert.deepEqual(await labeledItemsFromFeedback({ ...sources([{ ...feedback, rating: undefined }]) }), []);
-  assert.equal((await labeledItemsFromFeedback({ ...sources(), toScore: () => 0.5 }))[0]!.humanScore, 0.5);
+  assert.equal((await labeledItemsFromFeedback({ ...sources(), toScore: () => 0.5 }))[0]?.humanScore, 0.5);
   await assert.rejects(labeledItemsFromFeedback({ ...sources(), ownership: {} }), /ownership/);
   await assert.rejects(labeledItemsFromFeedback({ ...sources(), traceLimits: { maxBytes: 1 } }), /byte limit/);
 });
@@ -169,7 +169,7 @@ test("threshold_fails_uncalibrated_judge, lower CI bound, invalid evidence; igno
     packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
   });
   try {
-    const experiment = await runExperiment({ agent, dataset: defineDataset({ id: "d", items: [items[0]!.item] }), scorers: [judge] });
+    const experiment = await runExperiment({ agent, dataset: defineDataset({ id: "d", items: [items[0]?.item] }), scorers: [judge] });
     const calibration = await calibrateJudge({ judge, items });
     const gate = (report = calibration, minimumKappa = 0.6, minimumN?: number) =>
       assertEvaluationThreshold(experiment, { calibrations: { j: { report, minimumKappa, minimumN } } });
@@ -181,7 +181,7 @@ test("threshold_fails_uncalibrated_judge, lower CI bound, invalid evidence; igno
     assert.doesNotThrow(() => gate({ ...calibration, n: 30, kappaCi95: undefined }));
     assert.throws(() => gate({ ...calibration, n: 30, kappaCi95: null as never }), /calibration/);
     const comparison = await runComparison({
-      dataset: defineDataset({ id: "d", items: [items[0]!.item] }),
+      dataset: defineDataset({ id: "d", items: [items[0]?.item] }),
       candidates: { a: async () => result, b: async () => result },
       scorers: [{ id: "j", score: () => ({ preference: "left" }) }],
     });

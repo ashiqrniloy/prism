@@ -670,7 +670,7 @@ describe("@arnilo/prism-extensions/mcp live tool lists (plan 234 Task 4)", () =>
     const { agent, session, toolResults } = await liveAgent(() => {
       const fixture = fixtures[Math.min(next, fixtures.length - 1)];
       next += 1;
-      return fixture!.clientTransport;
+      return fixture?.clientTransport;
     }, "mcp:live:echo");
     await session.run("one");
     const reconnected = (await agent.commands.run("mcp:reconnect", { id: "live" })) as { state: string };

@@ -220,12 +220,12 @@ describe("source lifecycle and document adapters", () => {
       /transaction failed/,
     );
     assert.match(
-      (await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "policy"))[0]!.text,
+      (await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "policy"))[0]?.text,
       /new policy/,
     );
     await replaceSource({ sourceId: "policy", chunks: first, embedder, store, scope });
     assert.match(
-      (await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "policy"))[0]!.text,
+      (await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "policy"))[0]?.text,
       /old policy/,
     );
 
@@ -302,7 +302,7 @@ describe("source lifecycle and document adapters", () => {
       await store.getBySource({ tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId }, "web:firecrawl:guide")
     )[0]!;
     assert.equal(record.metadata?.untrusted, true);
-    assert.equal((record.metadata?.web as JsonObject)!.citationId, "web:firecrawl:guide");
+    assert.equal((record.metadata?.web as JsonObject)?.citationId, "web:firecrawl:guide");
     // The loader passes `maxBytes` to the service, so the fetch returns a bounded document.
     let seen: { signal?: AbortSignal; maxBytes?: number } | undefined;
     const bounded = createWebFetchDocumentLoader({
@@ -728,7 +728,7 @@ describe("retrieveContext / ContextProvider", () => {
     assert.equal(blocks[0]?.metadata?.inert, true);
     assert.equal(blocks[0]?.metadata?.untrusted, true);
     assert.equal(blocks[0]?.metadata?.injectionCapable, true);
-    assert.equal((blocks[0]?.metadata?.trust as JsonObject)!.inert, true);
+    assert.equal((blocks[0]?.metadata?.trust as JsonObject)?.inert, true);
   });
 
   it("rejects cross-scope and malformed vector hits", async () => {
@@ -843,8 +843,8 @@ describe("replaceSource hash skip", () => {
     assert.equal(embedder.calls(), 2); // initial batch + exactly one delta chunk
 
     const stored = await readRecords(store);
-    assert.deepEqual(stored.find((record) => record.id === "doc#0001")!.embedding, survivor.embedding);
-    assert.equal(stored.find((record) => record.id === "doc#0002")!.text, "beta v2");
+    assert.deepEqual(stored.find((record) => record.id === "doc#0001")?.embedding, survivor.embedding);
+    assert.equal(stored.find((record) => record.id === "doc#0002")?.text, "beta v2");
   });
 
   it("forces full re-index when skipIfUnchanged is false and never skips unhashed stores", async () => {
@@ -945,7 +945,7 @@ describe("generation visibility", () => {
 
     const result = await retrieveContext("embedded by model b", { embedder: embedderB, store, scope });
     assert.equal(result.hits.length, 1);
-    assert.equal(result.hits[0]!.text, "embedded by model b");
+    assert.equal(result.hits[0]?.text, "embedded by model b");
     // A-era rows are gone; querying with the old model fails closed on the remaining B rows.
     await assert.rejects(
       retrieveContext("query", { embedder: embedderA, store, scope }),

@@ -321,8 +321,8 @@ describe("loadManifest", () => {
           ["@acme/proj", "manifest:project"],
         ],
       );
-      assert.deepEqual(packages[0]!.configSources, { apiKey: "user", greeting: "user" });
-      assert.equal(packages[1]!.configSources.greeting, "host");
+      assert.deepEqual(packages[0]?.configSources, { apiKey: "user", greeting: "user" });
+      assert.equal(packages[1]?.configSources.greeting, "host");
       const text = JSON.stringify(agent.inspect());
       assert.ok(text.includes("env:PRISM_TEST_MANIFEST_KEY"));
       assert.equal(text.includes("sk-live-from-env-0123456789"), false);

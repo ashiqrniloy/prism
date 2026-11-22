@@ -285,7 +285,7 @@ describe("general-purpose consolidation extractor (plan 188.9 Task 8)", () => {
 
     const current = await second.recall("coffee brand", { kinds: ["fact"], minSimilarity: 0 });
     assert.equal(current.hits.length, 1, "one current value for the key");
-    assert.equal(current.hits[0]!.content, COFFEE_LATER);
+    assert.equal(current.hits[0]?.content, COFFEE_LATER);
     const old = (await store.get([before.id]))[0]!;
     const oldMetadata = parseMemoryNoteMetadata(old.metadata);
     assert.ok(oldMetadata !== undefined && (oldMetadata.validTo !== undefined || oldMetadata.status === "archived"));
@@ -348,12 +348,12 @@ describe("general-purpose consolidation extractor (plan 188.9 Task 8)", () => {
     const projectFabric = fabricFor(memory(), project.client, { repositoryRules: true });
     await archive(projectFabric, COFFEE);
     await projectFabric.consolidate({ id: "s1", entries: async () => [userEntry("e1", "My coffee brand is Stumptown.")] });
-    assert.ok(project.seen.system[0]!.includes("AGENTS.md"), "a project root keeps the repository rules");
+    assert.ok(project.seen.system[0]?.includes("AGENTS.md"), "a project root keeps the repository rules");
 
     const general = extractor([fact()]);
     const generalFabric = fabricFor(memory(), general.client);
     await archive(generalFabric, COFFEE);
     await generalFabric.consolidate({ id: "s1", entries: async () => [userEntry("e1", "My coffee brand is Stumptown.")] });
-    assert.equal(general.seen.system[0]!.includes("AGENTS.md"), false, "no project root means the domain-neutral prompt");
+    assert.equal(general.seen.system[0]?.includes("AGENTS.md"), false, "no project root means the domain-neutral prompt");
   });
 });

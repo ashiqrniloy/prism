@@ -305,7 +305,7 @@ describe("workflow parent session", () => {
       for (const [index, stream] of streams.entries()) {
         assert.equal(stream.length, 4);
         assert.ok(
-          stream.every((event) => event.package === "@arnilo/prism-extensions/workflows" && event.data.workflowRunId === runs[index]!.id),
+          stream.every((event) => event.package === "@arnilo/prism-extensions/workflows" && event.data.workflowRunId === runs[index]?.id),
         );
       }
       const records = (await store.list(parent.id)).filter((entry) => entry.kind === "package_state");

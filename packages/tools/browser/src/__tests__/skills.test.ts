@@ -31,7 +31,7 @@ async function firstRequest(
   try {
     const session = await agent.session();
     await session.run("go", only === undefined ? {} : { tools: { only: [...only] } });
-    return { text: textOf(requests[0]!.messages), skills: agent.inspect().skills };
+    return { text: textOf(requests[0]?.messages), skills: agent.inspect().skills };
   } finally {
     await agent.dispose();
   }

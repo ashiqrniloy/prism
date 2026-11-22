@@ -206,7 +206,7 @@ describe("prism-remote principal isolation", () => {
     expect(pending).toHaveLength(1);
     await aliceScoped.call("sessions.resume", {
       sessionId: aliceSessionId,
-      decisions: [{ approvalId: pending[0]!.approvalId, outcome: "allow_once" }],
+      decisions: [{ approvalId: pending[0]?.approvalId, outcome: "allow_once" }],
     });
     await until(() => aliceScoped.settled.length === 2);
     expect(aliceScoped.settled[1]?.result.status).toBe("completed");
@@ -534,11 +534,11 @@ describe("prism-remote principal isolation", () => {
     expect(ownersValuesSpy).toHaveBeenCalledTimes(0);
 
     for (let i = 0; i < 50; i += 1) {
-      expect(clients[i]!.asked).toHaveLength(i === targetIndex ? 1 : 0);
+      expect(clients[i]?.asked).toHaveLength(i === targetIndex ? 1 : 0);
     }
 
     ownerGetSpy.mockClear();
-    await clients[targetIndex]!.call("sessions.messages", { sessionId: targetSessionId });
+    await clients[targetIndex]?.call("sessions.messages", { sessionId: targetSessionId });
     expect(ownerGetSpy).toHaveBeenCalledTimes(1);
     expect(sessionsIterSpy).toHaveBeenCalledTimes(0);
     expect(sessionsValuesSpy).toHaveBeenCalledTimes(0);

@@ -149,7 +149,7 @@ describe("@arnilo/prism-ai/openai-codex package", () => {
     for (const field of ["temperature", "top_p", "metadata", "background", "prompt", "truncation", "user", "conversation"]) {
       assert.equal(field in body!, false, `${field} must not be sent`);
     }
-    assert.equal(body!.max_output_tokens, 256, "the route accepts max_output_tokens and it passes through");
+    assert.equal(body?.max_output_tokens, 256, "the route accepts max_output_tokens and it passes through");
   });
 
   it("openai_codex_rejects_max_output_tokens_below_the_route_minimum", async () => {
@@ -467,7 +467,7 @@ describe("@arnilo/prism-ai/openai-codex package", () => {
 
   it("openai_codex_replays_encrypted_reasoning_byte_equal", async () => {
     const recorded = JSON.parse(readFileSync(recording("structured-output"), "utf8")) as Array<{ responseBody: string }>;
-    const reasoningItem = recorded[0]!.responseBody
+    const reasoningItem = recorded[0]?.responseBody
       .split("\n")
       .filter((line) => line.startsWith("data: ") && !line.includes("[DONE]"))
       .map(

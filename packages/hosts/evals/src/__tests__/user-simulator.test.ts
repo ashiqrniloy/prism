@@ -185,7 +185,7 @@ test("simulator_timeout_and_fresh_toolless_session_lifecycle", async () => {
           assert.equal(options.limits?.maxTurns, 1);
           assert.equal(options.limits?.maxProviderAttempts, 1);
           return new Promise<never>((_, reject) =>
-            options.signal!.addEventListener("abort", () => reject(options.signal!.reason), { once: true }),
+            options.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true }),
           );
         },
         close: async () => {

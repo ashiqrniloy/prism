@@ -69,7 +69,7 @@ describe("forward compatibility", () => {
     await session.run("next");
     assert.equal(seen.length, 1);
     assert.ok(!seen[0]!.includes(MARKER), "an unknown entry never reaches a provider request");
-    assert.ok(seen[0]!.includes("hello") && seen[0]!.includes("next"));
+    assert.ok(seen[0]?.includes("hello") && seen[0]?.includes("next"));
     assert.ok(
       (await store.list("s")).some((row) => row.id === "f1"),
       "the store still holds the entry",

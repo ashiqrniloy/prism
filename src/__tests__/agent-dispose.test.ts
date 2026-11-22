@@ -142,7 +142,7 @@ describe("fail-closed agent.dispose (plan 177 Task 5)", () => {
               name: "start",
               description: "starts a task that ignores its abort signal",
               run: (_args, ctx) => {
-                ctx.session!.background("hang", () => new Promise<void>(() => {}));
+                ctx.session?.background("hang", () => new Promise<void>(() => {}));
                 return "started";
               },
             }),

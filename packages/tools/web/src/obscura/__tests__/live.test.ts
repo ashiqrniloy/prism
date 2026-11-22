@@ -31,7 +31,7 @@ test.skipIf(!(process.env.PRISM_LIVE_OBSCURA && bin))("live: Obscura-backed web_
     }
   }
   const fetch = toolSet.tools.find((tool) => tool.name === "web_fetch")!;
-  const fetched = await fetch.execute({ url: value.results[0]!.url } as never, ctx);
+  const fetched = await fetch.execute({ url: value.results[0]?.url } as never, ctx);
   const markdown = (fetched.value as { markdown: string }).markdown;
   console.log(`web_fetch markdown bytes: ${markdown.length}`);
   if (markdown.trim().length === 0) throw new Error("live web_fetch of the first result returned no Markdown");

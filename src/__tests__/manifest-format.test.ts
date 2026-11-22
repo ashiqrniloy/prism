@@ -158,7 +158,7 @@ describe("manifest format v1", () => {
       merged.packages.map((p) => p.name),
       ["u1", "u2", "p1", "p2"],
     );
-    assert.equal(merged.packages[2]!.scope, "project");
+    assert.equal(merged.packages[2]?.scope, "project");
   });
 
   it("project_override_of_unlisted_package_fails_closed", () => {

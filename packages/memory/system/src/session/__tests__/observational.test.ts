@@ -98,7 +98,7 @@ async function harness(options: HarnessOptions = {}) {
             ) => void;
           }) => {
             for (const name of ["package.event", "background.started", "background.completed", "background.failed"] as const) {
-              hooks.on(name, (payload) => options.events!.push(payload as AgentEvent));
+              hooks.on(name, (payload) => options.events?.push(payload as AgentEvent));
             }
           },
         }
@@ -451,12 +451,12 @@ it("om_context_block_pinned_after_foreign_compaction_and_foreign_owner_keeps_gat
   await settle();
   await session.compact();
   await session.run("two");
-  const first = requests.at(-1)!.messages.filter((message) => JSON.stringify(message).includes("session-memory"));
+  const first = requests.at(-1)?.messages.filter((message) => JSON.stringify(message).includes("session-memory"));
   assert.match(JSON.stringify(first), /Observed/);
   await settle();
   await session.run("three");
   assert.deepEqual(
-    requests.at(-1)!.messages.filter((message) => JSON.stringify(message).includes("session-memory")),
+    requests.at(-1)?.messages.filter((message) => JSON.stringify(message).includes("session-memory")),
     first,
   );
   assert.equal(compactions, 1, "foreign owner is never forced by advancing observation coverage");

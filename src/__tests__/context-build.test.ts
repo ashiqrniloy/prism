@@ -39,7 +39,7 @@ describe("context.build sources", () => {
     const captured: ProviderRequest[] = [];
     const session = await (await capturingAgent([{ name: "agents", instructions: "repo rules" }], captured)).session();
     await session.run("hi");
-    const messages = captured[0]!.messages;
+    const messages = captured[0]?.messages;
     const injectedAt = messages.findIndex((m) => text(m).includes("repo rules"));
     const userAt = messages.findIndex((m) => m.role === "user" && text(m) === "hi");
     assert.ok(injectedAt >= 0 && userAt >= 0);
@@ -53,7 +53,7 @@ describe("context.build sources", () => {
     ).session();
     await session.run("hi");
     assert.deepEqual(
-      (captured[0]!.context ?? []).map((block) => block.id),
+      (captured[0]?.context ?? []).map((block) => block.id),
       ["schema"],
     );
   });
@@ -88,7 +88,7 @@ describe("context.build sources", () => {
     const without: ProviderRequest[] = [];
     await (await (await await capturingAgent([{ name: "none" }], withHook)).session()).run("hi");
     await (await (await await capturingAgent([], without)).session()).run("hi");
-    assert.deepEqual(withHook[0]!.messages.map(text), without[0]!.messages.map(text));
+    assert.deepEqual(withHook[0]?.messages.map(text), without[0]?.messages.map(text));
   });
 });
 
@@ -124,7 +124,7 @@ describe("context.build tools are restrictive-only", () => {
       })
     ).session();
     await session.run("hi");
-    const names = (captured[0]!.tools ?? []).map((entry) => entry.name);
+    const names = (captured[0]?.tools ?? []).map((entry) => entry.name);
     assert.deepEqual(names, [], "a smuggled tool name is dropped, and the emptied list stands");
   });
 
@@ -148,7 +148,7 @@ describe("context.build tools are restrictive-only", () => {
       })
     ).session();
     await session.run("hi");
-    assert.deepEqual(captured[0]!.tools, []);
+    assert.deepEqual(captured[0]?.tools, []);
   });
 });
 

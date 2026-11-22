@@ -321,7 +321,7 @@ describe("recall returns the original content from the session store (plan 218.3
       const session = await live.agent.session({ id: "s1", create: true });
       await session.run("build it");
       await waitForRecord(session, "Build passed");
-      const forkPoint = (await session.entries()).at(-1)!.id;
+      const forkPoint = (await session.entries()).at(-1)?.id;
       await session.run("deploy it");
       const deployId = await waitForRecord(session, "Deploy passed");
       const deployEntry = await toolEntryOf(session, DEPLOY_OUTPUT);

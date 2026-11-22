@@ -37,7 +37,7 @@ test("answer_log_is_bounded_and_returns_copies", async () => {
   for (const sessionId of ["a", "b", "c"]) await router.request({ kind: "confirm", title: "?", sessionId });
   expect((await router.answers()).map((row) => row.sessionId)).toEqual(["b", "c"]);
   Object.assign((await router.answers())[0]!, { route: "mutated" });
-  expect((await router.answers())[0]!.route).toBe("policy");
+  expect((await router.answers())[0]?.route).toBe("policy");
 });
 
 test("answer_log_write_failure_is_surfaced", async () => {

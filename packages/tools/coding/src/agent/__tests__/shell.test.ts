@@ -102,7 +102,7 @@ test("timeout smaller than sleep → child killed, error reflects timeout, exitC
     const tool = createShellTool(cwd);
     const r = await tool.execute({ command: "sleep 5; echo done", timeout: 1 }, ctx());
     assert.ok(r.error, "timeout must set error");
-    assert.match(r.error!.message, /timed out after 1 seconds/);
+    assert.match(r.error?.message, /timed out after 1 seconds/);
     assert.equal(r.metadata?.exitCode, null);
     assert.match(textOf(r), /timed out after 1 seconds/);
   } finally {
@@ -120,7 +120,7 @@ test("context.signal aborted mid-run → child terminated, error reflects abort"
     setTimeout(() => ac.abort(), 150);
     const r = await pending;
     assert.ok(r.error, "abort must set error");
-    assert.equal(r.error!.message, "Command aborted");
+    assert.equal(r.error?.message, "Command aborted");
     assert.equal(r.metadata?.exitCode, null);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -133,7 +133,7 @@ test("empty command → error result, no spawn", async () => {
     const tool = createShellTool(cwd);
     const r = await tool.execute({ command: "" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /command is required/);
+    assert.match(r.error?.message, /command is required/);
     assert.equal(r.metadata?.exitCode, undefined);
     assert.match(textOf(r), /command is required/);
   } finally {
@@ -147,7 +147,7 @@ test("missing/invalid command type → error result", async () => {
     const tool = createShellTool(cwd);
     const r = await tool.execute({ command: 123 }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /command is required/);
+    assert.match(r.error?.message, /command is required/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

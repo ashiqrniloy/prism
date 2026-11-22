@@ -47,7 +47,7 @@ test("diff_is_bounded_and_redacted", async () => {
     secrets: ["private-secret"],
     scorers: [createStateMatchScorer({ expected, mode: "exact" })],
   });
-  const diff = record!.metadata!.diff as { path: string; expected: unknown; actual: unknown }[];
+  const diff = record?.metadata?.diff as { path: string; expected: unknown; actual: unknown }[];
   assert.equal(diff.length, 32);
   assert.ok(!JSON.stringify(record).includes("private-secret"));
   for (const entry of diff) {
@@ -61,7 +61,7 @@ test("diff_is_bounded_and_redacted", async () => {
     secrets: ["first-secret", "second-secret"],
     scorers: [createStateMatchScorer({ expected: { token: "first-secret" }, mode: "exact" })],
   });
-  assert.equal(redacted!.score, 1, "comparison uses redacted values");
+  assert.equal(redacted?.score, 1, "comparison uses redacted values");
 });
 
 test("select_and_item_expected_support_invariants", async () => {
@@ -79,9 +79,9 @@ test("select_and_item_expected_support_invariants", async () => {
     scorers: [scorer],
   });
   assert.equal(record!.score, 0);
-  assert.equal(record!.scorerId, "paid");
-  assert.equal(record!.metadata!.invariant, true);
-  assert.deepEqual(record!.metadata!.diff, [{ path: "/paid", expected: true, actual: false }]);
+  assert.equal(record?.scorerId, "paid");
+  assert.equal(record?.metadata?.invariant, true);
+  assert.deepEqual(record?.metadata?.diff, [{ path: "/paid", expected: true, actual: false }]);
 });
 
 test("missing_environment_throws_requirement_error", async () => {
@@ -97,7 +97,7 @@ test("state_bounds_fail_record_with_attributable_code", async () => {
   ]) {
     const record = await grade(expected, actual);
     assert.equal(record.status, "failed");
-    assert.equal(record.error!.code, "ERR_PRISM_EVAL_STATE_BOUNDS");
+    assert.equal(record.error?.code, "ERR_PRISM_EVAL_STATE_BOUNDS");
   }
   assert.equal((await grade("x".repeat(1024 * 1024 - 2), "x".repeat(1024 * 1024 - 2))).score, 1);
 });
@@ -108,7 +108,7 @@ test("pointers_and_comparison_use_own_keys", async () => {
   assert.equal((await grade(state, {}, "exact", ["/__proto__", "/constructor", "/a~1b~0c"])).score, 1);
   assert.equal(({} as { polluted?: boolean }).polluted, undefined);
   const mismatch = await grade({ "a/b~c": 1 }, { "a/b~c": 2 });
-  assert.deepEqual(mismatch.metadata!.diff, [{ path: "/a~1b~0c", expected: 1, actual: 2 }]);
+  assert.deepEqual(mismatch.metadata?.diff, [{ path: "/a~1b~0c", expected: 1, actual: 2 }]);
 });
 
 test("non_serializable_states_fail_instead_of_matching_lossy_json", async () => {

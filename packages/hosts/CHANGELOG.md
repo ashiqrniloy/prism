@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-22
+
 Consolidate ten host and driver workspaces into `@arnilo/prism-hosts` subpaths. Preserve library exports, protocol caps, authentication, sandboxing and both executable bins. Host-builder indexes and the installer use bundle specifiers. Versions remain in lockstep with the kernel.
 
 ### ./mcp-server history

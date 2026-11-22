@@ -1,6 +1,55 @@
 # Migration guide
 
-## 0.13.1 → next (unreleased): default run limits
+## 0.13.x → 0.14.0: a breaking release
+
+0.14.0 is a breaking release. Before 1.0.0, Prism follows semver for 0.x: a `0.Y.0` release may break, and a
+`0.Y.Z` patch only adds ([compatibility.md](compatibility.md)).
+
+**Versions, peers and the API level.**
+- Every package is at 0.14.0, except `@arnilo/prism-knowledge` at `0.14.0-experimental.0`.
+- Every first-party package peers `@arnilo/prism` at `^0.14.0` (it was `>=0.13.0 <1.0.0`).
+- The kernel's API level is now 2. A package declaring `requires: { api: 1 }` fails to load with `kernel_api`, so
+  set `requires: { api: 2 }` in your own packages after checking the removals below.
+
+**Session memory is the compaction system; working memory is off.** `@arnilo/prism-memory-system` left the
+experimental line: install it from `latest` (`bun add @arnilo/prism-memory-system`).
+- **It still installs off.** Set `enabled: true` to make STM the agent's compaction, or let a session run
+  `memory:session`.
+- **WM is off unless configured.** An omitted `wm` component is now off (it followed `stm`). Set `wm: {}` to keep
+  working memory; it still runs only under a host scope.
+- **WM's default policy is deterministic.** `wm.policy` defaults to `"deterministic"`; set `"model"` for model verdicts.
+- **Experimental config.** `wm.*`, `rehearsal.*`, `scope.*`, `ltm.*` and `sleep.*` are marked experimental in the
+  package's config stability table.
+- **Verbatim user messages.** STM keeps each user message of up to `stm.verbatimUserChars` characters (2,000)
+  word for word, as one `request` record marked `verbatim`. Set `stm.verbatimUserChars: 0` for the old behaviour.
+- **Removed: the chunk store.** `ChunkStore`, `SqliteChunkStore`, `createSqliteChunkStore`,
+  `MEMORY_CHUNK_STORE_SERVICE`, `MemoryChunkRef` and their types are gone. `recall` reads the original entries
+  from the session store.
+
+**LLM compaction is the alternative to session memory.** `@arnilo/prism-extensions/compaction` and session memory are
+each a compaction system, and an agent runs one: listing both fails `createAgent`. Set the memory system's
+`context.compaction: false` to keep LLM compaction beside long-term memory.
+- `keepRecentTokens` now defaults to 20% of the model's input cap (at most 20,000); it was always 20,000.
+- The new `maxKeptShare` (default 0.4) keeps the kept tail inside the window, so a session recovers after a turn
+  with one very large tool output. Set `keepRecentTokens` and `maxKeptShare: 1` for the old cut.
+
+**Removed exports.** Compared with 0.13.1:
+- **Limit constants.** About 350 `HARD_*` and `DEFAULT_*` exports are gone: in the kernel (for example
+  `HARD_MAX_SESSION_SEARCH_*`, `HARD_MAX_PENDING_STEERS`, `DEFAULT_MAX_PENDING_DECISIONS`), `@arnilo/prism-tools`
+  (mostly `./browser`), `@arnilo/prism-extensions`, `@arnilo/prism-hosts`, `@arnilo/prism-knowledge`,
+  `@arnilo/prism-memory-system` and `@arnilo/prism-ai/litellm`. Every limit is now host configuration: [limits.md](limits.md) lists each one with
+  its config path and default. Set the value in config instead of reading the constant.
+- **Provider kit.** `readRetryAfterMs` is replaced by `parseRetryAfterMs`. `withoutStructuredOutput` and
+  `artifactStructuredOutputRequest` are removed; structured output is validated on `RunResult.output`
+  ([models.md](models.md)).
+- **Governance.** `AUDIT_EXPORT_HARD_LIMITS` is removed.
+
+**The reference host and the kit.** `apps/prism-agent`'s coding and research agents default to session memory;
+`compaction: "llm"` opts into LLM compaction. The host-builder kit recommends session memory.
+
+The Phase 19 behaviour changes follow. The [CHANGELOG](../CHANGELOG.md) `[0.14.0]` section lists every change.
+
+## 0.13.x → 0.14.0: default run limits
 
 `DEFAULT_RUN_LIMITS` is sized for agent work (plan 229 Task 2). An axis no layer sets now resolves to:
 
@@ -22,7 +71,7 @@ What a host must check:
 - **Stall axis (plan 239 Task 9).** A new axis, `maxRepeatedToolRounds`, defaults to 5: a run whose tool rounds repeat a recent round (same calls, same results) five times in a row now fails with `limit: "maxRepeatedToolRounds"`. Set it to `null` to keep the old behaviour.
 - Narrowing, `null`, validation and the byte caps are unchanged. `DEFAULT_RUN_LIMITS`'s declared type now allows `null` on the token axes.
 
-## 0.13.1 → next (unreleased): one writer per session
+## 0.13.x → 0.14.0: one writer per session
 
 A session's appends at its own tip are tip-checked (plan 230 Task 2). Where a second writer used to fork the
 branch silently, the run now fails with `error.code: "session_conflict"` and writes nothing from that append

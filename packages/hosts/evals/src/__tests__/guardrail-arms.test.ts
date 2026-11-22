@@ -305,14 +305,14 @@ describe("guardrail arms on the injection suite", () => {
     assert.equal(packs.attackSuccessRate.successes, none.attackSuccessRate.successes);
     const comparison = compareExperiments(none.report, packs.report, { seed: 7 });
     assert.equal(comparison.pairedItems, dataset.items.length);
-    assert.ok(comparison.scorers["guardrail_flagged:injection-markers"]!.difference > 0);
+    assert.ok(comparison.scorers["guardrail_flagged:injection-markers"]?.difference > 0);
     assert.equal(comparison.scorers.attack_success!.difference, 0);
   });
 
   test("benign_items_stay_under_the_false_positive_ceiling", async () => {
     await ready;
-    const markers = packs.detection["guardrail_flagged:injection-markers"]!.falsePositive;
-    const pii = packs.detection["guardrail_flagged:pii"]!.falsePositive;
+    const markers = packs.detection["guardrail_flagged:injection-markers"]?.falsePositive;
+    const pii = packs.detection["guardrail_flagged:pii"]?.falsePositive;
     assert.equal(markers.n, TASKS.length);
     // Recorded ceiling: at most one of the four benign pages (the transcript sample) is flagged.
     expect(markers.successes).toBeLessThanOrEqual(1);

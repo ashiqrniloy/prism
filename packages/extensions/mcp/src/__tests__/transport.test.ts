@@ -5,7 +5,7 @@ import { createMcpTransport, createSecureMcpFetch } from "../transport.js";
 
 const servers: Server[] = [];
 afterEach(async () => {
-  while (servers.length > 0) await new Promise<void>((resolve) => servers.pop()!.close(() => resolve()));
+  while (servers.length > 0) await new Promise<void>((resolve) => servers.pop()?.close(() => resolve()));
 });
 
 describe("secure MCP Streamable HTTP transport", () => {

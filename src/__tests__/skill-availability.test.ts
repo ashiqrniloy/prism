@@ -115,9 +115,9 @@ async function run(options: {
 describe("skill availability", () => {
   it("skill_hidden_when_required_tool_absent", async () => {
     const full = await run({});
-    assert.match(textOf(full.requests[0]!.messages), /- web-research: Search the web\./);
+    assert.match(textOf(full.requests[0]?.messages), /- web-research: Search the web\./);
     const narrowed = await run({ only: ["web_search", "gated_tool"] });
-    const text = textOf(narrowed.requests[0]!.messages);
+    const text = textOf(narrowed.requests[0]?.messages);
     assert.doesNotMatch(text, /web-research/, "web_fetch is not advertised");
     assert.match(text, /- plain: Always here\./);
     assert.match(text, /- gated-skill:/);
@@ -131,10 +131,10 @@ describe("skill availability", () => {
   it("skill_hidden_when_tool_when_false", async () => {
     let hide = false;
     const shown = await run({ hideWhen: () => hide });
-    assert.match(textOf(shown.requests[0]!.messages), /- gated-skill:/);
+    assert.match(textOf(shown.requests[0]?.messages), /- gated-skill:/);
     hide = true;
     const hidden = await run({ hideWhen: () => hide });
-    const text = textOf(hidden.requests[0]!.messages);
+    const text = textOf(hidden.requests[0]?.messages);
     assert.doesNotMatch(text, /gated-skill/);
     assert.match(text, /- web-research:/, "other skills are untouched");
   });
@@ -170,11 +170,11 @@ describe("skill availability", () => {
 
   it("eager_body_not_sent_when_unavailable", async () => {
     const eager = await run({ disclosure: "eager", disable: { tools: ["web_fetch"] } });
-    const text = textOf(eager.requests[0]!.messages);
+    const text = textOf(eager.requests[0]?.messages);
     assert.doesNotMatch(text, /WEB BODY/);
     assert.match(text, /PLAIN BODY/);
     const all = await run({ disclosure: "eager" });
-    assert.match(textOf(all.requests[0]!.messages), /WEB BODY/);
+    assert.match(textOf(all.requests[0]?.messages), /WEB BODY/);
   });
 
   it("reattach_skips_unavailable_skill", async () => {

@@ -93,7 +93,7 @@ describe("@arnilo/prism-ai/liquid package", () => {
       assert.equal(notes[0]?.level, "warn");
       const listed = await agent.models.list();
       assert.ok(listed.some((entry) => entry.provider === "liquid" && entry.model === model.model));
-      assert.ok(listed.some((entry) => entry.provider === "liquid-local" && entry.model === liquidLocalModels[0]!.model));
+      assert.ok(listed.some((entry) => entry.provider === "liquid-local" && entry.model === liquidLocalModels[0]?.model));
 
       const session = await agent.session();
       const result = await session.run("hi");
@@ -133,7 +133,7 @@ describe("@arnilo/prism-ai/liquid package", () => {
       capabilities: ["models"],
     });
     const agent = await createAgent({
-      model: { provider: "liquid-local", model: liquidLocalModels[0]!.model },
+      model: { provider: "liquid-local", model: liquidLocalModels[0]?.model },
       packages: [
         liquid({
           hosted: false,
@@ -162,7 +162,7 @@ describe("@arnilo/prism-ai/liquid package", () => {
 
   it("liquid_hosted_false_registers_only_local", async () => {
     const agent = await createAgent({
-      model: { provider: "liquid-local", model: liquidLocalModels[0]!.model },
+      model: { provider: "liquid-local", model: liquidLocalModels[0]?.model },
       packages: [liquid({ hosted: false, apiKey: UNSET_REF })],
     });
     try {

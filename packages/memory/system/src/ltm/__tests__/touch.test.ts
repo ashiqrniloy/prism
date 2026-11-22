@@ -32,16 +32,16 @@ for (const adapter of ["memory", "sqlite"] as const) {
         { wait: true },
       );
       await memory.setConsent("a", { visible: true });
-      const before = await store.getByThread!(scope);
+      const before = await store.getByThread?.(scope);
       batches = 0;
       await memory.recall("alpha", { scoring: { recencyWeight: 1, halfLifeMs: 1000 } });
       assert.equal(batches, 0);
-      assert.deepEqual(await store.getByThread!(scope), before);
+      assert.deepEqual(await store.getByThread?.(scope), before);
       await memory.touch(["a", "b", "a", "missing"]);
       assert.equal(batches, 1);
-      const after = await store.getByThread!(scope);
-      assert.ok(after[0]!.lastAccessedAt);
-      assert.equal(after[0]!.lastAccessedAt, after[1]!.lastAccessedAt);
+      const after = await store.getByThread?.(scope);
+      assert.ok(after[0]?.lastAccessedAt);
+      assert.equal(after[0]?.lastAccessedAt, after[1]?.lastAccessedAt);
       assert.deepEqual(
         after.map(({ lastAccessedAt, ...record }) => record),
         before,
@@ -49,11 +49,11 @@ for (const adapter of ["memory", "sqlite"] as const) {
       await memory.touch([]);
       assert.equal(batches, 1);
       await memory.setConsent("a", { visible: false });
-      const revoked = await store.getByThread!(scope);
+      const revoked = await store.getByThread?.(scope);
       batches = 0;
       await memory.touch(["a"]);
       assert.equal(batches, 0);
-      assert.deepEqual(await store.getByThread!(scope), revoked);
+      assert.deepEqual(await store.getByThread?.(scope), revoked);
       await assert.rejects(memory.touch([""]), /entryId/);
       await assert.rejects(memory.touch(["a"], { signal: AbortSignal.abort() }));
     } finally {

@@ -190,7 +190,7 @@ describe("agent job driver (plan 239 Task 10)", () => {
     assert.equal(result.status, "done");
     assert.equal(result.runs, 2);
     assert.equal(requestsB.length, 1, "one model turn: the in-flight run is continued");
-    assert.equal(requestsB[0]!.messages.at(-1)?.role, "user");
+    assert.equal(requestsB[0]?.messages.at(-1)?.role, "user");
     const users = (await sessionB.messages()).filter((m) => m.role === "user");
     assert.equal(users.length, 2, "the in-flight run's message is not sent again");
 
@@ -235,7 +235,7 @@ describe("agent job driver (plan 239 Task 10)", () => {
     assert.equal(still.pending?.[0]?.approvalId, suspended.pending?.[0]?.approvalId);
 
     const resumed = await resumeAgentJob(session, spec, "job-approval", {
-      decisions: [{ approvalId: suspended.pending![0]!.approvalId, outcome: "allow_once" }],
+      decisions: [{ approvalId: suspended.pending?.[0]?.approvalId, outcome: "allow_once" }],
     });
     assert.equal(resumed.status, "done");
     assert.equal(resumed.runs, 1);

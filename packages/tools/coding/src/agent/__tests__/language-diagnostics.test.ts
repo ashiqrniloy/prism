@@ -102,7 +102,7 @@ test("normalization: per-file cap and message truncation", () => {
     generation: 1,
     maxMessageBytes: 16,
   });
-  assert.ok(long[0]!.message.length <= 17); // 16 bytes + ellipsis
+  assert.ok(long[0]?.message.length <= 17); // 16 bytes + ellipsis
 });
 
 test("diagnosticDelta: deterministic added/removed/unchanged across generations", () => {
@@ -249,7 +249,7 @@ test("diagnosticDelta: pull path uses resultId full/unchanged reuse", async () =
       // unchanged reuse: server answers kind=unchanged for the same resultId
       const second = await lang.diagnosticDelta({
         files: ["a.ts"],
-        previous: { "a.ts": { generation: 1, diagnostics: first.files["a.ts"]!.added } },
+        previous: { "a.ts": { generation: 1, diagnostics: first.files["a.ts"]?.added } },
       });
       assert.equal(second.files["a.ts"]?.added.length, 0);
       assert.equal(second.files["a.ts"]?.unchanged.length, 1);

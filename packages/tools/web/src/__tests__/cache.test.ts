@@ -152,7 +152,7 @@ test("web_fetch_exposes_refresh_only_with_cache_config", async () => {
   const second = await tool.execute({ url: "https://example.com/doc", offset: 1 }, context);
   assert.equal(calls.length, 1);
   assert.equal((second.value as { cached?: true }).cached, true);
-  assert.match((second.content as readonly { text: string }[])[0]!.text, /cached \d+s ago/u);
+  assert.match((second.content as readonly { text: string }[])[0]?.text, /cached \d+s ago/u);
   await tool.execute({ url: "https://example.com/doc", refresh: true }, context);
   assert.equal(calls.length, 2);
 

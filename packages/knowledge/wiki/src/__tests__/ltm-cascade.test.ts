@@ -69,7 +69,7 @@ describe("deletion cascades from long-term memory into the wiki", () => {
     assert.equal(report.removed, 1);
     assert.deepEqual(await claims(port), ["Inputs are validated with zod."]);
     const [record] = await port.concepts("project");
-    assert.ok(record!.dirty.includes("removed"), "the concept is queued for repair");
+    assert.ok(record?.dirty.includes("removed"), "the concept is queued for repair");
     rmSync(root, { recursive: true, force: true });
   });
 

@@ -196,7 +196,7 @@ describe("memory lineage", () => {
     await store.upsert([record({ id: "a", sequence: 1 })]);
     await assert.rejects(
       store.transaction(async (txn) => {
-        await txn.invalidate!(scope, [{ id: "a", reason: "forgotten", at: new Date(0).toISOString() }]);
+        await txn.invalidate?.(scope, [{ id: "a", reason: "forgotten", at: new Date(0).toISOString() }]);
         throw new Error("boom");
       }),
       /boom/,

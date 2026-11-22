@@ -153,7 +153,7 @@ test("missing path → error result, no fs mutation", async () => {
     const tool = createWriteTool(cwd);
     const r = await tool.execute({ path: "", content: "x" }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /path is required/);
+    assert.match(r.error?.message, /path is required/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -165,7 +165,7 @@ test("non-string content → error result", async () => {
     const tool = createWriteTool(cwd);
     const r = await tool.execute({ path: "f.txt", content: 123 }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /content is required and must be a string/);
+    assert.match(r.error?.message, /content is required and must be a string/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -179,7 +179,7 @@ test("aborted signal before write → error result, file not written", async () 
     ac.abort();
     const r = await tool.execute({ path: "aborted.txt", content: "x" }, ctx(ac.signal));
     assert.ok(r.error);
-    assert.match(r.error!.message, /aborted/i);
+    assert.match(r.error?.message, /aborted/i);
     await assert.rejects(() => stat(join(cwd, "aborted.txt")));
   } finally {
     await rm(cwd, { recursive: true, force: true });

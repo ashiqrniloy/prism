@@ -27,12 +27,12 @@ test("kagi_search_normalizes_results", async () => {
     response.results.map((result) => result.url),
     ["https://example.org/kagi-one", "https://example.org/kagi-two"],
   );
-  assert.equal(response.results[0]!.snippet, "First Kagi snippet");
-  assert.equal(response.results[0]!.publishedAt, "2026-10-03T00:00:00Z");
-  assert.match(response.results[0]!.citationId, /^web:kagi:[0-9a-f]{64}$/u);
-  assert.equal(calls[0]!.url.toString(), "https://kagi.com/api/v1/search", "v1, not the deprecated v0 GET");
-  assert.equal(calls[0]!.init.method, "POST");
-  assert.equal(header(calls[0]!.init, "authorization"), "Bot kagi-test");
+  assert.equal(response.results[0]?.snippet, "First Kagi snippet");
+  assert.equal(response.results[0]?.publishedAt, "2026-10-03T00:00:00Z");
+  assert.match(response.results[0]?.citationId, /^web:kagi:[0-9a-f]{64}$/u);
+  assert.equal(calls[0]?.url.toString(), "https://kagi.com/api/v1/search", "v1, not the deprecated v0 GET");
+  assert.equal(calls[0]?.init.method, "POST");
+  assert.equal(header(calls[0]?.init, "authorization"), "Bot kagi-test");
 });
 
 test("kagi_v1_request_shape_carries_lens_and_filters", async () => {
@@ -45,7 +45,7 @@ test("kagi_v1_request_shape_carries_lens_and_filters", async () => {
     includeDomains: ["example.org"],
     excludeDomains: ["spam.example"],
   });
-  const request = body(calls[0]!.init);
+  const request = body(calls[0]?.init);
   assert.equal(request.query, "prism agent");
   assert.equal(request.workflow, "search");
   assert.equal(request.page, 2, "offset 1 is page 2");
@@ -62,7 +62,7 @@ test("kagi_year_freshness_uses_a_date_filter", async () => {
   const { fetch, calls } = stub(fixture("kagi-search.json"));
   const search = createKagiSearch({ credentials: async () => "kagi-test", fetch });
   await search.search("prism agent", { freshness: "year" });
-  const request = body(calls[0]!.init);
+  const request = body(calls[0]?.init);
   assert.equal((request.lens as Record<string, unknown> | undefined)?.timeRelative, undefined);
   const after = (request.filters as { after?: string }).after;
   assert.match(after ?? "", /^\d{4}-\d{2}-\d{2}$/u);

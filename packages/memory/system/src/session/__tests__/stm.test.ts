@@ -88,17 +88,17 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
       maxTurns: 1,
       instruction: "Prefer finance wording.",
     });
-    const parameters = requests[0]!.tools?.find((tool) => tool.name === "record_event")?.parameters as {
+    const parameters = requests[0]?.tools?.find((tool) => tool.name === "record_event")?.parameters as {
       properties: { kind: { enum: string[] } };
       required: string[];
     };
     assert.deepEqual(parameters.properties.kind.enum, [...memoryEventKindValues]);
     assert.deepEqual(parameters.required, ["kind", "description", "sourceEntryIds"]);
     assert.deepEqual(
-      requests[0]!.tools?.map((tool) => tool.name),
+      requests[0]?.tools?.map((tool) => tool.name),
       ["record_event", "record_task_state"],
     );
-    assert.match(JSON.stringify(requests[0]!.messages[0]), /Prefer finance wording/);
+    assert.match(JSON.stringify(requests[0]?.messages[0]), /Prefer finance wording/);
     // A missing or unknown kind is refused with a reason the model can act on.
     const refused = await runStm({
       verbatimUserChars: 0,
@@ -169,7 +169,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     assert.ok(prompt.indexOf("bbbbbbbbbbbb") < prompt.indexOf("cccccccccccc"), "shown oldest first");
     assert.equal(recorded.length, 1);
     assert.deepEqual(records, [
-      { type: OBSERVATIONS_DROPPED, observationIds: ["cccccccccccc"], reason: "superseded", supersededBy: recorded[0]!.id },
+      { type: OBSERVATIONS_DROPPED, observationIds: ["cccccccccccc"], reason: "superseded", supersededBy: recorded[0]?.id },
     ]);
   });
 
@@ -421,14 +421,14 @@ describe("structured signals on record_event (plan 218.2 Task 2)", () => {
     assert.equal(events[1]?.resolves, undefined, "resolves belongs to an outcome");
     const results = toolResults(requests[1]!);
     assert.match(results[0]!, /resolvesWarning/);
-    assert.match(results[0]!, new RegExp(`"id":"${events[0]!.id}"`), "the result names the new record's id");
+    assert.match(results[0]!, new RegExp(`"id":"${events[0]?.id}"`), "the result names the new record's id");
   });
 
   it("stm_request_never_carries_scope_wm_or_ltm", async () => {
     // I1 extended: the new fields describe the cited messages; the schema names no scope, WM item or LTM note.
     const requests: ProviderRequest[] = [];
     await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(scripted(requests, [])), maxTurns: 1 });
-    const parameters = requests[0]!.tools?.find((tool) => tool.name === "record_event")?.parameters as {
+    const parameters = requests[0]?.tools?.find((tool) => tool.name === "record_event")?.parameters as {
       properties: Record<string, { description?: string }>;
     };
     for (const field of ["status", "corrects", "durable", "resolves"]) {

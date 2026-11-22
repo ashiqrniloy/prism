@@ -94,7 +94,7 @@ function createMemorySandbox(_workspaceRoot = ROOT): DisposableSandbox & { reado
     const command = request.command.trim();
     const cat = /^cat(?:\s+)(.+)$/.exec(command);
     if (cat) {
-      let path = cat[1]!.trim().replace(/^['"]|['"]$/g, "");
+      let path = cat[1]?.trim().replace(/^['"]|['"]$/g, "");
       if (!path.startsWith("/")) path = posix.join(request.cwd, path);
       const buf = files.get(path);
       if (!buf) return { exitCode: 1 };

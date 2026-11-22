@@ -99,19 +99,19 @@ describe("habituation and event boundaries (plan 217 Task 3)", () => {
     await flush();
     let ledger = foldObservationalMemoryLedger(data);
     assert.equal(activeObservations(ledger).length, 1);
-    assert.equal(activeObservations(ledger)[0]!.count, 2, "a repeat inside one batch raises the new record's count");
+    assert.equal(activeObservations(ledger)[0]?.count, 2, "a repeat inside one batch raises the new record's count");
 
     entries = [...entries, message("p2", 5, "tool", "build 812: pending")];
     await flush();
     ledger = foldObservationalMemoryLedger(data);
     const [record] = activeObservations(ledger);
     assert.equal(activeObservations(ledger).length, 1, "no record added");
-    assert.equal(record!.count, 3);
-    assert.equal(record!.lastAt, entries[1]!.timestamp);
+    assert.equal(record?.count, 3);
+    assert.equal(record?.lastAt, entries[1]?.timestamp);
     const repeat = data.find((item) => (item as { type?: string }).type === OBSERVATIONS_REPEATED) as { count: number };
     assert.equal(repeat.count, 3, "the repeat record carries the absolute count");
     // Folding the repeat twice cannot over-count.
-    assert.equal(activeObservations(foldObservationalMemoryLedger([...data, repeat as unknown as JsonValue]))[0]!.count, 3);
+    assert.equal(activeObservations(foldObservationalMemoryLedger([...data, repeat as unknown as JsonValue]))[0]?.count, 3);
 
     assert.match(renderObservationalMemory([], activeObservations(ledger)), /result ×3: CI status poll/);
     assert.match(stmRecentIndex(activeObservations(ledger))[0]!, /result ×3:/);
@@ -137,8 +137,8 @@ describe("habituation and event boundaries (plan 217 Task 3)", () => {
       onRecord: (record) => records.push(record),
     });
     assert.equal(events.length, 2, "a different description makes a new event");
-    assert.equal(events[0]!.count, 2, "the identical description habituates to the first record");
-    assert.equal(events[1]!.count ?? 1, 1);
+    assert.equal(events[0]?.count, 2, "the identical description habituates to the first record");
+    assert.equal(events[1]?.count ?? 1, 1);
     assert.equal(records.length, 0, "batch-local repeats need no repeat record");
   });
 
@@ -168,7 +168,7 @@ describe("habituation and event boundaries (plan 217 Task 3)", () => {
     );
     assert.equal(first.boundaries, 2);
     assert.equal(counter.calls, 1, "outcome and task-state boundaries come from the pass itself: no extra STM call");
-    const outcomeId = activeObservations(ledger).find((item) => item.kind === "outcome")!.id;
+    const outcomeId = activeObservations(ledger).find((item) => item.kind === "outcome")?.id;
     assert.equal(ledger.boundaries?.[0]?.recordId, outcomeId);
 
     // An unchanged task state is not a boundary.

@@ -182,7 +182,7 @@ describe("observational memory workers", () => {
       recorded.map((record) => record.description),
       ["one", "two", "three"],
     );
-    const refusals = seen[1]!.messages.flatMap((message) =>
+    const refusals = seen[1]?.messages.flatMap((message) =>
       message.role === "tool" ? message.content.filter((part) => part.type === "tool_result" && part.error) : [],
     );
     assert.equal(refusals.length, 1);
@@ -357,7 +357,7 @@ describe("observational memory workers", () => {
     });
     assert.deepEqual(executed, ["n1"], "the valid call ran and the unknown one did not");
     assert.equal(requests.length, 2, "the pass continued to a second turn");
-    const results = requests[1]!.flatMap((message) => message.content).filter((part) => part.type === "tool_result");
+    const results = requests[1]?.flatMap((message) => message.content).filter((part) => part.type === "tool_result");
     assert.equal(results.length, 2);
     const refused = results.find((part) => part.type === "tool_result" && part.toolCallId === "u1");
     assert.ok(refused && refused.type === "tool_result");
@@ -588,7 +588,7 @@ describe("observational memory workers", () => {
     assert.equal(replay?.[0]?.content[0]?.type, "tool_call");
     assert.equal(replay?.[1]?.role, "tool");
     assert.equal(replay?.[1]?.content[0]?.type, "tool_result");
-    assert.equal((replay?.[1]?.content[0] as any)!.toolCallId, "c1");
+    assert.equal((replay?.[1]?.content[0] as any)?.toolCallId, "c1");
     assert.equal(JSON.stringify(replay).includes("Ignored worker"), false);
   });
 

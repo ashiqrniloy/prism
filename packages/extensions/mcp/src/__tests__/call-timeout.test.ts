@@ -62,7 +62,7 @@ async function attachSlow(fixture: SlowServer, limits: { callTimeoutMs?: number;
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
-  while (cleanups.length > 0) await cleanups.pop()!();
+  while (cleanups.length > 0) await cleanups.pop()?.();
 });
 
 describe("MCP call timeouts (plan 234 Task 2)", () => {
@@ -109,7 +109,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     const bridge = await attachSlow(fixture, { callTimeoutMs: 60, maxCallTimeMs: 5_000 });
     cleanups.push(() => bridge.close());
     const started = Date.now();
-    const result = await bridge.tools[0]!.execute({}, executionContext);
+    const result = await bridge.tools[0]?.execute({}, executionContext);
     assert.ok(Date.now() - started < 1_000, "ended at callTimeoutMs, not maxCallTimeMs or the tool's end");
     assert.match(result.error?.message ?? "", /MCP server "slow" tool call timed out after callTimeoutMs \(60ms\) without progress/);
   }, 5_000);
@@ -119,7 +119,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     const finishes = await slowServer({ durationMs: 250, progressEveryMs: 20 });
     const ok = await attachSlow(finishes, { callTimeoutMs: 60, maxCallTimeMs: 2_000 });
     cleanups.push(() => ok.close());
-    const done = await ok.tools[0]!.execute({}, executionContext);
+    const done = await ok.tools[0]?.execute({}, executionContext);
     assert.equal(done.error, undefined, done.error?.message);
 
     // Endless progress still ends at maxCallTimeMs.
@@ -127,7 +127,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     const capped = await attachSlow(endless, { callTimeoutMs: 60, maxCallTimeMs: 200 });
     cleanups.push(() => capped.close());
     const started = Date.now();
-    const result = await capped.tools[0]!.execute({}, executionContext);
+    const result = await capped.tools[0]?.execute({}, executionContext);
     const elapsed = Date.now() - started;
     assert.ok(elapsed >= 190 && elapsed < 1_000, `ended at maxCallTimeMs, took ${elapsed}ms`);
     assert.match(result.error?.message ?? "", /MCP server "slow" tool call exceeded maxCallTimeMs \(200ms\)/);
@@ -137,7 +137,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     const fixture = await slowServer({ durationMs: 2_000 });
     const bridge = await attachSlow(fixture, { callTimeoutMs: 50 });
     cleanups.push(() => bridge.close());
-    const result = await bridge.tools[0]!.execute({}, executionContext);
+    const result = await bridge.tools[0]?.execute({}, executionContext);
     assert.ok(result.error);
     for (let i = 0; i < 40 && fixture.cancelled.length === 0; i += 1) await sleep(10);
     assert.equal(fixture.cancelled.length, 1, "the server's request signal aborted from notifications/cancelled");
@@ -186,7 +186,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     });
     cleanups.push(() => bridge.close());
     assert.equal(bridge.protocolEra, "modern");
-    const result = await bridge.tools[0]!.execute({}, executionContext);
+    const result = await bridge.tools[0]?.execute({}, executionContext);
     assert.match(result.error?.message ?? "", /callTimeoutMs \(50ms\)/);
     for (let i = 0; i < 40 && !callAborted; i += 1) await sleep(10);
     assert.equal(callAborted, true, "the per-request HTTP stream was aborted");
@@ -199,7 +199,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     cleanups.push(() => bridge.close());
     const controller = new AbortController();
     const started = Date.now();
-    const pending = bridge.tools[0]!.execute({}, { ...executionContext, signal: controller.signal });
+    const pending = bridge.tools[0]?.execute({}, { ...executionContext, signal: controller.signal });
     setTimeout(() => controller.abort(new Error("run aborted")), 20);
     const result = await pending;
     assert.ok(Date.now() - started < 500);

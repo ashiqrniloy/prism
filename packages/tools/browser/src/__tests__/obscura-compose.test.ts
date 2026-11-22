@@ -159,10 +159,10 @@ test("tools_browser_composes_obscura_cdp", async () => {
     assert.deepEqual((observe.value as { console: unknown[] }).console, []);
     const close = await callTool(tools, "browser_close", {});
     assert.equal(close.error, undefined);
-    assert.ok(record.browsers[0]!.context.page.closed);
+    assert.ok(record.browsers[0]?.context.page.closed);
 
     await session.close();
-    assert.equal(record.browsers[0]!.closeCount, 1);
+    assert.equal(record.browsers[0]?.closeCount, 1);
   } finally {
     server.close();
   }

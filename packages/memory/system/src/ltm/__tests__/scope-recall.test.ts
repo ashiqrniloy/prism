@@ -30,7 +30,7 @@ function fabricOver(levels: readonly ("project" | "agent" | "user")[]) {
     level,
     memory: memoryFor(level === "project" ? "projects/demo--01234567" : level, stores),
   }));
-  return { bindings, fabric: createLongTermMemory({ memory: bindings[0]!.memory, scopes: bindings, consolidate: false }) };
+  return { bindings, fabric: createLongTermMemory({ memory: bindings[0]?.memory, scopes: bindings, consolidate: false }) };
 }
 
 function userEntry(text: string): SessionEntry {
@@ -177,7 +177,7 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
     await fabric.remember({ kind: "preference", content: "Deploys happen on fridays", scope: "user" });
     await fabric.remember({ kind: "fact", content: "Deploys happen fridays from main", scope: "project" });
 
-    const projection = createFabricContext(bindings[0]!.memory, fabric.recall, { topK: 3, budgetTokens: 200 }, {});
+    const projection = createFabricContext(bindings[0]?.memory, fabric.recall, { topK: 3, budgetTokens: 200 }, {});
     const entries = [userEntry("how do deploys happen fridays")];
     const built = await projection.build(
       { messages: [{ role: "user", content: [{ type: "text", text: "how do deploys happen fridays" }] }] } as ContextDraft,
@@ -190,12 +190,12 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
 
     // The floor is applied per scope before the prior, so a large prior cannot rescue a weak hit.
     const strictFabric = createLongTermMemory({
-      memory: bindings[0]!.memory,
+      memory: bindings[0]?.memory,
       scopes: bindings,
       consolidate: false,
       scopePriors: { user: 0.5, project: 0.5 },
     });
-    const strictProjection = createFabricContext(bindings[0]!.memory, strictFabric.recall, {
+    const strictProjection = createFabricContext(bindings[0]?.memory, strictFabric.recall, {
       topK: 3,
       minSimilarity: 0.9,
       budgetTokens: 200,
@@ -252,7 +252,7 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
 
     await tracker.flush();
     assert.equal(saved.length, 1);
-    assert.equal(saved[0]!.paths.length, 256);
+    assert.equal(saved[0]?.paths.length, 256);
     await tracker.flush();
     assert.equal(saved.length, 1, "flush once per turn, only when changed");
   });

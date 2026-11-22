@@ -55,7 +55,7 @@ function assertPermutation(before: readonly RagHit[], after: readonly RagHit[]):
   const refs = new Set(before);
   for (const hit of after) assert.ok(refs.has(hit), "rerank must return the same object references — provenance untouched");
   for (let i = 1; i < after.length; i += 1) {
-    assert.ok(after[i - 1]!.score >= after[i]!.score, `scores must be non-increasing (${after[i - 1]!.score} < ${after[i]!.score})`);
+    assert.ok(after[i - 1]?.score >= after[i]?.score, `scores must be non-increasing (${after[i - 1]?.score} < ${after[i]?.score})`);
   }
 }
 

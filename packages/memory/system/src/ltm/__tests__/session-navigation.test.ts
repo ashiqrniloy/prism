@@ -164,15 +164,15 @@ test("package_memory_read_navigates_and_replace_pins_across_scopes", async () =>
     await agent.dispose();
     await pump;
     const [around, paged, replaced] = results as { value: { notes?: { id: string }[]; found?: boolean } }[];
-    expect(around!.value.notes?.map((note) => note.id)).toEqual([
+    expect(around?.value.notes?.map((note) => note.id)).toEqual([
       "000000000000",
       "000000000001",
       "000000000002",
       "000000000003",
       "000000000004",
     ]);
-    expect(paged!.value.notes).toHaveLength(5);
-    expect(replaced!.value.found).toBe(true);
+    expect(paged?.value.notes).toHaveLength(5);
+    expect(replaced?.value.found).toBe(true);
     const reopened = await createSqliteMemoryStores({ path });
     const row = await createMemory({ ...scope, ...reopened }).getEntry(fact.id);
     expect((row?.metadata?.fabric as { pinned?: boolean } | undefined)?.pinned).toBe(true);

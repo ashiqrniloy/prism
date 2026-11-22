@@ -233,12 +233,12 @@ describe("memory.recall tool: multi-query, snippets, budget", () => {
     const result = (await recall.execute({ query: "needle", topK: 12, budget: 1200 } as JsonObject, toolContext)) as ToolResult;
     const value = result.value as { summary?: string; hits: unknown[] };
     assert.ok(value.summary, "the summary is present");
-    assert.ok(Math.ceil(value.summary!.length / 4) <= 200, "the summary stays within 200 rendered tokens");
+    assert.ok(Math.ceil(value.summary?.length / 4) <= 200, "the summary stays within 200 rendered tokens");
     const rendered = okText(result)
       .split("\n")
       .filter((line) => line.includes("matched=["))
       .reduce((sum, line) => sum + Math.ceil(line.length / 4), 0);
-    assert.ok(rendered + Math.ceil(value.summary!.length / 4) <= 1200, "summary and snippets share the recall budget");
+    assert.ok(rendered + Math.ceil(value.summary?.length / 4) <= 1200, "summary and snippets share the recall budget");
   });
 
   it("empty_recall_reports_terms_and_scopes", async () => {

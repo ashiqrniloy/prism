@@ -77,7 +77,7 @@ test("edit_exact_only_trailing_whitespace_variant_fails", async () => {
     await writeFile(join(cwd, "f.txt"), before);
     const r = await createEditTool(cwd).execute({ path: "f.txt", edits: [{ oldText: "line with spaces", newText: "CHANGED" }] }, ctx());
     assert.ok(r.error, "an oldText with an ASCII space is not the file's NBSP, so it must not edit");
-    assert.match(r.error!.message, /Could not find the exact text/);
+    assert.match(r.error?.message, /Could not find the exact text/);
     assert.equal(await readFile(join(cwd, "f.txt"), "utf-8"), before, "file must be byte-identical");
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -92,8 +92,8 @@ test("no-match edit → error result, file BYTE-IDENTICAL to before", async () =
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "does not exist", newText: "x" }] }, ctx());
     assert.ok(r.error, "no-match must be an error result");
-    assert.match(r.error!.message, /Could not find/);
-    assert.match(r.error!.message, /f\.txt/);
+    assert.match(r.error?.message, /Could not find/);
+    assert.match(r.error?.message, /f\.txt/);
     // file untouched
     assert.equal(await readFile(join(cwd, "f.txt"), "utf-8"), before);
   } finally {
@@ -117,8 +117,8 @@ test("no-match with multiple edits → error names the failing edit index", asyn
       ctx(),
     );
     assert.ok(r.error);
-    assert.match(r.error!.message, /edits\[1\]/);
-    assert.match(r.error!.message, /f\.txt/);
+    assert.match(r.error?.message, /edits\[1\]/);
+    assert.match(r.error?.message, /f\.txt/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -131,7 +131,7 @@ test("duplicate (non-unique) oldText → error result", async () => {
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "dup", newText: "x" }] }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /3 occurrences/);
+    assert.match(r.error?.message, /3 occurrences/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -153,7 +153,7 @@ test("overlapping edits → error result naming both indices", async () => {
       ctx(),
     );
     assert.ok(r.error);
-    assert.match(r.error!.message, /overlap/);
+    assert.match(r.error?.message, /overlap/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -165,8 +165,8 @@ test("missing file → error result naming the path + code", async () => {
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "nope.txt", edits: [{ oldText: "a", newText: "b" }] }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /Could not edit file: nope\.txt/);
-    assert.match(r.error!.message, /ENOENT/);
+    assert.match(r.error?.message, /Could not edit file: nope\.txt/);
+    assert.match(r.error?.message, /ENOENT/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -178,7 +178,7 @@ test("empty/missing path → error result", async () => {
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "", edits: [{ oldText: "a", newText: "b" }] }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /path is required/);
+    assert.match(r.error?.message, /path is required/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -191,7 +191,7 @@ test("empty edits array → error result", async () => {
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "f.txt", edits: [] }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /at least one/);
+    assert.match(r.error?.message, /at least one/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
@@ -351,7 +351,7 @@ test("aborted signal before edit → error result, file unchanged", async () => 
     ac.abort();
     const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "b", newText: "B" }] }, ctx(ac.signal));
     assert.ok(r.error);
-    assert.match(r.error!.message, /aborted/i);
+    assert.match(r.error?.message, /aborted/i);
     assert.equal(await readFile(join(cwd, "f.txt"), "utf-8"), before);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -369,10 +369,10 @@ test("edit no-match includes Nearby snippets and leaves the file unchanged", asy
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "a.ts", edits: [{ oldText: "function createEditTool(ARGS) {", newText: "z" }] }, ctx());
     assert.ok(r.error, "no-match must be an error result");
-    assert.match(r.error!.message, /Could not find the exact text in .*a\.ts/);
-    assert.match(r.error!.message, /Nearby:/);
-    assert.match(r.error!.message, /L1: function createEditTool\(opts\) \{/);
-    assert.match(r.error!.message, /L3: function createEditTool\(config\) \{/);
+    assert.match(r.error?.message, /Could not find the exact text in .*a\.ts/);
+    assert.match(r.error?.message, /Nearby:/);
+    assert.match(r.error?.message, /L1: function createEditTool\(opts\) \{/);
+    assert.match(r.error?.message, /L3: function createEditTool\(config\) \{/);
     assert.equal(await readFile(join(cwd, "a.ts"), "utf-8"), before, "file must be byte-identical");
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -386,7 +386,7 @@ test("edit rejects a read-prefixed oldText with a precise hint and never strips 
     await writeFile(join(cwd, "f.txt"), before);
     const r = await createEditTool(cwd).execute({ path: "f.txt", edits: [{ oldText: "1\talpha\n2\tbeta", newText: "z" }] }, ctx());
     assert.ok(r.error, "read-prefixed oldText must not match");
-    assert.match(r.error!.message, /oldText includes read line-number prefixes \("12\\t"\); remove them/);
+    assert.match(r.error?.message, /oldText includes read line-number prefixes \("12\\t"\); remove them/);
     assert.equal(await readFile(join(cwd, "f.txt"), "utf-8"), before, "file must be byte-identical");
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -414,7 +414,7 @@ test("edit no-match with no similar line keeps the plain sentence (no Nearby)", 
     const tool = createEditTool(cwd);
     const r = await tool.execute({ path: "f.txt", edits: [{ oldText: "zzz unrelated", newText: "y" }] }, ctx());
     assert.ok(r.error);
-    assert.match(r.error!.message, /Could not find/);
+    assert.match(r.error?.message, /Could not find/);
     assert.doesNotMatch(r.error!.message, /Nearby:/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -443,7 +443,7 @@ test("edit_unicode_quote_variant_fails_instead_of_fuzzy_editing", async () => {
     await writeFile(join(cwd, "f.ts"), before);
     const r = await createEditTool(cwd).execute({ path: "f.ts", edits: [{ oldText: 'const s = "value";', newText: "x" }] }, ctx());
     assert.ok(r.error, "an ASCII quote is not the file's smart quote, so the edit must fail");
-    assert.match(r.error!.message, /Could not find the exact text/);
+    assert.match(r.error?.message, /Could not find the exact text/);
     assert.equal(await readFile(join(cwd, "f.ts"), "utf-8"), before, "file must be byte-identical");
   } finally {
     await rm(cwd, { recursive: true, force: true });

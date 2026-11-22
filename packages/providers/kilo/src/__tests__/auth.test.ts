@@ -92,17 +92,17 @@ describe("Kilo device login", () => {
     await kiloAuth({ credential: "keyring:kilo", fetch: http.fetch, sleep: async () => {}, now: () => 1_800_000_000_000 }).login(ctx);
 
     assert.equal(stored.length, 1);
-    assert.equal(stored[0]![0], "keyring:kilo");
-    assert.equal(stored[0]![1].type, "bearer");
-    assert.equal(stored[0]![1].value, token);
-    assert.deepEqual(stored[0]![1].metadata, {
+    assert.equal(stored[0]?.[0], "keyring:kilo");
+    assert.equal(stored[0]?.[1].type, "bearer");
+    assert.equal(stored[0]?.[1].value, token);
+    assert.deepEqual(stored[0]?.[1].metadata, {
       v: 1,
       email: EMAIL,
       obtainedAt: new Date(1_800_000_000_000).toISOString(),
       expires: exp * 1_000,
     });
     assert.equal(ui.calls.length, 1);
-    assert.equal(ui.calls[0]!.kind, "open-url");
+    assert.equal(ui.calls[0]?.kind, "open-url");
     assert.equal((ui.calls[0] as { url: string }).url, URL_OK);
     assert.match((ui.calls[0] as { title: string }).title, /device-code/);
     assert.deepEqual(http.bodies[0], "{}");
@@ -122,7 +122,7 @@ describe("Kilo device login", () => {
       json({ hasPersonalAccount: false }),
     ]);
     await kiloAuth({ fetch: http.fetch, sleep: async () => {}, now: () => now }).login(ctx);
-    assert.equal(stored[0]![1].metadata?.expires, now + 365 * 24 * 60 * 60 * 1_000);
+    assert.equal(stored[0]?.[1].metadata?.expires, now + 365 * 24 * 60 * 60 * 1_000);
   });
 
   it("kilo_login_denied_expired_busy", async () => {
@@ -188,7 +188,7 @@ describe("Kilo device login", () => {
     const input = ui.calls.find((call) => call.kind === "input") as { value?: string; detail?: string };
     assert.equal(input.value, "org-a", "the CLI's selected organization is the default");
     assert.match(input.detail ?? "", /org-b \(Beta\)/);
-    assert.equal(stored[0]![1].metadata?.organizationId, "org-b");
+    assert.equal(stored[0]?.[1].metadata?.organizationId, "org-b");
     assert.equal(JSON.stringify(ui.calls).includes(TOKEN), false);
   });
 
@@ -205,7 +205,7 @@ describe("Kilo device login", () => {
       ui.calls.some((call) => call.kind === "input"),
       false,
     );
-    assert.equal(stored[0]![1].metadata?.organizationId, "only-org");
+    assert.equal(stored[0]?.[1].metadata?.organizationId, "only-org");
   });
 
   it("kilo_login_personal_default_leaves_organization_unset", async () => {
@@ -287,7 +287,7 @@ describe("Kilo device login", () => {
     ]);
     const now = 1_800_000_000_000;
     await kiloAuth({ fetch: http.fetch, sleep: async () => {}, now: () => now }).login(ctx);
-    assert.equal(stored[0]![1].metadata?.expires, now + 365 * 24 * 60 * 60 * 1_000);
+    assert.equal(stored[0]?.[1].metadata?.expires, now + 365 * 24 * 60 * 60 * 1_000);
   });
 
   it("kilo_login_rejects_an_unknown_organization", async () => {

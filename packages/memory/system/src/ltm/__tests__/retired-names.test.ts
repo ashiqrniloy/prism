@@ -16,11 +16,11 @@ const SKIP_FILES = /(^|\/)(CHANGELOG\.md|migrate-to-[0-9.]+\.md)$/;
 const c = "co" + "re";
 const RETIRED: readonly [string, RegExp][] = [
   ["the derived rules file name", new RegExp(`\\b${c}\\.md\\b`)],
-  ["createFabric" + "Core", new RegExp(`\\bcreateFabric${c[0]!.toUpperCase()}${c.slice(1)}\\b`)],
-  ["resolveFabric" + "CoreOptions", new RegExp(`\\bresolveFabric${c[0]!.toUpperCase()}${c.slice(1)}Options\\b`)],
-  ["MemoryFabric" + "CoreConfig", new RegExp(`\\bMemoryFabric${c[0]!.toUpperCase()}${c.slice(1)}Config\\b`)],
+  ["createFabric" + "Core", new RegExp(`\\bcreateFabric${c[0]?.toUpperCase()}${c.slice(1)}\\b`)],
+  ["resolveFabric" + "CoreOptions", new RegExp(`\\bresolveFabric${c[0]?.toUpperCase()}${c.slice(1)}Options\\b`)],
+  ["MemoryFabric" + "CoreConfig", new RegExp(`\\bMemoryFabric${c[0]?.toUpperCase()}${c.slice(1)}Config\\b`)],
   ["the block source", new RegExp(`fabric-${c}\\b`)],
-  ["the block heading", new RegExp(`${c[0]!.toUpperCase()}${c.slice(1)} memory \\(`)],
+  ["the block heading", new RegExp(`${c[0]?.toUpperCase()}${c.slice(1)} memory \\(`)],
   ["the budget field", new RegExp(`\\b${c}\\.(maxTokens|scopes|kinds)\\b`)],
 ];
 

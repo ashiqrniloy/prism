@@ -223,7 +223,7 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
       await session.run("next");
       await session.run("last");
       const rendered = requests.map((request) => JSON.stringify(request));
-      assert.ok(rendered[0]!.includes("Long-term memory"), "files alone populate the directory");
+      assert.ok(rendered[0]?.includes("Long-term memory"), "files alone populate the directory");
       const prefixes = requests.map((request) => JSON.stringify(request.context));
       assert.equal(new Set(prefixes).size, 1, "writes leave the epoch prefix unchanged");
       assert.ok(!rendered.some((text) => text.includes("prism-memory.sqlite")), "the store file is never listed");
@@ -255,7 +255,7 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
       const rendered = requests.map((request) => JSON.stringify(request));
       assert.ok(!rendered[0]!.includes("Standing rules"), "an empty rule set renders no block");
       assert.match(rendered[2]!, /Standing rules \(project prism\): \[[0-9a-f]{12}\] deploys run on fridays/);
-      assert.ok(rendered[2]!.indexOf("Long-term memory") < rendered[2]!.indexOf("Standing rules"), "the directory stays first");
+      assert.ok(rendered[2]?.indexOf("Long-term memory") < rendered[2]?.indexOf("Standing rules"), "the directory stays first");
       const core = (text: string) => /Standing rules \(project prism\): [^"]+/.exec(text)?.[0];
       assert.equal(core(rendered[2]!), core(rendered[3]!), "no write between turns: identical bytes");
       assert.match(

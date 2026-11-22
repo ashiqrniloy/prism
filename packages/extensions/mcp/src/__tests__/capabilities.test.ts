@@ -8,7 +8,7 @@ import { McpUnsupportedCapabilityError } from "../types.js";
 
 const open: Array<{ close(): Promise<void> }> = [];
 afterEach(async () => {
-  while (open.length) await open.pop()!.close();
+  while (open.length) await open.pop()?.close();
 });
 
 async function fixture(withCapabilities = true) {

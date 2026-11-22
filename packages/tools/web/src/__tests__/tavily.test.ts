@@ -27,12 +27,12 @@ test("tavily_search_normalizes_results", async () => {
     response.results.map((result) => result.url),
     ["https://example.org/tavily-one", "https://example.org/tavily-two"],
   );
-  assert.equal(response.results[0]!.snippet, "First Tavily snippet");
-  assert.equal(response.results[0]!.publishedAt, "2026-10-02");
-  assert.match(response.results[0]!.citationId, /^web:tavily:[0-9a-f]{64}$/u);
-  assert.equal(calls[0]!.url.toString(), "https://api.tavily.com/search");
-  assert.equal(calls[0]!.init.method, "POST");
-  assert.equal(header(calls[0]!.init, "authorization"), "Bearer tvly-test");
+  assert.equal(response.results[0]?.snippet, "First Tavily snippet");
+  assert.equal(response.results[0]?.publishedAt, "2026-10-02");
+  assert.match(response.results[0]?.citationId, /^web:tavily:[0-9a-f]{64}$/u);
+  assert.equal(calls[0]?.url.toString(), "https://api.tavily.com/search");
+  assert.equal(calls[0]?.init.method, "POST");
+  assert.equal(header(calls[0]?.init, "authorization"), "Bearer tvly-test");
 });
 
 test("tavily_maps_controls_into_the_request_body", async () => {
@@ -45,7 +45,7 @@ test("tavily_maps_controls_into_the_request_body", async () => {
     includeDomains: ["example.org"],
     excludeDomains: ["spam.example"],
   });
-  const request = body(calls[0]!.init);
+  const request = body(calls[0]?.init);
   assert.equal(request.time_range, "week");
   assert.equal(request.language, "en");
   assert.equal(request.topic, "general", "country is only honored on the general topic");

@@ -164,7 +164,7 @@ test("unlisted_model_uses_ratio_and_notes_once", async () => {
       });
       const notes = agent.inspect().statusNotes.filter((note) => note.package === "@prism-agent/context-budget");
       assert.equal(notes.length, 1);
-      assert.match(notes[0]!.message, /input_ratio 0\.6/);
+      assert.match(notes[0]?.message, /input_ratio 0\.6/);
     } finally {
       await agent.dispose();
     }
@@ -230,8 +230,8 @@ test("long_session_stays_bounded", async () => {
 
     for (let index = 1; index < turns.length; index += 1) {
       if (counts[index] !== counts[index - 1]) continue;
-      const previous = turns[index - 1]!.messages;
-      const current = turns[index]!.messages;
+      const previous = turns[index - 1]?.messages;
+      const current = turns[index]?.messages;
       if (current.length < previous.length) continue; // a compaction shortened the branch
       if (JSON.stringify(current[0]) !== JSON.stringify(previous[0])) continue; // a compaction replaced the summary
       assert.equal(

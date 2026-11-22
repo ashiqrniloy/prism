@@ -84,14 +84,14 @@ function clauseNames(clause: string): string[] | null {
     .replace(/,/g, "")
     .trim();
   if (!braces || head) return null;
-  return braces[1]!
-    .split(",")
+  return braces[1]
+    ?.split(",")
     .map((part) =>
       part
         .trim()
         .replace(/^type\s+/, "")
-        .split(/\s+as\s+/)[0]!
-        .trim(),
+        .split(/\s+as\s+/)[0]
+        ?.trim(),
     )
     .filter(Boolean);
 }
