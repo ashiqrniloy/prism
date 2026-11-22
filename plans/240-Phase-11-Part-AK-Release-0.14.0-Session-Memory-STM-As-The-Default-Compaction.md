@@ -614,7 +614,7 @@
     - `PRODUCT.md`, `README.md` and `docs/index.md` were done in Task 7, and the index banner in Task 8.
     - `docs.test.ts`: 69 pass. The kernel byte budget is rebaselined with Task 8a's budget edit (one file).
 
-- [ ] Task 10: Paid live check of the release defaults (owner's word, ceiling per D7)
+- [x] Task 10: Paid live check of the release defaults (owner's word, ceiling per D7)
   - Acceptance Criteria:
     - Functional:
       - **Session-Bench sessions on the release defaults.** `memorySystem({ enabled: true })` runs: STM, no WM, verbatim records. The arm is STM-only under rule a1c6df8d's models, with a new rule hash recorded in the gate.
@@ -639,6 +639,27 @@
     - Docs pages to create/edit: `docs/_evidence/memory-bench/README.md` row.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22, on the owner's word, D7):
+    - **Session-Bench:** 6 sessions on the 0.14.0 defaults (STM-only, which now equals the release default) with rule a1c6df8d's models at W = 32K. The sessions were sb-sc-06, sb-sc-12, sb-id-03, sb-id-16, sb-rt-19 and sb-rt-01, including earlier D4 failures and weak sessions. Same sessions:
+
+      | Run | Tasks | D2 | D4 | C |
+      | --- | --- | --- | --- | --- |
+      | Release check | **61/67** | 6/7 | **5/6** | **75/80** |
+      | Replay of the fixes (plan 218.5 Task 1) | 59/67 | 6/7 | 4/6 | 72/80 |
+      | Screen STM-only | 54/67 | 2/7 | 3/6 | 75/80 |
+
+      - Tasks with zero tool calls: 3, against 4 in the replay and 1 in the screen. That is within run noise; plan 218.5 keeps counting it.
+      - 0 worker errors and 0 fallbacks.
+      - One provider fault (`ETIMEDOUT`) stopped sb-id-16's first attempt; the rerun was clean (11/11).
+      - Tokens: 13.0M.
+    - **Reference-host smoke:** `apps/prism-agent`'s `createCodingWorker` on opencode-go/hy4-flash-free at `limits.contextWindow` 8K and 16K, `approval: "auto"`, with six read-only tasks: a forced full read of a 24–80 KB file, follow-ups, and a fact said and later recalled.
+      - **Session memory (the default):** 6/6 runs completed, 5–6 `session-memory` compactions, and the fact recalled, including at 16K after 40 KB reads.
+      - **`compaction: "llm"`, first runs:** runs completed (one provider 502 aside) and the fact was recalled, but most compactions were the kernel default. `compaction.fallback` gave "Summarization failed: empty response": hy4-flash-free spent its output thinking, and the package did not retry.
+      - **Fix:** `strategy.ts` `runSummaryProvider` asks an empty summary once more with `thinkingLevel: "none"` (mapped against `client.resolve()`), as STM does; a second empty answer still falls back. Tests: `empty_summary_is_asked_again_with_thinking_off` and `two_empty_answers_still_fail_so_the_package_falls_back`; compaction 63 pass.
+      - **After the fix:** 2 runs at 16K, 12/12 runs completed, 5 compactions, **all LLM summaries, 0 fallbacks**, and the fact recalled. The kept-tail fit (Task 5) held after 40–51 KB reads.
+    - **Spend:** about 13M Session-Bench tokens plus the smokes, under the 30M ceiling.
+    - **Evidence:** `docs/_evidence/memory-bench/240/release-defaults-check.json`.
 
 - [ ] Task 11: Release preflight on a clean tree
   - Acceptance Criteria:

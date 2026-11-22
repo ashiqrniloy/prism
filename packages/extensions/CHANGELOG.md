@@ -4,6 +4,8 @@
 
 ## [0.14.0] - 2026-11-22
 
+- **`compaction`: an empty summary is asked again with thinking off (plan 240 Task 10).** A reasoning summary model that ignores a low effort can spend its whole output thinking and answer no text. The summary call is now retried once with `thinkingLevel: "none"`, as session memory's STM worker is, and only a second empty answer falls back to the kernel default. Seen live on opencode-go/hy4-flash-free: before, most compactions fell back; after, every compaction was an LLM summary.
+
 - **`compaction`: the kept tail fits the window (plan 240 Task 5).** **Fixed:** one turn whose input exceeded the model's window (a large tool output) left every later compaction keeping that same oversized tail, so the retry and every later run of the session failed `context_overflow`. The cut now keeps at most `maxKeptShare` (new, default 0.4) of the model's input cap and summarizes the rest, and a tail never starts on an orphaned tool result. **Behaviour change:** `keepRecentTokens` defaults to 20% of the input cap, at most 20,000 (it was always 20,000), so small-window models keep a proportionate tail. With no resolvable cap, both behave as before.
 
 - **One compaction system per agent (plan 218.3 Task 2).** `./compaction` provides the `compaction.system` service (`{ name: "llm-compaction" }`) and fails setup when another compaction system already provides it, naming it; the memory system's session compaction provides it as `session-memory`. `./context-engineering` with `fold` or `attention` fails setup beside session memory's compaction and otherwise provides `context.fold`, so the memory system fails setup when it loads second. To keep LLM compaction or folding beside the memory system, set its `context.compaction: false`.

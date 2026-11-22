@@ -231,6 +231,12 @@ async function summarizeTurnPrefix(
   return runSummaryProvider(context, client, TURN_PREFIX_SYSTEM_PROMPT, prompt, secrets, limits);
 }
 
+/**
+ * One summary call, asked once more with thinking off when it answers no text (plan 240 Task 5). A reasoning model that
+ * ignores a low effort spends its whole output budget thinking and returns nothing (seen live on
+ * opencode-go/hy4-flash-free); session memory's STM worker retries the same way. A second empty answer fails the
+ * compaction, and the package falls back to the kernel default.
+ */
 async function runSummaryProvider(
   context: CompactionContext,
   client: ModelClient,
@@ -238,6 +244,25 @@ async function runSummaryProvider(
   prompt: string,
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
+): Promise<string> {
+  try {
+    return await runSummaryOnce(context, client, systemPrompt, prompt, secrets, limits);
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== EMPTY_SUMMARY) throw error;
+    return runSummaryOnce(context, client, systemPrompt, prompt, secrets, limits, "none");
+  }
+}
+
+const EMPTY_SUMMARY = "Summarization failed: empty response";
+
+async function runSummaryOnce(
+  context: CompactionContext,
+  client: ModelClient,
+  systemPrompt: string,
+  prompt: string,
+  secrets: readonly (string | undefined)[],
+  limits: ResolvedSummaryLimits,
+  thinkingLevel?: string,
 ): Promise<string> {
   throwIfAborted(context.signal);
   const text: string[] = [];
@@ -247,15 +272,20 @@ async function runSummaryProvider(
   let truncated = false;
   let eventCount = 0;
   const providerSignal = context.signal ? AbortSignal.any([context.signal, providerAbort.signal]) : providerAbort.signal;
+  // A thinking level maps against the provider's description of the model (its `compat`), not the bare ref.
+  const model = thinkingLevel === undefined ? client.model : ((await client.resolve?.()) ?? client.model);
   let request: ProviderRequest = {
-    model: client.model,
+    model,
     messages: [
       { role: "system", content: [{ type: "text", text: systemPrompt }] },
       { role: "user", content: [{ type: "text", text: prompt }] },
     ] satisfies readonly Message[],
     signal: providerSignal,
   };
-  request = applyDefaultProviderRequestOptions(request, { sessionId: context.sessionId });
+  request = applyDefaultProviderRequestOptions(request, {
+    sessionId: context.sessionId,
+    ...(thinkingLevel === undefined ? {} : { thinkingLevel }),
+  });
 
   try {
     // The slot owner's session view (when it has one) charges the summary to the run that compacts (plan 225 Task 5).
@@ -292,7 +322,7 @@ async function runSummaryProvider(
   }
 
   const summary = capSummary(text.join("").trim(), limits.maxSummaryTokens, truncated);
-  if (!summary) throw new Error("Summarization failed: empty response");
+  if (!summary) throw new Error(EMPTY_SUMMARY);
   return summary;
 }
 

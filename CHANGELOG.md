@@ -2,6 +2,8 @@
 
 ## [0.14.0] - 2026-11-22
 
+- `@arnilo/prism-extensions/compaction`: an empty summary (a reasoning model that spent its output thinking) is retried once with thinking off before falling back to the kernel default (plan 240 Task 10).
+
 A breaking release (semver 0.x; [migration guide](docs/migration.md#013x--0140-a-breaking-release)). Highlights:
 - Kernel API level 2, with every first-party peer at `^0.14.0`.
 - Session memory (`@arnilo/prism-memory-system`, now stable) is the recommended compaction system: working memory is
