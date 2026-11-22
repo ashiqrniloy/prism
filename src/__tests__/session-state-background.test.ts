@@ -27,7 +27,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra });
 
 const provider: ModelProvider = {
   id: "mock",

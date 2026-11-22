@@ -56,7 +56,7 @@ function fetchCallProbe(url: string) {
   return definePackage<Record<string, never>>({
     name: "test-web-fetch-call-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: (prism) => {
       const service = prism.services.consume<WebFetchService>("web.fetch");
       prism.commands.register({
@@ -80,7 +80,7 @@ function toolParameterProbe(name: string) {
   return definePackage<Record<string, never>>({
     name: "test-tool-parameter-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: (prism) => {
       prism.commands.register({
         name: "probe-tool-parameters",
@@ -100,7 +100,7 @@ function fetchProbe() {
   return definePackage<Record<string, never>>({
     name: "test-web-fetch-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: (prism) => {
       const service = prism.services.consume<WebFetchService>("web.fetch");
       prism.commands.register({

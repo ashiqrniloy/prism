@@ -85,7 +85,7 @@ function workspaceProbe() {
   const probe = definePackage({
     name: "@prism-test/routing-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: ({ services }) => {
       read = () => services.consume<WorkspaceService>("workspace");
     },

@@ -232,7 +232,7 @@ const definition = definePackage<ToolsWorkConfig>({
   version: manifest.version,
   description:
     "Office document, spreadsheet, diagram, connector, and bounded reader tools with declared effects, ref-only credentials, and an injected work sandbox.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["credentials"],
   config: toolsWorkConfigSchema,
   setup: async (prism) => {

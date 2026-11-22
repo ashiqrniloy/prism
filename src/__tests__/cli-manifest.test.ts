@@ -142,7 +142,7 @@ describe("prism new package", () => {
     assert.deepEqual(pkg.exports, { ".": "./src/index.ts" });
     const source = await readFile(join(dir, "src", "index.ts"), "utf8");
     assert.match(source, /definePackage/);
-    assert.match(source, /requires: \{ api: 1 \}/);
+    assert.match(source, /requires: \{ api: 2 \}/);
     assert.equal(source.includes("{{"), false);
     assert.match(await readFile(join(dir, "src", "__tests__", "package.test.ts"), "utf8"), /packageConformance/);
 

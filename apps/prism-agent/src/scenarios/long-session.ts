@@ -74,7 +74,7 @@ function longResultTool() {
   return definePackage({
     name: "@prism-agent/long-result",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.tools.register({
         name: TOOL,
@@ -117,7 +117,7 @@ export async function longSession(config: HostConfig): Promise<LongSessionResult
       definePackage({
         name: "@prism-agent/long-session-provider",
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.providers.register(provider);
         },

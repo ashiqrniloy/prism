@@ -12,7 +12,7 @@ const tool = (name: string): ToolDefinition =>
 const skill = (name: string): Skill => ({ name, description: name, instructions: name });
 
 function pkg(name: string, setup: (prism: PackageAPI<any>) => void | Promise<void>) {
-  return definePackage({ name, version: "1.0.0", requires: { api: 1 }, setup });
+  return definePackage({ name, version: "1.0.0", requires: { api: 2 }, setup });
 }
 
 /** A package that keeps its API so the test can read after setup. */

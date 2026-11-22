@@ -85,7 +85,7 @@ describe("jsonl store package", () => {
     const spy = definePackage({
       name: "@prism-test/workflow-services-spy",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         seen.checkpoints = prism.services.consume("checkpoints");
         seen.leases = prism.services.consume("leases");

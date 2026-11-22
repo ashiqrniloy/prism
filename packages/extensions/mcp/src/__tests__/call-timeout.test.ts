@@ -71,7 +71,7 @@ describe("MCP call timeouts (plan 234 Task 2)", () => {
     const transports = definePackage({
       name: "raw-transport-service",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("mcp.transport", { slow: fixture.clientTransport });
       },

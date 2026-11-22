@@ -69,7 +69,7 @@ const definition = definePackage<JsonlStoreConfig>({
   name: "@arnilo/prism-extensions/store-jsonl",
   version: manifest.version,
   description: "One JSONL file per session under a directory, as a durable single-process session store.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["slot:store"],
   config: configSchema,
   setup: (prism) => {

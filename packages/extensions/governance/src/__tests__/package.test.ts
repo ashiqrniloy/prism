@@ -74,7 +74,7 @@ function providerPackageFor(provider: ModelProvider) {
   return definePackage({
     name: "@test/governance-provider",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(provider);
     },
@@ -89,7 +89,7 @@ function captureAuditPackage() {
   return definePackage({
     name: "@test/capture-governance-audit",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       capturedAudit = prism.services.consume<{ store: PolicyDecisionStore }>("governance.audit");
     },
@@ -101,7 +101,7 @@ function identityVerifierPackage(verifier: IdentityVerifier, name = "identity.ve
   return definePackage({
     name: "@test/governance-identity-verifier",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.services.provide(name, verifier);
     },
@@ -125,7 +125,7 @@ function eventCollectorPackage(events: unknown[]) {
   return definePackage({
     name: "@test/governance-event-collector",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       const record = (event: unknown): void => {
         events.push(event);
@@ -759,7 +759,7 @@ describe("governance package", () => {
     const side = definePackage<any>({
       name: "@acme/side",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["models"],
       setup: ({ models }: any) => {
         clients.push(models.client("mock/m"));

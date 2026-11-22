@@ -85,7 +85,7 @@ const definition = definePackage<DelegateConfig>({
   name: DELEGATE_PACKAGE,
   version: manifest.version,
   description: "Sub-agents as a tool: a delegate tool whose child is a linked session limited to the tools of chosen packages.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["models", "background", "session-state", "sessions"],
   config: delegateConfigSchema,
   setup(prism) {

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-hosts",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Prism host libraries, process driver and version-exact host-builder kit. Import each library through its subpath.",
   "type": "module",
   "exports": {
@@ -72,7 +72,7 @@
     "pack:dry-run": "bun pm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism": "^0.14.0",
     "@agentclientprotocol/sdk": "1.4.0",
     "@ag-ui/core": "1.0.4",
     "@modelcontextprotocol/server": "^2.3.0",
@@ -119,7 +119,7 @@
     "prism-host-builder": "./host-builder/bin/prism-host-builder.ts"
   },
   "dependencies": {
-    "@arnilo/prism-extensions": "^0.13.0"
+    "@arnilo/prism-extensions": "^0.14.0"
   },
   "peerDependenciesMeta": {
     "@agentclientprotocol/sdk": {

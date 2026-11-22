@@ -167,7 +167,7 @@ export const definition = definePackage<WikiConfig>({
     "The wiki: concepts, claims and sources in their own store, consolidated from cited evidence; reads memory read-only when installed.",
   // No required service: the wiki runs on its own sources. Long-term memory, when installed, is read through the
   // read-only `memory.ltm` service, resolved per call so the order of the packages does not matter.
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["models", "background", "session-state"],
   config: {
     type: "object",

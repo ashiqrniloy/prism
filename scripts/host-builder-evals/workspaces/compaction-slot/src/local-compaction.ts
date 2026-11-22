@@ -4,7 +4,7 @@ import { createDefaultCompactor, definePackage } from "@arnilo/prism";
 export default definePackage({
   name: "@acme/local-compaction",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["slot:compaction"],
   setup(prism) {
     prism.slots.compaction.provide(createDefaultCompactor());

@@ -46,7 +46,7 @@
 ./approval decideApproval	function decideApproval(input: { readonly mode: ApprovalMode; readonly effects: readonly string[]; readonly inside: boolean; readonly granted: boolean; }): ApprovalCell
 ./approval default	const definition: import("@arnilo/prism").PackageDefinition<ApprovalConfig>
 ./approval grantKey	function grantKey(tool: string, command?: string): string
-./compaction MemoryCompactionConfig	interface MemoryCompactionConfig { readonly keepRecentTokens?: number; readonly maxChunks?: number; readonly maxErrorBytes?: number; readonly maxSummaryTokens?: number; readonly maxTextBlockChars?: number; readonly maxToolResultChars?: number; readonly model?: ModelRef; readonly profile?: MemoryCompactionProfile; readonly reserveTokens?: number; readonly summaryPrompt?: string; readonly trigger?: CompactionTrigger; }
+./compaction MemoryCompactionConfig	interface MemoryCompactionConfig { readonly keepRecentTokens?: number; readonly maxChunks?: number; readonly maxErrorBytes?: number; readonly maxKeptShare?: number; readonly maxSummaryTokens?: number; readonly maxTextBlockChars?: number; readonly maxToolResultChars?: number; readonly model?: ModelRef; readonly profile?: MemoryCompactionProfile; readonly reserveTokens?: number; readonly summaryPrompt?: string; readonly trigger?: CompactionTrigger; }
 ./compaction MemoryCompactionProfile	type MemoryCompactionProfile = "default" | "coding"
 ./compaction default	const definition: import("@arnilo/prism").PackageDefinition<MemoryCompactionConfig>
 ./context-engineering ACTIVATED_TOOLS_KEY	const ACTIVATED_TOOLS_KEY = "contextEngineering.activated"

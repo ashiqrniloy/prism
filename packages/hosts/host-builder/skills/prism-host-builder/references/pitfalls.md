@@ -25,7 +25,7 @@ In the tables below the **Code** column holds only codes that exist in `errors.j
 | `config_invalid` | A config value breaks the schema (type, range, shape). | Fix the value. |
 | `secret_literal` | A literal was put in a secret field. | Use an `env:NAME` or `keyring:name` ref. |
 | `kernel_range` | The kernel version does not satisfy the package's `requires.prism`. | Align versions; all `@arnilo/*` packages are lockstep with the kernel. |
-| `kernel_api` | `requires.api` is not an API level this kernel supports. | Write the package against `api: 1` for 0.13. |
+| `kernel_api` | `requires.api` is not an API level this kernel supports. | Write the package against `api: 2` for 0.14. |
 | `capability_missing` | The package used a capability it did not declare. | Add it to `capabilities`, only if the package really needs it. |
 | `setup_failed` | `setup` threw, or a listed package failed to load. | Read the error cause; fix the package. Do not wrap `setup` in a try/catch that hides it. |
 | `registration_closed` | A tool or contribution was registered after `setup` finished. | Register during `setup`. |

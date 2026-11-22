@@ -63,7 +63,7 @@ function tool(name: string, onCall?: () => void): ToolDefinition {
 }
 
 const pkg = (name: string, setup: (prism: PackageAPI<any>) => void) =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup });
 
 async function agentWith(options: {
   readonly steps: Step[];

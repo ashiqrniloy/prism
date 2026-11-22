@@ -460,7 +460,7 @@
     - **Gate:** lint and format are clean. The last full `bun run test` failed only on the kernel bytes (rebaselined above), the stale criteria lock (re-registered), and two timing tests under a load average of about 30: `lifecycle_suite_cli…` (SIGTERM, exit 143) and `long_session_turn_overhead_stays_flat` (sqlite ratio 1.9 against 1.5). Task 11 re-runs both on a quiet machine. The budget-gate and evals suites pass (38).
     - **Left to Task 9:** the roadmap's version rows (`roadmap.md:1607-1609,2462`).
 
-- [ ] Task 8: Public surface against 0.13.1, baselines, budgets and generated truth
+- [x] Task 8: Public surface against 0.13.1, baselines, budgets and generated truth
   - Acceptance Criteria:
     - Functional:
       - **D6: 0.14.0 is the breaking release** (semver 0.x; owner 2026-11-22). Nothing removed is restored. Instead:
@@ -495,6 +495,25 @@
     - Docs pages to create/edit: `docs/migration.md` (accepted breaks); `CHANGELOG.md`.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22):
+    - **API level 2:**
+      - `KERNEL_API_LEVEL` 1 → 2 (`src/version.ts`).
+      - 345 `requires: { api: 1 }` declarations in 216 files (src, packages, apps, scripts, examples, docs code) → 2, plus the `prism new package` template and `examples/define-package.ts`.
+      - `api_level_mismatch_fails_closed` now proves that a level-1 package is refused ("targets kernel API 1; this kernel supports 2").
+      - `packaging.test.ts` requires level 2.
+    - **Versions moved here from Task 12:** a `^0.14.0` peer validates only against a 0.14.0 kernel, so the bump lands with the ranges. Task 12 now tags and publishes only.
+      - `release.mjs bump --from 0.13.1 --to 0.14.0` (kernel and hosts; it syncs `src/version.ts`); `--package … --type minor` for ai (0.13.0), extensions (0.13.2) and tools (0.13.2), so all → 0.14.0.
+      - `src/index.ts` `version` and the `docs/index.md` current-line banner set by hand.
+      - Every first-party range is now `^0.14.0`: peers on the kernel, hosts → extensions, tools → extensions, knowledge → tools, and the app → hosts. `bun.lock` is refreshed.
+    - **Peer rule (D6):** the new `isKernelMinorPeer(range, version)` (`^<major>.<minor>.0` of the kernel's minor) replaces the `>=x <1.0.0` window in both `release.mjs` checks. `version-literal-gate.test.mjs` (peer field only, so a stale kernel *dependency* is still reported), `install-smoke.test.ts`, `packaging.test.ts`, `phase24-truth.test.mjs`, `release.test.ts` and two package tests follow.
+    - **`docs/compatibility.md`:** the pre-1.0 rule (a `0.Y.0` may break with a migration note; a `0.Y.Z` patch only adds; the kernel's minor as the peer; a breaking release raises the API level), and the additive/breaking table is now "patch release" / "the next 0.Y.0".
+    - **Nothing removed was restored (D6).** `bun scripts/release.mjs gate --update-baseline` rewrote 3 lines since the Task 1 baselines: `./compaction MemoryCompactionConfig.maxKeptShare?` (Task 5), `KERNEL_API_LEVEL = 2`, and `version = "0.14.0"`. Against `v0.13.1`, the classified removals are in Task 2's notes; the migration note lists them (Task 9).
+    - **Sweep:** `bun scripts/retired-names.mjs --generate` regenerated the list; `bun scripts/retired-names.mjs` finds 0 hits.
+    - **Budgets:** the memory bundle is rebaselined to the measurement (`packStats`: 427,458 → 468,819 packed, 1,573,067 → 1,715,368 unpacked; the memory-track growth, with a reason). Kernel packed is 1,452,914 and unpacked 4,801,525.
+    - Package truth, the host-builder index and the evals' criteria lock are regenerated.
+    - **`bun scripts/release.mjs gate` exits 0.** The full `bun run test` after the fix shows only timing tests failing at bun's 5 s default under a load average of about 25: `markdown_store_write_amplification`, and build-race scenarios 3–4 when run outside the gate's timeout. Task 11 re-runs them on a quiet machine. Lint and format are clean.
+    - **Left to Task 9:** the roadmap version table (including the native-packages row's old "a kernel 0.14 or 0.15 needs no package change"), the migration note, and the CHANGELOG `[0.14.0]` sections.
 
 - [ ] Task 8a: Reduce the non-null assertions before the release (owner D10)
   - Acceptance Criteria:
@@ -610,7 +629,7 @@
   - Acceptance Criteria:
     - Functional:
       - Owner confirmation before each outward step: the push to `origin`, each tag, any trusted-publisher renewal.
-      - **Versions per D5.** `bun scripts/release.mjs bump` per line, with the kernel bump syncing `src/version.ts`. `KERNEL_API_LEVEL` stays 1 unless D6 chose level 2.
+      - **Versions** are already at 0.14.0 (Task 8 moved the bump there). Task 12 verifies them against the registry before tagging.
       - **Tags pushed one at a time** (plan 225's lesson: concurrent runs raced, E409): first `v0.14.0` (kernel and hosts), then each `@arnilo/<bundle>@<version>` once the previous run has finished.
       - `release.yml` publishes from the same tarballs under OIDC with provenance; `--resume` is used if a run fails partway.
       - After the publish:

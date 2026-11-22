@@ -98,7 +98,7 @@ function createGovernedHookPackage(
   return definePackage({
     name: "governed-agent-hook",
     version: "0.1.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models"],
     setup(prism) {
       prism.hooks.on("model.call", async (request, next) => {

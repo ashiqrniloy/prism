@@ -186,7 +186,7 @@ export async function demo() {
         definePackage({
           name: "@example/headless",
           version: "1.0.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           capabilities: ["session-state"],
           setup(prism) {
             prism.commands.register(workflowCommand(prism, "report", flow, { args: { type: "object", properties: {} } }));

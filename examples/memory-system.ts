@@ -162,7 +162,7 @@ export async function runProfile(profile: ProfileName): Promise<ProfileReport> {
     name: "@example/memory-system-host",
     version: "0.0.0",
     description: "The demo's scripted provider, and a read of the services the memory system provides.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(provider);
       prism.hooks.on("session.opened", () => {

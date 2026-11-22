@@ -84,7 +84,7 @@ const readFiles: string[] = [];
 const readTool = definePackage({
   name: "read-tool",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "read_file",
@@ -139,7 +139,7 @@ async function build(
   const consumer = definePackage({
     name: "delegate-shape-probe",
     version: "0.12.1",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       service = prism.services.consume<DelegateService>("delegate") as unknown as ValidatorDelegateService | undefined;
     },

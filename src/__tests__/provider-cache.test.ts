@@ -26,7 +26,7 @@ const provide = (name: string, ...providers: ModelProvider[]) =>
   definePackage<any>({
     name,
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: ({ providers: api }: any) => {
       providers.forEach((p) => {
         api.register(p);
@@ -87,7 +87,7 @@ describe("per-agent provider cache", () => {
     const user = definePackage<any>({
       name: "@acme/client",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["models"],
       setup: ({ models, hooks }: any) => {
         const client = models.client();

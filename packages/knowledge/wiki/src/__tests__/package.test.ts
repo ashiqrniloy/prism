@@ -34,7 +34,7 @@ function webFetchPackage(fetch: (url: string) => Promise<unknown>): PackageInsta
   return definePackage({
     name: "@test/wiki-web-fetch",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.services.provide("web.fetch", { fetch });
     },
@@ -61,7 +61,7 @@ describe("wiki package: knowledge outside memory", () => {
     assert.deepEqual(Object.keys(pkg.exports).sort(), ["./rag", "./wiki"]);
     assert.equal(pkg.bin, undefined, "the prism-wiki bin is retired");
     assert.equal(pkg.files.includes("skills"), false, "the bundled skills are retired");
-    assert.equal(pkg.peerDependencies["@arnilo/prism"], ">=0.13.0 <1.0.0");
+    assert.equal(pkg.peerDependencies["@arnilo/prism"], "^0.14.0");
     // Installing the bundle does not activate the memory package; core is its shared library.
     assert.equal(pkg.peerDependencies["@arnilo/prism-memory-system"], undefined);
     // Plan 240 Task 7: the memory bundle is stable, so knowledge depends on its range.

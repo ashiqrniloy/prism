@@ -36,7 +36,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra });
 
 /** Direct loader harness: its own bus and slot registry, so tests can see what survives a failure. */
 function harness(options: { readonly redactor?: ReturnType<typeof createSecretRedactor>; readonly kernelVersion?: string } = {}) {
@@ -91,12 +91,12 @@ describe("definePackage", () => {
       ["version", () => definePackage({ name: "a", version: "1.0", setup() {} })],
       ["setup", () => definePackage({ name: "a", version: "1.0.0" } as never)],
       ["requires.api missing", () => pkg("a", () => {}, { requires: {} as never })],
-      ["requires.prism hyphen", () => pkg("a", () => {}, { requires: { api: 1, prism: "1.0.0 - 2.0.0" } })],
-      ["requires.prism x-range", () => pkg("a", () => {}, { requires: { api: 1, prism: "1.x" } })],
-      ["requires.prism partial", () => pkg("a", () => {}, { requires: { api: 1, prism: "1.2" } })],
-      ["requires.prism tag", () => pkg("a", () => {}, { requires: { api: 1, prism: "latest" } })],
-      ["requires.packages range", () => pkg("a", () => {}, { requires: { api: 1, packages: { b: "next" } } })],
-      ["requires.services", () => pkg("a", () => {}, { requires: { api: 1, services: [""] } })],
+      ["requires.prism hyphen", () => pkg("a", () => {}, { requires: { api: 2, prism: "1.0.0 - 2.0.0" } })],
+      ["requires.prism x-range", () => pkg("a", () => {}, { requires: { api: 2, prism: "1.x" } })],
+      ["requires.prism partial", () => pkg("a", () => {}, { requires: { api: 2, prism: "1.2" } })],
+      ["requires.prism tag", () => pkg("a", () => {}, { requires: { api: 2, prism: "latest" } })],
+      ["requires.packages range", () => pkg("a", () => {}, { requires: { api: 2, packages: { b: "next" } } })],
+      ["requires.services", () => pkg("a", () => {}, { requires: { api: 2, services: [""] } })],
       ["capability", () => pkg("a", () => {}, { capabilities: ["root" as never] })],
     ];
     for (const [label, make] of bad) {
@@ -235,12 +235,12 @@ describe("package loader", () => {
 
   it("api_level_admits_next_minor", async () => {
     // The API level is what admits a package on a newer 0.x kernel; `prism` is optional.
-    await harness({ kernelVersion: "0.14.0" }).load([pkg("a", () => {}, { requires: { api: 1 } })]);
+    await harness({ kernelVersion: "0.14.0" }).load([pkg("a", () => {}, { requires: { api: 2 } })]);
   });
 
   it("api_level_mismatch_fails_closed", async () => {
-    const mismatched = await loadError(harness().load([pkg("a", () => {}, { requires: { api: 2 } })]), "kernel_api");
-    assert.match(mismatched.message, /targets kernel API 2; this kernel supports 1/);
+    const mismatched = await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1 } })]), "kernel_api");
+    assert.match(mismatched.message, /targets kernel API 1; this kernel supports 2/);
   });
 
   it("api_missing_fails_closed", async () => {
@@ -254,13 +254,13 @@ describe("package loader", () => {
   });
 
   it("prism_minimum_still_checked", async () => {
-    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1, prism: ">=9.0.0" } })]), "kernel_range");
-    await harness({ kernelVersion: "9.0.0" }).load([pkg("a", () => {}, { requires: { api: 1, prism: ">=9.0.0" } })]);
+    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 2, prism: ">=9.0.0" } })]), "kernel_range");
+    await harness({ kernelVersion: "9.0.0" }).load([pkg("a", () => {}, { requires: { api: 2, prism: ">=9.0.0" } })]);
   });
 
   it("requires_checks_fail_closed", async () => {
     let ran = false;
-    const probe = () => pkg("@acme/probe", () => void (ran = true), { requires: { api: 1, prism: "^9.0.0" } });
+    const probe = () => pkg("@acme/probe", () => void (ran = true), { requires: { api: 2, prism: "^9.0.0" } });
     const error = await loadError(harness().load([probe()]), "kernel_range");
     assert.equal(error.package, "@acme/probe");
     assert.equal(ran, false, "setup never runs after a failed requires check");
@@ -268,19 +268,19 @@ describe("package loader", () => {
     await harness({ kernelVersion: "9.1.0" }).load([probe()]);
     assert.equal(ran, true);
 
-    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1, packages: { b: "^1.0.0" } } })]), "missing_package");
-    const old = definePackage({ name: "b", version: "0.9.0", requires: { api: 1 }, setup() {} });
+    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 2, packages: { b: "^1.0.0" } } })]), "missing_package");
+    const old = definePackage({ name: "b", version: "0.9.0", requires: { api: 2 }, setup() {} });
     const wrongVersion = await loadError(
-      harness().load([pkg("a", () => {}, { requires: { api: 1, packages: { b: "^1.0.0" } } }), old]),
+      harness().load([pkg("a", () => {}, { requires: { api: 2, packages: { b: "^1.0.0" } } }), old]),
       "missing_package",
     );
     assert.match(wrongVersion.message, /0\.9\.0/);
-    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1, services: ["svc"] } })]), "missing_service");
+    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 2, services: ["svc"] } })]), "missing_service");
     const cycle = await loadError(
       harness().load([
-        pkg("a", () => {}, { requires: { api: 1, packages: { b: "*" } } }),
-        pkg("b", () => {}, { requires: { api: 1, packages: { c: "*" } } }),
-        pkg("c", () => {}, { requires: { api: 1, packages: { a: "*" } } }),
+        pkg("a", () => {}, { requires: { api: 2, packages: { b: "*" } } }),
+        pkg("b", () => {}, { requires: { api: 2, packages: { c: "*" } } }),
+        pkg("c", () => {}, { requires: { api: 2, packages: { a: "*" } } }),
       ]),
       "dependency_cycle",
     );
@@ -293,7 +293,7 @@ describe("package loader", () => {
   it("topological_order_is_stable", async () => {
     const order: string[] = [];
     const track = (name: string, extra?: Partial<Loose["requires"]>) =>
-      pkg(name, () => void order.push(name), { requires: { api: 1, ...extra } });
+      pkg(name, () => void order.push(name), { requires: { api: 2, ...extra } });
     const { load } = harness();
     const loaded = await load([track("b", { prism: "*", packages: { a: "*" } }), track("c"), track("a")]);
     assert.deepEqual(order, ["a", "b", "c"]);
@@ -360,7 +360,7 @@ describe("package loader", () => {
     assert.equal(note?.level, "warn");
     assert.match(note?.message ?? "", /^skipped: .*no api key/);
     // `optional` covers a setup throw only: a failed requires check is still fatal.
-    await loadError(load([pkg("needs", () => {}, { requires: { api: 1, prism: "^9.0.0" } })({}, { optional: true })]), "kernel_range");
+    await loadError(load([pkg("needs", () => {}, { requires: { api: 2, prism: "^9.0.0" } })({}, { optional: true })]), "kernel_range");
   });
 
   it("capabilities_for_narrows_per_instance_and_fails_closed_outside_declared", async () => {
@@ -648,7 +648,7 @@ describe("package loader", () => {
       definePackage<any>({
         name,
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         config: {
           type: "object",
           properties: { level: { type: "string", default: "info" }, nested: { type: "object", additionalProperties: true } },
@@ -718,7 +718,7 @@ describe("package loader", () => {
         hooks.on("run.input", (m) => m);
         onDispose(() => void order.push("p2"));
       },
-      { requires: { api: 1, services: ["svc.one", "svc.missing"] } },
+      { requires: { api: 2, services: ["svc.one", "svc.missing"] } },
     );
     const error = await loadError(load([provider, second]), "missing_service");
     assert.match(error.message, /svc\.missing/);
@@ -843,7 +843,7 @@ describe("session context", () => {
     const definition = definePackage<any>({
       name: "scoped-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: {
@@ -890,7 +890,7 @@ describe("session context", () => {
     const pkgDef = definePackage<any>({
       name: "freeze-test",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: {
@@ -917,7 +917,7 @@ describe("session context", () => {
     const defManifest = definePackage<any>({
       name: "manifest-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: {
@@ -947,7 +947,7 @@ describe("session context", () => {
     const defCode = definePackage<any>({
       name: "code-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: {
@@ -983,7 +983,7 @@ describe("session context", () => {
     const defA = definePackage<any>({
       name: "pkg-a",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: { foo: { type: "string" } },
@@ -993,7 +993,7 @@ describe("session context", () => {
     const defB = definePackage<any>({
       name: "pkg-b",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: { bar: { type: "string" } },
@@ -1005,7 +1005,7 @@ describe("session context", () => {
     const defC = definePackage<any>({
       name: "pkg-c",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         cApi = prism;
       },
@@ -1029,16 +1029,16 @@ describe("session context", () => {
 
   it("package_instances_rejects_unknown_disabled_self", async () => {
     let bApi: any;
-    const defA = definePackage({ name: "pkg-a", version: "1.0.0", requires: { api: 1 }, setup() {} });
+    const defA = definePackage({ name: "pkg-a", version: "1.0.0", requires: { api: 2 }, setup() {} });
     const defB = definePackage({
       name: "pkg-b",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         bApi = prism;
       },
     });
-    const defC = definePackage({ name: "pkg-c", version: "1.0.0", requires: { api: 1 }, setup() {} });
+    const defC = definePackage({ name: "pkg-c", version: "1.0.0", requires: { api: 2 }, setup() {} });
     const { load } = harness();
     await load([defA, defB, defC], { hostConfig: { disable: { packages: ["pkg-c"] } } });
 
@@ -1061,11 +1061,11 @@ describe("session context", () => {
 
   it("package_instances_not_ready_during_setup", async () => {
     let setupError: any;
-    const defA = definePackage({ name: "pkg-a", version: "1.0.0", requires: { api: 1 }, setup() {} });
+    const defA = definePackage({ name: "pkg-a", version: "1.0.0", requires: { api: 2 }, setup() {} });
     const defB = definePackage({
       name: "pkg-b",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         try {
           prism.packages.instances(["pkg-a"]);
@@ -1085,14 +1085,14 @@ describe("session context", () => {
     const targetDef = definePackage<any>({
       name: "target-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: { type: "object", properties: { key: { type: "string" } } },
       setup() {},
     });
     const loopDef = definePackage({
       name: "custom-loop-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["slot:loop"],
       setup(prism) {
         prism.slots.loop.provide({
@@ -1123,7 +1123,7 @@ describe("session context", () => {
     const secretPkg = definePackage<any>({
       name: "secret-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       config: {
         type: "object",
         properties: {
@@ -1136,7 +1136,7 @@ describe("session context", () => {
     const consumerPkg = definePackage({
       name: "consumer-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         consumerApi = prism;
       },
@@ -1152,7 +1152,7 @@ describe("session context", () => {
     const def = definePackage({
       name: "late-reg-pkg",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         packageApi = prism;
       },

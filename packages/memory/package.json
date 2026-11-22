@@ -36,7 +36,7 @@
     "test:postgres": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 system/src/ltm/__tests__/postgres-memory.integration.test.ts system/src/ltm/__tests__/postgres-vector.integration.test.ts system/src/ltm/__tests__/postgres-propagation.integration.test.ts"
   },
   "peerDependencies": {
-    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism": "^0.14.0",
     "pg": "^8.23.0"
   },
   "peerDependenciesMeta": {

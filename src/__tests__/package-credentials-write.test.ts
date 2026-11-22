@@ -18,7 +18,7 @@ import { loadPackages } from "../packages/loader.js";
 const CANARY = "sk-live-canary-credentials-write";
 
 const pkg = (name: string, setup: (api: any) => void, extra: Record<string, unknown> = {}): PackageInput =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra }) as PackageInput;
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra }) as PackageInput;
 
 /** A credentials slot that records writes; `store`/`delete` are omitted when asked. */
 const recordingSlot = (

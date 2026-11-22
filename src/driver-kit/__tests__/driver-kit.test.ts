@@ -201,7 +201,7 @@ describe("driver kit", () => {
       name: "other-package",
       version: "1.0.0",
       description: "provides a tool, a skill and a service",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: [],
       async setup(prism) {
         prism.tools.register({

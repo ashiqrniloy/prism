@@ -272,7 +272,7 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const transportServicePackage = definePackage({
       name: "raw-transport-service",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("mcp.transport", { in_mem: clientTransport });
       },
@@ -282,7 +282,7 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const eventCollector = definePackage({
       name: "event-collector",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("package.event", (e) => void events.push(e));
       },
@@ -348,7 +348,7 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const eventCollector = definePackage({
       name: "event-collector-6",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("package.event", (e) => void events.push(e));
       },
@@ -397,7 +397,7 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const transportServicePackage = definePackage({
       name: "raw-transport-reconnect",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("mcp.transport", { live: clientTransport });
       },
@@ -407,7 +407,7 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const eventCollector = definePackage({
       name: "event-collector-8",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("package.event", (e) => void events.push(e));
       },
@@ -477,7 +477,7 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const transportServicePackage = definePackage({
       name: "raw-transport-effects",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("mcp.transport", { rw: ct1, ro: ct2 });
       },
@@ -595,7 +595,7 @@ describe("@arnilo/prism-extensions/mcp live tool lists (plan 234 Task 4)", () =>
     const service = definePackage({
       name: "raw-transport-live",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("mcp.transport", {
           get live() {

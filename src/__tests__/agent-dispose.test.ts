@@ -26,7 +26,7 @@ import { textProvider, twoTurnProvider } from "../testing/index.js";
 const MODEL = { provider: "mock", model: "demo" } as const;
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra });
 
 /** A tool that records every execution, so a dispose that fails to stop it is visible. */
 function dangerTool(executed: string[]): ToolDefinition {

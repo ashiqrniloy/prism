@@ -70,7 +70,7 @@ async function startAgent(
   const service = definePackage({
     name: "raw-transport-droppable",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.services.provide("mcp.transport", {
         get live() {

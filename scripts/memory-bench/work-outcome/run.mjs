@@ -309,7 +309,7 @@ function observer(record, actionTool) {
   return definePackage({
     name: "work-outcome-observer",
     version: "0.13.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.hooks.on("model.request", (request) => {
         if (!(request.tools ?? []).some((tool) => tool.name === "write_file")) return;

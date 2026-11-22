@@ -99,7 +99,7 @@ async function live(memory: MemorySystemConfig, options: { rejectOnce?: () => bo
   const tools = definePackage({
     name: "@test/overflow-tools",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       for (const [name, output] of [
         ["fetch_log", HUGE_OUTPUT],

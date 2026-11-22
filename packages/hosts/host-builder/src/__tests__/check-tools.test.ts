@@ -35,7 +35,7 @@ const PACKAGE = `import { definePackage } from "@arnilo/prism";
 export default definePackage({
   name: "@acme/good",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.status.note("info", "ready");
   },
@@ -66,7 +66,7 @@ import { mockProvider } from "@arnilo/prism/testing";
 const labeled = definePackage<{ label: string }>({
   name: "@acme/labeled",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   config: { type: "object", properties: { label: { type: "string" } } },
   setup() {},
 });
@@ -178,7 +178,7 @@ export async function fetchesOut() {
 export default definePackage({
   name: "@acme/bad",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     void prism.credentials.resolve("env:ANYTHING").catch(() => undefined);
   },
@@ -212,7 +212,7 @@ export default definePackage({
     );
     writeFileSync(
       join(dir, "src/index.ts"),
-      `export default { name: "@acme/feature", version: "1.0.0", requires: { api: 1 }, capabilities: ["host-ui"], config: { type: "object" }, setup() {} };\n`,
+      `export default { name: "@acme/feature", version: "1.0.0", requires: { api: 2 }, capabilities: ["host-ui"], config: { type: "object" }, setup() {} };\n`,
     );
     await writeManifest(dirs, {
       version: 1,

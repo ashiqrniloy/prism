@@ -764,7 +764,7 @@ describe("concept pass: package wiring", () => {
     const grab = definePackage({
       name: "@test/grab-port",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         probe.port = prism.services.consume(MEMORY_LTM_SERVICE);
       },

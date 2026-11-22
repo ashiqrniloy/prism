@@ -65,7 +65,7 @@ async function agentWith(
     packages: [
       providerPackage("p", [provider]),
       workflows,
-      definePackage({ name: "job-host", version: "1.0.0", requires: { api: 1 }, setup: (prism) => void (api = prism) }),
+      definePackage({ name: "job-host", version: "1.0.0", requires: { api: 2 }, setup: (prism) => void (api = prism) }),
       ...((options.extra?.packages as []) ?? []),
     ],
   });

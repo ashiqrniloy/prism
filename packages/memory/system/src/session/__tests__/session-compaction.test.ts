@@ -42,7 +42,7 @@ function mainProvider(requests: ProviderRequest[], options: { failOn?: number } 
 const noopTool = definePackage({
   name: "@acme/noop",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "noop",
@@ -90,7 +90,7 @@ const llmCompaction = () =>
   definePackage({
     name: "@acme/llm-compaction",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["slot:compaction"],
     setup(prism) {
       const other = prism.services.consume<{ name?: string }>("compaction.system");
@@ -103,7 +103,7 @@ const fold = () =>
   definePackage({
     name: "@acme/fold",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       const system = prism.services.consume<{ name?: string }>("compaction.system");
       if (system?.name === "session-memory") throw new TypeError("fold and attention cannot run beside session memory");

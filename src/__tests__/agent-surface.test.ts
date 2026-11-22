@@ -26,7 +26,7 @@ const SECRET = "sk-agent-surface-0123456789";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra });
 
 const provider = (): ModelProvider => createMockProvider([providerTextDelta("ok"), providerDone()]);
 const tool = (name: string, extra: Partial<ToolDefinition> = {}): ToolDefinition => ({

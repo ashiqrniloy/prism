@@ -175,7 +175,7 @@ export function journeyBudgetPackage(budget: JourneyBudget): PackageInstance {
   return definePackage({
     name: "journey-budget",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on(
         "model.call",

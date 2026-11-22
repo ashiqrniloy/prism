@@ -29,7 +29,7 @@ Page: `node_modules/@arnilo/prism/docs/tools.md`.
 
 ## Write a package
 
-Copy `examples/define-package.ts`. Declare `requires: { api: 1 }`, the capabilities you use, and a config schema
+Copy `examples/define-package.ts`. Declare `requires: { api: 2 }`, the capabilities you use, and a config schema
 with `x-prism-secret` for any secret field. Register hooks with `prism.hooks.on(name, handler)`. A handler receives one
 payload: read its fields in `data/api.json` under `members` (a `tool.call` payload is `ToolCallHookPayload`: the tool
 `name`, its `args` object and its `effects`). Test the package with `packageConformance(pkg)` from

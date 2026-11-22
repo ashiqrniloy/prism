@@ -172,7 +172,7 @@ test("workspace_config_local_account_refuses_hosted_before_spawn", async () => {
         definePackage({
           name: "workspace-config-test-workspace",
           version: "1.0.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup(prism) {
             prism.services.provide("workspace", { worktree: { bound: () => ({ path: worktree }) } });
           },

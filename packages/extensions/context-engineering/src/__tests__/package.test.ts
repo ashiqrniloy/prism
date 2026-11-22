@@ -67,7 +67,7 @@ function blockPackage(sentinel: string, chars: number): PackageInstance {
   return definePackage({
     name: "@acme/blocks",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("context.build", (draft: ContextDraft) => ({
         ...draft,
@@ -82,7 +82,7 @@ function hiddenToolPackage(): PackageInstance {
   return definePackage({
     name: "@acme/hidden",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.tools.register(
         {

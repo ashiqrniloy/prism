@@ -23,7 +23,7 @@ function readerProbe(fixture: string) {
   return definePackage<Record<string, never>>({
     name: "test-work-reader-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: (prism) => {
       const reader = prism.services.consume<DocumentReader>("work.reader");
       prism.commands.register({

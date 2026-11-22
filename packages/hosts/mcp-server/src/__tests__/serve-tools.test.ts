@@ -115,7 +115,7 @@ async function withRun(
   const loop = definePackage({
     name: loopName,
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["slot:loop"],
     setup(prism) {
       prism.slots.loop.provide({
@@ -165,7 +165,7 @@ async function withServed(setup: ServeSetup, body: (ctx: ServedContext) => Promi
   const collector = definePackage({
     name: "test-collector",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("tool.call", (payload) => {
         calls.push(payload);
@@ -254,7 +254,7 @@ function scriptedGate(): PackageInstance {
   return definePackage({
     name: "test-permission-gate",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("tool.call", (payload) => {
         const mode = (payload.args as { readonly mode?: unknown }).mode;
@@ -438,7 +438,7 @@ describe("serveTools", () => {
     const gate = definePackage({
       name: "test-ask",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("tool.call", (payload) => (payload.name === "gated" ? { ask: "confirm gated" } : undefined));
       },

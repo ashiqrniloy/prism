@@ -39,7 +39,7 @@ function serviceProbe() {
   const probe = definePackage({
     name: "@test/memory-system-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("session.opened", () => {
         seen.system = prism.services.consume<MemorySystemService>(MEMORY_SYSTEM_SERVICE);

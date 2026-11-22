@@ -58,7 +58,7 @@ let audit: { store: PolicyDecisionStore } | undefined;
 const auditCapture = definePackage({
   name: "@prism-example/governance-audit-capture",
   version: "0.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     audit = prism.services.consume<{ store: PolicyDecisionStore }>("governance.audit");
   },

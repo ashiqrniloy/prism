@@ -72,7 +72,7 @@ const definition = definePackage<ToolsOpenapiConfig>({
   version: manifest.version,
   description:
     "OpenAPI 3.1 operation compiler: pinned-origin, allow-listed, schema-bounded tools with per-method effects and ref-only header credentials.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["credentials"],
   config: toolsOpenapiConfigSchema,
   setup: async (prism) => {

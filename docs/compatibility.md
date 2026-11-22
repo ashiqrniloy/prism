@@ -6,12 +6,13 @@ This page is the stability promise of `@arnilo/prism` and its stable native pack
 says which surfaces stay stable across releases, which changes a minor release may make, and the rules
 hosts, packages, and stores follow so that code written today keeps working against later minors.
 
-**Versioning.** Every package on the 0.x line is versioned independently after 0.13.0 and declares the
-kernel API level it was written against (`requires: { api: 1 }`, peer range `>=0.13.0 <1.0.0`). The kernel
-exports that level as `KERNEL_API_LEVEL`. Within one API level, every minor release is **additive**: a package
-or host that works on 0.13 works on 0.14. A change that breaks a stable surface needs a **new API level**
-and a migration note. During a transition the kernel loads more than one level, and a package whose level the
-kernel does not support fails to load with `kernel_api`.
+**Versioning.** Before 1.0.0, Prism follows semver for 0.x. A `0.Y.0` release may break a stable surface and
+ships a migration note ([migration.md](migration.md)); a `0.Y.Z` patch release only adds or fixes, so a host or
+package that works on 0.14.0 works on every 0.14.x. Every first-party package peers the kernel's minor (`^0.14.0`)
+and declares the kernel API level it was written against (`requires: { api: 2 }`). The kernel exports that level
+as `KERNEL_API_LEVEL`, and a breaking `0.Y.0` raises it, so a package written for an older level fails to load
+with `kernel_api` instead of breaking at an import. Each bundle still has its own version line; a breaking kernel
+release moves every bundle to the new minor.
 
 **What is stable.** These surfaces are covered by the promise:
 
@@ -40,16 +41,16 @@ reachable only through a deep import that `exports` does not list, and the text 
 - Before writing a package: follow the package rules, and declare `requires.api`.
 - Before writing a store adapter: follow the store rules, and run `storeConformance` from
   `@arnilo/prism/testing`.
-- Before changing the kernel or a stable package: check whether the change is additive (ships in a minor)
-  or breaking (needs a new API level).
+- Before changing the kernel or a stable package: check whether the change is additive (ships in a patch)
+  or breaking (waits for the next `0.Y.0`, with a migration note and, for a kernel contract, a new API level).
 
 ## Inputs / request
 
-**What a minor release may change.** The compat gate ([release.md](release.md) "The compat gate") freezes the
-normalized declaration of every exported name, keyed by entry point, and classifies each difference. A minor
-release may only make changes the gate classifies as additive:
+**What a patch release may change.** The compat gate ([release.md](release.md) "The compat gate") freezes the
+normalized declaration of every exported name, keyed by entry point, and classifies each difference. A `0.Y.Z`
+patch release may only make changes the gate classifies as additive:
 
-| Additive (minor release) | Breaking (new API level) |
+| Additive (patch release) | Breaking (the next `0.Y.0`) |
 | --- | --- |
 | A new export, a new subpath, a new package | Removing or renaming an export, or moving it between entry points |
 | A new optional member on an interface or class | A new required member, or removing or retyping a member |
@@ -76,7 +77,7 @@ The unions the kernel only produces are listed in `PRODUCER_ONLY_TYPES` in `scri
 
 **Package rules.**
 
-- Declare `requires: { api: 1 }`. Add `requires.prism` only when the package needs a fix from a specific release.
+- Declare `requires: { api: 2 }`. Add `requires.prism` only when the package needs a fix from a specific release.
 - Never `switch` exhaustively on a producer-only union (`AgentEvent["type"]`, `AgentFinishReason`,
   `HostUiRequest["kind"]`, `SessionEntryKind`) without a `default` branch.
 - Treat a `HostUi` answer of `unavailable` as a deny and fail closed.

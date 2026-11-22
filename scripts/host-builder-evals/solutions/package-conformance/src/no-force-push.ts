@@ -5,7 +5,7 @@ const FORCE_PUSH = /\bgit\s+push\b[^\n;&|]*(?:--force\b|--force-with-lease\b|\s-
 export default definePackage({
   name: "@acme/no-force-push",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.hooks.on("tool.call", (call) => {
       if (call.name !== "shell") return "allow";

@@ -197,7 +197,7 @@ describe("serveAcp", () => {
         definePackage({
           name: "ping-pkg",
           version: "0.1.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup(api) {
             api.commands.register({
               name: "ping",

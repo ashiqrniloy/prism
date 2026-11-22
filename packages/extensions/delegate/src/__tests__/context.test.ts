@@ -57,7 +57,7 @@ function mock(record: Rec[], options: { summary?: string; summaryFails?: boolean
 const statePackage = definePackage({
   name: "state-package",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["session-state"],
   setup(prism) {
     const handle = prism.state.session("state-package", { marker: "initial" as string });
@@ -77,7 +77,7 @@ let view: SessionContext | undefined;
 const serviceConsumer = definePackage({
   name: "service-consumer",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["background", "session-state"],
   setup(prism) {
     captured = prism.services.consume<DelegateService>(DELEGATE_SERVICE);

@@ -133,7 +133,7 @@ async function liveAgent(store: SessionStore = createMemorySessionStore()) {
   const probe = definePackage({
     name: "@test/recall-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       // The retired `memory.chunks` service: nothing may consume or call it.
       prism.services.provide("memory.chunks", {

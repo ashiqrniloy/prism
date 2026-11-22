@@ -51,7 +51,7 @@ export function contextBudgetNotice(ref: ModelRef): PackageInstance {
   return definePackage({
     name: "@prism-agent/context-budget",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       if (contextBudgetFor(ref) !== undefined) return;
       prism.status.note("info", `${modelKey(ref)} has no measured context-rot budget; using input_ratio 0.6 of the model input cap`);

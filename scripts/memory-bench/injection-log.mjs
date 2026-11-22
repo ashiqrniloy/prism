@@ -21,7 +21,7 @@ export function injectionLogger(state) {
   return definePackage({
     name: "memory-bench-injections",
     version: "0.13.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("model.request", (request) => {
         if (state.phase !== "answer") return;

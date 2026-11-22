@@ -158,7 +158,7 @@ describe("@arnilo/prism-knowledge/rag package (plan 158 Task 3)", () => {
     const consumer = definePackage({
       name: "@acme/embeddings-consumer",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         const embedder = prism.services.require<Embedder>("embeddings");
         seen.embedder = embedder;
@@ -212,7 +212,7 @@ describe("@arnilo/prism-knowledge/rag package (plan 158 Task 3)", () => {
     const webFetch = definePackage({
       name: "@acme/web-fetch",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("web.fetch", {
           async fetch(url: string) {

@@ -249,7 +249,7 @@
 . JsonPrimitive	type JsonPrimitive = string | number | boolean | null
 . JsonSchema	interface JsonSchema { readonly "x-prism-secret"?: boolean; readonly "x-prism-stability"?: "contract" | "tuning"; readonly additionalProperties?: boolean | JsonSchema; readonly anyOf?: readonly JsonSchema[]; readonly const?: JsonValue; readonly default?: JsonValue; readonly description?: string; readonly enum?: readonly JsonValue[]; readonly items?: JsonSchema; readonly maxItems?: number; readonly maxLength?: number; readonly maximum?: number; readonly minItems?: number; readonly minLength?: number; readonly minimum?: number; readonly oneOf?: readonly JsonSchema[]; readonly pattern?: string; readonly properties?: Readonly<Record<string, JsonSchema>>; readonly required?: readonly string[]; readonly title?: string; readonly type?: "string" | "number" | "integer" | "boolean" | "object" | "array" | "null"; }
 . JsonValue	type JsonValue = JsonPrimitive | JsonObject | JsonValue[]
-. KERNEL_API_LEVEL	const KERNEL_API_LEVEL = 1
+. KERNEL_API_LEVEL	const KERNEL_API_LEVEL = 2
 . LoadBinaryResourceOptions	interface LoadBinaryResourceOptions extends MediaContentBounds { readonly signal?: AbortSignal; }
 . LoadedSkillBodiesEntry	interface LoadedSkillBodiesEntry { readonly instructions: string; readonly name: string; }
 . LoadedSkillSet	interface LoadedSkillSet { add(name: string, runId?: string): void; clear(): void; entries?(): readonly { readonly name: string; readonly runId?: string; }[]; has(name: string): boolean; list(): readonly string[]; remove?(name: string): void; }
@@ -741,7 +741,7 @@
 . validateJsonSchema	function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult
 . validateLoadedSkillBodies	function validateLoadedSkillBodies(value: unknown, bounds?: SkillBodyBounds): asserts value is readonly LoadedSkillBodiesEntry[]
 . validateSessionAppendBatch	function validateSessionAppendBatch(entries: readonly SessionEntry[]): SessionAppendBatch | undefined
-. version	const version = "0.13.1"
+. version	const version = "0.14.0"
 . waitForRetry	function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 . withContextBlocks	function withContextBlocks(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft | undefined
 ./artifacts ARTIFACT_BODY_ERROR_CODES	const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_${ArtifactBodyErrorCode}`>>

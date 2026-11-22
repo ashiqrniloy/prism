@@ -86,7 +86,7 @@ const definition = definePackage<RagConfig>({
   name: "@arnilo/prism-knowledge/rag",
   version: manifest.version,
   description: "Retrieval over indexed sources: a rag_search tool, an opt-in context block, and the embeddings service.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["models", "credentials"],
   config: ragConfigSchema,
   setup: async (prism) => {

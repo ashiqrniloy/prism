@@ -32,7 +32,7 @@ export async function harness(
   const inspector = definePackage({
     name: "test-inspector",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       inspection = api.services.consume(`driver-process:${adapter.name}`);
     },

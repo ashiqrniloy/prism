@@ -75,7 +75,7 @@ describe("agent.reload", () => {
     const dynamic = definePackage({
       name: "@acme/dynamic-skills",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         setups += 1;
         prism.skills.addDir(dir);
@@ -142,7 +142,7 @@ describe("agent.reload", () => {
     const flaky = definePackage({
       name: "@acme/flaky",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         setups += 1;
         if (setups > 1) throw new Error("reload failed");
@@ -192,7 +192,7 @@ describe("agent.reload", () => {
     const counted = definePackage({
       name: "@acme/counted",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup() {
         setups += 1;
       },

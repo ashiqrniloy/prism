@@ -10,7 +10,7 @@ const definition = defineWorkflow({ id: "restart-scheduler", revision: "1", node
 const host = definePackage({
   name: "scheduler-restart",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["session-state"],
   setup(prism) {
     prism.commands.register(workflowCommand(prism, "nightly", definition));

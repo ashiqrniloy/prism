@@ -55,7 +55,7 @@ You review diffs. Report each bug with file:line and a one-line fix.
 const readTools = definePackage({
   name: "read-tools",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     for (const name of ["read", "write"])
       prism.tools.register({

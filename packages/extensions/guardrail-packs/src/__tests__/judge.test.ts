@@ -76,7 +76,7 @@ async function run(options: Harness) {
   const providerPkg = definePackage({
     name: "@test/judge-provider",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(provider);
     },
@@ -286,7 +286,7 @@ describe("judge rules (plan 237 Task 3)", () => {
     const withheld = definePackage({
       name: "@test/guardrails-no-models",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["session-state"],
       config: guardrailPacks.config,
       setup: guardrailPacks.setup as never,

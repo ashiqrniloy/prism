@@ -34,7 +34,7 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
       definePackage({
         name: "probe",
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(api) {
           api.tools.register({
             name: "probe",

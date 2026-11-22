@@ -71,7 +71,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const eventCollector = definePackage({
     name: "mcp-trust-event-collector",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("package.event", (event) => void events.push(event));
     },

@@ -16,7 +16,7 @@ async function seededMechanism({ trigger, mutate }) {
   const pkg = prism.definePackage({
     name: "@probe/seeded",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.hooks.on("context.build", (draft) => {
         const last = draft.messages?.at(-1);

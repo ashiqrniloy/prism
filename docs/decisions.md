@@ -116,7 +116,7 @@ const decisionPackage = (name: string, options: Omit<SystemOneDecisionProviderOp
   definePackage({
     name,
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["credentials"],
     setup(prism) {
       const { keyRef, ...providerOptions } = options;

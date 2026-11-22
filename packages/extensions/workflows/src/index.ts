@@ -269,7 +269,7 @@ export function createWorkflowPackageDefinition() {
     description:
       "Typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export.",
     capabilities: ["session-state", "host-ui"],
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup,
   });
 }

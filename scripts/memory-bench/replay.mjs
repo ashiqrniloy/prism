@@ -1402,7 +1402,7 @@ export async function replay(question, options, providers, state) {
     definePackage({
       name: "memory-bench-recall-observer",
       version: "0.13.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("memory-fabric.diagnostics", (event) => {
           if (state.phase !== "answer") return;
@@ -1433,7 +1433,7 @@ export async function replay(question, options, providers, state) {
       definePackage({
         name: "memory-bench-embeddings-service",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.services.provide("embeddings", embedder);
         },
@@ -1457,7 +1457,7 @@ export async function replay(question, options, providers, state) {
       definePackage({
         name: "memory-bench-strip-supersession",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("model.request", (request) => {
             if (state.phase !== "answer" || workerKind(request) || isCuratorRequest(request) || isExtractorRequest(request)) return request;
@@ -1472,7 +1472,7 @@ export async function replay(question, options, providers, state) {
       definePackage({
         name: "memory-bench-final-turn-answer",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("model.request", (request) => {
             if (state.phase !== "answer" || workerKind(request) || isCuratorRequest(request) || isExtractorRequest(request)) return request;
@@ -1489,7 +1489,7 @@ export async function replay(question, options, providers, state) {
       definePackage({
         name: "memory-bench-no-tools",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("model.request", (request) => {
             if (!request.tools) return request;
@@ -1503,7 +1503,7 @@ export async function replay(question, options, providers, state) {
     definePackage({
       name: "memory-bench-metrics",
       version: "0.13.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("tool.call", (call) => {
           if (state.phase !== "answer") return;
@@ -1633,7 +1633,7 @@ export async function replay(question, options, providers, state) {
     definePackage({
       name: "memory-bench-cap",
       version: "0.13.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on(
           "context.build",

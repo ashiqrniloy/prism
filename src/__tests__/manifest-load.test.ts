@@ -46,7 +46,7 @@ m.__prismImported = [...(m.__prismImported ?? []), ${JSON.stringify(name)}];
 export default {
   name: ${JSON.stringify(name)},
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ${JSON.stringify(options.capabilities ?? [])},
   config: { type: "object", properties: { greeting: { type: "string", default: "hello" }, apiKey: { type: "string", "x-prism-secret": true } } },
   setup(prism: any) { ${options.setup ?? ""} },

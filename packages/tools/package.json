@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-tools",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "description": "Prism coding, web, browser, research, OpenAPI, computer-use and work tools. Import each package through its subpath.",
   "type": "module",
   "engines": {
@@ -103,8 +103,8 @@
     "turndown": "7.2.4"
   },
   "peerDependencies": {
-    "@arnilo/prism": ">=0.13.0 <1.0.0",
-    "@arnilo/prism-extensions": "^0.13.1",
+    "@arnilo/prism": "^0.14.0",
+    "@arnilo/prism-extensions": "^0.14.0",
     "@office-open/docx": "0.14.5",
     "@office-open/pptx": "0.14.5",
     "@office-open/xlsx": "0.14.5",

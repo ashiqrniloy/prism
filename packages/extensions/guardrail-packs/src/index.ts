@@ -227,7 +227,7 @@ function createDefinition() {
     name: PACKAGE,
     version: manifest.version,
     description: "Built-in guardrail packs: restrictive-only rules over tool calls, run input, model output, and tool results.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     // `models` only for an instance with a judge rule (plan 237 Task 3).
     capabilities: ["session-state", "models"],
     capabilitiesFor: (config) => (hasJudgeRule(config) ? ["session-state", "models"] : ["session-state"]),

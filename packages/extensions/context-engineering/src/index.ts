@@ -67,7 +67,7 @@ const definition = definePackage<ContextEngineeringConfig>({
   name: PACKAGE,
   version: manifest.version,
   description: "Input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["models", "session-state"],
   config: contextEngineeringConfigSchema,
   setup(prism) {

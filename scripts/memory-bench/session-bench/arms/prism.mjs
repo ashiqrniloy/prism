@@ -114,7 +114,7 @@ export const dropCompactionPackage = ({ keepRecentTokens, line }) =>
   definePackage({
     name: "session-bench-drop-compaction",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["slot:compaction"],
     setup(prism) {
       const cut = createDefaultCompactor({ name: "drop", keepRecentTokens });
@@ -147,7 +147,7 @@ export const thirdPartyContextPackage = (state) =>
   definePackage({
     name: "session-bench-third-party-context",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("context.build", (draft) =>
         state.memoryBlock

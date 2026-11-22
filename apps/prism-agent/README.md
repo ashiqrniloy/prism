@@ -62,7 +62,7 @@ const orchestrator = await createAgent({
     definePackage({
       name: "@prism-agent/build-command",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup: (prism) => {
         prism.commands.register(workflowCommand(prism, "build", () => buildWorkflow(config, workers)));
       },

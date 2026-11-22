@@ -119,7 +119,7 @@ describe("connectAgent", () => {
         definePackage({
           name: "counter",
           version: "1.0.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup(prism) {
             prism.hooks.on("tool.call", (payload) => {
               localCalls.push(payload.name);

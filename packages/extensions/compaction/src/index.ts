@@ -34,7 +34,7 @@ const definition = definePackage<MemoryCompactionConfig>({
   name: "@arnilo/prism-extensions/compaction",
   version: manifest.version,
   description: "LLM summarization compaction: one model call per compaction, with the kernel default as fallback.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["models", "slot:compaction"],
   config: memoryCompactionConfigSchema,
   setup(prism) {

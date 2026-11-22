@@ -71,7 +71,7 @@ async function writePkg(
     `export default {
   name: ${JSON.stringify(manifest.name)},
   version: ${JSON.stringify(manifest.version ?? "1.0.0")},
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ${JSON.stringify(manifest.capabilities ?? [])},
   config: { type: "object" },
   setup(prism: any) {},

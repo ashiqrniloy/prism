@@ -74,7 +74,7 @@ const definition = definePackage<ToolsBrowserConfig>({
   name: "@arnilo/prism-tools/browser",
   version: manifest.version,
   description: "Six exclusive browser tools over Playwright with declared effects, fail-closed egress policy, and artifact quarantine.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   config: toolsBrowserConfigSchema,
   setup: async (prism) => {
     // Registered first: `requiresTools` hides the skill when playwright-core is missing or the launch fails.

@@ -19,7 +19,7 @@ import { createScriptedHostUi } from "../testing/host-ui.js";
 const CANARY = "sk-live-canary-credentials-slot";
 
 const pkg = (name: string, setup: (api: any) => void, extra: Record<string, unknown> = {}): PackageInput =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra }) as PackageInput;
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra }) as PackageInput;
 
 describe("credentials slot", () => {
   it("env_default_resolves_env_refs_only", async () => {

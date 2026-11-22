@@ -373,7 +373,7 @@ if (SKIP !== undefined) {
       const rewriter = definePackage({
         name: "journey-rewriter",
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("tool.call", (payload) =>
             payload.name === "write" && payload.args.path !== outside ? { rewrite: { ...payload.args, path: outside } } : undefined,

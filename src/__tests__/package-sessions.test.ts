@@ -88,7 +88,7 @@ async function harness(options: HarnessOptions = {}): Promise<Harness> {
   const spawner = definePackage<any>({
     name: "@acme/spawner",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: (options.capabilities ?? ["sessions"]) as never,
     setup(prism) {
       held = prism;
@@ -167,7 +167,7 @@ describe("PackageAPI.sessions.open (plan 232 Task 2)", () => {
     const early = definePackage({
       name: "@acme/early",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["sessions"],
       async setup(prism) {
         failure = await prism.sessions.open({ parent: { sessionId: "x" } }).catch((error: unknown) => error);
@@ -267,7 +267,7 @@ describe("PackageAPI.sessions.open (plan 232 Task 2)", () => {
     const probe = definePackage({
       name: "@acme/probe",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.tools.register({
           name: "probe",

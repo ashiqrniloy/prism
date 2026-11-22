@@ -280,7 +280,7 @@ describe("delegate worktree isolation", () => {
     const sandboxed = definePackage({
       name: "@prism-test/sandboxed-workspace",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup: ({ services }) => {
         services.provide("workspace", {
           worktree: {

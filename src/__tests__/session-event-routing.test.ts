@@ -136,7 +136,7 @@ describe("session event routing (plan 225 Task 3)", () => {
         definePackage<any>({
           name: "@acme/noter",
           version: "1.0.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup: (prism: any) => {
             note = (message) => prism.status.note("info", message);
             prism.hooks.on("package.status", (_payload: unknown, context: any) => {

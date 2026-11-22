@@ -18,7 +18,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const sideCall = definePackage({
     name: "@acme/side-call",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models"],
     setup(prism) {
       prism.tools.register({

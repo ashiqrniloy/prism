@@ -290,7 +290,7 @@ export const deferredCallsPackage = (state, meter) =>
   definePackage({
     name: "session-bench-deferred-calls",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("tool.call", (call) => {
         if (!state.deferred?.has(call.callId) || MAIN_TOOLS.has(call.name)) return undefined;

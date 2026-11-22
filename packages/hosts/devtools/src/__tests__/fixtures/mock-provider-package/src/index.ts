@@ -4,7 +4,7 @@ export default {
   name: "@acme/mock-provider",
   version: "1.0.0",
   description: "Manifest fixture provider package.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: [],
   setup(prism: { providers: { register(provider: unknown): void } }): void {
     prism.providers.register({

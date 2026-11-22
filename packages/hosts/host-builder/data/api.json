@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "prismVersion": "0.13.1",
-  "contentHash": "5e5f5e8295dc03ffec6284c862f1494e68ce09ee394dfaf4de845614196aefa3",
+  "prismVersion": "0.14.0",
+  "contentHash": "ad243de83907ea19b46c9c26a6d1f163b491c18ea91932b274b0140332922449",
   "packages": [
     {
       "name": "@arnilo/prism",
-      "version": "0.13.1",
+      "version": "0.14.0",
       "path": ".",
       "experimental": false,
       "entries": [
@@ -264,7 +264,7 @@
             {"name":"JsonPrimitive","kind":"type","signature":"export type JsonPrimitive = string | number | boolean | null"},
             {"name":"JsonSchema","kind":"interface","signature":"export interface JsonSchema","members":["readonly type?: \"string\" | \"number\" | \"integer\" | \"boolean\" | \"object\" | \"array\" | \"null\"","readonly properties?: Readonly<Record<string, JsonSchema>>","readonly required?: readonly string[]","readonly additionalProperties?: boolean | JsonSchema","readonly items?: JsonSchema","readonly minItems?: number","readonly maxItems?: number","readonly enum?: readonly JsonValue[]","readonly const?: JsonValue","readonly default?: JsonValue","readonly minimum?: number","readonly maximum?: number","readonly minLength?: number","readonly maxLength?: number","readonly pattern?: string","readonly oneOf?: readonly JsonSchema[]","readonly anyOf?: readonly JsonSchema[]","readonly description?: string","readonly title?: string","readonly \"x-prism-secret\"?: boolean","readonly \"x-prism-stability\"?: \"contract\" | \"tuning\""],"summary":"The JSON Schema keyword subset package config may use (plan 146 Task 1(c)), derived from the config shapes of the Part B conversions.","docs":["node_modules/@arnilo/prism/docs/packages.md"],"examples":["examples/secure-agent.ts","examples/web-research.ts"]},
             {"name":"JsonValue","kind":"type","signature":"export type JsonValue = JsonPrimitive | JsonObject | JsonValue[]","docs":["node_modules/@arnilo/prism/docs/agent-adapters.md"],"examples":["examples/durable-loops-and-approvals.ts","examples/external-agent.ts","examples/serve-tools.ts"]},
-            {"name":"KERNEL_API_LEVEL","kind":"const","signature":"export declare const KERNEL_API_LEVEL = 1","summary":"The kernel API level a package's `requires.api` is checked against.","docs":["node_modules/@arnilo/prism/docs/compatibility.md"]},
+            {"name":"KERNEL_API_LEVEL","kind":"const","signature":"export declare const KERNEL_API_LEVEL = 2","summary":"The kernel API level a package's `requires.api` is checked against.","docs":["node_modules/@arnilo/prism/docs/compatibility.md"]},
             {"name":"LoadBinaryResourceOptions","kind":"interface","signature":"export interface LoadBinaryResourceOptions extends MediaContentBounds","members":["readonly signal?: AbortSignal"],"docs":["node_modules/@arnilo/prism/docs/resource-loading.md"]},
             {"name":"LoadedSkillBodiesEntry","kind":"interface","signature":"export interface LoadedSkillBodiesEntry","members":["readonly name: string","readonly instructions: string"],"summary":"One persisted loaded-skill body (plan 018 closeout `checkpoint-bodies`)."},
             {"name":"LoadedSkillSet","kind":"interface","signature":"export interface LoadedSkillSet","members":["has(name: string): boolean","add(name: string, runId?: string): void","list(): readonly string[]","clear(): void","entries?(): readonly { readonly name: string; readonly runId?: string; }[]","remove?(name: string): void"]},
@@ -756,7 +756,7 @@
             {"name":"validateJsonSchema","kind":"function","signature":"export declare function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult","summary":"Validates `value` against `schema` and returns it with defaults applied.","examples":["examples/secure-agent.ts","examples/web-research.ts"]},
             {"name":"validateLoadedSkillBodies","kind":"function","signature":"export declare function validateLoadedSkillBodies(value: unknown, bounds?: SkillBodyBounds): asserts value is readonly LoadedSkillBodiesEntry[]","summary":"Fail-closed shape/cap validation for a persisted bodies payload (load and save sides)."},
             {"name":"validateSessionAppendBatch","kind":"function","signature":"export declare function validateSessionAppendBatch(entries: readonly SessionEntry[]): SessionAppendBatch | undefined","summary":"The store-independent part of `SessionStore.appendMany` validation (plan 230 Task 5): one session, no id twice, and the parents the batch does not carry itself.","docs":["node_modules/@arnilo/prism/docs/slots.md"]},
-            {"name":"version","kind":"const","signature":"export declare const version = \"0.13.1\"","docs":["node_modules/@arnilo/prism/docs/agent-adapters.md","node_modules/@arnilo/prism/docs/events.md","node_modules/@arnilo/prism/docs/limits.md","node_modules/@arnilo/prism/docs/live-testing.md","node_modules/@arnilo/prism/docs/long-running.md","node_modules/@arnilo/prism/docs/manifest.md"]},
+            {"name":"version","kind":"const","signature":"export declare const version = \"0.14.0\"","docs":["node_modules/@arnilo/prism/docs/agent-adapters.md","node_modules/@arnilo/prism/docs/events.md","node_modules/@arnilo/prism/docs/limits.md","node_modules/@arnilo/prism/docs/live-testing.md","node_modules/@arnilo/prism/docs/long-running.md","node_modules/@arnilo/prism/docs/manifest.md"]},
             {"name":"waitForRetry","kind":"function","signature":"export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>"},
             {"name":"withContextBlocks","kind":"function","signature":"export declare function withContextBlocks(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft | undefined","summary":"Append `blocks` to a draft's context, or return `undefined` when there is nothing to add — the transform's way of saying \"no change\", so the controller skips re-deriving the request.","examples":["examples/context.ts","examples/custom-builders.ts","examples/instruction-injection.ts","examples/rag.ts"]}
           ]
@@ -1388,7 +1388,7 @@
     },
     {
       "name": "@arnilo/prism-ai",
-      "version": "0.13.0",
+      "version": "0.14.0",
       "path": "packages/providers",
       "experimental": false,
       "entries": [
@@ -1759,7 +1759,7 @@
     },
     {
       "name": "@arnilo/prism-extensions",
-      "version": "0.13.2",
+      "version": "0.14.0",
       "path": "packages/extensions",
       "experimental": false,
       "entries": [
@@ -3121,7 +3121,7 @@
     },
     {
       "name": "@arnilo/prism-hosts",
-      "version": "0.13.1",
+      "version": "0.14.0",
       "path": "packages/hosts",
       "experimental": false,
       "entries": [
@@ -4579,7 +4579,7 @@
     },
     {
       "name": "@arnilo/prism-tools",
-      "version": "0.13.2",
+      "version": "0.14.0",
       "path": "packages/tools",
       "experimental": false,
       "entries": [

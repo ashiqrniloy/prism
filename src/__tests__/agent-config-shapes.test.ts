@@ -48,7 +48,7 @@ test("tools_add_registers_host_tools_and_collides_fail_closed_with_package_tools
   const pkg = definePackage({
     name: "vendor",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.tools.register(tool);
     },

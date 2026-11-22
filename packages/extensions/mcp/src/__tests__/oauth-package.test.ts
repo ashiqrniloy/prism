@@ -226,7 +226,7 @@ async function startAgent(config: McpPackageConfig, slot: CredentialResolver, ui
   const collector = definePackage({
     name: "oauth-event-collector",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("package.event", (event) => void events.push(event));
     },

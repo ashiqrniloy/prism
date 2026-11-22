@@ -117,7 +117,7 @@ function definitionFor(options: PostgresStoreOptions) {
     name: "@arnilo/prism-extensions/store-postgres",
     version: manifest.version,
     description: "PostgreSQL session store with leases, lifecycle, event source, and schema migrations.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["slot:store", "credentials"],
     config: configSchema,
     setup: async (prism) => {

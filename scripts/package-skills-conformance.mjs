@@ -48,7 +48,7 @@ export function defaultFixtures(root = REPO_ROOT) {
       const probe = definePackage({
         name: "package-skills-gate-computer-use-bridge",
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup: (prism) => prism.services.provide("computer-use.mcp", async () => bridge),
       });
       return [
@@ -102,7 +102,7 @@ export function defaultFixtures(root = REPO_ROOT) {
         definePackage({
           name: "@arnilo/prism-hosts/host-builder",
           version: "0.0.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup: (prism) => prism.skills.addDir(skills),
         }),
       ];
@@ -113,7 +113,7 @@ export function defaultFixtures(root = REPO_ROOT) {
       const sandbox = definePackage({
         name: "package-skills-gate-work-sandbox",
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup: (prism) => prism.services.provide("work.sandbox", { capabilities: {}, execFile: async () => ({ exitCode: 0 }) }),
       });
       return [sandbox, toolsWork({ root: tmpdir() })];

@@ -99,7 +99,7 @@ function mockProviderPackage(recorder: Recorder): PackageInstance {
     name: "@acme/observational-memory-demo-provider",
     version: "1.0.0",
     description: "The demo's scripted provider for the main and observer models.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(demoProvider(recorder));
     },

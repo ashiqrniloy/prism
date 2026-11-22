@@ -57,7 +57,7 @@ function personaPackage(options: PersonaOptions) {
   return definePackage({
     name: `@example/${options.name}`,
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     async setup(prism) {
       const entries = await options.store.list(sessionId);
       for (const entry of entries) {

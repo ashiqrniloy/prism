@@ -331,7 +331,7 @@ test("simulator_sessions_close_and_tools_cannot_execute", async () => {
       definePackage({
         name: "sim-test",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(api) {
           api.tools.register({
             name: "leak",

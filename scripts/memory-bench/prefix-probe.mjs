@@ -238,7 +238,7 @@ async function runPrefixProbe() {
           definePackage({
             name: "@probe/observations",
             version: "0.0.0",
-            requires: { api: 1 },
+            requires: { api: 2 },
             capabilities: ["session-state"],
             setup(prism) {
               const log = prism.state.log("ledger");

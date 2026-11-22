@@ -137,7 +137,7 @@ function definitionFor(options: HooksJsonOptions) {
     name: "@arnilo/prism-extensions/hooks-json",
     version: manifest.version,
     description: "Claude/Codex hooks.json compiled onto Prism hooks.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["credentials"],
     config: hooksConfigSchema,
     setup: (prism) => compileHooks(prism, options),

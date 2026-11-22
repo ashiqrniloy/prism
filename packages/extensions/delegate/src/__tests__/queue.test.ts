@@ -106,7 +106,7 @@ let view: SessionContext | undefined;
 const consumer = definePackage({
   name: "queue-consumer",
   version: "0.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     captured = prism.services.consume<DelegateService>(DELEGATE_SERVICE);
     prism.commands.register({

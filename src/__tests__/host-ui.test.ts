@@ -27,7 +27,7 @@ const KINDS: readonly HostUiRequestKind[] = ["confirm", "select", "input", "secr
 
 type Loose = { setup: (api: any) => void } & Record<string, unknown>;
 const pkg = (name: string, setup: Loose["setup"], extra: Record<string, unknown> = {}): PackageInput =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra }) as PackageInput;
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra }) as PackageInput;
 
 /** Direct loader harness with a pluggable credentials slot, so the secret path is observable. */
 function harness(credentials: CredentialResolver = { resolve: () => undefined }) {
@@ -320,7 +320,7 @@ describe("host ui", () => {
     const closed = definePackage<any>({
       name: "@acme/closed",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["host-ui"],
       setup({ host, commands }) {
         // Correct: branch on `status` and fail closed with a named error.
@@ -342,7 +342,7 @@ describe("host ui", () => {
     const sloppy = definePackage<any>({
       name: "@acme/sloppy",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["host-ui"],
       setup({ host, commands }) {
         commands.register({

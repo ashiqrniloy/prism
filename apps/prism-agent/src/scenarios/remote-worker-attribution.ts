@@ -41,7 +41,7 @@ export async function remoteWorkerAttribution(config: HostConfig): Promise<Remot
       definePackage({
         name: "@prism-agent/remote-gate-probe",
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("tool.call", (payload) => {
             gateClaims.push(payload.name);

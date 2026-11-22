@@ -29,7 +29,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra });
 
 const tool = (name: string, onRun?: () => void): ToolDefinition => ({
   name,
@@ -539,7 +539,7 @@ describe("services", () => {
     const agent = await createAgent({
       model: MODEL,
       packages: [
-        pkg("@acme/user", ({ services }) => void (late = () => services.require("svc")), { requires: { api: 1, services: ["svc"] } }),
+        pkg("@acme/user", ({ services }) => void (late = () => services.require("svc")), { requires: { api: 2, services: ["svc"] } }),
         pkg("@acme/provider", ({ services }) => services.provide("svc", impl)),
         providerPackage("test-provider", [textProvider()]),
       ],
@@ -561,7 +561,7 @@ describe("services", () => {
       createAgent({
         model: MODEL,
         packages: [
-          pkg("@a/a", () => {}, { requires: { api: 1, services: ["absent"] } }),
+          pkg("@a/a", () => {}, { requires: { api: 2, services: ["absent"] } }),
           providerPackage("test-provider", [textProvider()]),
         ],
       }),

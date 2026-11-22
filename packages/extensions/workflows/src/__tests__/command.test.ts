@@ -9,7 +9,7 @@ function build(register: (prism: PackageAPI) => void) {
     name: "test-host-workflows",
     version: "1.0.0",
     capabilities: ["session-state"],
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: register,
   });
   return createAgent({

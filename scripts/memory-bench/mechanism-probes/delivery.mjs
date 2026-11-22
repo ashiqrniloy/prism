@@ -22,7 +22,7 @@ async function fileTools() {
   return prism.definePackage({
     name: "@probe/file-tools",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.tools.register({
         name: "read",

@@ -44,7 +44,7 @@ function credentialProbe(refs: readonly string[], out: Record<string, Secret | u
   return definePackage({
     name: "@test/credential-probe",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["credentials"],
     setup: async (prism) => {
       for (const ref of refs) {
@@ -63,7 +63,7 @@ function secretAsker(ref: string, outcome: { answer?: unknown; error?: unknown }
   return definePackage({
     name: "@test/secret-asker",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["host-ui"],
     setup: async (prism) => {
       try {
@@ -79,7 +79,7 @@ function secretAsker(ref: string, outcome: { answer?: unknown; error?: unknown }
 const secondClaimant = definePackage({
   name: "@test/credentials-fixture",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["slot:credentials"],
   setup: (prism) => {
     prism.slots.credentials.provide({ resolve: () => ({ type: "api_key", value: "fixture" }) });

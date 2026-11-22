@@ -596,7 +596,7 @@ export async function runLifecycle(input = {}) {
           definePackage({
             name: "lifecycle-events",
             version: "0.13.0",
-            requires: { api: 1 },
+            requires: { api: 2 },
             setup(api) {
               const pending = [];
               api.hooks.on("model.request", (request) => {

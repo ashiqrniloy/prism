@@ -109,7 +109,7 @@ export function workflowLoop(definition: WorkflowDefinition, options: WorkflowLo
     version: manifest.version,
     description: `Runs the "${definition.id}" workflow inside one agent's run.`,
     capabilities: ["slot:loop"],
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: (prism) => prism.slots.loop.provide(strategy),
   });
 }

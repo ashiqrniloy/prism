@@ -69,7 +69,7 @@ const definition = definePackage<MemorySystemConfig>({
   version: manifest.version,
   description:
     "The memory system: session tiers (STM, WM, rehearsal) with a source-backed ledger, recall, and ledger-driven compaction, plus long-term memory (ltm).",
-  requires: { api: 1 },
+  requires: { api: 2 },
   // The union every component may use; `capabilitiesFor` narrows it to the enabled components'.
   capabilities: ["models", "session-state", "background", "slot:compaction", "credentials", "host-ui"],
   capabilitiesFor(config) {

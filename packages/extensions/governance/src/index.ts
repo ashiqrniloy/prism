@@ -327,7 +327,7 @@ function createDefinition() {
     name: PACKAGE,
     version: manifest.version,
     description: "Deny-by-default policy engine, OPA adapter, approvals, and audit ledger.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["credentials"],
     config: governanceConfigSchema,
     async setup(prism) {

@@ -105,7 +105,7 @@ const definitionFor = (options: AdvisorFactoryOptions) =>
     version: manifest.version,
     description:
       "A second model's advice on the current approach: one advise tool, optional review triggers, and completion validation by a model or a delegate child.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models", "session-state"],
     config: advisorConfigSchema,
     setup(prism) {

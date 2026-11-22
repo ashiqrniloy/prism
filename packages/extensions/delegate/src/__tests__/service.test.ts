@@ -46,7 +46,7 @@ let view: SessionContext | undefined;
 const consumer = definePackage({
   name: "service-consumer",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["background", "session-state"],
   setup(prism) {
     captured = prism.services.consume<DelegateService>(DELEGATE_SERVICE);

@@ -256,7 +256,7 @@ function definitionFor(options: KeyringPackageOptions) {
     name: "@arnilo/prism-extensions/keyring",
     version: manifest.version,
     description: "OS keyring and encrypted-file backends for the Prism credentials slot.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["slot:credentials"],
     config: configSchema,
     setup: async (prism) => {

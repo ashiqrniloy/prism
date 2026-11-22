@@ -10,7 +10,7 @@ async function embeddings() {
   return prism.definePackage({
     name: "@probe/embeddings",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.services.provide("embeddings", embedder);
     },

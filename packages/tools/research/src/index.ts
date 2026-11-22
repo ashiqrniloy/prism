@@ -27,7 +27,7 @@ const definition = definePackage<ToolsResearchConfig>({
   name: PACKAGE,
   version: manifest.version,
   description: "Research skills, a per-session source ledger, cite, and a bounded citation check.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["session-state"],
   config: toolsResearchConfigSchema,
   setup(prism) {

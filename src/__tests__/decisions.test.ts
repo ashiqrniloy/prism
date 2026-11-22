@@ -37,7 +37,7 @@ function fakeAdapter(seen: DecisionRequest[] = []): DecisionsProvider {
 }
 
 function pkg(name: string, setup: (api: any) => void, extra: Record<string, unknown> = {}) {
-  return definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
+  return definePackage<any>({ name, version: "1.0.0", requires: { api: 2 }, setup, ...extra });
 }
 
 const modelLessLoop = (run: (run: RunController) => Promise<void>): LoopStrategy => ({

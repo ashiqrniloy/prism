@@ -46,7 +46,7 @@ describe("@arnilo/prism-extensions/workflows checkpoints contract", () => {
     const spyPackage = definePackage({
       name: "@prism-test/checkpoints-spy",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         captured = prism;
         prism.services.provide(CHECKPOINTS_SERVICE, spy);

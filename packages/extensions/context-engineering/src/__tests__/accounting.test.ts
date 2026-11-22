@@ -64,7 +64,7 @@ function memoryPackage(sentinel: string, options: { readonly tail?: boolean } = 
   return definePackage({
     name: "@acme/memory",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("context.build", (draft: ContextDraft) => {
         const next = withContextBlocks(draft, [
@@ -95,7 +95,7 @@ function priorityPackage(): PackageInstance {
   return definePackage({
     name: "@acme/priority-blocks",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("context.build", (draft: ContextDraft) =>
         withContextBlocks(draft, [
@@ -112,7 +112,7 @@ function tailPriorityPackage(): PackageInstance {
   return definePackage({
     name: "@acme/tail-priority",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("context.build", (draft: ContextDraft) => {
         const tail = {
@@ -139,7 +139,7 @@ function instructionPackage(): PackageInstance {
   return definePackage({
     name: "@acme/instructions",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.hooks.on("context.build", (draft: ContextDraft) => ({
         ...draft,
@@ -298,7 +298,7 @@ describe("context accounting and block share (plan 194 Task 5)", () => {
     const side = definePackage<any>({
       name: "@acme/side",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["models"],
       setup: ({ models }: any) => {
         client = models.client("mock/main");

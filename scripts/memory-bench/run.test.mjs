@@ -937,7 +937,7 @@ test("memory_bench_logs_item_metadata_and_judges_only_each_item_text", async () 
       definePackage({
         name: "bench-test-memory",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("context.build", (draft) => ({
             ...draft,
@@ -986,7 +986,7 @@ test("memory_bench_logs_tail_context_metadata_and_item_tokens", async () => {
       definePackage({
         name: "bench-test-memory",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.hooks.on("context.build", (draft) =>
             withTailContext(draft, [
@@ -1810,7 +1810,7 @@ test("delivery_seams_date_prefix_order_store_timestamp_and_iso_period", async ()
       definePackage({
         name: "delivery-seam-probe",
         version: "0.13.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         capabilities: ["session-state"],
         setup(prism) {
           prism.hooks.on("context.build", (draft) => ({ ...draft, messages: datedMessages(draft.messages) }), { priority: -1000 });

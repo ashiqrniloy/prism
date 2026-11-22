@@ -84,7 +84,7 @@ function scripted(
 const childTools = definePackage({
   name: "child-tools",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "child_tool",
@@ -99,7 +99,7 @@ function countingChildTools(onRun: () => void) {
   return definePackage({
     name: "counted-tools",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.tools.register({
         name: "child_tool",
@@ -116,7 +116,7 @@ function countingChildTools(onRun: () => void) {
 const otherTools = definePackage({
   name: "other-tools",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "other_tool",
@@ -129,7 +129,7 @@ const otherTools = definePackage({
 const askingPackage = definePackage({
   name: "asking-hooks",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.hooks.on("tool.call", (payload) => (payload.name === "child_tool" ? { ask: "needs approval" } : "allow"));
   },
@@ -727,7 +727,7 @@ describe("delegate package", () => {
     const spy = definePackage({
       name: "setup-spy",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup() {
         setups += 1;
       },
@@ -785,7 +785,7 @@ describe("delegate package", () => {
     const otherCounted = definePackage({
       name: "other-counted",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.tools.register({
           name: "other_tool",

@@ -132,7 +132,7 @@ async function scopeAgent(config: Parameters<typeof memorySystem>[0] = {}) {
   const probe = definePackage({
     name: "@test/scope-probe",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.commands.register({
         name: "probe:set-scope",

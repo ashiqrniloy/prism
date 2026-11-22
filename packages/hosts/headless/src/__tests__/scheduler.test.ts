@@ -137,7 +137,7 @@ test("workflow_firing_starts_run_under_schedule_session_and_trigger_fires_immedi
   const host = definePackage({
     name: "scheduler-test",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["session-state"],
     setup(prism) {
       prism.commands.register(
@@ -544,7 +544,7 @@ test("command_target_fires_without_a_model_turn", async () => {
   const commands = definePackage({
     name: "@test/maintenance",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.commands.register({
         name: "memory:maintain",

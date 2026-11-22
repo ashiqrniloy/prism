@@ -276,7 +276,7 @@ describe("docs", () => {
     for (const needle of [
       "isKnownAgentEventType",
       '{ status: "unavailable" }',
-      "requires: { api: 1 }",
+      "requires: { api: 2 }",
       "PRODUCER_ONLY_TYPES",
       "SESSION_ENTRY_SCHEMA_VERSION",
       "unknown-entry-kind",

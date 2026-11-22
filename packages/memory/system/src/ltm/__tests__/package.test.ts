@@ -42,7 +42,7 @@ function embeddingsPackage(): PackageInstance {
   return definePackage({
     name: "@acme/embeddings",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.services.provide("embeddings", embedder);
     },
@@ -397,7 +397,7 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
     const service = definePackage({
       name: "@acme/counted-embeddings",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.services.provide("embeddings", {
           ...base,

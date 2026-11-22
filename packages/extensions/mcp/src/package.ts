@@ -142,7 +142,7 @@ export const mcpPackageDefinition = definePackage<McpPackageConfig>({
   name: PACKAGE_NAME,
   version: manifest.version,
   description: "Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: CAPABILITIES,
   // `credentials:write` only when a server signs in with OAuth: the record is written back.
   capabilitiesFor: (config) =>

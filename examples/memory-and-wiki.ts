@@ -165,7 +165,7 @@ const probe = definePackage({
   name: "@example/memory-and-wiki-probe",
   version: "0.0.0",
   description: "Lets the demo read memory's read-only port to print and assert what memory stored.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     ltmPort = () => prism.services.consume<MemoryLtmPort>(MEMORY_LTM_SERVICE);
   },
@@ -174,7 +174,7 @@ const providerPackage = definePackage({
   name: "@example/memory-and-wiki-provider",
   version: "0.0.0",
   description: "The demo's scripted provider for the main, observer and curator models.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.providers.register(provider);
   },

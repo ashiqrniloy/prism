@@ -45,7 +45,7 @@ async function bundle(rootExport = false) {
   ]) {
     await writeFile(
       join(dir, `${file}.js`),
-      `export default {name: '@acme/bundle/${name}', version: '1.0.0', requires: {api: 1}, capabilities: [], setup() {}};`,
+      `export default {name: '@acme/bundle/${name}', version: '1.0.0', requires: {api: 2}, capabilities: [], setup() {}};`,
     );
   }
   await writeFile(join(dir, "library.js"), "globalThis.__prismUnlistedLibrary = true; export default 42;");
@@ -121,7 +121,7 @@ describe("module specifiers", () => {
     await writeFile(join(source, "package.json"), (await readFile(join(source, "package.json"), "utf8")).replace('"1.0.0"', '"2.0.0"'));
     await writeFile(
       join(source, "two.js"),
-      "export default {name: '@acme/bundle/nested/two', version: '2.0.0', requires: {api: 1}, setup() {}};",
+      "export default {name: '@acme/bundle/nested/two', version: '2.0.0', requires: {api: 2}, setup() {}};",
     );
     const second = await install("@acme/bundle/nested/two@^2.0.0", options);
     const manifest = (await readManifest(dirs))!;

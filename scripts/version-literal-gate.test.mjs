@@ -275,9 +275,9 @@ export function claimViolations(files, current) {
         // rewrite them, or the next release --resume sees a manifest the registry does not have. Its
         // pin on another independent line (the app on the SDK) is still a claim.
         if (INDEPENDENT_LINES.has(pkg.name) && !INDEPENDENT_LINES.has(name)) continue;
-        // The kernel peer is the API-level window (`>=0.13.0 <1.0.0`), not a cut pin; a kernel minor
-        // does not rewrite it (docs/compatibility.md).
-        if (name === "@arnilo/prism" && /^>=\d+\.\d+\.\d+ <1\.0\.0$/.test(String(range))) continue;
+        // The kernel peer is the kernel's minor (`^0.14.0`, plan 240 Task 8): a patch does not rewrite it.
+        if (field === "peerDependencies" && name === "@arnilo/prism" && String(range) === `^${current.split(".").slice(0, 2).join(".")}.0`)
+          continue;
         // A caret into a stable independent line is a floor, not a cut pin: one that still admits the line's
         // current version in the same minor (`^0.13.0` for 0.13.1) is true as written, so a patch on that line
         // never forces already-published consumers to republish. A floor above current or in an older minor is a claim.

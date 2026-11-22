@@ -1,12 +1,12 @@
 {
   "criteriaHash": "0862496ab78245523c16a10ac93300483337999447dd36d9c203a9ffbd05c8e3",
   "inputs": {
-    "workspaces": "sha256:7ff669f3e529bc8d1739706331ec27923455a27c6703be5f4ed6661f8bbe69c1",
+    "workspaces": "sha256:eea507479050046faebb4544d2bc71dff2d4cfef86b00d27237b41dd193df48a",
     "hidden": "sha256:f41d3bd44cdaa34b6f63bf885cce5544a2e9e20b88f60df460491215d396f171",
-    "solutions": "sha256:b6aed396ab9ec832231bacc54d4525edd02383d8e378866234deface5fd8b7eb",
-    "skill": "sha256:9d480cd867272efb3b841ccb53e320b1326321d85f51ae2e683d7607b7f65bd5",
-    "indexes": "sha256:9363cfa0a1bbc49c2a1d800176fde3f07b04f095742e727cd654b7db3e5c4068"
+    "solutions": "sha256:e079740efe55b963f6fad7cdca9cc948160ff83683c425ac9650c9b86bdcf644",
+    "skill": "sha256:20ff5619a59943ddcc2d463a5d6853517b95b77d2453ae749cb445c3e087f5bc",
+    "indexes": "sha256:34bed01822f456b28b28413abb5b650585ff032ce3b656728a5a731415981a87"
   },
-  "registeredAt": "2026-11-22T13:48:07.098Z",
-  "gitHead": "3be2793cad5781ada85c61efdcc57debbc4b30c2"
+  "registeredAt": "2026-11-22T14:01:54.970Z",
+  "gitHead": "34379e8572addd4f96b661285bf6ab063ead8a68"
 }

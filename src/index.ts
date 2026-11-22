@@ -478,7 +478,7 @@ export {
 export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 
 export const name = "prism";
-export const version = "0.13.1";
+export const version = "0.14.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";
 export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js";
 export type { Logger } from "./host/types.js";

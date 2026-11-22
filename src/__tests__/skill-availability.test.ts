@@ -41,7 +41,7 @@ const plain: Skill = { name: "plain", description: "Always here.", instructions:
 const tools = definePackage<any>({
   name: "@acme/web",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup: ({ tools: api }) => {
     api.register(tool("web_search"));
     api.register(tool("web_fetch"));
@@ -81,7 +81,7 @@ async function run(options: {
   const gated = definePackage<any>({
     name: "@acme/gated",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: ({ tools: api, skills }) => {
       api.register(tool("gated_tool"), { when: () => !options.hideWhen?.() });
       skills.register({
@@ -96,7 +96,7 @@ async function run(options: {
     ? definePackage<any>({
         name: "@acme/loop",
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         capabilities: ["slot:loop"],
         setup: ({ slots }) => slots.loop.provide(options.loop!),
       })
@@ -304,7 +304,7 @@ describe("requiresTools parsing", () => {
       const pkg = definePackage<any>({
         name: "@acme/dirs",
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup: ({ skills }) => skills.addDir(root),
       });
       await assert.rejects(

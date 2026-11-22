@@ -1038,9 +1038,10 @@ describe("install smoke (fresh offline tarball install)", () => {
 // runtime npm resolver invocation (ERESOLVE) with manifest-metadata assertion
 // for the declared peer-dependency caret window across workspace packages (Plan 128 Task 2).
 describe("peer-version policy (plan 030 Task 9, Decision B: the 0.x kernel window)", () => {
-  it("declares the kernel API window `>=0.13.0 <1.0.0` on every packed package", () => {
+  it("declares the kernel's minor `^0.Y.0` on every packed package", () => {
+    // Plan 240 Task 8 (owner D6): semver 0.x, a 0.Y.0 release may break.
     const [major, minor] = ROOT_VERSION.split(".").map((part: string) => Number(part));
-    const expected = `>=${major}.${minor}.0 <1.0.0`;
+    const expected = `^${major}.${minor}.0`;
     // Packed packages live at packages/<group>/<name>/ since plan 152-172; the old flat scan missed
     // every grouped workspace, so after plan 174 Task 7 removed the last flat ones it found none.
     const manifests: Array<{ name: string; peerDependencies?: Record<string, string> }> = [];

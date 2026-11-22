@@ -32,9 +32,9 @@
     "pack:dry-run": "bun pm pack --dry-run"
   },
   "peerDependencies": {
-    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism": "^0.14.0",
     "pg": "^8.23.0",
-    "@arnilo/prism-tools": "^0.13.0"
+    "@arnilo/prism-tools": "^0.14.0"
   },
   "peerDependenciesMeta": {
     "pg": {

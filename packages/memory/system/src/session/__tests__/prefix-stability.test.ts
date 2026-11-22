@@ -61,7 +61,7 @@ function workerProvider(): ModelProvider {
 const echoTool = definePackage({
   name: "@test/echo",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "echo",
@@ -182,7 +182,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
     const foreign = definePackage({
       name: "@test/foreign-compactor",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["slot:compaction"],
       setup(prism) {
         prism.slots.compaction.provide({
@@ -313,7 +313,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
       const foreign = definePackage({
         name: "@test/foreign-compactor-two",
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         capabilities: ["slot:compaction"],
         setup(prism) {
           prism.slots.compaction.provide({

@@ -270,7 +270,7 @@ const PRE = "0.13.0-experimental.0";
 /** Kernel + a stable addon on 0.13.0, and two experimental packages on the prerelease that pin each other exactly. */
 function experimentalFixture(experimental: unknown = ["@arnilo/prism-memory-core", "@arnilo/prism-memory-system"]) {
   const root = mkdtempSync(join(tmpdir(), "prism-release-exp-"));
-  const kernelPeer = ">=0.13.0 <1.0.0";
+  const kernelPeer = "^0.13.0";
   const manifests: Array<[string, Record<string, unknown>]> = [
     ["", { name: "@arnilo/prism", version: "0.13.0" }],
     ["packages/addon", { name: "@arnilo/prism-addon", version: "0.13.0", peerDependencies: { "@arnilo/prism": kernelPeer } }],

@@ -33,7 +33,7 @@ const counter = definePackage<CounterConfig>({
   name: "@acme/sqlite-counter",
   version: "1.0.0",
   description: "Bumps a counter kept in session state.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["session-state"],
   config: {
     type: "object",

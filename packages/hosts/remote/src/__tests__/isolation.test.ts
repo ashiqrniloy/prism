@@ -111,7 +111,7 @@ describe("prism-remote principal isolation", () => {
         definePackage({
           name: "cmd-pkg",
           version: "0.0.1",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup(prism) {
             prism.commands.register({
               name: "ping",
@@ -404,7 +404,7 @@ describe("prism-remote principal isolation", () => {
         definePackage({
           name: "bg-pkg",
           version: "0.0.1",
-          requires: { api: 1 },
+          requires: { api: 2 },
           capabilities: ["background"],
           setup(prism) {
             prism.hooks.on("run.started", (_event, ctx) => {

@@ -172,8 +172,8 @@ export function assertCorePin(dep, range, rootVersion, owner) {
     return;
   }
   if (dep === "@arnilo/prism") {
-    // The kernel peer is the API-level window, not a cut pin: every package admits the whole 0.x line.
-    assert.match(range ?? "", /^>=\d+\.\d+\.\d+ <1\.0\.0$/, `${owner} must peer ${dep} with the 0.x API window, got ${range}`);
+    // The kernel peer is the kernel's minor (plan 240 Task 8): `^0.Y.0`.
+    assert.match(range ?? "", /^\^\d+\.\d+\.0$/, `${owner} must peer ${dep} with the kernel's minor, got ${range}`);
     return;
   }
   assert.equal(range, `^${rootVersion}`, `${owner} must depend on ${dep}@^${rootVersion}`);
@@ -196,7 +196,7 @@ test("peer policy Decision B: all code packages peer the 0.x kernel window", () 
     // Plan 071 Task 1 (plan 070 FA 10): a compatibility bump moves the whole 0.x API window; a
     // package that owns its version line pins the same line at a floor (see assertCorePin).
     assertCorePin("@arnilo/prism", spec, t.root.version, p.name);
-    assert.match(spec, /^>=\d+\.\d+\.\d+ <1\.0\.0$/, `${p.name} peer spec must be the 0.x API window, got ${spec}`);
+    assert.match(spec, /^\^\d+\.\d+\.0$/, `${p.name} peer spec must be the kernel's minor, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;
   }

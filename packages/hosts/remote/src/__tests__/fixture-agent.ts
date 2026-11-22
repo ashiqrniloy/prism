@@ -43,7 +43,7 @@ export async function create({ hostUi, stateDirectory }: { hostUi: HostUi; state
       definePackage({
         name: "conformance-fixture",
         version: "1.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.commands.register({ name: "ping", description: "Conformance command", run: () => "pong" });
         },

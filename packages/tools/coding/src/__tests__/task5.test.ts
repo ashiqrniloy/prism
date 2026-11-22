@@ -181,7 +181,7 @@ describe("tools-coding git, checks, todo, ask_user, and principal", () => {
       const probe = definePackage({
         name: "@test/forge-probe",
         version: "1.0.0",
-        requires: { api: 1, services: ["coding.forge"] },
+        requires: { api: 2, services: ["coding.forge"] },
         setup: (prism) => {
           service = prism.services.require<typeof service>("coding.forge");
         },

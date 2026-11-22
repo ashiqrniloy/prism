@@ -75,7 +75,7 @@ export async function ontologyMemory(config: HostConfig): Promise<OntologyMemory
       name: "@prism-agent/ontology-scenario",
       version: "0.0.0",
       description: "The scenario's scripted provider.",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.providers.register(provider);
       },

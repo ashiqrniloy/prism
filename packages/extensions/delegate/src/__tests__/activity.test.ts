@@ -50,7 +50,7 @@ function provider(mode: "sync" | "async", parentTexts: string[]): ModelProvider 
 const secretTools = definePackage({
   name: "secret-tools",
   version: "0.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "secret_tool",

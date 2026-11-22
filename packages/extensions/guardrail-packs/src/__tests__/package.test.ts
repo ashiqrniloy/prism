@@ -56,7 +56,7 @@ function providerPackageFor(provider: ModelProvider) {
   return definePackage({
     name: "@test/guardrail-provider",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(provider);
     },

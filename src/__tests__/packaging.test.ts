@@ -21,7 +21,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 // suite derives from it instead of hardcoding the cut. `scripts/version-literal-gate.test.mjs`
 // asserts the same surfaces (manifests, caret ranges, lockfile, version constant).
 /** The kernel peer window every native package admits: the whole 0.x line, floored at the API-level cut. */
-const KERNEL_PEER = ">=0.13.0 <1.0.0";
+const KERNEL_PEER = "^0.14.0"; // plan 240 Task 8 (owner D6): semver 0.x, a 0.Y.0 release may break
 /**
  * A code package on the lockstep line pins the core at the caret of the current version. A package
  * that owns its version line (scripts/independent-packages.json) pins the same 0.x line at a floor:
@@ -39,7 +39,7 @@ const EXPERIMENTAL_LINES = new Set(independentFile.experimental ?? []);
 // the same as every code package; only its pins into other independent lines are cut-line claims.
 const corePin = (owner: string, range: string | undefined): string | undefined => {
   if (!INDEPENDENT_LINES.has(owner)) return range;
-  assert.match(range ?? "", /^>=\d+\.\d+\.\d+ <1\.0\.0$/, `${owner} must peer the core with the 0.x API window, got ${range}`);
+  assert.equal(range, KERNEL_PEER, `${owner} must peer the core with the kernel's minor, got ${range}`);
   return range;
 };
 
@@ -937,14 +937,15 @@ describe("packaging guard", () => {
     for (const file of packageSourceFiles().filter((file) => !file.includes("/__tests__/"))) {
       const text = readFileSync(file, "utf8");
       for (const match of text.matchAll(/requires:\s*\{\s*api:\s*([0-9]+|KERNEL_API_LEVEL)/g)) {
-        declared.set(`${file}:${match.index}`, match[1] === "KERNEL_API_LEVEL" ? "1" : match[1]);
+        declared.set(`${file}:${match.index}`, match[1] === "KERNEL_API_LEVEL" ? "2" : match[1]);
       }
       prismOnly += [...text.matchAll(/requires:\s*\{\s*prism:/g)].length;
     }
     // The `definePackage` entries (not the `"*"` test fixtures) must declare the level.
     assert.ok(declared.size >= 28, `every definePackage requires.api must be scanned, found ${declared.size}`);
-    const stale = [...declared.entries()].filter(([, api]) => api !== "1");
-    assert.deepEqual(stale, [], "every definePackage requires.api must be 1");
+    // Plan 240 Task 8 (owner D6): 0.14.0 is the breaking release, at kernel API level 2.
+    const stale = [...declared.entries()].filter(([, api]) => api !== "2");
+    assert.deepEqual(stale, [], "every definePackage requires.api must be 2");
     assert.equal(prismOnly, 0, "no source may gate on requires.prism alone; declare requires.api");
   });
 

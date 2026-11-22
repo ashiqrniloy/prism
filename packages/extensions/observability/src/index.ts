@@ -190,7 +190,7 @@ export function createObservabilityDefinition(load: OpenTelemetryApiLoader = loa
     name: PACKAGE,
     version: manifest.version,
     description: "OpenTelemetry spans and metrics over the agent event catalog. Exports nothing itself: the host registers the SDK.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     config: observabilityConfigSchema,
     setup: (prism) => setup(prism, load),
   });

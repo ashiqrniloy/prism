@@ -130,5 +130,5 @@ redacted before it is stored or emitted.
 
 ## Requirements
 
-`capabilities: ["models", "slot:compaction"]`, `requires.api: 1`. No runtime
+`capabilities: ["models", "slot:compaction"]`, `requires.api: 2`. No runtime
 dependencies.

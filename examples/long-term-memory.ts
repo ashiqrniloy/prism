@@ -27,7 +27,7 @@ const root = await mkdtemp(join(tmpdir(), "prism-long-term-memory-"));
 const embeddings = definePackage({
   name: "@example/embeddings",
   version: "0.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.services.provide<Embedder>("embeddings", createHashEmbedder({ dimensions: 32, id: "demo-embeddings" }));
   },

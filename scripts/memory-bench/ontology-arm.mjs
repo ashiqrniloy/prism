@@ -91,7 +91,7 @@ export function createOntologyArm({ config = {}, settleMs = ONTOLOGY_SETTLE_MS }
   const capture = definePackage({
     name: "memory-bench-ontology-port",
     version: "0.13.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       ltm = () => prism.services.consume(MEMORY_LTM_SERVICE);
       // A package event is observable by hooks, not by `agent.subscribe()`: the wiki emits one per pass that did work.

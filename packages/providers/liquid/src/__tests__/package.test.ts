@@ -128,7 +128,7 @@ describe("@arnilo/prism-ai/liquid package", () => {
     const user = definePackage<any>({
       name: "@acme/liquid-local-probe",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup: (a) => void (api = a),
       capabilities: ["models"],
     });

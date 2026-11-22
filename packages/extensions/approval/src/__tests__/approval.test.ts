@@ -86,7 +86,7 @@ function repeatingNotePackage() {
   return definePackage({
     name: "@test/note-provider",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(repeatingNote());
     },
@@ -318,7 +318,7 @@ describe("approval package", () => {
       definePackage({
         name: "@test/coding-targets",
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(prism) {
           prism.services.provide("coding.targets", createCodingTargets(root, [], workspace));
         },

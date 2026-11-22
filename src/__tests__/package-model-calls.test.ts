@@ -79,7 +79,7 @@ async function harness(options: HarnessOptions = {}): Promise<Harness & { readon
   const side = definePackage<any>({
     name: "@acme/side",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models"],
     setup: ({ models, tools }: any) => {
       client = models.client(options.sideModel);
@@ -400,7 +400,7 @@ describe("package decision calls (plan 237 Task 3)", () => {
     const judge = definePackage<any>({
       name: "@acme/judge",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["models"],
       setup: ({ models, tools }: any) => {
         tools.register({

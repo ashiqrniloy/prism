@@ -271,7 +271,7 @@ describe("workflow parent session", () => {
         definePackage({
           name: "host-workflow",
           version: "1.0.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           setup(prism) {
             prism.commands.register({
               name: "build",

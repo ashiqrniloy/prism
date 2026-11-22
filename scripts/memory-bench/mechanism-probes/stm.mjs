@@ -159,7 +159,7 @@ function fixtureTools(prism, fx, toolLog) {
   return prism.definePackage({
     name: "@probe/long-session-tools",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       for (const name of names)
         api.tools.register({
@@ -184,7 +184,7 @@ function sentinelTiers(prism) {
   return prism.definePackage({
     name: "@probe/scope-and-ltm",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.hooks.on("context.build", (draft) => ({
         ...draft,
@@ -276,7 +276,7 @@ export async function replayLongSession({
   const compactionCounter = prism.definePackage({
     name: "@probe/compaction-counter",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.hooks.on("compaction.completed", (event) => {
         if (!event.error) compactionCount.n += 1;
@@ -457,7 +457,7 @@ export async function replayOmBefore() {
   const tools = prism.definePackage({
     name: "@probe/long-session-tools",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       for (const name of new Set([...fx.calls.values()].map((call) => call.tool)))
         api.tools.register({

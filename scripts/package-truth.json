@@ -1,28 +1,28 @@
 {
-  "generatedAt": "2026-11-22T13:28:07.776Z",
+  "generatedAt": "2026-11-22T13:54:46.198Z",
   "root": {
     "name": "@arnilo/prism",
-    "version": "0.13.1"
+    "version": "0.14.0"
   },
   "versions": {
-    "@arnilo/prism": "0.13.1",
-    "@arnilo/prism-extensions": "0.13.2",
-    "@arnilo/prism-hosts": "0.13.1",
+    "@arnilo/prism": "0.14.0",
+    "@arnilo/prism-extensions": "0.14.0",
+    "@arnilo/prism-hosts": "0.14.0",
     "@arnilo/prism-knowledge": "0.14.0-experimental.0",
     "@arnilo/prism-memory-system": "0.14.0",
-    "@arnilo/prism-ai": "0.13.0",
-    "@arnilo/prism-tools": "0.13.2",
-    "@arnilo/prism-ai/commandcode": "0.13.0",
-    "@arnilo/prism-ai/hyper": "0.13.0",
-    "@arnilo/prism-ai/kilo": "0.13.0",
-    "@arnilo/prism-ai/laya": "0.13.0",
-    "@arnilo/prism-ai/liquid": "0.13.0",
-    "@arnilo/prism-ai/litellm": "0.13.0",
-    "@arnilo/prism-ai/ollama-cloud": "0.13.0",
-    "@arnilo/prism-ai/openai-codex": "0.13.0",
-    "@arnilo/prism-ai/opencode-go": "0.13.0",
-    "@arnilo/prism-ai/openrouter": "0.13.0",
-    "@arnilo/prism-ai/typesafe": "0.13.0"
+    "@arnilo/prism-ai": "0.14.0",
+    "@arnilo/prism-tools": "0.14.0",
+    "@arnilo/prism-ai/commandcode": "0.14.0",
+    "@arnilo/prism-ai/hyper": "0.14.0",
+    "@arnilo/prism-ai/kilo": "0.14.0",
+    "@arnilo/prism-ai/laya": "0.14.0",
+    "@arnilo/prism-ai/liquid": "0.14.0",
+    "@arnilo/prism-ai/litellm": "0.14.0",
+    "@arnilo/prism-ai/ollama-cloud": "0.14.0",
+    "@arnilo/prism-ai/openai-codex": "0.14.0",
+    "@arnilo/prism-ai/opencode-go": "0.14.0",
+    "@arnilo/prism-ai/openrouter": "0.14.0",
+    "@arnilo/prism-ai/typesafe": "0.14.0"
   },
   "counts": {
     "publishable": 7,
@@ -59,7 +59,7 @@
   "profiles": {},
   "peerPolicy": {
     "decision": "B",
-    "spec": "^0.13.1",
+    "spec": "^0.14.0",
     "atomicUpgrade": false
   }
 }

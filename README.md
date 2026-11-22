@@ -75,13 +75,13 @@ Pass it to `createAgent({ packages: [...] })` next to the others. [docs/packages
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.13.1 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-ai` | 0.13.0 | capability |
-| `@arnilo/prism-extensions` | 0.13.2 | capability |
-| `@arnilo/prism-hosts` | 0.13.1 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
+| `@arnilo/prism` | 0.14.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-ai` | 0.14.0 | capability |
+| `@arnilo/prism-extensions` | 0.14.0 | capability |
+| `@arnilo/prism-hosts` | 0.14.0 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
 | `@arnilo/prism-knowledge` | 0.14.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range |
 | `@arnilo/prism-memory-system` | 0.14.0 | capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools |
-| `@arnilo/prism-tools` | 0.13.2 | capability |
+| `@arnilo/prism-tools` | 0.14.0 | capability |
 <!-- generated:package-truth:inventory end -->
 
 **Memory.** `@arnilo/prism-memory-system` is stable: its session memory is the recommended compaction system (`enabled: true`), with `@arnilo/prism-extensions/compaction` as the alternative. Its working memory, long-term memory and the rest are experimental config. `@arnilo/prism-knowledge/wiki` and `/rag` ship on the `experimental` dist-tag (`bun add @arnilo/prism-knowledge@experimental`), outside the stability promise.

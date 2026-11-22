@@ -69,7 +69,7 @@ function createDefinition() {
     name: PACKAGE,
     version: manifest.version,
     description: "Native model router package: cost/latency-aware routing, budget reservation, circuits, and failover over model.call.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models"],
     config: modelRouterConfigSchema,
     setup(prism) {

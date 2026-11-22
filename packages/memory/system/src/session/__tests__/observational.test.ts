@@ -390,7 +390,7 @@ describe("observational memory package", () => {
       name: "@acme/other-compactor",
       version: "1.0.0",
       description: "A second package provider for the compaction slot.",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["slot:compaction"],
       setup(prism) {
         prism.slots.compaction.provide({ name: "other-compaction", compact: () => ({ summary: "", entries: [] }) });

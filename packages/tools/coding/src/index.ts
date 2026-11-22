@@ -95,7 +95,7 @@ const definition = definePackage<ToolsCodingConfig>({
   version: manifest.version,
   description:
     "File, search, shell, git, check, todo, and ask-user coding tools with declared effects, in-tool containment, and tool.call hard denies.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["host-ui", "credentials"],
   config: toolsCodingConfigSchema,
   setup: async (prism) => {

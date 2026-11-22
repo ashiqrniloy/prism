@@ -215,7 +215,7 @@ function observerProvider(state: { calls: number; fail: boolean }): ModelProvide
 const noopTool = definePackage({
   name: "@acme/noop",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "noop",
@@ -342,7 +342,7 @@ describe("coverage past the snapshot (plan 218.3 Task 12)", () => {
     const big = definePackage({
       name: "@acme/big",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.tools.register({
           name: "big",

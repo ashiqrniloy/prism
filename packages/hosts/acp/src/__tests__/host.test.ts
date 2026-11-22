@@ -23,7 +23,7 @@ describe("acpHost", () => {
         definePackage({
           name: "ask-pkg",
           version: "0.1.0",
-          requires: { api: 1 },
+          requires: { api: 2 },
           capabilities: ["host-ui"],
           setup(api) {
             api.hooks.on("tool.call", async () => {

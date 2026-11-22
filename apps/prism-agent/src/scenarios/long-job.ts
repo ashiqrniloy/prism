@@ -68,7 +68,7 @@ function providerPackage(provider: ModelProvider) {
   return definePackage({
     name: "@prism-agent/long-job-provider",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(provider);
     },

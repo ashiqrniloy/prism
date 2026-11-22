@@ -346,7 +346,7 @@ async function runModel(spec, items, options) {
   const runner = definePackage({
     name: "@arnilo/prism-decision-bench",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models"],
     setup(prism) {
       captured = prism;

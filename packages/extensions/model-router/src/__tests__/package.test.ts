@@ -381,7 +381,7 @@ describe("model router and package model calls (plan 225 Task 5)", () => {
     const side = definePackage<any>({
       name: "@acme/side",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["models"],
       setup: ({ models }: any) => {
         client = models.client("mock-b/chosen");

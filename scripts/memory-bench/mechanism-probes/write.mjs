@@ -25,7 +25,7 @@ async function reflections(items) {
   return prism.definePackage({
     name: "@probe/observations",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["session-state"],
     setup(api) {
       const log = api.state.log("ledger");
@@ -251,7 +251,7 @@ export const probes = [
       const tool = prism.definePackage({
         name: "@probe/tool",
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup(api) {
           api.tools.register({
             name: "deploy_status",

@@ -18,7 +18,7 @@ active package; the host wires nothing else.
 export default definePackage({
   name: "@acme/plan-execute-verify",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["slot:loop"],
   setup(prism) {
     prism.slots.loop.provide(planExecuteVerify);

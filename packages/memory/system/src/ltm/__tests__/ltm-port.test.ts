@@ -95,7 +95,7 @@ describe("LTM after the ontology moved to the wiki", () => {
     const probe = definePackage({
       name: "@test/ltm-probe",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("session.opened", () => {
           provided = prism.services.consume<MemoryLtmPort>(MEMORY_LTM_SERVICE);

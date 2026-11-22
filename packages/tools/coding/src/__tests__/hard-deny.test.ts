@@ -280,7 +280,7 @@ describe("tools-coding hard denies", () => {
     const probe = definePackage({
       name: "@test/coding-skill-roots-probe",
       version: "0.0.1",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup: (prism) => {
         consume = () => prism.services.consume("coding.targets");
       },
@@ -375,7 +375,7 @@ describe("tools-coding hard denies", () => {
     const probe = definePackage({
       name: "@test/coding-targets-probe",
       version: "0.0.1",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup: (prism) => {
         consume = () => prism.services.consume("coding.targets");
       },

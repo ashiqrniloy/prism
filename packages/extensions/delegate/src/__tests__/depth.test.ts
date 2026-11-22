@@ -55,7 +55,7 @@ function treeProvider(seenTools: Map<string, string[]>): ModelProvider {
 const probeTools = definePackage({
   name: "probe-tools",
   version: "0.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "probe",

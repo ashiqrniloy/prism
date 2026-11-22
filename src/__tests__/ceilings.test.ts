@@ -117,7 +117,7 @@ describe("ceilings (plan 239 Task 4)", () => {
     const probe = definePackage({
       name: "probe",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         seen.api = prism as PackageAPI<never>;
         try {

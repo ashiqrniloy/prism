@@ -98,13 +98,9 @@ export function validateRelease(release, version) {
     if (pkg.manifest.publishConfig?.access !== "public") errors.push(`${pkg.manifest.name} must set publishConfig.access to public`);
     for (const field of DEPENDENCY_FIELDS) {
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
-        // The kernel peer is the API-level window, not a cut pin: every package admits the whole
-        // 0.x line (`>=0.13.0 <1.0.0`), so a kernel minor never needs a package rewrite. A floor at
-        // or below this cut is valid (docs/compatibility.md).
-        if (field === "peerDependencies" && name === "@arnilo/prism") {
-          const wide = /^>=(\d+\.\d+\.\d+) <1\.0\.0$/.exec(range);
-          if (wide && cmpSemver(version, wide[1]) >= 0) continue;
-        }
+        // The kernel peer is the cut's minor (`^0.14.0`; semver 0.x, plan 240 Task 8): a 0.Y.0 release may break,
+        // so every package peers its own minor, and a patch release admits it (docs/compatibility.md).
+        if (field === "peerDependencies" && name === "@arnilo/prism" && isKernelMinorPeer(range, version)) continue;
         // Lockstep cuts pin every first-party range at the cut version — exact
         // (`<version>`) or caret (`^<version>`). A range that merely *satisfies*
         // it (one minor behind at the cut) means two installs of one release line
@@ -159,6 +155,12 @@ function syncKernelVersion(root, version) {
   const text = readFileSync(file, "utf8");
   const next = text.replace(/(export const KERNEL_VERSION = ")[^"]*(";)/, `$1${version}$2`);
   if (next !== text) writeFileSync(file, next);
+}
+
+/** Semver 0.x (plan 240 Task 8, owner D6): the kernel peer is `^<major>.<minor>.0` of the kernel's own minor. */
+export function isKernelMinorPeer(range, version) {
+  const [major, minor] = String(version).split(".");
+  return range === `^${major}.${minor}.0`;
 }
 
 export function bumpRelease(release, from, to) {
@@ -356,11 +358,8 @@ export function validateReleaseIndependent(release, { baseline, gitDiff = defaul
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
         const target = release.byName.get(name);
         if (!target) continue;
-        // The kernel peer is the API-level window, not a cut pin: a floor at or below the kernel is fine.
-        if (field === "peerDependencies" && name === "@arnilo/prism") {
-          const wide = /^>=(\d+\.\d+\.\d+) <1\.0\.0$/.exec(range);
-          if (wide && cmpSemver(target.manifest.version, wide[1]) >= 0) continue;
-        }
+        // The kernel peer is the kernel's minor (`^0.14.0`, plan 240 Task 8).
+        if (field === "peerDependencies" && name === "@arnilo/prism" && isKernelMinorPeer(range, target.manifest.version)) continue;
         if (!satisfiesInternalRange(range, target.manifest.version)) {
           errors.push(`${pkg.manifest.name} ${field}.${name} range ${range} does not satisfy ${name}@${target.manifest.version}`);
         }

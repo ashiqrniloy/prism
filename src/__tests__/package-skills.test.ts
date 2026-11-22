@@ -65,7 +65,7 @@ function synthetic(options: {
       definePackage({
         name,
         version: "0.0.0",
-        requires: { api: 1 },
+        requires: { api: 2 },
         setup: (prism) => {
           for (const tool of tools) {
             prism.tools.register({
@@ -219,7 +219,7 @@ describe("package skills", () => {
     const fixture = synthetic({});
     const silent: Fixture = {
       ...fixture,
-      build: async () => [definePackage({ name: "@fixture/silent", version: "0.0.0", requires: { api: 1 }, setup: () => {} })()],
+      build: async () => [definePackage({ name: "@fixture/silent", version: "0.0.0", requires: { api: 2 }, setup: () => {} })()],
     };
     const report = await gateOn([{ ...silent }]);
     assert.ok(checks(report).includes("load"), JSON.stringify(report.failures));

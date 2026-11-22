@@ -48,7 +48,7 @@ function providerPackage(provider: ModelProvider) {
   return definePackage({
     name: "@test/content-provider",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       prism.providers.register(provider);
     },
@@ -315,7 +315,7 @@ describe("guardrail packs content stages", () => {
     const recorder = definePackage({
       name: "@test/ledger",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("tool.result", (result) => {
           seen.push(JSON.stringify(result.value));

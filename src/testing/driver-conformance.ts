@@ -561,7 +561,7 @@ async function open(ctx: Context, options: OpenOptions): Promise<Opened> {
               definePackage({
                 name: "conformance-workspace",
                 version: "1.0.0",
-                requires: { api: 1 },
+                requires: { api: 2 },
                 setup(prism) {
                   prism.services.provide("workspace", { worktree: { bound: () => ({ path: join(root, "worktree") }) } });
                 },

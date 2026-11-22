@@ -30,7 +30,7 @@ function bridgeProbe(bridge: McpToolBridge) {
   return definePackage<Record<string, never>>({
     name: "test-computer-use-bridge",
     version: "0.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: (prism) => {
       prism.services.provide("computer-use.mcp", async () => bridge);
     },

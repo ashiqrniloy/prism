@@ -22,7 +22,7 @@
       "dependencies": {
         "@arnilo/prism-ai": "workspace:*",
         "@arnilo/prism-extensions": "workspace:*",
-        "@arnilo/prism-hosts": "^0.13.0",
+        "@arnilo/prism-hosts": "^0.14.0",
         "@arnilo/prism-knowledge": "0.14.0-experimental.0",
         "@arnilo/prism-memory-system": "workspace:*",
         "@arnilo/prism-tools": "workspace:*",
@@ -34,7 +34,7 @@
     },
     "packages/extensions": {
       "name": "@arnilo/prism-extensions",
-      "version": "0.13.2",
+      "version": "0.14.0",
       "devDependencies": {
         "@arnilo/prism-ai": "workspace:*",
         "@arnilo/prism-hosts": "workspace:*",
@@ -51,7 +51,7 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
+        "@arnilo/prism": "^0.14.0",
         "@modelcontextprotocol/client": "^2.3.0",
         "@napi-rs/keyring": "^2.0.0",
         "@opentelemetry/api": "^1.9.0",
@@ -68,13 +68,13 @@
     },
     "packages/hosts": {
       "name": "@arnilo/prism-hosts",
-      "version": "0.13.1",
+      "version": "0.14.0",
       "bin": {
         "prism-devtools": "./devtools/bin/prism-devtools.ts",
         "prism-host-builder": "./host-builder/bin/prism-host-builder.ts",
       },
       "dependencies": {
-        "@arnilo/prism-extensions": "^0.13.0",
+        "@arnilo/prism-extensions": "^0.14.0",
       },
       "devDependencies": {
         "@ag-ui/client": "1.0.4",
@@ -93,7 +93,7 @@
       "peerDependencies": {
         "@ag-ui/core": "1.0.4",
         "@agentclientprotocol/sdk": "1.4.0",
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
+        "@arnilo/prism": "^0.14.0",
         "@modelcontextprotocol/server": "^2.3.0",
         "zod": "^4.6.6",
       },
@@ -119,8 +119,8 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-tools": "^0.13.0",
+        "@arnilo/prism": "^0.14.0",
+        "@arnilo/prism-tools": "^0.14.0",
         "pg": "^8.23.0",
       },
       "optionalPeers": [
@@ -140,7 +140,7 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
+        "@arnilo/prism": "^0.14.0",
         "pg": "^8.23.0",
       },
       "optionalPeers": [
@@ -149,18 +149,18 @@
     },
     "packages/providers": {
       "name": "@arnilo/prism-ai",
-      "version": "0.13.0",
+      "version": "0.14.0",
       "devDependencies": {
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
+        "@arnilo/prism": "^0.14.0",
       },
     },
     "packages/tools": {
       "name": "@arnilo/prism-tools",
-      "version": "0.13.2",
+      "version": "0.14.0",
       "dependencies": {
         "@mozilla/readability": "0.6.0",
         "diff": "^9.0.0",
@@ -186,8 +186,8 @@
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-extensions": "^0.13.1",
+        "@arnilo/prism": "^0.14.0",
+        "@arnilo/prism-extensions": "^0.14.0",
         "@firecrawl/anydoc": "0.2.4",
         "@office-open/docx": "0.14.5",
         "@office-open/pptx": "0.14.5",

@@ -163,7 +163,7 @@ const definition = definePackage<ToolsWebConfig>({
   name: "@arnilo/prism-tools/web",
   version: manifest.version,
   description: "Web search and fetch tools with declared network effects, ref-only keys, and a web.fetch service.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   // `models` is declared statically (capabilities are not per-config); `models.client` is only called
   // when `fetch.prompt` is configured.
   capabilities: ["credentials", "models"],

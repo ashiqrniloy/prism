@@ -60,7 +60,7 @@ const executed: string[] = [];
 const writeTool = definePackage({
   name: "write-tool",
   version: "0.12.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "write",

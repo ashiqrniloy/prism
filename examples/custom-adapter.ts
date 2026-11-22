@@ -96,7 +96,7 @@ function workspaceProbe(): { readonly package: PackageInstance; readonly service
   const instance = definePackage({
     name: "custom-adapter-workspace-probe",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup: ({ services }) => {
       service = services.consume<WorkspaceService>("workspace");
     },

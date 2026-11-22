@@ -86,7 +86,7 @@ function provider(seen: Seen, verdict = '{"verdict":"complete"}'): ModelProvider
 const readTool = definePackage({
   name: "read-tool",
   version: "0.13.1",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.tools.register({
       name: "read_file",
@@ -102,7 +102,7 @@ async function agentWith(seen: Seen, advisorInstance: PackageInstance, extra: re
   const probe = definePackage({
     name: "advisor-service-probe",
     version: "0.13.1",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(prism) {
       service = prism.services.consume<AdvisorService>(ADVISOR_SERVICE);
     },

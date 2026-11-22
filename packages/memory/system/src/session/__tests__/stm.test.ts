@@ -214,7 +214,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     const tiers = definePackage({
       name: "@test/scope-and-ltm",
       version: "0.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       setup(prism) {
         prism.hooks.on("context.build", (draft) => ({
           ...draft,

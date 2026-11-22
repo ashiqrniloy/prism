@@ -31,7 +31,7 @@ const definition = definePackage<ContextFilesConfig>({
   name: PACKAGE,
   version: manifest.version,
   description: "AGENTS.md and SYSTEM.md context layers, trust-gated and cached per session.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["session-state"],
   config: contextFilesConfigSchema,
   async setup(prism) {

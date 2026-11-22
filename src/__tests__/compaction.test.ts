@@ -147,7 +147,7 @@ describe("compaction", () => {
     const owner = definePackage({
       name: "@acme/compactor",
       version: "1.0.0",
-      requires: { api: 1 },
+      requires: { api: 2 },
       capabilities: ["slot:compaction", "session-state"],
       setup: ({ slots, state }) => {
         const mark = state.session<JsonValue>("mark", { n: 5 });

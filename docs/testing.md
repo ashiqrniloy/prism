@@ -230,7 +230,7 @@ import { loopConformance, packageConformance } from "@arnilo/prism/testing";
 const audit = definePackage({
   name: "@acme/audit",
   version: "1.0.0",
-  requires: { api: 1 },
+  requires: { api: 2 },
   setup(prism) {
     prism.hooks.on("tool.result", () => {});
   },

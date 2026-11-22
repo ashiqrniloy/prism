@@ -42,7 +42,7 @@ async function clientsFor(
   const user = definePackage<any>({
     name: "@acme/side",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["models"],
     setup: ({ models }: any) => {
       for (const ref of refs) clients.push(models.client(ref));

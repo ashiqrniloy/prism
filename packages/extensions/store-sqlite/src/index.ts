@@ -86,7 +86,7 @@ const definition = definePackage<SqliteStoreConfig>({
   name: "@arnilo/prism-extensions/store-sqlite",
   version: manifest.version,
   description: "SQLite session store with leases, lifecycle, and schema migrations.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   capabilities: ["slot:store"],
   config: configSchema,
   setup: (prism) => {

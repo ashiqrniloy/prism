@@ -25,7 +25,7 @@ import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // A package declares the kernel API level it was written against; the kernel loads it unchanged on
 // any 0.x minor (docs/compatibility.md).
-const requires = { api: 1 } as const;
+const requires = { api: 2 } as const;
 const ENV_VALUE = "demo-only-env-value-1234";
 const finished: string[] = [];
 

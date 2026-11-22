@@ -215,7 +215,7 @@ function createDefinition(gate: LiveGate) {
     name: PACKAGE,
     version: manifest.version,
     description: "Approval modes over tool effects and roots.",
-    requires: { api: 1 },
+    requires: { api: 2 },
     capabilities: ["host-ui", "session-state"],
     config: approvalConfigSchema,
     setup(prism) {

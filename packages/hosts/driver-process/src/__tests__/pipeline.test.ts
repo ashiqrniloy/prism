@@ -56,7 +56,7 @@ test("run_pipeline_materializes_files_overlays_and_env", async () => {
   const workspace = definePackage({
     name: "test-workspace",
     version: "1.0.0",
-    requires: { api: 1 },
+    requires: { api: 2 },
     setup(api) {
       api.services.provide("workspace", { worktree: { bound: () => ({ path: cwd }) } });
     },

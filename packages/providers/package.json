@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-ai",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Prism provider packages. Import each provider through its subpath.",
   "type": "module",
   "exports": {
@@ -59,7 +59,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
-    "@arnilo/prism": ">=0.13.0 <1.0.0"
+    "@arnilo/prism": "^0.14.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

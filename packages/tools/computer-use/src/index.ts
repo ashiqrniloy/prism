@@ -89,7 +89,7 @@ const definition = definePackage<ToolsComputerUseConfig>({
   version: manifest.version,
   description:
     "Linux desktop observation and targeting over the host-owned computer-use-linux MCP binary, with in-tool device admission and declared external effects.",
-  requires: { api: 1 },
+  requires: { api: 2 },
   config: toolsComputerUseConfigSchema,
   setup: async (prism) => {
     const device = prism.config.device;

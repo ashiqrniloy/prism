@@ -206,7 +206,7 @@ describe("LLM compactor over a history larger than its model's window (plan 229 
           definePackage({
             name: "@acme/event-observer",
             version: "1.0.0",
-            requires: { api: 1 },
+            requires: { api: 2 },
             setup: ({ hooks }) => {
               hooks.on("package.event", (event) => {
                 seen.push(event);
