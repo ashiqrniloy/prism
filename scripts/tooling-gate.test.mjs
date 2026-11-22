@@ -421,7 +421,10 @@ describe("retired sqlite driver", () => {
       rel.startsWith("docs/migrate-to-") ||
       rel === "CHANGELOG.md" ||
       rel === "scripts/plan-review-gate.test.mjs" ||
-      rel.startsWith("security-artifacts/");
+      rel.startsWith("security-artifacts/") ||
+      // Session-Bench's third-party Mem0 arm (plan 218.3 Task 10): a bun:sqlite shim installed under the npm name Mem0
+      // requires, from a committed lock into the benchmark cache. It is not a Prism driver.
+      rel.startsWith("scripts/memory-bench/session-bench/");
     const hits = [];
     for (const rel of execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0")) {
       if (!rel || skip(rel)) continue;

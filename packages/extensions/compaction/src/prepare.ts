@@ -124,7 +124,8 @@ export function findLlmCompactionCutPoint(
   let reachKept = kept;
   while (reach > startIndex && isToolResultEntry(entries[reach])) {
     reach -= 1;
-    reachKept += estimateEntryTokens(entries[reach]!);
+    const previous = entries[reach];
+    if (previous) reachKept += estimateEntryTokens(previous);
   }
   if (reachKept <= maxKept) firstKeptIndex = reach;
   else while (firstKeptIndex < entries.length && isToolResultEntry(entries[firstKeptIndex])) firstKeptIndex += 1;

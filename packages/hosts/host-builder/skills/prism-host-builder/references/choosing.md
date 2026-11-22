@@ -44,26 +44,28 @@ There are four slots: `loop`, `compaction`, `store`, `credentials`. Each holds o
 provide one slot with no assignment fail the load (`ERR_PRISM_SLOT_CONFLICT`). Assign the owner by package name in
 `slots`, as `node_modules/@arnilo/prism/docs/slots.md` shows.
 
-- Need summarised history: `@arnilo/prism-extensions/compaction` (stable). Example: `examples/compaction.ts`.
-- Need session memory too: `@arnilo/prism-memory-system`'s session tiers are a compaction system of their own (on by
-  default). One compaction system runs per agent: either list the memory system alone, or keep LLM compaction and set
-  the memory system's `context: { compaction: false }`. Listing both compaction systems fails `createAgent`.
-  Example: `examples/session-memory.ts`.
+- Need long sessions to stay coherent (the default choice): session memory, `@arnilo/prism-memory-system` with
+  `enabled: true`. STM records the session and compaction removes only what it recorded; `recall` returns originals.
+  It installs off: without `enabled: true` no session uses it. Example: `examples/session-memory.ts`.
+- Need a plain summary instead: `@arnilo/prism-extensions/compaction`, one model call per compaction. It replaces
+  session memory. One compaction system runs per agent: listing both fails `createAgent`, unless the memory system
+  sets `context: { compaction: false }` (to keep its long-term memory). Example: `examples/compaction.ts`.
 - Need a different loop (workflow, external agent): `slots.loop`, or a package that claims it
   (`@arnilo/prism-extensions/workflows`, `@arnilo/prism-hosts/driver-process`). Example: `examples/custom-loop.ts`.
 
-## The experimental memory line
+## The experimental memory parts
 
-`@arnilo/prism-memory-system/core` and `-system`, `@arnilo/prism-knowledge/wiki` and `@arnilo/prism-knowledge/rag` ship as `0.13.0-experimental.N` on the npm
-dist-tag `experimental`. They sit outside the compatibility promise: API, config and defaults may change in any release.
-A `^0.13.0` range never matches a prerelease, so opt in by tag and keep the host able to run without them:
+`@arnilo/prism-memory-system` is stable for its session tier (STM, session compaction, `recall`). Its `wm`, `rehearsal`,
+`scope`, `ltm` and `sleep` config are experimental, and `@arnilo/prism-knowledge/wiki` and `/rag` ship on the
+`experimental` dist-tag. Experimental parts may change in any release; a `^0.14.0` range never matches a prerelease, so
+opt in by tag:
 
 ```bash
-bun add @arnilo/prism-memory-system@experimental
+bun add @arnilo/prism-knowledge@experimental
 ```
 
-Say in your report that the host depends on an experimental package. Use `@arnilo/prism-extensions/compaction` unless
-the product needs more. Examples: `examples/long-term-memory.ts`, `examples/memory-and-wiki.ts`.
+Say in your report when the host depends on an experimental part. Examples: `examples/long-term-memory.ts`,
+`examples/memory-and-wiki.ts`.
 
 ## Approval and governance
 

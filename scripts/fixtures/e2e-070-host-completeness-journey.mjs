@@ -572,7 +572,7 @@ const scopeAgent = await createAgent({
     providerPackage("memory", [observerProvider]),
     memorySystem({
       stm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
-      wm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
+      wm: { model: { provider: "memory", model: "worker" }, policy: "model", triggerTokens: 1 },
       // WM runs only under a host-set scope (plan 218.3 Task 7); without one the session is STM-only.
       scope: { text: "Observational-memory journey: keep the retry budget small." },
       context: { compactAfterRun: { maxTokens: 999_999 } },

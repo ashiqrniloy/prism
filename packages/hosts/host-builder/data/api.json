@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "prismVersion": "0.13.1",
-  "contentHash": "8a059e82e5ddf6e02569e521ec79740916f6989ca2f80039dedceb07a7c4c019",
+  "contentHash": "8c7fc16c6e7f6e3196f4ed344a37e0621bcbffac62e01346e500892d5a7d2c06",
   "packages": [
     {
       "name": "@arnilo/prism",
@@ -3112,7 +3112,7 @@
           "subpath": "./compaction",
           "specifier": "@arnilo/prism-extensions/compaction",
           "exports": [
-            {"name":"MemoryCompactionConfig","kind":"interface","signature":"export interface MemoryCompactionConfig","members":["readonly model?: ModelRef","readonly profile?: MemoryCompactionProfile","readonly keepRecentTokens?: number","readonly maxSummaryTokens?: number","readonly summaryPrompt?: string","readonly reserveTokens?: number","readonly maxErrorBytes?: number","readonly maxToolResultChars?: number","readonly maxTextBlockChars?: number","readonly maxChunks?: number","readonly trigger?: CompactionTrigger"],"summary":"Validated `packageConfig` for `@arnilo/prism-extensions/compaction`."},
+            {"name":"MemoryCompactionConfig","kind":"interface","signature":"export interface MemoryCompactionConfig","members":["readonly model?: ModelRef","readonly profile?: MemoryCompactionProfile","readonly keepRecentTokens?: number","readonly maxSummaryTokens?: number","readonly summaryPrompt?: string","readonly reserveTokens?: number","readonly maxErrorBytes?: number","readonly maxToolResultChars?: number","readonly maxTextBlockChars?: number","readonly maxChunks?: number","readonly maxKeptShare?: number","readonly trigger?: CompactionTrigger"],"summary":"Validated `packageConfig` for `@arnilo/prism-extensions/compaction`."},
             {"name":"MemoryCompactionProfile","kind":"type","signature":"export type MemoryCompactionProfile = \"default\" | \"coding\"","summary":"`\"coding\"` tracks and reports read/modified files and focuses the summary on coding handoff."},
             {"name":"default","kind":"reexport","signature":"export default","docs":["node_modules/@arnilo/prism/docs/agent.md","node_modules/@arnilo/prism/docs/compatibility.md","node_modules/@arnilo/prism/docs/limits.md","node_modules/@arnilo/prism/docs/live-testing.md","node_modules/@arnilo/prism/docs/packages.md","node_modules/@arnilo/prism/docs/slots.md"],"examples":["examples/coding-compaction.ts","examples/compaction.ts","examples/session-memory.ts"]}
           ]

@@ -352,7 +352,7 @@
     - **Results:** compaction 61 pass; extensions 1,210 pass. The 1 failure is `field-policy` microbenchmark, which timed out at bun's 5 s on a loaded machine (load average 10); its measured overheads are all within bounds (≤ 91.1% < 110%). It is unrelated and rechecked in Task 11. `docs.test.ts` 69 pass; lint and format clean.
     - **Effect on Session-Bench:** the `memory-off-llm` arm sets `keepRecentTokens` explicitly, so only the new tail fit can change it. Plan 218.5 runs on the 0.14.0 product anyway.
 
-- [ ] Task 6: The reference host and the host-builder kit default to session memory
+- [x] Task 6: The reference host and the host-builder kit default to session memory
   - Acceptance Criteria:
     - Functional:
       - **`apps/prism-agent`:**
@@ -390,10 +390,21 @@
       - The "session-memory needs memory" refusal is removed.
       - Tests: LLM-specific tests opt into `compaction: "llm"`; the default test asserts session memory (enabled, no WM, slot owner); `reference_host_llm_compaction_is_opt_in` is added. prism-agent passes 74.
       - The README's `compaction` paragraph is updated.
-    - **Left:**
-      - README rows 24–25 and 42–51 and the experimental banner (`:118-122`);
-      - the kit's `SKILL.md:52`, `choosing.md`, `recipes.md` and `pitfalls.md:41-42`, then `bun scripts/host-builder-index.mjs` and the evals' criteria lock;
-      - the full gate.
+    - **README:** the worker rows, the code sample (now `memorySystem({ enabled: true })`, with no `slots` assignment), the one-system sentence and the Memory banner (the memory bundle is stable; LTM and knowledge are experimental).
+    - **Kit:**
+      - `SKILL.md` names session memory as the recommended system;
+      - `choosing.md` puts session memory first, with LLM compaction as the replacement, and rewrites "the experimental memory line" as "the experimental memory parts";
+      - `recipes.md` points to `examples/session-memory.ts` first;
+      - `pitfalls.md` covers the two-systems refusal and the installs-off trap.
+      - The index (`bun scripts/host-builder-index.mjs`) and the evals' `criteria.lock.json` (`--register`) are regenerated.
+    - **Gate fixes:**
+      - the kit check rejects code identifiers in references, so `recipes.md` says "with `enabled: true`";
+      - the packed host-completeness journey sets `wm.policy: "model"`, since it scripts model verdicts;
+      - the retired-sqlite sweep skips `scripts/memory-bench/session-bench/`, whose Mem0 arm installs a bun:sqlite shim under the npm name Mem0 requires (plan 218.3 Task 10; it became tracked at the consolidation);
+      - `prepare.ts`'s `!` is replaced by a guard;
+      - `budgets.json` gets dated reasons: kernel packed 1,452,303 → 1,452,777, unpacked 4,799,583 → 4,801,103, memory-system exports 1,152 → 1,153, extensions 1,538 → 1,540;
+      - package truth is regenerated.
+    - **Full gate:** `bun run test` 9/9 stages, lint and format clean.
 
 - [ ] Task 7: The memory bundle leaves the experimental line (per D1)
   - Acceptance Criteria:

@@ -107,10 +107,10 @@ Pages: `node_modules/@arnilo/prism/docs/drivers.md`, `node_modules/@arnilo/prism
 
 ## Compact long history
 
-Copy `examples/compaction.ts`. If any other package you list also provides `compaction` (observational memory, or a
-package the project already has), assign the owner in `slots` and check `agent.inspect().slots`
-(`references/choosing.md`).
-Page: `node_modules/@arnilo/prism-extensions/compaction/README.md`.
+Copy `examples/session-memory.ts` (session memory with `enabled: true`), or `examples/compaction.ts`
+for LLM compaction instead. List one compaction system: two fail `createAgent` (`references/choosing.md`). Check
+`agent.inspect().slots`.
+Pages: `node_modules/@arnilo/prism-memory-system/README.md`, `node_modules/@arnilo/prism-extensions/compaction/README.md`.
 
 ## Drive the host from a manifest
 

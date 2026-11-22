@@ -4,9 +4,9 @@
     "workspaces": "sha256:7ff669f3e529bc8d1739706331ec27923455a27c6703be5f4ed6661f8bbe69c1",
     "hidden": "sha256:f41d3bd44cdaa34b6f63bf885cce5544a2e9e20b88f60df460491215d396f171",
     "solutions": "sha256:b6aed396ab9ec832231bacc54d4525edd02383d8e378866234deface5fd8b7eb",
-    "skill": "sha256:01d007e0c52c250b252b9b754bc80b073fa360e1c4e9c102329adf661beb5b52",
-    "indexes": "sha256:43c3299cfb857151d689aff7fb62326bc8ba9689e493ef936654691f9db774f6"
+    "skill": "sha256:9d480cd867272efb3b841ccb53e320b1326321d85f51ae2e683d7607b7f65bd5",
+    "indexes": "sha256:81dbfd430fd66972ace616a0a9f84aeae22bf12cd91ca5f5c1cddff3e973e267"
   },
-  "registeredAt": "2026-11-22T10:14:56.532Z",
-  "gitHead": "623aeb19fc4cfdf6809901298952c6e584e224a2"
+  "registeredAt": "2026-11-22T13:23:15.892Z",
+  "gitHead": "218d19de6ccf03bcfe57dd83e2f91e6a8e2ba25f"
 }

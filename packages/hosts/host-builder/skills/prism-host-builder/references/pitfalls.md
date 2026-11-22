@@ -38,8 +38,10 @@ In the tables below the **Code** column holds only codes that exist in `errors.j
   a project unless asked; edit `package.json` and tell the person to install.
 - **Copying a 0.12 sample.** A `store: "memory"` field, a `loop:` option or a model-invoked workflow no longer exists.
   Read `references/upgrading.md` and copy from `data/examples/`.
-- **Two memory packages and no `slots`.** Listing `@arnilo/prism-extensions/compaction` with
-  `@arnilo/prism-memory-system` is valid only with a `compaction` owner assigned.
+- **Two compaction systems.** Listing `@arnilo/prism-extensions/compaction` with `@arnilo/prism-memory-system` fails
+  `createAgent`, whatever `slots` says. Keep one, or set the memory system's `context: { compaction: false }`.
+- **Session memory that never runs.** `@arnilo/prism-memory-system` installs off: set `enabled: true`, or the kernel's
+  deterministic compactor runs.
 - **A tool in `requiresTools` that is off.** The skill disappears from the catalog; it is not an error. Check
   `agent.inspect().skills` before you debug the prompt.
 - **A host answering nothing.** With no `host.ui`, every ask answers `unavailable`. Approval asks then suspend the run

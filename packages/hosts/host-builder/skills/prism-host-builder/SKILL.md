@@ -49,7 +49,7 @@ receives), never guess it.
   `definePackage` and list it.
 - No default model or provider exists. A host names one and lists the provider package.
 - Do not run `bun install` to repair a workspace without being asked; it can rewrite the lockfile.
-- Memory packages other than `memory-compaction` are experimental. Opt in on purpose (`references/choosing.md`).
+- Session memory (`@arnilo/prism-memory-system`, `enabled: true`) is the recommended compaction system. Its working memory, long-term memory and `@arnilo/prism-knowledge` are experimental: opt in on purpose (`references/choosing.md`).
 - Do not copy a code sample from memory, a blog or a 0.12 page. Copy from `data/examples/` or the installed docs.
 
 ## Mistakes the compiler cannot catch
