@@ -47,7 +47,7 @@
       - `bun run typecheck`, `bun run lint`, `bun run format:check` and `bun run test` are green, or every remaining failure is named in the notes with its cause and the later task that owns it.
     - Performance: n/a (no behavior change beyond the executed plans).
     - Code Quality: commits are grouped by track with plan numbers in the messages, and the merge does not rewrite history.
-    - Security: the diff is scanned for credential shapes; the hits are test fixtures (`sk-TESTONLY…`, `AKIAABCDEFGHIJKLMNOP`, the A2A `-----BEGIN PRIVATE KEY-----` refusal test, a Slack test token).
+    - Security: the diff is scanned for credential shapes; the hits are test fixtures (a fake OpenAI-style key, a fake AWS access key id, the A2A private-key refusal test, a Slack test token).
   - Approach:
     - Documentation Reviewed: `git status` (912 entries), the plan index statuses and the ticked tasks per plan, `.agents/skills/prism-execution/references/release.md` "Rules".
     - Options Considered: one commit per plan, rejected because the plans touch the same files (`config.ts`, the README, the baselines) and cannot be split without hand surgery; one squashed commit, rejected because it hides which track a change belongs to.

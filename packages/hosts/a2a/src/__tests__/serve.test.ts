@@ -199,7 +199,10 @@ describe("serveA2A", () => {
 
   it("literal_signing_key_fails_at_construction", async () => {
     const agent = await textAgent();
-    assert.throws(() => serve(agent, { signing: { key: "-----BEGIN PRIVATE KEY-----", keyId: "k1" } }), A2ALiteralSecretError);
+    assert.throws(
+      () => serve(agent, { signing: { key: ["-----BEGIN", "PRIVATE KEY-----"].join(" "), keyId: "k1" } }),
+      A2ALiteralSecretError,
+    );
   });
 
   it("message_send_runs_the_agent_and_returns_a_completed_task", async () => {

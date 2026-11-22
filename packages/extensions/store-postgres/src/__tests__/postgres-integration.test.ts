@@ -317,10 +317,18 @@ describeIntegration("createPostgresPersistence integration", () => {
     const forkStatements = statements() - forkStart;
     // One branch read plus one batch append; Task 1 measured 30,001 statements for a 5,000-entry fork.
     assert.ok(forkStatements <= 3, `fork sent ${forkStatements} statements`);
+    // fork() stamps each copy's `metadata.forkedFrom` with the source entry's id (plan 218.3 Task 4); the rest is identical.
+    const source = await persistence.list("batch");
+    const copies = await persistence.list(forked.id);
     assert.deepEqual(
-      (await persistence.list(forked.id)).map(({ id: _id, parentId: _parentId, sessionId: _sessionId, ...rest }) => rest),
-      (await persistence.list("batch")).map(({ id: _id, parentId: _parentId, sessionId: _sessionId, ...rest }) => rest),
+      copies.map((entry) => (entry.metadata as { forkedFrom?: readonly string[] } | undefined)?.forkedFrom?.at(-1)),
+      source.map((entry) => entry.id),
     );
+    const withoutLineage = ({ id: _id, parentId: _parentId, sessionId: _sessionId, metadata, ...rest }: (typeof source)[number]) => {
+      const { forkedFrom: _forkedFrom, ...kept } = (metadata ?? {}) as Record<string, unknown>;
+      return { ...rest, ...(Object.keys(kept).length ? { metadata: kept } : {}) };
+    };
+    assert.deepEqual(copies.map(withoutLineage), source.map(withoutLineage));
     assert.deepEqual(await forked.messages(), await session.messages());
     await persistence.close();
   });
