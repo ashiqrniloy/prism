@@ -2137,3 +2137,38 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md
 - Compromise: plan 218.1 closed at Task 4. The Compact-Bench and LOCA-Bench harnesses are kept but run in no gate.
 - Implications: their tests must stay green, or they must be removed by an owner decision.
+
+## WM verdict on the 0.14.0 product
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/240-Phase-11-Part-AK-Release-0.14.0-Session-Memory-STM-As-The-Default-Compaction.md
+- Compromise: 0.14.0 ships WM off, with its code kept, before plan 218.5's long-session benchmark.
+- Implications: STM's behaviour once its pool overflows (about task 47 at W = 32K) is unmeasured in the shipped default.
+
+## Knowledge npm latest dist-tag
+- Section: Further Actions
+- Priority: P3
+- Source: plans/240-Phase-11-Part-AK-Release-0.14.0-Session-Memory-STM-As-The-Default-Compaction.md
+- What: point `@arnilo/prism-knowledge`'s `latest` at a current version, or document that only `experimental` is meaningful.
+- Why: `latest` still names npm's first-publish `0.13.0-experimental.0`.
+
+## Zero-tool-call tasks under session memory
+- Section: Further Actions
+- Priority: P2
+- Source: plans/240-Phase-11-Part-AK-Release-0.14.0-Session-Memory-STM-As-The-Default-Compaction.md
+- What: count and explain tasks the agent ended without a tool call, from captured requests, in plan 218.5's runs.
+- Why: 6 in the 36-session replay and 3 in the release check, against 2 and 1 in the screen.
+
+## Load-tolerant timing tests
+- Section: Further Actions
+- Priority: P3
+- Source: plans/240-Phase-11-Part-AK-Release-0.14.0-Session-Memory-STM-As-The-Default-Compaction.md
+- What: measure `field-policy` and `injection-markers` with a median of runs, and give them explicit timeouts.
+- Why: both flaked under machine load and in CI during the 0.14.0 release.
+
+## Migration drill derives its inverse
+- Section: Further Actions
+- Priority: P4
+- Source: plans/240-Phase-11-Part-AK-Release-0.14.0-Session-Memory-STM-As-The-Default-Compaction.md
+- What: derive the rollback drill's inverse from the migration contract instead of hand-retargeting.
+- Why: it failed closed at 0.13.0 (010 → 011) and 0.14.0 (011 → 013).

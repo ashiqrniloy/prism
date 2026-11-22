@@ -702,7 +702,7 @@
     - **`bun scripts/sbom.mjs`** passes.
     - **Left to the owner (Task 12):** confirm the npm trusted publishers for all seven names (hosts had expired at 0.13.1), and give the word for the push and the tags.
 
-- [ ] Task 12: Bump, tag and publish 0.14.0 (owner-gated), then verify
+- [x] Task 12: Bump, tag and publish 0.14.0 (owner-gated), then verify
   - Acceptance Criteria:
     - Functional:
       - Owner confirmation before each outward step: the push to `origin`, each tag, any trusted-publisher renewal.
@@ -730,6 +730,24 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
+  - Notes (executed 2026-11-23, on the owner's word: "Checked. You can go ahead and publish"; then "prism-knowledge is setup. Publish"):
+    - **Before tagging:** the CHANGELOG dates were moved to the publish day (2026-11-23), and `main` was pushed.
+    - **`v0.14.0`, first run:** blocked before any publish by two failures.
+      - `supply-chain`'s source secret scan rejected two credential-shaped test fixtures (the guardrail detectors' fake AWS key and the A2A private-key header) and their quotes in this plan. The fixtures are now assembled at runtime, and the plan text is reworded.
+      - `integration-postgres`'s fork comparison did not allow for `fork()`'s `metadata.forkedFrom` stamp (plan 218.3 Task 4). It now checks the stamp and compares the rest.
+      - Both pass locally (scan: 0 findings; `test:postgres` on a throwaway pgvector pg16: 59 + 2 + 5).
+    - **Second run:** the migration rollback drill still targeted `011_evaluations` and failed closed. It now inverts `013_session_entry_seq`:
+      - Postgres: drop the index and the `seq` column and the history row, check the rows with raw SQL, re-apply (the backfill), and check the order and the store.
+      - SQLite: a recorded no-op.
+      - It passes locally.
+    - **Third run:** `verify` failed once on `worst_case_input_scans_inside_the_budget`: `injection-markers` took 59.5 ms against the 50 ms CI ceiling, after passing in the previous run. The re-run of the failed jobs passed.
+    - **Publish:** the `npm-publish` environment approval was given on the owner's word, and the run published `@arnilo/prism@0.14.0` and `@arnilo/prism-hosts@0.14.0` with provenance.
+    - **`@arnilo/prism-extensions@0.14.0` tag (one tag publishes every changed independent line, as at 0.13.1):** it published ai, extensions, tools and memory-system at 0.14.0. `@arnilo/prism-knowledge` failed `ENEEDAUTH` (no trusted publisher). The owner set it up, and the re-run of the failed job published `0.14.0-experimental.0` on `experimental`.
+    - **Record tags:** `@arnilo/prism-ai@0.14.0`, `-tools@0.14.0`, `-memory-system@0.14.0` and `-knowledge@0.14.0-experimental.0` were pushed so each line's next baseline is tagged. Their runs, which would only skip, were cancelled. `v0.14.0` was re-pointed twice before any publish (each run failed before `publish`).
+    - **After the publish:**
+      - `bun run post-publish:smoke`: **PASS (registry @0.14.0)**.
+      - `npm view`: kernel, hosts, ai, extensions, tools and memory-system on `latest` at 0.14.0; knowledge on `experimental` at `0.14.0-experimental.0` (`latest` there still names npm's first-publish `0.13.0-experimental.0`).
+
 ## Verification (whole plan)
 
 - `timeout 900 bun run build:core && timeout 900 bun run typecheck`
@@ -742,8 +760,18 @@
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- The long-session question is not answered for 0.14.0: WM ships off, with its code kept, before plan 218.5 measures STM against WM once STM's pool overflows. (P2)
+- `@arnilo/prism-knowledge`'s npm `latest` dist-tag still names `0.13.0-experimental.0`, set by npm on its first publish. `experimental` is current. (P4)
+- Tasks with zero tool calls were 3 in the release check against 1 in the screen on the same sessions. This is within noise, but not explained. (P3)
+
+Recorded in plans/backlog.md.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- P2: plan 218.5 Tasks 2–8 (the long-session benchmark and the WM verdict), now on the 0.14.0 product.
+- P2: count and explain zero-tool-call tasks from captured requests in plan 218.5's runs.
+- P3: the `field-policy` and `injection-markers` timing tests flake under load (bun's 5 s default, and a 50 ms ceiling in CI). Give them a load-tolerant measure, for example the median of several runs.
+- P3: point `@arnilo/prism-knowledge`'s npm `latest` at a current version, or document that only `experimental` is meaningful (owner action: `npm dist-tag`).
+- P4: the migration drill retargets by hand at each new migration; derive the inverse from the migration contract.
+
+Recorded in plans/backlog.md.
