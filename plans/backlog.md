@@ -2088,3 +2088,52 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
 - What: Carry the record's `metadata.outcome` into the guardrail timeline step.
 - Why: `createGuardrailFlaggedScorer` cannot tell a judge `onError: "allow"` record from a catch.
+
+## Session memory at long session lengths
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/218.3-Phase-11-Part-O19.3-Memory-System-Session-Memory-As-The-Only-Compaction-Recall-Of-Original-Content-WM-Look-Ahead-And-Session-Bench.md
+- Compromise: the Session-Bench screen ran 8–14-task dev sessions on one main model and one worker, and STM's pool never filled.
+- Implications: the verdict does not cover long sessions under eviction. Plan 218.5 measures that before WM is kept or dropped.
+
+## Mem0 arm on a local embedder
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/218.3-Phase-11-Part-O19.3-Memory-System-Session-Memory-As-The-Only-Compaction-Recall-Of-Original-Content-WM-Look-Ahead-And-Session-Bench.md
+- Compromise: Mem0 ran with BGE-M3 on the GPU instead of its default OpenAI embedder (a G10 deviation).
+- Implications: Mem0's numbers may differ on its default embedder.
+
+## LLM compaction recovers after an over-window turn
+- Section: Further Actions
+- Priority: P1
+- Source: plans/218.3-Phase-11-Part-O19.3-Memory-System-Session-Memory-As-The-Only-Compaction-Recall-Of-Original-Content-WM-Look-Ahead-And-Session-Bench.md
+- What: make `@arnilo/prism-extensions/compaction` compact on the next run after an over-window turn, instead of failing `context_overflow` on every later run. Carried by plan 240 Task 5.
+- Why: it is the advertised replacement for session memory in 0.14.0.
+
+## Window-relative `keepRecentTokens` for LLM compaction
+- Section: Further Actions
+- Priority: P2
+- Source: plans/218.3-Phase-11-Part-O19.3-Memory-System-Session-Memory-As-The-Only-Compaction-Recall-Of-Original-Content-WM-Look-Ahead-And-Session-Bench.md
+- What: replace the absolute 20,000-token kept-tail default (`packages/extensions/compaction/src/prepare.ts:35`) with a share of the input cap, as session memory uses.
+- Why: a model with a window under about 40K overflows after its first large tool output.
+
+## Stall limits for the other live benches
+- Section: Further Actions
+- Priority: P3
+- Source: plans/218.3-Phase-11-Part-O19.3-Memory-System-Session-Memory-As-The-Only-Compaction-Recall-Of-Original-Content-WM-Look-Ahead-And-Session-Bench.md
+- What: give `scripts/memory-bench/run.mjs` `benchmarkFetch` and `wire-proxy.mjs` a stall limit like Session-Bench's.
+- Why: other live benches can hang on a silent upstream stream.
+
+## STM worker cost measured before a cheaper batch design
+- Section: Further Actions
+- Priority: P3
+- Source: plans/218.3-Phase-11-Part-O19.3-Memory-System-Session-Memory-As-The-Only-Compaction-Recall-Of-Original-Content-WM-Look-Ahead-And-Session-Bench.md
+- What: decide a cheaper STM batch design from Session-Bench's per-worker split.
+- Why: the STM worker is the larger part of the memory arms' extra spend.
+
+## External memory suites kept as unscheduled harnesses
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md
+- Compromise: plan 218.1 closed at Task 4. The Compact-Bench and LOCA-Bench harnesses are kept but run in no gate.
+- Implications: their tests must stay green, or they must be removed by an owner decision.

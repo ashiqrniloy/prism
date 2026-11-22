@@ -7,6 +7,14 @@ those plans cite. It is not a package page: each package README documents the co
 **Amended 2026-11-13** after an evaluation of the design and of the STM and WM evidence (§14). The amendment adds
 invariants I16 and I17, narrows I9, and inserts plan 218.2.
 
+**Amended 2026-11-22** (owner; plans 218.3, 218.5, 240):
+- Session memory (STM) is the compaction system the host turns on, and its only compaction when on. Prism's LLM compaction is the host's other option, with one system per agent.
+- Compaction runs on two triggers and removes only what STM has recorded. Originals are recalled from the session store; the chunk store is gone.
+- STM keeps short user messages word for word.
+- WM ships **off by default** in 0.14.0 with its code kept. With `wm: {}` it runs only under a host scope, on the deterministic policy, and tracks and looks ahead for the remaining steps. Plan 218.5 decides whether it stays.
+- While WM is off, the diagram's WM box is skipped: Rehearsal (off by default, it needs `ltm`) judges STM directly, and "WM owns compaction" reads "session memory (STM) owns compaction".
+- Session-Bench is the session tiers' benchmark.
+
 **Supersedes:**
 
 - the "episodic memory" redesign of plan 210 Tasks 7.1–7.6 (2026-11-08). The name *episodic* now belongs to a

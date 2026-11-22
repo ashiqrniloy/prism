@@ -583,6 +583,7 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
       `bun test --timeout=0 scripts/memory-bench`: 552 pass, 2 fail, both recorded since Task 1: the feature ledger's 17 fabric-config problems, and the Task 5 fixture's `git archive` of the removed `packages/memory/fabric` path. The third, `om_before_runs_from_pinned_pre_216_revision`, now passes. Not run: the safety suite and the package suites, since no package code changed (whole-plan verification).
 
 - [ ] Task 6: Gate M-2 — live WM efficacy (paid), and plan end
+  - Notes: Dropped by plan 240 (2026-11-22): gate M-2's default rule was answered by plan 218.3 Task 12's Session-Bench screen (WM's policy stays deterministic; STM+WM − STM-only dependency −0.02 at 1.27× cost). 0.14.0 ships WM off by default with its code kept, and whether WM stays or is removed is decided by plan 218.5's long-session benchmark (plan 218.4, removal, is on hold).
   - Amended 2026-11-17 (owner, external benchmark instead of our own authored screen; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) Tasks 4–6):
     - **The default rule reads M6**, LOCA-Bench task accuracy (`WM` vs `STM-only`, plan 218.1 Task 5), wherever the 2026-11-13 rule below says "the `long-horizon` family". The rule's thresholds are unchanged; plan 218.1 Task 5 writes it into the gate record as `locaBenchScreen`.
     - **The `long-horizon` family is not run**; plan 218.1 Task 5 deletes it. Its `--estimate` and approval criteria below no longer apply.

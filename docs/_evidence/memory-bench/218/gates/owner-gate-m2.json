@@ -401,7 +401,7 @@
         "note": "stopped by the owner at 28 of 45 rows, 93.9M input tokens (about $6.10): Prism arms are not held to B (91 of 2,099 requests over 64K, largest 472K) while LOCA ReAct trims to B and ends when one tool output exceeds it; calibration is confounded. Owner: \"I would actually stop now. Go with option 2 of treating it as a product fix.\" Rows kept as diagnostics; the pilot re-runs after the product fix."
       }
     ],
-    "status": "stopped 2026-11-17 by the owner; awaiting the per-request window cap product fix"
+    "status": "stopped 2026-11-17 by the owner; plan 218.1 closed at Task 4 on 2026-11-22 (plan 218.3 Task 13): the harness is kept as a documented, unscheduled harness"
   },
   "sessionBench": {
     "pinnedBy": "plan 218.3 Task 10 (2026-11-18)",
