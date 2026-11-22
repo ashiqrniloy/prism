@@ -326,9 +326,13 @@ describe("guardrail packs package", () => {
       model: { provider: "mock", model: "m" },
       packages: [guardrailPacks({ packs: ["destructive-commands"] })],
     });
-    // @ts-expect-error `guardrailPacks` is package config now, not a `SessionOptions` field (plan 159 Task 5).
-    const session = await agent.session({ guardrailPacks: ["destructive-commands"] });
-    assert.equal("guardrailPackRefs" in session, false, "the session carries no pack refs");
+    // `guardrailPacks` is package config now, not a `SessionOptions` field (plan 159 Task 5); plan 229
+    // Task 3 rejects the unknown key instead of ignoring it.
+    await assert.rejects(
+      // @ts-expect-error not a `SessionOptions` field
+      agent.session({ guardrailPacks: ["destructive-commands"] }),
+      /SessionOptions has unknown key "guardrailPacks"/,
+    );
     await agent.dispose();
   });
 

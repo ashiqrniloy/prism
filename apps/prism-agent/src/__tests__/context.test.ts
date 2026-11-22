@@ -69,7 +69,7 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
   }
 });
 
-test("memory_opt_in_budgets_the_observational_memory", async () => {
+test("memory_opt_in_keeps_llm_compaction_and_turns_session_compaction_off", async () => {
   const root = mkdtempSync(join(tmpdir(), "prism-agent-om-budget-"));
   mkdirSync(join(root, "workspace"));
   try {
@@ -80,8 +80,40 @@ test("memory_opt_in_budgets_the_observational_memory", async () => {
       );
       try {
         const observational = packageConfig(agent, "@arnilo/prism-memory-system");
-        assert.deepEqual(observational.context, { recentMessages: 8, compactAt: { ratio: 0.6, maxTokens: 96_000 } });
+        assert.equal((observational.context as { compaction?: boolean }).compaction, false);
         assert.deepEqual(packageConfig(agent, "@arnilo/prism-extensions/compaction").trigger, { type: "threshold_tokens", tokens: 96_000 });
+        assert.ok(packageConfig(agent, "@arnilo/prism-extensions/context-engineering").fold, "folding stays with LLM compaction");
+        assert.equal(agent.inspect().slots.compaction, "@arnilo/prism-extensions/compaction");
+      } finally {
+        await agent.dispose();
+      }
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("session_memory_compaction_replaces_llm_compaction_and_fold", async () => {
+  const root = mkdtempSync(join(tmpdir(), "prism-agent-session-compaction-"));
+  mkdirSync(join(root, "workspace"));
+  try {
+    for (const create of [createCodingWorker, createResearchWorker]) {
+      const agent = await create(
+        { ...config(root, BUDGET_MODEL, BUDGET_MODEL), memory: "conversational", compaction: "session-memory" },
+        { packages: packages("opencode-go") },
+      );
+      try {
+        const observational = packageConfig(agent, "@arnilo/prism-memory-system");
+        assert.equal(observational.enabled, true, "session memory is on for every session");
+        assert.equal((observational.context as { compaction?: boolean }).compaction, true);
+        assert.deepEqual((observational.context as { compactAfterRun?: unknown }).compactAfterRun, { maxTokens: 96_000 });
+        assert.equal(agent.inspect().slots.compaction, "@arnilo/prism-memory-system");
+        assert.equal(
+          agent.inspect().packages.some((entry) => entry.name === "@arnilo/prism-extensions/compaction"),
+          false,
+          "LLM compaction is not listed",
+        );
+        assert.equal(packageConfig(agent, "@arnilo/prism-extensions/context-engineering").fold, undefined, "no folding");
       } finally {
         await agent.dispose();
       }

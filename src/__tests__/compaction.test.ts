@@ -10,11 +10,15 @@ import {
   createDefaultCompactor,
   createSessionEntry,
   definePackage,
+  type JsonObject,
   type JsonValue,
   providerDone,
   rebuildSessionContext,
+  type SessionEntry,
 } from "../index.js";
+import { filesSection, recentSection, summarizeDropped, taskSection, toolsSection } from "../compaction.js";
 import { mockProvider } from "../testing/index.js";
+import { assertCompactorConforms } from "../testing/compaction-conformance.js";
 
 const now = () => new Date("2026-01-01T00:00:00.000Z");
 
@@ -191,15 +195,161 @@ describe("compaction", () => {
   });
 });
 
+let seq = 0;
+function entry(message: SessionEntry["message"]): SessionEntry {
+  seq += 1;
+  return createSessionEntry({ id: `e${seq}`, sessionId: "s1", timestamp: now().toISOString(), kind: "message", message });
+}
+const user = (text: string) => entry({ role: "user", content: [{ type: "text", text }] });
+const assistant = (text: string) => entry({ role: "assistant", content: [{ type: "text", text }] });
+const call = (name: string, args: JsonObject, id = `c${seq + 1}`) =>
+  entry({ role: "assistant", content: [{ type: "tool_call", id, name, arguments: args }] });
+const result = (name: string, id: string) =>
+  entry({ role: "tool", content: [{ type: "tool_result", toolCallId: id, name, result: { ok: true } }] });
+
+describe("default compactor keeps what a continuing agent needs (plan 229 Task 5)", () => {
+  it("summary_keeps_first_user_request_and_latest_progress", async () => {
+    const entries = [
+      user("Port the parser to the new grammar"),
+      ...Array.from({ length: 40 }, (_, i) => assistant(`working step ${i} ${"x".repeat(400)}`)),
+      assistant("Parser ported; next: fix the three failing tests"),
+      user("recent ask"),
+      assistant("recent reply"),
+    ];
+    const out = await createDefaultCompactor({ keepRecentEntries: 2 }).compact({ sessionId: "s1", entries });
+
+    assert.ok(out.summary.startsWith("Task: Port the parser to the new grammar"), "the first user request leads");
+    assert.ok(out.summary.includes("Latest progress: Parser ported; next: fix the three failing tests"));
+    assert.ok(out.summary.length <= 8_000, "default cap is 8,000 characters");
+    assert.ok(out.summary.includes("characters cut]"), "older recent text is marked as cut");
+    assert.equal(out.summary.includes("recent reply"), false, "kept entries are not summarized");
+  });
+
+  it("summary_lists_files_and_tools", () => {
+    const entries = [
+      user("task"),
+      call("read", { path: "c.ts" }, "r1"),
+      result("read", "r1"),
+      call("edit", { path: "b.ts" }, "e1"),
+      call("write", { path: "a.ts" }, "w1"),
+      call("read", { path: "a.ts" }, "r2"),
+      call("shell", { command: "bun test" }, "s1"),
+      call("read", { path: "d.ts" }, "r3"),
+    ];
+    assert.deepEqual(filesSection(entries), ["Files modified: a.ts, b.ts", "Files read: c.ts, d.ts"]);
+    assert.equal(toolsSection(entries), "Tools used: read ×3, edit ×1, shell ×1, write ×1");
+    assert.equal(toolsSection([user("no tools")]), undefined);
+    assert.equal(taskSection(undefined), undefined);
+    assert.ok(summarizeDropped(entries).includes("Files modified: a.ts, b.ts"));
+  });
+
+  it("tail_is_chosen_by_token_budget", async () => {
+    // Each message is ~1,000 estimated tokens (4,000 characters).
+    const entries = Array.from({ length: 10 }, (_, i) => (i % 2 ? assistant : user)(`${i}`.padEnd(4_000, "y")));
+    const keep = async (context: Partial<CompactionContext>) =>
+      (
+        (await createDefaultCompactor().compact({ sessionId: "s1", entries, ...context })).entries?.[0]?.data as
+          | CompactionEntryData
+          | undefined
+      )?.keepEntryIds?.length;
+
+    assert.equal(await keep({}), 2, "no cap: the 2,000-token floor keeps the newest two messages");
+    assert.equal(await keep({ inputCapTokens: 20_000 }), 4, "20% of a 20,000-token cap keeps 4,000 tokens");
+    assert.equal(await keep({ inputCapTokens: 20_000, keepRecentEntries: 7 }), 7, "an explicit count still wins");
+    const fixed = await createDefaultCompactor({ keepRecentTokens: 3_000 }).compact({ sessionId: "s1", entries, inputCapTokens: 100_000 });
+    assert.equal(
+      (fixed.entries?.[0]?.data as CompactionEntryData | undefined)?.keepEntryIds?.length,
+      3,
+      "a fixed budget replaces the ratio",
+    );
+  });
+
+  it("tool_result_never_split_from_its_call", async () => {
+    const big = "z".repeat(9_000);
+    // The call alone is over the 2,000-token floor; its small result fits.
+    const callEntry = call("write", { path: "big.ts", content: big }, "rb");
+    const resultEntry = entry({
+      role: "tool",
+      content: [
+        { type: "tool_result", toolCallId: "rb", name: "read", result: { ok: true } },
+        { type: "text", text: "ok" },
+      ],
+    });
+    const entries = [user(big), assistant(big), callEntry, resultEntry];
+    const out = await createDefaultCompactor().compact({ sessionId: "s1", entries });
+    assert.deepEqual((out.entries?.[0]?.data as CompactionEntryData | undefined)?.keepEntryIds, [callEntry.id, resultEntry.id]);
+  });
+
+  it("summary_is_capped_and_marks_the_cut", async () => {
+    const entries = [user("t".repeat(3_000)), assistant("p".repeat(3_000)), user("recent")];
+    const out = await createDefaultCompactor({ keepRecentEntries: 1, maxSummaryChars: 1_000 }).compact({ sessionId: "s1", entries });
+    assert.equal(out.summary.length, 1_000);
+    assert.match(out.summary, /\n\[…\d+ characters cut\]$/);
+    assert.match(
+      out.summary,
+      /^Task: t+\n\[…\d+ characters cut\]$/,
+      "the task section is itself clipped to 1,500 characters before the cap",
+    );
+    assert.ok(summarizeDropped(entries.slice(0, 2)).includes(`t${"t".repeat(1_499)} […1500 characters cut]`));
+    const tiny = await createDefaultCompactor({ keepRecentEntries: 1, maxSummaryChars: 1 }).compact({ sessionId: "s1", entries });
+    assert.equal(tiny.summary.length, 1, "a one-character cap still holds");
+    const recent = recentSection([user("a".repeat(50)), user("b".repeat(50))], new Set(), 80);
+    assert.ok(recent?.startsWith("Recent:\n[…"), "the older cut text is marked before what was kept");
+  });
+
+  it("secret_in_dropped_text_is_redacted", async () => {
+    const secret = "sk-test-0123456789abcdef";
+    const entries = [user(`deploy with ${secret}`), assistant(`used ${secret} ok`), call("read", { path: "x.ts" }, "rx"), user("recent")];
+    const out = await createDefaultCompactor({ keepRecentEntries: 1 }).compact({
+      sessionId: "s1",
+      entries,
+      secrets: [secret],
+      maxSummaryChars: 30,
+    });
+    assert.equal(out.summary.includes(secret.slice(0, 10)), false, "redaction runs before the cap");
+    const full = await createDefaultCompactor({ keepRecentEntries: 1 }).compact({ sessionId: "s1", entries, secrets: [secret] });
+    assert.equal(full.summary.includes(secret), false);
+    assert.ok(full.summary.includes("[REDACTED]"));
+  });
+
+  it("compaction_conformance_passes_for_the_default_compactor", async () => {
+    await assertCompactorConforms(createDefaultCompactor(), { secrets: ["secret-value"] });
+    await assertCompactorConforms(createDefaultCompactor({ keepRecentTokens: 0 }), { secrets: ["secret-value"] });
+  });
+
+  it("compaction_options_max_summary_chars_reaches_the_compactor", async () => {
+    let seen: CompactionContext | undefined;
+    const agent: Agent = await createAgent({
+      model: { provider: "mock", model: "demo", limits: { contextWindow: 11_024, maxOutputTokens: 0 } },
+      packages: [mockProvider([[providerDone()]])],
+      compaction: { maxSummaryChars: 123 },
+      slots: {
+        compaction: {
+          compact: (context) => {
+            seen = context;
+            return { summary: "host" };
+          },
+        },
+      },
+    });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("old");
+    await session.compact();
+
+    assert.equal(seen?.maxSummaryChars, 123);
+    assert.equal(seen?.inputCapTokens, 10_000, "the cap is the window less the default 1,024-token reserve");
+  });
+});
+
 describe("retired compaction seams", () => {
   it("middleware_field_is_gone", () => {
     // Compaction has exactly two seams: the `compaction` slot and the `compaction.when` hook.
-    // `CompactionOptions` carries sizing knobs only, and there is no middleware registry to hang
+    // `CompactionOptions` carries sizing knobs and the fallback trigger, and there is no middleware registry to hang
     // a pre- or post-compaction callback off any more.
     const options: CompactionOptions = { keepRecentEntries: 4, thresholdEntries: 20, maxSummaryChars: 800 };
     // @ts-expect-error `strategy` was retired: the implementation is the `compaction` slot.
     void ({ ...options, strategy: createDefaultCompactor() } satisfies CompactionOptions);
-    // @ts-expect-error `trigger` was retired: the auto trigger is the `compaction.when` hook.
+    // `trigger` came back in plan 229 Task 4 as the kernel fallback's trigger, behind `compaction.when`.
     void ({ ...options, trigger: { type: "each_turn" } } satisfies CompactionOptions);
     // @ts-expect-error `middleware` was retired: the whole registry left with the last hook names.
     void ({ model: { provider: "mock", model: "demo" }, middleware: undefined } satisfies AgentConfig);

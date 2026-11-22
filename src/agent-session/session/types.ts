@@ -11,9 +11,11 @@ import type {
   RunResult,
   ModelProvider,
   ErrorInfo,
+  JsonValue,
   Message,
   ModelConfig,
   OwnershipScope,
+  NestedRunRef,
   PendingDecision,
   PromptVersionRef,
   ProviderRequest,
@@ -70,6 +72,8 @@ export type SessionHost = {
   activeLimits?: RunLimitTracker;
   /** Charges a package's model call to the active run; set with the run, cleared with its limits (plan 225 Task 5). */
   activePackageUsage?: import("../../package-call-seam.js").PackageCallSeam["recordUsage"];
+  /** `RunOptions.chargeTo`'s seam: its `recordUsage` is the ancestor's active run, read per usage (plan 232 Task 2). */
+  activeChargeTo?: import("../../package-call-seam.js").PackageCallSeam;
   /** Plan 091 T2: input tokens of the latest provider turn plus whether the
    *  provider reported them. Set by the usage seam; read by `contextMeter()`. */
   activeInputMeter?: { readonly tokens: number; readonly source: "reported" | "estimated" };
@@ -78,7 +82,11 @@ export type SessionHost = {
   activeLimitOutputBuffer: boolean;
   activeDurable?: ActiveDurableRun;
   activeLoop?: LoopStrategy;
+  /** The running loop's latest `run.checkpoint` value (plan 231 Task 4), seeded from the restored state. */
+  activeLoopCheckpoint?: { readonly value: JsonValue };
   activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
+  /** Nested suspensions of the current tool round (plan 232 Task 3), keyed by hosting call id. */
+  activeNestedRound?: Map<string, { entry: NestedRunRef; decisions: readonly PendingDecision[] }>;
   activeLoopTurn: number;
   readonly loadedSkills: LoadedSkillSet;
   /** Run-owned monotonic prompt tail; cleared before each new run. */
@@ -96,7 +104,7 @@ export type SessionHost = {
   resolveRunProvider(options: ResolvedRunOptions, skip?: boolean): void;
   emit(event: AgentEvent): void;
   rebuildHistory(): Promise<readonly string[]>;
-  resolveRunSkills(tools: readonly ToolDefinition[]): readonly Skill[];
+  resolveRunSkills(tools: readonly ToolDefinition[], narrow?: RunOptions["skills"]): readonly Skill[];
   runRedactor(base?: SecretRedactor): SecretRedactor | undefined;
   sessionContextFor(owner: string): import("../../session-context.js").SessionContext;
   /** Redacted, cap-checked steer queue push (plan 106 R1 uses it for stop-hook continuations). */
@@ -128,12 +136,20 @@ export type SessionHost = {
     readonly abortReason?: string;
     readonly runState?: import("../../contracts.js").AgentRunState;
     readonly interruption?: import("../../contracts.js").AgentRunInterruption;
+    readonly structuredOutput?: import("../../contracts.js").StructuredOutputOptions;
   }): RunResult;
   /** Session teardown: close every subscriber, run-scoped and `acrossRuns` alike. */
   closeSubscribers(): void;
   /** Run end (finish, suspend, or deny): close only the subscribers that do not opt into `acrossRuns`. */
   closeRunSubscribers(): void;
   snapshot(): Promise<SessionContextSnapshot>;
+  hasSessionLimits(): boolean;
+  sessionLimitsSnapshot(): import("../../contracts.js").SessionLimitsEntryData | undefined;
+  readonly resolvedSessionLimits: Readonly<import("../../contracts.js").ResolvedSessionLimits>;
+  readonly sessionLimitsTracker: import("../../run-limits.js").SessionLimitTracker;
+  checkSessionLimitsForStart(): void;
+  recordSessionRunCompleted(): void;
+  appendSessionLimits(runId?: string): Promise<void>;
 };
 
 export function asSessionHost(session: unknown): SessionHost {
@@ -158,6 +174,8 @@ export type RoundContext = {
   systemInstructions: string | undefined;
   providerOptions: import("../../contracts.js").ProviderRequestOptions | undefined;
   validate: RunOptions["validate"];
+  /** `AgentConfig.tools.validation`: the built-in argument check (default `"schema"`). */
+  validation: import("../../tools.js").ToolArgumentValidation;
   inputLayout: RunOptions["inputLayout"];
   loop: LoopStrategy;
   /** The loop's only handle; the default loop reaches the kernel through it. */

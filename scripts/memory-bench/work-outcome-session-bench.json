@@ -1,0 +1,147 @@
+{
+  "benchmark": "session-bench",
+  "version": 3,
+  "plan": "218.3",
+  "task": 9,
+  "seed": "prism-218.3-session-bench-v1",
+  "source": "scripts/memory-bench/session-bench (project-owned synthetic generator); sessions rebuild from the seed, ids and hashes only",
+  "draw": "SHA-256(\"prism-218.3-session-bench-v1:\" + id), ascending inside each family; strata [dev, heldout-a, heldout-b]",
+  "strata": {
+    "service-config": [
+      12,
+      4,
+      4
+    ],
+    "incident-desk": [
+      12,
+      4,
+      4
+    ],
+    "release-train": [
+      12,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; product tuning and plan 218.3's screen read dev only; heldout-a and heldout-b stay unread until the memory model's gate A",
+  "window": {
+    "tokens": 32000,
+    "sensitivityTokens": 64000,
+    "minSessionWindows": 4,
+    "minSpanWindows": 1.5,
+    "minTaskGap": 3
+  },
+  "templateHash": "844cd4d21df6a3aaff1b98d733040bf5fc51a18d94ccf0dfd6bf00ff98e4fbed",
+  "coreFiles": [
+    "env/workspace.mjs",
+    "templates/families.mjs",
+    "templates/build.mjs",
+    "checks.mjs",
+    "agents.mjs",
+    "generate.mjs",
+    "score.mjs"
+  ],
+  "sessionsHash": "58eb9e1660a98774f0f5685bb0c087916d151c52e49446b333066d0a88fd8413",
+  "scopesHash": "75dc1df308438b2600ecdd164eb5187835576ebf5692f2fec8df054253cfc364",
+  "counts": {
+    "sessions": 60,
+    "tasks": 653,
+    "checks": 1015,
+    "dependencies": {
+      "D2": 72,
+      "D4": 60,
+      "D3": 55,
+      "D1": 60
+    },
+    "minSessionTokens": 141227,
+    "minSpanTokens": 52349,
+    "maxTaskTokens": 25205
+  },
+  "idsHash": "1937178f6107526c04e10b2bf0357f20bd106874f25fe1caf1c0495ee0738bda",
+  "abilities": {
+    "dev": {
+      "service-config": [
+        "sb-sc-19",
+        "sb-sc-06",
+        "sb-sc-18",
+        "sb-sc-14",
+        "sb-sc-10",
+        "sb-sc-08",
+        "sb-sc-16",
+        "sb-sc-07",
+        "sb-sc-12",
+        "sb-sc-15",
+        "sb-sc-04",
+        "sb-sc-02"
+      ],
+      "incident-desk": [
+        "sb-id-12",
+        "sb-id-02",
+        "sb-id-05",
+        "sb-id-07",
+        "sb-id-14",
+        "sb-id-13",
+        "sb-id-15",
+        "sb-id-01",
+        "sb-id-19",
+        "sb-id-03",
+        "sb-id-08",
+        "sb-id-16"
+      ],
+      "release-train": [
+        "sb-rt-01",
+        "sb-rt-12",
+        "sb-rt-11",
+        "sb-rt-07",
+        "sb-rt-19",
+        "sb-rt-06",
+        "sb-rt-14",
+        "sb-rt-03",
+        "sb-rt-10",
+        "sb-rt-13",
+        "sb-rt-02",
+        "sb-rt-08"
+      ]
+    },
+    "heldout-a": {
+      "service-config": [
+        "sb-sc-09",
+        "sb-sc-00",
+        "sb-sc-13",
+        "sb-sc-17"
+      ],
+      "incident-desk": [
+        "sb-id-09",
+        "sb-id-18",
+        "sb-id-06",
+        "sb-id-10"
+      ],
+      "release-train": [
+        "sb-rt-15",
+        "sb-rt-05",
+        "sb-rt-17",
+        "sb-rt-16"
+      ]
+    },
+    "heldout-b": {
+      "service-config": [
+        "sb-sc-11",
+        "sb-sc-01",
+        "sb-sc-03",
+        "sb-sc-05"
+      ],
+      "incident-desk": [
+        "sb-id-04",
+        "sb-id-17",
+        "sb-id-00",
+        "sb-id-11"
+      ],
+      "release-train": [
+        "sb-rt-09",
+        "sb-rt-18",
+        "sb-rt-00",
+        "sb-rt-04"
+      ]
+    }
+  }
+}

@@ -3,6 +3,9 @@ import type { JsonValue } from "../../contracts.js";
 import { type JsonlItem, readJsonl } from "./jsonl.js";
 import { createStdinWriter } from "./stdin.js";
 
+const DEFAULT_MAX_CONCURRENT_REQUESTS = 1;
+const DEFAULT_MAX_LINE_BYTES = 1_048_576;
+
 export interface JsonRpcPeerOptions {
   readonly readable: Readable;
   readonly writable: Writable;
@@ -45,7 +48,7 @@ export function createJsonRpcPeer(options: JsonRpcPeerOptions): JsonRpcPeer {
   const pending = new Map<string | number, { resolve: (v: JsonValue) => void; reject: (e: Error) => void }>();
   let nextId = 1;
   let active = 0;
-  const concurrency = options.maxConcurrentRequests ?? 1;
+  const concurrency = options.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS;
   if (!Number.isInteger(concurrency) || concurrency < 1) throw new RangeError("maxConcurrentRequests must be a positive integer");
 
   const respond = (id: JsonValue, body: Obj): Promise<void> => writer.write({ jsonrpc: "2.0", id, ...body });
@@ -96,7 +99,7 @@ export function createJsonRpcPeer(options: JsonRpcPeerOptions): JsonRpcPeer {
 
   const closed = (async () => {
     try {
-      for await (const item of readJsonl(options.readable, { maxLineBytes: options.maxLineBytes ?? 1_048_576 })) {
+      for await (const item of readJsonl(options.readable, { maxLineBytes: options.maxLineBytes ?? DEFAULT_MAX_LINE_BYTES })) {
         if (item.kind !== "value" || !isObj(item.value)) {
           options.onInvalid?.(item);
           continue;

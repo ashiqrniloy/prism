@@ -15,6 +15,7 @@ export const CLIENT_METHODS = [
   "sessions.open",
   "sessions.list",
   "sessions.resume",
+  "sessions.continue",
   "sessions.messages",
   "run",
   "steer",
@@ -66,6 +67,8 @@ export interface RemoteMethods {
   "sessions.list": { params: { query?: JsonObject }; result: JsonValue };
   /** `decisions` accepts only `approvalId` (≤ 256), `outcome`, `reason` (≤ 2 KiB), `elicitation` (pending elicitation only), and `modifiedArguments` only when `ServeAgentOptions.allowModifiedArguments: true`. */
   "sessions.resume": { params: { sessionId: string; decisions: readonly Decision[] }; result: { runId: string } };
+  /** `Session.continue` over the wire: a run with no new input on a branch that owes a model turn. Same `options` subset as `run`. */
+  "sessions.continue": { params: { sessionId: string; options?: RemoteRunOptions }; result: { runId: string } };
   "sessions.messages": { params: { sessionId: string }; result: { messages: readonly JsonObject[] } };
   run: { params: { sessionId: string; input: JsonValue; options?: RemoteRunOptions }; result: { runId: string } };
   /** `options` accepts only `{ softInterrupt?: boolean }`. */

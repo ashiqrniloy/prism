@@ -47,8 +47,6 @@ export interface ContextBudgetReport {
   readonly truncated: boolean;
 }
 
-export const HARD_MAX_CONTEXT_BUDGET_TOKENS = 2_000_000;
-export const HARD_MAX_CONTEXT_BUDGET_BYTES = 32 * 1024 * 1024;
 export const DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS = 256;
 export const HARD_MAX_CONTEXT_BUDGET_OMISSIONS = 1_024;
 export const CONTEXT_BUDGET_ERROR_CODE = "context_budget_exceeded" as const;
@@ -72,14 +70,14 @@ export function resolveContextBudget(budget: ContextBudget): Required<Pick<Conte
   if (!hasTokens && !hasBytes) {
     throw new TypeError("contextBudget requires maxInputTokens and/or maxInputBytes");
   }
-  if (hasTokens) assertPositiveCap(budget.maxInputTokens!, "maxInputTokens", HARD_MAX_CONTEXT_BUDGET_TOKENS);
-  if (hasBytes) assertPositiveCap(budget.maxInputBytes!, "maxInputBytes", HARD_MAX_CONTEXT_BUDGET_BYTES);
+  if (hasTokens) assertPositiveCap(budget.maxInputTokens!, "maxInputTokens");
+  if (hasBytes) assertPositiveCap(budget.maxInputBytes!, "maxInputBytes");
   return { ...budget, reportOmissions: budget.reportOmissions === true };
 }
 
-function assertPositiveCap(value: number, name: string, hardMax: number): void {
-  if (!Number.isSafeInteger(value) || value < 1 || value > hardMax) {
-    throw new TypeError(`contextBudget.${name} must be a safe integer from 1 to ${hardMax}`);
+function assertPositiveCap(value: number, name: string): void {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new TypeError(`contextBudget.${name} must be a positive safe integer`);
   }
 }
 

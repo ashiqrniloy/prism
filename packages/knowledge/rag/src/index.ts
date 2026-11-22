@@ -69,8 +69,8 @@ export { createProviderEmbedder, type ProviderEmbedderOptions, probeEmbedderDime
 // The moved 0.12 library surface keeps its names, now behind one entry point.
 export * from "./exports.js";
 export {
+  DEFAULT_MAX_SOURCE_FILES,
   globToRegExp,
-  HARD_MAX_SOURCE_FILES,
   type IndexSourcesOptions,
   type IndexSourcesResult,
   indexSources,

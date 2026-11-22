@@ -332,6 +332,8 @@ describe("docs", () => {
     "events",
     "hooks",
     "host",
+    "limits",
+    "long-running",
     "loop",
     "manifest",
     "models",
@@ -1612,12 +1614,19 @@ describe("docs", () => {
         "examples/workflow-loop.ts",
         "examples/build-workflow.ts",
         "examples/remote-agent.ts",
+        "examples/a2a-server.ts",
+        "examples/a2a-client.ts",
+        "examples/channel-slack.ts",
+        "examples/channel-discord.ts",
         "examples/headless-host.ts",
         "examples/ag-ui-a2ui.ts",
         "examples/durable-loops-and-approvals.ts",
+        "examples/continue-after-failure.ts",
+        "examples/long-running-job.ts",
         "examples/custom-loop.ts",
         "examples/define-package.ts",
         "examples/session.ts",
+        "examples/parallel-tools.ts",
         "examples/approval.ts",
         "examples/host-hooks.ts",
         "examples/manifest.ts",
@@ -1631,7 +1640,9 @@ describe("docs", () => {
         "examples/coding-approval.ts",
         "examples/web-no-key.ts",
         "examples/mcp-trust.ts",
+        "examples/mcp-oauth.ts",
         "examples/guardrail-packs.ts",
+        "examples/guardrail-content.ts",
         "examples/eval-judges.ts",
         "examples/governance-deny.ts",
         "examples/external-agent.ts",
@@ -1640,6 +1651,7 @@ describe("docs", () => {
         "examples/delegate.ts",
         "examples/advisor.ts",
         "examples/validator.ts",
+        "examples/structured-output.ts",
       ];
       const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
       for (const file of demos) {
@@ -1650,6 +1662,29 @@ describe("docs", () => {
         const out = `${result.stdout}\n${result.stderr}`;
         assert.ok(out.trim().length > 0, `${file} produced no output`);
         assert.ok(!secret.test(out), `${file} emitted a real-looking secret`);
+        if (file === "examples/a2a-server.ts") {
+          assert.ok(out.includes('"firstState":"TASK_STATE_INPUT_REQUIRED"'));
+          assert.ok(out.includes('"resumedState":"TASK_STATE_COMPLETED"'));
+          assert.ok(out.includes('"streamedFinalState":"TASK_STATE_COMPLETED"'));
+        }
+        if (file === "examples/a2a-client.ts") {
+          assert.ok(out.includes('"firstStatus":"suspended"'));
+          assert.ok(out.includes('"resumedFinal":"run.completed"'));
+          assert.ok(out.includes('"executedBy":"external"'));
+          assert.ok(!out.includes("demo-peer-token"), "a2a-client demo emitted its token");
+        }
+        if (file === "examples/channel-slack.ts") {
+          assert.ok(out.includes('"unsignedStatus":401'));
+          assert.ok(out.includes('"replyInThread":true'));
+          assert.ok(out.includes('"toolRuns":1'));
+          assert.ok(!out.includes("demo-slack-bot-token") && !out.includes("demo-signing-secret"), "slack demo emitted a credential");
+        }
+        if (file === "examples/channel-discord.ts") {
+          assert.ok(out.includes('"identified":true'));
+          assert.ok(out.includes('"foreignClickRuns":0'));
+          assert.ok(out.includes('"toolRuns":1'));
+          assert.ok(!out.includes("demo-discord-bot-token"), "discord demo emitted a credential");
+        }
         if (file === "examples/headless-host.ts") {
           assert.ok(out.includes('"status":"resumed"'));
           assert.ok(out.includes('"scheduledFirings":1'));
@@ -1659,8 +1694,49 @@ describe("docs", () => {
         if (file === "examples/memory-and-wiki.ts") {
           const summary = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as { stored: Record<string, number> };
           // The mock observer records the same statement each pass: habituation (plan 217 Task 3) keeps one record, count 2.
-          assert.deepEqual(summary.stored, { observations: 1, memoryFacts: 3, wikiConcepts: 1 });
+          // The user's message is kept word for word beside it (plan 218.5 Task 1, fix 1).
+          assert.deepEqual(summary.stored, { observations: 2, memoryFacts: 3, wikiConcepts: 1 });
           assert.ok(out.includes("memory.forget: 4 claims -> 3"), "forgetting a cited memory note removed its wiki claim");
+        }
+        if (file === "examples/structured-output.ts") {
+          const structured = JSON.parse(out) as { status: string; requests: number; output: unknown; repairMessage: string };
+          assert.equal(structured.status, "completed");
+          assert.equal(structured.requests, 2, "one invalid reply, one repair");
+          assert.deepEqual(structured.output, { city: "Oslo", celsius: 18 });
+          assert.match(structured.repairMessage, /\/celsius/);
+        }
+        if (file === "examples/continue-after-failure.ts") {
+          assert.deepEqual(JSON.parse(out), {
+            firstRun: "failed",
+            continued: "completed",
+            text: "It is 18°C and clear in Oslo.",
+            toolRuns: 1,
+            userMessages: 1,
+            again: "nothing_to_continue",
+          });
+        }
+        if (file === "examples/long-running-job.ts") {
+          assert.deepEqual(JSON.parse(out), {
+            status: "done",
+            reason: "done",
+            runs: 30,
+            usage: { inputTokens: 2360, outputTokens: 590, totalTokens: 2950 },
+            lastText: "step 30 of 30: ALL DONE",
+            sessionRuns: 30,
+            remainingRuns: 10,
+            userMessages: 30,
+            toolRuns: 30,
+          });
+        }
+        if (file === "examples/parallel-tools.ts") {
+          const parallel = JSON.parse(out) as {
+            parallel: { maxActive: number };
+            serial: { maxActive: number };
+            exclusive: { maxActive: number };
+          };
+          assert.equal(parallel.parallel.maxActive, 4);
+          assert.equal(parallel.serial.maxActive, 1);
+          assert.equal(parallel.exclusive.maxActive, 1);
         }
         if (file === "examples/connected-slack-mcp.ts") {
           assert.deepEqual(JSON.parse(out), {
@@ -1711,6 +1787,24 @@ describe("docs", () => {
           assert.equal(packs.askRule, "pack:deploy-guard/prod-version-approval");
           assert.deepEqual(packs.askDispatched, ["deploy"], "the approved call dispatched once");
           assert.equal(packs.secretRule, "pack:secrets-hygiene/no-secret-material-in-arguments");
+        }
+        if (file === "examples/guardrail-content.ts") {
+          const content = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as {
+            redactRule: string;
+            addressStored: boolean;
+            flagRule: string;
+            flagAction: string;
+            denyAction: string;
+            deniedBodyStored: boolean;
+            statuses: string[];
+          };
+          assert.equal(content.redactRule, "pack:pii/email-output");
+          assert.equal(content.addressStored, false, "output redaction ran before the append");
+          assert.equal(content.flagRule, "pack:injection-markers/instruction-override");
+          assert.equal(content.flagAction, "allow", "a flag is not a denial");
+          assert.equal(content.denyAction, "block");
+          assert.equal(content.deniedBodyStored, false);
+          assert.deepEqual(content.statuses, ["completed", "completed", "completed"]);
         }
         if (file === "examples/governance-deny.ts") {
           const deny = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as {
@@ -1793,6 +1887,17 @@ describe("docs", () => {
           assert.equal(trust.untrustedReason, "untrusted", "the reason names untrusted");
           assert.equal(trust.docsState, "connected", "the trusted fixture server connected");
           assert.equal(trust.brokenState, "failed", "the unreachable trusted server failed");
+        }
+        if (file === "examples/mcp-oauth.ts") {
+          assert.deepEqual(JSON.parse(out), {
+            state: "connected",
+            toolCount: 1,
+            opened: 1,
+            storedAs: "bearer",
+            tokenLeaked: false,
+            afterLogout: "closed",
+            recordDeleted: true,
+          });
         }
         if (file === "examples/open-connector-sidecar.ts") {
           assert.deepEqual(JSON.parse(out), {

@@ -3,6 +3,7 @@
  *  calibrated probabilities, instead of generating text. The vocabulary and answer shapes
  *  mirror System One because every endpoint known today speaks it; the kernel names no vendor.
  *  Validation lives here, once, and runs before any adapter; callers chunk nothing. */
+import type { SessionContext } from "../session-context.js";
 import type { JsonObject, ModelCapabilities, ModelConfig, Usage } from "./content.js";
 
 /** Text, structured criteria, or message-part arrays accepted as question instructions. */
@@ -90,10 +91,21 @@ export interface DecisionsProvider {
   decide(request: DecisionRequest): Promise<DecisionResult>;
 }
 
+/** Options of one {@link DecisionsClient.decide} call (plan 237 Task 3). */
+export interface DecisionCallOptions {
+  /**
+   * The session this call belongs to, normally the one a hook, tool or command handler received. While that session
+   * has an active run, the call's usage is charged to the run's token and cost limits, usage and ledger (a
+   * `package_call` row), the same way a `models.client(...).generate` call is. Without it nothing is charged to a run.
+   * A decision call runs no `model.request` or `model.call` hook: those carry a `ProviderRequest` and a stream.
+   */
+  readonly session?: SessionContext;
+}
+
 /** A package-facing adapter with the model id already bound. */
 export interface DecisionsClient {
   readonly id: string;
-  decide(request: DecisionInput): Promise<DecisionResult>;
+  decide(request: DecisionInput, options?: DecisionCallOptions): Promise<DecisionResult>;
 }
 
 export type DecisionsErrorCode = "unsupported_model" | "invalid_request" | "state_too_large";
@@ -129,11 +141,19 @@ export function assertDecisionsSupported(model: ModelConfig): void {
   }
 }
 
+/** Byte bounds an adapter applies to a decisions request (plan 239 Task 4); a provider package sets them from its config. */
+export interface DecisionRequestBounds {
+  /** Serialized `state` bytes. Default {@link DEFAULT_MAX_DECISION_STATE_BYTES}. */
+  readonly maxStateBytes?: number;
+  /** Decoded bytes of all `images`. Default {@link DEFAULT_MAX_DECISION_IMAGE_BYTES}. */
+  readonly maxImageBytes?: number;
+}
+
 /** Enforces every kernel bound before an adapter builds a request. */
-export function assertDecisionRequest(request: DecisionRequest, model: ModelConfig): void {
+export function assertDecisionRequest(request: DecisionRequest, model: ModelConfig, bounds: DecisionRequestBounds = {}): void {
   if (typeof request.model !== "string" || !request.model.trim()) invalid("model must be a non-empty string");
-  validateState(request.state, DEFAULT_MAX_DECISION_STATE_BYTES);
-  validateImages(request.images, model);
+  validateState(request.state, bounds.maxStateBytes ?? DEFAULT_MAX_DECISION_STATE_BYTES);
+  validateImages(request.images, model, bounds.maxImageBytes ?? DEFAULT_MAX_DECISION_IMAGE_BYTES);
   validateQuestions(request.questions);
 }
 
@@ -155,7 +175,7 @@ function validateState(state: DecisionState | undefined, maxBytes: number): void
   }
 }
 
-function validateImages(images: readonly string[] | undefined, model: ModelConfig): void {
+function validateImages(images: readonly string[] | undefined, model: ModelConfig, maxBytes: number): void {
   if (images === undefined) return;
   if (!Array.isArray(images)) invalid("images must be an array of data: URLs");
   if (images.length === 0) return;
@@ -171,8 +191,8 @@ function validateImages(images: readonly string[] | undefined, model: ModelConfi
     const match = /^data:(image\/[a-z0-9][a-z0-9.+-]*);base64,([A-Za-z0-9+/]+={0,2})$/.exec(url);
     if (!match) invalid(`${field} must be a data:image/*;base64 URL`);
     total += decodedBase64Bytes(match[2]!);
-    if (total > DEFAULT_MAX_DECISION_IMAGE_BYTES) {
-      throw new DecisionsError("state_too_large", `images decoded to ${total} bytes; the limit is ${DEFAULT_MAX_DECISION_IMAGE_BYTES}`);
+    if (total > maxBytes) {
+      throw new DecisionsError("state_too_large", `images decoded to ${total} bytes; the limit is ${maxBytes}`);
     }
   }
 }

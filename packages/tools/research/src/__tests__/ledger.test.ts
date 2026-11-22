@@ -113,7 +113,7 @@ describe("research ledger", () => {
     });
     try {
       await run.session.run("note");
-      const notes = (await run.agent.inspect()).statusNotes.filter((note) => note.level === "info");
+      const notes = (await run.agent.inspect()).statusNotes.filter((note) => note.level === "info" && note.package !== "kernel");
       assert.equal(notes.length, 1);
       assert.match(notes[0]?.message ?? "", /missing_tool/);
     } finally {

@@ -11,7 +11,7 @@ export const OBSERVATIONS_REPEATED = "memory.session.observations.repeated";
 export const BOUNDARY_RECORDED = "memory.session.boundary.recorded";
 /**
  * A tombstone (plan 217 Task 4): an STM record whose surface was removed (by plan 218's WM). It leaves the context
- * block and the active set, and `recall` still finds it by id with its reason. Chunk referrers are the remover's call.
+ * block and the active set, and `recall` still finds it by id with its reason.
  */
 export const OBSERVATIONS_TOMBSTONED = "memory.session.observations.tombstoned";
 /** Longest tombstone reason the ledger accepts, in characters. */
@@ -20,6 +20,10 @@ export const FOLDED_MEMORY = "memory.session.folded";
 /** Context pin and compaction marker records the package appends beside the worker records. */
 export const CONTEXT_PINNED = "memory.session.context.pinned";
 export const SESSION_COMPACTED = "memory.session.compacted";
+/** The ledger record each scope set or clear appends: the scope's hash and size, never its text. */
+export const SCOPE_SET = "memory.session.scope.set";
+/** A finished scope step (plan 218.3 Task 7): ordinal, step-text hash, source and evidence ids only. */
+export const SCOPE_STEP = "memory.session.scope.step";
 
 /** The record-type prefix the observational package wrote before the 2026-11-08 rename. */
 export const RETIRED_LEDGER_TYPE_PREFIX = "om.";
@@ -92,23 +96,16 @@ export const memoryEventStatusValues: readonly MemoryEventStatus[] = ["passed", 
 export type MemoryDurable = "constraint" | "preference";
 export const memoryDurableValues: readonly MemoryDurable[] = ["constraint", "preference"];
 
-/** A reference to one verbatim chunk in the chunk store; the text itself never lives on the branch. */
-export interface MemoryChunkRef {
-  readonly id: string;
-  readonly sourceEntryId: string;
-  readonly sha256: string;
-  readonly bytes: number;
-}
-
 /**
  * One short-term memory event (the type keeps its 0.13 name until plans 218–219 replace the
- * consumers). `description` is one self-contained line a later model can judge usefulness from.
+ * consumers). `description` is one self-contained line a later model can judge usefulness from. Its evidence is the
+ * cited source entries themselves, read from the session store by `recall` (plan 218.3 Task 4): no copy is kept. A
+ * record written before that may carry `chunkRefs`; they are ignored.
  */
 export interface MemoryObservation {
   readonly id: MemoryId;
   readonly kind: MemoryEventKind;
   readonly description: string;
-  readonly chunkRefs?: readonly MemoryChunkRef[];
   /** Identical repeats collapsed into this event (habituation, Task 3). Absent means 1. */
   readonly count?: number;
   /** Time of the latest repeat. Absent means `observedAt ?? timestamp`. */
@@ -128,8 +125,21 @@ export interface MemoryObservation {
   readonly durable?: MemoryDurable;
   /** Ids of the `request` or `error` records this `outcome` closes (plan 218.2 Task 2). */
   readonly resolves?: readonly MemoryId[];
+  /**
+   * Present when the record was written without the STM model (plan 218.3 Task 12): `output_cap` (the model ended at
+   * its output cap twice before any call), `worker_error` (a compaction's coverage pass failed). Absent on model records.
+   */
+  readonly fallback?: MemoryObservationFallback;
+  /**
+   * A user message kept word for word (plan 218.5 Task 1, fix 1): written without the model, so a constraint or a changed value
+   * said in passing cannot be summarised away. `supersedes` never removes one.
+   */
+  readonly verbatim?: true;
   readonly tokenCount: number;
 }
+
+export const memoryObservationFallbackValues = ["output_cap", "worker_error"] as const;
+export type MemoryObservationFallback = (typeof memoryObservationFallbackValues)[number];
 
 export interface MemoryTaskState {
   readonly id: MemoryId;
@@ -138,6 +148,41 @@ export interface MemoryTaskState {
   readonly decisions?: readonly string[];
   readonly nextSteps?: readonly string[];
   readonly sourceEntryIds: readonly string[];
+}
+
+export interface ScopeSetData {
+  readonly type: typeof SCOPE_SET;
+  /** sha256 of the stored (redacted) text, 16 hex characters; absent on a clear. */
+  readonly hash?: string;
+  /** UTF-8 bytes of the stored text; 0 on a clear. */
+  readonly bytes: number;
+  readonly at: string;
+  /** Present on `memory:scope { clear: true }`. */
+  readonly cleared?: true;
+  /** Step ordinal → sha256(stepText).slice(0, 16) at set time, so a scope change resets only changed steps. */
+  readonly stepHashes?: Readonly<Record<string, string>>;
+  /** Step ordinals whose scope line was a checked box (`- [x]`) at set time (plan 218.3 Task 8: the block's step order reads it). */
+  readonly checkedSteps?: number[];
+}
+
+export interface ScopeStepData {
+  readonly type: typeof SCOPE_STEP;
+  readonly step: number;
+  readonly status: "finished";
+  /** sha256(stepText).slice(0, 16) when marked finished, so a scope change detects text edits without storing text. */
+  readonly stepHash?: string;
+  /** STM passed-outcome record ids cited by WM; absent for a host/user command. */
+  readonly evidenceIds?: readonly MemoryId[];
+  readonly source: "wm" | "command";
+  readonly at: string;
+}
+
+export interface ScopeStepState {
+  readonly step: number;
+  readonly stepHash?: string;
+  readonly evidenceIds?: readonly MemoryId[];
+  readonly source: "wm" | "command";
+  readonly at: string;
 }
 
 export interface TaskStateRecordedData {
@@ -150,8 +195,8 @@ export type MemoryWmItemKind = "event" | "summary" | "fact";
 export const memoryWmItemKindValues: readonly MemoryWmItemKind[] = ["event", "summary", "fact"];
 
 /**
- * One working-memory item. `citedIds` are the STM records (and, for a `fact`, the WM items) it rests on; `chunkRefs`
- * are the chunks it holds a `wm` referrer for, inherited from what it cites and what it supersedes. `text` is one line.
+ * One working-memory item. `citedIds` are the STM records (and, for a `fact`, the WM items) it rests on; `text`
+ * is one line.
  */
 export interface MemoryWmItem {
   readonly id: MemoryId;
@@ -159,7 +204,6 @@ export interface MemoryWmItem {
   readonly text: string;
   readonly relevance: MemoryRelevance;
   readonly citedIds: readonly MemoryId[];
-  readonly chunkRefs?: readonly MemoryChunkRef[];
   /** WM items this one replaced by name (`summarize` and `derive` only). */
   readonly supersedes?: readonly MemoryId[];
   /** Why a `keep` kept the record. */
@@ -205,6 +249,8 @@ export interface WmRecordedData {
   readonly budgetUnmet?: WmBudgetUnmet;
   /** Present on the first WM pass after a scope change (plan 218 Task 4): what it re-judged. */
   readonly rejudge?: WmRejudge;
+  /** Present when the pass was offered earlier records for coming scope steps (plan 218.3 Task 8). */
+  readonly lookAhead?: WmLookAhead;
   /**
    * `protection_lapsed` (plan 218.2 Task 3): batch records whose link protection (a request or error no outcome named in
    * `resolves`) ended after `wm.protectRequestPasses` passes, so this pass could discard them.
@@ -214,14 +260,23 @@ export interface WmRecordedData {
 
 /**
  * Re-judgment after a scope change (plan 218 Task 4). `scopeHash` is the scope it answered (absent after a clear),
- * `offered` the discarded records it was sent, `kept` the ids it kept back into WM, and `chunkDropped` the discarded
- * records it could not offer because every chunk they cited was deleted.
+ * `offered` the discarded records it was sent and `kept` the ids it kept back into WM. A record
+ * written before plan 218.3 Task 4 may carry `chunkDropped`; it is ignored.
  */
 export interface WmRejudge {
   readonly scopeHash?: string;
   readonly offered: number;
   readonly kept: readonly string[];
-  readonly chunkDropped: readonly string[];
+}
+
+/**
+ * WM's look-ahead on one pass (plan 218.3 Task 8): `offered` earlier records matching remaining scope steps, their
+ * `tokens`, and the ids it `kept` back into WM (each as an event whose `neededLater` names the matched step).
+ */
+export interface WmLookAhead {
+  readonly offered: number;
+  readonly tokens: number;
+  readonly kept: readonly string[];
 }
 
 export interface WmCompression {
@@ -318,7 +373,6 @@ export function isMemoryObservation(value: unknown): value is MemoryObservation 
     typeof value.description === "string" &&
     value.description.length > 0 &&
     !value.description.includes("\n") &&
-    (value.chunkRefs === undefined || (Array.isArray(value.chunkRefs) && value.chunkRefs.every(isChunkRef))) &&
     (value.count === undefined || (Number.isInteger(value.count) && (value.count as number) >= 1)) &&
     (value.lastAt === undefined || isIsoTime(value.lastAt)) &&
     typeof value.timestamp === "string" &&
@@ -338,7 +392,9 @@ function isEventSignals(value: Record<string, unknown>): boolean {
     (value.status === undefined || (memoryEventStatusValues as readonly unknown[]).includes(value.status)) &&
     (value.corrects === undefined || value.corrects === true) &&
     (value.durable === undefined || (memoryDurableValues as readonly unknown[]).includes(value.durable)) &&
-    (value.resolves === undefined || (isStringArray(value.resolves) && value.resolves.every(isMemoryId)))
+    (value.resolves === undefined || (isStringArray(value.resolves) && value.resolves.every(isMemoryId))) &&
+    (value.fallback === undefined || (memoryObservationFallbackValues as readonly unknown[]).includes(value.fallback)) &&
+    (value.verbatim === undefined || value.verbatim === true)
   );
 }
 
@@ -355,7 +411,6 @@ export function isMemoryWmItem(value: unknown): value is MemoryWmItem {
     isStringArray(value.citedIds) &&
     value.citedIds.length > 0 &&
     value.citedIds.every(isMemoryId) &&
-    (value.chunkRefs === undefined || (Array.isArray(value.chunkRefs) && value.chunkRefs.every(isChunkRef))) &&
     (value.supersedes === undefined || (isStringArray(value.supersedes) && value.supersedes.every(isMemoryId))) &&
     (value.reason === undefined || typeof value.reason === "string") &&
     (value.neededLater === undefined || (typeof value.neededLater === "string" && value.neededLater.length > 0)) &&
@@ -386,6 +441,7 @@ export function isWmRecordedData(value: unknown): value is WmRecordedData {
     (value.compression === undefined || isTokenRecord(value.compression, ["processedTokens", "itemTokens", "targetTokens"])) &&
     (value.budgetUnmet === undefined || isTokenRecord(value.budgetUnmet, ["protectedTokens", "targetTokens"])) &&
     (value.rejudge === undefined || isWmRejudge(value.rejudge)) &&
+    (value.lookAhead === undefined || isWmLookAhead(value.lookAhead)) &&
     (value.protectionLapsed === undefined || (isStringArray(value.protectionLapsed) && value.protectionLapsed.every(isMemoryId)))
   );
 }
@@ -397,10 +453,12 @@ function isWmRejudge(value: unknown): value is WmRejudge {
     Number.isSafeInteger(value.offered) &&
     (value.offered as number) >= 0 &&
     isStringArray(value.kept) &&
-    value.kept.every(isMemoryId) &&
-    isStringArray(value.chunkDropped) &&
-    value.chunkDropped.every(isMemoryId)
+    value.kept.every(isMemoryId)
   );
+}
+
+function isWmLookAhead(value: unknown): value is WmLookAhead {
+  return isRecord(value) && isTokenRecord(value, ["offered", "tokens"]) && isStringArray(value.kept) && value.kept.every(isMemoryId);
 }
 
 function isTokenRecord(value: unknown, keys: readonly string[]): boolean {
@@ -480,17 +538,6 @@ function isEventKind(value: unknown): value is MemoryEventKind {
   return typeof value === "string" && (memoryEventKindValues as readonly string[]).includes(value);
 }
 
-function isChunkRef(value: unknown): value is MemoryChunkRef {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.sourceEntryId === "string" &&
-    typeof value.sha256 === "string" &&
-    /^[a-f0-9]{64}$/.test(value.sha256) &&
-    isNonNegativeNumber(value.bytes)
-  );
-}
-
 function isRelevance(value: unknown): value is MemoryRelevance {
   return typeof value === "string" && (relevanceValues as readonly string[]).includes(value);
 }
@@ -516,7 +563,7 @@ export function isIsoDate(value: unknown): value is string {
   );
 }
 
-function isIsoTime(value: unknown): value is string {
+export function isIsoTime(value: unknown): value is string {
   return (
     typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && isIsoDate(value.slice(0, 10)) && Number.isFinite(Date.parse(value))
   );
@@ -532,5 +579,32 @@ export function isTaskStateRecordedData(value: unknown): value is TaskStateRecor
     isStringArray(state.sourceEntryIds) &&
     state.sourceEntryIds.length > 0 &&
     [state.openQuestions, state.decisions, state.nextSteps].every((items) => items === undefined || isStringArray(items))
+  );
+}
+
+export function isScopeSetData(value: unknown): value is ScopeSetData {
+  if (!isRecord(value) || value.type !== SCOPE_SET) return false;
+  return (
+    (value.hash === undefined || typeof value.hash === "string") &&
+    isNonNegativeNumber(value.bytes) &&
+    isIsoTime(value.at) &&
+    (value.cleared === undefined || value.cleared === true) &&
+    (value.stepHashes === undefined ||
+      (isRecord(value.stepHashes) && Object.values(value.stepHashes).every((entry) => typeof entry === "string"))) &&
+    (value.checkedSteps === undefined ||
+      (Array.isArray(value.checkedSteps) && value.checkedSteps.every((step) => Number.isSafeInteger(step) && (step as number) >= 1)))
+  );
+}
+
+export function isScopeStepData(value: unknown): value is ScopeStepData {
+  if (!isRecord(value) || value.type !== SCOPE_STEP) return false;
+  return (
+    Number.isSafeInteger(value.step) &&
+    (value.step as number) >= 1 &&
+    value.status === "finished" &&
+    (value.stepHash === undefined || typeof value.stepHash === "string") &&
+    (value.evidenceIds === undefined || (isStringArray(value.evidenceIds) && value.evidenceIds.every(isMemoryId))) &&
+    (value.source === "wm" || value.source === "command") &&
+    isIsoTime(value.at)
   );
 }

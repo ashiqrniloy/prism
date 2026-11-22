@@ -1,7 +1,8 @@
 import { assertCompactionTrigger, type CompactionTrigger, type JsonSchema, type ModelRef } from "@arnilo/prism";
 
-import { DEFAULT_MAX_SUMMARY_TOKENS, HARD_MAX_SUMMARY_TOKENS, HARD_RESERVE_TOKENS } from "./limits.js";
+import { DEFAULT_MAX_CHUNKS, DEFAULT_MAX_SUMMARY_ERROR_BYTES, DEFAULT_MAX_SUMMARY_TOKENS, DEFAULT_RESERVE_TOKENS } from "./limits.js";
 import { DEFAULT_KEEP_RECENT_TOKENS } from "./prepare.js";
+import { DEFAULT_MAX_TEXT_BLOCK_CHARS, DEFAULT_MAX_TOOL_RESULT_CHARS } from "./serialize.js";
 
 /** `"coding"` tracks and reports read/modified files and focuses the summary on coding handoff. */
 export type MemoryCompactionProfile = "default" | "coding";
@@ -26,6 +27,19 @@ export interface MemoryCompactionConfig {
   readonly maxSummaryTokens?: number;
   /** Replaces the summarization system prompt. The turn-prefix prompt stays the package's own. */
   readonly summaryPrompt?: string;
+  /** Tokens kept free for the summary call's own prompt and output. Default 16,384. */
+  readonly reserveTokens?: number;
+  /** Bytes of a failed summary call's error kept in the fallback note. Default 1,024. */
+  readonly maxErrorBytes?: number;
+  /** Characters of one tool result in the serialized history. Default 2,000. */
+  readonly maxToolResultChars?: number;
+  /** Characters of one text, thinking or tool-call block in the serialized history. Default 8,000; `0` disables it. */
+  readonly maxTextBlockChars?: number;
+  /**
+   * Summary calls per compaction when the history does not fit the summary model's input cap: a rolling
+   * summary over bounded chunks. Default {@link DEFAULT_MAX_CHUNKS}.
+   */
+  readonly maxChunks?: number;
   /**
    * Auto-compaction gate, the JSON-safe kinds of `CompactionTrigger` (`custom` is a function, so it
    * is not a config value: a host that needs one registers its own handler). Omitted: no handler is
@@ -58,14 +72,12 @@ export const memoryCompactionConfigSchema: JsonSchema = {
     keepRecentTokens: {
       type: "integer",
       minimum: 0,
-      maximum: HARD_RESERVE_TOKENS,
       default: DEFAULT_KEEP_RECENT_TOKENS,
       description: "Tokens of recent history the compaction cut keeps verbatim.",
     },
     maxSummaryTokens: {
       type: "integer",
       minimum: 1,
-      maximum: HARD_MAX_SUMMARY_TOKENS,
       default: DEFAULT_MAX_SUMMARY_TOKENS,
       description: "Summary cap in tokens, and the per-call provider output budget.",
     },
@@ -73,6 +85,31 @@ export const memoryCompactionConfigSchema: JsonSchema = {
       type: "string",
       minLength: 1,
       description: "Replaces the summarization system prompt.",
+    },
+    reserveTokens: { type: "integer", minimum: 1, default: DEFAULT_RESERVE_TOKENS, description: "Tokens kept free for the summary call." },
+    maxErrorBytes: {
+      type: "integer",
+      minimum: 1,
+      default: DEFAULT_MAX_SUMMARY_ERROR_BYTES,
+      description: "Bytes of a failed summary error kept.",
+    },
+    maxToolResultChars: {
+      type: "integer",
+      minimum: 0,
+      default: DEFAULT_MAX_TOOL_RESULT_CHARS,
+      description: "Characters of one tool result in the history.",
+    },
+    maxTextBlockChars: {
+      type: "integer",
+      minimum: 0,
+      default: DEFAULT_MAX_TEXT_BLOCK_CHARS,
+      description: "Characters of one text block in the history; 0 disables.",
+    },
+    maxChunks: {
+      type: "integer",
+      minimum: 1,
+      default: DEFAULT_MAX_CHUNKS,
+      description: "Summary calls per compaction when the history does not fit the summary model's input cap.",
     },
     trigger: {
       description: 'Auto-compaction gate, e.g. { "type": "input_ratio", "ratio": 0.8 }. Omitted: the kernel threshold applies.',
@@ -115,6 +152,11 @@ export interface ResolvedMemoryCompactionConfig {
   readonly keepRecentTokens: number;
   readonly maxSummaryTokens: number;
   readonly summaryPrompt?: string;
+  readonly maxChunks: number;
+  readonly reserveTokens?: number;
+  readonly maxErrorBytes?: number;
+  readonly maxToolResultChars?: number;
+  readonly maxTextBlockChars?: number;
   readonly trigger?: CompactionTrigger;
 }
 
@@ -125,6 +167,11 @@ export function resolveMemoryCompactionConfig(config: MemoryCompactionConfig = {
     keepRecentTokens: config.keepRecentTokens ?? DEFAULT_KEEP_RECENT_TOKENS,
     maxSummaryTokens: config.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
     ...(config.summaryPrompt === undefined ? {} : { summaryPrompt: config.summaryPrompt }),
+    maxChunks: config.maxChunks ?? DEFAULT_MAX_CHUNKS,
+    ...(config.reserveTokens === undefined ? {} : { reserveTokens: config.reserveTokens }),
+    ...(config.maxErrorBytes === undefined ? {} : { maxErrorBytes: config.maxErrorBytes }),
+    ...(config.maxToolResultChars === undefined ? {} : { maxToolResultChars: config.maxToolResultChars }),
+    ...(config.maxTextBlockChars === undefined ? {} : { maxTextBlockChars: config.maxTextBlockChars }),
     // Validated at config time: an unknown kind or a bad threshold fails the load, not the run.
     ...(config.trigger === undefined ? {} : { trigger: assertCompactionTrigger(config.trigger) }),
   };

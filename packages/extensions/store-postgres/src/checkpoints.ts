@@ -12,6 +12,9 @@ import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } fro
 import type { Pool } from "pg";
 import { qualifyTable } from "./identifiers.js";
 
+const DEFAULT_QUERY_LIMIT = 100;
+const MAX_QUERY_LIMIT = 500;
+
 interface Row {
   namespace: string;
   key: string;
@@ -27,7 +30,7 @@ interface Row {
   updated_at: string | Date;
 }
 
-export function createPostgresCheckpointStore(pool: Pool, schema = "prism"): CheckpointStore {
+export function createPostgresCheckpointStore(pool: Pool, schema = "prism", maxQueryLimit: number = MAX_QUERY_LIMIT): CheckpointStore {
   const table = qualifyTable(schema, "prism_checkpoints");
   let ready: Promise<void> | undefined;
   const ensureReady = () =>
@@ -135,7 +138,7 @@ RETURNING *`,
         clauses.push(`category = ANY($${params.length}::text[])`);
       }
       const offset = decodeCheckpointCursor(query.cursor);
-      const limit = Math.min(Math.max(1, query.limit ?? 100), 500);
+      const limit = Math.min(Math.max(1, query.limit ?? DEFAULT_QUERY_LIMIT), maxQueryLimit);
       params.push(limit + 1, offset);
       const result = await pool.query(
         `SELECT * FROM ${table} ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""} ORDER BY updated_at DESC, key ASC LIMIT $${params.length - 1} OFFSET $${params.length}`,

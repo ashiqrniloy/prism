@@ -37,7 +37,7 @@ export interface AdvisorConfig {
   /** Replaces the default advisor instructions. */
   readonly instructions?: string;
   readonly context?: AdvisorContextConfig;
-  /** Cap on the advice text. Default 4,000, capped at 16,000. */
+  /** Cap on the advice text. Default 4,000. */
   readonly adviceMaxChars?: number;
   /** Register the `advise` tool. Default `true`. */
   readonly tool?: boolean;
@@ -47,7 +47,7 @@ export interface AdvisorConfig {
     /** Consult at the natural end of each run; a revise continues the run with a steer. */
     readonly beforeFinish?: boolean;
   };
-  /** Model calls one run may spend on advisor consults. Default 3, capped at 20. */
+  /** Model calls one run may spend on advisor consults. Default 3. */
   readonly maxConsultsPerRun?: number;
   readonly validate?: AdvisorValidateConfig;
 }
@@ -57,52 +57,31 @@ export const DEFAULT_ADVISOR_INSTRUCTIONS =
 
 export const DEFAULT_CONTEXT_LAST_TURNS = 6;
 export const DEFAULT_CONTEXT_MAX_CHARS = 24_000;
-export const HARD_CONTEXT_MAX_CHARS = 120_000;
-export const HARD_CONTEXT_LAST_TURNS = 50;
 export const DEFAULT_ADVICE_MAX_CHARS = 4_000;
-export const HARD_ADVICE_MAX_CHARS = 16_000;
 export const DEFAULT_MAX_CONSULTS_PER_RUN = 3;
-export const HARD_MAX_CONSULTS_PER_RUN = 20;
 export const DEFAULT_MAX_ROUNDS = 2;
-export const HARD_MAX_ROUNDS = 10;
 
 export interface ResolvedContext {
   readonly lastTurns: number;
   readonly maxChars: number;
-  /** True when a requested value was above its ceiling and was lowered. */
-  readonly clamped: boolean;
 }
 
+/** The host's context window, or the defaults. The host's value is the cap (plan 239 Task 5). */
 export function resolveContext(config: AdvisorContextConfig | undefined): ResolvedContext {
-  const requestedTurns = config?.lastTurns ?? DEFAULT_CONTEXT_LAST_TURNS;
-  const requestedChars = config?.maxChars ?? DEFAULT_CONTEXT_MAX_CHARS;
-  const lastTurns = Math.min(requestedTurns, HARD_CONTEXT_LAST_TURNS);
-  const maxChars = Math.min(requestedChars, HARD_CONTEXT_MAX_CHARS);
-  return { lastTurns, maxChars, clamped: lastTurns !== requestedTurns || maxChars !== requestedChars };
+  return { lastTurns: config?.lastTurns ?? DEFAULT_CONTEXT_LAST_TURNS, maxChars: config?.maxChars ?? DEFAULT_CONTEXT_MAX_CHARS };
 }
 
-const clamp = (value: number | undefined, fallback: number, ceiling: number): number => Math.min(value ?? fallback, ceiling);
-
-/** Every knockout is a ceiling, so a config can only narrow. The caller reports one note for the lot. */
+/** The host's knock-out limits, or the defaults. The config is host-authored, so its value is the cap. */
 export function resolveLimits(config: AdvisorConfig): {
   readonly adviceMaxChars: number;
   readonly maxConsultsPerRun: number;
   readonly maxRounds: number;
-  readonly clamped: readonly string[];
 } {
-  const adviceMaxChars = clamp(config.adviceMaxChars, DEFAULT_ADVICE_MAX_CHARS, HARD_ADVICE_MAX_CHARS);
-  const maxConsultsPerRun = clamp(config.maxConsultsPerRun, DEFAULT_MAX_CONSULTS_PER_RUN, HARD_MAX_CONSULTS_PER_RUN);
-  const maxRounds = clamp(config.validate?.maxRounds, DEFAULT_MAX_ROUNDS, HARD_MAX_ROUNDS);
-  const clamped: string[] = [];
-  if (adviceMaxChars !== (config.adviceMaxChars ?? DEFAULT_ADVICE_MAX_CHARS))
-    clamped.push(`adviceMaxChars ${config.adviceMaxChars} → ${adviceMaxChars}`);
-  if (maxConsultsPerRun !== (config.maxConsultsPerRun ?? DEFAULT_MAX_CONSULTS_PER_RUN)) {
-    clamped.push(`maxConsultsPerRun ${config.maxConsultsPerRun} → ${maxConsultsPerRun}`);
-  }
-  if (config.validate !== undefined && maxRounds !== (config.validate.maxRounds ?? DEFAULT_MAX_ROUNDS)) {
-    clamped.push(`validate.maxRounds ${config.validate.maxRounds} → ${maxRounds}`);
-  }
-  return { adviceMaxChars, maxConsultsPerRun, maxRounds, clamped };
+  return {
+    adviceMaxChars: config.adviceMaxChars ?? DEFAULT_ADVICE_MAX_CHARS,
+    maxConsultsPerRun: config.maxConsultsPerRun ?? DEFAULT_MAX_CONSULTS_PER_RUN,
+    maxRounds: config.validate?.maxRounds ?? DEFAULT_MAX_ROUNDS,
+  };
 }
 
 const modelRef = {

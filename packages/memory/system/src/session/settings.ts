@@ -1,6 +1,10 @@
 import type { ModelConfig, ProviderRequestOptions, SettingsProvider } from "@arnilo/prism";
-import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-system/core";
-import { DEFAULT_COMPACT_AT_RATIO, type ResolvedCompactAt } from "./config.js";
+import {
+  DEFAULT_COMPACT_AFTER_RUN_TOKENS,
+  DEFAULT_COMPACT_AT_RATIO,
+  type ResolvedCompactAfterRun,
+  type ResolvedCompactAt,
+} from "./config.js";
 import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
 
 export interface ObservationalMemoryObservationSettings {
@@ -34,9 +38,9 @@ export interface ObservationalMemoryDropperSettings {
 }
 
 export interface ObservationalMemoryContextSettings {
-  readonly recentMessages: number;
   readonly recentMessageMaxTokens?: number;
   readonly compactAt: ResolvedCompactAt;
+  readonly compactAfterRun: ResolvedCompactAfterRun;
   readonly observationsPoolMaxTokens: number;
   readonly observationsPoolTargetTokens: number;
 }
@@ -85,9 +89,9 @@ export interface ObservationalMemoryDropperSettingsInput {
 }
 
 export interface ObservationalMemoryContextSettingsInput {
-  readonly recentMessages?: number;
   readonly recentMessageMaxTokens?: number;
-  readonly compactAt?: { readonly ratio?: number; readonly maxTokens?: number };
+  readonly compactAt?: { readonly ratio?: number };
+  readonly compactAfterRun?: { readonly maxTokens?: number; readonly ratio?: number };
   readonly observationsPoolMaxTokens?: number;
   readonly observationsPoolTargetTokens?: number;
 }
@@ -112,8 +116,8 @@ export const defaultObservationalMemorySettings: ObservationalMemorySettings = {
   reflection: { observationTokens: 20_000 },
   dropper: { targetTokens: 20_000, policy: "model" },
   context: {
-    recentMessages: 8,
     compactAt: { ratio: DEFAULT_COMPACT_AT_RATIO },
+    compactAfterRun: { maxTokens: DEFAULT_COMPACT_AFTER_RUN_TOKENS },
     observationsPoolMaxTokens: 20_000,
     observationsPoolTargetTokens: 10_000,
   },
@@ -165,9 +169,9 @@ export async function resolveObservationalMemorySettings(
       requireExplicitModel: merged.dropper?.requireExplicitModel === true ? true : undefined,
     },
     context: {
-      recentMessages: nonNegativeInt(merged.context?.recentMessages, defaultObservationalMemorySettings.context.recentMessages),
       recentMessageMaxTokens: optionalPositive(merged.context?.recentMessageMaxTokens),
       compactAt: compactAtOf(merged.context?.compactAt),
+      compactAfterRun: compactAfterRunOf(merged.context?.compactAfterRun),
       observationsPoolMaxTokens: positive(
         merged.context?.observationsPoolMaxTokens,
         defaultObservationalMemorySettings.context.observationsPoolMaxTokens,
@@ -188,7 +192,7 @@ const REMOVED_FLAT_KEYS: readonly { key: string; replacement: string }[] = [
   { key: "observeAfterTokens", replacement: "observation.messageTokens" },
   { key: "reflectAfterTokens", replacement: "reflection.observationTokens" },
   { key: "compactAfterTokens", replacement: "context.compactAt" },
-  { key: "keepRecentEntries", replacement: "context.recentMessages" },
+  { key: "keepRecentEntries", replacement: "nothing (retired in plan 218.3 Task 2)" },
   { key: "recentMessageMaxTokens", replacement: "context.recentMessageMaxTokens" },
   { key: "observationsPoolMaxTokens", replacement: "context.observationsPoolMaxTokens" },
   { key: "observationsPoolTargetTokens", replacement: "context.observationsPoolTargetTokens" },
@@ -213,23 +217,25 @@ export function assertNoRemovedFlatKeys(input: unknown): void {
   }
 }
 
-function compactAtOf(value: { readonly ratio?: unknown; readonly maxTokens?: unknown } | undefined): ResolvedCompactAt {
-  const ratio =
-    typeof value?.ratio === "number" && Number.isFinite(value.ratio) && value.ratio > 0 && value.ratio <= 1
-      ? value.ratio
-      : DEFAULT_COMPACT_AT_RATIO;
+function compactAtOf(value: { readonly ratio?: unknown } | undefined): ResolvedCompactAt {
+  return { ratio: ratioOr(value?.ratio, DEFAULT_COMPACT_AT_RATIO) };
+}
+
+function compactAfterRunOf(value: { readonly maxTokens?: unknown; readonly ratio?: unknown } | undefined): ResolvedCompactAfterRun {
   if (value?.maxTokens !== undefined && (!Number.isSafeInteger(value.maxTokens) || (value.maxTokens as number) < 1)) {
-    throw new TypeError("context.compactAt.maxTokens must be a positive safe integer");
+    throw new TypeError("context.compactAfterRun.maxTokens must be a positive safe integer");
   }
-  return { ratio, ...(value?.maxTokens === undefined ? {} : { maxTokens: value.maxTokens as number }) };
+  const ratio = value?.ratio === undefined ? undefined : ratioOr(value.ratio, undefined);
+  if (value?.maxTokens === undefined && ratio === undefined) return { maxTokens: DEFAULT_COMPACT_AFTER_RUN_TOKENS };
+  return { ...(value?.maxTokens === undefined ? {} : { maxTokens: value.maxTokens as number }), ...(ratio === undefined ? {} : { ratio }) };
+}
+
+function ratioOr<T extends number | undefined>(value: unknown, fallback: T): number | T {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 1 ? value : fallback;
 }
 
 function positive(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-function nonNegativeInt(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : fallback;
 }
 
 function optionalPositive(value: unknown): number | undefined {
@@ -245,8 +251,8 @@ function recallPageLimit(value: unknown): number {
 }
 
 function workerTurns(value: unknown): number {
-  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > HARD_MAX_WORKER_TURNS) {
-    throw new RangeError(`agentMaxTurns must be a positive safe integer at most ${HARD_MAX_WORKER_TURNS}`);
+  if (!Number.isSafeInteger(value) || (value as number) < 1) {
+    throw new RangeError("agentMaxTurns must be a positive safe integer");
   }
   return value as number;
 }

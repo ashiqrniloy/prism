@@ -73,8 +73,6 @@ export {
   DEFAULT_DEVICE_MAX_CHUNK_BYTES,
   DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
   DevicePolicyError,
-  HARD_DEVICE_MAX_CHUNK_BYTES,
-  HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
   redactDeviceTelemetry,
   resolveDevicePolicy,
   runDevicePolicyConformance,
@@ -140,7 +138,8 @@ const definition = definePackage<ToolsComputerUseConfig>({
       prism.status.note("warn", `computer-use: ${errorMessage(error)}`);
       return;
     }
-    for (const tool of desktop.tools) prism.tools.register(tool);
+    // A tool source, so the desktop tools exist exactly while the binary's MCP bridge is open (plan 234 Task 4).
+    prism.tools.source(() => (desktop.isClosed ? [] : desktop.tools));
     prism.skills.register(loadComputerUseLinuxSkill());
     prism.onDispose(() => desktop.close());
   },

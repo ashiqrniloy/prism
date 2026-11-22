@@ -1,6 +1,7 @@
 import type { Message, PackageAPI } from "@arnilo/prism";
 import { messageText } from "./consult.js";
 import type { AdvisorConfig } from "./config.js";
+import { isChildSession } from "./child.js";
 
 /** Runs whose input was seen, so `validate` can pin the task even when the transcript slice is short. */
 export interface CapturedTask {
@@ -53,6 +54,7 @@ export function createTaskStore(prism: PackageAPI<AdvisorConfig>): TaskStore {
  */
 export function registerTaskCapture(prism: PackageAPI<AdvisorConfig>, store: TaskStore): void {
   prism.hooks.on("run.input", (messages, context) => {
+    if (isChildSession(context)) return messages;
     if (context.runId !== "") store.capture(context.runId, messages);
     return messages;
   });

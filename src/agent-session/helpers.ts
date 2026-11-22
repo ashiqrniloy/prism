@@ -97,11 +97,12 @@ export function mergeCompaction(
 
 /**
  * Durable-run gate: the built-in default loop is durable via the pending-call mechanism; a custom
- * strategy must declare both snapshot and restore hooks.
+ * strategy must declare per-run state (`state: "run"`) or both snapshot and restore hooks.
  */
 export function isDurableLoop(loop: import("../loop/index.js").LoopStrategy): boolean {
   if (typeof loop !== "object" || loop === null) return true;
   if (loop === defaultLoop) return true;
+  if (loop.state === "run") return true;
   return typeof loop.snapshot === "function" && typeof loop.restore === "function";
 }
 
@@ -151,6 +152,82 @@ export function jsonBytes(value: unknown): number {
   } catch {
     throw new TypeError("Provider request or event must be JSON-serializable for run limits");
   }
+}
+
+/**
+ * Plan 228 Task 4: serialized size of one message, tool definition or context block, keyed by object
+ * identity. These parts are immutable once built, and the same objects recur in every attempt of a run,
+ * so each one is stringified once (which keeps `jsonBytes` as the serializability guard) and its size reused.
+ */
+const partBytesMemo = new WeakMap<object, number>();
+
+function memoPartBytes(part: unknown): number {
+  if (part === null || typeof part !== "object") return jsonBytes(part);
+  let bytes = partBytesMemo.get(part);
+  if (bytes === undefined) {
+    bytes = jsonBytes(part);
+    partBytesMemo.set(part, bytes);
+  }
+  return bytes;
+}
+
+/** Keys whose arrays carry the large, recurring parts of a request. */
+const MEMOIZED_REQUEST_ARRAYS = new Set(["messages", "tools", "context"]);
+
+/**
+ * `maxRequestBytes` charge: the UTF-8 length of `JSON.stringify(request)`, computed without serializing the
+ * whole request. Recurring parts (messages, tools, context blocks) are sized once by identity; the small
+ * remaining fields are stringified each call. Exact for plain JSON data.
+ */
+export function requestBytes(request: object): number {
+  let total = 2; // {}
+  let fields = 0;
+  for (const [key, value] of Object.entries(request)) {
+    if (value === undefined || typeof value === "function" || typeof value === "symbol") continue;
+    let bytes: number;
+    if (MEMOIZED_REQUEST_ARRAYS.has(key) && Array.isArray(value)) {
+      bytes = value.length === 0 ? 2 : value.length + 1; // brackets and commas
+      for (const item of value) bytes += memoPartBytes(item) || 4; // an unserializable item is `null`
+    } else {
+      bytes = jsonBytes(value);
+      if (bytes === 0) continue; // serializes to undefined: the key is omitted
+    }
+    total += jsonBytes(key) + 1 + bytes + (fields > 0 ? 1 : 0);
+    fields += 1;
+  }
+  return total;
+}
+
+/** Fixed per-event allowance for the JSON framing around an event's strings (keys, type tags, numbers). */
+export const PROVIDER_EVENT_OVERHEAD_BYTES = 64;
+
+function stringBytes(value: string | undefined): number {
+  return value === undefined ? 0 : Buffer.byteLength(value, "utf8");
+}
+
+/**
+ * `maxResponseBytes` charge for one provider event, from the lengths of the strings it carries plus
+ * {@link PROVIDER_EVENT_OVERHEAD_BYTES}; streamed text, thinking and tool-argument deltas are never
+ * serialized, and JSON escaping inside their strings is not counted (the cap bounds what the host holds). Rare or structured events (a whole tool call, media, usage, errors) fall back to `jsonBytes`.
+ */
+export function providerEventBytes(event: ProviderEvent): number {
+  if (event.type === "tool_call_delta") {
+    if (event.argumentsText !== undefined && typeof event.argumentsText !== "string") return jsonBytes(event);
+    return PROVIDER_EVENT_OVERHEAD_BYTES + stringBytes(event.id) + stringBytes(event.name) + stringBytes(event.argumentsText);
+  }
+  if (event.type === "content_delta") {
+    const block = event.content;
+    if (block.type === "text" && typeof block.text === "string") return PROVIDER_EVENT_OVERHEAD_BYTES + stringBytes(block.text);
+    if (
+      block.type === "thinking" &&
+      typeof block.text === "string" &&
+      (block.signature === undefined || typeof block.signature === "string") &&
+      (block.data === undefined || typeof block.data === "string")
+    ) {
+      return PROVIDER_EVENT_OVERHEAD_BYTES + stringBytes(block.text) + stringBytes(block.signature) + stringBytes(block.data);
+    }
+  }
+  return jsonBytes(event);
 }
 
 export function createUsageAccumulator(): { add(usage: Usage): void; value(): Usage | undefined } {

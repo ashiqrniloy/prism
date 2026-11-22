@@ -31,10 +31,6 @@ import {
   DEFAULT_MAX_IMAGE_BYTES,
   DEFAULT_MAX_LINES,
   DEFAULT_MAX_TEXT_SCAN_BYTES,
-  HARD_MAX_BYTES,
-  HARD_MAX_IMAGE_BYTES,
-  HARD_MAX_LINES,
-  HARD_MAX_TEXT_SCAN_BYTES,
   validateCodingLimit,
 } from "./limits.js";
 import { resolveReadPathAsync, resolveToCwd } from "./path-utils.js";
@@ -494,10 +490,10 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
     throw new TypeError('Read tool: "autoResizeImages" was removed in 0.1.5; use "transformImage" instead.');
   }
   const ops = options?.operations ?? defaultReadOperations;
-  const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
-  const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
-  const maxImageBytes = validateCodingLimit("maxImageBytes", options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES, HARD_MAX_IMAGE_BYTES);
-  const maxScanBytes = validateCodingLimit("maxScanBytes", options?.maxScanBytes ?? DEFAULT_MAX_TEXT_SCAN_BYTES, HARD_MAX_TEXT_SCAN_BYTES);
+  const maxLines = validateCodingLimit("maxLines", options?.maxLines ?? DEFAULT_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options?.maxBytes ?? DEFAULT_MAX_BYTES);
+  const maxImageBytes = validateCodingLimit("maxImageBytes", options?.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES);
+  const maxScanBytes = validateCodingLimit("maxScanBytes", options?.maxScanBytes ?? DEFAULT_MAX_TEXT_SCAN_BYTES);
 
   return {
     name: "read",
@@ -548,7 +544,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): ToolDefi
 
       try {
         let startLine = validateCodingLimit("offset", offset ?? 1, Number.MAX_SAFE_INTEGER);
-        const requestedLines = limit === undefined ? undefined : validateCodingLimit("limit", limit, HARD_MAX_LINES);
+        const requestedLines = limit === undefined ? undefined : validateCodingLimit("limit", limit);
         const absolutePath = options?.operations ? resolveToCwd(path, cwd) : await resolveReadPathAsync(path, cwd);
 
         const policyCheck = await enforceExecutionPolicy(

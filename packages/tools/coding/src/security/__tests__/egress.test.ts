@@ -469,7 +469,7 @@ test("egress limits: frozen defaults and hard caps", () => {
   assert.equal(limits.concurrentConnections, 32);
   assert.equal(limits.redirectHops, 5);
   assert.throws(() => resolveEgressLimits({ concurrentConnections: 0 }), RangeError);
-  assert.throws(() => resolveEgressLimits({ concurrentConnections: 10_000 }), RangeError);
+  assert.equal(resolveEgressLimits({ concurrentConnections: 10_000 }).concurrentConnections, 10_000);
   assert.equal(resolveEgressLimits({ redirectHops: 7 }).redirectHops, 7);
 });
 

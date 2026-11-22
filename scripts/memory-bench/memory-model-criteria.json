@@ -39,6 +39,11 @@
       "date": "2026-11-12",
       "decision": "beam-1m and longmemeval-m leave every row and gate. M5 reads the lean Compact-Bench screen (retention, WM vs STM-only, with the outcome screen beside it); S3 reads the screen's outcome arms once and its held-out reading waits for a new outcome set; S4 reads the long-session family plus the screen's retention sessions; R6 reads LoCoMo temporal only; T1 and T2 take Compact-Bench retention details as gold plus LoCoMo; R5, T7, L4 and Z1 wait for MemoryArena or STATE-Bench (scope.awaitingSuite) and read `missing` until one is adopted",
       "reason": "Owner, 2026-11-12, after gate M-2's first sitting: the two suites measure question answering over imported chat logs, not keeping a coding agent's progress across compaction, and at about 1M tokens a question they cannot reach a deciding sample (M-1: 2 questions per cell; M-2: 4). Record: docs/_evidence/memory-bench/memory-model/benchmark-decision-2026-11-12.json; plan 218.1."
+    },
+    "sessionBenchRows": {
+      "date": "2026-11-19",
+      "decision": "Session-Bench (plan 218.3) is the session tiers' outcome benchmark: row M6 (gate M-2, WM) reads its dev partition, STM+WM vs STM-only; new row M7 (gate M-2, STM) reads it, STM-only vs memory-off-llm; the session-bench fixture is hashed (v3); S3's held-out reading is Session-Bench heldout-a; the long-horizon fixture leaves the index (its family is deleted)",
+      "reason": "Owner design 2026-11-18 (plan 218.3 header: \"Comparison should be between memory-off with LLM driven compaction in Prism, STM only, STM and WM together\"; plan 218.1 closes and its screens move to plan 218.3) and the Task 12 decisions of 2026-11-19 (36 dev sessions, Session-Bench v3, WM default only at <= 1.5x STM-only's input per passed task). Rule and verdict: gate M-2 record, sessionBenchScreen."
     }
   },
   "pins": {
@@ -98,7 +103,8 @@
     "RT": "plan 219.1's retrieval at the stage under test (RT, RT-cues, RT-time, RT-context, RT-assoc, RT-modes, RT-meta)",
     "+procedural / +triggers / +priming / +all": "plan 220's add-one arms over RT (procedural memory, conditioned triggers, priming) and all three",
     "no-sleep": "plan 221's `full` (plan 220's +all with a sleep every 3 sessions) without Sleep",
-    "PRE / claude-code-prompt / codex-prompt / anchor_index": "Compact-Bench references (plan 218.1): the continuation from the full history, the Claude Code and Codex compaction prompts run on the gate's summarizer, and upstream's regex reference; reported beside the arms, never a row's candidate"
+    "PRE / claude-code-prompt / codex-prompt / anchor_index": "Compact-Bench references (plan 218.1): the continuation from the full history, the Claude Code and Codex compaction prompts run on the gate's summarizer, and upstream's regex reference; reported beside the arms, never a row's candidate",
+    "memory-off-llm": "no memory package; Prism's LLM compaction (@arnilo/prism-extensions/compaction) with keepRecentTokens at 20% of the input cap (plan 218.3 Task 10): Session-Bench's baseline"
   },
   "baselines": {
     "record": "docs/_evidence/memory-bench/memory-model/baselines.json",
@@ -120,7 +126,7 @@
   },
   "gates": {
     "M-1": { "plan": 217, "component": "STM", "record": "docs/_evidence/memory-bench/217/gates/owner-gate-m1.json", "rows": ["S1", "S2", "S3", "S4"], "deferred": { "S3": { "to": "A", "decision": "m1S3Deferred" } } },
-    "M-2": { "plan": 218, "component": "WM", "record": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json", "rows": ["M1", "M2", "M3", "M4", "M5"] },
+    "M-2": { "plan": 218, "component": "WM", "record": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json", "rows": ["M1", "M2", "M3", "M4", "M5", "M6", "M7"] },
     "M-3": { "plan": 219, "component": "Rehearsal", "record": "docs/_evidence/memory-bench/219/gates/owner-gate-m3.json", "rows": ["R1", "R2", "R3", "R4", "R5", "R6"] },
     "M-T": { "plan": "219.1", "component": "Retrieval", "record": "docs/_evidence/memory-bench/219.1/gates/owner-gate-mt.json", "rows": ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"] },
     "M-4": { "plan": 220, "component": "Non-declarative", "record": "docs/_evidence/memory-bench/220/gates/owner-gate-m4.json", "rows": ["L1", "L2", "L3", "L4"] },
@@ -155,7 +161,7 @@
       "gate": "M-1", "component": "STM",
       "metric": "coding-task outcome after compaction: POST pass share (the repository's FAIL_TO_PASS tests) on Compact-Bench task preservation", "unit": "points", "direction": "higher",
       "arms": { "candidate": "STM-only", "vs": ["OM-before"] },
-      "scope": { "external": ["compact-bench-outcome"], "awaitingSuite": { "for": "gate A's held-out reading: a new held-out outcome set (the 22 validated tasks are read by the lean screen)", "decision": "qaSuitesRemoved" } },
+      "scope": { "external": ["compact-bench-outcome"], "awaitingSuite": { "for": "gate A's held-out reading: Session-Bench heldout-a (fixture session-bench), STM-only vs memory-off-llm as row M7 reads dev", "decision": "sessionBenchRows" } },
       "report": "the lean screen (plan 218.1 Task 3) reports its outcome arms once as S3's development reading; never a gate verdict",
       "tests": [{ "id": "vs-om-before", "vs": "OM-before", "kind": "nonInferior" }]
     },
@@ -205,6 +211,28 @@
       "scope": { "external": ["compact-bench-retention"] },
       "report": "the outcome screen (compact-bench-outcome: POST pass counts, redo_reads, discordant pairs) is reported beside it; the ship rule is pre-registered in gate M-2's record (plan 218.1 Task 3)",
       "tests": [{ "id": "vs-stm-only", "vs": "STM-only", "kind": "nonInferior" }]
+    },
+    "M6": {
+      "gate": "M-2", "component": "WM",
+      "metric": "Session-Bench dependency-check success (D1-D4 pooled), paired by check, sessions as clusters", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "WM", "vs": ["STM-only"] },
+      "scope": { "fixtures": ["session-bench"], "partition": "dev", "rule": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json sessionBenchScreen (scripts/memory-bench/session-bench/screen.mjs)" },
+      "report": "the screen's verdict (plan 218.3 Task 12): WM's model policy is the default under a host scope only if both tests hold; the task, per-class and side-arm comparisons and the detectable effect are reported beside it",
+      "tests": [
+        { "id": "vs-stm-only", "vs": "STM-only", "kind": "gain" },
+        { "id": "cost", "kind": "atMost", "value": 1.5, "measure": "whole-run input tokens per passed task, WM / STM-only (owner, 2026-11-19)" }
+      ]
+    },
+    "M7": {
+      "gate": "M-2", "component": "STM",
+      "metric": "Session-Bench dependency-check success (D1-D4 pooled), paired by check, sessions as clusters", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "STM-only", "vs": ["memory-off-llm"] },
+      "scope": { "fixtures": ["session-bench"], "partition": "dev", "rule": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json sessionBenchScreen (scripts/memory-bench/session-bench/screen.mjs)" },
+      "report": "the screen's verdict (plan 218.3 Task 12): STM is worth shipping only if both tests hold",
+      "tests": [
+        { "id": "vs-memory-off-llm", "vs": "memory-off-llm", "kind": "gain" },
+        { "id": "control", "kind": "atLeast", "value": -5, "measure": "95% interval lower bound of the C-check difference (STM-only - memory-off-llm), points" }
+      ]
     },
     "R1": {
       "gate": "M-3", "component": "Rehearsal",
@@ -444,7 +472,6 @@
       { "id": "long-session-replay", "kind": "offline", "plan": 217, "spec": "offline long-session coding replay, >= 6 tasks and >= 200 entries", "extendedBy": { "218": ["re-plan", "protected items"], "219": ["preference stated once", "superseded fact"], "220": ["repeated benign event", "repeated failure"], "221": ["episode:end"] }, "hash": "50a496470d0a9ac90b77e1f3656b558069cadc28bcd24797b91112fa3a8c06cb", "hashOf": "scripts/memory-bench/fixtures/memory-model/long-session/index.json" },
       { "id": "long-session", "kind": "live", "plan": 217, "spec": "live long-session coding family, added to the work-outcome runner", "hash": "7bf23b02fa517827b9c5cc1765c8e0daad293667f085ad186c676c8a71cd8d1d", "hashOf": "scripts/memory-bench/work-outcome-long-session.json" },
       { "id": "re-plan", "kind": "live", "plan": 218, "spec": "live re-plan family (a mid-episode re-plan), added to the work-outcome runner", "hash": "822f3823b20cb447c7961b7176fb43e2b036a1d5d7f732138b00190e71bf1c51", "hashOf": "scripts/memory-bench/work-outcome-re-plan.json" },
-      { "id": "long-horizon", "kind": "live", "plan": "218.2", "spec": "live long-horizon family: the long-session template chained into sessions of 13 projects (>= 150,000 eligible tokens), every project's dependent tasks after the other projects' work, run at the package defaults, added to the work-outcome runner", "hash": "52c8b3683963e65c96ab55de3c9da6d2ad02003b681cfb0a3b76cfa2bb0a5f5b", "hashOf": "scripts/memory-bench/work-outcome-long-horizon.json" },
       { "id": "recurring-failure", "kind": "live", "plan": 220, "spec": "live recurring-failure family (a repeated failure signature), added to the work-outcome runner", "hash": null },
       { "id": "multi-session-lifecycle", "kind": "offline+live", "plan": "219, 221", "spec": "multi-session lifecycle built on plan 202 Task 16's offline lifecycle suite (scripts/memory-bench/lifecycle)", "hash": null },
       { "id": "paraphrase", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.paraphrase", "hash": null },
@@ -454,7 +481,8 @@
       { "id": "full-r-snapshots", "kind": "offline", "plan": 219, "spec": "plan 219's full-r store snapshots, kept locally (bench cache), hashes in evidence", "hash": null },
       { "id": "compact-bench-retention", "kind": "external", "plan": "218.1", "spec": "Compact-Bench recurring-detail retention (Apache-2.0): 30 of the 146 sessions drawn label-blind (seed prism-218.1-compact-bench, stratified by client) and frozen", "upstream": { "code": "https://github.com/cai-jianfeng/compact-bench", "data": "https://huggingface.co/datasets/caijanfeng/compact-bench" }, "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5", "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b", "sha256sums": "94a7c6975d773538ca7122313fa21015fdc13b82fadbc33afc9cfbd08bb620fc", "hash": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af", "hashOf": "scripts/memory-bench/work-outcome-compact-bench.json" },
       { "id": "compact-bench-outcome", "kind": "external", "plan": "218.1", "spec": "Compact-Bench task preservation: the 22 validated SWE-bench repairs (upstream's PRE-pass set minus the two excluded pytest instances), listed by id in the same frozen draw file", "upstream": { "code": "https://github.com/cai-jianfeng/compact-bench", "data": "https://huggingface.co/datasets/caijanfeng/compact-bench" }, "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5", "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b", "sha256sums": "94a7c6975d773538ca7122313fa21015fdc13b82fadbc33afc9cfbd08bb620fc", "hash": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af", "hashOf": "scripts/memory-bench/work-outcome-compact-bench.json" },
-      { "id": "worker-replay", "kind": "offline", "plan": "218.2", "spec": "worker replay screen: frozen STM and WM worker requests (at most 120) with annotations, built by scripts/memory-bench/worker-replay/build.mjs from the long-session dev personas and written hard cases (passed outcomes that read as failures, a non-correcting \"actually\", Bengali/Japanese/Spanish corrections, constraints and failed checks, an off-topic constraint, a >= 16 KB plan scope)", "hash": "0ce56d6b27d145f017833065a55880f45ca626ece39d9b4e3f1b1f21a7b806b7", "hashOf": "scripts/memory-bench/fixtures/memory-model/worker-replay/index.json" }
+      { "id": "worker-replay", "kind": "offline", "plan": "218.2", "spec": "worker replay screen: frozen STM and WM worker requests (at most 120) with annotations, built by scripts/memory-bench/worker-replay/build.mjs from the long-session dev personas and written hard cases (passed outcomes that read as failures, a non-correcting \"actually\", Bengali/Japanese/Spanish corrections, constraints and failed checks, an off-topic constraint, a >= 16 KB plan scope)", "hash": "0ce56d6b27d145f017833065a55880f45ca626ece39d9b4e3f1b1f21a7b806b7", "hashOf": "scripts/memory-bench/fixtures/memory-model/worker-replay/index.json" },
+      { "id": "session-bench", "kind": "offline+live", "plan": "218.3", "spec": "Session-Bench v3: project-owned multi-task, same-session benchmark (scripts/memory-bench/session-bench, methodology in its README): 60 seeded sessions of 8-14 tasks in three template families, one scope per session, labelled D1-D4 and C checks, sessions of at least 4 windows (W = 32K) and dependencies spanning at least 1.5 windows, guardrails G1-G10; drawn label-blind into dev / heldout-a / heldout-b (12/4/4 per family)", "hash": "fbedb2ee5425fffbefc5cb7233fd16ef87e4fcbfb8e85a6956eaf184bd6344f7", "hashOf": "scripts/memory-bench/work-outcome-session-bench.json" }
     ]
   },
   "gateRecord": {
@@ -532,6 +560,23 @@
       "plan": "218.2",
       "task": 8,
       "reason": "fixtures.rule: plan 218.2's long-horizon family enters the index with the sha256 of its frozen partition file (work-outcome-long-horizon.json: 6 sessions drawn label-blind into dev / heldout-a / heldout-b, 13 projects each) before any gate names it. No row reads it yet; the long-session and re-plan fixtures and their hashes are untouched. Closed gate M-1 keeps 1a768299... (closedGateCriteriaHash). No row, threshold or partition rule changes."
+    },
+    {
+      "previousHash": "8a59fc796b966178518dc1093e00ef932b65308432a290416f7faf71d385e095",
+      "date": "2026-11-18",
+      "plan": "218.3",
+      "task": 9,
+      "reason": "fixtures.rule: plan 218.3's Session-Bench enters the index unhashed (its frozen partition file is work-outcome-session-bench.json, v1); plan 218.3 Task 12's amendment hashes it with its pins before any gate reads it. No row reads it yet; no other fixture, row, threshold or partition rule changes. Closed gate M-1 keeps 1a768299... (closedGateCriteriaHash)."
+    },
+    {
+      "previousHash": "55619da20232583a296672933011ea6b92900486e063582b3ad78702ef6de7fc",
+      "date": "2026-11-19",
+      "plan": "218.3",
+      "task": 12,
+      "kind": "owner-decision",
+      "decision": "sessionBenchRows",
+      "changesThresholds": false,
+      "reason": "ownerDecisions.sessionBenchRows: rows M6 (WM vs STM-only) and M7 (STM-only vs memory-off-llm) read Session-Bench dev under gate M-2 (gate M-2 lists them; arm memory-off-llm named); fixture session-bench hashed (work-outcome-session-bench.json, v3); S3's awaitingSuite names Session-Bench heldout-a; fixture long-horizon removed with its family (plan 218.1 Task 5's plan, carried by plan 218.3 Task 12). No other row, threshold, test kind, partition or statistic changes. Closed gate M-1 keeps 1a768299... (closedGateCriteriaHash)."
     }
   ]
 }

@@ -27,6 +27,7 @@ import type {
 } from "../index.js";
 import {
   HOOK_CATALOG,
+  askEveryTool,
   createAgent,
   createMemorySessionStore,
   errorToErrorInfo,
@@ -245,4 +246,152 @@ export async function assertToolRoundSettlement(strategy: LoopStrategy): Promise
     for (const block of message.content) if (block.type === "tool_call" && !answered.has(block.id)) unanswered.push(block.id);
   }
   if (unanswered.length > 0) throw new Error(`Loop "${strategy.name}" left tool calls without a result: ${unanswered.join(", ")}`);
+}
+
+/**
+ * Structured-output repair conformance (plan 235 Task 3): `run.end()` sends an invalid final reply back
+ * once, so any loop that calls it gets the repair. Runs one scenario on `strategy`: a model without the
+ * structured-output capability (prompted mode) answers prose first, then valid JSON. Throws when the
+ * run does not end with the parsed value after exactly two provider requests.
+ */
+export async function assertStructuredOutputRepair(strategy: LoopStrategy): Promise<void> {
+  let requests = 0;
+  const provider: ModelProvider = {
+    id: "mock",
+    async *generate() {
+      requests += 1;
+      yield providerTextDelta(requests === 1 ? "not json" : '{"ok":true}');
+      yield providerDone();
+    },
+  };
+  const schema = { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] };
+  const { result, error, agent } = await loopConformance({
+    loop: strategy,
+    provider,
+    probe: false,
+    runOptions: { providerOptions: { structuredOutput: { name: "repair_probe", schema } } },
+  });
+  await agent.dispose();
+  if (error) throw new Error(`Loop "${strategy.name}" failed the structured-output repair run: ${error.message}`);
+  if (requests !== 2 || JSON.stringify(result?.output) !== '{"ok":true}') {
+    throw new Error(
+      `Loop "${strategy.name}" did not repair an invalid structured reply through run.end(): ${requests} request(s), output ${JSON.stringify(result?.output)}`,
+    );
+  }
+}
+
+/**
+ * Dropped-stream conformance (plan 227 Task 4): a stream that fails transiently after output began is
+ * retried, and the failed attempt leaves nothing behind. Runs one scenario on `strategy`: the first
+ * attempt streams text, a complete `echo` call and a partial one, then fails with `ECONNRESET`; the
+ * second answers "done". Throws when the run does not complete with the second attempt's text, when
+ * the failed attempt's tool call ran, or when its text reached the branch.
+ */
+export async function assertDroppedStreamRecovery(strategy: LoopStrategy): Promise<void> {
+  let attempts = 0;
+  let executed = 0;
+  const provider: ModelProvider = {
+    id: "mock",
+    async *generate() {
+      attempts += 1;
+      if (attempts === 1) {
+        yield providerTextDelta("dropped-partial");
+        yield { type: "tool_call" as const, call: toolCallContent("dropped-1", "echo", {}) };
+        yield { type: "tool_call_delta" as const, index: 1, id: "dropped-2", name: "echo", argumentsText: "{" };
+        yield {
+          type: "error" as const,
+          error: { name: "TypeError", message: "socket reset", code: "ECONNRESET", failureClass: "transient" as const },
+        };
+        return;
+      }
+      yield providerTextDelta("done");
+      yield providerDone();
+    },
+  };
+  const { result, error, session, agent } = await loopConformance({
+    loop: strategy,
+    provider,
+    probe: false,
+    tools: [echoTool(() => (executed += 1))],
+    runOptions: { retry: { baseDelayMs: 0 } },
+  });
+  const messages = await session.messages();
+  await agent.dispose();
+  const failures: string[] = [];
+  if (result?.status !== "completed") failures.push(`run ${result?.status ?? "rejected"}: ${error?.message ?? ""}`);
+  else if (result.text !== "done") failures.push(`final text is ${JSON.stringify(result.text)}, not the retried attempt's "done"`);
+  if (attempts !== 2) failures.push(`${attempts} provider attempts, expected 2`);
+  if (executed > 0) failures.push("a tool call from the failed attempt ran");
+  if (JSON.stringify(messages).includes("dropped-")) failures.push("the failed attempt's output reached the branch");
+  if (failures.length > 0) throw new Error(`Loop "${strategy.name}" did not recover a dropped stream: ${failures.join("; ")}`);
+}
+
+/**
+ * Concurrent-resume conformance (plan 231 Task 4): one strategy object serves two sessions whose runs suspend
+ * on an approval and resume at the same time. Every tool call is gated (`askEveryTool`), the provider answers
+ * one `echo` call and then "done". Both first runs must suspend and both resumes must complete. A loop that
+ * keeps its state on the strategy object (`snapshot`/`restore` without `state: "run"`) fails here with
+ * `ERR_PRISM_LOOP_SHARED_STATE`; a `state: "run"` loop keeps each run's `run.checkpoint` value separate.
+ * Returns each session's stored loop state (`suspended_run` entry), keyed by session id, for further checks.
+ */
+export async function assertConcurrentLoopResume(strategy: LoopStrategy): Promise<Readonly<Record<string, unknown>>> {
+  const turns = new Map<string, number>();
+  const provider: ModelProvider = {
+    id: "mock",
+    async *generate(request) {
+      const key = JSON.stringify(request.messages.find((message) => message.role === "user")?.content ?? "");
+      const turn = (turns.get(key) ?? 0) + 1;
+      turns.set(key, turn);
+      if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent(`call-${turns.size}`, "echo", {}) };
+      else yield providerTextDelta("done");
+      yield providerDone();
+    },
+  };
+  const agent = await createAgent({
+    model: { provider: provider.id, model: "demo" },
+    packages: [providerPackage("loop-conformance-provider", [provider])],
+    tools: { add: [echoTool()] },
+    slots: { store: createMemorySessionStore(), loop: strategy },
+    hooks: askEveryTool(),
+  });
+  const failures: string[] = [];
+  const loopStates: Record<string, unknown> = {};
+  try {
+    const sessions = await Promise.all(["alpha", "beta"].map((id) => agent.session({ id: `concurrent-${id}`, create: true })));
+    const first = await Promise.all(sessions.map((session) => session.run(`go ${session.id}`).catch((error: unknown) => error)));
+    first.forEach((result, index) => {
+      const status = (result as RunResult).status;
+      if (status !== "suspended")
+        failures.push(`${sessions[index]?.id} first run ${status ?? errorToErrorInfo(result).message}, expected suspended`);
+    });
+    if (failures.length === 0) {
+      const resumed = await Promise.all(
+        sessions.map(async (session, index) => {
+          const pending = (first[index] as RunResult).pending ?? [];
+          let last: AgentEvent | undefined;
+          try {
+            for await (const event of session.resume(pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const }))))
+              last = event;
+          } catch (error) {
+            return errorToErrorInfo(error).message;
+          }
+          return last?.type === "run.completed"
+            ? undefined
+            : `${last?.type ?? "no event"}${last?.type === "run.failed" ? `: ${last.error.message}` : ""}`;
+        }),
+      );
+      resumed.forEach((failure, index) => {
+        if (failure) failures.push(`${sessions[index]?.id} resume ended ${failure}`);
+      });
+      for (const session of sessions) {
+        const entries = await session.entries();
+        const suspended = entries.find((entry) => entry.kind === "suspended_run");
+        loopStates[session.id] = (suspended?.data as { loop?: { snapshot?: unknown } } | undefined)?.loop?.snapshot;
+      }
+    }
+  } finally {
+    await agent.dispose();
+  }
+  if (failures.length > 0) throw new Error(`Loop "${strategy.name}" did not resume two concurrent runs: ${failures.join("; ")}`);
+  return loopStates;
 }

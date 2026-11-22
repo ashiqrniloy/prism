@@ -4,7 +4,6 @@ import { EvalDatasetError, EvalError } from "./errors.js";
 import { runExperiment } from "./experiment.js";
 import { defineScorer } from "./scorer.js";
 import { wilsonInterval } from "./stats.js";
-import { HARD_DATASET_ITEMS } from "./limits.js";
 import type { DatasetItem, Dataset, RunExperimentOptions, Scorer, ExperimentItemResult } from "./types.js";
 
 export interface InjectionAttack {
@@ -79,8 +78,6 @@ export function createInjectionDataset<TInput = unknown, TExpected = unknown>(op
 }): Dataset<TInput, TExpected> {
   const tasks = defineDataset({ id: options.id, items: options.tasks }).items;
   const attacks = options.attacks ?? BUILTIN_INJECTION_ATTACKS;
-  if (tasks.length * (1 + attacks.length * options.carriers.length) > HARD_DATASET_ITEMS)
-    throw new EvalDatasetError("injection dataset exceeds item limit");
   if (new Set(attacks.map((a) => a.id)).size !== attacks.length) throw new EvalDatasetError("duplicate injection attack id");
   for (const attack of attacks)
     validateSpec({ attackId: attack.id, carrier: { tool: "validation" }, payload: attack.payload, goal: attack.goal });
@@ -146,6 +143,13 @@ export interface InjectionMetrics {
   readonly benignUtility: InjectionRate;
   readonly utilityUnderAttack: InjectionRate;
   readonly attackSuccessRate: InjectionRate;
+  /** Present on per-attack and per-carrier groups when detectors are configured. */
+  readonly detection?: Readonly<Record<string, InjectionDetection>>;
+}
+/** A detector scorer's pass rate on attacked items (catch) and on benign items (false positive). */
+export interface InjectionDetection {
+  readonly caught: InjectionRate;
+  readonly falsePositive: InjectionRate;
 }
 export type RunInjectionSuiteOptions<TInput = unknown, TExpected = unknown> = Omit<
   RunExperimentOptions<TInput, TExpected>,
@@ -153,6 +157,11 @@ export type RunInjectionSuiteOptions<TInput = unknown, TExpected = unknown> = Om
 > & {
   readonly agent: Exclude<RunExperimentOptions<TInput, TExpected>["agent"], import("@arnilo/prism").Agent>;
   readonly utility: Scorer<TInput, TExpected>;
+  /**
+   * Detector scorers (for example `createGuardrailFlaggedScorer`), at most 8. Each is reported as
+   * `detection[id]`: its pass rate on attacked items is the catch rate, on benign items the false-positive rate.
+   */
+  readonly detectors?: readonly Scorer<TInput, TExpected>[];
 };
 
 export async function runInjectionSuite<TInput = unknown, TExpected = unknown>(options: RunInjectionSuiteOptions<TInput, TExpected>) {
@@ -160,6 +169,10 @@ export async function runInjectionSuite<TInput = unknown, TExpected = unknown>(o
   if (options.timeline !== undefined && options.timeline !== "redacted_io")
     throw new EvalError("injection goals require timeline: redacted_io for tool arguments");
   if (options.utility.id === "attack_success") throw new EvalError("utility id conflicts with attack_success");
+  const detectors = options.detectors ?? [];
+  const ids = [options.utility.id, "attack_success", ...detectors.map((scorer) => scorer.id)];
+  if (detectors.length > 8 || new Set(ids).size !== ids.length)
+    throw new EvalError("injection detectors must be at most 8 scorers with unique ids");
   if (
     options.sampling !== undefined &&
     ((options.sampling.rate !== undefined && options.sampling.rate !== 1) ||
@@ -195,7 +208,7 @@ export async function runInjectionSuite<TInput = unknown, TExpected = unknown>(o
   const report = await runExperiment({
     ...options,
     timeline: "redacted_io",
-    scorers: [options.utility, attackSuccess],
+    scorers: [options.utility, attackSuccess, ...detectors],
     agent: (extra) =>
       options.agent({
         ...extra,
@@ -233,6 +246,9 @@ export async function runInjectionSuite<TInput = unknown, TExpected = unknown>(o
     attackSuccessRate: rate(items, attackSuccess),
   });
   const attacked = report.items.filter((item) => specOf(item).attackId !== null);
+  const benign = report.items.filter((item) => specOf(item).attackId === null);
+  const detection = (items: readonly ExperimentItemResult<TInput, TExpected>[]): Record<string, InjectionDetection> =>
+    Object.fromEntries(detectors.map((scorer) => [scorer.id, { caught: rate(items, scorer), falsePositive: rate(benign, scorer) }]));
   const group = (key: (spec: Exclude<InjectionSpec, { attackId: null }>) => string) => {
     const groups = new Map<string, typeof attacked>();
     for (const item of attacked) {
@@ -241,7 +257,18 @@ export async function runInjectionSuite<TInput = unknown, TExpected = unknown>(o
       values.push(item);
       groups.set(name, values);
     }
-    return Object.fromEntries([...groups].map(([name, items]) => [name, metrics(items)]));
+    return Object.fromEntries(
+      [...groups].map(([name, items]): [string, InjectionMetrics] => [
+        name,
+        { ...metrics(items), ...(detectors.length ? { detection: detection(items) } : {}) },
+      ]),
+    );
   };
-  return { report, ...metrics(attacked), byAttack: group((spec) => spec.attackId), byCarrier: group((spec) => spec.carrier.tool) };
+  return {
+    report,
+    ...metrics(attacked),
+    detection: detection(attacked),
+    byAttack: group((spec) => spec.attackId),
+    byCarrier: group((spec) => spec.carrier.tool),
+  };
 }

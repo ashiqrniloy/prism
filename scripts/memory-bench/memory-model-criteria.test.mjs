@@ -32,8 +32,48 @@ const edited = (edit) => {
 };
 const QA_SUITES = ["beam-1m", "longmemeval-m"];
 const LME_BEAM_LOCOMO = ["longmemeval-m", "beam-1m", "locomo"];
-/** Amendment 9 (plan 218.2 Task 8) undone: the long-horizon fixture leaves the index. */
+/**
+ * Amendment 11 (plan 218.3 Task 12, owner decision sessionBenchRows) undone: rows M6 and M7, arm memory-off-llm and the
+ * decision leave; gate M-2 lists M1-M5; S3 awaits "a new held-out outcome set"; session-bench is unhashed again; the
+ * long-horizon fixture (its family deleted by Task 12) returns to its slot.
+ */
+const LONG_HORIZON_FIXTURE = {
+  id: "long-horizon",
+  kind: "live",
+  plan: "218.2",
+  spec: "live long-horizon family: the long-session template chained into sessions of 13 projects (>= 150,000 eligible tokens), every project's dependent tasks after the other projects' work, run at the package defaults, added to the work-outcome runner",
+  hash: "52c8b3683963e65c96ab55de3c9da6d2ad02003b681cfb0a3b76cfa2bb0a5f5b",
+  hashOf: "scripts/memory-bench/work-outcome-long-horizon.json",
+};
+const beforeEleventh = (c) => {
+  c.amendments = c.amendments.slice(0, 10);
+  delete c.ownerDecisions.sessionBenchRows;
+  delete c.arms["memory-off-llm"];
+  delete c.rows.M6;
+  delete c.rows.M7;
+  c.gates["M-2"].rows = ["M1", "M2", "M3", "M4", "M5"];
+  c.rows.S3.scope.awaitingSuite = {
+    for: "gate A's held-out reading: a new held-out outcome set (the 22 validated tasks are read by the lean screen)",
+    decision: "qaSuitesRemoved",
+  };
+  Object.assign(
+    c.fixtures.index.find((entry) => entry.id === "session-bench"),
+    {
+      spec: "Session-Bench: project-owned multi-task, same-session benchmark (scripts/memory-bench/session-bench, methodology in its README): 60 seeded sessions of 8-14 tasks in three template families, one scope per session, labelled D1-D4 and C checks, sessions of at least 4 windows (W = 32K) and dependencies spanning at least 1.5 windows, guardrails G1-G10; drawn label-blind into dev / heldout-a / heldout-b (12/4/4 per family)",
+      hash: null,
+    },
+  );
+  c.fixtures.index.splice(3, 0, { ...LONG_HORIZON_FIXTURE });
+};
+/** Amendment 10 (plan 218.3 Task 9) undone (after 11): the unhashed session-bench fixture leaves the index. */
+const beforeTenth = (c) => {
+  beforeEleventh(c);
+  c.amendments = c.amendments.slice(0, 9);
+  c.fixtures.index = c.fixtures.index.filter((entry) => entry.id !== "session-bench");
+};
+/** Amendment 9 (plan 218.2 Task 8) undone (after 10): the long-horizon fixture leaves the index. */
 const beforeNinth = (c) => {
+  beforeTenth(c);
   c.amendments = c.amendments.slice(0, 8);
   c.fixtures.index = c.fixtures.index.filter((entry) => entry.id !== "long-horizon");
 };
@@ -111,7 +151,7 @@ test("memory_model_criteria_hash_pinned_and_frozen", () => {
 
 test("every_row_names_metric_direction_arms_threshold_and_gate", () => {
   assert.deepEqual(Object.keys(MEMORY_MODEL_CRITERIA.rows).sort(), [...MEMORY_MODEL_ROW_IDS].sort());
-  assert.equal(MEMORY_MODEL_ROW_IDS.length, 31);
+  assert.equal(MEMORY_MODEL_ROW_IDS.length, 33);
   for (const [id, row] of Object.entries(MEMORY_MODEL_CRITERIA.rows)) {
     for (const field of ["gate", "metric", "unit", "direction"]) assert.ok(row[field], `${id} ${field}`);
     assert.ok(row.arms.candidate, `${id} candidate`);
@@ -366,28 +406,41 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
 
 test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
   // Plan 217 Task 6: the two fixtures gate M-1 reads are hashed by the first amendment; removing it restores the frozen file.
-  const [first, second, third, fourth, fifth, sixth, seventh, eighth, ninth] = MEMORY_MODEL_CRITERIA.amendments;
+  const [first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleventh] = MEMORY_MODEL_CRITERIA.amendments;
   const rowsBeforeSixth = edited(beforeSixth).rows;
+  // Amendment 11 (plan 218.3 Task 12) is checked in criteria_amendment_adds_session_bench_rows_only; the older
+  // amendments are read against the file it amended.
+  const atTenth = edited(beforeEleventh);
+  assert.equal(memoryModelCriteriaHash(atTenth), eleventh.previousHash);
+  // Amendment 10 (plan 218.3 Task 9): the session-bench fixture enters unhashed; no row change and no other fixture moved.
+  assert.deepEqual([tenth.plan, tenth.task, tenth.kind], ["218.3", 9, undefined]);
+  assert.equal(memoryModelCriteriaHash(edited(beforeTenth)), tenth.previousHash);
+  assert.deepEqual(edited(beforeTenth).rows, atTenth.rows);
+  assert.deepEqual(
+    edited(beforeTenth).fixtures.index,
+    atTenth.fixtures.index.filter((entry) => entry.id !== "session-bench"),
+  );
+  assert.equal(atTenth.fixtures.index.find((entry) => entry.id === "session-bench").hash, null);
   // Amendment 9 (plan 218.2 Task 8): the long-horizon family's partition hash, no row change and no other fixture moved.
   assert.deepEqual([ninth.plan, ninth.task, ninth.kind], ["218.2", 8, undefined]);
   assert.equal(memoryModelCriteriaHash(edited(beforeNinth)), ninth.previousHash);
-  assert.deepEqual(edited(beforeNinth).rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(edited(beforeNinth).rows, atTenth.rows);
   assert.deepEqual(
     edited(beforeNinth).fixtures.index,
-    MEMORY_MODEL_CRITERIA.fixtures.index.filter((entry) => entry.id !== "long-horizon"),
+    atTenth.fixtures.index.filter((entry) => entry.id !== "long-horizon" && entry.id !== "session-bench"),
   );
   // Amendment 8 (plan 218.2 Task 1): the worker replay fixture's hash, no row change and no other fixture moved.
   assert.deepEqual([eighth.plan, eighth.task, eighth.kind], ["218.2", 1, undefined]);
   assert.equal(memoryModelCriteriaHash(edited(beforeEighth)), eighth.previousHash);
-  assert.deepEqual(edited(beforeEighth).rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(edited(beforeEighth).rows, atTenth.rows);
   assert.deepEqual(
     edited(beforeEighth).fixtures.index,
-    MEMORY_MODEL_CRITERIA.fixtures.index.filter((entry) => entry.id !== "worker-replay" && entry.id !== "long-horizon"),
+    atTenth.fixtures.index.filter((entry) => entry.id !== "worker-replay" && entry.id !== "long-horizon" && entry.id !== "session-bench"),
   );
   // Amendment 7 (plan 218.1 Task 2): the Compact-Bench pins and draw hash, no row change.
   assert.deepEqual([seventh.plan, seventh.task, seventh.kind], ["218.1", 2, undefined]);
   assert.equal(memoryModelCriteriaHash(edited(beforeSeventh)), seventh.previousHash);
-  assert.deepEqual(edited(beforeSeventh).rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.deepEqual(edited(beforeSeventh).rows, atTenth.rows);
   // Amendment 6 (plan 218.1, owner decision qaSuitesRemoved) is the only one that changes rows.
   assert.equal(sixth.decision, "qaSuitesRemoved");
   assert.equal(memoryModelCriteriaHash(edited(beforeSixth)), sixth.previousHash);
@@ -513,7 +566,8 @@ test("amendment_6_removes_beam_and_longmemeval_from_every_row", () => {
   assert.deepEqual([sixth.plan, sixth.task, sixth.kind, sixth.decision], ["218.1", 1, "owner-decision", "qaSuitesRemoved"]);
   // The re-scope keeps every threshold, test kind and comparator.
   const before = edited(beforeSixth).rows;
-  for (const [id, row] of Object.entries(MEMORY_MODEL_CRITERIA.rows)) {
+  // Rows added later (M6 and M7, amendment 11) are not part of the re-scope.
+  for (const [id, row] of Object.entries(edited(beforeEleventh).rows)) {
     assert.deepEqual(row.tests, before[id].tests, `${id} tests`);
     assert.deepEqual(row.arms.vs, before[id].arms.vs, `${id} comparators`);
   }
@@ -570,6 +624,47 @@ test("deferred_rows_read_missing_not_pass", () => {
   for (const id of ["S3", "R5", "L4", "Z1"]) assert.equal(verdict.rows.find((row) => row.row === id).status, "missing");
 });
 
+test("criteria_amendment_adds_session_bench_rows_only", () => {
+  // Plan 218.3 Task 12: amendment 11 (owner decision sessionBenchRows) adds M6 and M7 under gate M-2, hashes
+  // session-bench, points S3's held-out reading at it and drops the long-horizon fixture; nothing else moves.
+  const eleventh = MEMORY_MODEL_CRITERIA.amendments.at(-1);
+  assert.deepEqual([eleventh.plan, eleventh.task, eleventh.kind, eleventh.decision], ["218.3", 12, "owner-decision", "sessionBenchRows"]);
+  // It declares that no existing row's thresholds change (the worker replay gate keeps its approved hash on that).
+  assert.equal(eleventh.changesThresholds, false);
+  const atTenth = edited(beforeEleventh);
+  assert.equal(memoryModelCriteriaHash(atTenth), eleventh.previousHash);
+  const { M6, M7, ...others } = MEMORY_MODEL_CRITERIA.rows;
+  const { S3, ...othersBefore } = atTenth.rows;
+  assert.deepEqual({ ...others, S3: undefined }, { ...othersBefore, S3: undefined });
+  assert.deepEqual({ ...MEMORY_MODEL_CRITERIA.rows.S3, scope: undefined }, { ...S3, scope: undefined });
+  assert.match(MEMORY_MODEL_CRITERIA.rows.S3.scope.awaitingSuite.for, /Session-Bench heldout-a/);
+  for (const [row, vs] of [
+    [M6, "STM-only"],
+    [M7, "memory-off-llm"],
+  ]) {
+    assert.equal(row.gate, "M-2");
+    assert.deepEqual(row.scope.fixtures, ["session-bench"]);
+    assert.equal(row.scope.partition, "dev");
+    assert.deepEqual(row.arms.vs, [vs]);
+    assert.equal(row.tests[0].kind, "gain");
+  }
+  assert.deepEqual([M6.arms.candidate, M6.tests[1].kind, M6.tests[1].value], ["WM", "atMost", 1.5]);
+  assert.deepEqual([M7.arms.candidate, M7.tests[1].kind, M7.tests[1].value], ["STM-only", "atLeast", -5]);
+  assert.deepEqual(MEMORY_MODEL_CRITERIA.gates["M-2"].rows, ["M1", "M2", "M3", "M4", "M5", "M6", "M7"]);
+  // Only M-2 and its record changed among the gates; statistics, partitions and test kinds are untouched.
+  for (const key of ["statistics", "partitions", "testKinds", "qaRows", "retrievalSets", "wiki", "acceptance", "baselines"])
+    assert.deepEqual(MEMORY_MODEL_CRITERIA[key], atTenth[key], key);
+  for (const gate of Object.keys(MEMORY_MODEL_CRITERIA.gates).filter((id) => id !== "M-2"))
+    assert.deepEqual(MEMORY_MODEL_CRITERIA.gates[gate], atTenth.gates[gate], gate);
+  // The fixture is hashed and the file still hashes to it; the long-horizon fixture is gone.
+  assert.equal(assertMemoryModelFixture("session-bench"), MEMORY_MODEL_CRITERIA.fixtures.index.find((e) => e.id === "session-bench").hash);
+  assert.ok(!MEMORY_MODEL_CRITERIA.fixtures.index.some((entry) => entry.id === "long-horizon"));
+  assert.deepEqual(
+    MEMORY_MODEL_CRITERIA.fixtures.index.filter((entry) => entry.id !== "session-bench"),
+    atTenth.fixtures.index.filter((entry) => entry.id !== "session-bench" && entry.id !== "long-horizon"),
+  );
+});
+
 test("closed_gate_m1_still_reads_its_own_hash", () => {
   const closed = repoJson("docs/_evidence/memory-bench/217/gates/owner-gate-m1.json");
   const record = repoJson(RECORD);
@@ -577,7 +672,9 @@ test("closed_gate_m1_still_reads_its_own_hash", () => {
   assert.notEqual(record.memoryModelCriteriaHash, closed.memoryModelCriteriaHash);
   const hashes = memoryModelCriteriaHashes();
   assert.equal(hashes.at(-1), frozenMemoryModelHash());
-  assert.equal(record.amendments.at(-4).previousHash, "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e");
+  assert.equal(record.amendments.at(-6).previousHash, "52ba02ffcc489f93f9da6f940328e0ea61b6d650de0e2f98f7025c0d1d3fdd4e");
+  assert.equal(record.amendments.at(-5).previousHash, record.amendments.at(-6).hash);
+  assert.equal(record.amendments.at(-4).previousHash, record.amendments.at(-5).hash);
   assert.equal(record.amendments.at(-3).previousHash, record.amendments.at(-4).hash);
   assert.equal(record.amendments.at(-2).previousHash, record.amendments.at(-3).hash);
   assert.equal(record.amendments.at(-1).previousHash, record.amendments.at(-2).hash);

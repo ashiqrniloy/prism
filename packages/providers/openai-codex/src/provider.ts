@@ -2,6 +2,7 @@ import type { ModelProvider, ProviderRequest } from "@arnilo/prism";
 import {
   createRoutedProvider,
   OPENAI_RESPONSES_UNSUPPORTED_FIELDS,
+  type ProviderTransportConfig,
   type RoutedProviderRoute,
   sanitizeCacheKey,
   type SecretSource,
@@ -42,6 +43,8 @@ export const OPENAI_CODEX_RESPONSES_ROUTE: RoutedProviderRoute<"openai-responses
 };
 
 export interface OpenAICodexProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   /** Defaults to {@link OPENAI_CODEX_DEFAULT_BASE_URL}. */
   readonly baseUrl?: string;
@@ -69,6 +72,7 @@ export function createOpenAICodexProvider(options: OpenAICodexProviderOptions = 
         })
       : undefined);
   return createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "openai-codex",
     baseUrl: options.baseUrl ?? OPENAI_CODEX_DEFAULT_BASE_URL,
     apiKey,

@@ -2,11 +2,12 @@ import type { JsonObject, ModelProvider, ProviderRequest, Usage } from "@arnilo/
 import {
   createRoutedProvider,
   mapOpenAIChatUsage,
+  parseRetryAfterMs,
   providerHttpError,
-  readRetryAfterMs,
+  type ProviderTransportConfig,
   resolveReasoningObject,
-  sanitizeCacheKey,
   type RoutedProviderRoute,
+  sanitizeCacheKey,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { OPENROUTER_DEFAULT_BASE_URL } from "./models.js";
@@ -24,6 +25,8 @@ export interface OpenRouterRouting {
   readonly quantizations?: readonly string[];
 }
 export interface OpenRouterProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -65,7 +68,7 @@ export function mapOpenRouterHttpError(response: Response, bodyText: string, sec
   if (response.status === 429 && /daily|per.day/i.test(bodyText)) hint += "Daily quota exhausted. ";
   return providerHttpError(
     "OpenRouter",
-    { status: response.status, code: response.status, retryAfterMs: readRetryAfterMs(response.headers) },
+    { status: response.status, code: response.status, retryAfterMs: parseRetryAfterMs(response.headers) },
     hint + bodyText,
     secrets,
   );
@@ -98,6 +101,7 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions = {}
     },
   });
   const provider = createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "openrouter",
     baseUrl: options.baseUrl ?? OPENROUTER_DEFAULT_BASE_URL,
     apiKey: options.apiKey,

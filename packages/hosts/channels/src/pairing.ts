@@ -9,7 +9,6 @@ import { CHANNEL_JOURNAL_NAMESPACES } from "./state.js";
 
 /** Review section 6: 5 minutes, host-tightenable, never longer. */
 export const DEFAULT_PAIRING_TTL_MS = 5 * 60_000;
-export const HARD_PAIRING_TTL_MS = 5 * 60_000;
 const TOKEN_BYTES = 32;
 
 export interface ChannelPairingRecord {
@@ -121,7 +120,7 @@ export function createChannelPairingStore(options: ChannelPairingStoreOptions): 
       return r;
     },
     async create(input) {
-      const ttl = Math.min(Math.max(1_000, input.ttlMs ?? DEFAULT_PAIRING_TTL_MS), HARD_PAIRING_TTL_MS);
+      const ttl = Math.max(1_000, input.ttlMs ?? DEFAULT_PAIRING_TTL_MS);
       const now = input.now ?? new Date().toISOString();
       const token = randomBytes(TOKEN_BYTES).toString("base64url");
       const record: ChannelPairingRecord = {

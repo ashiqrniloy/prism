@@ -6,11 +6,6 @@ import {
   DEFAULT_MAX_FORGE_PAYLOAD_BYTES,
   DEFAULT_MAX_FORGE_REQUEST_CONCURRENCY,
   DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS,
-  HARD_MAX_FORGE_COMMENTS_PER_REVIEW,
-  HARD_MAX_FORGE_PAGES_PER_OPERATION,
-  HARD_MAX_FORGE_PAYLOAD_BYTES,
-  HARD_MAX_FORGE_REQUEST_CONCURRENCY,
-  HARD_MAX_FORGE_REQUEST_TIMEOUT_MS,
   validateCodingLimit,
 } from "../limits.js";
 import type { ExecutionPolicy } from "../execution-policy.js";
@@ -103,31 +98,14 @@ export interface ResolvedForgeLimits {
 
 export function resolveForgeLimits(options?: ForgeLimits): ResolvedForgeLimits {
   return {
-    pagesPerOperation: validateCodingLimit(
-      "forge.pagesPerOperation",
-      options?.pagesPerOperation ?? DEFAULT_MAX_FORGE_PAGES_PER_OPERATION,
-      HARD_MAX_FORGE_PAGES_PER_OPERATION,
-    ),
-    payloadBytes: validateCodingLimit(
-      "forge.payloadBytes",
-      options?.payloadBytes ?? DEFAULT_MAX_FORGE_PAYLOAD_BYTES,
-      HARD_MAX_FORGE_PAYLOAD_BYTES,
-    ),
-    commentsPerReview: validateCodingLimit(
-      "forge.commentsPerReview",
-      options?.commentsPerReview ?? DEFAULT_MAX_FORGE_COMMENTS_PER_REVIEW,
-      HARD_MAX_FORGE_COMMENTS_PER_REVIEW,
-    ),
+    pagesPerOperation: validateCodingLimit("forge.pagesPerOperation", options?.pagesPerOperation ?? DEFAULT_MAX_FORGE_PAGES_PER_OPERATION),
+    payloadBytes: validateCodingLimit("forge.payloadBytes", options?.payloadBytes ?? DEFAULT_MAX_FORGE_PAYLOAD_BYTES),
+    commentsPerReview: validateCodingLimit("forge.commentsPerReview", options?.commentsPerReview ?? DEFAULT_MAX_FORGE_COMMENTS_PER_REVIEW),
     requestConcurrency: validateCodingLimit(
       "forge.requestConcurrency",
       options?.requestConcurrency ?? DEFAULT_MAX_FORGE_REQUEST_CONCURRENCY,
-      HARD_MAX_FORGE_REQUEST_CONCURRENCY,
     ),
-    requestTimeoutMs: validateCodingLimit(
-      "forge.requestTimeoutMs",
-      options?.requestTimeoutMs ?? DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS,
-      HARD_MAX_FORGE_REQUEST_TIMEOUT_MS,
-    ),
+    requestTimeoutMs: validateCodingLimit("forge.requestTimeoutMs", options?.requestTimeoutMs ?? DEFAULT_MAX_FORGE_REQUEST_TIMEOUT_MS),
   };
 }
 

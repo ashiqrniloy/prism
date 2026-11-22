@@ -196,20 +196,6 @@
       ]
     },
     {
-      "name": "A2A_PROTOCOL_VERSION",
-      "from": [
-        "@arnilo/prism-core",
-        "@arnilo/prism-supervisor"
-      ]
-    },
-    {
-      "name": "A2AError",
-      "from": [
-        "@arnilo/prism-core",
-        "@arnilo/prism-supervisor"
-      ]
-    },
-    {
       "name": "abortableSleep",
       "from": [
         "@arnilo/prism"
@@ -1176,6 +1162,12 @@
       ]
     },
     {
+      "name": "artifactStructuredOutputRequest",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
       "name": "asEnterprisePostgresError",
       "from": [
         "@arnilo/prism-core",
@@ -1727,6 +1719,13 @@
       "name": "attemptForward",
       "from": [
         "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "AUDIT_EXPORT_HARD_LIMITS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-policy"
       ]
     },
     {
@@ -2830,13 +2829,6 @@
       "name": "collapsedThinkingText",
       "from": [
         "@arnilo/prism-code"
-      ]
-    },
-    {
-      "name": "collectFileOperations",
-      "from": [
-        "@arnilo/prism-compaction-llm",
-        "@arnilo/prism-memory"
       ]
     },
     {
@@ -5666,6 +5658,13 @@
       ]
     },
     {
+      "name": "DEFAULT_MAX_CHECK_NAMES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "DEFAULT_MAX_CHILD_EVENT_BYTES",
       "from": [
         "@arnilo/prism-core",
@@ -5747,6 +5746,12 @@
       ]
     },
     {
+      "name": "DEFAULT_MAX_EXPECTED_CALLS",
+      "from": [
+        "@arnilo/prism-core"
+      ]
+    },
+    {
       "name": "DEFAULT_MAX_FRAME_BYTES",
       "from": [
         "@arnilo/prism-providers"
@@ -5757,6 +5762,12 @@
       "from": [
         "@arnilo/prism-core",
         "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "DEFAULT_MAX_HOLD_REASON_BYTES",
+      "from": [
+        "@arnilo/prism"
       ]
     },
     {
@@ -5816,6 +5827,12 @@
       "name": "DEFAULT_MAX_PAYLOAD_BYTES",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "DEFAULT_MAX_PENDING_DECISIONS",
+      "from": [
+        "@arnilo/prism"
       ]
     },
     {
@@ -5961,6 +5978,24 @@
       "from": [
         "@arnilo/prism-core",
         "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "DEFAULT_MAX_SESSIONS",
+      "from": [
+        "@arnilo/prism-mcp"
       ]
     },
     {
@@ -7346,13 +7381,6 @@
       ]
     },
     {
-      "name": "FileOperationDetails",
-      "from": [
-        "@arnilo/prism-compaction-llm",
-        "@arnilo/prism-memory"
-      ]
-    },
-    {
       "name": "fileResource",
       "from": [
         "@arnilo/prism-memory",
@@ -7462,13 +7490,6 @@
       "name": "formatDoctorTable",
       "from": [
         "@arnilo/prism-code"
-      ]
-    },
-    {
-      "name": "formatFileOperations",
-      "from": [
-        "@arnilo/prism-compaction-llm",
-        "@arnilo/prism-memory"
       ]
     },
     {
@@ -8036,9 +8057,22 @@
       ]
     },
     {
+      "name": "HARD_ACTION_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
       "name": "HARD_ADMISSION_PAGES",
       "from": [
         "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "HARD_AG_UI_LIMITS",
+      "from": [
+        "@arnilo/prism-ag-ui"
       ]
     },
     {
@@ -8140,6 +8174,26 @@
       ]
     },
     {
+      "name": "HARD_BROWSER_LIMITS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_CALL_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_CANDIDATE_MAX_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
       "name": "HARD_CAPABILITY_TOKEN_BYTES",
       "from": [
         "@arnilo/prism-core",
@@ -8151,6 +8205,54 @@
       "from": [
         "@arnilo/prism-core",
         "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_CHANNEL_LIMITS",
+      "from": [
+        "@arnilo/prism-channels"
+      ]
+    },
+    {
+      "name": "HARD_CHECK_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_CHUNK_OVERLAP_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_CHUNK_SIZE_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_CLEANUP_DEADLINE_MS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_CLOSE_GRACE_MS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_COMPARISON_CANDIDATES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
       ]
     },
     {
@@ -8217,6 +8319,20 @@
       ]
     },
     {
+      "name": "HARD_CPUS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_DATASET_ITEMS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
       "name": "HARD_DELEGATION_TIMEOUT_MS",
       "from": [
         "@arnilo/prism-core",
@@ -8238,6 +8354,25 @@
       ]
     },
     {
+      "name": "HARD_DEVICE_MAX_CHUNK_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_DEVICE_MAX_CONCURRENT_SESSIONS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_DOWNLOAD_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "HARD_DRAIN_DEADLINE_MS",
       "from": [
         "@arnilo/prism-core",
@@ -8251,6 +8386,27 @@
       ]
     },
     {
+      "name": "HARD_EMBED_BATCH_SIZE_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_EVALUATION_PAGE_CAP",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_EXPERIMENT_CONCURRENCY_CAP",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
       "name": "HARD_FABRIC_MAX_FILE_BYTES",
       "from": [
         "@arnilo/prism-memory"
@@ -8260,6 +8416,95 @@
       "name": "HARD_FABRIC_VIEW_ENTRIES",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_FEEDBACK_PAGE_SIZE",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_GIT_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_IDENTITY_LIMITS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_IDLE_RUN_TTL_MS",
+      "from": [
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_IDLE_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_INFERENCE_WINDOW_ROWS",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-sheets",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_INGESTION_STATUS_PAGE_SIZE_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_JUDGE_MAX_ATTEMPTS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_JUDGE_MAX_INPUT_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_JUDGE_MAX_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_JUDGE_MAX_RUBRIC_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_JUDGE_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_KEYCHAIN_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-credentials-node"
       ]
     },
     {
@@ -8322,6 +8567,12 @@
       ]
     },
     {
+      "name": "HARD_LIFECYCLE_PAGE_SIZE",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
       "name": "HARD_LINEAGE_DEPTH",
       "from": [
         "@arnilo/prism-memory"
@@ -8337,6 +8588,43 @@
       "name": "HARD_LINEAGE_SOURCE_IDS",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_LIST_CACHE_TTL_MS",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_LIST_PAGE_CAP",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_A2UI_COMPONENT_DEPTH",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_A2UI_OPERATION_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_A2UI_OPS_PER_MESSAGE",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_A2UI_SURFACES_PER_RUN",
+      "from": [
+        "@arnilo/prism-ag-ui"
       ]
     },
     {
@@ -8418,6 +8706,20 @@
       ]
     },
     {
+      "name": "HARD_MAX_ACTION_INPUT_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ACTIONS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
       "name": "HARD_MAX_ACTIVE_CHILDREN",
       "from": [
         "@arnilo/prism-core",
@@ -8425,9 +8727,162 @@
       ]
     },
     {
+      "name": "HARD_MAX_ACTIVITY_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ASK_USER_DECISION_BULLET_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ASK_USER_DECISION_LABEL_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ASK_USER_DECISION_OPTIONS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "HARD_MAX_ATTEMPTS",
       "from": [
         "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ATTRIBUTES",
+      "from": [
+        "@arnilo/prism-diagrams",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_BLOCKED_URL_PATTERNS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_BLOCKS",
+      "from": [
+        "@arnilo/prism-documents",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CAPABILITY_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CAPABILITY_ITEMS",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CAPABILITY_PAGES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CELLS",
+      "from": [
+        "@arnilo/prism-documents",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECK_CONCURRENCY",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECK_DIAGNOSTIC_LINES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECK_NAMES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECK_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECK_SUMMARY_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECKPOINT_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECKPOINT_URL_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CHECKPOINTS_PER_RUN",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
       ]
     },
     {
@@ -8451,6 +8906,63 @@
       ]
     },
     {
+      "name": "HARD_MAX_CHUNKS_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CODING_ARTIFACT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CODING_ARTIFACTS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CODING_CHECKPOINT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_COLUMNS",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-sheets",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_COMMANDS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CONCURRENCY",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CONCURRENT_EXECS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "HARD_MAX_CONCURRENT_RUNS",
       "from": [
         "@arnilo/prism-core",
@@ -8458,9 +8970,42 @@
       ]
     },
     {
+      "name": "HARD_MAX_CONSOLE_ENTRIES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CONTEXT_BUDGET_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CONTEXT_BUDGET_TOKENS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CONTEXT_TOKENS_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
       "name": "HARD_MAX_CONVERSATION_CURSOR_BYTES",
       "from": [
         "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_CURSOR_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-mcp"
       ]
     },
     {
@@ -8506,15 +9051,284 @@
       ]
     },
     {
+      "name": "HARD_MAX_DIALOGS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DIFF_NODES",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DIFF_OPS",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOCUMENT_BYTES",
+      "from": [
+        "@arnilo/prism-document-reader",
+        "@arnilo/prism-documents",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOCUMENT_BYTES_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOCUMENT_CHARS_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOCUMENT_PAGES",
+      "from": [
+        "@arnilo/prism-document-reader",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOCUMENT_TEXT_BYTES",
+      "from": [
+        "@arnilo/prism-document-reader",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOMAIN_STATE_HASH_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOWNLOAD_AGGREGATE_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOWNLOAD_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_DOWNLOADS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EDIT_FILE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EDIT_INPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EDITS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EGRESS_CONCURRENT_CONNECTIONS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EGRESS_REDIRECT_HOPS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EGRESS_REQUEST_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EGRESS_RESPONSE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EGRESS_RULES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EGRESS_TRANSFER_TIME_MS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ELEMENTS",
+      "from": [
+        "@arnilo/prism-diagrams",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
       "name": "HARD_MAX_ENTRY_TEXT_CHARS_CAP",
       "from": [
         "@arnilo/prism-memory"
       ]
     },
     {
+      "name": "HARD_MAX_ENV_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ENV_NAMES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ENVELOPE_FILE_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-credentials-node"
+      ]
+    },
+    {
+      "name": "HARD_MAX_ERROR_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EVALUATE_RESULT_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EVENT_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EXPECTED_CALLS",
+      "from": [
+        "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EXPORT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EXPORT_ENTRIES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EXTRACTION_BYTES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_EXTRACTION_TEXT_BYTES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
       "name": "HARD_MAX_FABRIC_LINK_TOP_K",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FAN_OUT",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FDS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FEEDBACK_COMMENT_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FEEDBACK_LINKS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FEEDBACK_METADATA_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FEEDBACK_TAGS",
+      "from": [
+        "@arnilo/prism"
       ]
     },
     {
@@ -8525,9 +9339,100 @@
       ]
     },
     {
+      "name": "HARD_MAX_FORGE_COMMENTS_PER_REVIEW",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FORGE_PAGES_PER_OPERATION",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FORGE_PAYLOAD_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FORGE_REQUEST_CONCURRENCY",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_FORGE_REQUEST_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "HARD_MAX_FRAME_BYTES",
       "from": [
         "@arnilo/prism-providers"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_CHANGED_FILES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_DIFF_LINES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_MESSAGE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_PATCH_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_PATHS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_REF_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_GIT_WORKTREES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
       ]
     },
     {
@@ -8535,6 +9440,34 @@
       "from": [
         "@arnilo/prism-core",
         "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_HOST_DATA_REF_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_HTTP_RESPONSE_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_IMAGE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_IMAGES",
+      "from": [
+        "@arnilo/prism-documents",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
       ]
     },
     {
@@ -8579,9 +9512,173 @@
       ]
     },
     {
+      "name": "HARD_MAX_INPUT_CONTEXT_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_CONTEXTS",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_INTERRUPTS",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_MEDIA_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_MEDIA_PARTS",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_MESSAGES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_TEXT_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_TOOL_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_INPUT_TOOLS",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_JSON_ARRAY_ITEMS",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_JSON_DEPTH",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_JSON_PROPERTIES",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_KEYCHAIN_PAYLOAD_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-credentials-node"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LINES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LIST_PAGES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LISTENERS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LOOP_ITERATIONS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LS_FILES_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LSP_DIAGNOSTICS_PER_FILE",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LSP_MESSAGE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LSP_PENDING_REQUESTS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LSP_RESULTS_PER_QUERY",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LSP_SERVERS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_LSP_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "HARD_MAX_MEMORY_EXPORT_BYTES_CAP",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_METADATA_BYTES_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
       ]
     },
     {
@@ -8591,9 +9688,185 @@
       ]
     },
     {
+      "name": "HARD_MAX_NESTED_DEPTH",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_NETWORK_REQUESTS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_NODE_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_NODE_RETRIES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_NODE_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_NODES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_OCR_PAGES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_OCR_STDERR_BYTES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PAGES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PARSE_MS_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PATCH_OPERATIONS",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
       "name": "HARD_MAX_PAYLOAD_BYTES_CAP",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PDF_PAGES_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PENDING_STEER_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PENDING_STEERS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PIDS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PLAN_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_POPUPS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PR_COMMITS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PR_HANDOFF_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PROCESS_INPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PROCESS_LIFETIME_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PROCESS_SESSIONS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PROJECTOR_MESSAGES",
+      "from": [
+        "@arnilo/prism-ag-ui"
       ]
     },
     {
@@ -8646,6 +9919,47 @@
       ]
     },
     {
+      "name": "HARD_MAX_PTY_ATTACH_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_PTY_BACKEND_METADATA_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_QUEUED_ACTIONS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_QUEUED_EVENTS",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_RAW_EVENT_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REASONING_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
       "name": "HARD_MAX_RECALL_PAGE_LIMIT",
       "from": [
         "@arnilo/prism-compaction-observational-memory",
@@ -8695,6 +10009,13 @@
       ]
     },
     {
+      "name": "HARD_MAX_REDIRECTS_PER_REQUEST",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
       "name": "HARD_MAX_RENDERED_MEMORY_BYTES",
       "from": [
         "@arnilo/prism-compaction-observational-memory",
@@ -8709,10 +10030,102 @@
       ]
     },
     {
+      "name": "HARD_MAX_REPLAY_DEPTH",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REPLAY_EVENTS",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REPO_CONCURRENCY",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REPO_DEPTH",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REPO_ENTRIES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REPO_FILES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REPO_RESULTS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_REQUEST_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_RERANK_BYTES_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_RERANK_MS_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
       "name": "HARD_MAX_RESPONSE_BYTES",
       "from": [
         "@arnilo/prism-core",
         "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_RESULT_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_RESULT_BYTES_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_MAX_RETAINED_ARTIFACTS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
       ]
     },
     {
@@ -8743,6 +10156,20 @@
       ]
     },
     {
+      "name": "HARD_MAX_ROWS",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-sheets",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SCENARIO_TURNS",
+      "from": [
+        "@arnilo/prism-core"
+      ]
+    },
+    {
       "name": "HARD_MAX_SCHEDULE_CLAIMS",
       "from": [
         "@arnilo/prism-core",
@@ -8757,6 +10184,136 @@
       ]
     },
     {
+      "name": "HARD_MAX_SCREENSHOT_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SCREENSHOT_MEGAPIXELS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SCREENSHOTS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SCRYPT_MEMORY_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-credentials-node"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_CONTEXT_LINES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_FILE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_LINE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_MATCHES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_PATTERN_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_SCAN_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SEARCH_TIME_MS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SESSION_SEARCH_LINEAR_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SESSIONS",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SHEET_BYTES",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-sheets",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SHEETS",
+      "from": [
+        "@arnilo/prism-documents",
+        "@arnilo/prism-office",
+        "@arnilo/prism-sheets",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
       "name": "HARD_MAX_SKILL_CATALOG_ENTRIES",
       "from": [
         "@arnilo/prism"
@@ -8766,6 +10323,78 @@
       "name": "HARD_MAX_SKILL_DESCRIPTION_BYTES",
       "from": [
         "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SLIDES",
+      "from": [
+        "@arnilo/prism-documents",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SNAPSHOT_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SNAPSHOT_DEPTH",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_SNAPSHOT_REFS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_STATE_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_STATE_HISTORY",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-workflows"
+      ]
+    },
+    {
+      "name": "HARD_MAX_STEP_SCORES",
+      "from": [
+        "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "HARD_MAX_STICKY_DECISIONS",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_STREAM_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_MAX_STREAM_EVENTS",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
       ]
     },
     {
@@ -8783,6 +10412,12 @@
       ]
     },
     {
+      "name": "HARD_MAX_SUPERSTEPS",
+      "from": [
+        "@arnilo/prism-core"
+      ]
+    },
+    {
       "name": "HARD_MAX_SUPERVISOR_QUEUED_EVENTS",
       "from": [
         "@arnilo/prism-core",
@@ -8790,8 +10425,252 @@
       ]
     },
     {
+      "name": "HARD_MAX_TERMINAL_COLUMNS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TERMINAL_RESIZES_PER_MINUTE",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TERMINAL_ROWS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TERMINAL_TERM_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TEXT_BYTES",
+      "from": [
+        "@arnilo/prism-ag-ui"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TEXT_SCAN_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_CONTENT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_ID_BYTES",
+      "from": [
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_ITEMS",
+      "from": [
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_NO_PROGRESS",
+      "from": [
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_STEER_BYTES",
+      "from": [
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_STEER_ITEMS",
+      "from": [
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODO_TEXT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TODOS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOL_DESCRIPTION_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOL_NAME_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOL_SCHEMA_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOLS",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOLS_INDEX",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOLS_SEARCH_QUERY_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOOLS_SEARCH_TOP_K",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOTAL_OUTPUT_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES",
+      "from": [
+        "@arnilo/prism-mcp"
+      ]
+    },
+    {
+      "name": "HARD_MAX_TRIALS",
+      "from": [
+        "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "HARD_MAX_UPLOAD_AGGREGATE_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_UPLOAD_BYTES",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_UPLOADS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_VAULT_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-credentials-node"
+      ]
+    },
+    {
       "name": "HARD_MAX_VECTOR_DIMENSIONS_CAP",
       "from": [
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WARNINGS",
+      "from": [
+        "@arnilo/prism-office",
+        "@arnilo/prism-sheets",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WEBSOCKETS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_ARGUMENT_BYTES",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_ERROR_BYTES",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_MESSAGE_BYTES",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_RESULT_BYTES",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_TOOL_CALLS",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_TOOL_CALLS_PER_TURN",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_MAX_WORKER_TURNS",
+      "from": [
+        "@arnilo/prism-compaction-observational-memory",
         "@arnilo/prism-memory"
       ]
     },
@@ -8837,6 +10716,28 @@
       ]
     },
     {
+      "name": "HARD_MAX_WRITE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_MAX_XML_BYTES",
+      "from": [
+        "@arnilo/prism-diagrams",
+        "@arnilo/prism-office",
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_MEMORY_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
       "name": "HARD_MEMORY_EXPORT_MS_CAP",
       "from": [
         "@arnilo/prism-memory"
@@ -8861,6 +10762,12 @@
       ]
     },
     {
+      "name": "HARD_MEMORY_RETENTION_BATCH_CAP",
+      "from": [
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
       "name": "HARD_MESSAGE_RANGE_CAP",
       "from": [
         "@arnilo/prism-memory"
@@ -8870,6 +10777,84 @@
       "name": "HARD_MILESTONE_EVERY_TURNS",
       "from": [
         "@arnilo/prism-core"
+      ]
+    },
+    {
+      "name": "HARD_MODEL_ROUTER_LIMITS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-model-router"
+      ]
+    },
+    {
+      "name": "HARD_NAVIGATION_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_OBSCURA_PROCESS_LIMITS",
+      "from": [
+        "@arnilo/prism-obscura",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_OBSCURA_WEB_LIMITS",
+      "from": [
+        "@arnilo/prism-obscura",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_OCR_MAX_BYTES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_OCR_MAX_CONCURRENT",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_OCR_MAX_PAGES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_OCR_MAX_RESPONSE_BYTES",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_OCR_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-work"
+      ]
+    },
+    {
+      "name": "HARD_OPENAPI_LIMITS",
+      "from": [
+        "@arnilo/prism-coding-tools",
+        "@arnilo/prism-openapi-tools"
+      ]
+    },
+    {
+      "name": "HARD_PAIRING_TTL_MS",
+      "from": [
+        "@arnilo/prism-channels"
+      ]
+    },
+    {
+      "name": "HARD_POLICY_LIMITS",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-policy"
       ]
     },
     {
@@ -8883,6 +10868,13 @@
       "name": "HARD_PROPAGATION_EDGES",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_QUERY_CANDIDATES_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
       ]
     },
     {
@@ -8910,10 +10902,39 @@
       ]
     },
     {
+      "name": "HARD_REPORT_MAX_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_REQUEST_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-ag-ui",
+        "@arnilo/prism-core",
+        "@arnilo/prism-server"
+      ]
+    },
+    {
+      "name": "HARD_RERANK_CONCURRENCY_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
       "name": "HARD_RESERVE_TOKENS",
       "from": [
         "@arnilo/prism-compaction-llm",
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_RETRIEVE_SCOPE_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
       ]
     },
     {
@@ -8930,6 +10951,13 @@
       ]
     },
     {
+      "name": "HARD_RUN_WALL_TIME_MS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
       "name": "HARD_SCHEDULE_PAGE_CAP",
       "from": [
         "@arnilo/prism-core",
@@ -8940,6 +10968,120 @@
       "name": "HARD_SHARE_SOURCE_IDS",
       "from": [
         "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_SHELL_TIMEOUT_SECONDS",
+      "from": [
+        "@arnilo/prism-coding-agent",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_STARTUP_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_STOP_GRACE_MS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_SYNC_MAX_PAGES_CAP",
+      "from": [
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_SYNC_PAGE_SIZE_CAP",
+      "from": [
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_SYNC_RETRIES_CAP",
+      "from": [
+        "@arnilo/prism-memory"
+      ]
+    },
+    {
+      "name": "HARD_TMP_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
+      "name": "HARD_TOP_K_CAP",
+      "from": [
+        "@arnilo/prism-memory",
+        "@arnilo/prism-rag"
+      ]
+    },
+    {
+      "name": "HARD_TRACE_MAX_BYTES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_TRACE_PAGE_SIZE",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_TRACE_PAGES",
+      "from": [
+        "@arnilo/prism-core",
+        "@arnilo/prism-evals"
+      ]
+    },
+    {
+      "name": "HARD_WAIT_TIMEOUT_MS",
+      "from": [
+        "@arnilo/prism-browser",
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_WALL_TIME_MS",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
+      ]
+    },
+    {
+      "name": "HARD_WEB_LIMITS",
+      "from": [
+        "@arnilo/prism-web-tools"
+      ]
+    },
+    {
+      "name": "HARD_WORK_LIMITS",
+      "from": [
+        "@arnilo/prism-work",
+        "@arnilo/prism-work-tools"
+      ]
+    },
+    {
+      "name": "HARD_WORKSPACE_BYTES",
+      "from": [
+        "@arnilo/prism-coding-security",
+        "@arnilo/prism-coding-tools"
       ]
     },
     {
@@ -14233,6 +16375,12 @@
       ]
     },
     {
+      "name": "readRetryAfterMs",
+      "from": [
+        "@arnilo/prism-providers"
+      ]
+    },
+    {
       "name": "readScheduleStatus",
       "from": [
         "@arnilo/prism-core",
@@ -18115,6 +20263,12 @@
       ]
     },
     {
+      "name": "withoutStructuredOutput",
+      "from": [
+        "@arnilo/prism"
+      ]
+    },
+    {
       "name": "withoutTrailingInput",
       "from": [
         "@arnilo/prism"
@@ -18945,7 +21099,6 @@
     "ERR_PRISM_A2A_CARD",
     "ERR_PRISM_A2A_CARD_SIGNATURE",
     "ERR_PRISM_A2A_CONCURRENCY",
-    "ERR_PRISM_A2A_CONFIG",
     "ERR_PRISM_A2A_INTERRUPTED",
     "ERR_PRISM_A2A_MESSAGE",
     "ERR_PRISM_A2A_ORIGIN",
@@ -18984,6 +21137,7 @@
     "ERR_PRISM_ERP_OUTBOX_LEASE_EXPIRED",
     "ERR_PRISM_ERP_OUTBOX_RETRY_EXHAUSTED",
     "ERR_PRISM_EVAL_TOOL_DENIED",
+    "ERR_PRISM_EVAL_TRAJECTORY_BOUNDS",
     "ERR_PRISM_MCP_CONCURRENCY",
     "ERR_PRISM_MCP_CONNECT",
     "ERR_PRISM_MCP_SERVER",
@@ -19158,6 +21312,10 @@
     {
       "path": "scripts/host-builder-evals/workspaces/upgrade-0-12/",
       "reason": "a 0.12 host the host-builder upgrade eval migrates; it must name 0.12 packages"
+    },
+    {
+      "path": "docs/limits.md",
+      "reason": "generated by scripts/limits-inventory.mjs from live src/ and packages/ constants; every name it lists exists in the tree, even where a 0.12 package once exported the same name"
     }
   ]
 }

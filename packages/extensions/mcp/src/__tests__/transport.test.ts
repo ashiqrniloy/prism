@@ -142,7 +142,7 @@ describe("secure MCP Streamable HTTP transport", () => {
   });
 
   it("validates the HTTP response limit before transport creation", () => {
-    for (const value of [0, NaN, Infinity, 64 * 1024 * 1024 + 1]) {
+    for (const value of [0, NaN, Infinity, 1.5]) {
       assert.throws(() =>
         createMcpTransport({
           type: "streamable-http",

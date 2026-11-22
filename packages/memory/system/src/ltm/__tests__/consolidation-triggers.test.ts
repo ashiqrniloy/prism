@@ -120,7 +120,8 @@ async function waitFor(check: () => Promise<boolean>, attempts = 200): Promise<v
 const SESSION_TIERS = {
   stm: { model: "scripted/om", triggerTokens: 1 },
   wm: { model: "scripted/om", triggerTokens: 1 },
-  context: { compactAt: { maxTokens: 999_999 } },
+  scope: { text: "Consolidate session." },
+  context: { compactAfterRun: { maxTokens: 999_999 } },
   worker: { maxTurns: 1 },
 } as const;
 

@@ -154,7 +154,8 @@ export function generate({ from = DEFAULT_FROM, root = ROOT } = {}) {
   const successors = {};
   for (const bundle of activeBundles(root)) {
     for (const row of bundle.subpaths) {
-      if (row.formerName === bundle.name) continue;
+      // A new subpath (no `formerName`) retired nothing.
+      if (row.formerName === undefined || row.formerName === bundle.name) continue;
       candidates.add(row.formerName);
       if (!(row.formerName in successors) || row.kind === "package") {
         successors[row.formerName] = bundle.name + (row.path === "." ? "" : row.path.slice(1));

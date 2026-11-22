@@ -140,7 +140,7 @@ describe("compaction.when abstention", () => {
       model,
       packages: [
         providerPackage("test-provider", [provider]),
-        memorySystem({ enabled: true, context: { compactAt: { maxTokens: 1_000_000 } } }),
+        memorySystem({ enabled: true, context: { compactAfterRun: { maxTokens: 1_000_000 } } }),
       ],
       compaction: { thresholdEntries: 0 },
     });

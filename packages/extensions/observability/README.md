@@ -72,7 +72,7 @@ observability({
 
 ## Spans and metrics
 
-`invoke_agent` (run) > `chat <model>` (turn attempt) > `execute_tool <name>` (tool call), plus `prism.guardrail.evaluate`. `delegate.step`, `router.decision`, and `mcp.status` package events become span events on the run span, with bounded scalar fields only. Tool arguments are never attributes.
+`invoke_agent` (run) > `chat <model>` (turn attempt) > `execute_tool <name>` (tool call), plus `prism.guardrail.evaluate`. `delegate.step`, `delegate.activity`, `router.decision`, and `mcp.status` package events become span events on the run span, with bounded scalar fields only (`delegate.activity` keeps its `kind`, `tool` and `status`, never its text). Tool arguments are never attributes.
 
 When an event carries `origin`, every span it opens also carries `prism.origin.agent`, `.vendor`, `.profile`, `.executed_by`, `.delegation_id`, and `.subagent_id` (the names are `ORIGIN_ATTRIBUTES`). Values are bounded to 128 characters; `profile` is kept only when it is a plain name (no path separators, `~`, or spaces) and is never a credential or home path. The `fieldPolicy` drop and hash rules apply to these attributes like any other, and no message text becomes an attribute.
 

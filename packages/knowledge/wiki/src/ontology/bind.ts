@@ -13,7 +13,6 @@ import { lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-system
 
 /** Two matched tokens of one name, or one whole multi-token name. Tuning (`ontology.bindThreshold`). */
 export const DEFAULT_BIND_THRESHOLD = 2;
-export const MAX_BIND_THRESHOLD = 8;
 /** Text beyond this is not read: a verbatim exchange can be large and its opening names its subject. */
 const MAX_BIND_TEXT_CHARS = 16_000;
 
@@ -37,8 +36,8 @@ interface NameEntry {
 
 export function resolveBindThreshold(value: number | undefined): number {
   const threshold = value ?? DEFAULT_BIND_THRESHOLD;
-  if (!Number.isInteger(threshold) || threshold < 1 || threshold > MAX_BIND_THRESHOLD) {
-    throw new MemoryValidationError(`ontology.bindThreshold must be an integer in [1,${MAX_BIND_THRESHOLD}]`);
+  if (!Number.isSafeInteger(threshold) || threshold < 1) {
+    throw new MemoryValidationError("ontology.bindThreshold must be a positive integer");
   }
   return threshold;
 }

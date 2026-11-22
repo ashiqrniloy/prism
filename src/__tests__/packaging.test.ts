@@ -287,19 +287,26 @@ describe("packaging guard", () => {
     assert.ok((manifest.files as string[] | undefined)?.includes("computer-use/skills"), "desktop package manifest must include skills");
   });
 
-  it("hosts bundle publishes channel source and keeps telegram isolated from signal", () => {
+  it("hosts bundle publishes channel source and keeps each adapter isolated", () => {
     const manifest = readPkg("packages/hosts");
     const exportsMap = manifest.exports as Record<string, string>;
     assert.deepEqual(
       Object.keys(exportsMap)
         .filter((key) => key === "./channels" || key.startsWith("./channels/"))
         .sort(),
-      ["./channels", "./channels/signal", "./channels/telegram"],
+      ["./channels", "./channels/discord", "./channels/signal", "./channels/slack", "./channels/telegram"],
     );
     assert.ok((manifest.peerDependencies as Record<string, string>)["@arnilo/prism"]);
     assert.deepEqual(Object.keys(manifest.dependencies ?? {}), ["@arnilo/prism-extensions"]);
     const files = getPackList("packages/hosts", "@arnilo/prism-hosts");
-    for (const required of ["channels/src/index.ts", "channels/src/telegram.ts", "channels/src/signal.ts"]) {
+    for (const required of [
+      "channels/src/index.ts",
+      "channels/src/telegram.ts",
+      "channels/src/signal.ts",
+      "channels/src/slack.ts",
+      "channels/src/discord.ts",
+      "channels/src/discord-gateway.ts",
+    ]) {
       assert.ok(files.includes(required), `channels pack missing ${required}`);
     }
     assert.equal(
@@ -309,6 +316,23 @@ describe("packaging guard", () => {
     );
     const telegram = readFileSync(join(repoRoot, "packages/hosts/channels/src/telegram.ts"), "utf8");
     assert.equal(telegram.includes("./signal.js") || telegram.includes("node:net"), false, "telegram must not load signal or Unix sockets");
+    const slack = readFileSync(join(repoRoot, "packages/hosts/channels/src/slack.ts"), "utf8");
+    assert.equal(
+      slack.includes("./signal.js") || slack.includes("./telegram.js") || slack.includes("node:net"),
+      false,
+      "slack must not load another adapter or Unix sockets",
+    );
+    for (const file of ["discord.ts", "discord-gateway.ts"]) {
+      const discord = readFileSync(join(repoRoot, "packages/hosts/channels/src", file), "utf8");
+      assert.equal(
+        discord.includes("./signal.js") ||
+          discord.includes("./telegram.js") ||
+          discord.includes("./slack.js") ||
+          discord.includes("node:net"),
+        false,
+        `${file} must not load another adapter or Unix sockets`,
+      );
+    }
   });
 
   it("tools-browser publishes the browser source surface and the web-tools workspace is gone", () => {

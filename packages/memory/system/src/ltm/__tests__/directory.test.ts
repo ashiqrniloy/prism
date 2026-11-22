@@ -136,7 +136,9 @@ describe("memory directory", () => {
     assert.ok(Math.ceil(block!.content.length / 4) <= 40);
     assert.ok(block!.content.startsWith("20 facts."), "counts survive the shrink");
     assert.equal(block!.metadata?.tokens, Math.ceil(block!.content.length / 4));
-    assert.throws(() => resolveFabricDirectoryOptions({ maxTokens: 501 }, true), /maxTokens/);
+    // Plan 239: the host's value is the cap; only an invalid value is refused.
+    assert.equal((resolveFabricDirectoryOptions({ maxTokens: 501 }, true) || { maxTokens: 0 }).maxTokens, 501);
+    assert.throws(() => resolveFabricDirectoryOptions({ maxTokens: 1.5 }, true), /maxTokens/);
     assert.throws(() => resolveFabricDirectoryOptions({ maxTopics: 0 }, true), /maxTopics/);
   });
 

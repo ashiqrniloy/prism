@@ -1,8 +1,10 @@
 import { Buffer } from "node:buffer";
 import { lstat, open } from "node:fs/promises";
 import type { JsonObject, ToolEffectDeclaration, ToolEffectRecord, ToolResult } from "@arnilo/prism";
-import { HARD_MAX_WRITE_BYTES } from "./limits.js";
 import { resolveContainedMutationPath } from "./mutation-path.js";
+
+/** Largest write a crash reconciliation compares byte for byte; a larger one is reported `unknown`. */
+const MAX_RECONCILE_WRITE_BYTES = 64 * 1024 * 1024;
 
 export const CODING_OBSERVATION_EFFECT = { kind: "none", idempotency: "none" } as const satisfies ToolEffectDeclaration;
 export const CODING_LOCAL_EFFECT = { kind: "local_mutation", idempotency: "optional" } as const satisfies ToolEffectDeclaration;
@@ -37,7 +39,7 @@ export async function reconcileCodingToolEffect(input: CodingEffectReconciliatio
     if (input.record.toolName === "write") {
       const path = stringArg(input.args, "path");
       const content = stringArg(input.args, "content");
-      if (path === undefined || content === undefined || Buffer.byteLength(content, "utf8") > HARD_MAX_WRITE_BYTES)
+      if (path === undefined || content === undefined || Buffer.byteLength(content, "utf8") > MAX_RECONCILE_WRITE_BYTES)
         return { status: "unknown" };
       const target = await resolveContainedMutationPath(input.cwd, path);
       const expected = Buffer.from(content, "utf8");

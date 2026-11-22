@@ -1,7 +1,7 @@
-import type { Message, SessionEntry } from "@arnilo/prism";
+import { type Message, type SessionEntry, sessionEntryForkedFrom } from "@arnilo/prism";
 import { recordData } from "./ledger.js";
 import { estimateEntryTokens } from "./tokens.js";
-import { isMemoryObservation, isObservationsRecordedData, isWmRecordedData, type MemoryObservation } from "./types.js";
+import { isMemoryObservation, isObservationsRecordedData, isScopeStepData, isWmRecordedData, type MemoryObservation } from "./types.js";
 
 const OBSERVATION_ELIGIBLE_ROLES = new Set<Message["role"]>(["user", "assistant", "tool"]);
 
@@ -10,8 +10,27 @@ export function isEligibleObservationSourceEntry(entry: SessionEntry): boolean {
   return OBSERVATION_ELIGIBLE_ROLES.has(entry.message.role);
 }
 
+/**
+ * The branch's entries by id, including the ids a fork's copies had in the sessions they were copied from
+ * (`sessionEntryForkedFrom`, plan 218.3 Task 4): ledger records written before a fork cite the parent's ids, and resolve
+ * to the fork's copies. An entry the fork did not copy (after its fork point) resolves to nothing.
+ */
+export function entriesById(entries: readonly SessionEntry[]): ReadonlyMap<string, SessionEntry> {
+  const byId = new Map<string, SessionEntry>();
+  for (const entry of entries) {
+    byId.set(entry.id, entry);
+    for (const id of sessionEntryForkedFrom(entry)) if (!byId.has(id)) byId.set(id, entry);
+  }
+  return byId;
+}
+
+/** The index of the entry `id` names on the branch, through a fork's copies too (`entriesById`); `-1` when absent. */
+export function entryIndexOf(entries: readonly SessionEntry[], id: string): number {
+  return entries.findIndex((entry) => entry.id === id || sessionEntryForkedFrom(entry).includes(id));
+}
+
 export function unscannedEntries(entries: readonly SessionEntry[], latestObservationCoverageId?: string): readonly SessionEntry[] {
-  const start = latestObservationCoverageId ? entries.findIndex((entry) => entry.id === latestObservationCoverageId) + 1 : 0;
+  const start = latestObservationCoverageId ? entryIndexOf(entries, latestObservationCoverageId) + 1 : 0;
   return entries.slice(Math.max(0, start));
 }
 
@@ -54,7 +73,8 @@ export function observationTokensSinceEmptyWmAttempt(sources: readonly unknown[]
   let lastAttempt = -1;
   for (let index = 0; index < sources.length; index++) {
     const data = recordData(sources[index]!);
-    if (isWmRecordedData(data)) lastAttempt = data.items.length || data.processedIds?.length ? -1 : index;
+    if (isWmRecordedData(data)) lastAttempt = data.items.length || data.processedIds?.length || data.supersededItemIds?.length ? -1 : index;
+    else if (isScopeStepData(data)) lastAttempt = -1;
   }
   if (lastAttempt < 0) return undefined;
   let tokens = 0;

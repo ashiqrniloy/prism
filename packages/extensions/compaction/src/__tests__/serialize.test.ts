@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { createSessionEntry, type Message, type SessionEntry } from "@arnilo/prism";
-import { collectFileOperations, formatFileOperations } from "../file-ops.js";
+import { collectFileOperations, createSessionEntry, formatFileOperations, type Message, type SessionEntry } from "@arnilo/prism";
 import { serializeCompactionConversation } from "../serialize.js";
 
 const timestamp = "2026-01-01T00:00:00.000Z";

@@ -12,7 +12,6 @@ function createStaticSettingsProvider(settings: Record<string, unknown>) {
   };
 }
 
-import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-system/core";
 import {
   defaultObservationalMemorySettings,
   type ObservationalMemorySettingsInput,
@@ -26,7 +25,7 @@ describe("observational memory settings", () => {
     const settings = createStaticSettingsProvider({
       "observational-memory": {
         observation: { messageTokens: 5 },
-        context: { recentMessages: 4 },
+        context: { compactAfterRun: { ratio: 0.5 } },
         passive: true,
         agentMaxTurns: 2,
       },
@@ -37,7 +36,7 @@ describe("observational memory settings", () => {
     });
     assert.equal(resolved.observation.messageTokens, 5);
     assert.equal(resolved.reflection.observationTokens, 7);
-    assert.equal(resolved.context.recentMessages, 4);
+    assert.deepEqual(resolved.context.compactAfterRun, { ratio: 0.5 });
     assert.equal(resolved.agentMaxTurns, 2);
     assert.equal(resolved.passive, false);
     assert.deepEqual(resolved.context.compactAt, defaultObservationalMemorySettings.context.compactAt);
@@ -48,16 +47,16 @@ describe("observational memory settings", () => {
       observation: { messageTokens: 11, model: workerModel },
       reflection: { observationTokens: 22, model: workerModel },
       context: {
-        compactAt: { ratio: 0.5, maxTokens: 33 },
-        recentMessages: 3,
+        compactAt: { ratio: 0.5 },
+        compactAfterRun: { maxTokens: 33 },
         observationsPoolMaxTokens: 44,
         observationsPoolTargetTokens: 55,
       },
     });
     assert.equal(resolved.observation.messageTokens, 11);
     assert.equal(resolved.reflection.observationTokens, 22);
-    assert.deepEqual(resolved.context.compactAt, { ratio: 0.5, maxTokens: 33 });
-    assert.equal(resolved.context.recentMessages, 3);
+    assert.deepEqual(resolved.context.compactAt, { ratio: 0.5 });
+    assert.deepEqual(resolved.context.compactAfterRun, { maxTokens: 33 });
     assert.equal(resolved.context.observationsPoolMaxTokens, 44);
     assert.equal(resolved.context.observationsPoolTargetTokens, 55);
     assert.equal(resolved.dropper.targetTokens, 55);
@@ -70,7 +69,7 @@ describe("observational memory settings", () => {
       ["observeAfterTokens", "observation.messageTokens"],
       ["reflectAfterTokens", "reflection.observationTokens"],
       ["compactAfterTokens", "context.compactAt"],
-      ["keepRecentEntries", "context.recentMessages"],
+      ["keepRecentEntries", "nothing (retired in plan 218.3 Task 2)"],
       ["recentMessageMaxTokens", "context.recentMessageMaxTokens"],
       ["observationsPoolMaxTokens", "context.observationsPoolMaxTokens"],
       ["observationsPoolTargetTokens", "context.observationsPoolTargetTokens"],
@@ -106,7 +105,7 @@ describe("observational memory settings", () => {
     const b: ObservationalMemorySettingsInput = { reflectAfterTokens: 1 };
     // @ts-expect-error removed in 0.1.5; use context.compactAt
     const c: ObservationalMemorySettingsInput = { compactAfterTokens: 1 };
-    // @ts-expect-error removed in 0.1.5; use context.recentMessages
+    // @ts-expect-error removed in 0.1.5; retired in plan 218.3 Task 2
     const d: ObservationalMemorySettingsInput = { keepRecentEntries: 1 };
     // @ts-expect-error removed in 0.1.5; use context.recentMessageMaxTokens
     const e: ObservationalMemorySettingsInput = { recentMessageMaxTokens: 1 };
@@ -124,12 +123,10 @@ describe("observational memory settings", () => {
   });
 
   it("observational_memory_settings_reject_invalid_worker_turn_limits", async () => {
-    for (const value of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, HARD_MAX_WORKER_TURNS + 1]) {
+    for (const value of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
       await assert.rejects(resolveObservationalMemorySettings(undefined, { agentMaxTurns: value }), /agentMaxTurns/);
     }
-    assert.equal(
-      (await resolveObservationalMemorySettings(undefined, { agentMaxTurns: HARD_MAX_WORKER_TURNS })).agentMaxTurns,
-      HARD_MAX_WORKER_TURNS,
-    );
+    // Plan 239: the host's value is the cap.
+    assert.equal((await resolveObservationalMemorySettings(undefined, { agentMaxTurns: 1_000 })).agentMaxTurns, 1_000);
   });
 });

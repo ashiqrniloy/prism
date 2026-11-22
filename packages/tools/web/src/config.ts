@@ -18,6 +18,8 @@ export interface ToolsWebFetchConfig {
   readonly userAgent?: string;
   /** Adds the `prompt` argument: one model call answers a question from the fetched page. */
   readonly prompt?: ToolsWebPromptConfig;
+  /** Ceiling on the model's `web_fetch` `max_chars`. Default 100,000. */
+  readonly maxChars?: number;
 }
 
 /** Opt-in `web_fetch` question answering: the host picks the model, the model only asks the question. */
@@ -149,6 +151,7 @@ export const toolsWebConfigSchema: JsonSchema = {
         backend: { type: "string", enum: ["native", "firecrawl", "off"], default: "native" },
         apiKey: secretString,
         userAgent: { type: "string", minLength: 1, maxLength: 512 },
+        maxChars: { type: "integer", minimum: 1 },
         prompt: {
           type: "object",
           properties: {
@@ -163,8 +166,8 @@ export const toolsWebConfigSchema: JsonSchema = {
               ],
             },
             // No `default`: a nested default would materialize `fetch.prompt` and fail its required model.
-            maxInputChars: { type: "integer", minimum: 1, maximum: 1_000_000 },
-            maxOutputTokens: { type: "integer", minimum: 1, maximum: 32_768 },
+            maxInputChars: { type: "integer", minimum: 1 },
+            maxOutputTokens: { type: "integer", minimum: 1 },
           },
           required: ["model"],
         },
@@ -193,9 +196,9 @@ export const toolsWebConfigSchema: JsonSchema = {
     cache: {
       type: "object",
       properties: {
-        ttlSeconds: { type: "integer", minimum: 1, maximum: 86_400 },
-        maxEntries: { type: "integer", minimum: 1, maximum: 4_096 },
-        maxBytes: { type: "integer", minimum: 1, maximum: 67_108_864 },
+        ttlSeconds: { type: "integer", minimum: 1 },
+        maxEntries: { type: "integer", minimum: 1 },
+        maxBytes: { type: "integer", minimum: 1 },
       },
       required: ["ttlSeconds"],
     },

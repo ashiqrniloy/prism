@@ -7,7 +7,7 @@ import { type OpenAIChatCodecOptions, openAIChatBody, openAIChatEvents } from ".
 import { type OpenAIResponsesCodecOptions, openAIResponsesBody, openAIResponsesEvents } from "./codecs/openai-responses.js";
 import { ProviderRequirementError } from "./provider-request-policy.js";
 import { createToolNameMap } from "./tool-names.js";
-import { httpStatusError, readBoundedResponseText } from "./transport.js";
+import { type BoundedStreamLimits, fetchWithStreamTimeouts, httpStatusError, readBoundedResponseText } from "./transport.js";
 
 /** Route definition for a multi-route or single-route provider. */
 export type RoutedProviderFormat = "openai-chat" | "anthropic-messages" | "openai-responses";
@@ -49,6 +49,11 @@ export interface RoutedProviderOptions {
   readonly mapHttpError?: (response: Response, bodyText: string, secrets: readonly (string | undefined)[]) => Error;
   readonly mapUsage?: (usage: unknown, chunk?: JsonObject) => Usage | undefined;
   readonly secrets?: (request: ProviderRequest) => readonly (string | undefined)[];
+  /**
+   * SSE event, SSE buffer and response-body ceilings for this provider; each defaults to the transport's. The host
+   * sets them (a provider package's `transport` config); a provider response never raises them.
+   */
+  readonly streamLimits?: BoundedStreamLimits;
 }
 
 /** A routed provider that can also show the request body it would send, without a key or a network call. */
@@ -235,18 +240,16 @@ export function createRoutedProvider(options: RoutedProviderOptions): RoutedProv
         // 7. Determine request URL
         const url = route.url ? route.url(request, baseUrl) : `${baseUrl}${route.path.startsWith("/") ? "" : "/"}${route.path}`;
 
-        // 8. Fetch
-        const fetchImpl = options.fetch ?? fetch;
-        const response = await fetchImpl(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(body),
-          signal: request.signal,
-        });
+        // 8. Fetch, under the request's connect/idle timeouts
+        const response = await fetchWithStreamTimeouts(
+          url,
+          { method: "POST", headers, body: JSON.stringify(body), signal: request.signal },
+          { fetch: options.fetch, timeouts: request.options?.timeouts },
+        );
 
         // 9. Handle non-2xx status
         if (!response.ok) {
-          const bodyText = await readBoundedResponseText(response, { secrets });
+          const bodyText = await readBoundedResponseText(response, { ...options.streamLimits, secrets });
           const error = route.mapHttpError
             ? route.mapHttpError(response, bodyText, secrets)
             : options.mapHttpError
@@ -270,6 +273,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): RoutedProv
             secrets,
             mapUsage,
             toolNames,
+            ...(options.streamLimits === undefined ? {} : { streamLimits: options.streamLimits }),
           });
         } else if (route.format === "openai-responses") {
           const codec = route.codec as OpenAIResponsesCodecOptions | undefined;
@@ -280,6 +284,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): RoutedProv
             mapUsage,
             secrets,
             toolNames,
+            ...(options.streamLimits === undefined ? {} : { streamLimits: options.streamLimits }),
           });
         } else {
           const codec = route.codec as OpenAIChatCodecOptions | undefined;
@@ -291,6 +296,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): RoutedProv
             onComment: codec?.onComment,
             secrets,
             toolNames,
+            ...(options.streamLimits === undefined ? {} : { streamLimits: options.streamLimits }),
           });
         }
       } catch (error) {

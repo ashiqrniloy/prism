@@ -15,6 +15,8 @@ export interface RagSourceConfig {
   readonly glob?: string;
   /** Absolute HTTP(S) URL, fetched through the `web.fetch` service. Mutually exclusive with `path`. */
   readonly url?: string;
+  /** Files a local directory source may contribute. Default 4096; reaching it fails the source. */
+  readonly maxFiles?: number;
 }
 
 /** The embeddings the package provides. `model` builds an `Embedder` over the kernel embeddings adapter. */
@@ -122,6 +124,7 @@ const sourceProperties: Readonly<Record<string, JsonSchema>> = {
   path: { type: "string", minLength: 1, maxLength: 4096 },
   glob: { type: "string", minLength: 1, maxLength: 4096 },
   url: { type: "string", minLength: 1, maxLength: 4096 },
+  maxFiles: { type: "integer", minimum: 1 },
 };
 
 const rerankerSchema: JsonSchema = {

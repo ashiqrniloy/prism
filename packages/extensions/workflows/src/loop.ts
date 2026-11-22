@@ -2,8 +2,12 @@ import manifest from "../../package.json" with { type: "json" };
 import { definePackage, type JsonValue, type LoopStrategy, type Message, type PackageDefinition, type RunController } from "@arnilo/prism";
 import { defineWorkflow } from "./define.js";
 import { WorkflowDefinitionError, WorkflowRuntimeError } from "./errors.js";
+import { validateWorkflowLimit } from "./limits.js";
 import { runWorkflow } from "./run.js";
 import type { FunctionNodeDefinition, WorkflowDefinition, WorkflowNodeContext, WorkflowNodeDefinition } from "./types.js";
+
+/** Most tool rounds in one `loopAgentNode` step; `workflowLoop(definition, { maxToolRounds })` or the step's own. */
+export const DEFAULT_MAX_TOOL_ROUNDS = 16;
 
 export interface LoopAgentStepConfig {
   /** `"any"` lets a gate's back edge re-enter the step. Default `"all"`. */
@@ -13,7 +17,7 @@ export interface LoopAgentStepConfig {
   /** Narrow or disable tools for this step's turns (`RunTurnOptions.tools`). */
   readonly tools?: false | readonly string[];
   readonly system?: string;
-  /** Most tool rounds in one step. Default 16. */
+  /** Most tool rounds in this step. Default: the loop's `maxToolRounds` (16). */
   readonly maxToolRounds?: number;
   /** Maps the step's final assistant text to the node output. Default: the text. */
   readonly output?: (text: string, ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
@@ -58,12 +62,17 @@ function lastAssistantText(messages: readonly Message[]): string {
   return "";
 }
 
-async function agentStep(run: RunController, config: LoopAgentStepConfig, ctx: WorkflowNodeContext): Promise<string> {
+async function agentStep(
+  run: RunController,
+  config: LoopAgentStepConfig,
+  ctx: WorkflowNodeContext,
+  loopMaxRounds: number,
+): Promise<string> {
   if (config.input) {
     const text = await config.input(ctx);
     await run.append({ role: "user", content: [{ type: "text", text }] });
   }
-  const maxRounds = config.maxToolRounds ?? 16;
+  const maxRounds = config.maxToolRounds ?? loopMaxRounds;
   for (let round = 0; ; round++) {
     const turn = await run.turn({
       ...(config.tools !== undefined ? { tools: config.tools } : {}),
@@ -83,6 +92,8 @@ async function agentStep(run: RunController, config: LoopAgentStepConfig, ctx: W
 export interface WorkflowLoopOptions {
   /** Package name. Default `@arnilo/prism-workflow-loop`. */
   readonly name?: string;
+  /** Most tool rounds in one `loopAgentNode` step that sets none. Default 16 (`DEFAULT_MAX_TOOL_ROUNDS`). */
+  readonly maxToolRounds?: number;
 }
 
 /**
@@ -92,7 +103,7 @@ export interface WorkflowLoopOptions {
  * The loop is not resumable, so an `ask` with no `host.ui` denies instead of suspending.
  */
 export function workflowLoop(definition: WorkflowDefinition, options: WorkflowLoopOptions = {}): PackageDefinition {
-  const strategy = workflowLoopStrategy(definition);
+  const strategy = workflowLoopStrategy(definition, options.maxToolRounds === undefined ? {} : { maxToolRounds: options.maxToolRounds });
   return definePackage({
     name: options.name ?? "@arnilo/prism-workflow-loop",
     version: manifest.version,
@@ -104,8 +115,13 @@ export function workflowLoop(definition: WorkflowDefinition, options: WorkflowLo
 }
 
 /** The loop strategy `workflowLoop` provides; also what `loopConformance` from `/testing` takes. */
-export function workflowLoopStrategy(definition: WorkflowDefinition): LoopStrategy {
+export function workflowLoopStrategy(definition: WorkflowDefinition, options: { readonly maxToolRounds?: number } = {}): LoopStrategy {
   assertNoForeignAgents(definition, "");
+  const loopMaxRounds = validateWorkflowLimit("maxToolRounds", options.maxToolRounds ?? DEFAULT_MAX_TOOL_ROUNDS);
+  for (const node of Object.values(definition.nodes)) {
+    const rounds = steps.get(node)?.maxToolRounds;
+    if (rounds !== undefined) validateWorkflowLimit("loopAgentNode maxToolRounds", rounds);
+  }
   return {
     name: `workflow:${definition.id}`,
     revision: definition.revision,
@@ -120,7 +136,7 @@ export function workflowLoopStrategy(definition: WorkflowDefinition): LoopStrate
               ...(node as FunctionNodeDefinition),
               execute: (ctx: WorkflowNodeContext) => {
                 const next = queue.then(async () => {
-                  const text = await agentStep(run, config, ctx);
+                  const text = await agentStep(run, config, ctx, loopMaxRounds);
                   return config.output ? config.output(text, ctx) : text;
                 });
                 queue = next.catch(() => undefined);

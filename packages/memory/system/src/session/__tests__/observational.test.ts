@@ -315,16 +315,17 @@ describe("observational memory package", () => {
     await settle();
     const after = (await agent.commands.run("memory:session:status", {}, { session })) as typeof before;
     assert.equal(after.enabled, true, "status reports the per-session toggle");
-    assert.equal(after.observations.recorded, 1, "status counts the ledger's recorded observations");
-    assert.equal(after.observations.active, 1);
+    // The user message word for word (plan 218.5 fix 1) plus the model's event.
+    assert.equal(after.observations.recorded, 2, "status counts the ledger's recorded observations");
+    assert.equal(after.observations.active, 2);
     assert.equal(after.inFlight, false);
-    assert.match(after.text, /1 active \/ 1 recorded observations/);
+    assert.match(after.text, /2 active \/ 2 recorded observations/);
     const view = (await agent.commands.run("memory:session:view", {}, { session })) as {
       observations: number;
       wmItems: number;
       text: string;
     };
-    assert.equal(view.observations, 1, "view renders the same ledger status counted");
+    assert.equal(view.observations, 2, "view renders the same ledger status counted");
     assert.equal(view.wmItems, 0);
     assert.ok(view.text.length > 0, "view renders the observation text a person can read");
     const model = (await agent.commands.run("memory:session:model", { stm: "observer/om-model" }, { session })) as { stm: string };
@@ -363,7 +364,7 @@ describe("observational memory package", () => {
       "a flush start was reported",
     );
     assert.equal(statuses.at(-1)?.inFlight, false, "a flush end was reported");
-    assert.equal(statuses.at(-1)?.observations, 1);
+    assert.equal(statuses.at(-1)?.observations, 2, "the user message word for word plus the model's event");
     await session.close();
   });
 
@@ -434,8 +435,10 @@ describe("observational memory package", () => {
 
 it("om_context_block_pinned_after_foreign_compaction_and_foreign_owner_keeps_gate", async () => {
   let compactions = 0;
+  // The host's own compactor is the compaction system, so session memory's is off (plan 218.3 Task 2).
   const { session, agent, requests } = await harness({
     enabled: true,
+    config: { context: { compaction: false } },
     compaction: {
       name: "foreign",
       compact: () => {
@@ -460,22 +463,10 @@ it("om_context_block_pinned_after_foreign_compaction_and_foreign_owner_keeps_gat
   assert.equal(((await agent.commands.run("memory:session:status", {}, { session })) as any).contextMode, "pinned");
   await agent.dispose();
 });
-it("om_requests_compaction_when_coverage_advances_after_own_compaction", async () => {
-  const { session, agent, store, requests } = await harness({ enabled: true });
-  await session.run("one");
-  await settle();
-  await session.compact();
-  await session.run("two");
-  assert.doesNotMatch(JSON.stringify(requests.at(-1)!.messages), /session-memory/);
-  await settle();
-  const before = (await store.list("s")).filter((entry) => entry.kind === "compaction").length;
-  await session.run("three");
-  assert.equal((await store.list("s")).filter((entry) => entry.kind === "compaction").length, before + 1);
-  assert.equal(((await agent.commands.run("memory:session:status", {}, { session })) as any).contextMode, "own-compaction");
-  await agent.dispose();
-});
 it("om_prefix_stable_between_compactions", async () => {
-  const { session, agent, requests, store } = await harness({ enabled: true, observer: { fail: true } });
+  // A working observer: a compaction now covers the branch first (plan 218.3 Task 3), and later background passes that
+  // add records must not move the prefix.
+  const { session, agent, requests, store } = await harness({ enabled: true });
   await session.run("one");
   await settle();
   await session.compact();
@@ -492,6 +483,7 @@ it("om_prefix_stable_between_compactions", async () => {
 it("failed_compaction_does_not_pin", async () => {
   const { session, agent, store } = await harness({
     enabled: true,
+    config: { context: { compaction: false } },
     compaction: {
       name: "broken",
       compact() {

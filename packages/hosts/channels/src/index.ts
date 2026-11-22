@@ -1,6 +1,6 @@
 export type { ChannelDeliveryJournal, ChannelDeliveryJournalOptions, ChannelReplyKeyInput } from "./delivery.js";
 export { createChannelDeliveryJournal, emptyPruneResult, isSettledReply } from "./delivery.js";
-export { DEFAULT_CHANNEL_LIMITS, HARD_CHANNEL_LIMITS, resolveChannelLimits } from "./limits.js";
+export { DEFAULT_CHANNEL_LIMITS, resolveChannelLimits } from "./limits.js";
 export type {
   ChannelPairingConsumption,
   ChannelPairingGrant,
@@ -10,7 +10,7 @@ export type {
   ConsumeChannelPairingInput,
   CreateChannelPairingInput,
 } from "./pairing.js";
-export { createChannelPairingStore, DEFAULT_PAIRING_TTL_MS, HARD_PAIRING_TTL_MS } from "./pairing.js";
+export { createChannelPairingStore, DEFAULT_PAIRING_TTL_MS } from "./pairing.js";
 export type { ChannelApprovalStore } from "./approvals.js";
 export { createChannelApprovalStore } from "./approvals.js";
 export { createMemoryCheckpointStore, createMemoryLeaseStore } from "./memory-stores.js";
@@ -78,5 +78,7 @@ export type {
 } from "./types.js";
 export { connectTelegram, type TelegramConnectOptions } from "./telegram.js";
 export { connectSignal, type SignalConnectOptions } from "./signal.js";
+export { connectSlack, type SlackConnectOptions } from "./slack.js";
+export { connectDiscord, type DiscordConnectOptions } from "./discord.js";
 
 export { channelHostUi, type ChannelHostUiOptions } from "./host-ui.js";

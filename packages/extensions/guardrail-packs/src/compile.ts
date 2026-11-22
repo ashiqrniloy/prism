@@ -7,6 +7,7 @@
  */
 import type { Guardrail, JsonObject, ToolResult } from "@arnilo/prism";
 import { GuardrailError, guardrailRefusalText, runGuardrailList } from "@arnilo/prism";
+import { type ContentRule, isContentStage, resolveContentRule } from "./content.js";
 import type { GuardrailPackInput, GuardrailPackRef, GuardrailRule, GuardrailRuleAction, GuardrailRuleContext } from "./contracts.js";
 import { GuardrailPackError } from "./packs/errors.js";
 import { BUILT_IN_GUARDRAIL_PACKS } from "./packs/index.js";
@@ -36,7 +37,8 @@ const OBSERVE_RULE_ID = "observe";
 /** One `guardrail:<stage>` identity row of a compiled pack, for `guardrail-packs:describe`. */
 export interface GuardrailPackRow {
   readonly name: string;
-  readonly stage: "tool_input" | "tool_output";
+  /** `tool_input` (tool-call rules), `tool_output` (observers and `tool_result` rules), `input`, `output`. */
+  readonly stage: "tool_input" | "tool_output" | "input" | "output";
   readonly revision: string | null;
 }
 
@@ -52,7 +54,10 @@ interface ResolvedRule {
 export interface ResolvedPack {
   readonly id: string;
   readonly version: number;
+  /** Tool-call rules (`stage` omitted or `tool_call`). */
   readonly rules: readonly ResolvedRule[];
+  /** Content-stage rules (`input`, `output`, `tool_result`). */
+  readonly contentRules: readonly ContentRule[];
   readonly observe?: GuardrailPackRules["observe"];
   /** Live pack-local state record shared by this pack's rules and observer. */
   readonly state: Record<string, unknown>;
@@ -71,6 +76,8 @@ export function describeGuardrailPacks(
     if (pack.observe) rows.push({ name: packRuleName(pack.id, OBSERVE_RULE_ID), stage: "tool_output", revision: packRevision(pack) });
     for (const resolved of pack.rules)
       rows.push({ name: packRuleName(pack.id, resolved.rule.id), stage: "tool_input", revision: packRevision(pack) });
+    for (const rule of pack.contentRules)
+      rows.push({ name: rule.name, stage: rule.stage === "tool_result" ? "tool_output" : rule.stage, revision: packRevision(pack) });
   }
   return rows;
 }
@@ -130,7 +137,13 @@ export function resolveGuardrailPacks(
       throw new GuardrailPackError(`guardrail pack "${input.id}" state codec must declare snapshot and parse`);
     }
     const seenRules = new Set<string>();
-    const rules = built.rules.map((rule) => resolveRule(input.id, rule, seenRules));
+    const rules: ResolvedRule[] = [];
+    const contentRules: ContentRule[] = [];
+    for (const rule of built.rules) {
+      const resolved = resolveRule(input.id, rule, seenRules);
+      if ("stage" in resolved) contentRules.push(resolved);
+      else rules.push(resolved);
+    }
     if (built.observe && byteLength(packRuleName(input.id, OBSERVE_RULE_ID)) > MAX_PACK_NAME_BYTES) {
       throw new GuardrailPackError(`guardrail pack "${input.id}" name exceeds ${MAX_PACK_NAME_BYTES} bytes`);
     }
@@ -139,6 +152,7 @@ export function resolveGuardrailPacks(
       id: input.id,
       version,
       rules,
+      contentRules,
       state: {},
       inline: input.rules !== undefined,
       ...(built.observe ? { observe: built.observe } : {}),
@@ -151,16 +165,34 @@ function unknownGuardrailPack(id: string, registry: ReadonlyMap<string, unknown>
   return new GuardrailPackError(`unknown guardrail pack "${id}"; known packs: ${[...registry.keys()].join(", ") || "none"}`);
 }
 
-function resolveRule(packId: string, rule: GuardrailRule, seenRules: Set<string>): ResolvedRule {
+function resolveRule(packId: string, rule: GuardrailRule, seenRules: Set<string>): ResolvedRule | ContentRule {
   const where = `guardrail pack "${packId}"`;
   if (!rule || typeof rule.id !== "string" || !rule.id.trim() || byteLength(rule.id) > MAX_RULE_ID_BYTES) {
     throw new GuardrailPackError(`${where} rule ids must be non-empty strings of at most ${MAX_RULE_ID_BYTES} bytes`);
   }
   if (seenRules.has(rule.id)) throw new GuardrailPackError(`${where} has a duplicate rule id "${rule.id}"`);
   seenRules.add(rule.id);
+  const stage = rule.stage ?? "tool_call";
+  if (stage !== "tool_call" && !isContentStage(stage)) {
+    throw new GuardrailPackError(`${where} rule "${rule.id}" stage must be "tool_call", "input", "output", or "tool_result"`);
+  }
+  if (rule.reason !== undefined && (typeof rule.reason !== "string" || byteLength(rule.reason) > MAX_RULE_REASON_BYTES)) {
+    throw new GuardrailPackError(`${where} rule "${rule.id}" reason must be a string of at most ${MAX_RULE_REASON_BYTES} bytes`);
+  }
+  if (byteLength(packRuleName(packId, rule.id)) > MAX_PACK_NAME_BYTES) {
+    throw new GuardrailPackError(`${where} rule "${rule.id}" name exceeds ${MAX_PACK_NAME_BYTES} bytes`);
+  }
+  const tools = resolveTools(where, rule);
+  const reason = rule.reason ?? `guardrail pack rule ${packId}/${rule.id}`;
+  if (isContentStage(stage)) return resolveContentRule(packId, rule, stage, packRuleName(packId, rule.id), reason, tools);
   const action = rule.action ?? "deny";
   if (action !== "deny" && action !== "tripwire" && action !== "ask") {
-    throw new GuardrailPackError(`${where} rule "${rule.id}" action must be "deny", "tripwire", or "ask"`);
+    throw new GuardrailPackError(`${where} rule "${rule.id}" action must be "deny", "tripwire", or "ask" on stage "tool_call"`);
+  }
+  if (rule.detector !== undefined || rule.untrustedOnly !== undefined || rule.alsoScanTools !== undefined || rule.judge !== undefined) {
+    throw new GuardrailPackError(
+      `${where} rule "${rule.id}" detector, judge, untrustedOnly, and alsoScanTools apply to content stages only`,
+    );
   }
   if (action === "ask" && rule.deny !== undefined) {
     throw new GuardrailPackError(
@@ -173,32 +205,28 @@ function resolveRule(packId: string, rule: GuardrailRule, seenRules: Set<string>
     throw new GuardrailPackError(`${where} rule "${rule.id}" requires exactly one of "pattern" or "deny"`);
   }
   if (hasDeny && typeof rule.deny !== "function") throw new GuardrailPackError(`${where} rule "${rule.id}" deny must be a function`);
-  if (rule.reason !== undefined && (typeof rule.reason !== "string" || byteLength(rule.reason) > MAX_RULE_REASON_BYTES)) {
-    throw new GuardrailPackError(`${where} rule "${rule.id}" reason must be a string of at most ${MAX_RULE_REASON_BYTES} bytes`);
-  }
-  let tools: readonly string[] | undefined;
-  if (rule.tool !== undefined) {
-    tools = typeof rule.tool === "string" ? [rule.tool] : [...rule.tool];
-    if (tools.length === 0 || tools.length > MAX_GUARDRAIL_PACK_RULES || tools.some((name) => typeof name !== "string" || !name.trim())) {
-      throw new GuardrailPackError(`${where} rule "${rule.id}" tool must be a non-empty tool name or array of names`);
-    }
-  }
   if (rule.argPath !== undefined) {
     const paths = typeof rule.argPath === "string" ? [rule.argPath] : [...rule.argPath];
     if (paths.length === 0 || paths.length > MAX_RULE_ARG_PATHS || paths.some((path) => typeof path !== "string" || !path.trim())) {
       throw new GuardrailPackError(`${where} rule "${rule.id}" argPath must be a non-empty dot path or array of paths`);
     }
   }
-  if (byteLength(packRuleName(packId, rule.id)) > MAX_PACK_NAME_BYTES) {
-    throw new GuardrailPackError(`${where} rule "${rule.id}" name exceeds ${MAX_PACK_NAME_BYTES} bytes`);
-  }
   return {
     rule,
     action,
-    reason: rule.reason ?? `guardrail pack rule ${packId}/${rule.id}`,
+    reason,
     ...(tools ? { tools } : {}),
     ...(hasPattern ? { regex: compileRulePattern(packId, rule.id, rule.pattern) } : {}),
   };
+}
+
+function resolveTools(where: string, rule: GuardrailRule): readonly string[] | undefined {
+  if (rule.tool === undefined) return undefined;
+  const tools = typeof rule.tool === "string" ? [rule.tool] : [...rule.tool];
+  if (tools.length === 0 || tools.length > MAX_GUARDRAIL_PACK_RULES || tools.some((name) => typeof name !== "string" || !name.trim())) {
+    throw new GuardrailPackError(`${where} rule "${rule.id}" tool must be a non-empty tool name or array of names`);
+  }
+  return tools;
 }
 
 function compileRulePattern(packId: string, ruleId: string, pattern: string | RegExp): RegExp {

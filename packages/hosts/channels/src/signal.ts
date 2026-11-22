@@ -26,11 +26,8 @@ export type { ChannelConnectionHandle };
 export const SIGNAL_CLI_VERSION = "0.14.8";
 
 const DEFAULT_FRAME_BYTES = 128 * 1024;
-const HARD_FRAME_BYTES = 512 * 1024;
 const DEFAULT_PENDING_REQUESTS = 16;
-const HARD_PENDING_REQUESTS = 64;
 const DEFAULT_PENDING_EVENTS = 32;
-const HARD_PENDING_EVENTS = 128;
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
 const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
@@ -146,10 +143,11 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
-function bounded(value: number | undefined, fallback: number, min: number, max: number, name: string): number {
+/** A host-set Signal limit, at least `min`. The host's value is the cap (plan 239 Task 5). */
+function bounded(value: number | undefined, fallback: number, min: number, name: string): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < min || resolved > max) {
-    throw new TypeError(`Signal ${name} must be an integer between ${min} and ${max}`);
+  if (!Number.isSafeInteger(resolved) || resolved < min) {
+    throw new TypeError(`Signal ${name} must be an integer of at least ${min}`);
   }
   return resolved;
 }
@@ -318,19 +316,13 @@ function validateOptions(options: SignalAdapterOptions): void {
  */
 export function createSignalAdapter(options: SignalAdapterOptions): SignalAdapter {
   validateOptions(options);
-  const maxFrameBytes = bounded(options.maxFrameBytes, DEFAULT_FRAME_BYTES, 1024, HARD_FRAME_BYTES, "maxFrameBytes");
-  const maxPendingRequests = bounded(options.maxPendingRequests, DEFAULT_PENDING_REQUESTS, 1, HARD_PENDING_REQUESTS, "maxPendingRequests");
-  const maxPendingEvents = bounded(options.maxPendingEvents, DEFAULT_PENDING_EVENTS, 1, HARD_PENDING_EVENTS, "maxPendingEvents");
-  const requestTimeoutMs = bounded(options.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT_MS, 100, 60_000, "requestTimeoutMs");
-  const reconnectDelayMs = bounded(options.reconnectDelayMs, DEFAULT_RECONNECT_DELAY_MS, 1, 60_000, "reconnectDelayMs");
-  const maxReconnectDelayMs = bounded(
-    options.maxReconnectDelayMs,
-    DEFAULT_MAX_RECONNECT_DELAY_MS,
-    reconnectDelayMs,
-    60_000,
-    "maxReconnectDelayMs",
-  );
-  const leaseTtlMs = bounded(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, 5_000, 300_000, "leaseTtlMs");
+  const maxFrameBytes = bounded(options.maxFrameBytes, DEFAULT_FRAME_BYTES, 1024, "maxFrameBytes");
+  const maxPendingRequests = bounded(options.maxPendingRequests, DEFAULT_PENDING_REQUESTS, 1, "maxPendingRequests");
+  const maxPendingEvents = bounded(options.maxPendingEvents, DEFAULT_PENDING_EVENTS, 1, "maxPendingEvents");
+  const requestTimeoutMs = bounded(options.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT_MS, 100, "requestTimeoutMs");
+  const reconnectDelayMs = bounded(options.reconnectDelayMs, DEFAULT_RECONNECT_DELAY_MS, 1, "reconnectDelayMs");
+  const maxReconnectDelayMs = bounded(options.maxReconnectDelayMs, DEFAULT_MAX_RECONNECT_DELAY_MS, reconnectDelayMs, "maxReconnectDelayMs");
+  const leaseTtlMs = bounded(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, 5_000, "leaseTtlMs");
   const ownerId = `signal-receiver-${randomUUID()}`;
   const connect = options.connect ?? ((socketPath: string) => createConnection(socketPath));
   const pending = new Map<string, Pending>();

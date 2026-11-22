@@ -17,7 +17,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import delegate, { DELEGATE_SERVICE, type DelegateService, HARD_CONTEXT_MAX_CHARS, resolveChildContext } from "../index.js";
+import delegate, { DELEGATE_SERVICE, type DelegateService, resolveChildContext } from "../index.js";
 
 interface Rec {
   readonly kind: "parent" | "child" | "summary";
@@ -73,12 +73,22 @@ const statePackage = definePackage({
 });
 
 let captured: DelegateService | undefined;
+let view: SessionContext | undefined;
 const serviceConsumer = definePackage({
   name: "service-consumer",
   version: "0.12.1",
   requires: { api: 1 },
+  capabilities: ["background", "session-state"],
   setup(prism) {
     captured = prism.services.consume<DelegateService>(DELEGATE_SERVICE);
+    // The kernel's own view of a session, as a package gets it: `chargeTo` accepts nothing else.
+    prism.commands.register({
+      name: "capture-session",
+      description: "test only",
+      run: (_args, context) => {
+        view = context.session;
+      },
+    });
   },
 });
 
@@ -107,14 +117,12 @@ async function build(options: {
   return agent;
 }
 
-/** The session as a package sees it; a test has a `Session`, a package gets a `SessionContext`. */
-function contextOf(session: Session): SessionContext {
-  return {
-    id: session.id,
-    model: { provider: "mock", model: "m" },
-    entries: () => session.entries(),
-    background: () => undefined,
-  };
+/** The session as a package sees it: the kernel's view, captured through a command of the consumer package. */
+async function contextOf(agent: Agent, session: Session): Promise<SessionContext> {
+  view = undefined;
+  await agent.commands.run("capture-session", {}, { session });
+  assert.ok(view, "the command saw the session");
+  return view;
 }
 
 const childTurns = (record: readonly Rec[]) => record.filter((entry) => entry.kind === "child");
@@ -129,7 +137,7 @@ describe("delegate context", () => {
       child: "reviewer",
       input: "the brief",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome && outcome.status === "completed", JSON.stringify(outcome));
     const child = childTurns(record).at(-1);
@@ -149,7 +157,7 @@ describe("delegate context", () => {
       child: "reviewer",
       input: "the brief",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.equal((outcome as { context?: unknown }).context, undefined, "no context reported");
     const child = childTurns(record).at(-1);
@@ -171,7 +179,7 @@ describe("delegate context", () => {
       child: "researcher",
       input: "the brief",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome && outcome.status === "completed");
     assert.equal(record.filter((entry) => entry.kind === "summary").length, 1);
@@ -194,7 +202,7 @@ describe("delegate context", () => {
       child: "researcher",
       input: "the brief",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome);
     assert.equal(outcome.status, "failed");
@@ -215,7 +223,7 @@ describe("delegate context", () => {
       child: "reviewer",
       input: "the brief",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome && outcome.status === "completed");
     const child = childTurns(record).at(-1);
@@ -236,7 +244,7 @@ describe("delegate context", () => {
       child: "reviewer",
       input: "the brief",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome && outcome.status === "completed");
     const child = childTurns(record).at(-1);
@@ -261,21 +269,9 @@ describe("delegate context", () => {
     assert.match(tool.description, /The child sees only your input unless its line says it sees this conversation\./);
   });
 
-  it("context_max_chars_above_cap_clamped_with_note", async () => {
-    assert.deepEqual(resolveChildContext({ lastTurns: 2, maxChars: HARD_CONTEXT_MAX_CHARS + 1 }), {
-      mode: "lastTurns",
-      lastTurns: 2,
-      maxChars: HARD_CONTEXT_MAX_CHARS,
-      clamped: true,
-    });
-    const agent = await build({
-      children: { reviewer: { inherit: [], context: { lastTurns: 2, maxChars: HARD_CONTEXT_MAX_CHARS + 50_000 } } },
-    });
-    assert.ok(
-      agent
-        .inspect()
-        .statusNotes.some((note) => note.level === "info" && new RegExp(`using ${HARD_CONTEXT_MAX_CHARS} chars`).test(note.message)),
-    );
+  it("context_max_chars_is_the_host_value", () => {
+    // Plan 239 Task 5: the host's `maxChars` is the cap; there is no hidden ceiling above it.
+    assert.deepEqual(resolveChildContext({ lastTurns: 200, maxChars: 500_000 }), { mode: "lastTurns", lastTurns: 200, maxChars: 500_000 });
   });
 
   it("context_invalid_shape_fails_config_validation", async () => {
@@ -284,7 +280,7 @@ describe("delegate context", () => {
       /children\/reviewer\/context/,
     );
     await assert.rejects(
-      () => build({ children: { reviewer: { inherit: [], context: { lastTurns: 51 } } } }),
+      () => build({ children: { reviewer: { inherit: [], context: { lastTurns: 0 } } } }),
       /children\/reviewer\/context/,
     );
     await assert.rejects(() => build({ children: { reviewer: { inherit: [], context: "everything" } } }), /children\/reviewer\/context/);

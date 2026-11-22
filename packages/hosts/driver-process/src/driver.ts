@@ -30,6 +30,8 @@ import { jsonRpc } from "./transports/json-rpc.js";
 import { jsonlStream } from "./transports/jsonl-stream.js";
 import { createTurn } from "./turn.js";
 
+const DEFAULT_HOOK_TIMEOUT_MS = 5000;
+
 export function adapterDriver(adapter: AgentAdapter): DriverDefinition<ProcessDriverConfig> {
   assertAdapter(adapter);
   return defineDriver<ProcessDriverConfig>({
@@ -134,7 +136,7 @@ async function runAdapter(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDr
             }
           : noHooks,
         failClosed: adapter.hooks?.failClosed ?? { exitCode: 2, stdout: "" },
-        timeoutMs: adapter.hooks?.timeoutMs ?? 5000,
+        timeoutMs: adapter.hooks?.timeoutMs ?? DEFAULT_HOOK_TIMEOUT_MS,
         askSupport: { rewrite: adapter.descriptor.controls.rewrite },
       },
     );

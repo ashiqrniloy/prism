@@ -4,7 +4,7 @@ import { Buffer } from "node:buffer";
 import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import { dispatchToolCall, type ToolDefinition, type ToolExecutionContext, type ToolResult } from "@arnilo/prism";
 import type { EditOperations } from "../edit.js";
 import { createEditTool } from "../edit.js";
 
@@ -334,7 +334,7 @@ test("oversized symlink target is rejected and edit limits reject invalid values
     assert.match(result.error?.message ?? "", /target is 11 bytes/);
     assert.equal(await readFile(join(cwd, "target.txt"), "utf-8"), "01234567890");
 
-    for (const options of [{ maxFileBytes: Infinity }, { maxInputBytes: 0 }, { maxEdits: 1_001 }])
+    for (const options of [{ maxFileBytes: Infinity }, { maxInputBytes: 0 }, { maxEdits: 1.5 }])
       assert.throws(() => createEditTool(cwd, options), /positive safe integer/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
@@ -481,6 +481,35 @@ test("edit_crlf_and_bom_preserved", async () => {
     assert.equal(r.error, undefined, JSON.stringify(r.error));
     assert.equal(await readFile(join(cwd, "crlf.txt"), "utf-8"), "\uFEFFalpha\r\nBETA\r\ngamma\r\n");
     assert.equal(textOf(r), ["Edited crlf.txt: 1 block(s).", "1\talpha", "2\tBETA", "3\tgamma"].join("\n"));
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("tool_can_opt_out: kernel argument validation lets a JSON-string edits and legacy oldText/newText through (plan 226)", async () => {
+  const cwd = await tmp();
+  try {
+    await writeFile(join(cwd, "f.txt"), "alpha\nbeta\ngamma");
+    const tool = createEditTool(cwd);
+    assert.equal(tool.validateArguments, false);
+    const registry = {
+      register() {},
+      get: (name: string) => (name === "edit" ? tool : undefined),
+      resolve: () => tool as ToolDefinition,
+      list: () => [tool],
+    };
+    const run = (args: Record<string, unknown>) =>
+      dispatchToolCall({
+        call: { type: "tool_call", id: "c", name: "edit", arguments: args as never },
+        registry,
+        context: { sessionId: "s", runId: "r", toolCallId: "c" },
+        ownership: { tenantId: "t", accountId: "a", userId: "u" },
+      });
+    const asString = await run({ path: "f.txt", edits: JSON.stringify([{ oldText: "beta", newText: "BETA" }]) });
+    assert.equal(asString.error, undefined, JSON.stringify(asString.error));
+    const legacy = await run({ path: "f.txt", oldText: "gamma", newText: "GAMMA" });
+    assert.equal(legacy.error, undefined, JSON.stringify(legacy.error));
+    assert.equal(await readFile(join(cwd, "f.txt"), "utf-8"), "alpha\nBETA\nGAMMA");
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

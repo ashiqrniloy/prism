@@ -51,8 +51,9 @@ import {
   type WikiScopeLevel,
 } from "./types.js";
 
+const DEFAULT_MAX_TEXT_CHARS = 16_384;
+
 export const MAX_ONTOLOGY_READ_IDS = 32;
-export const MAX_ONTOLOGY_PENDING = 64;
 export const DEFAULT_ONTOLOGY_PENDING = 24;
 export const MAX_CONCEPT_EDITS = 64;
 /** LTM metadata pages one binding sweep reads at most (500 notes each). */
@@ -283,7 +284,7 @@ export function createWikiOntology(options: CreateWikiOntologyOptions = {}): Wik
   const now = options.now ?? (() => new Date());
   const redact = options.redact ?? ((text: string) => text);
   const threshold = resolveBindThreshold(options.bindThreshold);
-  const maxText = options.maxTextChars ?? 16_384;
+  const maxText = options.maxTextChars ?? DEFAULT_MAX_TEXT_CHARS;
   const ltm = (): LtmPort | undefined => options.ltm?.();
   const opened = new Set<WikiScopeLevel>();
   let seenEpoch: number | undefined;
@@ -837,7 +838,8 @@ export function createWikiOntology(options: CreateWikiOntologyOptions = {}): Wik
       readableScope(scope);
       await pinOwner(scope);
       const signal = pendingOptions.signal;
-      const limit = Math.min(Math.max(1, Math.trunc(pendingOptions.limit ?? DEFAULT_ONTOLOGY_PENDING)), MAX_ONTOLOGY_PENDING);
+      // The caller's page size is the cap (plan 239).
+      const limit = Math.max(1, Math.trunc(pendingOptions.limit ?? DEFAULT_ONTOLOGY_PENDING));
       const bindings = await store.bindings(scope);
       const rows: { id: string; createdAt: string; source?: WikiSourceRecord }[] = [];
       const keep = (id: string, stored: string | undefined, coRead: number): boolean => {

@@ -274,7 +274,7 @@ test("shell limits reject non-finite, zero, and above-hard-cap values", async ()
   const cwd = await mkdtemp(join(tmpdir(), "shell-"));
   try {
     assert.throws(() => createShellTool(cwd, { timeout: Infinity }), /positive safe integer/);
-    assert.throws(() => createShellTool(cwd, { maxTotalOutputBytes: 1024 * 1024 * 1024 + 1 }), /positive safe integer/);
+    assert.throws(() => createShellTool(cwd, { maxTotalOutputBytes: 0 }), /positive safe integer/);
     const tool = createShellTool(cwd);
     for (const timeout of [0, Infinity, 3_601]) {
       const result = await tool.execute({ command: "echo no", timeout }, ctx());

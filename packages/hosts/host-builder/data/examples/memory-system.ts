@@ -57,11 +57,18 @@ function profileConfig(profile: ProfileName, root: string): MemorySystemConfig {
     case "ltm":
       return { stm: false, ltm };
     case "session":
-      return { stm: STM, wm: WM };
+      return { stm: STM, wm: WM, scope: { text: "Remember the retry budget." } };
     case "stm":
       return { stm: STM, wm: false };
     case "full":
-      return { stm: STM, wm: WM, rehearsal: { targetTokens: 1, policy: "lowest-relevance" }, ltm, sleep: {} };
+      return {
+        stm: STM,
+        wm: WM,
+        scope: { text: "Remember the retry budget." },
+        rehearsal: { targetTokens: 1, policy: "lowest-relevance" },
+        ltm,
+        sleep: {},
+      };
   }
 }
 
@@ -79,15 +86,16 @@ function observe(request: ProviderRequest): ProviderEvent[] {
 }
 
 /**
- * Working memory: one `derive` over the first STM record its prompt lists. A fact gives the record no verdict, so it
- * stays on the STM surface and the `full` profile's rehearsal still has a record to drop.
+ * Working memory: one `judge` call holding one fact over the first STM record its prompt lists (records are shown as
+ * ordinals, `r1…rN`). A fact gives the record no verdict, so it stays on the STM surface and the `full` profile's
+ * rehearsal still has a record to drop.
  */
 function reflect(request: ProviderRequest): ProviderEvent[] {
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];
-  const id = prompt?.type === "text" ? /^- \[([a-f0-9]{12})\] \d{4}-/m.exec(prompt.text)?.[1] : undefined;
-  if (request.messages.some((message) => message.role === "tool") || !id) return [providerDone()];
+  const ordinal = prompt?.type === "text" ? /^- \[(r[0-9]+)\] \d{4}-/m.exec(prompt.text)?.[1] : undefined;
+  if (request.messages.some((message) => message.role === "tool") || !ordinal) return [providerDone()];
   return [
-    providerToolCall(toolCallContent("wm-1", "derive", { supportingIds: [id], text: `Durable: ${FACT}`, relevance: "high" })),
+    providerToolCall(toolCallContent("wm-1", "judge", { facts: [{ support: [ordinal], text: `Durable: ${FACT}`, relevance: "high" }] })),
     providerDone(),
   ];
 }

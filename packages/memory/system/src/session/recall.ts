@@ -1,34 +1,24 @@
 import type { SessionEntry } from "@arnilo/prism";
 import { redactSecrets } from "@arnilo/prism";
-import { lexicalCoverage, lexicalTerms } from "@arnilo/prism-memory-system/core";
-import { isEligibleObservationSourceEntry } from "./coverage-helpers.js";
+import { lexicalCoverage, lexicalTerms, truncateWorkerText } from "@arnilo/prism-memory-system/core";
+import { entriesById, isEligibleObservationSourceEntry } from "./coverage-helpers.js";
 import { foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
-import { DEFAULT_RECALL_QUERY_LIMIT, HARD_MAX_RECALL_PAGE_LIMIT, resolveRecallPageLimit } from "./limits.js";
-import { renderRecentMessageWindow } from "./recent-messages.js";
-import { serializeSourceEntries } from "./serialize.js";
 import {
-  isMemoryId,
-  type MemoryChunkRef,
-  type MemoryObservation,
-  type MemoryTaskState,
-  type MemoryTombstone,
-  type MemoryWmItem,
-} from "./types.js";
+  DEFAULT_MAX_RECALL_PAGE_LIMIT,
+  DEFAULT_RECALL_QUERY_LIMIT,
+  MIN_RECALL_PAGE_BYTES,
+  resolveRecallPageBytes,
+  resolveRecallPageLimit,
+} from "./limits.js";
+import { boundedOriginals, headerReserve, originalEntryText, originalPageHeader, originalSlice } from "./original.js";
+import { renderRecentMessageWindow } from "./recent-messages.js";
+import { isMemoryId, type MemoryObservation, type MemoryTaskState, type MemoryTombstone, type MemoryWmItem } from "./types.js";
 
 export type RecallKind = "observation" | "wm_item" | "task_state";
 export type RecallPageDirection = "forward" | "backward";
 export type RecallPageDetail = "summary" | "full";
 /** Where an STM record stands: on the surface, dropped, or tombstoned by a WM verdict (surface removed, still found). */
 export type RecallRecordState = "active" | "dropped" | "tombstoned";
-
-/** One chunk of a recalled STM record: its verbatim text, or why it is gone (`dropped`), or neither when not read. */
-export interface RecalledChunk extends MemoryChunkRef {
-  readonly text?: string;
-  readonly dropped?: string;
-}
-
-/** A chunk as the store returned it for the executing session, or `undefined` when the session holds no referrer. */
-export type RecallChunkTexts = ReadonlyMap<string, { readonly text: string } | undefined>;
 
 export interface MemoryRecallResult {
   readonly found: boolean;
@@ -47,8 +37,6 @@ export interface MemoryRecallResult {
   /** An STM record's state (plan 217 Task 4). */
   readonly state?: RecallRecordState;
   readonly tombstone?: MemoryTombstone;
-  /** An STM record's or WM item's chunks, verbatim, or with the reason each one is gone. */
-  readonly chunks?: readonly RecalledChunk[];
   readonly text: string;
   readonly reason?: "invalid_id" | "unknown_id" | "revoked";
 }
@@ -74,12 +62,36 @@ export interface RecallBranchPageResult {
 
 export interface RecallMemoryOptions {
   readonly invalidatedIds?: readonly string[];
-  /** `full` adds the raw source entries to an STM record's recall. Default `summary`. */
+  /** `full` adds the original source entries to an STM record's recall. Default `summary`. */
   readonly detail?: RecallPageDetail;
-  /** The ledger, when the caller already folded it (the recall tool folds once to find the chunks to read). */
+  /** The ledger, when the caller already folded it. */
   readonly ledger?: ObservationalMemoryLedger;
-  /** The record's chunks as read from the chunk store for the executing session, by chunk id. */
-  readonly chunkTexts?: RecallChunkTexts;
+  /** Bytes the answer's text may take; source evidence past it names the `recall { entry, offset }` to read on. Default 16_384. */
+  readonly pageBytes?: number;
+}
+
+/** `recall { entry, offset, limit }`: one page of one original entry (plan 218.3 Task 4). */
+export interface RecallEntryPageRequest {
+  /** A current-branch user, assistant or tool message entry id (a parent's id resolves to a fork's copy). */
+  readonly entry: string;
+  /** Byte offset into the entry's original content. Default 0. */
+  readonly offset?: number;
+  /** Bytes of content the page may carry, at most the page size. Default the page size. */
+  readonly limit?: number;
+}
+
+export interface RecallEntryPageResult {
+  readonly found: boolean;
+  /** The id the entry has on this branch. */
+  readonly entry: string;
+  readonly offset: number;
+  readonly bytes: number;
+  readonly totalBytes: number;
+  readonly nextOffset?: number;
+  /** The page's slice of the redacted original content, verbatim. */
+  readonly content: string;
+  readonly text: string;
+  readonly reason?: "invalid_entry" | "entry_not_found" | "entry_not_message" | "invalid_offset" | "limit_exceeded";
 }
 
 export function recallObservationalMemory(
@@ -90,7 +102,8 @@ export function recallObservationalMemory(
 ): MemoryRecallResult {
   if (!isMemoryId(id)) return { found: false, id, reason: "invalid_id", text: "Invalid memory id; expected 12 lowercase hex characters." };
   const ledger = options?.ledger ?? foldObservationalMemoryLedger(entries);
-  const entryById = new Map(entries.map((entry) => [entry.id, entry]));
+  const entryById = entriesById(entries);
+  const pageBytes = resolveRecallPageBytes(options?.pageBytes);
   const dropped = new Set(ledger.droppedObservationIds);
   const invalidated = new Set(options?.invalidatedIds ?? []);
   const taskState = ledger.taskState;
@@ -105,10 +118,7 @@ export function recallObservationalMemory(
       taskState,
       sourceEntries,
       missingSourceEntryIds: taskState.sourceEntryIds.filter((sourceId) => !entryById.has(sourceId)),
-      text: redactSecrets(
-        `Task state [${id}]: ${JSON.stringify(taskState)}\n\nSource evidence:\n${serializeSourceEntries(sourceEntries, secrets) || "none"}`,
-        secrets,
-      ),
+      text: withEvidence(`Task state [${id}]: ${JSON.stringify(taskState)}`, sourceEntries, secrets, pageBytes),
     };
   }
   const observation = ledger.observations.find((item) => item.id === id);
@@ -125,7 +135,7 @@ export function recallObservationalMemory(
       };
     }
     const state: RecallRecordState = Object.hasOwn(ledger.tombstones ?? {}, id) ? "tombstoned" : dropped.has(id) ? "dropped" : "active";
-    return recallObservation(id, observation, entryById, state, ledger, secrets, options);
+    return recallObservation(id, observation, entryById, state, ledger, secrets, options?.detail === "full", pageBytes);
   }
 
   const wmItem = ledger.wmItems.find((item) => item.id === id);
@@ -154,12 +164,7 @@ export function recallObservationalMemory(
     const superseded = (ledger.supersededWmItemIds ?? []).includes(id);
     const sourceIds = new Set(citedObservations.flatMap((item) => item.sourceEntryIds));
     const sourceEntries = [...sourceIds].flatMap((sourceId) => entryById.get(sourceId) ?? []);
-    const chunks = recalledChunks(wmItem.chunkRefs ?? [], options, secrets, () =>
-      superseded
-        ? "WM item superseded"
-        : "no referrer in this session's chunk store (the store was not kept across a restart, or the chunk was deleted)",
-    );
-    const text = [
+    const head = [
       `WM item [${id}]${superseded ? " (superseded)" : ""}: ${wmItem.kind} (${wmItem.relevance}): ${wmItem.text}`,
       ...(wmItem.observedFrom
         ? [`time: ${wmItem.observedFrom}${wmItem.observedTo && wmItem.observedTo !== wmItem.observedFrom ? ` – ${wmItem.observedTo}` : ""}`]
@@ -173,10 +178,6 @@ export function recallObservationalMemory(
       }),
       ...wmItem.citedIds.filter((cited) => wmIds.has(cited)).map((cited) => `- [${cited}] WM item`),
       ...(missingCitedIds.length ? ["", `Missing cited ids: ${missingCitedIds.join(", ")}`] : []),
-      ...chunkLines(chunks),
-      "",
-      "Source evidence:",
-      serializeSourceEntries(sourceEntries, secrets) || "none",
     ].join("\n");
     return {
       found: true,
@@ -188,8 +189,7 @@ export function recallObservationalMemory(
       missingCitedIds,
       sourceEntries,
       missingSourceEntryIds: [...sourceIds].filter((sourceId) => !entryById.has(sourceId)),
-      ...(chunks.length ? { chunks } : {}),
-      text: redactSecrets(text, secrets),
+      text: withEvidence(head, sourceEntries, secrets, pageBytes),
     };
   }
 
@@ -246,18 +246,19 @@ export function recallObservationalMemoryQuery(
   entries: readonly SessionEntry[],
   request: RecallQueryRequest,
   secrets: readonly (string | undefined)[] = [],
-  options?: { readonly ledger?: ObservationalMemoryLedger },
+  options?: { readonly ledger?: ObservationalMemoryLedger; readonly maxPageLimit?: number; readonly pageBytes?: number },
 ): RecallQueryResult {
   const query = typeof request.query === "string" ? request.query.trim() : "";
   const base = { query, tiers: RECALL_QUERY_TIERS, hits: [] as RecallQueryHit[] };
-  const limit = request.limit ?? DEFAULT_RECALL_QUERY_LIMIT;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_RECALL_PAGE_LIMIT) {
+  const maxLimit = options?.maxPageLimit ?? DEFAULT_MAX_RECALL_PAGE_LIMIT;
+  const limit = request.limit ?? Math.min(DEFAULT_RECALL_QUERY_LIMIT, maxLimit);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > maxLimit) {
     return {
       ...base,
       found: false,
       limit,
       reason: "limit_exceeded",
-      text: `Query limit must be a positive safe integer at most ${HARD_MAX_RECALL_PAGE_LIMIT}.`,
+      text: `Query limit must be a positive safe integer at most ${maxLimit}.`,
     };
   }
   const terms = lexicalTerms(query);
@@ -270,7 +271,7 @@ export function recallObservationalMemoryQuery(
   const tombstones = ledger.tombstones ?? {};
   const candidates: RecallQueryHit[] = [];
   const consider = (hit: Omit<RecallQueryHit, "coverage">) => {
-    const coverage = lexicalCoverage(terms, lexicalTerms(hit.description));
+    const coverage = recordCoverage(terms, hit.description);
     if (coverage > 0) candidates.push({ ...hit, coverage });
   };
   for (const item of ledger.observations) {
@@ -310,22 +311,112 @@ export function recallObservationalMemoryQuery(
       text: `No session memory record matches "${redactSecrets(query, secrets)}" (searched STM records and WM items, discarded ones included).`,
     };
   }
-  const lines = hits.map((hit) => {
+  const line = (hit: RecallQueryHit) => {
     const state = hit.state === "active" || !hit.stateReason ? hit.state : `${hit.state}: ${hit.stateReason}`;
     const time = hit.time ? ` ${hit.time}` : "";
     return `- [${hit.id}] ${hit.kind === "wm_item" ? "WM " : ""}${hit.recordKind}${time} (${state}): ${hit.description}`;
-  });
-  const text = redactSecrets(
-    [`${hits.length} session memory record(s) match; call recall with an id for evidence and chunks.`, ...lines].join("\n"),
-    secrets,
-  );
-  return { ...base, found: true, limit, hits, text };
+  };
+  const answer = (shown: readonly RecallQueryHit[]): RecallQueryResult => {
+    const more = hits.length - shown.length;
+    const text = redactSecrets(
+      [
+        `${shown.length} session memory record(s) match; call recall with an id for the record and its original source entries.`,
+        ...shown.map(line),
+        ...(more ? [`${more} more record(s) match past this page; narrow the query to see them.`] : []),
+      ].join("\n"),
+      secrets,
+    );
+    return { ...base, found: true, limit, hits: [...shown], text };
+  };
+  // Plan 218.3 Task 12: the answer stays within the page bytes like every other recall mode (a query over many long
+  // records answered ~200K characters, over a 32K window on its own). The first hit always shows.
+  const pageBytes = resolveRecallPageBytes(options?.pageBytes);
+  let shown = hits.length;
+  let result = answer(hits);
+  while (shown > 1 && Buffer.byteLength(JSON.stringify(result), "utf8") > pageBytes) result = answer(hits.slice(0, --shown));
+  return result;
+}
+
+/** The query scorer `recall { query }` and WM's look-ahead share: the share of the query's terms a description holds. */
+function recordCoverage(queryTerms: ReadonlySet<string>, description: string): number {
+  return lexicalCoverage(queryTerms, lexicalTerms(description));
+}
+
+/** One earlier STM record offered to a WM pass for a coming scope step (plan 218.3 Task 8). */
+export interface LookAheadCandidate {
+  readonly record: MemoryObservation;
+  /** The remaining step ordinal the record matched best. */
+  readonly step: number;
+  /** Share of that step's terms the record's description holds, in (0,1]. */
+  readonly coverage: number;
+  readonly state: RecallRecordState;
+}
+
+export interface LookAheadOptions {
+  /** Most records one pass is offered (`wm.lookAheadRecords`); 0 offers none. */
+  readonly maxRecords: number;
+  /** Most record tokens one pass is offered (`wm.lookAheadTokens`). */
+  readonly maxTokens: number;
+  /** Record ids never offered: the flush passes the STM surface (its batches reach WM) and the re-judged records. */
+  readonly exclude?: ReadonlySet<string>;
+}
+
+/**
+ * WM's look-ahead (plan 218.3 Task 8): earlier STM records whose description matches a remaining scope step, whatever
+ * their state, except those `exclude` names (the flush passes the STM surface, which WM's batches already reach) and
+ * those an active WM item already cites.
+ * The scorer is `recall { query }`'s with each step's text as the query; a record must share at least two of the
+ * step's terms (all of them for a one-term step). Each record goes to the step it covers best (the earlier step on a
+ * tie); the next step's records come first, then higher coverage, then newer. Bounded by records and tokens. A pure
+ * read of the folded ledger: no store read, no model call.
+ */
+export function selectLookAheadRecords(
+  ledger: ObservationalMemoryLedger,
+  remaining: readonly { readonly step: number; readonly text: string }[],
+  options: LookAheadOptions,
+): readonly LookAheadCandidate[] {
+  if (!remaining.length || options.maxRecords < 1 || options.maxTokens < 1) return [];
+  const steps = remaining
+    .map((step, position) => ({ ...step, position, terms: lexicalTerms(step.text) }))
+    .filter((step) => step.terms.size);
+  if (!steps.length) return [];
+  const superseded = new Set(ledger.supersededWmItemIds ?? []);
+  const inWm = new Set(ledger.wmItems.filter((item) => !superseded.has(item.id)).flatMap((item) => item.citedIds));
+  const dropped = new Set(ledger.droppedObservationIds);
+  const tombstones = ledger.tombstones ?? {};
+  const scored: (LookAheadCandidate & { readonly position: number; readonly index: number })[] = [];
+  for (const [index, record] of ledger.observations.entries()) {
+    if (inWm.has(record.id) || options.exclude?.has(record.id)) continue;
+    const terms = lexicalTerms(record.description);
+    let best: { step: number; position: number; coverage: number } | undefined;
+    for (const step of steps) {
+      let matched = 0;
+      for (const term of step.terms) if (terms.has(term)) matched += 1;
+      if (matched < Math.min(2, step.terms.size)) continue;
+      const coverage = matched / step.terms.size;
+      if (!best || coverage > best.coverage) best = { step: step.step, position: step.position, coverage };
+    }
+    if (!best) continue;
+    const state: RecallRecordState = Object.hasOwn(tombstones, record.id) ? "tombstoned" : dropped.has(record.id) ? "dropped" : "active";
+    scored.push({ record, step: best.step, coverage: best.coverage, state, position: best.position, index });
+  }
+  scored.sort((a, b) => a.position - b.position || b.coverage - a.coverage || b.index - a.index);
+  const chosen: LookAheadCandidate[] = [];
+  let tokens = 0;
+  for (const { position: _position, index: _index, ...candidate } of scored) {
+    if (chosen.length >= options.maxRecords) break;
+    if (tokens + candidate.record.tokenCount > options.maxTokens) continue;
+    chosen.push(candidate);
+    tokens += candidate.record.tokenCount;
+  }
+  return chosen;
 }
 
 export function recallObservationalMemoryBranchPage(
   entries: readonly SessionEntry[],
   request: RecallBranchPageRequest,
   secrets: readonly (string | undefined)[] = [],
+  options?: { readonly pageBytes?: number; readonly maxPageLimit?: number },
 ): RecallBranchPageResult {
   const cursor = typeof request.cursor === "string" ? request.cursor.trim() : "";
   const direction: RecallPageDirection = request.direction === "forward" ? "forward" : "backward";
@@ -343,7 +434,7 @@ export function recallObservationalMemoryBranchPage(
   }
   let limit: number;
   try {
-    limit = resolveRecallPageLimit(request.limit);
+    limit = resolveRecallPageLimit(request.limit, options?.maxPageLimit);
   } catch {
     return {
       found: false,
@@ -352,12 +443,11 @@ export function recallObservationalMemoryBranchPage(
       limit: request.limit ?? 0,
       entries: [],
       reason: "limit_exceeded",
-      text: `Page limit must be a positive safe integer at most ${HARD_MAX_RECALL_PAGE_LIMIT}.`,
+      text: `Page limit must be a positive safe integer at most ${options?.maxPageLimit ?? DEFAULT_MAX_RECALL_PAGE_LIMIT}.`,
     };
   }
 
-  const entryById = new Map(entries.map((entry) => [entry.id, entry]));
-  const cursorEntry = entryById.get(cursor);
+  const cursorEntry = entriesById(entries).get(cursor);
   if (!cursorEntry) {
     return {
       found: false,
@@ -382,11 +472,16 @@ export function recallObservationalMemoryBranchPage(
   }
 
   const messages = entries.filter(isEligibleObservationSourceEntry);
-  const index = messages.findIndex((entry) => entry.id === cursor);
+  const index = messages.indexOf(cursorEntry);
   const start = direction === "backward" ? Math.max(0, index - limit + 1) : index;
   const end = direction === "backward" ? index + 1 : Math.min(messages.length, index + limit);
   const page = messages.slice(start, end);
-  const text = detail === "full" ? serializeSourceEntries(page, secrets) || "none" : renderRecentMessageWindow(page, secrets) || "none";
+  // `full` pages the original entries within the page bytes; an entry past them names the `recall { entry }` to read it.
+  const text =
+    detail === "full"
+      ? boundedOriginals(page, secrets, resolveRecallPageBytes(options?.pageBytes)) || "none"
+      : // Plan 218.3 Task 12: the summary page stays within the page bytes too (it rendered every message whole).
+        boundedSummary(renderRecentMessageWindow(page, secrets), resolveRecallPageBytes(options?.pageBytes)) || "none";
   return {
     found: true,
     cursor,
@@ -399,28 +494,98 @@ export function recallObservationalMemoryBranchPage(
   };
 }
 
+/**
+ * `recall { entry, offset, limit }` (plan 218.3 Task 4): one page of one current-branch message entry's original content,
+ * read from the session store and redacted, header included within `pageBytes`. The page names the offset to read on.
+ * A parent's entry id resolves to a fork's copy; an entry after the fork point is not on the fork's branch.
+ */
+export function recallObservationalMemoryEntryPage(
+  entries: readonly SessionEntry[],
+  request: RecallEntryPageRequest,
+  secrets: readonly (string | undefined)[] = [],
+  options?: { readonly pageBytes?: number },
+): RecallEntryPageResult {
+  const requested = typeof request.entry === "string" ? request.entry.trim() : "";
+  const offset = request.offset ?? 0;
+  const empty = { entry: requested, offset, bytes: 0, totalBytes: 0, content: "" };
+  if (!requested) return { ...empty, found: false, reason: "invalid_entry", text: "Invalid entry; expected a current-branch entry id." };
+  if (!Number.isSafeInteger(offset) || offset < 0)
+    return { ...empty, found: false, reason: "invalid_offset", text: "Offset must be a non-negative safe integer." };
+  const pageBytes = resolveRecallPageBytes(options?.pageBytes);
+  const limit = request.limit ?? pageBytes;
+  if (!Number.isSafeInteger(limit) || limit < MIN_RECALL_PAGE_BYTES || limit > pageBytes) {
+    return {
+      ...empty,
+      found: false,
+      reason: "limit_exceeded",
+      text: `Entry page limit must be a safe integer from ${MIN_RECALL_PAGE_BYTES} to ${pageBytes} bytes.`,
+    };
+  }
+  const entry = entriesById(entries).get(requested);
+  if (!entry) return { ...empty, found: false, reason: "entry_not_found", text: `Entry ${requested} was not found on the current branch.` };
+  if (!isEligibleObservationSourceEntry(entry)) {
+    return {
+      ...empty,
+      found: false,
+      reason: "entry_not_message",
+      text: `Entry ${requested} is not a user/assistant/tool message on the current branch.`,
+    };
+  }
+  const totalBytes = Buffer.byteLength(redactSecrets(originalEntryText(entry), secrets), "utf8");
+  if (offset > totalBytes) {
+    return {
+      ...empty,
+      entry: entry.id,
+      totalBytes,
+      found: false,
+      reason: "invalid_offset",
+      text: `Offset ${offset} is past the end of entry ${entry.id} (${totalBytes} bytes).`,
+    };
+  }
+  const slice = originalSlice(entry, offset, Math.min(limit, pageBytes - headerReserve(entry, totalBytes)), secrets);
+  return {
+    found: true,
+    entry: entry.id,
+    offset: slice.offset,
+    bytes: slice.bytes,
+    totalBytes: slice.totalBytes,
+    ...(slice.nextOffset === undefined ? {} : { nextOffset: slice.nextOffset }),
+    content: slice.content,
+    text: `${originalPageHeader(entry, slice)}\n${slice.content}`,
+  };
+}
+
+/** A record's lines, then its source entries' original content in the room the page has left. */
+function withEvidence(
+  head: string,
+  sourceEntries: readonly SessionEntry[],
+  secrets: readonly (string | undefined)[],
+  pageBytes: number,
+): string {
+  const top = redactSecrets(`${head}\n\nSource evidence:`, secrets);
+  const room = Math.max(MIN_RECALL_PAGE_BYTES, pageBytes - Buffer.byteLength(top, "utf8") - 1);
+  return `${top}\n${boundedOriginals(sourceEntries, secrets, room) || "none"}`;
+}
+
 function recallObservation(
   id: string,
   observation: MemoryObservation,
-  entryById: Map<string, SessionEntry>,
+  entryById: ReadonlyMap<string, SessionEntry>,
   state: RecallRecordState,
   ledger: ObservationalMemoryLedger,
   secrets: readonly (string | undefined)[],
-  options: RecallMemoryOptions | undefined,
+  full: boolean,
+  pageBytes: number,
 ): MemoryRecallResult {
-  const full = options?.detail === "full";
   const tombstone = state === "tombstoned" ? ledger.tombstones?.[id] : undefined;
-  const chunks = recalledChunks(observation.chunkRefs ?? [], options, secrets, () => chunkDropReason(id, state, ledger, tombstone));
   const sourceEntries = observation.sourceEntryIds.flatMap((sourceId) => entryById.get(sourceId) ?? []);
   const missingSourceEntryIds = observation.sourceEntryIds.filter((sourceId) => !entryById.has(sourceId));
   const count = observation.count ?? 1;
   const stateLabel = state === "tombstoned" ? ` (tombstoned: ${tombstone?.reason ?? "unknown"})` : state === "dropped" ? " (dropped)" : "";
-  const text = [
+  const head = [
     `Observation [${id}]${stateLabel}: ${observation.kind}${count > 1 ? ` ×${count}` : ""}: ${observation.description}`,
     `time: ${observation.observedAt ?? observation.timestamp}${count > 1 && observation.lastAt ? `; last seen ${observation.lastAt}` : ""}${observation.referencedAt ? `; refers to ${observation.referencedAt}` : ""}`,
-    `sources: ${observation.sourceEntryIds.join(", ") || "none"}`,
-    ...chunkLines(chunks),
-    ...(full ? ["", "Source evidence:", serializeSourceEntries(sourceEntries, secrets) || "none"] : []),
+    `sources: ${sourceEntries.map((entry) => entry.id).join(", ") || "none"}${missingSourceEntryIds.length ? `; not on this branch: ${missingSourceEntryIds.join(", ")}` : ""}`,
   ].join("\n");
   return {
     found: true,
@@ -429,51 +594,18 @@ function recallObservation(
     observation,
     state,
     ...(tombstone ? { tombstone } : {}),
-    ...(chunks.length ? { chunks } : {}),
     ...(full ? { sourceEntries } : {}),
     missingSourceEntryIds,
     dropped: state === "dropped",
-    text: redactSecrets(text, secrets),
+    text: full ? withEvidence(head, sourceEntries, secrets, pageBytes) : redactSecrets(head, secrets),
   };
 }
 
-/** Why a chunk the record cites is not readable by the executing session. */
-function chunkDropReason(
-  id: string,
-  state: RecallRecordState,
-  ledger: ObservationalMemoryLedger,
-  tombstone: MemoryTombstone | undefined,
-): string {
-  if (state === "dropped") return `record ${ledger.dropReasons?.[id] ?? "dropped"}`;
-  if (state === "tombstoned") return `record tombstoned (${tombstone?.reason ?? "unknown"})`;
-  return "no referrer in this session's chunk store (the store was not kept across a restart, or the chunk was deleted)";
-}
+/** The marker a cut summary page ends with: the entry ids on the page read whole through `recall { entry }`. */
+export const RECALL_PAGE_CUT_MARKER = "\n[page cut at the page bytes: read one entry whole with recall { entry: <entry id>, offset }]";
 
-function recalledChunks(
-  refs: readonly MemoryChunkRef[],
-  options: RecallMemoryOptions | undefined,
-  secrets: readonly (string | undefined)[],
-  dropReason: () => string,
-): readonly RecalledChunk[] {
-  return refs.map((ref): RecalledChunk => {
-    if (!options?.chunkTexts) return ref;
-    const stored = options.chunkTexts.get(ref.id);
-    if (stored) return { ...ref, text: redactSecrets(stored.text, secrets) };
-    return { ...ref, dropped: dropReason() };
-  });
-}
-
-function chunkLines(chunks: readonly RecalledChunk[]): readonly string[] {
-  if (!chunks.length) return [];
-  return [
-    "",
-    "Chunks:",
-    ...chunks.map((chunk) =>
-      chunk.text !== undefined
-        ? `[chunk ${chunk.id}] from ${chunk.sourceEntryId}, ${chunk.bytes} bytes:\n${chunk.text}`
-        : chunk.dropped !== undefined
-          ? `[chunk ${chunk.id}] from ${chunk.sourceEntryId}: chunk dropped: ${chunk.dropped}`
-          : `[chunk ${chunk.id}] from ${chunk.sourceEntryId}, ${chunk.bytes} bytes (not read)`,
-    ),
-  ];
+/** A summary page within `pageBytes`; a cut page says how to read an entry whole (plan 218.3 Task 12). */
+function boundedSummary(text: string, pageBytes: number): string {
+  if (Buffer.byteLength(text, "utf8") <= pageBytes) return text;
+  return `${truncateWorkerText(text, pageBytes - Buffer.byteLength(RECALL_PAGE_CUT_MARKER, "utf8"))}${RECALL_PAGE_CUT_MARKER}`;
 }

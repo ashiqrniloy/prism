@@ -66,9 +66,30 @@ export function deriveToolEffectKey(input: Omit<ToolEffectKey, "key" | "signal">
 }
 
 /** In-process reference. Use a durable adapter for cross-replica claims. */
-export function createMemoryToolEffectStore(options: { readonly now?: () => number } = {}): ToolEffectStore {
+/**
+ * Ceilings of the in-memory effect store (plan 239 Task 4). The store is host-constructed, so only the host
+ * sets them. Defaults: claim TTL 1 h, 10 attempts, 500 records per cleanup, 64 KiB per result, 128 KiB per record.
+ */
+export interface MemoryToolEffectStoreLimits {
+  readonly maxClaimTtlMs?: number;
+  readonly maxAttempts?: number;
+  readonly maxCleanupLimit?: number;
+  readonly maxResultBytes?: number;
+  readonly maxRecordBytes?: number;
+}
+
+export function createMemoryToolEffectStore(
+  options: { readonly now?: () => number; readonly limits?: MemoryToolEffectStoreLimits } = {},
+): ToolEffectStore {
   const records = new Map<string, ToolEffectRecord>();
   const now = options.now ?? Date.now;
+  const caps = {
+    claimTtlMs: positiveLimit(options.limits?.maxClaimTtlMs, HARD_CLAIM_TTL_MS, "maxClaimTtlMs"),
+    attempts: positiveLimit(options.limits?.maxAttempts, HARD_MAX_ATTEMPTS, "maxAttempts"),
+    cleanup: positiveLimit(options.limits?.maxCleanupLimit, HARD_CLEANUP_LIMIT, "maxCleanupLimit"),
+    resultBytes: positiveLimit(options.limits?.maxResultBytes, MAX_RESULT_BYTES, "maxResultBytes"),
+    recordBytes: positiveLimit(options.limits?.maxRecordBytes, MAX_RECORD_BYTES, "maxRecordBytes"),
+  };
 
   function current(input: ToolEffectKey): ToolEffectRecord | undefined {
     throwIfAborted(input.signal);
@@ -82,8 +103,8 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
   }
 
   function save(record: ToolEffectRecord, ownership: OwnershipScope): ToolEffectRecord {
-    const frozen = freezeRecord(record);
-    assertRecordSize(frozen);
+    const frozen = freezeRecord(record, caps.recordBytes);
+    assertRecordSize(frozen, caps.recordBytes);
     records.set(recordKey({ ownership, key: frozen.key }), frozen);
     return frozen;
   }
@@ -96,8 +117,8 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
     async begin(input) {
       const existing = current(input);
       const timestamp = now();
-      const ttl = claimTtl(input.claimTtlMs);
-      const attempts = maxAttempts(input.maxAttempts);
+      const ttl = claimTtl(input.claimTtlMs, caps.claimTtlMs);
+      const attempts = maxAttempts(input.maxAttempts, caps.attempts);
       if (!existing)
         return {
           outcome: "acquired",
@@ -127,7 +148,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
 
     async complete(input) {
       const record = requireClaim(current(input), input, ["dispatched"]);
-      const result = input.result === undefined ? undefined : validateResult(input.result, input);
+      const result = input.result === undefined ? undefined : validateResult(input.result, input, caps.resultBytes);
       const resultRef = input.resultRef === undefined ? undefined : validateReference(input.resultRef);
       return save(
         {
@@ -173,7 +194,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
     async resolveUnknown(input) {
       const record = current(input);
       if (record?.status !== "unknown" || record.version !== input.expectedVersion) throw conflict();
-      const result = input.result === undefined ? undefined : validateResult(input.result, input);
+      const result = input.result === undefined ? undefined : validateResult(input.result, input, caps.resultBytes);
       const resultRef = input.resultRef === undefined ? undefined : validateReference(input.resultRef);
       return save(
         {
@@ -194,7 +215,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
       const before = Date.parse(input.before);
       if (!Number.isFinite(before)) throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_LIMIT", "cleanup boundary is invalid");
       validateOwnership(input.ownership);
-      const limit = cleanupLimit(input.limit);
+      const limit = cleanupLimit(input.limit, caps.cleanup);
       let deleted = 0;
       for (const [id, record] of records) {
         throwIfAborted(input.signal);
@@ -299,9 +320,13 @@ function assertMatches(record: ToolEffectRecord, input: ToolEffectKey): void {
   }
 }
 
-function validateResult(result: ToolResult, input: Pick<ToolEffectKey, "toolCallId" | "toolName">): ToolResult {
+function validateResult(
+  result: ToolResult,
+  input: Pick<ToolEffectKey, "toolCallId" | "toolName">,
+  maxBytes = MAX_RESULT_BYTES,
+): ToolResult {
   if (result.toolCallId !== input.toolCallId || result.name !== input.toolName) throw conflict();
-  return jsonSnapshot(result, MAX_RESULT_BYTES, "tool result") as ToolResult;
+  return jsonSnapshot(result, maxBytes, "tool result") as ToolResult;
 }
 
 function validateReference(reference: string): string {
@@ -320,8 +345,8 @@ function validateFailure(failure: { readonly code: string; readonly reference?: 
   });
 }
 
-function assertRecordSize(record: ToolEffectRecord): void {
-  void jsonSnapshot(record, MAX_RECORD_BYTES, "tool effect record");
+function assertRecordSize(record: ToolEffectRecord, maxBytes = MAX_RECORD_BYTES): void {
+  void jsonSnapshot(record, maxBytes, "tool effect record");
 }
 
 function jsonSnapshot(value: unknown, maxBytes: number, label: string): unknown {
@@ -336,8 +361,8 @@ function jsonSnapshot(value: unknown, maxBytes: number, label: string): unknown 
   return JSON.parse(text);
 }
 
-function freezeRecord(record: ToolEffectRecord): ToolEffectRecord {
-  return freezeJson(jsonSnapshot(record, MAX_RECORD_BYTES, "tool effect record") as ToolEffectRecord);
+function freezeRecord(record: ToolEffectRecord, maxBytes = MAX_RECORD_BYTES): ToolEffectRecord {
+  return freezeJson(jsonSnapshot(record, maxBytes, "tool effect record") as ToolEffectRecord);
 }
 
 function freezeJson<T>(value: T): T {
@@ -370,23 +395,30 @@ function timestamp(value: number): string {
   return new Date(value).toISOString();
 }
 
-function claimTtl(value: number | undefined): number {
-  const ttl = value ?? DEFAULT_CLAIM_TTL_MS;
-  if (!Number.isSafeInteger(ttl) || ttl < 1 || ttl > HARD_CLAIM_TTL_MS)
+function positiveLimit(value: number | undefined, fallback: number, name: string): number {
+  const limit = value ?? fallback;
+  if (!Number.isSafeInteger(limit) || limit < 1)
+    throw new TypeError(`createMemoryToolEffectStore limits.${name} must be a positive safe integer`);
+  return limit;
+}
+
+function claimTtl(value: number | undefined, max: number): number {
+  const ttl = value ?? Math.min(DEFAULT_CLAIM_TTL_MS, max);
+  if (!Number.isSafeInteger(ttl) || ttl < 1 || ttl > max)
     throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_LIMIT", "claim TTL exceeds limits");
   return ttl;
 }
 
-function maxAttempts(value: number | undefined): number {
-  const attempts = value ?? DEFAULT_MAX_ATTEMPTS;
-  if (!Number.isSafeInteger(attempts) || attempts < 1 || attempts > HARD_MAX_ATTEMPTS)
+function maxAttempts(value: number | undefined, max: number): number {
+  const attempts = value ?? Math.min(DEFAULT_MAX_ATTEMPTS, max);
+  if (!Number.isSafeInteger(attempts) || attempts < 1 || attempts > max)
     throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_LIMIT", "effect attempts exceed limits");
   return attempts;
 }
 
-function cleanupLimit(value: number | undefined): number {
-  const limit = value ?? DEFAULT_CLEANUP_LIMIT;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_CLEANUP_LIMIT)
+function cleanupLimit(value: number | undefined, max: number): number {
+  const limit = value ?? Math.min(DEFAULT_CLEANUP_LIMIT, max);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > max)
     throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_LIMIT", "cleanup limit exceeds limits");
   return limit;
 }

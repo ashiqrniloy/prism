@@ -28,8 +28,7 @@ const SSE_HEADERS = {
   connection: "keep-alive",
 };
 
-/** Resume-boundary caps mirroring the kernel's hard decision limits (`HARD_MAX_*`). */
-const MAX_RESUME_DECISIONS = 128;
+/** Bytes of one resume payload (`{ outcome }`), a wire field; the decision count is bounded by the kernel's pending decisions. */
 const MAX_RESUME_PAYLOAD_BYTES = 64 * 1024;
 const APPROVAL_OUTCOMES: ReadonlySet<string> = new Set(["allow_once", "allow_for_run", "reject_once", "reject_for_run"]);
 
@@ -260,7 +259,7 @@ async function runSource<Authorization extends AgUiAuthorization>(
       signal,
       interactive: false,
       maxQueuedEvents: limits.maxQueuedEvents,
-      overflow: "close",
+      overflow: "coalesce",
     }),
     session,
     input,
@@ -325,7 +324,8 @@ function readResumeDecisions(
     }
     decisions.push({ approvalId: record.approvalId, outcome: readResumeOutcome(entry.payload) });
   }
-  if (decisions.length === 0 || decisions.length > MAX_RESUME_DECISIONS) {
+  // Each decision matched a distinct pending interrupt, so the count is bounded by the agent's `ceilings.pendingDecisions`.
+  if (decisions.length === 0) {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume decisions must be a non-empty bounded array");
   }
   return decisions;

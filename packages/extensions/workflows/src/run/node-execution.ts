@@ -5,7 +5,8 @@ import { WorkflowAbortError, WorkflowCheckpointError, WorkflowLoopLimitError, Wo
 import {
   DEFAULT_MAX_CONCURRENCY,
   DEFAULT_MAX_NESTED_DEPTH,
-  HARD_MAX_LOOP_ITERATIONS,
+  DEFAULT_MAX_RETRY_BACKOFF_MS,
+  DEFAULT_RETRY_BACKOFF_STEP_MS,
   validateWorkflowLimit,
   WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
 } from "../limits.js";
@@ -173,7 +174,8 @@ export async function runNode(
         throw error;
       }
       if (attempt <= retries) {
-        await sleep(Math.min(1000, 25 * attempt), options.signal);
+        const stepMs = node.retryBackoff?.stepMs ?? DEFAULT_RETRY_BACKOFF_STEP_MS;
+        await sleep(Math.min(node.retryBackoff?.maxMs ?? DEFAULT_MAX_RETRY_BACKOFF_MS, stepMs * attempt), options.signal);
         continue;
       }
       nodeState.status = "failed";
@@ -284,6 +286,9 @@ export async function onNodeSucceeded(
           ? { stateVersionBefore: nodeState.currentIterationStateVersionBefore }
           : {}),
       });
+      // A long-lived cycle keeps only the newest records, so its checkpoint stays bounded (plan 239 Task 10).
+      const keep = state.workflow.limits?.maxIterationRecords;
+      if (keep !== undefined && iterations.length > keep) iterations.splice(0, iterations.length - keep);
       nodeState.iteration = iteration + 1;
       nodeState.lastOutput = output;
     }
@@ -449,7 +454,7 @@ async function executeNode(
       return { output };
     }
     case "loop": {
-      const maxIterations = validateWorkflowLimit(`Node "${ctx.nodeId}" maxIterations`, node.maxIterations, HARD_MAX_LOOP_ITERATIONS);
+      const maxIterations = validateWorkflowLimit(`Node "${ctx.nodeId}" maxIterations`, node.maxIterations);
       const nodeState = state.nodes.get(ctx.nodeId);
       const firstIteration = nodeState?.iteration ?? 0;
       const lastIteration = nodeState?.iterations?.at(-1);

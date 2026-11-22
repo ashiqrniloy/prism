@@ -40,11 +40,13 @@ import {
 } from "../media.js";
 import { OMITTED_TOOL_RESULT_IMAGE_NOTE, serializeToolResultText } from "../openai-primitives.js";
 import { canonicalizeJsonSchema } from "../schema.js";
-import { assertStructuredOutputRequestSupported } from "../structured-output.js";
+import { assertStructuredOutputRequestSupported, StructuredOutputError } from "../structured-output.js";
 import { resolvePreserveThinking, resolveReasoningEffort, resolveThinkingObject, stripOwnedCompat } from "../thinking.js";
 import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
-import { readSseEvents } from "../transport.js";
+import { type BoundedStreamLimits, classifyProviderFailure, readSseEvents } from "../transport.js";
 import { normalizeUsage } from "../usage.js";
+
+const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
 
 /**
  * Shared Anthropic Messages route serializer (body + SSE events) for the
@@ -76,6 +78,8 @@ export interface AnthropicMessagesEventsOptions {
   readonly mapUsage?: (usage: unknown) => Usage | undefined;
   /** Must be the same map that serialized the request. */
   readonly toolNames?: ToolNameMap;
+  /** SSE event and buffer ceilings; default the transport's. Host-set: a provider response never raises them. */
+  readonly streamLimits?: BoundedStreamLimits;
 }
 
 interface PartialBlock {
@@ -90,6 +94,15 @@ interface PartialBlock {
 
 export async function anthropicMessagesBody(request: ProviderRequest, hooks: AnthropicMessagesRouteHooks = {}): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
+  // This wire has no JSON-schema response format: fail closed instead of silently dropping the schema
+  // (plan 235 Task 3, finding F1). A session run's `mode: "auto"` sends these models the prompted block.
+  if (request.options?.structuredOutput) {
+    throw new StructuredOutputError(
+      "unsupported_model",
+      `The Anthropic Messages wire for ${request.model.provider}/${request.model.model} does not send structured output; ` +
+        'set structuredOutput.mode to "prompted" (or "auto") on a session run',
+    );
+  }
   const toolNames = hooks.toolNames ?? createToolNameMap(request.tools);
   const preserveThinking = (hooks.preserveThinking ?? resolvePreserveThinking)(request);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
@@ -134,7 +147,7 @@ export async function anthropicMessagesBody(request: ProviderRequest, hooks: Ant
     }),
     stream: true,
     ...parameters,
-    max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? 4096,
+    max_tokens: maxTokens ?? request.model.limits?.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
     ...compatRest,
     ...(request.options?.extra ?? {}),
     // Resolved official fields win over raw compat/extra escape hatches.
@@ -177,7 +190,7 @@ export async function* anthropicMessagesEvents(
     return customMapUsage ? customMapUsage(rawUsage) : toUsage(rawUsage);
   }
 
-  for await (const sseEvent of readSseEvents(body, { signal })) {
+  for await (const sseEvent of readSseEvents(body, { ...options?.streamLimits, signal })) {
     if (sseEvent.event === "ping") continue;
     const data = sseEvent.data.trim();
     if (!data) continue;
@@ -199,11 +212,13 @@ export async function* anthropicMessagesEvents(
     if (event.type === "error" || sseEvent.event === "error") {
       const vendorError = event.error ?? {};
       const code = vendorError.type ?? "api_error";
-      const isTransient = code === "overloaded_error" || code === "api_error";
       const err = new Error(vendorError.message ?? "Provider API error");
       err.name = "ProviderError";
       (err as any).code = code;
-      (err as any).failureClass = isTransient ? "transient" : "permanent";
+      // `rate_limit_error` → rate_limited, `overloaded_error` / `api_error` → transient (one wire-code
+      // table in the shared classifier); any other vendor type cannot succeed on a retry.
+      const failureClass = classifyProviderFailure(err);
+      (err as any).failureClass = failureClass === "unknown" ? "permanent" : failureClass;
       yield providerError(err, secrets);
       return;
     }
@@ -360,9 +375,9 @@ async function toMessage(
         content.push(withMarker({ type: "redacted_thinking", data: part.data ?? "" }, marker));
       } else if (preserveThinking && part.signature) {
         content.push(withMarker({ type: "thinking", thinking: part.text, signature: part.signature }, marker));
-      } else {
-        content.push(withMarker({ type: "text", text: part.text }, marker));
       }
+      // Unsigned or unpreserved reasoning is omitted: the route cannot verify it, and replaying it as
+      // `text` would show the model another provider's reasoning as if the assistant had said it.
     } else if (part.type === "image") {
       const resolved = resolvedMedia.get(part)!;
       const source: JsonObject = { type: "base64", media_type: resolved.mediaType, data: bytesToBase64(resolved.bytes) };

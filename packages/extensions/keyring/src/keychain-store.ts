@@ -1,11 +1,6 @@
 import type { StoredCredentialStore } from "./encrypted-store.js";
 import { CredentialStoreLockedError, CredentialStoreTimeoutError, CredentialStoreUnavailableError } from "./errors.js";
-import {
-  DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  HARD_KEYCHAIN_TIMEOUT_MS,
-  HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  validateCredentialLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES, validateCredentialLimit } from "./limits.js";
 import type { KeychainCredentialStoreOptions } from "./types.js";
 import { DEFAULT_KEYCHAIN_TIMEOUT_MS } from "./types.js";
 import {
@@ -94,7 +89,7 @@ export const KEYCHAIN_PROBE_ACCOUNT = "__prism_keychain_probe__";
  * Never throws; a locked/unavailable/timing-out backend reports `unavailable`.
  */
 export async function probeKeychainAvailability(options: KeychainProbeOptions): Promise<KeychainProbeResult> {
-  const timeoutMs = validateCredentialLimit("timeoutMs", options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS, HARD_KEYCHAIN_TIMEOUT_MS);
+  const timeoutMs = validateCredentialLimit("timeoutMs", options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS);
   try {
     await runKeychainOperation(
       async (signal) => (await keychainEntry(options.service, KEYCHAIN_PROBE_ACCOUNT)).getSecret(signal),
@@ -112,12 +107,8 @@ export interface KeychainCredentialStore extends StoredCredentialStore {
 }
 
 export function createKeychainCredentialStore(options: KeychainCredentialStoreOptions): KeychainCredentialStore {
-  const timeoutMs = validateCredentialLimit("timeoutMs", options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS, HARD_KEYCHAIN_TIMEOUT_MS);
-  const maxPayloadBytes = validateCredentialLimit(
-    "maxPayloadBytes",
-    options.maxPayloadBytes ?? DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES,
-    HARD_MAX_KEYCHAIN_PAYLOAD_BYTES,
-  );
+  const timeoutMs = validateCredentialLimit("timeoutMs", options.timeoutMs ?? DEFAULT_KEYCHAIN_TIMEOUT_MS);
+  const maxPayloadBytes = validateCredentialLimit("maxPayloadBytes", options.maxPayloadBytes ?? DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES);
   const accountForKey = (key: string) => keychainAccountName(options.namespace, key);
 
   const readVaultForKey = async (key: string) => {

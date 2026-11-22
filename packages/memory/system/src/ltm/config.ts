@@ -7,35 +7,13 @@
  */
 import { isAbsolute, relative, resolve } from "node:path";
 import type { JsonSchema } from "@arnilo/prism";
-import { HARD_TOP_K_CAP, MemoryValidationError } from "@arnilo/prism-memory-system/core";
+import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-system/core";
-import {
-  HARD_RULES_TOKENS,
-  type MemoryFabricRulesConfig,
-  type ResolvedFabricRulesOptions,
-  resolveFabricRulesOptions,
-} from "./delivery/rules.js";
-import {
-  HARD_CUE_TOKENS,
-  HARD_CUES_PER_TURN,
-  type MemoryFabricCuesConfig,
-  type ResolvedFabricCuesOptions,
-  resolveFabricCuesOptions,
-} from "./delivery/cues.js";
-import {
-  HARD_DIRECTORY_FILES,
-  HARD_DIRECTORY_TOKENS,
-  HARD_DIRECTORY_TOPICS,
-  type MemoryFabricDirectoryConfig,
-  type ResolvedFabricDirectoryOptions,
-  resolveFabricDirectoryOptions,
-} from "./directory.js";
-import {
-  DEFAULT_LESSON_ARCHIVE_SESSIONS,
-  DEFAULT_LESSON_NUDGE_TURNS,
-  MAX_LESSON_ARCHIVE_SESSIONS,
-  MAX_LESSON_NUDGE_TURNS,
-} from "./lessons.js";
+import { type MemoryFabricRulesConfig, type ResolvedFabricRulesOptions, resolveFabricRulesOptions } from "./delivery/rules.js";
+import { type MemoryFabricCuesConfig, type ResolvedFabricCuesOptions, resolveFabricCuesOptions } from "./delivery/cues.js";
+import { type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, resolveFabricDirectoryOptions } from "./directory.js";
+import { DEFAULT_LESSON_ARCHIVE_SESSIONS, DEFAULT_LESSON_NUDGE_TURNS } from "./lessons.js";
+import { DEFAULT_RECALL_WINDOW } from "./recall.js";
 
 export type {
   MemoryFabricRulesConfig,
@@ -60,12 +38,8 @@ import {
   DEFAULT_STRENGTH_WEIGHTS,
   DEFAULT_VERIFY_AFTER_SESSIONS,
   type ExchangeCapacityLimits,
-  HARD_VERIFY_AFTER_SESSIONS,
   MAX_ARCHIVE_BELOW,
   MAX_DUPLICATE_DICE,
-  MAX_FABRIC_CAPACITY_NOTES,
-  MAX_FABRIC_CAPACITY_TOKENS,
-  MAX_GRACE_SESSIONS,
   MAX_STORAGE_WEIGHT,
   MAX_STRENGTH_WEIGHT,
   type MemoryNoteDecay,
@@ -135,7 +109,10 @@ export interface MemoryFabricPostgresStoreConfig {
 /** File tools are jailed to `root`; without it they fail closed. */
 export interface MemoryFabricToolsConfig {
   readonly root?: string;
+  /** Per-file read/append ceiling; default 50 KiB. */
   readonly maxFileBytes?: number;
+  /** Entries one `memory.view` lists; default 200. */
+  readonly maxViewEntries?: number;
 }
 
 export interface MemoryFabricInjectConfig {
@@ -230,7 +207,7 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    verifyAfterSessions: { type: "integer", minimum: 1, maximum: HARD_VERIFY_AFTER_SESSIONS },
+    verifyAfterSessions: { type: "integer", minimum: 1 },
     decay: {
       type: "object",
       additionalProperties: false,
@@ -261,7 +238,7 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
       properties: {
         retrievalBelow: { type: "number", minimum: -MAX_ARCHIVE_BELOW, maximum: 0 },
         storageBelow: { type: "number", minimum: 0, maximum: MAX_ARCHIVE_BELOW },
-        graceSessions: { type: "integer", minimum: 0, maximum: MAX_GRACE_SESSIONS },
+        graceSessions: { type: "integer", minimum: 0 },
       },
     },
     capacity: {
@@ -274,8 +251,8 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
             type: "object",
             additionalProperties: false,
             properties: {
-              notes: { type: "integer", minimum: 1, maximum: MAX_FABRIC_CAPACITY_NOTES },
-              tokens: { type: "integer", minimum: 1, maximum: MAX_FABRIC_CAPACITY_TOKENS },
+              notes: { type: "integer", minimum: 1 },
+              tokens: { type: "integer", minimum: 1 },
             },
           },
         ]),
@@ -285,7 +262,7 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        hotTokens: { type: "integer", minimum: 1, maximum: MAX_FABRIC_CAPACITY_TOKENS },
+        hotTokens: { type: "integer", minimum: 1 },
       },
     },
     merge: {
@@ -306,8 +283,8 @@ function bounded(label: string, value: number, min: number, max: number, exclusi
 
 export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | undefined): ResolvedLifecycleConfig {
   const verifyAfterSessions = value?.verifyAfterSessions ?? DEFAULT_VERIFY_AFTER_SESSIONS;
-  if (!Number.isSafeInteger(verifyAfterSessions) || verifyAfterSessions < 1 || verifyAfterSessions > HARD_VERIFY_AFTER_SESSIONS) {
-    throw new MemoryValidationError(`lifecycle.verifyAfterSessions must be an integer in [1,${HARD_VERIFY_AFTER_SESSIONS}]`);
+  if (!Number.isSafeInteger(verifyAfterSessions) || verifyAfterSessions < 1) {
+    throw new MemoryValidationError("lifecycle.verifyAfterSessions must be a positive integer");
   }
   const decay: Record<MemoryNoteKind, number> = { ...DEFAULT_DECAY };
   for (const kind of DECAY_KINDS) {
@@ -343,22 +320,22 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
     ),
     graceSessions: value?.archive?.graceSessions ?? DEFAULT_ARCHIVE_CONFIG.graceSessions,
   };
-  if (!Number.isSafeInteger(archive.graceSessions) || archive.graceSessions < 0 || archive.graceSessions > MAX_GRACE_SESSIONS) {
-    throw new MemoryValidationError(`lifecycle.archive.graceSessions must be an integer in [0,${MAX_GRACE_SESSIONS}]`);
+  if (!Number.isSafeInteger(archive.graceSessions) || archive.graceSessions < 0) {
+    throw new MemoryValidationError("lifecycle.archive.graceSessions must be a non-negative integer");
   }
   const capacity: Record<string, CapacityLimits> = { ...DEFAULT_CAPACITY };
   const capacityFor = (level: string): CapacityLimits => capacity[level]!;
   for (const level of CAPACITY_LEVELS) {
     const input = value?.capacity?.[level];
     if (input?.notes !== undefined) {
-      if (!Number.isSafeInteger(input.notes) || input.notes < 1 || input.notes > MAX_FABRIC_CAPACITY_NOTES) {
-        throw new MemoryValidationError(`lifecycle.capacity.${level}.notes must be an integer in [1,${MAX_FABRIC_CAPACITY_NOTES}]`);
+      if (!Number.isSafeInteger(input.notes) || input.notes < 1) {
+        throw new MemoryValidationError(`lifecycle.capacity.${level}.notes must be a positive integer`);
       }
       capacity[level] = { ...capacityFor(level), notes: input.notes };
     }
     if (input?.tokens !== undefined) {
-      if (!Number.isSafeInteger(input.tokens) || input.tokens < 1 || input.tokens > MAX_FABRIC_CAPACITY_TOKENS) {
-        throw new MemoryValidationError(`lifecycle.capacity.${level}.tokens must be an integer in [1,${MAX_FABRIC_CAPACITY_TOKENS}]`);
+      if (!Number.isSafeInteger(input.tokens) || input.tokens < 1) {
+        throw new MemoryValidationError(`lifecycle.capacity.${level}.tokens must be a positive integer`);
       }
       capacity[level] = { ...capacityFor(level), tokens: input.tokens };
     }
@@ -366,12 +343,8 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
   const exchangeCapacity = {
     hotTokens: value?.exchangeCapacity?.hotTokens ?? DEFAULT_EXCHANGE_CAPACITY.hotTokens,
   };
-  if (
-    !Number.isSafeInteger(exchangeCapacity.hotTokens) ||
-    exchangeCapacity.hotTokens < 1 ||
-    exchangeCapacity.hotTokens > MAX_FABRIC_CAPACITY_TOKENS
-  ) {
-    throw new MemoryValidationError(`lifecycle.exchangeCapacity.hotTokens must be an integer in [1,${MAX_FABRIC_CAPACITY_TOKENS}]`);
+  if (!Number.isSafeInteger(exchangeCapacity.hotTokens) || exchangeCapacity.hotTokens < 1) {
+    throw new MemoryValidationError("lifecycle.exchangeCapacity.hotTokens must be a positive integer");
   }
   const merge = resolveMergeConfig(value?.merge);
   return {
@@ -403,7 +376,7 @@ export interface MemoryFabricExchangesConfig {
    * argument summary, outcome, first error line, result entry id; never result bodies. Default off.
    */
   readonly steps?: boolean;
-  /** Most tool rounds listed per exchange. Default 24, at most {@link MAX_EXCHANGE_STEPS}. */
+  /** Most tool rounds listed per exchange. Default 24. */
   readonly maxSteps?: number;
 }
 
@@ -428,7 +401,6 @@ export interface ResolvedFabricLessonsOptions {
 }
 
 export const DEFAULT_EXCHANGE_STEPS = 24;
-export const MAX_EXCHANGE_STEPS = 64;
 
 /** {@link MemoryFabricExchangesConfig} with the write scope the archive resolved. */
 export interface ResolvedFabricExchangesOptions {
@@ -542,6 +514,11 @@ export interface MemoryFabricRecallConfig {
    * questions. Default `false`: the tool schema and results are unchanged.
    */
   readonly gather?: boolean;
+  /**
+   * Hits one recall ranks at most: the window `memory.recall` pages over with the model's `topK` and `page`, and the
+   * candidates `inject` picks from. Default 32. The model's arguments never raise it.
+   */
+  readonly window?: number;
 }
 
 export interface ResolvedMemoryFabricConfig {
@@ -585,6 +562,7 @@ export interface ResolvedMemoryFabricConfig {
   readonly recall: {
     readonly expansion: boolean;
     readonly gather: boolean;
+    readonly window: number;
   };
   readonly promote: ResolvedPromoteConfig;
   /** Opt-in decision gates; `false` keeps every incumbent path. */
@@ -625,7 +603,7 @@ const fabricConfigSchema: JsonSchema = {
             minScore: { type: "number", minimum: 0, maximum: 1, default: 0.2 },
             fullTextScore: { type: "number", minimum: 0, maximum: 1, default: 0.35 },
             cardExcerpt: { enum: ["head", "query"], default: "head" },
-            topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 12 },
+            topK: { type: "integer", minimum: 1, default: 12 },
             budgetTokens: { type: "integer", minimum: 1, default: 4000 },
             query: { enum: ["task", "user"] },
             kinds: {
@@ -639,14 +617,14 @@ const fabricConfigSchema: JsonSchema = {
     },
     semantic: { type: "boolean", default: true },
     directory: flagOrObject({
-      maxTopics: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_TOPICS },
-      maxFiles: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_FILES },
-      maxTokens: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_TOKENS },
+      maxTopics: { type: "integer", minimum: 1 },
+      maxFiles: { type: "integer", minimum: 1 },
+      maxTokens: { type: "integer", minimum: 1 },
       stopWords: { type: "boolean", default: false },
     }),
     rules: flagOrObject({
       capture: { enum: ["off", "confirm"] },
-      maxTokens: { type: "integer", minimum: 1, maximum: HARD_RULES_TOKENS },
+      maxTokens: { type: "integer", minimum: 1 },
       scopes: { type: "array", minItems: 1, maxItems: 2, items: { enum: ["user", "project"] } },
       kinds: {
         type: "array",
@@ -656,8 +634,8 @@ const fabricConfigSchema: JsonSchema = {
       },
     }),
     cues: flagOrObject({
-      budgetTokens: { type: "integer", minimum: 1, maximum: HARD_CUE_TOKENS },
-      maxPerTurn: { type: "integer", minimum: 1, maximum: HARD_CUES_PER_TURN },
+      budgetTokens: { type: "integer", minimum: 1 },
+      maxPerTurn: { type: "integer", minimum: 1 },
     }),
     team: flagOrObject({
       dir: { type: "string", minLength: 1, maxLength: 4096 },
@@ -748,7 +726,8 @@ const fabricConfigSchema: JsonSchema = {
       additionalProperties: false,
       properties: {
         root: { type: "string", minLength: 1, maxLength: 4096 },
-        maxFileBytes: { type: "integer", minimum: 1, maximum: 1_048_576 },
+        maxFileBytes: { type: "integer", minimum: 1 },
+        maxViewEntries: { type: "integer", minimum: 1 },
       },
     },
     limits: {
@@ -766,15 +745,15 @@ const fabricConfigSchema: JsonSchema = {
     exchanges: flagOrObject({
       enabled: { type: "boolean" },
       steps: { type: "boolean" },
-      maxSteps: { type: "integer", minimum: 1, maximum: MAX_EXCHANGE_STEPS },
+      maxSteps: { type: "integer", minimum: 1 },
     }),
     lessons: {
       type: "object",
       additionalProperties: false,
       properties: {
         nudge: { type: "boolean" },
-        minTurnsBetweenNudges: { type: "integer", minimum: 1, maximum: MAX_LESSON_NUDGE_TURNS },
-        archiveAfterSessions: { type: "integer", minimum: 1, maximum: MAX_LESSON_ARCHIVE_SESSIONS },
+        minTurnsBetweenNudges: { type: "integer", minimum: 1 },
+        archiveAfterSessions: { type: "integer", minimum: 1 },
       },
     },
     recall: {
@@ -783,6 +762,7 @@ const fabricConfigSchema: JsonSchema = {
       properties: {
         expansion: { type: "boolean", default: false },
         gather: { type: "boolean", default: false },
+        window: { type: "integer", minimum: 1, default: DEFAULT_RECALL_WINDOW },
       },
     },
     lifecycle: memoryFabricLifecycleSchema,
@@ -832,6 +812,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "inject.budgetTokens",
   "recall.expansion",
   "recall.gather",
+  "recall.window",
   "rules.maxTokens",
   "exchanges.maxSteps",
   "lessons.minTurnsBetweenNudges",
@@ -845,6 +826,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "scopes.priors.agent",
   "scopes.priors.user",
   "tools.maxFileBytes",
+  "tools.maxViewEntries",
   "limits.maxEntryTextChars",
   "limits.rebuildBatchSize",
   "limits.rebuildMs",
@@ -981,6 +963,12 @@ function resolveGather(value: unknown): boolean {
   throw new MemoryValidationError("recall.gather must be a boolean");
 }
 
+function resolveRecallWindow(value: unknown): number {
+  if (value === undefined) return DEFAULT_RECALL_WINDOW;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 1) return value;
+  throw new MemoryValidationError("recall.window must be a positive integer");
+}
+
 function resolveExpansion(value: unknown): boolean {
   if (value === undefined) return false;
   if (typeof value === "boolean") return value;
@@ -1038,6 +1026,7 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
     recall: {
       expansion: resolveExpansion(config.recall?.expansion),
       gather: resolveGather(config.recall?.gather),
+      window: resolveRecallWindow(config.recall?.window),
     },
     promote: resolvePromoteConfig(config.promote),
     decisions: resolveDecisionsConfig(config.decisions),
@@ -1053,11 +1042,11 @@ function resolveLessonsConfig(
   const nudge = input?.nudge === true;
   if (nudge && !exchanges.enabled) throw new MemoryValidationError("lessons.nudge requires the exchange archive (exchanges)");
   const minTurnsBetweenNudges = input?.minTurnsBetweenNudges ?? DEFAULT_LESSON_NUDGE_TURNS;
-  if (!Number.isSafeInteger(minTurnsBetweenNudges) || minTurnsBetweenNudges < 1 || minTurnsBetweenNudges > MAX_LESSON_NUDGE_TURNS)
-    throw new MemoryValidationError(`lessons.minTurnsBetweenNudges must be an integer in [1,${MAX_LESSON_NUDGE_TURNS}]`);
+  if (!Number.isSafeInteger(minTurnsBetweenNudges) || minTurnsBetweenNudges < 1)
+    throw new MemoryValidationError("lessons.minTurnsBetweenNudges must be a positive integer");
   const archiveAfterSessions = input?.archiveAfterSessions ?? DEFAULT_LESSON_ARCHIVE_SESSIONS;
-  if (!Number.isSafeInteger(archiveAfterSessions) || archiveAfterSessions < 1 || archiveAfterSessions > MAX_LESSON_ARCHIVE_SESSIONS)
-    throw new MemoryValidationError(`lessons.archiveAfterSessions must be an integer in [1,${MAX_LESSON_ARCHIVE_SESSIONS}]`);
+  if (!Number.isSafeInteger(archiveAfterSessions) || archiveAfterSessions < 1)
+    throw new MemoryValidationError("lessons.archiveAfterSessions must be a positive integer");
   return { nudge, minTurnsBetweenNudges, archiveAfterSessions };
 }
 

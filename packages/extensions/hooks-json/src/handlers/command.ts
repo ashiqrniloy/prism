@@ -41,13 +41,16 @@ export interface HookOutcome {
 export interface CommandHandlerOptions {
   readonly cwd?: string;
   readonly env?: Readonly<Record<string, string>>;
+  /** Characters of a hook's stdout, and of its stderr, kept. Default 1,048,576 (`DEFAULT_MAX_HOOK_OUTPUT_CHARS`). */
+  readonly maxOutputChars?: number;
 }
 
 /** Default timeout in seconds when a handler omits `timeout` (Claude/Codex: 600). */
 export const DEFAULT_HANDLER_TIMEOUT_SECONDS = 600;
 
 /** Captured output cap per stream — a chatty handler must not become an OOM. */
-const STREAM_CAP = 1024 * 1024;
+/** Characters of a hook's stdout and stderr kept; `packageConfig["@arnilo/prism-extensions/hooks-json"].maxOutputChars`. */
+export const DEFAULT_MAX_HOOK_OUTPUT_CHARS = 1024 * 1024;
 
 function emptyOutcome(overrides: Partial<HookOutcome> = {}): HookOutcome {
   return { blocked: false, stopped: false, reason: "", context: "", timedOut: false, failed: false, exitCode: null, ...overrides };
@@ -169,6 +172,7 @@ export async function runCommandHandler(
   options: CommandHandlerOptions = {},
 ): Promise<HookOutcome> {
   const cwd = options.cwd ?? process.cwd();
+  const maxOutputChars = options.maxOutputChars ?? DEFAULT_MAX_HOOK_OUTPUT_CHARS;
   let argv: string[];
   try {
     argv = tokenizeCommand(handler.command).concat(handler.args ?? []);
@@ -204,10 +208,10 @@ export async function runCommandHandler(
     timer.unref?.();
 
     child.stdout?.on("data", (chunk: Buffer) => {
-      if (stdout.length < STREAM_CAP) stdout += chunk.toString("utf8");
+      if (stdout.length < maxOutputChars) stdout += chunk.toString("utf8");
     });
     child.stderr?.on("data", (chunk: Buffer) => {
-      if (stderr.length < STREAM_CAP) stderr += chunk.toString("utf8");
+      if (stderr.length < maxOutputChars) stderr += chunk.toString("utf8");
     });
     child.on("error", (error) => finish(emptyOutcome({ failed: true, reason: `spawn failed: ${error.message}` })));
     child.on("close", (code) => {

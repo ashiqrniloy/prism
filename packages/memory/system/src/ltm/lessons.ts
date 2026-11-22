@@ -18,9 +18,7 @@ export const LESSON_TAG = "lesson";
 export const EVIDENCE_RELATION = "evidence";
 export const MAX_EVIDENCE_IDS = 8;
 export const DEFAULT_LESSON_NUDGE_TURNS = 5;
-export const MAX_LESSON_NUDGE_TURNS = 1_000;
 export const DEFAULT_LESSON_ARCHIVE_SESSIONS = 20;
-export const MAX_LESSON_ARCHIVE_SESSIONS = 10_000;
 
 /** An `evidence` id is not a note readable wherever the new note is read. */
 export class EvidenceNotFoundError extends MemoryValidationError {

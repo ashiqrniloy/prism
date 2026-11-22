@@ -62,7 +62,9 @@ MIT
 
 `prepareEvaluationRecord` and `prepareExperimentReportRecord` validate and freeze JSON snapshots,
 apply an optional `{ redactor }` to content/metadata, and cap each row at 1 MiB.
-`HARD_EVALUATION_RECORD_BYTES` and `HARD_EXPERIMENT_REPORT_BYTES` expose these fixed ceilings.
+`HARD_EVALUATION_RECORD_BYTES` and `HARD_EXPERIMENT_REPORT_BYTES` expose these fixed record-shape bounds. Listing pages
+are bounded by the SQL store's `maxPageSize` (default 500, `DEFAULT_MAX_STORE_PAGE_SIZE`), and the run-feedback bounds
+(`maxCommentBytes`, `maxTags`, `maxLinks`, `maxMetadataBytes`) by the host's values with no ceiling above them.
 Evaluation ids, statuses, timestamps, scores and sampled flags are validated; experiment means
 must be finite scores in [0, 1]. Aggregate text is limited to statistic methods and currency labels.
 `EvaluationStoreError.code` distinguishes store validation (`ERR_PRISM_EVAL_STORE`), evaluation size

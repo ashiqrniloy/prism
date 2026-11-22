@@ -28,10 +28,12 @@ prism add @arnilo/prism-tools/coding
 | `readOnly` | `boolean` | `false` | Registers only `read`, `grep`, and `glob`. |
 | `shell.enabled` | `boolean` | `true` | When `false`, `shell` is not registered and the effect-classified `delete`/`move` substitutes take its place. |
 | `shell.timeoutMs` | `number` | tool default (600 s) | Default wall timeout for `shell`, converted to the tool's seconds option. |
-| `shell.background.maxProcesses` | `number` | `4` (hard cap 16) | Live background processes per session. At the cap, `shell({ background: true })` fails until one is killed with `shell_output({ id, kill: true })`. |
+| `shell.path` | `string` | resolved (see [Which shell runs commands](#which-shell-runs-commands)) | The shell `shell` and background processes run in. Must be an executable file, or the load fails with `prism-tools-coding: invalid shell.path`. Host-authored only; never taken from a tool argument. |
+| `shell.background.maxProcesses` | `number` | `4` | Live background processes per session. At the cap, `shell({ background: true })` fails until one is killed with `shell_output({ id, kill: true })`. |
 | `repository` | `object` | tool defaults | Shared repository limits for `grep` and `glob`: `maxDepth`, `maxEntries`, `maxFiles`, `maxResults`, `maxConcurrency`, `maxScanBytes`, `maxFileBytes`, `maxMatches`, `maxPatternBytes`, `maxLineBytes`, `maxContextLines`, `maxTimeMs`, and `exclude`. |
 | `sandbox` | `"none"` \| `"native"` \| `"docker"` \| `"e2b"` | `"none"` | Shell and file-operation backend. `native` builds the in-repo `unshare` backend; `e2b` is reached only through a dynamic `import()` of the optional peer; `docker` needs a host-provided digest-pinned image and runner. A backend that cannot be built notes a warning and withholds `shell` — it never throws and never runs an unsandboxed shell. |
-| `commandRules` | `{ match, decision, reason? }[]` | `[]` | Hard-deny command rules for `shell`. `decision` is `allow`, `deny`, or `requireApproval`; a `deny` wins over any approval. The built-in deny patterns (sudo, `rm -rf /`, pipe-to-shell, `mkfs`, `dd if=`) always apply. |
+| `guard` | `"auto"` \| `"off"` | `"auto"` | The unsandboxed default gate. With `"auto"`, `sandbox: "none"`, and no package providing the `tool-policy` service, `shell` asks through `tool.call` before each command (a `host.ui` confirm, or a suspension when no UI answers). `@arnilo/prism-extensions/approval` and `governance` provide `tool-policy`, so loading either hands the decision to it, whatever the package order. `"off"` adds no ask; it is an explicit host decision and shows in `inspect()`. |
+| `commandRules` | `{ match, decision, reason? }[]` | `[]` | Command rules for `shell` (max 256). `decision` is `allow`, `deny`, or `requireApproval`. Every matching rule is considered and the strictest wins: `deny`, then `requireApproval`, then `allow`, whatever the order. `match` written as `/pattern/` or `/pattern/i` is a regular expression compiled at setup (max 512 characters, no nested quantifiers such as `(a+)+`; an invalid one fails the load naming `commandRules[i]`); any other string is a substring. The built-in denies run first and no rule overrides them. |
 | `egress` | `{ allow?, presets? }` | none | Egress allow-list for sandboxed shells, validated with `createEgressPolicy`. Without a sandbox backend it has no effect and notes a warning. |
 | `git.enabled` | `boolean` | `true` | When `false`, no `git_*` tool is registered. |
 | `language.servers` | server map | none | Language servers behind the opt-in `diagnostics` tool: name → `{ command, args?, languages, env? }`, where `languages` are LSP language ids (`typescript`, `typescriptreact`, `python`, …) and the package maps file extension → language. No servers means no `diagnostics` tool and no server process. |
@@ -42,9 +44,10 @@ prism add @arnilo/prism-tools/coding
 | `forge.token` | `env:NAME` \| `keyring:NAME` | none | Ref only. A literal fails config validation. Resolved through `prism.credentials.resolve` into the `coding.forge` service. |
 | `workspace.enabled` | `boolean` | `true` | When `false`, no `workspace` service is provided. |
 | `workspace.worktreeRoot` | `string` | per-repository directory under the OS temp dir | Where worktrees are created. Every path is canonicalized and containment-checked under it. |
-| `workspace.maxWorktrees` | `number` | `4` (hard cap 16) | Maximum active worktrees the service creates. |
-| `workspace.diff.maxFiles` | `number` | `200` (hard cap 2000) | Maximum files `workspace.diff` lists. |
-| `workspace.diff.maxBytes` | `number` | `1 MiB` (hard cap 8 MiB) | Maximum bytes of one file's `diff` text; a larger file is listed with no `diff`. |
+| `workspace.maxWorktrees` | `number` | `4` | Maximum active worktrees the service creates. |
+| `workspace.diff.maxFiles` | `number` | `200` | Maximum files `workspace.diff` lists. |
+| `workspace.diff.maxBytes` | `number` | `1 MiB` | Maximum bytes of one file's `diff` text; a larger file is listed with no `diff`. |
+| `ceilings` | `object` | below | Host-only ceilings on values the model passes as tool arguments: `searchMatches` (10,000), `searchContextLines` (20), `repoResults` (10,000), `repoDepth` (128), `shellTimeoutSeconds` (3,600), `backgroundWaitSeconds` (60), `recursiveDeleteEntries` (100,000). A larger argument is refused; the model never raises one. Code: `createCodingTools(cwd, { ceilings })`. |
 
 An unknown key fails `createAgent` with the kernel's config error naming the key.
 
@@ -89,6 +92,17 @@ One `tool.call` decide handler, id `@arnilo/prism-tools/coding:tool.call#hard-de
 The handler ignores tools it did not register. The kernel's `tool.call` rule is any-deny-wins, so the
 deny holds under `approval` `auto`, under a host `allow` hook, and from a custom loop. Reasons name
 the root and the tool, never file contents.
+
+The same handler is the unsandboxed default gate (plan 233 Task 3). With `guard: "auto"` (the
+default), `sandbox: "none"`, and no `tool-policy` service, it returns
+`{ ask: "shell runs on the host without a sandbox or a tool-policy package" }` for every `shell` call
+that is not denied. The kernel resolves the ask: a `host.ui` confirm that shows the redacted
+arguments, or a suspended run when no UI answers. The service is looked up per call, so a policy
+package listed after `coding` still takes over. A `shell` the host removed with `disable.tools` is
+never asked about. Writes outside the roots are denied above, so `shell` is the only call the gate
+asks about; reads and in-root writes never ask. The package does not reimplement modes, rules, or
+grants — loading `@arnilo/prism-extensions/approval` (any mode) or `governance` hands the decision to
+that package.
 
 The package also provides the `coding.targets` service:
 `targets(name, args, context?) → { paths, roots } | undefined`. `paths` are absolute; `roots` is
@@ -216,6 +230,22 @@ Factories: `createCodingTools`, `createReadOnlyTools`, `createAllTools`, and the
 `createGitTools`, `createCodingCheckTool`, and `createAskUserDecisionTool` stay out of the default
 aggregators.
 
+### Which shell runs commands
+
+Model-written commands run in a POSIX shell, resolved once at setup:
+
+1. `shell.path`, when configured;
+2. `/bin/bash`, else `bash` on `PATH`;
+3. `$SHELL`, only when its basename is `bash`, `zsh`, `sh`, `dash`, or `ksh`;
+4. `sh`.
+
+A fish or nushell login shell is never used: it is the person's preference, not the dialect the
+model writes. The `shell` description names the result ("Execute a command in a POSIX shell
+(bash) …"), and an `info` status note in `inspect()` gives the resolved path. Background processes
+use the same shell. The `native` sandbox applies its limits in `/bin/sh` and then `exec`s the
+resolved shell; `docker` and `e2b` run the image's `/bin/sh`, because the host's shells are not in the
+container.
+
 Long-running commands are supported through `shell({ background: true })` + `shell_output`; those
 processes run on the process-session library (the same ownership, lifetime, and output caps the
 `agent/process` API uses), inherit the shell's environment allow-list, and are killed when the
@@ -267,7 +297,7 @@ how `forge.token` resolves. The package claims no slot and makes no model call a
 In enterprise or multi-tenant deployments, executing uncontained shell commands or file operations directly on the host poses security risks. The package provides multiple layers of defense:
 
 1. **Sandbox Backends (`sandbox`):**
-   By default, `sandbox` is `"none"`, which executes shell commands on the host. When `shell` is registered without a sandbox, setup emits a `warn` status note (`"shell runs on the host without a sandbox; pair it with @arnilo/prism-extensions/approval or set sandbox"`). For production workloads, select an isolated backend:
+   By default, `sandbox` is `"none"`, which executes shell commands on the host. When `shell` is registered without a sandbox, it asks before each command unless a policy package decides (see `guard`), and setup emits a `warn` status note (`"shell asks before each command; add @arnilo/prism-extensions/approval or a sandbox to change that"`; with `guard: "off"` the note says the guard is off). For production workloads, select an isolated backend:
    - `"docker"`: Runs file operations and shell commands inside a digest-pinned container runner.
    - `"native"`: Uses Linux namespace isolation (`unshare`) to containerize processes on the host.
    - `"e2b"`: Executes operations in isolated cloud microVMs via the optional E2B peer.
@@ -280,11 +310,13 @@ In enterprise or multi-tenant deployments, executing uncontained shell commands 
    Configure granular command policies for `shell` execution:
    ```jsonc
    "commandRules": [
-     { "match": "npm publish*", "decision": "deny", "reason": "publishing is prohibited" },
-     { "match": "curl *", "decision": "requireApproval" }
+     { "match": "git", "decision": "allow" },
+     { "match": "npm publish", "decision": "deny", "reason": "publishing is prohibited" },
+     { "match": "/\\brm\\s+-[a-z]*r[a-z]*f/i", "decision": "deny", "reason": "recursive force delete" },
+     { "match": "curl ", "decision": "requireApproval" }
    ]
    ```
-   Built-in deny patterns (sudo, `rm -rf /`, pipe-to-shell, `mkfs`, `dd if=`) always apply and cannot be bypassed.
+   The built-in deny list (`BUILTIN_DENY_RULES`) runs before any configured rule, so an `allow` rule cannot shadow it: `sudo`, `doas`, `pkexec`, and `su -c`; `rm` with recursive and force flags in any order aimed at `/`, `~`, or `$HOME`; a `curl`/`wget` download piped into `sh`, `bash`, `zsh`, `dash`, `ksh`, or `fish`, or run through `bash -c "$(curl …)"`, `bash <(curl …)`, or `eval`; `chmod 777`; `mkfs`; `dd if=`; and writes to `/dev/sd*`. The list is a tripwire for obvious forms, not a boundary: a shell command can always be rewritten to evade it. The sandbox is the control.
 
 4. **Network Egress Rules (`egress`):**
    When using a sandbox backend (`"docker"` or `"native"`), configure egress policies (`allow` rules and preset bundles) to restrict outbound network access from sandboxed shells:
@@ -298,6 +330,10 @@ In enterprise or multi-tenant deployments, executing uncontained shell commands 
 
 ## Cost, security, and failure behavior
 
+- `commandRules` and the built-in deny list are a tripwire, not a containment boundary. They catch
+  obvious destructive forms; a determined command can be rewritten past any pattern list. Use a
+  `sandbox` backend for containment. Deny reasons name the rule (`commandRules[2]` or the built-in
+  id), never the command.
 - In-tool path containment stays on: `write`/`edit`/`delete`/`move` resolve through
   `resolveContainedMutationPath`, and `read`/`grep`/`glob` go through the
   repository operations that refuse a path outside the root and never follow symlink escapes.

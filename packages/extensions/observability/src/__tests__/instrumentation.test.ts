@@ -460,3 +460,41 @@ test("observability_emits_gen_ai_evaluation_result through the structural sink a
   );
   assert.doesNotMatch(JSON.stringify(spans), /explanation|reason_text|metadata|error/);
 });
+
+test("delegate_activity_becomes_a_bounded_span_event", () => {
+  // Plan 232 Task 5: a child's activity is a span event with its kind, tool and status; its text never reaches the tracer.
+  const memory = createInMemoryTelemetry();
+  const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
+  telemetry.handleAgentEvent({ type: "run.started", sessionId: "s1", runId: "r1" });
+  for (const data of [
+    {
+      origin: DELEGATE_ORIGIN,
+      parentSessionId: "s1",
+      kind: "tool.finished",
+      tool: "read",
+      toolCallId: "c1",
+      status: "finished",
+      durationMs: 4,
+    },
+    { origin: DELEGATE_ORIGIN, parentSessionId: "s1", kind: "text", text: "child-text-canary" },
+  ]) {
+    telemetry.handleAgentEvent({
+      type: "package.event",
+      sessionId: "s1",
+      runId: "r1",
+      package: "@arnilo/prism-extensions/delegate",
+      name: "delegate.activity",
+      data: data as never,
+    });
+  }
+  telemetry.handleAgentEvent({ type: "run.completed", sessionId: "s1", status: "completed", runId: "r1" });
+  const run = memory.spans.find((span) => span.name === "invoke_agent prism");
+  const events = run?.events.filter((event) => event.name === "prism.delegate.activity") ?? [];
+  assert.equal(events.length, 2);
+  assert.equal(events[0]?.attributes["prism.event.kind"], "tool.finished");
+  assert.equal(events[0]?.attributes["prism.event.tool"], "read");
+  assert.equal(events[0]?.attributes["prism.event.status"], "finished");
+  assert.equal(events[0]?.attributes["prism.event.origin_agent"], "research");
+  assert.equal(events[1]?.attributes["prism.event.kind"], "text");
+  assert.doesNotMatch(JSON.stringify(memory.spans), /child-text-canary/);
+});

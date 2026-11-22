@@ -1,6 +1,6 @@
 import type { AgentEvent, ThinkingContent } from "@arnilo/prism";
 import { truncateUtf8 } from "./ag-ui-mapper.js";
-import { DEFAULT_MAX_REASONING_BYTES, HARD_MAX_REASONING_BYTES } from "./limits.js";
+import { DEFAULT_MAX_REASONING_BYTES } from "./limits.js";
 import type { AgUiReasoningProjection } from "./projection.js";
 
 export interface CreateReasoningEncryptedValueOptions {
@@ -10,7 +10,7 @@ export interface CreateReasoningEncryptedValueOptions {
   readonly content: ThinkingContent;
   /** The Prism event carrying the thinking content. */
   readonly event: AgentEvent;
-  /** Optional byte cap; defaults to `DEFAULT_MAX_REASONING_BYTES`, clamped to `HARD_MAX_REASONING_BYTES`. */
+  /** Optional byte cap; defaults to `DEFAULT_MAX_REASONING_BYTES`. The host's value is the cap. */
   readonly maxBytes?: number;
 }
 
@@ -35,6 +35,6 @@ export function createReasoningEncryptedValue(options: CreateReasoningEncryptedV
     return undefined;
   }
   if (typeof value !== "string" || value.length === 0) return undefined;
-  const maxBytes = Math.min(options.maxBytes ?? DEFAULT_MAX_REASONING_BYTES, HARD_MAX_REASONING_BYTES);
+  const maxBytes = options.maxBytes ?? DEFAULT_MAX_REASONING_BYTES;
   return { encryptedValue: truncateUtf8(value, maxBytes) };
 }

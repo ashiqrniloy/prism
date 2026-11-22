@@ -81,7 +81,11 @@ export async function runDropper(options: RunDropperOptions): Promise<readonly s
   };
   const limits = resolveMemoryWorkerLimits(options);
   const prompt = joinWorkerText(
-    [renderScopeBlock(options.scope, options.taskState), ...observationLines(active)],
+    [
+      ...(options.scope ? [renderScopeBlock(options.scope)] : []),
+      ...(!options.scope && options.taskState ? [`Current task state:\n${JSON.stringify(options.taskState)}`] : []),
+      ...observationLines(active),
+    ],
     limits.maxMessageBytes,
     "Observational memory drop prompt",
   );

@@ -2,7 +2,12 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { SessionEntry, ToolExecutionContext } from "@arnilo/prism";
 import { type MemoryObservation, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "../../index.js";
-import { recallObservationalMemory, recallObservationalMemoryBranchPage, recallObservationalMemoryQuery } from "../recall.js";
+import {
+  RECALL_PAGE_CUT_MARKER,
+  recallObservationalMemory,
+  recallObservationalMemoryBranchPage,
+  recallObservationalMemoryQuery,
+} from "../recall.js";
 import { createObservationalRecallTool } from "../recall-tool.js";
 import { OBSERVATIONS_DROPPED } from "../types.js";
 
@@ -215,6 +220,51 @@ describe("recall query over the session tiers (plan 218.2 Task 7)", () => {
     assert.deepEqual(none.tiers, ["stm", "wm"]);
     assert.equal(recallObservationalMemoryQuery(ledgerEntries(), { query: "the of" }).reason, "invalid_query");
     assert.equal(recallObservationalMemoryQuery(ledgerEntries(), { query: "retry", limit: 0 }).reason, "limit_exceeded");
+  });
+
+  it("recall_entry_answer_carries_the_page_once", async () => {
+    // Plan 218.3 Task 12 (Session-Bench): the model receives the tool's value, and an entry page carried its content
+    // twice (content and text), ~33K characters for a 16 KB page; three in one turn overflowed W = 32K.
+    const long: SessionEntry = { ...source, id: "long", message: { role: "user", content: [{ type: "text", text: "q".repeat(60_000) }] } };
+    const tool = createObservationalRecallTool();
+    const session = { id: "s1", entries: async () => [long] };
+    const result = await tool.execute({ entry: "long" } as never, { toolCallId: "t", session } as unknown as ToolExecutionContext);
+    const size = Buffer.byteLength(JSON.stringify(result.value));
+    assert.ok(size <= 16_384 + 512, `entry answer of ${size} bytes`);
+    assert.match((result.value as { text: string }).text, /q{100}/);
+  });
+
+  it("cursor_summary_page_stays_within_the_page_bytes", () => {
+    // Plan 218.3 Task 12 (Session-Bench, W = 32K): a cursor page at the default summary detail rendered every message
+    // whole (~180K characters for twelve 60K tool results), over the window on its own; full detail was already paged.
+    const big: SessionEntry[] = Array.from({ length: 12 }, (_, index) => ({
+      id: `b${index}`,
+      sessionId: "s1",
+      timestamp: source.timestamp,
+      kind: "message",
+      message: { role: "tool", toolCallId: `c${index}`, name: "get_config", content: [{ type: "text", text: "z".repeat(60_000) }] },
+    })) as SessionEntry[];
+    const page = recallObservationalMemoryBranchPage(big, { cursor: "b11", limit: 12 }, [], { pageBytes: 16_384 });
+    assert.equal(page.found, true);
+    assert.ok(Buffer.byteLength(page.text) <= 16_384, `summary page of ${Buffer.byteLength(page.text)} bytes`);
+    // A cut page says how to read one entry whole.
+    assert.ok(page.text.endsWith(RECALL_PAGE_CUT_MARKER));
+  });
+
+  it("query_answer_stays_within_the_page_bytes", () => {
+    // Plan 218.3 Task 12 (Session-Bench, W = 32K): a query matching many long records answered ~200K characters, over
+    // the window on its own; every other recall mode was already paged.
+    const many: MemoryObservation[] = Array.from({ length: 100 }, (_, index) => ({
+      ...observation,
+      id: index.toString(16).padStart(12, "c"),
+      description: `deploy note ${index} ${"detail ".repeat(300)}`,
+    }));
+    const entries = [source, custom("om", { type: OBSERVATIONS_RECORDED, observations: many, coversUpToId: "m1" })];
+    const result = recallObservationalMemoryQuery(entries, { query: "deploy note", limit: 100 }, [], { pageBytes: 16_384 });
+    assert.equal(result.found, true);
+    assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 16_384, `answer of ${Buffer.byteLength(JSON.stringify(result))} bytes`);
+    assert.ok(result.hits.length >= 1 && result.hits.length < 100);
+    assert.match(result.text, /more record\(s\) match/);
   });
 
   it("query_output_is_redacted_with_the_session_secrets", () => {

@@ -1,7 +1,7 @@
 import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { PackageAPI, TrustPolicy } from "@arnilo/prism";
-import { HARD_MAX_SKILL_INSTRUCTION_BYTES, isTrusted, parseSkillFile } from "@arnilo/prism";
+import { isTrusted, parseSkillFile } from "@arnilo/prism";
 import type { ContextFilesConfig } from "./config.js";
 
 /** One configured skill root. Project roots pass the file trust policy; global roots are user-owned. */
@@ -89,13 +89,15 @@ export async function registerDiscoveredSkills(
         }
         const info = await stat(path);
         if (!info.isFile()) continue;
-        if (info.size > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
-          prism.status.note("warn", `skipped skill ${candidate}: file exceeds ${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes`);
+        // The agent's resolved ceiling, read-only (plan 239 Task 4).
+        const maxBytes = prism.ceilings.skillInstructionBytes;
+        if (info.size > maxBytes) {
+          prism.status.note("warn", `skipped skill ${candidate}: file exceeds ${maxBytes} bytes`);
           continue;
         }
         const text = await readFile(path, "utf8");
-        if (Buffer.byteLength(text, "utf8") > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
-          prism.status.note("warn", `skipped skill ${candidate}: file exceeds ${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes`);
+        if (Buffer.byteLength(text, "utf8") > maxBytes) {
+          prism.status.note("warn", `skipped skill ${candidate}: file exceeds ${maxBytes} bytes`);
           continue;
         }
         const skill = parseSkillFile(text, path);

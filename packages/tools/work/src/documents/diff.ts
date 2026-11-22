@@ -4,9 +4,7 @@ import { validateDocumentModel } from "./model-schema.js";
 import type { CellValue, DeckModel, DocBlock, DocModel, DocumentKind, DocumentModel, ImageBlock, SheetModel, SlideData } from "./types.js";
 
 export const DEFAULT_MAX_DIFF_OPS = 4096;
-export const HARD_MAX_DIFF_OPS = 16_384;
 export const DEFAULT_MAX_DIFF_NODES = 8192;
-export const HARD_MAX_DIFF_NODES = 32_768;
 
 export type DocumentDiffOp = "add" | "remove" | "replace";
 
@@ -29,10 +27,10 @@ export interface DiffDocumentOptions {
   readonly maxNodes?: number;
 }
 
-function bound(name: string, value: number | undefined, fallback: number, hard: number): number {
+function bound(name: string, value: number | undefined, fallback: number): number {
   if (value === undefined) return fallback;
-  if (!Number.isInteger(value) || value < 1 || value > hard) {
-    throw new DocumentsCapError(`${name} must be an integer in 1..${hard}`);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new DocumentsCapError(`${name} must be a positive integer`);
   }
   return value;
 }
@@ -254,8 +252,8 @@ export function diffDocument(from: DocumentModel, to: DocumentModel, options?: D
   if (from.kind !== to.kind) {
     throw new DocumentsValidationError(`cannot diff "${from.kind}" against "${to.kind}"`);
   }
-  const maxOps = bound("maxOps", options?.maxOps, DEFAULT_MAX_DIFF_OPS, HARD_MAX_DIFF_OPS);
-  const maxNodes = bound("maxNodes", options?.maxNodes, DEFAULT_MAX_DIFF_NODES, HARD_MAX_DIFF_NODES);
+  const maxOps = bound("maxOps", options?.maxOps, DEFAULT_MAX_DIFF_OPS);
+  const maxNodes = bound("maxNodes", options?.maxNodes, DEFAULT_MAX_DIFF_NODES);
   const sink = createSink(maxOps, maxNodes);
   if (from.kind === "doc") diffDoc(sink, from, to as DocModel);
   else if (from.kind === "sheet") diffSheet(sink, from, to as SheetModel);

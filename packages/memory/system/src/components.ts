@@ -18,11 +18,12 @@ export type MemorySystemErrorCode =
   | "not_available_yet"
   | "component_off"
   | "scope_too_large"
-  | "scope_empty";
+  | "scope_empty"
+  | "memory_system_compaction_conflict";
 
 /**
  * A named memory-system failure: a component whose dependency is off, a service method whose plan has not landed or
- * whose component is off, or a refused episode scope.
+ * whose component is off, a refused episode scope, or a second compaction system beside session memory.
  */
 export class MemorySystemError extends Error {
   constructor(
@@ -65,12 +66,17 @@ function missing(component: MemorySystemComponent, needs: MemorySystemComponent)
  * The capabilities the enabled components use. A component that is off declares nothing; with every component off,
  * the package holds none (the `memory.system` service needs no capability).
  */
-export function memorySystemCapabilities(components: MemorySystemComponents): readonly Capability[] {
+export function memorySystemCapabilities(
+  components: MemorySystemComponents,
+  options: { readonly compaction?: boolean } = {},
+): readonly Capability[] {
   const capabilities = new Set<Capability>();
-  // The session tiers: worker model calls, the toggle and ledger, the background pass, the compaction slot, and host UI
-  // (`memory:scope { path }` asks the host to resolve the file).
-  if (components.stm)
-    for (const capability of ["models", "session-state", "background", "slot:compaction", "host-ui"] as const) capabilities.add(capability);
+  // The session tiers: worker model calls, the toggle and ledger, the background pass, host UI (`memory:scope { path }`
+  // asks the host to resolve the file), and the compaction slot while session memory is the compaction system.
+  if (components.stm) {
+    for (const capability of ["models", "session-state", "background", "host-ui"] as const) capabilities.add(capability);
+    if (options.compaction !== false) capabilities.add("slot:compaction");
+  }
   // Long-term memory: worker and decision model calls, its session state, background passes, store credentials, host UI.
   if (components.ltm)
     for (const capability of ["models", "session-state", "background", "credentials", "host-ui"] as const) capabilities.add(capability);

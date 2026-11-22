@@ -320,7 +320,7 @@ describe("@arnilo/prism-tools/coding package", () => {
         (n) =>
           n.package === "@arnilo/prism-tools/coding" &&
           n.level === "warn" &&
-          n.message === "shell runs on the host without a sandbox; pair it with @arnilo/prism-extensions/approval or set sandbox",
+          n.message === "shell asks before each command; add @arnilo/prism-extensions/approval or a sandbox to change that",
       );
       assert.ok(warnNote, "warn note emitted when shell runs on the host without sandbox");
     } finally {

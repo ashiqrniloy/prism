@@ -15,7 +15,7 @@ import {
   createSearchToolsTool,
   createToolSearchIndex,
   createToolSearchState,
-  HARD_MAX_TOOLS_INDEX,
+  DEFAULT_MAX_TOOLS_INDEX,
   scoreTools,
   SEARCH_TOOLS_TOOL_NAME,
   selectDisclosedTools,
@@ -68,13 +68,18 @@ describe("tool search scoring", () => {
     assert.ok(scoreTools(index, `tool_${"x".repeat(200_000)}`, 5).length <= 5);
   });
 
-  it("index build throws past the frozen hard cap", () => {
-    assert.throws(() => createToolSearchIndex(fixtureTools(HARD_MAX_TOOLS_INDEX + 1)), ToolDisclosureError);
+  it("index build throws past its cap, and the host sets the cap", () => {
+    assert.throws(() => createToolSearchIndex(fixtureTools(DEFAULT_MAX_TOOLS_INDEX + 1)), ToolDisclosureError);
+    assert.throws(() => createToolSearchIndex(fixtureTools(11), undefined, 10), ToolDisclosureError);
+    assert.equal(
+      createToolSearchIndex(fixtureTools(DEFAULT_MAX_TOOLS_INDEX + 1), undefined, 2_048).tools.length,
+      DEFAULT_MAX_TOOLS_INDEX + 1,
+    );
   });
 
   it("1024-tool registry indexes and scores within the turn envelope", () => {
     const startedAt = performance.now();
-    const index = createToolSearchIndex(fixtureTools(HARD_MAX_TOOLS_INDEX));
+    const index = createToolSearchIndex(fixtureTools(DEFAULT_MAX_TOOLS_INDEX));
     const matches = scoreTools(index, "domain 7 verbs 1 fixture", 16);
     const elapsedMs = performance.now() - startedAt;
     assert.ok(matches.length > 0);
@@ -103,7 +108,7 @@ describe("draft disclosure", () => {
   });
 
   it("fail-closed: index overflow discloses the full input list, never zero", () => {
-    const tools = fixtureTools(HARD_MAX_TOOLS_INDEX + 1);
+    const tools = fixtureTools(DEFAULT_MAX_TOOLS_INDEX + 1);
     assert.equal(selectDisclosedTools({ tools, input: "anything", search: { topK: 16 } }).length, tools.length);
   });
 });
@@ -133,6 +138,15 @@ describe("search_tools tool", () => {
       const result = await tool.execute(args as never, context);
       assert.ok(result.error, `expected rejection for ${JSON.stringify(args).slice(0, 40)}`);
     }
+  });
+
+  it("the model's query is bounded by the host's maxQueryBytes, never raised by the model", async () => {
+    const activated = createActiveToolSet();
+    const lowered = createSearchToolsTool(createToolSearchState({ tools: fixtureTools(8), activated, search: { maxQueryBytes: 16 } }));
+    assert.match(String((await lowered.execute({ query: "x".repeat(17) } as never, context)).error?.message), /exceeds 16 bytes/);
+    assert.equal((await lowered.execute({ query: "tool fixture" } as never, context)).error, undefined);
+    const raised = createSearchToolsTool(createToolSearchState({ tools: fixtureTools(8), activated, search: { maxQueryBytes: 200_000 } }));
+    assert.equal((await raised.execute({ query: `tool ${"y".repeat(70_000)}` } as never, context)).error, undefined);
   });
 
   it("activates bounded results and returns inert name+description text", async () => {

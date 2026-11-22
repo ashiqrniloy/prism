@@ -59,7 +59,8 @@ export function mcpServerFingerprint(server: McpServerConfig): string {
       ? ["stdio", server.command ?? "", ...(server.args ?? []), server.cwd ?? "", ...Object.keys(server.env ?? {}).sort()]
       : server.transport === "raw"
         ? ["raw", server.id]
-        : ["url", server.url ?? ""];
+        : // An `auth` entry is part of what the person trusted, so adding one asks again.
+          ["url", server.url ?? "", ...(server.auth ? ["oauth", server.auth.tokens] : [])];
   return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
 }
 
@@ -128,9 +129,11 @@ export async function checkServerTrust(
   server: McpServerConfig,
   prism: PackageAPI<McpPackageConfig>,
   trustedFingerprints: ReadonlySet<string>,
+  /** Fingerprints already trusted in this agent; a server whose fingerprint changed is treated as new and asks again. */
   knownTrustedServers: Set<string>,
 ): Promise<boolean> {
-  if (knownTrustedServers.has(server.id)) {
+  const fingerprint = mcpServerFingerprint(server);
+  if (knownTrustedServers.has(fingerprint)) {
     return true;
   }
 
@@ -139,13 +142,12 @@ export async function checkServerTrust(
   const isFromProject = serversSource === "project";
 
   if (!isFromProject) {
-    knownTrustedServers.add(server.id);
+    knownTrustedServers.add(fingerprint);
     return true;
   }
 
-  const fingerprint = mcpServerFingerprint(server);
   if (trustedFingerprints.has(fingerprint)) {
-    knownTrustedServers.add(server.id);
+    knownTrustedServers.add(fingerprint);
     return true;
   }
 
@@ -169,7 +171,7 @@ export async function checkServerTrust(
     });
 
     if (response.status === "answered" && response.value === true) {
-      knownTrustedServers.add(server.id);
+      knownTrustedServers.add(fingerprint);
       return true;
     }
     return false;

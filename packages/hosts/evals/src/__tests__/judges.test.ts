@@ -831,7 +831,7 @@ it("comparison_validates_trials_and_preserves_scorer_failures", async () => {
     ],
     secrets: ["SECRET"],
   };
-  for (const trials of [0, 17, 1.5, NaN]) await assert.rejects(() => runComparison({ ...options, trials }));
+  for (const trials of [0, -1, 1.5, NaN]) await assert.rejects(() => runComparison({ ...options, trials }));
   await assert.rejects(() => runComparison({ ...options, seed: 0.1 }));
   const report = await runComparison(options);
   assert.equal(report.failures, 1);

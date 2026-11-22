@@ -17,6 +17,7 @@ const FROZEN_PACKAGE_API: readonly (keyof PackageAPI)[] = [
   "name",
   "config",
   "configSources",
+  "ceilings",
   "packages",
   "hooks",
   "slots",
@@ -28,6 +29,8 @@ const FROZEN_PACKAGE_API: readonly (keyof PackageAPI)[] = [
   "credentials",
   "state",
   "services",
+  // Plan 232 Task 2: opens a linked child session; needs the `sessions` capability.
+  "sessions",
   "host",
   "events",
   "status",
@@ -43,6 +46,8 @@ const FROZEN_CAPABILITIES: readonly Capability[] = [
   "credentials",
   // Plan 204 Task 2: writes through a writable slot; docs/packages.md lists it beside `credentials`.
   "credentials:write",
+  // Plan 232 Task 2: `PackageAPI.sessions.open`.
+  "sessions",
   "slot:loop",
   "slot:compaction",
   "slot:store",
@@ -118,6 +123,7 @@ describe("package API freeze", () => {
       name: true,
       config: true,
       configSources: true,
+      ceilings: true,
       packages: true,
       hooks: true,
       slots: true,
@@ -129,6 +135,7 @@ describe("package API freeze", () => {
       credentials: true,
       state: true,
       services: true,
+      sessions: true,
       host: true,
       events: true,
       status: true,

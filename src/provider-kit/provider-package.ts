@@ -59,6 +59,29 @@ export function baseUrlProperty(description?: string): JsonSchema {
   return { type: "string", ...(description !== undefined ? { description } : {}) };
 }
 
+/**
+ * The `transport` config property: the provider's wire ceilings (SSE event bytes, SSE buffer bytes, non-streamed body
+ * bytes). Each defaults to the provider-kit transport's value. The host sets them; a provider response never can.
+ */
+export interface ProviderTransportConfig {
+  readonly maxEventBytes?: number;
+  readonly maxBufferBytes?: number;
+  readonly maxResponseBodyBytes?: number;
+  /** The `/models` catalog body, for a package that discovers one; each package names its default. */
+  readonly maxCatalogBytes?: number;
+}
+
+/** The {@link ProviderTransportConfig} schema; pass the stream keys to `createRoutedProvider({ streamLimits })`. */
+export function transportProperty(): JsonSchema {
+  const bytes: JsonSchema = { type: "integer", minimum: 1 };
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: { maxEventBytes: bytes, maxBufferBytes: bytes, maxResponseBodyBytes: bytes, maxCatalogBytes: bytes },
+    description: "Wire ceilings: SSE event bytes, SSE buffer bytes, non-streamed (error) body bytes, and the model catalog body.",
+  };
+}
+
 /** The static-catalog config property; `models()` falls back to discovery or the curated catalog. */
 export function modelsProperty(description?: string): JsonSchema {
   return {

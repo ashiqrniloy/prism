@@ -9,13 +9,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
 import { isAbsolute } from "node:path";
-import {
-  DEFAULT_GIT_TIMEOUT_MS,
-  DEFAULT_MAX_GIT_OUTPUT_BYTES,
-  HARD_GIT_TIMEOUT_MS,
-  HARD_MAX_GIT_OUTPUT_BYTES,
-  validateCodingLimit,
-} from "./limits.js";
+import { DEFAULT_GIT_TIMEOUT_MS, DEFAULT_MAX_GIT_OUTPUT_BYTES, validateCodingLimit } from "./limits.js";
 
 export class GitError extends Error {
   readonly code = "ERR_PRISM_GIT";
@@ -102,12 +96,8 @@ export async function runGitCli(request: GitExecRequest & { gitPath: string }): 
     }
   }
 
-  const maxOutputBytes = validateCodingLimit(
-    "maxOutputBytes",
-    request.maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES,
-    HARD_MAX_GIT_OUTPUT_BYTES,
-  );
-  const timeoutMs = validateCodingLimit("timeoutMs", request.timeoutMs ?? DEFAULT_GIT_TIMEOUT_MS, HARD_GIT_TIMEOUT_MS);
+  const maxOutputBytes = validateCodingLimit("maxOutputBytes", request.maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES);
+  const timeoutMs = validateCodingLimit("timeoutMs", request.timeoutMs ?? DEFAULT_GIT_TIMEOUT_MS);
 
   return await new Promise<GitExecResult>((resolve, reject) => {
     let settled = false;
@@ -259,11 +249,7 @@ export async function createBoundGitRunner(options?: CreateGitRunnerOptions): Pr
         if (request.signal?.aborted) throw new GitError("Git operation aborted before start");
         const chunks: Buffer[] = [];
         let outputBytes = 0;
-        const limit = validateCodingLimit(
-          "maxOutputBytes",
-          request.maxOutputBytes ?? maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES,
-          HARD_MAX_GIT_OUTPUT_BYTES,
-        );
+        const limit = validateCodingLimit("maxOutputBytes", request.maxOutputBytes ?? maxOutputBytes ?? DEFAULT_MAX_GIT_OUTPUT_BYTES);
         const args = [...SAFE_GIT_CONFIG_ARGS, ...request.args];
         try {
           const { exitCode } = await execFile({

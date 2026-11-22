@@ -10,21 +10,21 @@
 
 ## Expected Outcome
 
-- Default limits sized for agent work: 50 turns, 50 tool rounds, 200 tool calls, 15 minutes, and no default cap on the token axes. Hosts still narrow them; `null` still disables.
+- Default limits sized for agent work: 50 turns, 49 tool rounds (Task 2: one below turns so a runaway loop still ends with the clean stop), 200 tool calls, 15 minutes, and no default cap on the token axes. Hosts still narrow them; `null` still disables.
 - `createAgent` throws a `TypeError` naming the key for an unknown top-level key or a known key of the wrong shape.
 - An agent whose model has a resolvable input cap compacts automatically at 80% of it, with no configuration. `compaction: false` disables it; a configured trigger or a `compaction.when` vote still wins.
 - The default compactor keeps recent entries by a token budget, and its summary holds the first user request, the latest dropped progress, and the files and tools touched.
-- The LLM compactor summarizes an oversized history in bounded chunks and merges them.
+- The LLM compactor summarizes an oversized history as a rolling summary over bounded chunks.
 
 This plan implements roadmap **Phase 19 Part E**. It changes kernel defaults and contracts (limit defaults, config validation, the default compaction trigger, the default compactor's output), so **Task 1 is the phase review**. It runs after plan 228. No version bump or publish.
 
 Cost knobs:
 - Automatic compaction with the kernel default compactor makes no model call. With `@arnilo/prism-extensions/compaction` installed it costs one summary call per compaction, as today.
-- Chunked summarization costs one call per chunk plus one merge call, capped at `maxChunks` (default 6); it runs only when the history does not fit one request. Both are stated in the package README.
+- Chunked summarization costs one call per chunk, capped at `maxChunks` (default 6). It is a rolling summary, so there is no separate merge call (Task 6's chosen approach; wording corrected by Task 1). It runs only when the history does not fit one request. Both are stated in the package README.
 
 ## Tasks
 
-- [ ] Task 1: Phase review (read-only)
+- [x] Task 1: Phase review (read-only)
   - Acceptance Criteria:
     - Functional: The task note records, citing `file:line`:
       - (a) **Limits in use.** Every place a default limit is relied on or overridden: `apps/prism-agent/src/host/*.ts`, `packages/extensions/delegate/src/limits.ts:5-7` (child defaults 50 / 200 / 500,000 / 15 min), `workflows` agent nodes, examples, and the tests that pin `DEFAULT_RUN_LIMITS` values. How `maxProviderAttempts` is derived from `maxTurns` (`resolveRunLimits`).
@@ -61,17 +61,107 @@ Cost knobs:
       - none
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-15):
+    - Read-only. No code, test, or baseline change. Tasks 2–6 are confirmed with the amendments marked "(Task 1)" in their text.
+    - **(a) Limits in use.**
+      - Defaults: `src/run-limits.ts:13-24`. Resolution: `resolveRunLimits` (`src/run-limits.ts:100-155`). An omitted axis takes the default only when neither layer sets it (`:104-107`).
+      - `maxProviderAttempts` derivation (`src/run-limits.ts:119-128`): when no layer sets it, it is `max(DEFAULT.maxProviderAttempts, maxTurns)`, or `null` when `maxTurns` is `null`. A set value is lifted to `maxTurns` when lower. Today that is 24 attempts for 16 turns, so 8 spare attempts for retries. **With `maxTurns: 50` and the attempts default left at 24, attempts resolve to 50, which leaves no spare attempt for a retry once all 50 turns run.** Attempts are charged once per provider call, retries included (`src/agent-session/session/provider-round.ts:338`). Task 2 is amended to raise `maxProviderAttempts` to 75 and keep the derivation as it is.
+      - Charge sites: `maxTurns` at `src/agent-session/session/assemble.ts:497,508`; `maxToolRounds` at `src/agent-session/session/tool-round.ts:379`; `maxToolCalls` at `src/loop/run-controller.ts:523` and `src/tools.ts:401`; bytes at `provider-round.ts:339,396`; tokens in `RunLimitTracker.recordUsage` (`src/run-limits.ts:283-305`).
+      - Reference host: `apps/prism-agent/src/host/*.ts` sets no product axis. `research.ts:32` sets only `maxContinuations`, `workflow.ts:42` sets the workflow's `maxSupersteps`, and `coding.ts:34` forwards `deps.limits` (`config.ts:86`), which is unset by default. **The coding and research agents run on the kernel defaults today**, so they hit the same 40,000-token cumulative input cap as probe `p6-defaults`. The only override is the scenario `scenarios/long-session.ts:131-138` (100/100/100/100, input and total tokens `null`), which stays valid.
+      - Delegate (`packages/extensions/delegate/src/limits.ts:5-7`): `DEFAULT_CHILD_LIMITS` sets only `maxTurns` 50, `maxToolCalls` 200, `maxTotalTokens` 500,000, and `maxWallTimeMs` 15 min, applied as the child agent's `limits` (`runtime.ts:311`). The axes it leaves unset fall to the kernel defaults: **a child today is capped at 8 tool rounds and 40,000 cumulative input tokens**, so its 500,000-token total can never be reached. After Task 2 the child gets 50 tool rounds and no input cap, and its own 500,000-token total becomes the binding spend cap.
+      - Workflows: an agent node passes `node.runOptions?.limits ?? options.limits` as the run layer (`packages/extensions/workflows/src/nodes/agent-node.ts:137`), so unset axes take the node agent's config, then the kernel defaults. The workflow `loop` node keeps its own `maxToolRounds ?? 16` (`packages/extensions/workflows/src/loop.ts:66`); that value is not a kernel default.
+      - Examples set explicit limits wherever they show a stop: `secure-agent.ts:35`, `observability.ts:101`, `tool-narrowing-planes.ts:87`, `autonomous-coding-loop.ts:137,159`. None asserts a default value.
+      - Tests that pin defaults:
+        - `src/__tests__/run-limits.test.ts:45-67` pins the whole table.
+        - `run-limits.test.ts:314-320` pins `maxProviderAttempts` among the closest axes at `usedRatio` 0.5 (12 of the derived 24). That assertion changes with the new attempts default.
+        - Every other breach test sets its own limit (`tool-round-settlement.test.ts:150,160`, `package-model-calls.test.ts:169`, `run-limits.test.ts:229,362,515`, `apps/prism-agent/src/__tests__/live-provider-journey.test.ts:423,428`).
+      - Docs that state the old numbers:
+        - `scripts/skill-evals/README.md:77` says "`maxToolRounds` (default 8)".
+        - `docs/migrate-to-0.5.md:133` and `docs/migrate-to-0.9.md:39` are history and stay as they are.
+        - **`docs/agent.md` has no limits table**; line 25 says only "Hard floor". Task 2 adds the table.
+    - **(b) What each axis counts.**
+      - `Usage.inputTokens` includes cached tokens: `cacheReadTokens` and `cacheWriteTokens` are subsets of it (`src/contracts-core/content.ts:228-232`). `recordUsage` charges `inputTokens` to `maxInputTokens` and `totalTokens` (or input plus output) to `maxTotalTokens` (`src/run-limits.ts:292-297`). **Cache reads therefore count in full on both axes**, so a cumulative input cap grows with turn count rather than with spend. This confirms the rejected option in Task 2.
+      - Clean stop versus breach:
+        - When a turn returns tool calls and `toolRounds >= maxToolRounds`, the run controller settles the outstanding calls and returns `finishReason: "turn_limit"` (`src/loop/run-controller.ts:250-253`). The run then ends `stopped` with `stopReason: "turn_limit"`, with no `limit` and no `run.failed`.
+        - Every other axis breaches through `RunLimitTracker.exceed`, which throws `RunLimitError` (`src/run-limits.ts:308-322`). The wall-time axis records the breach and aborts the run instead of throwing. Either way the run ends `failed` with `limit`, plus the `budget_exhausted` attribution (`describeBudgetExhaustion`, `:355`).
+        - So `maxTurns` is a breach and `maxToolRounds` is the clean stop. Task 2's `default_limits_still_end_a_runaway_loop` therefore expects `stopped`/`turn_limit` at round 50, not a breach.
+    - **(c) `AgentConfig` inventory** (`src/contracts-core/agent.ts:51-135`, 32 fields).
+      - Plain data, which a checker can test by shape:
+        - `id`, `name`, `instructions`, `thinkingLevel`, `idempotencyKey`: string.
+        - `model`: `ModelRef`, a string or a `{ provider, model, … }` object.
+        - `tools`: object `{ add?: ToolDefinition[], validation?: "schema"|"off", concurrency?: int 1–16 }`. Plan 226's fields have already landed.
+        - `skills`: object `{ dirs?: string[], add?: Skill[], disclosure? }`.
+        - `allowHiddenToolCalls`: `true`.
+        - `usageEstimation`: `"fallback"|"off"|"strict"`.
+        - `providerOptions`, `systemPrompt`, `inputLayout`, `ownership`: objects.
+        - `compaction`, `retry`: `false` or an object.
+        - `limits`: object.
+        - `metadata`, `packageConfig`: records (`packageConfig` is a record of records).
+        - `disable`: object of string arrays.
+      - Functions or instances, which the JSON Schema subset cannot describe:
+        - `hooks` is a function.
+        - `resourceLoader`, `trust`, `redactor`, `runLedger`, `costCatalog`, `effectStore`, `validator` are instances.
+        - `slots` holds instances or package names; `packages` holds definitions or instances.
+        - `host` is a `HostPort` with a `ui`; `principal` is opaque.
+        - `tools.add[].execute` is a function, and `compaction.trigger.shouldCompact` once Task 4 adds `trigger`.
+      - Existing runtime checks, and when each fires:
+        - Removed fields `store`, `provider`, `providerSource` (`src/agent-session/create-agent.ts:72-82`): at create, before anything else.
+        - `model` through `parseModelRef` (`create-agent.ts:87`): at create.
+        - `skills.dirs` entries (`create-agent.ts:56-64`): at create, during package assembly.
+        - `tools.add` duplicate names (`src/packages/loader.ts:1161-1164`): at create, after packages load. **No check of `name` or `execute` on host tools.** Package tools get one (`loader.ts:555`).
+        - `disable.*` arrays (`loader.ts:219`) and unknown `packageConfig` names (`loader.ts:309-311`): at load.
+        - **`limits`**: checked only by `resolveRunLimits`, at the first run (`assemble.ts:371`), and `backgroundSettleMs` only at close (`session.ts:710`). A bad `limits` object passes `createAgent`.
+        - **`usageEstimation`**: checked in the session constructor (`session.ts:265-268`), not at create.
+        - **`tools.concurrency`**: checked at run time (`src/tools.ts:263-267`).
+        - **`retry`**: merged without validation (`provider-round.ts:279`, `loader.ts:736`).
+        - Trigger shape: `assertCompactionTrigger` (`src/contracts-core/compaction.ts:59`), called only by packages and `resolveShouldCompact`.
+      - The probe `p3b` failure, `tools: [tool]`: an array has no `add`, so `hostConfig.tools?.add` is `undefined` and the tool silently does not exist.
+      - `RunOptions` (`src/contracts-protocol.ts:73-122`, 21 fields) names its validator `validate`, while `AgentConfig` names it `validator`. `stream()` and `resume()` take `RunOptions & SubscribeOptions` and strip only `maxQueuedEvents`/`overflow` (`session.ts:592,720`), so `acrossRuns` reaches the run options. The unknown-key check must accept the three `SubscribeOptions` keys on those two entry points.
+      - `SessionOptions` (`src/contracts-core/agent.ts:281-316`) already rejects `store` (`create-agent.ts:194-199`).
+      - A test file with a near-identical name already exists: `src/__tests__/agent-config-shapes.test.ts` (tools.add, skills, run narrowing). Task 3 is amended to name its new file `agent-config-validation.test.ts`.
+    - **(d) Compaction trigger resolution.**
+      - `resolveAutoCompact` (`src/agent-session/session.ts:1077-1121`) returns early when `compaction.thresholdEntries` is unset and no `compaction.when` handler is registered (`:1084-1085`). Otherwise it reads one snapshot, skips when the tip is already a compaction, and asks `compaction.when`: `true` compacts, `false` vetoes, `undefined` abstains. On abstention it calls `resolveShouldCompact({ thresholdEntries })` (`:1106`). It never passes a `trigger`, although `resolveShouldCompact` supports one (`compaction.ts:142-179`).
+      - `mergeCompaction` (`src/agent-session/helpers.ts:89-96`): run `false` disables, a run object merges over the agent object, and agent `false` gives `undefined`. Overflow recovery uses `mergeCompaction(...) ?? {}` (`session.ts:1064`), so **`compaction: false` does not stop overflow compaction**. Task 4 keeps that and documents it.
+      - The kernel's cap comes from `resolveInputCap({}, options.model ?? this.agent.config.model)` (`session.ts:1115`). That is the parsed `ModelSpec`, which carries `limits` only when the host wrote them. A `"provider/model"` string ref has no `contextWindow` there, and `resolveInputCap` throws (`src/models/estimate.ts:100-103`). Neither `agent.models.resolve` (`src/agent/models.ts:51-54`) nor the run request (`assemble.ts:453`) fills limits. Only the loader's `describeModel`, used by `models.client().resolve()` (`loader.ts:713-716`), reads the provider catalog. `SessionContext.model` is the same config spec (`session.ts:304`), so packages see the same gap.
+      - **For the default trigger to fire on the common string ref, Task 4 must resolve the cap from the provider catalog**, through the same cached `describeModel` path. This happens lazily at the first trigger check, because a catalog read can be a network call and `createAgent` must not make one. A model with no resolvable cap gets no default trigger and one note per agent.
+      - Kernel status notes exist only per package (`PackageAPI.status.note`, `src/packages/api.ts:204`; event `package.status`). The kernel note needs a kernel owner name, such as `kernel`, on the same `package.status` channel.
+      - `compaction.when` voters:
+        - `@arnilo/prism-extensions/compaction` registers a voter only with `config.trigger` (`packages/extensions/compaction/src/index.ts:58`), and votes `false` below its gate. With no trigger, the kernel default applies.
+        - The `@arnilo/prism-memory-system` session tiers vote `false` below `compactAt` (default ratio 0.6, `packages/memory/system/src/session/config.ts:69`; handler `session/setup.ts:140-170`), so the kernel default never overrides them.
+        - **context-engineering attention abstains below its ratio** (`packages/extensions/context-engineering/src/index.ts:174-186`, `DEFAULT_ATTENTION_COMPACT_RATIO = 0.9`, `attention.ts:51`). With a kernel default of 0.8, the kernel would compact before attention's own 0.9 gate. Task 4 is amended so that attention votes `false` below its gate, the same pattern the other two voters use.
+    - **(e) Consumers of the default compactor's output.**
+      - Callers: `createSlotDefaults` (`src/slots/defaults.ts:11`); the LLM compactor's `withFallback` (`packages/extensions/compaction/src/index.ts:103-119`, via `prism.slots.compaction.default`); the scripts `host-builder-evals/workspaces/compaction-slot` and `memory-bench/work-outcome/long-session.test.mjs`; and tests `compaction.test.ts`, `agents.test.ts:1828`, `conformance-helpers.test.ts`, `public-contracts.test.ts`.
+      - `snapshotFromBranch` (`src/session-stores.ts:166-200`) reads only the latest compaction entry's `summary` and `data.keepEntryIds` / `throughEntryId`. `isCompactionEntryData` (`src/compaction.ts:47-57`) is the only shape check. No consumer parses the summary text.
+      - `prepareLlmCompaction` (`packages/extensions/compaction/src/prepare.ts:31-60`) has its own token-budget cut (`DEFAULT_KEEP_RECENT_TOKENS` 20,000) and does not call the kernel compactor. It does read the previous compaction entry's summary as `previousSummary`, so a default-compactor summary becomes LLM input on the next LLM compaction.
+      - `compaction-conformance` (`src/testing/compaction-conformance.ts:27-80`) asserts only a non-empty summary, redaction, and entry shape. No case pins the old text.
+      - Findings that change Task 5:
+        - `CompactionContext` (`src/contracts-core/compaction.ts:10-23`) carries no model or input cap and no `maxSummaryChars`. `compactBranch` forwards only `keepRecentEntries`, `trigger`, `secrets`, `metadata`, and `signal` (`session.ts:1153-1163`). **`CompactionOptions.maxSummaryChars` is never forwarded**, so it does nothing today; only the constructor option does. Task 5 adds `maxSummaryChars` and `inputCapTokens` to `CompactionContext`, which is an additive baseline change.
+        - `compaction.completed.entriesCompacted` falls back to `keepRecentEntries ?? 8` (`session.ts:1180`), a second copy of the count rule.
+        - `packages/extensions/compaction/src/file-ops.ts` (32 lines) imports only `type Message` from `@arnilo/prism`. It can move to the kernel, with the package importing it back.
+        - The default compactor receives the whole branch each time. It skips `compaction` entries (`entryText`, `src/compaction.ts:64-70`) and re-derives from raw entries, so the first user message is always available.
+    - **(f) Reference host evidence.**
+      - `docs/_evidence/context-rot-0.13.0.md:7`: `opencode-go/mimo-v2.5`, with a declared window of 1,000,000 tokens, has a measured effective budget of 96,000. Plan 194 encoded that measurement in `apps/prism-agent/src/host/context-budgets.ts:14-47`: `threshold_tokens` 96,000 for listed models, `input_ratio` 0.6 otherwise, and OM `compactAt` 0.6.
+      - The host passes these as the compaction package's `trigger` (`coding.ts:47`, `research.ts:53`) and as memory `compactAt` (`memory.ts:22`). Both vote `false` below their gate, so the kernel's 0.8 fallback never runs in the reference host. No contradiction.
+      - Recorded for docs: the measured rot point can sit far below 80% of a declared window (96,000 versus 800,000). The kernel default is a safety net against provider rejection, not a quality gate. `docs/slots.md` says so and points hosts to a measured `threshold_tokens`.
+    - **Security: implicit safety limits** (for the `docs/migration.md` note):
+      - The token axes are 40,000 input, 10,000 output, and 50,000 total. A host with no `maxCost` and no token axis has had these as an implicit spend guard; after Task 2 its only guards are 200 tool calls and 15 minutes.
+      - `maxToolCalls` 32 is an implicit bound on side-effecting calls (shell, write), and it becomes 200.
+      - `maxWallTimeMs` 120 s becomes 15 min.
+      - The migration note names all three changes, not only the token axes.
+      - The reference host is affected, since it sets none of these axes.
+      - Delegate children keep their own 500,000-token total.
 
-- [ ] Task 2: Default run limits sized for agent work
+- [x] Task 2: Default run limits sized for agent work
   - Acceptance Criteria:
     - Functional:
-      - `DEFAULT_RUN_LIMITS` becomes: `maxTurns: 50`, `maxToolRounds: 50`, `maxToolCalls: 200`, `maxWallTimeMs: 900_000`, `maxInputTokens: null`, `maxOutputTokens: null`, `maxTotalTokens: null`; byte limits unchanged; `maxProviderAttempts` keeps its derivation from `maxTurns` (Task 1(a) confirms the floor still leaves room for retries).
-      - Resolution, narrowing, `null`, and validation rules are unchanged.
-      - The delegate child defaults stay as they are, and the README says a child's defaults now equal the kernel's on the shared axes.
-      - Every test and example that relied on a default is updated to set the limit it means.
+      - `DEFAULT_RUN_LIMITS` becomes: `maxTurns: 50`, `maxProviderAttempts: 75`, `maxToolRounds: 49` (owner decision during execution, was 50; see the task note), `maxToolCalls: 200`, `maxWallTimeMs: 900_000`, `maxInputTokens: null`, `maxOutputTokens: null`, `maxTotalTokens: null`; byte limits unchanged. The `maxProviderAttempts` derivation (`max(default, maxTurns)`) is unchanged. (Task 1: leaving the attempts default at 24 would resolve it to 50 for 50 turns, with no spare attempt for retries; 75 keeps the old 1.5 ratio.)
+      - Resolution, narrowing, `null`, and validation rules are unchanged. `DEFAULT_RUN_LIMITS` is typed so the token axes may be `null`; the export type changes, so the compat baseline is regenerated and the diff goes in the task note.
+      - The delegate child defaults stay as they are. The README says a child's defaults now equal the kernel's on the shared axes, and that a child previously also inherited the kernel's 8 tool rounds and 40,000 input tokens (Task 1(a)).
+      - Every test and example that relied on a default is updated to set the limit it means. Task 1(a) lists them: `run-limits.test.ts:45-67` and `:314-320` (the attempts ratio), plus `scripts/skill-evals/README.md:77`.
+      - `default_limits_still_end_a_runaway_loop` expects a clean `stopped` / `stopReason: "turn_limit"` on turn 50, after 49 tool rounds, not a breach (Task 1(b); amended by Task 2, since with 50/50 the clean stop would fall on turn 51, after `maxTurns` has already breached).
     - Performance: n/a — constants.
     - Code Quality: The numbers live in one object; no second "recommended limits" table.
-    - Security: `docs/migration.md` states that a host that relied on the old token defaults as a spend guard must set `maxTotalTokens` or `maxCost`. The changelog entry is under Changed, marked behavior-changing.
+    - Security: `docs/migration.md` states that a host that relied on the old token defaults as a spend guard must set `maxTotalTokens` or `maxCost`. It also names the other two widened implicit guards, tool calls 32 → 200 and wall time 120 s → 15 min, and says the reference host sets none of these axes (Task 1, Security). The changelog entry is under Changed, marked behavior-changing.
   - Approach:
     - Documentation Reviewed:
       - `src/run-limits.ts:13-24`, `:97-125`; `src/contracts-core/run-limits.ts`
@@ -102,22 +192,55 @@ Cost knobs:
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — defaults
     - Docs pages to create/edit:
-      - `docs/agent.md`: the limits table
+      - `docs/agent.md`: a new limits table. None exists today; line 25 says only "Hard floor" (Task 1).
       - `docs/migration.md`: the spend-guard note
       - `packages/extensions/delegate/README.md`: one sentence
+      - `scripts/skill-evals/README.md:77`: the "default 8" sentence
       - `CHANGELOG.md`: `## [Unreleased]`, Changed
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-15):
+    - **What changed.**
+      - `src/run-limits.ts:13-41`: `DEFAULT_RUN_LIMITS` is 50 / 75 / 49 / 200 / 900,000 ms, bytes unchanged, token axes `null`. It now has an explicit declared type, so the token axes may be `null` and the literal values no longer appear in the type. The `maxProviderAttempts` derivation is unchanged.
+      - **Finding: `maxToolRounds` is 49, not 50 (owner decision).** The clean `turn_limit` stop fires on the turn *after* the last allowed round (`src/loop/run-controller.ts:250`). With 50 turns and 50 rounds, that turn is turn 51, and `maxTurns` breaches first when the turn is assembled (`assemble.ts:497`). A runaway would end `failed`/`maxTurns`, not `stopped`. The old defaults (16 / 8) stopped cleanly. The owner chose 49 rounds over keeping 50/50 (and accepting a breach) or 51 turns.
+      - Tests, in `src/__tests__/run-limits.test.ts`:
+        - The defaults table is updated.
+        - The attempts-lift test is updated: 64 turns now resolve to 75 attempts, and a new 96 → 96 case is added.
+        - The attribution test sets `maxProviderAttempts: 24`, the limit it meant, so its closest-axes ratios stay 0.6 / 0.6 / 0.5.
+        - Four new tests in a new `describe` block: `default_limits_finish_a_twelve_round_task` (12 rounds at 6,000 input tokens a turn, which used to fail at turn 7), `default_limits_still_end_a_runaway_loop` (`stopped`/`turn_limit`, 50 turns), `default_token_axes_are_disabled`, `host_token_cap_still_breaches`.
+      - `apps/prism-agent/src/__tests__/fixtures/one-shot.golden.jsonl`: `turn.completed.budgets` now carries `maxTurns: 50` and no `runInputBudget`, because there is no default input cap. The golden had pinned the default.
+      - Docs:
+        - `docs/agent.md`: a new `### Limits` subsection with the defaults table, and the `limits` row. It also has a paragraph on long jobs: defaults bound one run, not a session; use multiple runs on one session, or set axes to `null` and keep `maxCost`.
+        - `docs/migration.md`: new top section with the spend-guard, tool-call and wall-time notes.
+        - `packages/extensions/delegate/README.md`: child defaults versus kernel defaults.
+        - `scripts/skill-evals/README.md:77`.
+        - `CHANGELOG.md`: an `[Unreleased]` entry, marked behavior-changing.
+      - Examples and the reference host: no change needed. None relied on a default (Task 1(a)), and `bun run typecheck`, which includes `tsc -p examples`, passes.
+    - **Baseline diff** (`bun scripts/release.mjs gate --update-baseline`).
+      - This task's own line: `DEFAULT_RUN_LIMITS` went from `Readonly<{ maxTurns: 16; maxProviderAttempts: 24; maxToolRounds: 8; maxToolCalls: 32; maxWallTimeMs: 120000; …; maxInputTokens: 40000; maxOutputTokens: 10000; maxTotalTokens: 50000; }>` to `Readonly<{ maxTurns: number; …; maxInputTokens: number | null; maxOutputTokens: number | null; maxTotalTokens: number | null; }>`.
+      - The regeneration also picked up additions from plans 226–228 that had not been baselined: `AgentConfig.tools.validation`/`concurrency`, `RunLimits.bufferOutput`/`maxToolTimeMs`, `RetryOptions.afterOutput`/`maxRetryAfterMs`, `ProviderRequestTimeouts`, `fetchWithStreamTimeouts`, the `"coalesce"` overflow policy, `ToolDefinition.timeoutMs`/`validateArguments`, `assertDroppedStreamRecovery`, `parseRetryAfterMs`'s new signature, and the removed `readRetryAfterMs` (plan 227 Task 2). It also picked up memory-system 218.2 additions and ag-ui `DEFAULT_MAX_QUEUED_EVENTS` 4096 (plan 228 Task 3).
+    - **Generated files.**
+      - Regenerated with `bun scripts/host-builder-index.mjs` and `bun scripts/package-truth.mjs --emit-docs`: the phase54 map's export counts are 1542 → 1562 for the kernel and 1124 → 1146 for memory-system.
+      - `scripts/host-builder-evals/criteria.lock.json`: only the `indexes` hash changed, per the plan 225 precedent.
+      - `scripts/budgets.json` kernel ceilings were rebaselined with a reason entry: 1,307,803 packed / 4,230,858 unpacked / 42,822 source lines.
+    - **Checks.**
+      - Pass: `run-limits.test.ts` (34), `bun run typecheck`, delegate tests (73), `bun run --filter @arnilo/prism-agent test`, docs/host-builder/phase54 tests.
+      - `release.mjs gate` passes apart from "`@arnilo/prism-ai` changed … bump required". The plan rules out a version bump.
+      - `bun run test` still fails on items outside this task:
+        - The memory-system export-count budget (1146 vs 1124).
+        - The non-null-assertion budget (`packages/memory/system/src/session` 159 vs 114). Both come from the uncommitted plan 218.2 memory work in the tree.
+        - A load-sensitive timing check: `multi-agent-runtime` `contextBudget-10k-history` p95 1119 ms > 1000 ms, at load/cpu 1.7.
+      - One prism-agent run hit a 120 s unnamed-test timeout; the re-run passed (67 tests, 0 fail).
 
-- [ ] Task 3: `createAgent` rejects a malformed config
+- [x] Task 3: `createAgent` rejects a malformed config
   - Acceptance Criteria:
     - Functional:
       - An unknown top-level `AgentConfig` key throws `TypeError` naming the key and the nearest known key when one is within edit distance 2.
       - A known key of the wrong shape throws `TypeError` naming the key and the expected shape. Covered at least: `tools` (object with `add: ToolDefinition[]`, and the fields plans 226 adds), `skills`, `packages` (array), `packageConfig`, `limits`, `retry`, `compaction`, `slots`, `disable`, `hooks` (function), `host`, `instructions`, `model`.
       - Each `tools.add` entry must have a string `name` and a function `execute`; each `skills.add` entry a string `name`.
       - The three removed-field messages stay.
-      - `RunOptions` and `SessionOptions` get the same unknown-key check.
-      - Validation runs before any package loads, so a bad config has no side effect.
+      - `RunOptions` and `SessionOptions` get the same unknown-key check. `stream()` and `resume()` also accept the `SubscribeOptions` keys `acrossRuns`, `maxQueuedEvents`, and `overflow`. `RunOptions.validate` versus `AgentConfig.validator` is a case for the nearest-key hint (Task 1(c)).
+      - Validation runs before any package loads, so a bad config has no side effect. Checks that today fire late move to create time: `limits` (first run), `usageEstimation` (session constructor), `tools.concurrency` (run), `retry` (never), and `compaction.trigger` via `assertCompactionTrigger` (Task 1(c)). The late checks stay as they are for the run layer.
     - Performance: One pass over the config object's own keys; no deep walk of tool schemas.
     - Code Quality: A table of key → checker, shared by the three option types where keys repeat; no JSON Schema for function-valued fields.
     - Security: Error messages name keys and expected shapes, never values (a config may hold a redactor's secrets).
@@ -137,8 +260,8 @@ Cost knobs:
       ```
     - Files to Create/Edit:
       - `src/agent-session/config-shape.ts`: new
-      - `src/agent-session/create-agent.ts`, `src/models/ref.ts`, `src/agent/sessions.ts` (tentative — where `SessionOptions` is first read)
-      - `src/__tests__/agent-config-shape.test.ts`: new
+      - `src/agent-session/create-agent.ts` (`createAgentWith`, `agent.session()`), `src/agent-session/session.ts` (`run`, `stream`, `resume`). Executed: `src/models/ref.ts` and `src/agent/sessions.ts` needed no change.
+      - `src/__tests__/agent-config-validation.test.ts`: new. Renamed by Task 1 because `agent-config-shapes.test.ts` already exists for `tools.add`/`skills` behavior.
     - References:
       - Probe `p3b`
   - Test Cases to Write:
@@ -156,14 +279,51 @@ Cost knobs:
       - `CHANGELOG.md`: `## [Unreleased]`, Changed
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-15):
+    - **What changed.**
+      - New `src/agent-session/config-shape.ts`: a key → checker table, one pass over own keys.
+        - `assertAgentConfigShape` runs in `createAgentWith` after the three removed-field checks, before `parseModelRef` and before any package loads.
+        - `assertSessionOptionsShape` runs in `agent.session()` after the `store` message.
+        - `assertRunOptionsShape` runs in `session.run()`. `stream()`/`resume()` call it with the `SubscribeOptions` keys allowed, then strip `acrossRuns`, which had no effect there (their subscriber is their own).
+        - `AgentConfig` and `RunOptions` share one table for the 16 keys they have in common.
+      - Unknown key: `TypeError` naming the key, plus "did you mean" for the nearest known key within edit distance 2 (case-insensitive). `validate` ↔ `validator` is caught by that rule. A key whose value is `undefined` is ignored, so `{ ...opts, x: undefined }` spreads still work.
+      - Nested objects that reject unknown keys: `tools` (`add`, `validation`, `concurrency`; on `RunOptions`, `only`, `concurrency`), `skills`, `disable`, and `limits` (its 15 axis names). `compaction` and `retry` are shape-checked but stay open, so Task 4 can add `CompactionOptions.trigger` without touching the table. The checker already runs `assertCompactionTrigger` on a present `trigger`.
+      - Checks moved to create time: `limits` (through `resolveRunLimits`, which includes `backgroundSettleMs`), `usageEstimation`, `tools.concurrency`, `retry` (`policy.decide` a function, `maxAttempts` a non-negative integer, delays non-negative, `afterOutput` boolean), and `compaction.trigger`. The late checks stay for the run layer.
+      - `RunOptions.promptVersion` is accepted as is: `assertPromptVersionRef` (`src/agent-session/session/assemble.ts:267`) owns its shape and still runs before the run starts.
+      - Messages name keys, paths, and kinds ("received an array"), never values.
+    - **Findings: callers that passed keys the kernel ignored.** Each was a test or fixture that passed vacuously.
+      - `src/__tests__/host-ui.test.ts`: the "custom" case passed `loop:` at the top level, so the custom loop never ran. Moved to `slots.loop`. The loop also used a stale controller API (`turn.type`, `turn.calls`) and was not durable, so a suspending run failed `ERR_PRISM_LOOP_NOT_DURABLE`. Both are fixed, and the case now really tests a custom loop.
+      - `scripts/fixtures/e2e-070-host-completeness-journey.mjs`:
+        - Two `runExperiment` agents passed `tools: [...]` (the `p3b` bug). `deniedRan === 0` and `unknownRan === 0` held only because the tools did not exist. Now `tools: { add: [...] }`, and the journey passes.
+        - `validator: { validate }` (an old object shape) is now a `ToolValidator` function.
+      - `packages/extensions/governance/src/readiness.ts`: dropped the fallback reads of `config.identity` and `config.toolArgumentValidator`, which `createAgent` now rejects. The readiness test passes `identity` through `HostCompositionOptions.identity`, the documented field.
+      - `packages/hosts/evals`: `runExperiment` factories receive `{ hooks, slots, item }`. Tests that spread `...extra` into `createAgent` now forward `hooks` and `slots`. The README already said "forward hooks and slots"; it now also says not to spread `extra`. `runScenario` passes only `hooks`/`slots`, so its documented spread is unchanged.
+      - `src/__tests__/session-state-background.test.ts`: `backgroundSettleMs: -1` now fails at `createAgent`, not at the first close.
+      - `src/__tests__/usage-estimation-strict.test.ts`: the bad value now fails at `createAgent`, not at `agent.session()`.
+      - `packages/extensions/guardrail-packs`: `agent.session({ guardrailPacks })` now rejects with the unknown-key error. It used to be ignored.
+    - **Tests.** New `src/__tests__/agent-config-validation.test.ts` (9 tests): `tools_array_is_rejected_with_the_expected_shape`, `unknown_key_names_the_nearest_known_key`, `wrong_typed_known_keys_are_rejected` (24 cases), `removed_fields_keep_their_messages`, `undefined_values_are_ignored`, `bad_config_loads_no_package`, `error_message_contains_no_config_value`, `unknown_run_option_is_rejected` (covers `run`, `stream`, `resume`), `unknown_session_option_is_rejected`.
+    - **Baseline.** No export moved: `config-shape.ts` is not re-exported from the root or the `agent-session` barrel. `release.mjs gate` reports only the existing "`@arnilo/prism-ai` … bump required".
+    - **Budgets.** `scripts/budgets.json`: kernel ceilings rebaselined with a reason entry, to 1,312,231 packed / 4,245,926 unpacked / 371 files / 1,565 counted exports / 43,139 source lines. `exportCounts.@arnilo/prism` is 1,565 (+3 internal exports). The new code adds no non-null assertions.
+    - **Generated files.** Regenerated with `bun scripts/host-builder-index.mjs` and `bun scripts/package-truth.mjs --emit-docs`: `api.json` now cites `docs/agent.md`, and an `errors.json` line number moved. `scripts/host-builder-evals/criteria.lock.json`: only the `indexes` hash changed (the plan 225 precedent).
+    - **Checks.**
+      - Pass: `bun run typecheck`, `agent-config-validation.test.ts`, the kernel suite, `bun run --filter @arnilo/prism-agent test` (66), the examples execution gate (45 spawned), `scripts/e2e-full-surface.test.mjs` (5), host-builder index, package truth, phase54 map, and docs tests.
+      - `bun run test` still fails on items outside this task:
+        - The memory-system export count (1146 vs 1124) and the non-null budget (`packages/memory/system/src/session`), both from the uncommitted plan 218.2 work, as in Task 2.
+        - Load-sensitive timing checks (`hard_deny_decision_budget`, the field-policy microbenchmark).
+        - `governance_identity_expiry_denies_tool_call` times out at 5 s. It also does so with the shape checks bypassed, so it predates this task.
+        - The second full run's other timing failures: `multi-agent-runtime` `contextBudget-10k-history` p95 1402 ms > 1000 ms, and the `packages/tools` document envelope (extract 2246 ms > 2000 ms).
+      - These failed once under full-run load and pass in isolation: the browser package tests and `host_builder_eval_offline_runs_every_workspace`.
 
-- [ ] Task 4: Automatic compaction by default
+- [x] Task 4: Automatic compaction at 80% of the model's input cap
   - Acceptance Criteria:
     - Functional:
       - With `AgentConfig.compaction` omitted, the kernel fallback trigger is `{ type: "input_ratio", ratio: 0.8 }`. `compaction: false` disables automatic compaction; an explicit `thresholdEntries` or trigger replaces the default.
-      - `CompactionOptions.trigger` is accepted by the kernel fallback (today it reads `thresholdEntries` only).
+      - `CompactionOptions.trigger` is accepted by the kernel fallback (today it reads `thresholdEntries` only). Task 3 already checks a present `compaction.trigger` with `assertCompactionTrigger` at create, through `src/agent-session/config-shape.ts`; this task adds only the type field and the fallback behavior (Task 3).
       - The order of authority is unchanged: a `compaction.when` vote wins, the fallback applies only when every handler abstains.
-      - A model with no resolvable input cap gets no default trigger and one `info` status note at agent creation; it does not throw.
+      - The cap for the default trigger is resolved from the provider catalog, through the loader's cached `describeModel` (`src/packages/loader.ts:713`), when the host's `ModelSpec` carries no `limits`. A `"provider/model"` string ref has none, so without this the default would never fire (Task 1(d)). Resolution runs lazily at the first trigger check, never in `createAgent`, because a catalog read can be a network call.
+      - A model with no resolvable input cap gets no default trigger and one `info` note per agent on the `package.status` channel, under a kernel owner name. It does not throw. An explicitly configured `input_ratio` trigger keeps today's loud failure.
+      - context-engineering attention votes `false` below its own `compactRatio` instead of abstaining, so the kernel's 0.8 default cannot fire before attention's 0.9 gate (Task 1(d)).
+      - `compaction: false` disables automatic compaction only. Overflow recovery still compacts (`session.ts:1064`), and the docs say so.
       - Overflow recovery (plan 194) is unchanged and still covers a trigger that fires too late.
     - Performance: The trigger check reuses the turn's existing estimate; no added store read on a turn that does not compact.
     - Code Quality: One default constant beside `DEFAULT_RUN_LIMITS`-style defaults; no model-specific numbers in the kernel.
@@ -188,6 +348,8 @@ Cost knobs:
       - `src/agent-session/session.ts`: `resolveAutoCompact`
       - `src/contracts-core/compaction.ts`: `CompactionOptions.trigger`, the default
       - `packages/extensions/compaction/src/index.ts`, `README.md`: with no `trigger`, the kernel default now applies
+      - `packages/extensions/context-engineering/src/index.ts`: the attention voter returns `{ compact: false }` below its gate
+      - `src/packages/loader.ts`: expose the cached catalog lookup to the session (kernel-internal seam)
       - `src/__tests__/compaction-trigger.test.ts`, `compaction-when-abstain.test.ts`
       - `apps/prism-agent/src/host/*.ts`: unchanged if they set triggers; the 60-turn bounded-size scenario stays green
       - `scripts/compat-baseline/*.txt`: regenerated, additive diff in the task note
@@ -200,6 +362,8 @@ Cost knobs:
     - `when_handler_veto_still_wins`.
     - `model_without_cap_gets_a_note_and_no_trigger`.
     - `compaction_package_without_trigger_uses_kernel_default`.
+    - `string_model_ref_resolves_cap_from_provider_catalog`.
+    - `attention_below_its_gate_vetoes_the_kernel_default`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — a default and an option
     - Docs pages to create/edit:
@@ -207,18 +371,60 @@ Cost knobs:
       - `docs/agent.md`: `compaction`
       - `packages/extensions/compaction/README.md`
       - `CHANGELOG.md`: `## [Unreleased]`, Changed
+      - Executed, also: `docs/hooks.md` (`compaction.when` row), `docs/loop.md` (the check-point bullet), `packages/extensions/context-engineering/README.md` (attention now vetoes below its gate)
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-16):
+    - **What changed.**
+      - `src/contracts-core/compaction.ts`:
+        - `DEFAULT_COMPACTION_TRIGGER` (`{ type: "input_ratio", ratio: 0.8 }`, frozen) is a new root export.
+        - `CompactionOptions.trigger?: CompactionTrigger` is new. When both are set, `trigger` wins over `thresholdEntries`.
+        - The doc comments on `CompactionTrigger` and `CompactionOptions` now describe the fallback trigger and what `false` does.
+      - `src/agent-session/session.ts` `resolveAutoCompact`:
+        - The kernel trigger is `compaction.trigger`, else `thresholdEntries`, else the default.
+        - `disabled` is true when the run passes `false`, or when the run passes nothing and the agent has `false`. A run object re-enables over an agent `false`, as `mergeCompaction` already did.
+        - A `compaction.when` vote still decides first. The token estimate is memoized, so the vote and the fallback share one estimate.
+        - New private `describeModelForCap` and `noteNoDefaultTrigger`. Notes are tracked per agent in a module-level `WeakSet<Agent>`, so a reload does not repeat the note.
+      - `src/packages/loader.ts`: `LoadedPackages` gains two kernel-internal members, `describeModel(spec)` (the existing cached catalog lookup) and `kernelNote(level, message)` (the existing `note` under owner `kernel`). The session reaches both through `tryAgentRuntime(agent).packages`.
+      - The catalog is read only when the active trigger reads a cap (`input_ratio` or `custom`) and the spec has no `contextWindow`. That means at the first trigger check, never in `createAgent`; the test asserts zero reads after `createAgent`. An explicit `input_ratio` trigger also benefits from the catalog; when no cap resolves, it still fails the run loudly.
+      - `packages/extensions/context-engineering/src/index.ts`: attention returns `{ compact: decision.shouldFold }`. A call with no session still abstains.
+      - `packages/extensions/compaction/src/index.ts`: comment only, since the package registers no vote without `trigger`.
+    - **Decision: `compaction: false` and `compaction.when`.** `false` turns off the kernel trigger only. A package's `true` vote still compacts, as before this task (the old code returned `compaction ?? {}` on a `true` vote even under `false`). This keeps "order of authority unchanged". Overflow recovery also still compacts. Both points are documented in `docs/slots.md` and `docs/agent.md`.
+    - **Performance.** The session takes no added store read on a turn that does not compact. `resolveAutoCompact` now calls `snapshot()` on every check, where before it called it only when a trigger or handler existed. But `buildTurnRequest` already reads `(await session.snapshot()).summaries` on every turn (`assemble.ts:459`), so the second read hits the same cached snapshot. The provider catalog adds no repeated reads: it is read at most once per provider per agent (loader cache).
+    - **Findings.**
+      - `src/__tests__/compaction.test.ts` `middleware_field_is_gone` had a `@ts-expect-error` asserting that `CompactionOptions.trigger` was retired in 0.13.0. That line is now a positive check. `trigger` is not in `scripts/retired-names.json`, so no sweep was needed.
+      - The context-engineering test `context_engineering_below_ratio_abstains_and_host_trigger_fires` pinned the old abstention. It is replaced by `context_engineering_below_ratio_vetoes_the_host_trigger`: attention's `false` now also beats a host `thresholdEntries`, the same rule the compaction and memory voters already follow.
+      - The kernel's "no context window" note now reaches tests that count every status note or `package.status` event on a limits-less mock model:
+        - `packages/tools/research/src/__tests__/ledger.test.ts` `unlisted_source_tool_is_noted_once` now filters out `package: "kernel"`.
+        - `src/__tests__/session-state-background.test.ts` `session lifecycle events` ignores kernel `package.status`.
+      - `@arnilo/prism-extensions/compaction` with a `trigger` and the context-engineering attention compiler still resolve their cap from `session.model` only, so with a bare `"provider/model"` ref they still cannot resolve a cap. This is out of scope; it is recorded for Further Actions.
+    - **Tests.**
+      - `src/__tests__/compaction-trigger.test.ts`, new `describe("kernel default compaction trigger")`: `default_agent_compacts_at_eighty_percent_of_cap`, `compaction_false_never_auto_compacts` (agent and run `false`), `explicit_threshold_replaces_the_default` (`thresholdEntries` and an explicit 0.9 trigger), `when_handler_veto_still_wins`, `model_without_cap_gets_a_note_and_no_trigger` (one note over two sessions and three runs), `string_model_ref_resolves_cap_from_provider_catalog` (zero catalog reads at create, one after).
+      - `packages/extensions/context-engineering/src/__tests__/package.test.ts`: `attention_below_its_gate_vetoes_the_kernel_default` (it also shows that the same branch compacts without attention).
+      - `packages/extensions/compaction/src/__tests__/package.test.ts`: `compaction_package_without_trigger_uses_kernel_default`.
+      - `compaction-when-abstain.test.ts` was unchanged and still passes. The new cases went into `compaction-trigger.test.ts` and the two package suites, beside the tests they extend.
+    - **Baseline diff** (`bun scripts/release.mjs gate --update-baseline`, `arnilo__prism.txt`). Additive only:
+      - `CompactionOptions` gains `readonly trigger?: CompactionTrigger;`.
+      - `+ DEFAULT_COMPACTION_TRIGGER	const DEFAULT_COMPACTION_TRIGGER: Readonly<{ type: "input_ratio"; ratio: number; }>`.
+      - `src/__tests__/public-export-contract.test.ts` `FROZEN_VALUE_EXPORTS` gains the new name.
+    - **Budgets.** In `scripts/budgets.json`, the kernel ceilings were rebaselined with a reason entry to 1,314,983 packed / 4,254,247 unpacked / 1,566 root exports / 43,205 source lines. `exportCounts.@arnilo/prism` is now 1,566.
+    - **Generated files.** Regenerated with `bun scripts/host-builder-index.mjs` and `bun scripts/package-truth.mjs --emit-docs`.
+    - **Checks.**
+      - Pass: `bun run typecheck`; the four compaction kernel suites (40); `compaction-trigger.test.ts` (24); `bun run --filter @arnilo/prism-extensions test`; `bun run --filter @arnilo/prism-agent test`, which includes the 60-turn bounded-size scenario (the reference host sets its own triggers); `docs.test.ts`, `host-builder-index`, `phase54*`, `retired-names` (95).
+      - `bun test src` (6,827 pass) had 5 failures. Three were caused by this task (the export freeze and the two note-counting tests) and are now fixed. The other two, `hard_deny_decision_budget` and the process-recovery replica race, are load-sensitive and pass in isolation.
+      - `release.mjs gate` reports only the existing "`@arnilo/prism-ai` … bump required".
 
-- [ ] Task 5: The default compactor keeps what a continuing agent needs
+- [x] Task 5: The default compactor keeps what a continuing agent needs
   - Acceptance Criteria:
     - Functional:
       - The kept tail is chosen by a token budget (`keepRecentTokens`, default 20% of the input cap, floor 2,000) instead of a count of 8; `keepRecentEntries` still works when set. A tool result is never separated from its assistant tool call.
       - The summary is built from, in order: the first user message of the dropped span (the task), the last assistant text of the dropped span (latest progress), the files read and modified and the tool names used (from tool calls), and the newest remaining text up to the budget. It is capped at `maxSummaryChars` (default raised to 8,000) and marks what was cut.
+      - `CompactionContext` gains `inputCapTokens?` and `maxSummaryChars?`, and `compactBranch` forwards both. Today `CompactionOptions.maxSummaryChars` never reaches a compactor, and no context carries a cap (Task 1(e)). Without a cap, `keepRecentTokens` uses its floor. (Task 4: resolve `inputCapTokens` through the session's `describeModelForCap`, the catalog-backed lookup Task 4 added, so a `"provider/model"` ref gets the same cap the trigger used.)
+      - The `?? 8` fallback in `compaction.completed.entriesCompacted` (`session.ts:1180`) reads the shared keep rule instead of a second literal.
       - Output remains a pure, synchronous function of the entries, with no model call.
       - `compaction-conformance` passes; `snapshotFromBranch` reads the result unchanged.
     - Performance: One pass over the dropped entries; no quadratic string building.
-    - Code Quality: Section builders are small and separately tested; the file-operation extraction is shared with `packages/extensions/compaction/src/file-ops.ts` only if it can move to the kernel without importing a package (otherwise the kernel keeps its own minimal version, and the task note says so).
+    - Code Quality: Section builders are small and separately tested. `packages/extensions/compaction/src/file-ops.ts` moves to the kernel, since it imports only `type Message` (Task 1(e)), and the package imports it back. The export is additive, so the baseline is regenerated.
     - Security: `secrets` redaction still runs over the final summary.
   - Approach:
     - Documentation Reviewed:
@@ -238,7 +444,9 @@ Cost knobs:
       Recent: <newest dropped text up to the budget> […N characters cut]
       ```
     - Files to Create/Edit:
-      - `src/compaction.ts`
+      - `src/compaction.ts`, `src/contracts-core/compaction.ts` (`CompactionContext`), `src/agent-session/session.ts` (`compactBranch`)
+      - `src/file-ops.ts` (moved from the package), `packages/extensions/compaction/src/prepare.ts`, `strategy.ts` (re-import)
+      - `scripts/compat-baseline/*.txt`: regenerated, additive
       - `src/__tests__/compaction.test.ts`, `mid-run-compaction.test.ts`
       - `src/testing/compaction-conformance.ts`: only if a case pinned the old text
     - References:
@@ -251,6 +459,7 @@ Cost knobs:
     - `summary_is_capped_and_marks_the_cut`.
     - `secret_in_dropped_text_is_redacted`.
     - `compaction_conformance_passes_for_the_default_compactor`.
+    - `compaction_options_max_summary_chars_reaches_the_compactor`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes — the default compactor's output and keep rule
     - Docs pages to create/edit:
@@ -258,15 +467,79 @@ Cost knobs:
       - `CHANGELOG.md`: `## [Unreleased]`, Changed
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-16):
+    - **What changed.**
+      - `src/compaction.ts`, rewritten:
+        - `resolveKeptStartIndex(entries, { keepRecentEntries?, keepRecentTokens?, inputCapTokens? })` is the one keep rule. A message count wins when set. Otherwise the newest messages are kept while their `estimateMessageTokens` sum stays within the budget (inclusive). The budget is `keepRecentTokens`, else `max(2,000, floor(0.2 × cap))`, else the 2,000 floor. A kept tail that starts on a tool result backs up to its assistant call.
+        - `DefaultCompactorOptions.keepRecentTokens` is new. Precedence: context `keepRecentEntries`, then constructor `keepRecentEntries`, then the token budget. `maxSummaryChars`: context, then constructor, then 8,000.
+        - `summarizeDropped` builds, in order: `Task:` (first user text, head 1,500 chars), `Latest progress:` (last assistant text, tail 2,000 chars), `Files modified:`/`Files read:`, `Tools used: name ×n` (by count, then name), and `Recent:` (newest remaining lines that fit the budget left after the head; the older part is marked `[…N earlier characters cut]`). The task and progress entries are not repeated in `Recent`. Parts are collected in arrays and joined once.
+        - Redaction runs **before** the cap, so a cut cannot leave a partial secret the redactor misses. The cap ends in `\n[…N characters cut]` when the marker fits, else the old `…` (so `maxSummaryChars: 1`, which the memory-bench no-carry arm uses, still gives one character). `0` still means unlimited.
+        - Section builders (`taskSection`, `filesSection`, `toolsSection`, `recentSection`, `summarizeDropped`, `resolveKeptStartIndex`) are internal exports for the tests. They are not re-exported from the root.
+      - `src/file-ops.ts`: moved with `git mv` from `packages/extensions/compaction/src/file-ops.ts`. `collectFileOperations`, `formatFileOperations`, and `FileOperationDetails` are root exports. The package's `prepare.ts`, `strategy.ts`, and `serialize.test.ts` import them from `@arnilo/prism`.
+      - `src/contracts-core/compaction.ts`: `CompactionContext.inputCapTokens?` and `maxSummaryChars?`.
+      - `src/agent-session/session.ts`:
+        - `compactBranch` and `compactBranchResilient` take the model spec: `options.model ?? config.model` for auto and overflow compaction, and `config.model` for manual compaction.
+        - New private `inputCapFor` resolves `resolveInputCap({}, await describeModelForCap(model))` and returns `undefined` on any failure, so a model with no cap or a failed catalog read never fails a compaction.
+        - Both fields are forwarded only when defined.
+        - The `?? 8` in `entriesCompacted` is replaced by `resolveKeptStartIndex(entries, { keepRecentEntries, inputCapTokens })`.
+      - New root exports: `DEFAULT_COMPACTION_MAX_SUMMARY_CHARS` (8,000), `DEFAULT_KEEP_RECENT_TOKENS_FLOOR` (2,000), and the three file-ops names. `FROZEN_VALUE_EXPORTS`/`FROZEN_TYPE_EXPORTS` in `public-export-contract.test.ts` were updated.
+    - **Deviations from the task text.**
+      - `compaction-conformance` needed no change. It passes `keepRecentEntries: 1`, and no case pinned the old text.
+      - `mid-run-compaction.test.ts` needed no change: it passes unchanged. The new cases are in `compaction.test.ts`.
+      - Only `DefaultCompactorOptions` gains `keepRecentTokens`. `CompactionOptions` does not, so a host sizes the tail per agent with `keepRecentEntries`, or by constructing the compactor. This is recorded for Further Actions.
+    - **Findings.**
+      - The kernel-only manual `session.compact()` now reads the provider catalog through `describeModelForCap` when the spec has no `contextWindow`. That is at most one read per provider per agent, cached by the loader, and it is never in `createAgent`.
+      - `kernel_imports_no_package` matches the text "from `@arnilo/prism-…`" even in a doc comment. The first `file-ops.ts` comment tripped it and was reworded.
+      - Task 6: the LLM compactor now receives `context.inputCapTokens`. That is the **session** model's cap, not the summary model's. Task 6 should still resolve its own summary model's cap.
+    - **Retired-name sweep.** `bun scripts/retired-names.mjs --generate` removed `collectFileOperations`, `formatFileOperations`, and `FileOperationDetails` from the list. They were 0.12.1 exports and are live again from the kernel. It also added `readRetryAfterMs`, the plan 227 Task 2 removal that had not been swept. `scripts/retired-names.test.mjs` passes (6).
+    - **Baseline diff** (`bun scripts/release.mjs gate --update-baseline`, `arnilo__prism.txt`). Additive only:
+      - `CompactionContext` gains `readonly inputCapTokens?: number;` and `readonly maxSummaryChars?: number;`.
+      - `DefaultCompactorOptions` gains `readonly keepRecentTokens?: number;`.
+      - `+ DEFAULT_COMPACTION_MAX_SUMMARY_CHARS	const DEFAULT_COMPACTION_MAX_SUMMARY_CHARS = 8000`
+      - `+ DEFAULT_KEEP_RECENT_TOKENS_FLOOR	const DEFAULT_KEEP_RECENT_TOKENS_FLOOR = 2000`
+      - `+ FileOperationDetails	interface FileOperationDetails { readonly modifiedFiles: readonly string[]; readonly readFiles: readonly string[]; }`
+      - `+ collectFileOperations	function collectFileOperations(messages: readonly Message[]): FileOperationDetails`
+      - `+ formatFileOperations	function formatFileOperations(details: FileOperationDetails): string`
+      - The package's `file-ops.ts` was never a public subpath export, so nothing is removed from the extensions baseline.
+    - **Budgets.** In `scripts/budgets.json`, the kernel ceilings were rebaselined with a reason entry to 1,319,316 packed / 4,268,067 unpacked / 372 files / 1,578 counted exports / 43,441 source lines. `exportCounts.@arnilo/prism` is now 1,578 (+12: 5 root, 7 internal). The file was rewritten with `ensure_ascii`, matching its existing `\uXXXX` escaping.
+    - **Generated files.** Regenerated with `bun scripts/host-builder-index.mjs` and `bun scripts/package-truth.mjs --emit-docs`. `scripts/host-builder-evals/criteria.lock.json`: only the `indexes` hash changed.
+    - **Tests.** In `src/__tests__/compaction.test.ts`, new `describe("default compactor keeps what a continuing agent needs (plan 229 Task 5)")` (8 tests):
+      - `summary_keeps_first_user_request_and_latest_progress`
+      - `summary_lists_files_and_tools`
+      - `tail_is_chosen_by_token_budget` (floor, 20% of a cap, an explicit count, a fixed `keepRecentTokens`)
+      - `tool_result_never_split_from_its_call` (token mode, with the call alone over budget)
+      - `summary_is_capped_and_marks_the_cut` (also the one-character cap)
+      - `secret_in_dropped_text_is_redacted` (also under a 30-character cap)
+      - `compaction_conformance_passes_for_the_default_compactor`
+      - `compaction_options_max_summary_chars_reaches_the_compactor` (`maxSummaryChars` 123 and `inputCapTokens` 10,000 from an 11,024-token window)
+      - The existing default-compactor tests pass unchanged.
+    - **Checks.**
+      - Pass:
+        - `bun run typecheck`
+        - `compaction.test.ts` (17)
+        - `run-limits`, `agent-config-validation`, `compaction-trigger`, `public-export-contract` (124 with `compaction.test.ts`)
+        - `bun run --filter @arnilo/prism-extensions test`
+        - `bun run --filter @arnilo/prism-agent test`
+        - `scripts/memory-bench/work-outcome/long-session.test.mjs` (9; the no-carry `maxSummaryChars: 1` arm still re-derives)
+        - `docs.test.ts`, `host-builder-index`, `phase54-package-map`, `retired-names`
+        - `kernel-imports-no-package` and `packages/tools/browser` (96)
+      - `release.mjs gate` reports only the existing "`@arnilo/prism-ai` … bump required".
+      - `bun test src` (6,834 pass) had 6 failures:
+        - `kernel_imports_no_package` was caused by this task and is fixed.
+        - The two browser tests pass in isolation (the Task 3 load pattern).
+        - The field-policy microbenchmark and the process-leak cycle are load-sensitive.
+        - `governance_identity_expiry_denies_tool_call` predates this plan (Task 3 note).
 
-- [ ] Task 6: The LLM compactor summarizes a history larger than its model's window
+- [x] Task 6: The LLM compactor summarizes a history larger than its model's window
   - Acceptance Criteria:
     - Functional:
       - When the serialized conversation's estimate exceeds the summary model's input cap less the output budget, the compactor splits the entries at message boundaries into chunks that fit, summarizes each in order (each call receives the previous chunk's summary), and returns the last summary. At most `maxChunks` calls (default 6, hard cap 16); beyond that it summarizes the newest `maxChunks` chunks and states the omission in the summary.
       - A history that fits is summarized in one call, byte-identical to today.
       - Text blocks and tool-call arguments are capped per block in the serialization (default 8,000 characters, with a cut marker), as tool results already are.
       - A failure in any chunk falls back as today (`compaction.fallback`, then the kernel default).
-      - Each summary call passes the session (plan 225 Task 5), so it is metered.
+      - Each summary call passes the session (plan 225 Task 5), so it is metered. This is already in place for the single call (`strategy.ts:164-167`); each chunk call reuses that path.
+      - A history that fits is still prepared by `prepareLlmCompaction`'s own cut, which is independent of the kernel compactor (Task 1(e)). Chunking applies only to `entriesToSummarize`.
+      - The chunk size comes from the **summary** model's own cap. `CompactionContext.inputCapTokens` (added by Task 5) is the session model's cap and is not used for chunking (Task 5). The file-ops helpers now come from `@arnilo/prism` (Task 5).
     - Performance: Stated cost: `ceil(tokens / chunk)` calls, bounded by `maxChunks`. The README table gives the default and the per-compaction ceiling.
     - Code Quality: Chunking is a pure function over entries with its own tests.
     - Security: Redaction applies per chunk request and to the final summary.
@@ -284,7 +557,8 @@ Cost knobs:
       { "name": "@arnilo/prism-extensions/compaction", "config": { "maxChunks": 6 } }
       ```
     - Files to Create/Edit:
-      - `packages/extensions/compaction/src/strategy.ts`, `serialize.ts`, `config.ts`, `limits.ts`
+      - `packages/extensions/compaction/src/strategy.ts`, `serialize.ts`, `config.ts`, `limits.ts`, `index.ts`
+      - `packages/extensions/compaction/src/chunk.ts`: new, the pure chunking function
       - `packages/extensions/compaction/src/__tests__/chunked-summary.test.ts`: new
       - `packages/extensions/compaction/README.md`
     - References:
@@ -303,22 +577,90 @@ Cost knobs:
       - `CHANGELOG.md`: `## [Unreleased]`, Added
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-16):
+    - **What changed** (all in `packages/extensions/compaction/src/`).
+      - `chunk.ts` (new): `chunkCompactionEntries(entries, budgetTokens, measure)`. It packs consecutive entries greedily and splits only at entry boundaries. An entry over the budget gets a chunk of its own. It is pure, keeps order, and drops nothing.
+      - `strategy.ts`:
+        - `summarizeHistory` builds the request as before, gets one client from `clientFor`, and computes the **summary** model's cap with `summaryInputCap`. That is `resolveInputCap` over `client.resolve()` (the catalog-backed description) when present, else `client.model`, with `maxOutputTokens` set to the output budget `clientFor` requested (`parameters.maxTokens`). Any failure, including a model with no window, gives `undefined`, which means one call. When `estimate(system) + estimate(prompt) ≤ cap`, or there is no cap, it makes the one call with the same request as before.
+        - `summarizeInChunks` handles the rest. The chunk budget is `cap − estimate(system prompt + empty prompt frame) − room for the previous summary − 16 slack`. The room for the previous summary is `max(min(maxSummaryTokens, output budget), estimate(prep.previousSummary))`. A budget under 256 tokens throws `Summarization failed: …`, so the fallback runs. Each chunk's serialized text is cut to `budget × 4` characters, which only matters when one entry is over the budget. Each call gets the previous rolling summary (the first call gets `prep.previousSummary`), held to the output budget with `capSummary`. Past `maxChunks` it skips the oldest chunks and puts `[Earlier history omitted: the oldest N of M chunks were not summarized (maxChunks K).]` before the result.
+        - `historyPrompt` is the one prompt builder for both paths. `runSummaryProvider` now takes the client instead of building it. The turn-prefix call builds its own client with the 0.5 ratio, as before.
+        - `LlmCompactorOptions.maxChunks` is validated with `validateCompactionLimit` against `HARD_MAX_CHUNKS`.
+      - `limits.ts`: `DEFAULT_MAX_CHUNKS` 6 and `HARD_MAX_CHUNKS` 16.
+      - `serialize.ts`: `maxTextBlockChars` (default `DEFAULT_MAX_TEXT_BLOCK_CHARS`, 8,000; `0` disables). It caps text, thinking, `tool_call` arguments, and `tool_call_delta` `argumentsText` with the existing `[..., N characters truncated]` marker. `truncate` is exported for the strategy.
+      - `config.ts` and `index.ts`: package config `maxChunks` (integer 1–16, default 6), resolved and passed to both the default and the coding compactor.
+    - **Deviations from the task text.**
+      - Thinking blocks and `tool_call_delta` text are capped too, not only text and tool-call arguments. They are the same kind of unbounded text.
+      - The omission notice goes into the final summary only, not into a chunk prompt. That keeps the chunk budget exact.
+      - `maxTextBlockChars` is an `LlmCompactorOptions` and serializer option, not package config.
+    - **Findings.**
+      - The turn-prefix call (split turn) is still a single call. Its entries are bounded by `keepRecentTokens` (default 20,000), so with a summary model whose window is smaller than that it can still overflow and fall back. Recorded for Further Actions.
+      - The kernel's `DEFAULT_INPUT_RESERVE_TOKENS` (1,024) is part of the summary cap, the same reserve the trigger uses.
+    - **Baseline diff** (`bun scripts/release.mjs gate --update-baseline`, `arnilo__prism-extensions.txt`). Additive only: `./compaction MemoryCompactionConfig` gains `readonly maxChunks?: number;`. The other baseline lines in the working-tree diff come from earlier, uncommitted tasks.
+    - **Generated files.** Regenerated with `bun scripts/package-truth.mjs --emit-docs` and `bun scripts/host-builder-index.mjs`.
+    - **Tests.** In `chunked-summary.test.ts` (7):
+      - `history_that_fits_makes_one_identical_call`: an exact prompt and system prompt, and a model with no window is one call even over a large history.
+      - `oversized_history_is_summarized_in_rolling_chunks`: every request's estimate is ≤ the cap, call *k* carries `summary-(k−1)`, every dropped entry appears once and in order, and the result is the last summary.
+      - `max_chunks_bounds_calls_and_states_omission`: also checks that `maxChunks: 17` is rejected.
+      - `long_text_block_is_capped_with_a_marker`: text and tool-call arguments, plus `0` disables.
+      - `chunk_failure_falls_back_once`: at strategy level, call 2 fails and there is no call 3. At package level, through `createAgent` with a small-window summary `model`, there are exactly two chunk calls, one `compaction.fallback`, and the kernel default writes the entry.
+      - `chunking_is_a_pure_split_at_entry_boundaries`.
+      - `package_conformance_passes_with_max_chunks`.
+    - **Checks.** All pass:
+      - `bun run typecheck`
+      - `bun run --filter @arnilo/prism-extensions test` (1,089 pass, 0 fail)
+      - `bun run --filter @arnilo/prism-agent test`
+      - `docs.test.ts` (69)
+      - `host-builder-index` and `phase54-package-map` (14)
+      - `release.mjs gate`, which reports only the existing "`@arnilo/prism-ai` … bump required"
+    - **Fixed while running the whole-plan verification.**
+      - `biome lint` flagged three `noUnsafeOptionalChaining` errors in the Task 5 tests (`src/__tests__/compaction.test.ts:249,256,266`). The casts are now `as CompactionEntryData | undefined` followed by `?.`, and the 17 tests still pass.
+      - `scripts/budgets.json`:
+        - `kernel.packedBytes` was rebaselined to 1,319,822 and `unpackedBytes` to 4,269,463, with a reason entry. The only growth is this task's CHANGELOG entry.
+        - `exportCounts.@arnilo/prism-extensions` was rebaselined to 1,475 (+2), with a reason entry.
+      - `scripts/host-builder-evals/criteria.lock.json` was re-registered (`run.mjs --register`), because the regenerated indexes changed its `indexes` hash. `registeredAt` and `gitHead` now record that registration.
 
 ## Verification (whole plan)
 
 - `bun run build:core`
 - `bun run typecheck`
-- `bun test --timeout=0 src/__tests__/run-limits.test.ts src/__tests__/agent-config-shape.test.ts src/__tests__/compaction.test.ts src/__tests__/compaction-trigger.test.ts`
+- `bun test --timeout=0 src/__tests__/run-limits.test.ts src/__tests__/agent-config-validation.test.ts src/__tests__/compaction.test.ts src/__tests__/compaction-trigger.test.ts`
 - `bun run --filter @arnilo/prism-extensions test`
 - `bun run --filter @arnilo/prism-agent test`
 - `bun test --timeout=0 src/__tests__/docs.test.ts`
 - `bun run test`
 - `bun scripts/release.mjs gate`
 
+Result (2026-11-16):
+- Pass:
+  - `build:core`
+  - `typecheck`
+  - the four kernel suites (84)
+  - extensions (1,089 pass)
+  - prism-agent
+  - `docs.test.ts` (69)
+  - `biome lint`, after the Task 6 fix to the Task 5 tests
+- `release.mjs gate` reports only the existing "`@arnilo/prism-ai` … bump required" (backlog: plan 227).
+- `bun run test` is **not fully green**. The remaining failures are outside this plan:
+  - `budget-gate.test.mjs` export count and non-null assertion budget: `@arnilo/prism-memory-system` measures 1,146 exports against a ceiling of 1,124, and `packages/memory/system/src/session` has 159 non-null assertions against 114 recorded. Both come from the uncommitted plan 218.2 memory work in the tree, so they are left for that plan to rebaseline.
+  - `remote_conformance_passes_on_stdio` and the document-reader max-page envelope: load-sensitive, and both pass in isolation.
+
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- **No default token cap (Task 2).** `maxInputTokens`, `maxOutputTokens` and `maxTotalTokens` default to `null`. A host that relied on the old 40,000 / 10,000 / 50,000 as an implicit spend guard now has only 200 tool calls and 15 minutes. `docs/migration.md` names the change and points to `maxTotalTokens` or `maxCost`. Accepted because `maxInputTokens` counts cache reads in full, which made the old cumulative cap end ordinary tasks at about turn 7.
+- **`compaction: false` turns off only the kernel trigger (Task 4).** A package's `true` vote on `compaction.when` and overflow recovery still compact. This keeps the order of authority unchanged, and it is documented in `docs/slots.md` and `docs/agent.md`.
+- **Chunk sizing uses the kernel estimator (Task 6).** The estimator is `ceil(chars / 4)`, not a tokenizer, so dense text can still produce a request above the summary model's real cap. The kernel's 1,024-token reserve and 16 tokens of slack per request absorb small errors. A provider rejection still falls back to the kernel compactor.
+- **Past `maxChunks` the oldest chunks are not summarized (Task 6).** The summary states the omission. That is a bounded, visible loss, rather than an unbounded number of calls or a silent truncation.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- [x] **P2: resolve the cap from the provider catalog in the package voters.** `@arnilo/prism-extensions/compaction` with a `trigger` and the context-engineering attention compiler resolve the cap from `session.model` only, so with a bare `"provider/model"` ref an `input_ratio` gate cannot resolve one. The kernel already has the cached catalog lookup (Task 4). Handed to the backlog.
+  - Notes (executed 2026-11-16):
+    - **What changed.** Both packages now describe the session model through `prism.models.client(model).resolve()` when it declares no `limits.contextWindow`. That is the loader's cached `describeModel`, the lookup the kernel trigger uses, so it adds no kernel seam. Both packages already hold the `models` capability. A failed lookup answers the model as given.
+      - `packages/extensions/compaction/src/index.ts`: new `describeForCap`. The `compaction.when` vote describes the model only when the trigger reads the cap (`input_ratio` or `custom`), so `threshold_*` and `each_turn` gates never read the catalog.
+      - `packages/extensions/context-engineering/src/index.ts`: new `describedModel` and `warmAttentionCompiler`. The `context.build` hook and the `compaction.when` vote warm the per-model compiler memo from the described model before reading it. `attentionCompilerFor` stays synchronous, so the public `ContextEngineeringHandlerDeps` is unchanged; an async `attentionCompilerFor` (even widened to `T | Promise<T>`) failed the compat gate as a break. The `model.request` accounting (`blocks.maxShare`, `context.accounted`) reads the same described cap, because it had the same gap.
+    - **Tests (fail without the fix, pass with it).** `packages/extensions/compaction/src/__tests__/package.test.ts` `input_ratio_trigger_resolves_cap_from_provider_catalog`, and `packages/extensions/context-engineering/src/__tests__/package.test.ts` `attention_resolves_cap_from_provider_catalog`. Each uses a `"mock/main"` string ref whose window exists only in the provider catalog, and asserts zero catalog reads after `createAgent`, a compaction entry, and one catalog read per agent.
+    - **Checks.** `bun run typecheck` green. `biome lint` on both packages clean. `bun test packages/extensions src/__tests__/compaction-trigger.test.ts`: 1,160 tests, 2 failures, both outside this change and timing-bound. They are `governance_identity_expiry_denies_tool_call` (a 5 s timeout) and the field-policy microbenchmark; governance imports neither package. `bun scripts/host-builder-index.mjs --check`: fresh. `release.mjs gate` reports only the existing `@arnilo/prism-ai` bump note.
+    - **Baseline diff.** None.
+    - **Docs.** `CHANGELOG.md` `[Unreleased]` entry; `docs/slots.md` (the package voters read the same catalog); `packages/extensions/compaction/README.md` (trigger bullet); `packages/extensions/context-engineering/README.md` (`attention.maxInputTokens` row).
+- **P3: add `CompactionOptions.keepRecentTokens`.** Only `DefaultCompactorOptions` has it, so a host sizes the kernel compactor's tail per agent with `keepRecentEntries`, or by constructing the compactor itself (Task 5). Handed to the backlog.
+- **P3: chunk the split-turn prefix call.** Its entries are bounded by `keepRecentTokens` (default 20,000), so a summary model with a smaller window still overflows that one call and falls back (Task 6). Handed to the backlog.

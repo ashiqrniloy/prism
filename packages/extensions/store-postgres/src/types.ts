@@ -1,4 +1,5 @@
-import type { AgentEventSourceOptions, SecretRedactor } from "@arnilo/prism";
+import type { AgentEventSourceOptions, SecretRedactor, SessionQueryLimits } from "@arnilo/prism";
+import type { RunFeedbackLimits } from "@arnilo/prism-extensions/store-codecs";
 import type { Pool, PoolConfig } from "pg";
 
 /** Default PostgreSQL schema for Prism tables. */
@@ -26,6 +27,15 @@ export interface PostgresPersistenceOptions {
   readonly eventSource?: AgentEventSourceOptions;
   /** Stable HMAC secret shared by replicas that resume durable event cursors. */
   readonly eventCursorSecret?: string | Uint8Array;
+  /**
+   * Store query limits (plan 239 Task 5): the largest list and search page, the search text, cursor and snippet
+   * bytes, and the full-text candidate rows ranked per search. Host-only; each defaults to the kernel's value.
+   */
+  readonly queryLimits?: SessionQueryLimits;
+  /** Largest page of a checkpoint, lifecycle or feedback listing. Default 500 (`DEFAULT_MAX_STORE_PAGE_SIZE`). */
+  readonly maxPageSize?: number;
+  /** Bounds of one run-feedback record: comment and metadata bytes, tags, links. Defaults from `@arnilo/prism-extensions/store-codecs`. */
+  readonly feedbackLimits?: Omit<RunFeedbackLimits, "maxPageSize">;
   /** Skip automatic migration on open (tests only). */
   readonly skipMigrations?: boolean;
 }

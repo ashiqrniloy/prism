@@ -2,7 +2,6 @@ import { createCipheriv, createDecipheriv, randomBytes, scrypt, timingSafeEqual 
 import { CredentialDecryptError, WeakKdfParametersError } from "./errors.js";
 import {
   assertScryptWorkBounds,
-  HARD_MAX_SCRYPT_MEMORY_BYTES,
   type ResolvedEncryptedCredentialStoreLimits,
   resolveEncryptedCredentialStoreLimits,
   validateCredentialLimit,
@@ -51,7 +50,7 @@ export function assertScryptParameters(
   if (params.keyLength !== DEFAULT_SCRYPT_KEY_LENGTH) {
     throw new WeakKdfParametersError(`scrypt keyLength must be exactly ${DEFAULT_SCRYPT_KEY_LENGTH}`);
   }
-  const memoryLimit = validateCredentialLimit("maxScryptMemoryBytes", maxMemoryBytes, HARD_MAX_SCRYPT_MEMORY_BYTES);
+  const memoryLimit = validateCredentialLimit("maxScryptMemoryBytes", maxMemoryBytes);
   assertScryptWorkBounds(params.N, params.r, params.p, memoryLimit);
 }
 

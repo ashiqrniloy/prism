@@ -10,14 +10,7 @@ import {
   type SecretRedactor,
 } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import {
-  DEFAULT_TRACE_PAGE_SIZE,
-  DEFAULT_TRACE_PAGES,
-  HARD_DATASET_ITEMS,
-  HARD_REPORT_MAX_BYTES,
-  HARD_TRACE_PAGE_SIZE,
-  HARD_TRACE_PAGES,
-} from "./limits.js";
+import { DEFAULT_REPORT_MAX_BYTES, DEFAULT_TRACE_PAGE_SIZE, DEFAULT_TRACE_PAGES } from "./limits.js";
 import { checkRequirements } from "./score.js";
 import { bootstrapInterval, cohensKappa, krippendorffAlpha, spearman } from "./stats.js";
 import { createPersistenceTraceResolver, limit, pages } from "./trace.js";
@@ -39,7 +32,7 @@ export async function calibrateJudge<TInput = unknown, TExpected = unknown>(
   options: CalibrateJudgeOptions<TInput, TExpected>,
 ): Promise<CalibrationReport> {
   const { judge, items, scale = "nominal", seed = 0, signal } = options;
-  if (!["nominal", "ordinal"].includes(scale) || !Number.isSafeInteger(seed) || items.length > HARD_DATASET_ITEMS) {
+  if (!["nominal", "ordinal"].includes(scale) || !Number.isSafeInteger(seed)) {
     throw new EvalError("invalid calibration scale, seed, or item count", "ERR_PRISM_EVAL_CALIBRATION");
   }
   signal?.throwIfAborted();
@@ -62,7 +55,7 @@ export async function calibrateJudge<TInput = unknown, TExpected = unknown>(
   }
   const labels = [...new Set([...human, ...judged])].sort((a, b) => a - b);
   const indices = new Map(labels.map((label, i) => [label, i]));
-  if (labels.length ** 2 * 8 > HARD_REPORT_MAX_BYTES) {
+  if (labels.length ** 2 * 8 > DEFAULT_REPORT_MAX_BYTES) {
     throw new EvalError("calibration confusion matrix exceeds report bounds", "ERR_PRISM_EVAL_CALIBRATION");
   }
   const counts = labels.map(() => labels.map(() => 0));
@@ -123,13 +116,12 @@ export async function labeledItemsFromFeedback(
     throw new EvalError("calibration feedback requires explicit ownership without query overrides", "ERR_PRISM_EVAL_TRACE_OWNERSHIP");
   }
   signal?.throwIfAborted();
-  const pageSize = limit(options.traceLimits?.pageSize, DEFAULT_TRACE_PAGE_SIZE, HARD_TRACE_PAGE_SIZE, "pageSize");
-  const maxPages = limit(options.traceLimits?.maxPages, DEFAULT_TRACE_PAGES, HARD_TRACE_PAGES, "maxPages");
+  const pageSize = limit(options.traceLimits?.pageSize, DEFAULT_TRACE_PAGE_SIZE, "pageSize");
+  const maxPages = limit(options.traceLimits?.maxPages, DEFAULT_TRACE_PAGES, "maxPages");
   const records = await pages(
     (cursor) => options.feedbackStore.query({ ...query, ...ownership, limit: pageSize, cursor, signal }),
     maxPages,
   );
-  if (records.length > HARD_DATASET_ITEMS) throw new EvalError("too many calibration feedback items", "ERR_PRISM_EVAL_CALIBRATION");
   const resolver = createPersistenceTraceResolver(options.persistence);
   const redactor = resolveRedactor(options.redactor, options.secrets);
   const output: CalibrationItem<Message | undefined>[] = [];

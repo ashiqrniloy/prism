@@ -1,12 +1,11 @@
 import { type DelegateConfig } from "./config.js";
 import {
   type Message,
-  type OwnershipScope,
   type PackageAPI,
   type ProviderEvent,
   selectTranscript,
   type SessionContext,
-  type SessionEntry,
+  type SessionSeedEntry,
   type TranscriptSlice,
 } from "@arnilo/prism";
 
@@ -14,8 +13,6 @@ import {
 export type DelegateContextConfig = "none" | "summary" | { readonly lastTurns: number; readonly maxChars?: number };
 
 export const DEFAULT_CONTEXT_MAX_CHARS = 24_000;
-export const HARD_CONTEXT_MAX_CHARS = 120_000;
-export const HARD_CONTEXT_LAST_TURNS = 50;
 /** Input budget for the one summarization call: four times the summary it asks for. */
 const SUMMARY_INPUT_CHARS = 48_000;
 const SUMMARY_MAX_CHARS = 4_000;
@@ -25,16 +22,14 @@ export const SUMMARY_INSTRUCTION =
 
 export type ResolvedContext =
   | { readonly mode: "none" }
-  | { readonly mode: "lastTurns"; readonly lastTurns: number; readonly maxChars: number; readonly clamped: boolean }
+  | { readonly mode: "lastTurns"; readonly lastTurns: number; readonly maxChars: number }
   | { readonly mode: "summary" };
 
-/** `context` config → what the delegate runs; the shape is already schema-checked, so this only clamps. */
+/** `context` config → what the delegate runs; the shape is already schema-checked. The host's `maxChars` is the cap. */
 export function resolveChildContext(config: DelegateContextConfig | undefined): ResolvedContext {
   if (config === undefined || config === "none") return { mode: "none" };
   if (config === "summary") return { mode: "summary" };
-  const requested = config.maxChars ?? DEFAULT_CONTEXT_MAX_CHARS;
-  const maxChars = Math.min(requested, HARD_CONTEXT_MAX_CHARS);
-  return { mode: "lastTurns", lastTurns: config.lastTurns, maxChars, clamped: maxChars !== requested };
+  return { mode: "lastTurns", lastTurns: config.lastTurns, maxChars: config.maxChars ?? DEFAULT_CONTEXT_MAX_CHARS };
 }
 
 export interface ContextUsed {
@@ -45,29 +40,17 @@ export interface ContextUsed {
 }
 
 export interface SeededContext {
-  readonly sessionId: string;
-  readonly entries: readonly SessionEntry[];
+  /** What the child session opens with (`PackageAPI.sessions.open({ seed })`); the kernel stamps ids, chain and scope. */
+  readonly seed: readonly SessionSeedEntry[];
   readonly used: ContextUsed;
 }
 
-const entryId = () => `entry_${crypto.randomUUID()}`;
-
-/** One `summary` entry per summary, then one `message` entry per message, chained and owner-stamped. */
-function seedEntries(slice: TranscriptSlice, sessionId: string, ownership: OwnershipScope | undefined): SessionEntry[] {
-  const out: SessionEntry[] = [];
-  const push = (fields: Pick<SessionEntry, "kind" | "message" | "summary">) => {
-    out.push({
-      id: entryId(),
-      ...(out.at(-1) === undefined ? {} : { parentId: (out.at(-1) as SessionEntry).id }),
-      sessionId,
-      timestamp: new Date().toISOString(),
-      ...(ownership === undefined ? {} : { metadata: { ...ownership } }),
-      ...fields,
-    });
-  };
-  for (const summary of slice.summaries) push({ kind: "summary", summary });
-  for (const message of [...slice.pinned, ...slice.messages]) push({ kind: "message", message });
-  return out;
+/** One `summary` entry per summary, then one `message` entry per message. */
+function seedEntries(slice: TranscriptSlice): SessionSeedEntry[] {
+  return [
+    ...slice.summaries.map((summary): SessionSeedEntry => ({ kind: "summary", summary })),
+    ...[...slice.pinned, ...slice.messages].map((message): SessionSeedEntry => ({ kind: "message", message })),
+  ];
 }
 
 /** One provider call, text only: the summary the child will read instead of the conversation. */
@@ -113,29 +96,19 @@ export async function buildSeededContext(input: {
   readonly session: SessionContext;
   readonly model: { provider: string; model: string };
   readonly context: Exclude<ResolvedContext, { mode: "none" }>;
-  readonly ownership: OwnershipScope | undefined;
-  readonly signal?: AbortSignal;
 }): Promise<SeededContext> {
   const entries = await input.session.entries();
   if (input.context.mode === "summary") {
     const slice = selectTranscript(entries, { maxChars: SUMMARY_INPUT_CHARS });
     const summary = await summarize(input.prism, input.model, slice, input.session);
-    const sessionId = `session_${crypto.randomUUID()}`;
     return {
-      sessionId,
-      entries: seedEntries(
-        { summaries: [summary], pinned: [], messages: [], turns: 0, omittedTurns: 0, truncated: false },
-        sessionId,
-        input.ownership,
-      ),
+      seed: seedEntries({ summaries: [summary], pinned: [], messages: [], turns: 0, omittedTurns: 0, truncated: false }),
       used: { mode: "summary", turns: slice.turns, omittedTurns: slice.omittedTurns, truncated: slice.truncated },
     };
   }
   const slice = selectTranscript(entries, { lastTurns: input.context.lastTurns, maxChars: input.context.maxChars });
-  const sessionId = `session_${crypto.randomUUID()}`;
   return {
-    sessionId,
-    entries: seedEntries(slice, sessionId, input.ownership),
+    seed: seedEntries(slice),
     used: { mode: "lastTurns", turns: slice.turns, omittedTurns: slice.omittedTurns, truncated: slice.truncated },
   };
 }

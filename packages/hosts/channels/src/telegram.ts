@@ -5,7 +5,7 @@ import { type Agent, type OwnershipScope } from "@arnilo/prism";
 import type { CheckpointStore, LeaseRecord, LeaseStore } from "./checkpoint-contract.js";
 import { bindChannelHostUi } from "./host-ui.js";
 import { retryableAdmission } from "./admission.js";
-import { DEFAULT_CHANNEL_LIMITS, HARD_CHANNEL_LIMITS } from "./limits.js";
+import { DEFAULT_CHANNEL_LIMITS } from "./limits.js";
 import { createChannelStateStore } from "./state.js";
 import { type ChannelSecretSource, resolveChannelSecretRef, createChannelRedactor } from "./secret-ref.js";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "./memory-stores.js";
@@ -32,7 +32,6 @@ const DEFAULT_POLL_TIMEOUT_SECONDS = 30;
 const DEFAULT_POLL_LIMIT = 100;
 const DEFAULT_LEASE_TTL_MS = 90_000;
 const DEFAULT_MAX_REQUEST_BYTES = 128 * 1024;
-const HARD_MAX_REQUEST_BYTES = 1024 * 1024;
 const TELEGRAM_TEXT_CODE_UNITS = 3500;
 const MAX_SEND_ATTEMPTS = 5;
 /** One preview slot per chat: repeated updates with the same id replace that draft; a new id would create a second one. */
@@ -220,10 +219,15 @@ function apiOrigin(value: string | undefined): string {
   return parsed.origin;
 }
 
-function boundedInteger(value: number | undefined, fallback: number, min: number, max: number, name: string): number {
+/** A host-set adapter limit, at least `min`. The host's value is the cap (plan 239 Task 5). */
+/** Telegram Bot API `getUpdates` maxima. */
+const TELEGRAM_MAX_POLL_TIMEOUT_SECONDS = 50;
+const TELEGRAM_MAX_POLL_LIMIT = 100;
+
+function boundedInteger(value: number | undefined, fallback: number, min: number, name: string): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < min || resolved > max) {
-    throw new TypeError(`Telegram ${name} must be an integer between ${min} and ${max}`);
+  if (!Number.isSafeInteger(resolved) || resolved < min) {
+    throw new TypeError(`Telegram ${name} must be an integer of at least ${min}`);
   }
   return resolved;
 }
@@ -745,23 +749,15 @@ export function createTelegramAdapter(options: TelegramAdapterOptions): Telegram
   ) {
     throw new TypeError("Telegram connectionId must be a bounded non-empty string");
   }
-  const pollTimeoutSeconds = boundedInteger(options.pollTimeoutSeconds, DEFAULT_POLL_TIMEOUT_SECONDS, 1, 50, "pollTimeoutSeconds");
-  const pollLimit = boundedInteger(options.pollLimit, DEFAULT_POLL_LIMIT, 1, 100, "pollLimit");
-  const leaseTtlMs = boundedInteger(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, pollTimeoutSeconds * 1000 + 10_000, 300_000, "leaseTtlMs");
-  const maxResponseBytes = boundedInteger(
-    options.maxResponseBytes,
-    DEFAULT_MAX_REQUEST_BYTES,
-    1024,
-    HARD_MAX_REQUEST_BYTES,
-    "maxResponseBytes",
-  );
-  const maxAttachmentBytes = boundedInteger(
-    options.maxAttachmentBytes,
-    DEFAULT_CHANNEL_LIMITS.maxAttachmentBytes,
-    1,
-    HARD_CHANNEL_LIMITS.maxAttachmentBytes,
-    "maxAttachmentBytes",
-  );
+  const pollTimeoutSeconds = boundedInteger(options.pollTimeoutSeconds, DEFAULT_POLL_TIMEOUT_SECONDS, 1, "pollTimeoutSeconds");
+  const pollLimit = boundedInteger(options.pollLimit, DEFAULT_POLL_LIMIT, 1, "pollLimit");
+  // Telegram's own getUpdates ranges (wire format, not work limits).
+  if (pollTimeoutSeconds > TELEGRAM_MAX_POLL_TIMEOUT_SECONDS)
+    throw new TypeError(`Telegram pollTimeoutSeconds must be at most ${TELEGRAM_MAX_POLL_TIMEOUT_SECONDS}`);
+  if (pollLimit > TELEGRAM_MAX_POLL_LIMIT) throw new TypeError(`Telegram pollLimit must be at most ${TELEGRAM_MAX_POLL_LIMIT}`);
+  const leaseTtlMs = boundedInteger(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, pollTimeoutSeconds * 1000 + 10_000, "leaseTtlMs");
+  const maxResponseBytes = boundedInteger(options.maxResponseBytes, DEFAULT_MAX_REQUEST_BYTES, 1024, "maxResponseBytes");
+  const maxAttachmentBytes = boundedInteger(options.maxAttachmentBytes, DEFAULT_CHANNEL_LIMITS.maxAttachmentBytes, 1, "maxAttachmentBytes");
   const api = telegramApi({ ...options, maxResponseBytes });
   const allowGroups = options.allowGroups === true;
   const sendDrafts = options.sendDrafts === true;
@@ -1084,30 +1080,12 @@ export function createTelegramWebhookHandler(options: TelegramWebhookHandlerOpti
       if (!validWebhookSecret(value)) throw new TypeError("Telegram webhookSecret must be 1-256 URL-safe characters");
       return value;
     }));
-  const leaseTtlMs = boundedInteger(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, 5_000, 300_000, "leaseTtlMs");
-  const maxRequestBytes = boundedInteger(
-    options.maxRequestBytes,
-    DEFAULT_MAX_REQUEST_BYTES,
-    1024,
-    HARD_MAX_REQUEST_BYTES,
-    "maxRequestBytes",
-  );
-  const maxResponseBytes = boundedInteger(
-    options.maxResponseBytes,
-    DEFAULT_MAX_REQUEST_BYTES,
-    1024,
-    HARD_MAX_REQUEST_BYTES,
-    "maxResponseBytes",
-  );
+  const leaseTtlMs = boundedInteger(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, 5_000, "leaseTtlMs");
+  const maxRequestBytes = boundedInteger(options.maxRequestBytes, DEFAULT_MAX_REQUEST_BYTES, 1024, "maxRequestBytes");
+  const maxResponseBytes = boundedInteger(options.maxResponseBytes, DEFAULT_MAX_REQUEST_BYTES, 1024, "maxResponseBytes");
   const api = telegramApi({ ...options, maxResponseBytes });
   const allowGroups = options.allowGroups === true;
-  const maxAttachmentBytes = boundedInteger(
-    options.maxAttachmentBytes,
-    DEFAULT_CHANNEL_LIMITS.maxAttachmentBytes,
-    1,
-    HARD_CHANNEL_LIMITS.maxAttachmentBytes,
-    "maxAttachmentBytes",
-  );
+  const maxAttachmentBytes = boundedInteger(options.maxAttachmentBytes, DEFAULT_CHANNEL_LIMITS.maxAttachmentBytes, 1, "maxAttachmentBytes");
   const media = createInboundMedia({
     connectionId: options.connectionId,
     allowGroups,

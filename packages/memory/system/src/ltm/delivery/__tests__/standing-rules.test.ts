@@ -527,7 +527,12 @@ describe("standing rules (plan 188.5 Task 1, plan 209 Task 3)", () => {
       "capture earns the larger budget",
     );
     assert.equal((resolveFabricRulesOptions({ capture: "confirm", maxTokens: 700 }, true) as ResolvedFabricRulesOptions).maxTokens, 700);
-    assert.throws(() => resolveFabricRulesOptions({ maxTokens: 3_001 }, true), /rules\.maxTokens/);
+    assert.throws(() => resolveFabricRulesOptions({ maxTokens: 0 }, true), /rules\.maxTokens/);
+    assert.equal(
+      (resolveFabricRulesOptions({ maxTokens: 3_001 }, true) || { maxTokens: 0 }).maxTokens,
+      3_001,
+      "plan 239: the host's value is the cap",
+    );
     assert.throws(() => resolveFabricRulesOptions({ scopes: [] }, true), /rules\.scopes/);
     assert.throws(() => resolveFabricRulesOptions({ capture: "auto" as never }, true), /rules\.capture/);
   });

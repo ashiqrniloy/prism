@@ -13,7 +13,7 @@
  */
 
 import type { ExecutionPolicy } from "./execution-policy.js";
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, HARD_MAX_LINES, validateCodingLimit } from "./limits.js";
+import { type CodingArgCeilings, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, resolveCodingArgCeilings, validateCodingLimit } from "./limits.js";
 import { createProcessSessions } from "./process/sessions.js";
 import type { ProcessSandboxBackend, ProcessSession, ProcessSessions } from "./process/types.js";
 import { ProcessSessionError } from "./process/types.js";
@@ -22,16 +22,18 @@ import { formatSize, truncateTail } from "./truncate.js";
 
 /** Default live background processes per session. */
 export const DEFAULT_MAX_BACKGROUND_PROCESSES = 4;
-/** Hard cap on live background processes per session. */
-export const HARD_MAX_BACKGROUND_PROCESSES = 16;
+/** Live background processes across all sessions of one runtime; `createBackgroundProcesses({ maxTotalProcesses })`. */
+export const DEFAULT_MAX_BACKGROUND_TOTAL_PROCESSES = 32;
 /** How long `shell({ background: true })` waits for first output before returning. */
 export const BACKGROUND_FIRST_OUTPUT_MS = 1000;
-/** Longest `shell_output({ waitSeconds })` may wait. */
-export const HARD_MAX_BACKGROUND_WAIT_SECONDS = 60;
 
 export interface BackgroundProcessOptions {
-  /** Per-session live process cap (default 4, hard 16). */
+  /** Per-session live process cap (default 4). */
   readonly maxProcesses?: number;
+  /** Live processes across every session (default 32). */
+  readonly maxTotalProcesses?: number;
+  /** Ceiling on the model's `shell_output({ waitSeconds })` (`backgroundWaitSeconds`, default 60; plan 239 Task 5). */
+  readonly ceilings?: CodingArgCeilings;
   /** Per-process wall lifetime (default: the process-session default, 4 h). */
   readonly maxLifetimeMs?: number;
   /** Caps for the output `shell_output` returns (default 2000 lines / 50KB tail). */
@@ -78,6 +80,8 @@ export interface BackgroundRead {
 
 export interface BackgroundProcesses {
   readonly maxProcesses: number;
+  /** Longest a model's `shell_output({ waitSeconds })` may wait. */
+  readonly maxWaitSeconds: number;
   start(input: BackgroundStartInput): Promise<BackgroundStarted>;
   read(input: BackgroundReadInput): Promise<BackgroundRead>;
   /** Kill every process this session owns. Idempotent; also runs on `session.closed`. */
@@ -93,12 +97,9 @@ interface Tracked {
 }
 
 export function createBackgroundProcesses(options: BackgroundProcessOptions = {}): BackgroundProcesses {
-  const maxProcesses = validateCodingLimit(
-    "maxProcesses",
-    options.maxProcesses ?? DEFAULT_MAX_BACKGROUND_PROCESSES,
-    HARD_MAX_BACKGROUND_PROCESSES,
-  );
-  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
+  const maxProcesses = validateCodingLimit("maxProcesses", options.maxProcesses ?? DEFAULT_MAX_BACKGROUND_PROCESSES);
+  const maxWaitSeconds = resolveCodingArgCeilings(options.ceilings).backgroundWaitSeconds;
+  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES);
   const shell: ShellConfig = options.shell ?? { shell: "/bin/sh", args: ["-c"] };
   const tracked = new Map<string, Tracked>();
   // One registry per workspace root: the session library contains every cwd under its own root,
@@ -114,7 +115,7 @@ export function createBackgroundProcesses(options: BackgroundProcessOptions = {}
       ...(options.policy !== undefined ? { policy: options.policy } : {}),
       // The per-session cap below is the real bound; this only bounds the total.
       limits: {
-        maxSessions: HARD_MAX_BACKGROUND_PROCESSES * 2,
+        maxSessions: validateCodingLimit("maxTotalProcesses", options.maxTotalProcesses ?? DEFAULT_MAX_BACKGROUND_TOTAL_PROCESSES),
         ...(options.maxLifetimeMs !== undefined ? { maxLifetimeMs: options.maxLifetimeMs } : {}),
       },
     });
@@ -209,6 +210,7 @@ export function createBackgroundProcesses(options: BackgroundProcessOptions = {}
 
   return {
     maxProcesses,
+    maxWaitSeconds,
 
     async start(input) {
       const running = live(input.sessionId).length;
@@ -243,9 +245,7 @@ export function createBackgroundProcesses(options: BackgroundProcessOptions = {}
       const handle = sessions(entry.cwd).get(input.id, input.sessionId);
       if (input.kill && alive(handle)) await handle.kill();
       const output = format(
-        input.waitSeconds > 0
-          ? await waitFor(entry, Math.min(input.waitSeconds, HARD_MAX_BACKGROUND_WAIT_SECONDS) * 1000)
-          : await readAvailable(entry),
+        input.waitSeconds > 0 ? await waitFor(entry, Math.min(input.waitSeconds, maxWaitSeconds) * 1000) : await readAvailable(entry),
       );
       return { id: handle.id, output, running: alive(handle), exitCode: await exitOf(handle), state: handle.state };
     },

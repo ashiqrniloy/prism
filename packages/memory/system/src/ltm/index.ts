@@ -209,6 +209,7 @@ export async function setupLongTermMemory(prism: PackageAPI<unknown>, input: Mem
     ...fabricOptions,
     queryExpansion: config.recall.expansion,
     gather: config.recall.gather,
+    recallWindow: config.recall.window,
     vectorStore,
     ...(team === undefined ? {} : { readOnlyScopes: [{ level: "team" as const, memory: team.memory }] }),
   });
@@ -313,10 +314,10 @@ export async function setupLongTermMemory(prism: PackageAPI<unknown>, input: Mem
           stopWords: config.directory.stopWords,
           ...(config.tools.root
             ? {
-                files: createFabricFileJail(
-                  config.tools.root,
-                  config.tools.maxFileBytes === undefined ? {} : { maxFileBytes: config.tools.maxFileBytes },
-                ),
+                files: createFabricFileJail(config.tools.root, {
+                  ...(config.tools.maxFileBytes === undefined ? {} : { maxFileBytes: config.tools.maxFileBytes }),
+                  ...(config.tools.maxViewEntries === undefined ? {} : { maxViewEntries: config.tools.maxViewEntries }),
+                }),
                 exclude: (path: string) => sqliteFile !== undefined && (path === sqliteFile || path.startsWith(`${sqliteFile}-`)),
               }
             : {}),
@@ -462,6 +463,7 @@ export async function setupLongTermMemory(prism: PackageAPI<unknown>, input: Mem
   const tracker = createFabricCitationTracker();
   const tools = createLongTermMemoryTools({
     gather: config.recall.gather,
+    recallWindow: config.recall.window,
     memory,
     remember: fabric.remember,
     recall,
@@ -510,6 +512,7 @@ export async function setupLongTermMemory(prism: PackageAPI<unknown>, input: Mem
     deliveryState,
     decisions,
     lessonNudges,
+    config.recall.window,
   );
   // A person's edit of `rules.md` is folded into notes once per session, before the first block is built.
   const rulesReconciled = new Set<string>();

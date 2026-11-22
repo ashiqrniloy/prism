@@ -80,13 +80,20 @@ function recordingObserver(requests: ProviderRequest[], options: { failOnCall?: 
   };
 }
 
-function flushHarness(entries: readonly SessionEntry[], provider: ModelProvider, config = {}, secrets: readonly string[] = []) {
+function flushHarness(
+  entries: readonly SessionEntry[],
+  provider: ModelProvider,
+  config: Parameters<typeof resolveMemorySystemConfig>[0] = {},
+  secrets: readonly string[] = [],
+) {
   const data: JsonValue[] = [];
   const session = { id: "s", entries: async () => entries } as unknown as SessionContext;
+  const resolved = resolveMemorySystemConfig({ stm: { triggerTokens: 1, verbatimUserChars: 0 }, ...config });
   const flush = createObservationalFlush({
     log: fakeLog(data),
-    config: resolveMemorySystemConfig({ stm: { triggerTokens: 1 }, ...config }),
+    config: resolved,
     readState: () => ({ enabled: true }),
+    scopeFor: () => resolved.scope.text,
     onStatus: () => {},
     secretsFor: () => secrets,
     clientFor: () => clientFor(provider),
@@ -178,6 +185,7 @@ describe("memory-system session tiers", () => {
         stm: { triggerTokens: 1, instruction: "STM-RULE", thinkingLevel: "low" },
         wm: { triggerTokens: 1, instruction: "WM-RULE", thinkingLevel: "high" },
         rehearsal: { targetTokens: 1, instruction: "REHEARSAL-RULE", thinkingLevel: "minimal" },
+        scope: { text: "Deploy the service." },
       },
       [SECRET],
     );

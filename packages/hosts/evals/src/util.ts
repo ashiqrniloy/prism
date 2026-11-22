@@ -2,13 +2,7 @@ import type { EvaluationRecord, EvaluationStatus } from "@arnilo/prism";
 import { randomUUID } from "node:crypto";
 import { errorToErrorInfo, type OwnershipScope, type RunResult, redactSecrets, resolveRedactor, type SecretRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import {
-  DEFAULT_EVALUATION_PAGE_SIZE,
-  DEFAULT_EXPERIMENT_CONCURRENCY,
-  DEFAULT_SAMPLE_RATE,
-  HARD_EVALUATION_PAGE_CAP,
-  HARD_EXPERIMENT_CONCURRENCY_CAP,
-} from "./limits.js";
+import { DEFAULT_EVALUATION_PAGE_SIZE, DEFAULT_EXPERIMENT_CONCURRENCY, DEFAULT_SAMPLE_RATE } from "./limits.js";
 import type { EvaluationSampling, EvaluationSamplingMetadata, ScoreResult } from "./types.js";
 
 export function randomId(prefix: string): string {
@@ -63,7 +57,7 @@ export function normalizeConcurrency(concurrency: number | undefined): number {
   if (!Number.isInteger(value) || value < 1) {
     throw new EvalError("concurrency must be an integer >= 1", "ERR_PRISM_EVAL_BOUNDS");
   }
-  return Math.min(value, HARD_EXPERIMENT_CONCURRENCY_CAP);
+  return value;
 }
 
 export function normalizePageLimit(limit: number | undefined): number {
@@ -71,7 +65,7 @@ export function normalizePageLimit(limit: number | undefined): number {
   if (!Number.isInteger(value) || value < 1) {
     throw new EvalError("limit must be an integer >= 1", "ERR_PRISM_EVAL_BOUNDS");
   }
-  return Math.min(value, HARD_EVALUATION_PAGE_CAP);
+  return value;
 }
 
 export function validateScoreResult(result: ScoreResult): ScoreResult {

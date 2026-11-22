@@ -10,13 +10,15 @@ import type {
   ModelConfig,
   NestedRunRef,
   RunLimitCounters,
+  SessionLimitsEntryData,
   StickyDecision,
   ToolCallContent,
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { DurableRunStateOptions, RunStateCell, RunStateCellRecord } from "./run-state-cell.js";
-import { type LoadedSkillBodiesEntry, validateLoadedSkillBodies } from "./skill-load.js";
+import { type LoadedSkillBodiesEntry, MAX_PERSISTED_SKILL_BODY_BYTES, validateLoadedSkillBodies } from "./skill-load.js";
+import { ceilingsOf, isToolRoundDigestWindow, parseSessionLimitsData } from "./run-limits.js";
 import { HARD_RUN_TOOL_NAMES } from "./tools.js";
 
 export const AGENT_RUN_STATE_SCHEMA_VERSION = 1 as const;
@@ -66,6 +68,13 @@ export interface StoredAgentRunState extends AgentRunState {
    * (`hook_limit`). Absent on every other state — a naturally finished run is never continuable.
    */
   readonly stopReason?: "hook_stop" | "hook_limit";
+  /** Session-wide limit counters carried in turn checkpoints and suspensions (plan 239 Task 8). */
+  readonly sessionLimits?: SessionLimitsEntryData;
+  /**
+   * The stall window (plan 239 Task 9): `sha256:` digests of the run's last 8 settled tool rounds, oldest
+   * first. Hashes only. Absent on states saved before Task 9 and on runs with no settled round.
+   */
+  readonly toolRoundDigests?: readonly string[];
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
@@ -109,7 +118,8 @@ function assertJsonValue(value: unknown, depth: number): asserts value is JsonVa
 
 export function agentFingerprint(agent: Agent, revision: string): string {
   const config = agent.config;
-  const tools = agentToolList(agent);
+  // Source tools change with their servers; resume intersects the checkpoint grant with what they supply now.
+  const tools = agentToolList(agent, { sources: false });
   const skills = agentSkillSource(agent);
   const systemPrompt =
     config.systemPrompt === false || config.systemPrompt === undefined
@@ -151,11 +161,31 @@ export function agentId(agent: Agent): string {
   return id;
 }
 
-export function validateRunStateOptions(options: DurableRunStateOptions): void {
+/**
+ * Load-side bounds of a stored run state (plan 239 Task 4), from the agent's ceilings: the whole state, and
+ * each persisted skill body. Default: the shipped ceilings.
+ */
+export interface RunStateBounds {
+  readonly stateBytes: number;
+  readonly skillBodyBytes: number;
+}
+
+/** The run-state bounds an agent's resolved ceilings imply. */
+export function runStateBounds(ceilings: { readonly runStateBytes: number; readonly skillInstructionBytes: number }): RunStateBounds {
+  return { stateBytes: ceilings.runStateBytes, skillBodyBytes: ceilings.skillInstructionBytes };
+}
+
+const SHIPPED_RUN_STATE_BOUNDS: RunStateBounds = {
+  stateBytes: HARD_MAX_AGENT_RUN_STATE_BYTES,
+  skillBodyBytes: MAX_PERSISTED_SKILL_BODY_BYTES,
+};
+
+/** `ceiling` is the agent's `ceilings.runStateBytes` (default {@link HARD_MAX_AGENT_RUN_STATE_BYTES}). */
+export function validateRunStateOptions(options: DurableRunStateOptions, ceiling = HARD_MAX_AGENT_RUN_STATE_BYTES): void {
   if (!options.definitionRevision.trim()) throw new AgentRunStateError("Durable agent runs require definitionRevision");
-  const bytes = options.maxStateBytes ?? DEFAULT_MAX_AGENT_RUN_STATE_BYTES;
-  if (!Number.isSafeInteger(bytes) || bytes < 1 || bytes > HARD_MAX_AGENT_RUN_STATE_BYTES) {
-    throw new AgentRunStateError(`maxStateBytes must be a positive safe integer at most ${HARD_MAX_AGENT_RUN_STATE_BYTES}`);
+  const bytes = options.maxStateBytes ?? Math.min(DEFAULT_MAX_AGENT_RUN_STATE_BYTES, ceiling);
+  if (!Number.isSafeInteger(bytes) || bytes < 1 || bytes > ceiling) {
+    throw new AgentRunStateError(`maxStateBytes must be a positive safe integer at most ceilings.runStateBytes (${ceiling})`);
   }
 }
 
@@ -164,8 +194,14 @@ export async function saveAgentRunState(input: {
   readonly state: StoredAgentRunState;
   readonly redactor?: SecretRedactor;
   readonly maxStateBytes?: number;
+  /** The agent's ceilings for the skill bodies in `sessionState`; default the shipped ceilings. */
+  readonly bounds?: RunStateBounds;
 }): Promise<{ readonly record: RunStateCellRecord; readonly state: StoredAgentRunState }> {
-  const bounded = boundState(input.redactor?.redact(input.state) ?? input.state, input.maxStateBytes ?? DEFAULT_MAX_AGENT_RUN_STATE_BYTES);
+  const bounded = boundState(
+    input.redactor?.redact(input.state) ?? input.state,
+    input.maxStateBytes ?? DEFAULT_MAX_AGENT_RUN_STATE_BYTES,
+    input.bounds ?? SHIPPED_RUN_STATE_BOUNDS,
+  );
   const record = await input.cell.save({ key: bounded.runId, value: bounded });
   return { record, state: { ...bounded, version: record.version } };
 }
@@ -180,6 +216,8 @@ export function publicState(state: StoredAgentRunState): AgentRunState {
     deadlineAt: _deadlineAt,
     toolNames: _toolNames,
     stopReason: _stopReason,
+    sessionLimits: _sessionLimits,
+    toolRoundDigests: _toolRoundDigests,
     ...publicValue
   } = state;
   return publicValue;
@@ -202,7 +240,7 @@ export function initialAgentRunState(input: {
   /** Label for an agent with no id or name: a suspension still persists one full state. */
   readonly fallbackAgentId?: string;
 }): StoredAgentRunState {
-  validateRunStateOptions(input.options);
+  validateRunStateOptions(input.options, ceilingsOf(input.agent).runStateBytes);
   return {
     schemaVersion: AGENT_RUN_STATE_SCHEMA_VERSION,
     agentId:
@@ -225,7 +263,15 @@ export function initialAgentRunState(input: {
   };
 }
 
-export function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState {
+/**
+ * Fail-closed parse of a stored run state. `bounds` comes from the agent's ceilings (default the shipped ones):
+ * a state larger than a lowered `ceilings.runStateBytes` throws `AgentRunStateError`.
+ */
+export function parseAgentRunState(
+  value: unknown,
+  version?: number,
+  bounds: RunStateBounds = SHIPPED_RUN_STATE_BOUNDS,
+): StoredAgentRunState {
   if (!value || typeof value !== "object") throw new AgentRunStateError("Agent run state must be an object");
   const state = value as Partial<StoredAgentRunState>;
   if (state.schemaVersion !== AGENT_RUN_STATE_SCHEMA_VERSION)
@@ -277,7 +323,9 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
           typeof entry !== "object" ||
           typeof (entry as NestedRunRef).runId !== "string" ||
           typeof (entry as NestedRunRef).toolCallId !== "string" ||
+          typeof (entry as NestedRunRef).toolName !== "string" ||
           !Array.isArray((entry as NestedRunRef).path) ||
+          (entry as NestedRunRef).path.some((part) => typeof part !== "string") ||
           !Array.isArray((entry as NestedRunRef).approvals) ||
           (entry as NestedRunRef).approvals.some(
             (approval) => typeof approval?.id !== "string" || typeof approval?.childApprovalId !== "string",
@@ -308,14 +356,20 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
   if (state.stopReason !== undefined && state.stopReason !== "hook_stop" && state.stopReason !== "hook_limit") {
     throw new AgentRunStateError("Malformed agent run stop reason");
   }
-  // Load bounds against the hard cap, not the default: the configured maxStateBytes is a
-  // save-side policy knob, while the load-side bound is only a DoS ceiling. States saved
-  // with a raised maxStateBytes must remain resumable.
-  return boundState({ ...state, version } as StoredAgentRunState, HARD_MAX_AGENT_RUN_STATE_BYTES);
+  if (state.sessionLimits !== undefined) {
+    parseSessionLimitsData(state.sessionLimits);
+  }
+  if (state.toolRoundDigests !== undefined && !isToolRoundDigestWindow(state.toolRoundDigests)) {
+    throw new AgentRunStateError("Malformed agent run tool-round window");
+  }
+  // Load bounds against the ceiling, not the save bound: `limits.maxRunStateBytes` is a save-side policy
+  // knob, while the load-side bound is only a DoS ceiling. States saved with a raised save bound must
+  // remain resumable; a state above a lowered ceiling fails closed.
+  return boundState({ ...state, version } as StoredAgentRunState, bounds.stateBytes, bounds);
 }
 
-function boundState(state: StoredAgentRunState, maxBytes: number): StoredAgentRunState {
-  validateSessionState(state.sessionState);
+function boundState(state: StoredAgentRunState, maxBytes: number, bounds: RunStateBounds): StoredAgentRunState {
+  validateSessionState(state.sessionState, bounds);
   checkShape(state, 0);
   let text: string;
   try {
@@ -337,7 +391,7 @@ function checkShape(value: unknown, depth: number): void {
 }
 
 /** Fail-closed validation of the opt-in session-state block (load and save sides). */
-function validateSessionState(sessionState: StoredAgentRunState["sessionState"]): void {
+function validateSessionState(sessionState: StoredAgentRunState["sessionState"], bounds: RunStateBounds): void {
   if (sessionState === undefined) return;
   if (!sessionState || typeof sessionState !== "object") {
     throw new AgentRunStateError("Malformed agent run session state");
@@ -345,7 +399,7 @@ function validateSessionState(sessionState: StoredAgentRunState["sessionState"])
   const bodies = sessionState.loadedSkillBodies;
   if (bodies !== undefined) {
     try {
-      validateLoadedSkillBodies(bodies);
+      validateLoadedSkillBodies(bodies, { bodyBytes: bounds.skillBodyBytes, totalBytes: bounds.stateBytes });
     } catch (error) {
       throw new AgentRunStateError(error instanceof Error ? error.message : String(error));
     }

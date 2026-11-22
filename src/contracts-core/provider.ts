@@ -45,14 +45,40 @@ export interface PromptCacheHints {
   readonly breakpoints?: readonly PromptCacheBreakpoint[];
 }
 
+/**
+ * How a session run asks for structured output: `native` sends the schema to a model that declares
+ * `capabilities.structuredOutput`; `prompted` sends one instruction block carrying the schema to any
+ * model; `auto` (default) picks native when the run's model declares the capability, else prompted.
+ */
+export type StructuredOutputMode = "auto" | "native" | "prompted";
+
 export interface StructuredOutputOptions {
   readonly name: string;
   readonly schema: JsonObject;
   readonly strict?: boolean;
+  /** Default `"auto"`. A direct provider request (not a session run) supports native only. */
+  readonly mode?: StructuredOutputMode;
+  /**
+   * Session runs: how many times an invalid final reply is sent back with its violations (0–3,
+   * default 1). Each repair is one extra model turn; repairs do not count against `maxContinuations`.
+   */
+  readonly repair?: number;
+}
+
+/**
+ * Connect and idle timeouts for one provider request. `connectMs` bounds the wait for response headers
+ * (default 60,000); `idleMs` bounds the gap between body chunks while the body is read (default 300,000).
+ * `null` disables one. A timeout fails the request with `code: "ETIMEDOUT"`, `failureClass: "transient"`.
+ */
+export interface ProviderRequestTimeouts {
+  readonly connectMs?: number | null;
+  readonly idleMs?: number | null;
 }
 
 export interface ProviderRequestOptions {
   readonly sessionId?: string;
+  /** Connect/idle timeouts for the provider request; see {@link ProviderRequestTimeouts}. */
+  readonly timeouts?: ProviderRequestTimeouts;
   readonly cacheRetention?: CacheRetention;
   readonly cacheKey?: string;
   readonly cache?: PromptCacheHints;

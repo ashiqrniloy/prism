@@ -129,7 +129,7 @@ test("comparison_validates_options", () => {
     { alpha: NaN },
     { seed: 0.5 },
     { resamples: 0 },
-    { resamples: 100001 },
+    { resamples: 1.5 },
     { scorers: [] },
     { scorers: ["success", "success"] },
   ]) {

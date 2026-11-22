@@ -46,6 +46,28 @@ describe("packageConformance", () => {
     assert.ok(elapsed < 1000, `conformance run took ${elapsed}ms (budget: 1000ms)`);
   });
 
+  it("conformance_passes_for_a_tool_source_package", async () => {
+    // Plan 234 Task 4: source tools appear in inspect() while loaded and leave with the package.
+    const result = await packageConformance(
+      definePackage({
+        name: "@acme/tool-source",
+        version: "1.0.0",
+        requires: { api: 1 },
+        setup(prism) {
+          prism.tools.source(() => [
+            {
+              name: "sourced",
+              parameters: {},
+              effects: ["read"],
+              execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "sourced" }),
+            },
+          ]);
+        },
+      }),
+    );
+    assert.equal(result.ok, true, JSON.stringify(result.checks, null, 2));
+  });
+
   it("conformance_catches_leak", async () => {
     const result = await packageConformance(
       definePackage({

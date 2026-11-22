@@ -11,7 +11,7 @@ export interface HistoryRepair {
   readonly repaired: readonly string[];
 }
 
-function interruptedResult(call: { readonly id: string; readonly name: string }): ToolResult {
+export function interruptedResult(call: { readonly id: string; readonly name: string }): ToolResult {
   return {
     toolCallId: call.id,
     name: call.name,

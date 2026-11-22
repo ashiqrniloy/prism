@@ -23,7 +23,6 @@ import {
   verifyCodingArtifactBytes,
   writeCodingPlanFile,
 } from "../coding-checkpoint.js";
-import { HARD_MAX_PLAN_BYTES } from "../limits.js";
 
 const FP = fingerprintJson({ tools: ["repo_list", "git_status"], policy: "deny-shell" });
 const POLICY = fingerprintJson({ deny: ["shell"] });
@@ -43,7 +42,8 @@ describe("coding checkpoint limits", () => {
     const limits = resolveCodingCheckpointLimits();
     assert.equal(limits.maxPlanBytes, 256 * 1024);
     assert.equal(limits.maxTodos, 1_000);
-    assert.throws(() => resolveCodingCheckpointLimits({ maxPlanBytes: HARD_MAX_PLAN_BYTES + 1 }), /maxPlanBytes/);
+    assert.throws(() => resolveCodingCheckpointLimits({ maxPlanBytes: 0 }), /maxPlanBytes/);
+    assert.equal(resolveCodingCheckpointLimits({ maxPlanBytes: 64 * 1024 * 1024 }).maxPlanBytes, 64 * 1024 * 1024);
   });
 });
 

@@ -3,7 +3,6 @@ import type { HookRegistrar, JsonObject, Message, ModelClient, ModelRef } from "
 import { resolveRedactor } from "@arnilo/prism";
 import type { Memory, MemoryConsentInput, MemoryContextProviderOptions, RecallScoringOptions } from "@arnilo/prism-memory-system/core";
 import {
-  HARD_TOP_K_CAP,
   lexicalDice,
   lexicalTerms,
   MemoryScopeError,
@@ -48,7 +47,7 @@ import { noteImportance, storageStrength, strengthPrior } from "./lifecycle/stre
 import { mergeNoteLinks } from "./links.js";
 import { createNoteNavigator } from "./navigation.js";
 import { registerMemoryFabricContext } from "./provider.js";
-import { createFabricRecall, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
+import { createFabricRecall, DEFAULT_RECALL_WINDOW, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
 import { createScopeRecall, resolveScopePriors } from "./scope/recall.js";
 import { createFabricConversationSearch } from "./search.js";
 import { createLongTermMemoryTools } from "./tools.js";
@@ -896,7 +895,7 @@ export function createLongTermMemory(options: CreateMemoryFabricOptions): Memory
     if (scanned !== undefined) return scanned;
     const recalled = await source.recall(query, {
       minSimilarity,
-      topK: Math.min(HARD_TOP_K_CAP, limit * RECALL_OVERSAMPLE),
+      topK: Math.min(options.recallWindow ?? DEFAULT_RECALL_WINDOW, limit * RECALL_OVERSAMPLE),
       ...(scoring === undefined ? {} : { scoring }),
       ...(signal === undefined ? {} : { signal }),
     });
@@ -977,6 +976,7 @@ export function createLongTermMemory(options: CreateMemoryFabricOptions): Memory
     priors,
     onRecall: options.onRecall,
     ...(options.queryExpansion === true ? { queryExpansion: true } : {}),
+    ...(options.recallWindow === undefined ? {} : { recallWindow: options.recallWindow }),
   });
   const lifecycles = orderedMemories.map((scopeMemory) => createFabricLifecycle(scopeMemory));
   const routedVerify = async (id: string, verifyOptions: { readonly signal?: AbortSignal } = {}): Promise<boolean> => {

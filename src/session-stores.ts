@@ -5,15 +5,13 @@ import {
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
-  DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
-  DEFAULT_SESSION_LIST_LIMIT,
-  HARD_MAX_SESSION_LIST_LIMIT,
-  HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
-  HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
-  HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
+  clipSessionSearchSnippet,
   type Message,
   type OwnershipScope,
   type PersistencePage,
+  type ResolvedSessionQueryLimits,
+  resolveSessionListLimit,
+  resolveSessionQueryLimits,
   resolveSessionSearchQuery,
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_LINKS_DATA_KEY,
@@ -22,10 +20,12 @@ import {
   SessionAppendConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
+  SessionBranchReadLimitError,
   type SessionEntry,
   type SessionLinkFilter,
   type SessionLinks,
   type SessionListQuery,
+  type SessionQueryLimits,
   type SessionSearchHit,
   type SessionSearchQuery,
   SessionSearchUnsupportedError,
@@ -67,34 +67,193 @@ export function createSessionEntry(options: CreateSessionEntryOptions): SessionE
   };
 }
 
-// ponytail: max pages the reader path will follow before stopping. Guards against a buggy/
-// malicious reader that never ends `nextCursor`. Ancestor chains are short in practice; bump
-// this if a legitimate branch exceeds it.
-const MAX_BRANCH_PAGES = 64;
+/**
+ * Shipped `ceilings.branchReadPages`: the most pages a paged branch read follows. Guards against a buggy or
+ * malicious reader that never ends `nextCursor`. First-party stores answer a branch in one page.
+ */
+export const DEFAULT_MAX_BRANCH_PAGES = 64;
 
-export function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>;
+/** Options for a paged branch read (plan 239 Task 4). */
+export interface BranchReadOptions {
+  /** Pages to follow before the read fails with `SessionBranchReadLimitError`. Default {@link DEFAULT_MAX_BRANCH_PAGES}. */
+  readonly maxPages?: number;
+}
+
+export function getSessionBranchEntries(
+  reader: BranchReader,
+  query: SessionBranchRead,
+  options?: BranchReadOptions,
+): Promise<readonly SessionEntry[]>;
 export function getSessionBranchEntries(entries: readonly SessionEntry[], options?: SessionBranchOptions): readonly SessionEntry[];
 export function getSessionBranchEntries(
   input: readonly SessionEntry[] | BranchReader,
   options: SessionBranchOptions | SessionBranchRead = {},
+  read?: BranchReadOptions,
 ): readonly SessionEntry[] | Promise<readonly SessionEntry[]> {
   return typeof input === "function"
-    ? readBranchFromReader(input, options as SessionBranchRead)
+    ? readBranchFromReader(input, options as SessionBranchRead, read)
     : getSessionBranchEntriesCore(input, options as SessionBranchOptions);
 }
 
-async function readBranchFromReader(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]> {
+async function readBranchFromReader(
+  reader: BranchReader,
+  query: SessionBranchRead,
+  options?: BranchReadOptions,
+): Promise<readonly SessionEntry[]> {
+  // Reader returns an ancestor set in any order. Order once and keep those objects.
+  // Detachment is the store's clone (readBranchPath / list), not a second walk here.
+  return orderBranch(await readBranchPages(reader, query, options), { leafId: query.leafId });
+}
+
+async function readBranchPages(reader: BranchReader, query: SessionBranchRead, options?: BranchReadOptions): Promise<SessionEntry[]> {
+  const maxPages = options?.maxPages ?? DEFAULT_MAX_BRANCH_PAGES;
+  if (!Number.isSafeInteger(maxPages) || maxPages < 1) throw new TypeError("maxPages must be a positive safe integer");
   const items: SessionEntry[] = [];
   let cursor: string | undefined;
-  for (let page = 0; page < MAX_BRANCH_PAGES; page++) {
+  for (let page = 0; ; page++) {
+    // A cursor left after the last allowed page means the branch is longer than the read may follow:
+    // fail closed rather than return a short branch.
+    if (page >= maxPages) throw new SessionBranchReadLimitError(query.sessionId, maxPages);
     const result = await reader(cursor ? { ...query, cursor } : query);
     items.push(...result.items);
     cursor = result.nextCursor;
-    if (!cursor) break;
+    if (!cursor) return items;
   }
-  // Reader returns an ancestor set in any order. Order once and keep those objects.
-  // Detachment is the store's clone (readBranchPath / list), not a second walk here.
-  return orderBranch(items, { leafId: query.leafId });
+}
+
+type CompactionCheckpoint = NonNullable<CompactionEntryData["checkpoint"]>;
+
+/**
+ * Plan 230 Task 3: a snapshot built from a tail read holds only the branch from its newest compaction's
+ * `throughEntryId` on (plus pinned entries). The compaction's checkpoint stands for the part before it, and
+ * `compactionIndex` is the compaction entry's index in `snapshot.entries`.
+ */
+interface TailBase {
+  readonly checkpoint: CompactionCheckpoint;
+  readonly compactionIndex: number;
+}
+const tailBases = new WeakMap<SessionContextSnapshot, TailBase>();
+
+/**
+ * Kernel-internal (plan 230 Task 3): the snapshot of `query`'s branch, read from its newest compaction on
+ * when the store implements `readBranchPath`. A store that ignores `from`, a branch with no compaction, or a
+ * compaction written without a checkpoint yields the whole branch, as `rebuildSessionContext` would.
+ */
+export async function readSessionSnapshot(
+  store: SessionStore,
+  query: SessionBranchRead,
+  options?: BranchReadOptions,
+): Promise<SessionContextSnapshot> {
+  const read = store.readBranchPath;
+  if (!read) return rebuildSessionContextCore(await store.list(query.sessionId), { leafId: query.leafId });
+  const reader: BranchReader = (page) => read.call(store, page);
+  const tail = snapshotFromTail(await readBranchPages(reader, { ...query, from: "compaction" }, options), query.leafId);
+  return tail ?? snapshotFromBranch(await readBranchFromReader(reader, { ...query, from: undefined }, options));
+}
+
+/** The snapshot of a `from: "compaction"` read, or `undefined` when the tail cannot stand alone (no usable checkpoint). */
+function snapshotFromTail(items: readonly SessionEntry[], leafId: string | undefined): SessionContextSnapshot | undefined {
+  const leaf = leafId ?? items.at(-1)?.id;
+  // Nothing stored for the session (or the leaf): the caller decides whether that is an unknown leaf.
+  if (!leaf || items.length === 0) return snapshotFromBranch([]);
+  const byId = new Map(items.map((entry) => [entry.id, entry]));
+  if (!byId.has(leaf)) throw new Error(`Unknown session leaf: ${leaf}`);
+  const chain: SessionEntry[] = [];
+  for (let entry = byId.get(leaf); entry; entry = entry.parentId === undefined ? undefined : byId.get(entry.parentId)) chain.push(entry);
+  chain.reverse();
+  const first = chain[0];
+  // The walk reached the root: this is the whole branch.
+  if (!first || first.parentId === undefined) return snapshotFromBranch(chain);
+  let compactionIndex = chain.length - 1;
+  while (compactionIndex >= 0 && chain[compactionIndex]?.kind !== "compaction") compactionIndex -= 1;
+  const compaction = chain[compactionIndex];
+  const data = compaction && isCompactionEntryData(compaction.data) ? compaction.data : undefined;
+  if (!compaction?.summary || !data || !isCompactionCheckpoint(data.checkpoint) || data.throughEntryId !== first.id) return undefined;
+  const pinned: SessionEntry[] = [];
+  for (const id of data.checkpoint.pinnedEntryIds) {
+    const entry = byId.get(id);
+    if (!entry) return undefined;
+    pinned.push(entry);
+  }
+  const snapshot = snapshotFromBranch([...pinned, ...chain]);
+  tailBases.set(snapshot, { checkpoint: data.checkpoint, compactionIndex: pinned.length + compactionIndex });
+  return snapshot;
+}
+
+function isCompactionCheckpoint(value: unknown): value is CompactionCheckpoint {
+  if (!value || typeof value !== "object") return false;
+  const checkpoint = value as Record<string, unknown>;
+  return (
+    checkpoint.version === 1 &&
+    Number.isSafeInteger(checkpoint.branchLength) &&
+    (checkpoint.branchLength as number) >= 0 &&
+    Array.isArray(checkpoint.packageState) &&
+    Array.isArray(checkpoint.pinnedEntryIds) &&
+    checkpoint.pinnedEntryIds.every((id) => typeof id === "string") &&
+    Array.isArray(checkpoint.externalState) &&
+    checkpoint.externalState.every(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.vendor === "string" &&
+        typeof item.key === "string" &&
+        Number.isSafeInteger(item.count) &&
+        Number.isSafeInteger(item.bytes) &&
+        Number.isSafeInteger(item.seq),
+    )
+  );
+}
+
+/**
+ * Kernel-internal (plan 230 Task 3): the branch tail a `from: "compaction"` read returns, in branch order with
+ * the leaf last. The walk from `leafId` stops at the newest compaction's `throughEntryId` (included); the
+ * entries its `keepEntryIds` name that the walk did not reach come first. `get` answers this session's entries.
+ */
+function collectBranchTail(get: (id: string) => SessionEntry | undefined, leafId: string): SessionEntry[] {
+  const chain: SessionEntry[] = [];
+  let compaction: CompactionEntryData | undefined;
+  let stopped = false;
+  for (let id: string | undefined = leafId; id !== undefined; ) {
+    const entry = get(id);
+    if (!entry) throw new Error(id === leafId ? `Unknown session leaf: ${id}` : `Missing session parent: ${id}`);
+    chain.push(entry);
+    if (compaction?.throughEntryId === entry.id) {
+      stopped = true;
+      break;
+    }
+    if (!compaction && entry.kind === "compaction") compaction = isCompactionEntryData(entry.data) ? entry.data : {};
+    id = entry.parentId;
+  }
+  chain.reverse();
+  if (!stopped) return chain;
+  const walked = new Set(chain.map((entry) => entry.id));
+  const pinned = (compaction?.keepEntryIds ?? []).flatMap((id) => {
+    const entry = walked.has(id) ? undefined : get(id);
+    if (entry) walked.add(id);
+    return entry ? [entry] : [];
+  });
+  return [...pinned, ...chain];
+}
+
+/**
+ * Kernel-internal (plan 230 Task 3): what the snapshot stands for beyond its entries. `branchLength` counts the
+ * whole branch, compacted part included. Package and external state fold from the checkpoint's `packageState`
+ * and `externalState`, then from `entries`: those after a tail snapshot's compaction, or the whole branch.
+ */
+export function snapshotTail(snapshot: SessionContextSnapshot): {
+  readonly branchLength: number;
+  readonly packageState: CompactionCheckpoint["packageState"];
+  readonly externalState: CompactionCheckpoint["externalState"];
+  readonly entries: readonly SessionEntry[];
+} {
+  const base = tailBases.get(snapshot);
+  if (!base) return { branchLength: snapshot.entries.length, packageState: [], externalState: [], entries: snapshot.entries };
+  return {
+    branchLength: base.checkpoint.branchLength + snapshot.entries.length - base.compactionIndex,
+    packageState: base.checkpoint.packageState,
+    externalState: base.checkpoint.externalState,
+    entries: snapshot.entries.slice(base.compactionIndex + 1),
+  };
 }
 
 type SessionIndex = { byId: Map<string, SessionEntry>; parentIds: Set<string> };
@@ -215,6 +374,8 @@ export function extendSnapshot(snapshot: SessionContextSnapshot, entry: SessionE
     summaries: entry.kind === "summary" && entry.summary ? [...snapshot.summaries, entry.summary] : [...snapshot.summaries],
   };
   extendableSnapshots.add(next);
+  const base = tailBases.get(snapshot);
+  if (base) tailBases.set(next, base);
   return next;
 }
 
@@ -224,16 +385,17 @@ export interface CreateMemorySessionStoreOptions {
   /** Default `"linear"`: capped in-process scan. `"unsupported"`: typed throw. */
   readonly sessionSearchMode?: MemorySessionSearchMode;
   /**
-   * Optional overrides for the capped in-process scan. Hosts with a small session set can
-   * raise the caps (bounded by the contract `HARD_MAX_SESSION_SEARCH_LINEAR_*` values);
-   * defaults are the contract `DEFAULT_MAX_SESSION_SEARCH_LINEAR_*` caps. Values below 1
-   * or above the hard cap fail store construction closed with a `TypeError`.
+   * Ceilings of the capped in-process scan; the store is host-constructed, so only the host sets them.
+   * Defaults are the contract `DEFAULT_MAX_SESSION_SEARCH_LINEAR_*` caps. A value that is not a positive
+   * safe integer fails store construction closed with a `TypeError`.
    */
   readonly search?: {
     readonly maxLinearSessions?: number;
     readonly maxLinearEntries?: number;
     readonly maxLinearBytes?: number;
   };
+  /** List and search ceilings (plan 239 Task 4). See {@link SessionQueryLimits}. */
+  readonly queryLimits?: SessionQueryLimits;
 }
 
 /** Resolved bounds for the capped linear session scan. */
@@ -245,31 +407,16 @@ export interface LinearSearchCaps {
 
 function resolveLinearSearchCaps(search: CreateMemorySessionStoreOptions["search"]): LinearSearchCaps {
   return {
-    sessions: assertLinearCap(
-      search?.maxLinearSessions,
-      "maxLinearSessions",
-      DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
-      HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
-    ),
-    entries: assertLinearCap(
-      search?.maxLinearEntries,
-      "maxLinearEntries",
-      DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
-      HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
-    ),
-    bytes: assertLinearCap(
-      search?.maxLinearBytes,
-      "maxLinearBytes",
-      DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
-      HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
-    ),
+    sessions: assertLinearCap(search?.maxLinearSessions, "maxLinearSessions", DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS),
+    entries: assertLinearCap(search?.maxLinearEntries, "maxLinearEntries", DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES),
+    bytes: assertLinearCap(search?.maxLinearBytes, "maxLinearBytes", DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES),
   };
 }
 
-function assertLinearCap(value: number | undefined, name: string, fallback: number, hardMax: number): number {
+function assertLinearCap(value: number | undefined, name: string, fallback: number): number {
   const cap = value ?? fallback;
-  if (!Number.isSafeInteger(cap) || cap < 1 || cap > hardMax) {
-    throw new TypeError(`CreateMemorySessionStoreOptions.search.${name} must be a safe integer from 1 to ${hardMax}`);
+  if (!Number.isSafeInteger(cap) || cap < 1) {
+    throw new TypeError(`CreateMemorySessionStoreOptions.search.${name} must be a positive safe integer`);
   }
   return cap;
 }
@@ -280,7 +427,37 @@ function assertLinearCap(value: number | undefined, name: string, fallback: numb
  * `agent.sessions` failing closed with `UnsupportedStoreCapabilityError`.
  */
 export function sessionStoreCapabilities(store: SessionStore): readonly SessionStoreCapability[] {
-  return (["listSessions", "deleteSession", "searchSessions"] as const).filter((capability) => typeof store[capability] === "function");
+  const methods = (["listSessions", "deleteSession", "searchSessions", "appendMany"] as const).filter(
+    (capability) => typeof store[capability] === "function",
+  );
+  // `tipCheck` is a declared append guard, not a method (plan 230 Task 2).
+  return store.tipCheck === true ? [...methods, "tipCheck"] : methods;
+}
+
+/** What a store checks before writing an `appendMany` batch: its session and the parents it must already hold. */
+export interface SessionAppendBatch {
+  readonly sessionId: string;
+  /** Distinct `parentId`s not in the batch: each must already be an entry of `sessionId`. */
+  readonly externalParentIds: readonly string[];
+}
+
+/**
+ * The store-independent part of `SessionStore.appendMany` validation (plan 230 Task 5): one session, no id
+ * twice, and the parents the batch does not carry itself. `undefined` for an empty batch. A store then checks
+ * the external parents and the ids against what it holds, as `append` does, before writing anything.
+ */
+export function validateSessionAppendBatch(entries: readonly SessionEntry[]): SessionAppendBatch | undefined {
+  const first = entries[0];
+  if (!first) return undefined;
+  const ids = new Set<string>();
+  const external = new Set<string>();
+  for (const entry of entries) {
+    if (entry.sessionId !== first.sessionId) throw new TypeError("appendMany entries must belong to one session");
+    if (ids.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+    if (entry.parentId !== undefined && !ids.has(entry.parentId)) external.add(entry.parentId);
+    ids.add(entry.id);
+  }
+  return { sessionId: first.sessionId, externalParentIds: [...external] };
 }
 
 export function createMemorySessionStore(
@@ -291,14 +468,31 @@ export function createMemorySessionStore(
   const bySession = new Map<string, SessionEntry[]>();
   const leafBySession = new Map<string, string>();
   const idempotencySeen = new Set<string>();
+  /** Parent id → its one linear (tip-checked) child. Entry ids are store-unique, so the parent id is the key. */
+  const linearChild = new Map<string, string>();
   const mode = options.sessionSearchMode ?? "linear";
   const searchCaps = resolveLinearSearchCaps(options.search);
+  const queryLimits = resolveSessionQueryLimits(options.queryLimits);
 
   for (const entry of initialEntries) add(entry);
 
   return {
+    tipCheck: true,
     async append(entry, appendOptions) {
       add(entry, appendOptions);
+    },
+    async appendMany(entries, manyOptions) {
+      manyOptions?.signal?.throwIfAborted();
+      const batch = validateSessionAppendBatch(entries);
+      if (!batch) return;
+      // Every check runs before the first write, so a rejected batch writes nothing.
+      for (const parentId of batch.externalParentIds) {
+        if (byId.get(parentId)?.sessionId !== batch.sessionId) {
+          throw new SessionAppendConflictError({ code: SESSION_APPEND_CONFLICT_CODE, expectedParentId: parentId });
+        }
+      }
+      for (const entry of entries) if (byId.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
+      for (const entry of entries) add(entry);
     },
     async list(sessionId) {
       return (bySession.get(sessionId) ?? []).map(cloneEntry);
@@ -309,17 +503,20 @@ export function createMemorySessionStore(
     },
     async searchSessions(query) {
       if (mode === "unsupported") throw new SessionSearchUnsupportedError();
-      return searchLinearSessions(bySession, leafBySession, query, searchCaps);
+      return searchLinearSessions(bySession, leafBySession, query, searchCaps, queryLimits);
     },
     async listSessions(query) {
       query.signal?.throwIfAborted();
-      return listMemorySessions(bySession, leafBySession, query);
+      return listMemorySessions(bySession, leafBySession, query, queryLimits);
     },
     async deleteSession(sessionId, scope) {
       const entries = bySession.get(sessionId);
       // Fail closed and non-enumerating: an absent session and another scope's session answer alike.
       if (!entries || entries.length === 0 || !entriesInScope(entries, scope)) return false;
-      for (const entry of entries) byId.delete(entry.id);
+      for (const entry of entries) {
+        byId.delete(entry.id);
+        linearChild.delete(entry.id);
+      }
       bySession.delete(sessionId);
       leafBySession.delete(sessionId);
       return true;
@@ -328,7 +525,13 @@ export function createMemorySessionStore(
       const entries = bySession.get(query.sessionId) ?? [];
       const leafId = query.leafId ?? tipLeafId(entries);
       if (!leafId) return { items: [] };
-      const chain = orderBranch(entries, { leafId });
+      const chain =
+        query.from === "compaction"
+          ? collectBranchTail((id) => {
+              const entry = byId.get(id);
+              return entry?.sessionId === query.sessionId ? entry : undefined;
+            }, leafId)
+          : orderBranch(entries, { leafId });
       const start = query.cursor !== undefined ? decodeBranchOffset(query.cursor) : 0;
       const limit = query.limit ?? chain.length;
       const items = chain.slice(start, start + limit).map(cloneEntry);
@@ -351,13 +554,13 @@ export function createMemorySessionStore(
     // expectedParentId is same-session existence validation (the parent must already
     // be in the store for THIS session, or be undefined for a root). A parent from
     // another session is rejected: the write would be unreadable, since every branch
-    // walk is per-session. Tip-CAS is intentionally NOT used: prism
-    // allows branching from any existing leaf (checkout + append), so a stale-but-
-    // existing parent is a valid branch, not a conflict. DB adapters may layer
-    // stricter tip-CAS via unique constraints for linear-only sessions.
+    // walk is per-session. A stale-but-existing parent is a valid branch (checkout +
+    // append) unless the append says `tip`: then a parent that already has a linear
+    // child means another writer moved the tip (plan 230 Task 2).
+    const linearParent = options?.tip === true ? options.expectedParentId : undefined;
     if (options?.expectedParentId !== undefined) {
       const parent = byId.get(options.expectedParentId);
-      if (!parent || parent.sessionId !== entry.sessionId) {
+      if (!parent || parent.sessionId !== entry.sessionId || (linearParent !== undefined && linearChild.has(linearParent))) {
         throw new SessionAppendConflictError({
           code: SESSION_APPEND_CONFLICT_CODE,
           expectedParentId: options.expectedParentId,
@@ -368,6 +571,7 @@ export function createMemorySessionStore(
     if (byId.has(entry.id)) throw new Error(`Duplicate session entry id: ${entry.id}`);
     const snapshot = cloneEntry(entry);
     if (dedupKey !== undefined) rememberIdempotencyKey(idempotencySeen, dedupKey);
+    if (linearParent !== undefined) linearChild.set(linearParent, snapshot.id);
     byId.set(snapshot.id, snapshot);
     const entries = bySession.get(snapshot.sessionId) ?? [];
     entries.push(snapshot);
@@ -378,15 +582,17 @@ export function createMemorySessionStore(
 
 /**
  * Shared linear (unindexed) session search over already-grouped entries: the memory store's default
- * mode and the JSONL store's implementation. `caps` defaults to the contract linear caps.
+ * mode and the JSONL store's implementation. `caps` defaults to the contract linear caps, `limits` to the
+ * shipped store query limits.
  */
 export function searchLinearSessions(
   bySession: Map<string, SessionEntry[]>,
   leafBySession: Map<string, string>,
   query: SessionSearchQuery,
   caps: LinearSearchCaps = resolveLinearSearchCaps(undefined),
+  limits: ResolvedSessionQueryLimits = resolveSessionQueryLimits(),
 ): PersistencePage<SessionSearchHit> {
-  const q = resolveSessionSearchQuery(query);
+  const q = resolveSessionSearchQuery(query, limits);
   q.signal?.throwIfAborted();
 
   let sessionsScanned = 0;
@@ -477,7 +683,7 @@ export function searchLinearSessions(
       updatedAt: updatedAt || undefined,
       label,
       summary,
-      snippet: clipSnippet(snippetSource ?? label ?? summary),
+      snippet: clipSnippet(snippetSource ?? label ?? summary, limits.searchSnippetBytes),
       metadata: workspaceRoot !== undefined ? { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } : undefined,
     });
   }
@@ -511,11 +717,8 @@ function utf8Bytes(value: string | undefined): number {
   return value ? new TextEncoder().encode(value).byteLength : 0;
 }
 
-function clipSnippet(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  const encoded = new TextEncoder().encode(value);
-  if (encoded.byteLength <= DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES) return value;
-  return new TextDecoder().decode(encoded.slice(0, DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES));
+function clipSnippet(value: string | undefined, maxBytes: number): string | undefined {
+  return value ? clipSessionSearchSnippet(value, maxBytes) : undefined;
 }
 
 function encodeSearchCursor(updatedAt: string, sessionId: string): string {
@@ -684,11 +887,9 @@ function listMemorySessions(
   bySession: Map<string, SessionEntry[]>,
   leafBySession: Map<string, string>,
   query: SessionListQuery,
+  limits: ResolvedSessionQueryLimits,
 ): PersistencePage<SessionSummary> {
-  const limit = query.limit ?? DEFAULT_SESSION_LIST_LIMIT;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_SESSION_LIST_LIMIT) {
-    throw new TypeError(`SessionListQuery.limit must be a safe integer from 1 to ${HARD_MAX_SESSION_LIST_LIMIT}`);
-  }
+  const limit = resolveSessionListLimit(query, limits);
   const order = query.order ?? "desc";
   if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
   assertSessionLinkFilter(query);

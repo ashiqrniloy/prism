@@ -19,7 +19,6 @@ export {
   DEFAULT_ARCHIVE_CONFIG,
   MAX_ARCHIVE_BELOW,
   MAX_ARCHIVED_HITS,
-  MAX_GRACE_SESSIONS,
   shouldArchive,
 } from "./archive.js";
 export type { CapacityLimits, CapacityNote, CapacityUsage, ExchangeCapacityLimits } from "./capacity.js";
@@ -30,8 +29,6 @@ export {
   DEFAULT_EXCHANGE_CAPACITY,
   evictionOrder,
   exchangeDemotionOrder,
-  MAX_FABRIC_CAPACITY_NOTES,
-  MAX_FABRIC_CAPACITY_TOKENS,
   overCapacity,
 } from "./capacity.js";
 export {
@@ -78,8 +75,6 @@ export {
 
 /** Distinct sessions a candidate must be used in before it is verified. */
 export const DEFAULT_VERIFY_AFTER_SESSIONS = 2;
-/** The hard cap keeps a misconfigured threshold from making a candidate unverifiable. */
-export const HARD_VERIFY_AFTER_SESSIONS = 100;
 
 const MAX_EXPORT_PAGES = 10_000;
 

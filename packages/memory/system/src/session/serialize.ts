@@ -63,6 +63,11 @@ export interface SourceBatch {
  * is one batch whose text equals `serializeSourceEntries(entries, secrets, maxBytes)`. A single entry
  * larger than the budget is redacted, then cut, and ends with a marker naming its id and full size;
  * the marker never carries the cut bytes.
+ *
+ * A tool call and its results stay in one batch (plan 218.3 Task 12): when a batch closes before a tool result, the
+ * assistant message that made the call (and the results already batched) move to the next batch, so STM never sees
+ * an output without its call, or a call without its output. An output larger than the budget is cut to what the call
+ * leaves.
  */
 export function serializeSourceBatches(
   entries: readonly SessionEntry[],
@@ -71,7 +76,7 @@ export function serializeSourceBatches(
   /**
    * Where a batch of several entries closes (plan 217 Task 6): a backlog splits into passes of about this size
    * instead of one batch up to `maxBytes`. Only `maxBytes` ever cuts an entry; one entry larger than the target
-   * travels alone, whole.
+   * travels alone (with its call), whole.
    */
   targetBytes: number = maxBytes,
 ): readonly SourceBatch[] {
@@ -79,41 +84,64 @@ export function serializeSourceBatches(
   if (!Number.isSafeInteger(targetBytes) || targetBytes < 256) throw new RangeError("targetBytes must be a safe integer of at least 256");
   const closeAt = Math.min(maxBytes, targetBytes);
   const batches: SourceBatch[] = [];
-  let batch: SessionEntry[] = [];
-  let text = "";
-  let bytes = 0;
-  const close = (): void => {
-    if (batch.length) batches.push({ entries: batch, text });
-    batch = [];
-    text = "";
-    bytes = 0;
+  /** One batched entry: its serialized text, and the gap line before it when it does not open a batch. */
+  type Piece = { readonly entry: SessionEntry; readonly serialized: string; readonly gap?: string };
+  let batch: Piece[] = [];
+  const textOf = (pieces: readonly Piece[]): string =>
+    pieces.map((piece, i) => (i > 0 && piece.gap ? `${piece.gap}\n${piece.serialized}` : piece.serialized)).join("\n");
+  const bytesOf = (pieces: readonly Piece[]): number => Buffer.byteLength(textOf(pieces), "utf8");
+  const close = (keep: Piece[] = []): void => {
+    if (batch.length) batches.push({ entries: batch.map((piece) => piece.entry), text: textOf(batch) });
+    batch = keep;
+  };
+  /** The open tool round at the batch's end (its call and the results batched so far), when something precedes it. */
+  const openRound = (): Piece[] => {
+    let at = batch.length - 1;
+    while (at >= 0 && roleOf(batch[at]!.entry) === "tool") at -= 1;
+    if (at <= 0 || !hasToolCalls(batch[at]!.entry)) return [];
+    return batch.splice(at);
   };
   for (const entry of entries) {
     const serialized = serializeSessionEntry(entry, secrets);
     const size = Buffer.byteLength(serialized, "utf8");
+    const gap = gapMarker(batch.at(-1)?.entry, entry);
+    const isResult = roleOf(entry) === "tool";
     if (size > maxBytes) {
-      // An entry that cannot fit even alone travels by itself, cut, with a marker.
+      // An entry that cannot fit even alone travels cut, with a marker, after its call when it is a tool result.
+      let round = isResult ? openRound() : [];
       close();
-      batches.push({ entries: [entry], text: truncatedEntry(entry, serialized, size, maxBytes) });
+      let roundBytes = round.length ? bytesOf(round) + 1 : 0;
+      if (roundBytes > maxBytes / 4) {
+        batches.push({ entries: round.map((piece) => piece.entry), text: textOf(round) });
+        round = [];
+        roundBytes = 0;
+      }
+      const cut = truncatedEntry(entry, serialized, size, maxBytes - roundBytes);
+      batches.push({ entries: [...round.map((piece) => piece.entry), entry], text: round.length ? `${textOf(round)}\n${cut}` : cut });
       continue;
     }
-    // Same text `serializeSourceEntries` writes: a gap line when ten minutes passed in this batch.
-    const gap = gapMarker(batch.at(-1), entry);
-    const piece = gap ? `${gap}\n${serialized}` : serialized;
-    const added = Buffer.byteLength(piece, "utf8") + (text ? 1 : 0);
-    if (batch.length && bytes + added > closeAt) {
-      close();
-      batch.push(entry);
-      text = serialized;
-      bytes = size;
-      continue;
+    const piece: Piece = { entry, serialized, ...(gap ? { gap } : {}) };
+    if (batch.length && bytesOf([...batch, piece]) > closeAt) {
+      const round = isResult ? openRound() : [];
+      close(round);
+      // A round that no longer fits with this result goes on alone; the result opens its own batch.
+      if (batch.length && bytesOf([...batch, piece]) > maxBytes) close();
     }
-    batch.push(entry);
-    text += `${text ? "\n" : ""}${piece}`;
-    bytes += added;
+    batch.push(piece);
   }
   close();
   return batches;
+}
+
+function roleOf(entry: SessionEntry): string | undefined {
+  return entry.kind === "message" ? entry.message?.role : undefined;
+}
+
+/** Whether `entry` is an assistant message that calls a tool. */
+export function hasToolCalls(entry: SessionEntry): boolean {
+  if (roleOf(entry) !== "assistant") return false;
+  const content = entry.message?.content;
+  return Array.isArray(content) && content.some((block) => (block as { type?: string }).type === "tool_call");
 }
 
 function truncatedEntry(entry: SessionEntry, full: string, size: number, maxBytes: number): string {

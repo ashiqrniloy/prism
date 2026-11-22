@@ -16,7 +16,6 @@ import {
   createResourceDocumentLoader,
   createWebFetchDocumentLoader,
   deleteSource,
-  HARD_RETRIEVE_SCOPE_CAP,
   htmlParser,
   indexChunks,
   isValidContentHash,
@@ -131,7 +130,9 @@ describe("chunkText / chunkMarkdown", () => {
     assert.throws(() => chunkText("abcdef", { sourceId: "x", maxDocumentChars: 5 }), RagLimitError);
     assert.throws(() => chunkText("abc", { sourceId: "" }), RagValidationError);
     assert.throws(() => chunkText("abc", { sourceId: "bad\n[id]" }), RagValidationError);
-    assert.throws(() => resolveRagLimits({ topK: 33 }), RagLimitError);
+    assert.throws(() => resolveRagLimits({ topK: 0 }), RagLimitError);
+    // Plan 239: the host's value is the cap.
+    assert.equal(resolveRagLimits({ topK: 33, queryCandidates: 33 }).topK, 33);
   });
 });
 
@@ -437,7 +438,12 @@ describe("retrieveContext / ContextProvider", () => {
       RagValidationError,
     );
     await assert.rejects(retrieveContext("q", { embedder, store: stubLegStore([], []), scope, rrfK: 0 }), RagLimitError);
-    await assert.rejects(retrieveContext("q", { embedder, store: stubLegStore([], []), scope, rrfK: 1_001 }), RagLimitError);
+    await assert.rejects(retrieveContext("q", { embedder, store: stubLegStore([], []), scope, rrfK: 1.5 }), RagLimitError);
+    // A model-supplied query is bounded by the host's maxQueryChars.
+    await assert.rejects(
+      retrieveContext("q".repeat(9), { embedder, store: stubLegStore([], []), scope, maxQueryChars: 8 }),
+      RagValidationError,
+    );
   });
 
   it("retrieves hybrid through the real memory store lexical leg", async () => {
@@ -1204,17 +1210,15 @@ describe("retrieveContext multi-scope", () => {
     assert.equal(reranks, 0);
   });
 
-  it("rejects both, neither, and more than HARD_RETRIEVE_SCOPE_CAP scopes", async () => {
+  it("rejects both or neither scope, and accepts as many scopes as the host passes", async () => {
     const embedder = createHashEmbedder({ dimensions: 8 });
     const store = createMemoryVectorStore();
     await assert.rejects(retrieveContext("q", { embedder, store, scope: org, scopes: [org] }), RagValidationError);
     await assert.rejects(retrieveContext("q", { embedder, store }), RagValidationError);
-    const tooMany = Array.from({ length: HARD_RETRIEVE_SCOPE_CAP + 1 }, (_, i) => ({
-      tenantId: "org_a",
-      resourceId: "kb",
-      corpusId: `c${i}`,
-    }));
-    await assert.rejects(retrieveContext("q", { embedder, store, scopes: tooMany }), RagLimitError);
+    // Plan 239: the scopes are the host's; there is no hidden cap on how many.
+    const many = Array.from({ length: 12 }, (_, i) => ({ tenantId: "org_a", resourceId: "kb", corpusId: `c${i}` }));
+    const result = await retrieveContext("q", { embedder, store, scopes: many });
+    assert.deepEqual(result.hits, []);
   });
 
   it("fails closed on a foreign corpus row and embedder drift in any requested scope", async () => {

@@ -24,8 +24,10 @@ import {
   defineProviderPackage,
   modelsProperty,
   providerPackageInstance,
+  type ProviderTransportConfig,
   refSource,
   secretRefProperty,
+  transportProperty,
 } from "@arnilo/prism/provider-kit";
 import { listCommandCodeModels } from "./models.js";
 import { createCommandCodeProvider } from "./provider.js";
@@ -35,6 +37,8 @@ export const COMMAND_CODE_DEFAULT_API_KEY_REF = "env:COMMAND_CODE_API_KEY";
 
 /** The config a host (or a code instance) may set; every secret field is a ref, never a value. */
 export interface CommandCodeProviderConfig {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); each defaults to the transport's. */
+  readonly transport?: ProviderTransportConfig;
   /** An `env:`/`keyring:` ref; defaults to {@link COMMAND_CODE_DEFAULT_API_KEY_REF}. */
   readonly apiKey?: string;
   /** Official base; defaults to the vendor default. */
@@ -58,6 +62,7 @@ const configSchema: JsonSchema = {
   properties: {
     apiKey: secretRefProperty(COMMAND_CODE_DEFAULT_API_KEY_REF),
     baseUrl: baseUrlProperty("Official base; defaults to the vendor default."),
+    transport: transportProperty(),
     zdr: {
       type: "boolean",
       default: false,
@@ -83,7 +88,14 @@ function definitionFor(options: CommandCodeProviderPackageOptions) {
       if ((await resolve(ref)) === undefined) prism.status.note("warn", `commandcode: no API key at ${ref}`);
       const baseUrl = prism.config.baseUrl;
       const zdr = prism.config.zdr ?? false;
-      const provider = createCommandCodeProvider({ id, baseUrl, apiKey, zdr, fetch: options.fetch });
+      const provider = createCommandCodeProvider({
+        ...(prism.config.transport === undefined ? {} : { transport: prism.config.transport }),
+        id,
+        baseUrl,
+        apiKey,
+        zdr,
+        fetch: options.fetch,
+      });
       const configured = prism.config.models;
       prism.providers.register({
         ...provider,

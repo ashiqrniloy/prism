@@ -21,11 +21,12 @@ An agent is a model plus the packages you list. This one talks to Hyper and can 
 ```ts
 import { createAgent } from "@arnilo/prism";
 import hyper from "@arnilo/prism-ai/hyper";
+import approval from "@arnilo/prism-extensions/approval";
 import coding from "@arnilo/prism-tools/coding";
 
 const agent = await createAgent({
   model: "hyper/claude-sonnet-4-5",
-  packages: [hyper({ apiKey: "env:HYPER_API_KEY" }), coding({ root: process.cwd() })],
+  packages: [hyper({ apiKey: "env:HYPER_API_KEY" }), coding({ root: process.cwd() }), approval({ mode: "edits" })],
 });
 
 const session = await agent.session();
@@ -34,6 +35,8 @@ for await (const event of session.stream("List the files here")) {
 }
 await agent.dispose();
 ```
+
+`approval({ mode: "edits" })` lets reads and edits inside the root through and asks before anything else, such as a shell command. Without a policy package, `coding` runs `shell` on the host only after asking through `host.ui` for each command, and a run with no UI suspends at the first one; a sandbox (`coding({ root, sandbox: "native" })`) or `guard: "off"` changes that.
 
 Run it with `bun run agent.ts`. To try it offline, import `mockProvider` from `@arnilo/prism/testing`, list `mockProvider([[{ type: "content_delta", content: { type: "text", text: "Hello" } }, { type: "done" }]])` in `packages` instead of the provider and tool packages, and set `model: "mock/demo"`.
 

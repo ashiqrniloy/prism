@@ -232,7 +232,11 @@ async function runDelegations({ delayMs, cap, attempted, prefix }) {
     id: nextId(prefix),
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore(), loop: concurrentLoop(attempted) },
-    packages: [providerPackage("test-provider", [provider]), delegatePackage({ children: { child: { inherit: [] } }, maxConcurrent: cap })],
+    // The scenarios measure the over-limit refusal: `queueTimeoutMs: 0` keeps it immediate (plan 232 Task 5 queues by default).
+    packages: [
+      providerPackage("test-provider", [provider]),
+      delegatePackage({ children: { child: { inherit: [] } }, maxConcurrent: cap, queueTimeoutMs: 0 }),
+    ],
   });
   const session = await agent.session();
   const completed = [];
@@ -401,6 +405,8 @@ export async function runToolConcurrency(options = {}) {
       add: [
         {
           name: "work",
+          // A tool with no `effects` keeps its round serial (plan 226 Task 4), so the fixture declares them.
+          effects: ["read"],
           execute: async (_args, context) => {
             tracker.enter();
             try {

@@ -2,6 +2,7 @@ import type { PackageAPI } from "@arnilo/prism";
 import { callKey, consultPrompt, generateText, renderSlice, sliceOf, type AdvisorRuntime } from "./consult.js";
 import type { AdvisorConfig } from "./config.js";
 import { ADVICE_JSON_INSTRUCTION, eventData, parseAdviceVerdict } from "./verdict.js";
+import { isChildSession } from "./child.js";
 
 /** The `tool.call` and `run.end` review consults. Both fail open: an advisor outage must not block work. */
 const REASON = "Advisor review";
@@ -14,7 +15,7 @@ const REASON = "Advisor review";
 export function registerBeforeTools(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime, names: readonly string[]): void {
   const listed = new Set(names);
   prism.hooks.on("tool.call", async (payload, context) => {
-    if (!listed.has(payload.name)) return undefined;
+    if (!listed.has(payload.name) || isChildSession(context)) return undefined;
     const key = callKey(payload.name, payload.args);
     if (runtime.ledger.wasRevised(payload.runId, key)) return "allow";
     if (!runtime.ledger.take(payload.runId)) {
@@ -62,6 +63,7 @@ export function registerBeforeTools(prism: PackageAPI<AdvisorConfig>, runtime: A
  */
 export function registerBeforeFinish(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime): void {
   prism.hooks.on("run.end", async (payload, context) => {
+    if (isChildSession(context)) return undefined;
     if (!runtime.ledger.take(payload.runId)) {
       context.emit("advisor.consult", eventData({ trigger: "beforeFinish", status: "capped" }));
       return undefined;

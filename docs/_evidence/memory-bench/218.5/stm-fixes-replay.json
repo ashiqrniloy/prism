@@ -1,0 +1,4798 @@
+{
+ "kind": "stm-fixes-replay-v1",
+ "plan": "218.5 Task 1",
+ "owner": "2026-11-22: \"Add the fixes to STM as suggested. 1 and 2 first and then do 3 and 1,2, and 3 together we do tests.\"",
+ "run": {
+  "arm": "STM-only",
+  "fixes": [
+   "verbatim user messages (stm.verbatimUserChars 2000)",
+   "user statement or change is its own statement (instruction)",
+   "correction inherits rank"
+  ],
+  "rule": "a1c6df8d (screen models: main opencode-go/hy4-flash-free, worker opencode-go/muse-spark-1.3-contributor at low, W=32K)",
+  "sessions": 36,
+  "diagnostic": true,
+  "startedAt": "2026-11-22T08:52Z",
+  "finishedAt": "2026-11-22T09:47:08Z",
+  "workerErrors": 0,
+  "stmFallbacks": 0,
+  "overflows": 0,
+  "sourceHashes": {
+   "packages/memory/system/src/session/workers/stm.ts": "90e463a16088be3bc7869e30963039758465dbe946a3b2acbe988835fe4a5245",
+   "packages/memory/system/src/session/config.ts": "700cf8335ad8006e3f2d6bcdba124025acafcac8c5859122427e1fbd2ce80094",
+   "packages/memory/system/src/session/render.ts": "0f78f1dc40bb29e835c8b6ca36cfb8aad04f66fda9539ea71ff770108382b749",
+   "packages/memory/system/src/session/types.ts": "bf499587fdebf4aef6529f87330a9d8cadf7dc04219e7de3cafec77ab4c67c39",
+   "packages/memory/system/src/session/flush.ts": "58d94e1a8d89680683b1fae9d643994be84a3eb7faefd53dc9a9d4c329224523"
+  }
+ },
+ "rows": [
+  {
+   "session": "sb-id-01",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-112",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-120",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    7,
+    4,
+    3,
+    6,
+    3,
+    7,
+    4,
+    12
+   ],
+   "meter": {
+    "main": {
+     "calls": 56,
+     "inputTokens": 995746,
+     "cachedInputTokens": 207360,
+     "outputTokens": 6584
+    },
+    "workers": {
+     "calls": 24,
+     "inputTokens": 212157,
+     "cachedInputTokens": 34456,
+     "outputTokens": 19941
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-02",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-108",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-114",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "T-123",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "T-131",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 14,
+     "check": "t14.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 14,
+     "check": "t14.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    9,
+    5,
+    4,
+    6,
+    3,
+    9,
+    4,
+    3,
+    7,
+    5,
+    6,
+    6,
+    6
+   ],
+   "meter": {
+    "main": {
+     "calls": 91,
+     "inputTokens": 1775895,
+     "cachedInputTokens": 377600,
+     "outputTokens": 9693
+    },
+    "workers": {
+     "calls": 43,
+     "inputTokens": 400496,
+     "cachedInputTokens": 73113,
+     "outputTokens": 40022
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-03",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-108",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-117",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "T-126",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    6,
+    3,
+    4,
+    3,
+    3,
+    6,
+    4,
+    8,
+    12,
+    5,
+    6
+   ],
+   "meter": {
+    "main": {
+     "calls": 78,
+     "inputTokens": 1528315,
+     "cachedInputTokens": 304896,
+     "outputTokens": 7712
+    },
+    "workers": {
+     "calls": 37,
+     "inputTokens": 363773,
+     "cachedInputTokens": 91025,
+     "outputTokens": 30303
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-05",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-122",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    8,
+    7,
+    8,
+    2,
+    5,
+    6,
+    4,
+    6,
+    5,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 73,
+     "inputTokens": 1408686,
+     "cachedInputTokens": 219136,
+     "outputTokens": 7965
+    },
+    "workers": {
+     "calls": 35,
+     "inputTokens": 325074,
+     "cachedInputTokens": 58641,
+     "outputTokens": 32819
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-07",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    4,
+    5,
+    5,
+    4,
+    8,
+    5,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 52,
+     "inputTokens": 989849,
+     "cachedInputTokens": 122112,
+     "outputTokens": 4834
+    },
+    "workers": {
+     "calls": 27,
+     "inputTokens": 240761,
+     "cachedInputTokens": 44169,
+     "outputTokens": 22282
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-08",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-120",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    5,
+    3,
+    5,
+    3,
+    5,
+    3,
+    5,
+    11,
+    6,
+    9
+   ],
+   "meter": {
+    "main": {
+     "calls": 72,
+     "inputTokens": 1403845,
+     "cachedInputTokens": 252928,
+     "outputTokens": 6673
+    },
+    "workers": {
+     "calls": 38,
+     "inputTokens": 339981,
+     "cachedInputTokens": 62293,
+     "outputTokens": 34509
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-12",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-116",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-125",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    6,
+    20,
+    6,
+    3,
+    4,
+    6,
+    3,
+    7,
+    6,
+    6,
+    8,
+    6
+   ],
+   "meter": {
+    "main": {
+     "calls": 107,
+     "inputTokens": 2047930,
+     "cachedInputTokens": 441088,
+     "outputTokens": 9127
+    },
+    "workers": {
+     "calls": 44,
+     "inputTokens": 459391,
+     "cachedInputTokens": 89994,
+     "outputTokens": 38546
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-13",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "T-119",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    11,
+    6,
+    5,
+    4,
+    5,
+    3,
+    8,
+    4,
+    9,
+    9
+   ],
+   "meter": {
+    "main": {
+     "calls": 75,
+     "inputTokens": 1485550,
+     "cachedInputTokens": 300544,
+     "outputTokens": 7795
+    },
+    "workers": {
+     "calls": 33,
+     "inputTokens": 316135,
+     "cachedInputTokens": 52527,
+     "outputTokens": 25113
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-14",
+   "checks": [
+    {
+     "task": 1,
+     "check": "T-108",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "T-117",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    10,
+    6,
+    2,
+    6,
+    2,
+    5,
+    7,
+    3,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 60,
+     "inputTokens": 1217276,
+     "cachedInputTokens": 86784,
+     "outputTokens": 7794
+    },
+    "workers": {
+     "calls": 32,
+     "inputTokens": 320297,
+     "cachedInputTokens": 51548,
+     "outputTokens": 23979
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-15",
+   "checks": [
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    9,
+    6,
+    3,
+    6,
+    4,
+    7,
+    8,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 64,
+     "inputTokens": 1318885,
+     "cachedInputTokens": 107520,
+     "outputTokens": 7038
+    },
+    "workers": {
+     "calls": 34,
+     "inputTokens": 330067,
+     "cachedInputTokens": 55968,
+     "outputTokens": 27147
+    },
+    "providerErrors": 1
+   }
+  },
+  {
+   "session": "sb-id-16",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-116",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-124",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    11,
+    4,
+    6,
+    4,
+    4,
+    7,
+    3,
+    8,
+    5,
+    7,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 78,
+     "inputTokens": 1618581,
+     "cachedInputTokens": 114432,
+     "outputTokens": 7107
+    },
+    "workers": {
+     "calls": 36,
+     "inputTokens": 321442,
+     "cachedInputTokens": 53393,
+     "outputTokens": 30869
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-id-19",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "T-119",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "T-127",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    14,
+    5,
+    5,
+    4,
+    5,
+    3,
+    7,
+    3,
+    7,
+    9,
+    5,
+    9,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 101,
+     "inputTokens": 2073318,
+     "cachedInputTokens": 285696,
+     "outputTokens": 17049
+    },
+    "workers": {
+     "calls": 59,
+     "inputTokens": 613396,
+     "cachedInputTokens": 93895,
+     "outputTokens": 55364
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-01",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 4,
+     "check": "T-110",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    6,
+    2,
+    0,
+    0,
+    0,
+    6,
+    4,
+    18,
+    4,
+    3
+   ],
+   "meter": {
+    "main": {
+     "calls": 60,
+     "inputTokens": 1134324,
+     "cachedInputTokens": 299264,
+     "outputTokens": 17815
+    },
+    "workers": {
+     "calls": 36,
+     "inputTokens": 368720,
+     "cachedInputTokens": 57090,
+     "outputTokens": 37176
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-02",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    10,
+    7,
+    3,
+    4,
+    5,
+    5,
+    6,
+    6,
+    6,
+    8
+   ],
+   "meter": {
+    "main": {
+     "calls": 71,
+     "inputTokens": 1185684,
+     "cachedInputTokens": 572416,
+     "outputTokens": 7293
+    },
+    "workers": {
+     "calls": 22,
+     "inputTokens": 232451,
+     "cachedInputTokens": 35412,
+     "outputTokens": 19611
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-03",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    7,
+    3,
+    3,
+    6,
+    10,
+    35,
+    4
+   ],
+   "meter": {
+    "main": {
+     "calls": 81,
+     "inputTokens": 1704200,
+     "cachedInputTokens": 250880,
+     "outputTokens": 8251
+    },
+    "workers": {
+     "calls": 36,
+     "inputTokens": 370418,
+     "cachedInputTokens": 69875,
+     "outputTokens": 31608
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-06",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-108",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-107",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-113",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D3",
+     "pass": false
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "T-117",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D1",
+     "pass": false
+    },
+    {
+     "task": 14,
+     "check": "t14.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 14,
+     "check": "t14.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    12,
+    7,
+    9,
+    5,
+    6,
+    4,
+    4,
+    4,
+    0,
+    0,
+    10,
+    7,
+    3,
+    4
+   ],
+   "meter": {
+    "main": {
+     "calls": 90,
+     "inputTokens": 1783198,
+     "cachedInputTokens": 450816,
+     "outputTokens": 28973
+    },
+    "workers": {
+     "calls": 42,
+     "inputTokens": 501297,
+     "cachedInputTokens": 62052,
+     "outputTokens": 37305
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-07",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-116",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    4,
+    15,
+    4,
+    3,
+    3,
+    4,
+    6,
+    5,
+    4,
+    5,
+    6,
+    8,
+    6
+   ],
+   "meter": {
+    "main": {
+     "calls": 88,
+     "inputTokens": 1878368,
+     "cachedInputTokens": 413440,
+     "outputTokens": 9956
+    },
+    "workers": {
+     "calls": 44,
+     "inputTokens": 433022,
+     "cachedInputTokens": 73241,
+     "outputTokens": 37706
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-08",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    6,
+    4,
+    4,
+    4,
+    4,
+    5,
+    4,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 51,
+     "inputTokens": 971759,
+     "cachedInputTokens": 376064,
+     "outputTokens": 4165
+    },
+    "workers": {
+     "calls": 18,
+     "inputTokens": 162151,
+     "cachedInputTokens": 29042,
+     "outputTokens": 15896
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-10",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    8,
+    6,
+    5,
+    4,
+    3,
+    5,
+    4,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 51,
+     "inputTokens": 1013563,
+     "cachedInputTokens": 387328,
+     "outputTokens": 7440
+    },
+    "workers": {
+     "calls": 21,
+     "inputTokens": 198543,
+     "cachedInputTokens": 31587,
+     "outputTokens": 20618
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-11",
+   "checks": [
+    {
+     "task": 1,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "T-112",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "T-117",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    5,
+    5,
+    6,
+    3,
+    4,
+    4,
+    3,
+    8,
+    7,
+    5,
+    4,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 80,
+     "inputTokens": 1538714,
+     "cachedInputTokens": 491520,
+     "outputTokens": 8982
+    },
+    "workers": {
+     "calls": 38,
+     "inputTokens": 373921,
+     "cachedInputTokens": 63234,
+     "outputTokens": 37692
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-12",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-109",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D3",
+     "pass": false
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    4,
+    5,
+    3,
+    3,
+    3,
+    2,
+    9
+   ],
+   "meter": {
+    "main": {
+     "calls": 90,
+     "inputTokens": 1941992,
+     "cachedInputTokens": 315392,
+     "outputTokens": 9313
+    },
+    "workers": {
+     "calls": 31,
+     "inputTokens": 340305,
+     "cachedInputTokens": 67247,
+     "outputTokens": 28272
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-13",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 2,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": false
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "T-116",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    2,
+    13,
+    3,
+    3,
+    5,
+    4,
+    3,
+    4,
+    6,
+    1,
+    9,
+    7,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 79,
+     "inputTokens": 1562558,
+     "cachedInputTokens": 590848,
+     "outputTokens": 15152
+    },
+    "workers": {
+     "calls": 30,
+     "inputTokens": 332645,
+     "cachedInputTokens": 50652,
+     "outputTokens": 27483
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-14",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "T-114",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    12,
+    9,
+    7,
+    6,
+    8,
+    6,
+    12,
+    7,
+    6,
+    8
+   ],
+   "meter": {
+    "main": {
+     "calls": 97,
+     "inputTokens": 2257534,
+     "cachedInputTokens": 559360,
+     "outputTokens": 18268
+    },
+    "workers": {
+     "calls": 50,
+     "inputTokens": 583000,
+     "cachedInputTokens": 85552,
+     "outputTokens": 45735
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-rt-19",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": false
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "T-114",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    2,
+    8,
+    4,
+    5,
+    3,
+    3,
+    4,
+    1,
+    8,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 56,
+     "inputTokens": 1346212,
+     "cachedInputTokens": 119808,
+     "outputTokens": 10857
+    },
+    "workers": {
+     "calls": 31,
+     "inputTokens": 322764,
+     "cachedInputTokens": 45163,
+     "outputTokens": 25993
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-02",
+   "checks": [
+    {
+     "task": 1,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "T-112",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "T-117",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    5,
+    7,
+    2,
+    4,
+    3,
+    5,
+    8,
+    8,
+    7,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 74,
+     "inputTokens": 1707434,
+     "cachedInputTokens": 285440,
+     "outputTokens": 11283
+    },
+    "workers": {
+     "calls": 36,
+     "inputTokens": 363298,
+     "cachedInputTokens": 57504,
+     "outputTokens": 32399
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-04",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    4,
+    4,
+    1,
+    6,
+    3,
+    2,
+    2,
+    4,
+    6,
+    3,
+    17,
+    3
+   ],
+   "meter": {
+    "main": {
+     "calls": 69,
+     "inputTokens": 1417579,
+     "cachedInputTokens": 442624,
+     "outputTokens": 10641
+    },
+    "workers": {
+     "calls": 32,
+     "inputTokens": 327197,
+     "cachedInputTokens": 39945,
+     "outputTokens": 28437
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-06",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D4",
+     "pass": false
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D3",
+     "pass": false
+    },
+    {
+     "task": 9,
+     "check": "T-116",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": false
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    15,
+    8,
+    6,
+    3,
+    3,
+    8,
+    2,
+    0,
+    7,
+    25
+   ],
+   "meter": {
+    "main": {
+     "calls": 89,
+     "inputTokens": 1788734,
+     "cachedInputTokens": 428800,
+     "outputTokens": 17896
+    },
+    "workers": {
+     "calls": 31,
+     "inputTokens": 319510,
+     "cachedInputTokens": 45675,
+     "outputTokens": 29742
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-07",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    13,
+    3,
+    6,
+    5,
+    6,
+    5,
+    4,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 56,
+     "inputTokens": 1102195,
+     "cachedInputTokens": 309248,
+     "outputTokens": 6114
+    },
+    "workers": {
+     "calls": 26,
+     "inputTokens": 266140,
+     "cachedInputTokens": 44794,
+     "outputTokens": 25355
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-08",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "t1.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": false
+    },
+    {
+     "task": 12,
+     "check": "T-116",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    5,
+    8,
+    5,
+    5,
+    4,
+    3,
+    4,
+    7,
+    10,
+    7,
+    19,
+    6
+   ],
+   "meter": {
+    "main": {
+     "calls": 95,
+     "inputTokens": 1680647,
+     "cachedInputTokens": 490496,
+     "outputTokens": 12463
+    },
+    "workers": {
+     "calls": 35,
+     "inputTokens": 355440,
+     "cachedInputTokens": 58641,
+     "outputTokens": 31946
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-10",
+   "checks": [
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    6,
+    4,
+    2,
+    3,
+    4,
+    3,
+    7
+   ],
+   "meter": {
+    "main": {
+     "calls": 41,
+     "inputTokens": 735561,
+     "cachedInputTokens": 179712,
+     "outputTokens": 5323
+    },
+    "workers": {
+     "calls": 20,
+     "inputTokens": 181542,
+     "cachedInputTokens": 31060,
+     "outputTokens": 15282
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-12",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 13,
+     "check": "t13.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    9,
+    8,
+    3,
+    4,
+    4,
+    5,
+    4,
+    4,
+    6,
+    13,
+    8,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 90,
+     "inputTokens": 1815251,
+     "cachedInputTokens": 697600,
+     "outputTokens": 11818
+    },
+    "workers": {
+     "calls": 35,
+     "inputTokens": 373891,
+     "cachedInputTokens": 57361,
+     "outputTokens": 32148
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-14",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-114",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    13,
+    7,
+    4,
+    4,
+    4,
+    5,
+    7,
+    4,
+    7,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 71,
+     "inputTokens": 1500001,
+     "cachedInputTokens": 247552,
+     "outputTokens": 7091
+    },
+    "workers": {
+     "calls": 43,
+     "inputTokens": 425199,
+     "cachedInputTokens": 82871,
+     "outputTokens": 36936
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-15",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": false
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "T-112",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D3",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    6,
+    12,
+    4,
+    4,
+    6,
+    2,
+    5,
+    21,
+    7,
+    9,
+    6
+   ],
+   "meter": {
+    "main": {
+     "calls": 94,
+     "inputTokens": 1938177,
+     "cachedInputTokens": 359936,
+     "outputTokens": 14524
+    },
+    "workers": {
+     "calls": 39,
+     "inputTokens": 415825,
+     "cachedInputTokens": 65109,
+     "outputTokens": 35488
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-16",
+   "checks": [
+    {
+     "task": 1,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.2.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "T-111",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "T-115",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    3,
+    7,
+    5,
+    3,
+    3,
+    4,
+    3,
+    6,
+    8,
+    6,
+    11
+   ],
+   "meter": {
+    "main": {
+     "calls": 72,
+     "inputTokens": 1364920,
+     "cachedInputTokens": 403200,
+     "outputTokens": 6683
+    },
+    "workers": {
+     "calls": 27,
+     "inputTokens": 244040,
+     "cachedInputTokens": 47625,
+     "outputTokens": 21452
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-18",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 1,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "t3.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "T-110",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "T-114",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D4",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D1",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    15,
+    6,
+    8,
+    2,
+    5,
+    5,
+    4,
+    6,
+    5,
+    4,
+    9
+   ],
+   "meter": {
+    "main": {
+     "calls": 81,
+     "inputTokens": 1706174,
+     "cachedInputTokens": 430592,
+     "outputTokens": 9488
+    },
+    "workers": {
+     "calls": 35,
+     "inputTokens": 355151,
+     "cachedInputTokens": 56239,
+     "outputTokens": 29661
+    },
+    "providerErrors": 0
+   }
+  },
+  {
+   "session": "sb-sc-19",
+   "checks": [
+    {
+     "task": 1,
+     "check": "t1.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "t2.1.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 2,
+     "check": "T-106",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-108",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 3,
+     "check": "T-107",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 4,
+     "check": "t4.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 5,
+     "check": "t5.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 6,
+     "check": "t6.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 7,
+     "check": "t7.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "T-113",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 8,
+     "check": "t8.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 9,
+     "check": "t9.1.0",
+     "class": "D3",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 10,
+     "check": "t10.1.0",
+     "class": "D1",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 11,
+     "check": "t11.1.0",
+     "class": "D2",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.0.0",
+     "class": "C",
+     "pass": true
+    },
+    {
+     "task": 12,
+     "check": "t12.1.0",
+     "class": "D4",
+     "pass": true
+    }
+   ],
+   "toolCalls": [
+    4,
+    8,
+    6,
+    4,
+    6,
+    3,
+    3,
+    7,
+    4,
+    7,
+    6,
+    5
+   ],
+   "meter": {
+    "main": {
+     "calls": 76,
+     "inputTokens": 1385568,
+     "cachedInputTokens": 474368,
+     "outputTokens": 8092
+    },
+    "workers": {
+     "calls": 29,
+     "inputTokens": 298885,
+     "cachedInputTokens": 40713,
+     "outputTokens": 27165
+    },
+    "providerErrors": 0
+   }
+  }
+ ],
+ "baseline": {
+  "screen": "docs/_evidence/memory-bench/218/session-bench-screen.json (rule a1c6df8d)",
+  "rowsDir": "live/a1c6df8dd548be4d/rows (not committed)"
+ }
+}

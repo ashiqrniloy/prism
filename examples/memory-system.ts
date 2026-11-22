@@ -57,11 +57,18 @@ function profileConfig(profile: ProfileName, root: string): MemorySystemConfig {
     case "ltm":
       return { stm: false, ltm };
     case "session":
-      return { stm: STM, wm: WM };
+      return { stm: STM, wm: WM, scope: { text: "Remember the retry budget." } };
     case "stm":
       return { stm: STM, wm: false };
     case "full":
-      return { stm: STM, wm: WM, rehearsal: { targetTokens: 1, policy: "lowest-relevance" }, ltm, sleep: {} };
+      return {
+        stm: STM,
+        wm: WM,
+        scope: { text: "Remember the retry budget." },
+        rehearsal: { targetTokens: 1, policy: "lowest-relevance" },
+        ltm,
+        sleep: {},
+      };
   }
 }
 

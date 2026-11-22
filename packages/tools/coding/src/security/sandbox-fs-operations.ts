@@ -10,9 +10,6 @@ import {
   literalMatcher,
   type DeleteOperations,
   type EditOperations,
-  HARD_MAX_EDIT_FILE_BYTES,
-  HARD_MAX_TEXT_SCAN_BYTES,
-  HARD_MAX_WRITE_BYTES,
   isBinaryBuffer,
   type MoveOperations,
   compileGlob,
@@ -32,6 +29,9 @@ import {
 import type { DisposableSandbox } from "./sandbox.js";
 
 /** Fixed scripts — tests match these exact strings. */
+/** Exec stdout a sandbox filesystem or repository operation collects; `maxOutputBytes` in its options. */
+export const DEFAULT_SANDBOX_EXEC_OUTPUT_BYTES = 1024 * 1024 * 1024;
+
 export const SANDBOX_FS_SCRIPTS = Object.freeze({
   read: 'dd if="$1" bs="$2" count=1 status=none 2>/dev/null',
   write: 'printf "%s" "$1" | base64 -d > "$2"',
@@ -59,7 +59,7 @@ export class SandboxFsError extends Error {
 
 export interface SandboxFsOperationsOptions {
   readonly workspaceRoot?: string;
-  /** Cap collected exec stdout (default HARD_MAX_TEXT_SCAN_BYTES). */
+  /** Cap collected exec stdout (default 1 GiB, `DEFAULT_SANDBOX_EXEC_OUTPUT_BYTES`). */
   readonly maxOutputBytes?: number;
 }
 
@@ -199,11 +199,11 @@ export function createSandboxFilesystemOperations(
   options?: SandboxFsOperationsOptions,
 ): { read: ReadOperations; write: WriteOperations; edit: EditOperations; delete: DeleteOperations; move: MoveOperations } {
   const workspaceRoot = normalizeWorkspaceRoot(options?.workspaceRoot);
-  const maxOutputBytes = options?.maxOutputBytes ?? HARD_MAX_TEXT_SCAN_BYTES;
+  const maxOutputBytes = options?.maxOutputBytes ?? DEFAULT_SANDBOX_EXEC_OUTPUT_BYTES;
 
   const readFile = async (absolutePath: string, opts: { maxBytes: number; signal?: AbortSignal }): Promise<Buffer> => {
     const path = assertSandboxPath(workspaceRoot, absolutePath);
-    const maxBytes = Math.min(Math.max(1, opts.maxBytes), HARD_MAX_TEXT_SCAN_BYTES);
+    const maxBytes = Math.max(1, opts.maxBytes);
     const { exitCode, stdout } = await sh(sandbox, SANDBOX_FS_SCRIPTS.read, [path, String(maxBytes)], {
       cwd: workspaceRoot,
       signal: opts.signal,
@@ -248,7 +248,8 @@ export function createSandboxFilesystemOperations(
 
   const writeFile = async (absolutePath: string, content: string, opts?: { maxBytes?: number; signal?: AbortSignal }): Promise<void> => {
     const path = assertSandboxPath(workspaceRoot, absolutePath);
-    const maxBytes = Math.min(opts?.maxBytes ?? HARD_MAX_WRITE_BYTES, HARD_MAX_WRITE_BYTES);
+    // The tool layer bounded the content by the host's limit; a caller's `maxBytes` adds its own bound.
+    const maxBytes = opts?.maxBytes ?? Number.POSITIVE_INFINITY;
     const buf = Buffer.from(content, "utf8");
     if (buf.byteLength > maxBytes) {
       throw new SandboxFsError(`write exceeds ${maxBytes} byte limit`);
@@ -287,7 +288,7 @@ export function createSandboxFilesystemOperations(
     readFile,
     readText: async (absolutePath, options) => {
       if (options.signal?.aborted) throw new SandboxFsError("Operation aborted");
-      const maxScan = Math.min(options.maxScanBytes, HARD_MAX_TEXT_SCAN_BYTES);
+      const maxScan = options.maxScanBytes;
       const buf = await readFile(absolutePath, { maxBytes: maxScan, signal: options.signal });
       return paginateText(buf, options);
     },
@@ -299,11 +300,10 @@ export function createSandboxFilesystemOperations(
 
   const edit: EditOperations = {
     readFile: async (absolutePath, opts) => {
-      const maxBytes = Math.min(opts.maxBytes, HARD_MAX_EDIT_FILE_BYTES);
+      const maxBytes = opts.maxBytes;
       return readFile(absolutePath, { maxBytes, signal: opts.signal });
     },
-    writeFile: async (absolutePath, content, opts) =>
-      writeFile(absolutePath, content, { maxBytes: HARD_MAX_EDIT_FILE_BYTES, signal: opts?.signal }),
+    writeFile: async (absolutePath, content, opts) => writeFile(absolutePath, content, { signal: opts?.signal }),
     access,
     statFile,
   };
@@ -394,7 +394,7 @@ export function createSandboxRepositoryOperations(
 ): RepositoryOperations {
   const workspaceRoot = normalizeWorkspaceRoot(options?.workspaceRoot);
   const limits = resolveRepositoryLimits(options?.limits);
-  const maxOutputBytes = options?.maxOutputBytes ?? HARD_MAX_TEXT_SCAN_BYTES;
+  const maxOutputBytes = options?.maxOutputBytes ?? DEFAULT_SANDBOX_EXEC_OUTPUT_BYTES;
   const { read } = createSandboxFilesystemOperations(sandbox, {
     workspaceRoot,
     maxOutputBytes,

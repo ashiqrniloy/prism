@@ -25,7 +25,9 @@ import {
   defineProviderPackage,
   modelsProperty,
   providerPackageInstance,
+  type ProviderTransportConfig,
   secretRefProperty,
+  transportProperty,
 } from "@arnilo/prism/provider-kit";
 import { listOpenAICodexModels } from "./models.js";
 import { assertWritableCredentialRef, credentialRecordFromSecret, openAICodexApiKey, openAICodexAuth } from "./oauth.js";
@@ -36,6 +38,8 @@ export const OPENAI_CODEX_DEFAULT_CREDENTIAL_REF = "keyring:openai-codex";
 
 /** The config a host (or a code instance) may set. The credential is a ref, never a value. */
 export interface OpenAICodexProviderConfig {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); each defaults to the transport's. */
+  readonly transport?: ProviderTransportConfig;
   /** A writable `keyring:` ref holding the grant; defaults to {@link OPENAI_CODEX_DEFAULT_CREDENTIAL_REF}. */
   readonly credential?: string;
   /** The host's name for this app, sent as `agent_name_hint` on first sign-in. Required to sign in. */
@@ -72,6 +76,7 @@ const configSchema: JsonSchema = {
       description: "The host's name for this app, sent as `agent_name_hint` on first sign-in.",
     },
     baseUrl: baseUrlProperty("Defaults to `https://api.openai.com/v1`."),
+    transport: transportProperty(),
     models: modelsProperty("Static catalog. When absent, `models()` asks `GET /models` with the grant."),
     callbackPort: { type: "integer", minimum: 0, maximum: 65535, description: "Loopback port to try first; defaults to 1455." },
   },
@@ -113,14 +118,26 @@ function definitionFor(options: OpenAICodexProviderPackageOptions) {
       if (credentialRecordFromSecret(await prism.credentials.resolve(credential)) === undefined)
         prism.status.note("warn", "openai-codex: not signed in");
       const baseUrl = prism.config.baseUrl;
-      const provider = createOpenAICodexProvider({ id, baseUrl, apiKey, fetch: options.fetch });
+      const provider = createOpenAICodexProvider({
+        ...(prism.config.transport === undefined ? {} : { transport: prism.config.transport }),
+        id,
+        baseUrl,
+        apiKey,
+        fetch: options.fetch,
+      });
       const configured = prism.config.models;
       prism.providers.register({
         ...provider,
         auth: [auth],
         async models() {
           if (configured !== undefined) return configured;
-          return listOpenAICodexModels({ provider: id, baseUrl, apiKey, fetch: options.fetch });
+          return listOpenAICodexModels({
+            ...(prism.config.transport?.maxCatalogBytes === undefined ? {} : { maxBodyBytes: prism.config.transport.maxCatalogBytes }),
+            provider: id,
+            baseUrl,
+            apiKey,
+            fetch: options.fetch,
+          });
         },
       });
     },

@@ -10,11 +10,8 @@ import type { Chunker, IngestionStatusStore, RagScope, SourceFreshness, Transact
 import { assertNotAborted, requireScope, requireSourceId } from "./util.js";
 
 export const DEFAULT_SYNC_PAGE_SIZE = 50;
-export const HARD_SYNC_PAGE_SIZE_CAP = 200;
 export const DEFAULT_SYNC_MAX_PAGES = 8;
-export const HARD_SYNC_MAX_PAGES_CAP = 64;
 export const DEFAULT_SYNC_RETRIES = 3;
-export const HARD_SYNC_RETRIES_CAP = 8;
 
 export type KnowledgeChange =
   | {
@@ -75,9 +72,9 @@ interface SyncCheckpointValue {
 
 export async function syncKnowledge(options: SyncKnowledgeOptions): Promise<SyncKnowledgeResult> {
   const scope = requireScope(options.scope);
-  const pageSize = bound(options.pageSize, DEFAULT_SYNC_PAGE_SIZE, HARD_SYNC_PAGE_SIZE_CAP, "pageSize");
-  const maxPages = bound(options.maxPages, DEFAULT_SYNC_MAX_PAGES, HARD_SYNC_MAX_PAGES_CAP, "maxPages");
-  const maxRetries = bound(options.maxRetries, DEFAULT_SYNC_RETRIES, HARD_SYNC_RETRIES_CAP, "maxRetries", 0);
+  const pageSize = bound(options.pageSize, DEFAULT_SYNC_PAGE_SIZE, "pageSize");
+  const maxPages = bound(options.maxPages, DEFAULT_SYNC_MAX_PAGES, "maxPages");
+  const maxRetries = bound(options.maxRetries, DEFAULT_SYNC_RETRIES, "maxRetries", 0);
   const onInvalid = options.onInvalidCursor ?? "resync";
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const chunker = options.chunker ?? chunkText;
@@ -247,10 +244,10 @@ function readCursor(value: unknown): string | undefined {
   return record.cursor;
 }
 
-function bound(value: number | undefined, fallback: number, cap: number, label: string, minimum = 1): number {
+/** The host's value is the cap (plan 239): validated, never clamped to a hidden maximum. */
+function bound(value: number | undefined, fallback: number, label: string, minimum = 1): number {
   const resolved = value ?? fallback;
-  if (!Number.isInteger(resolved) || resolved < minimum) throw new RagLimitError(`${label} must be an integer >= ${minimum}`);
-  if (resolved > cap) throw new RagLimitError(`${label} exceeds hard cap ${cap}`);
+  if (!Number.isSafeInteger(resolved) || resolved < minimum) throw new RagLimitError(`${label} must be an integer >= ${minimum}`);
   return resolved;
 }
 

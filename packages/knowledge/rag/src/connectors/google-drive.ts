@@ -7,6 +7,8 @@ import { htmlParser, pdfParser, textParser } from "../parsers.js";
 import type { KnowledgeChange, KnowledgeChangePage, KnowledgeConnector } from "../sync.js";
 import { assertNotAborted } from "../util.js";
 
+const DEFAULT_MAX_RESPONSE_BYTES = 1_048_576;
+
 const DEFAULT_BASE = "https://www.googleapis.com/drive/v3";
 const GOOGLE_DOC = "application/vnd.google-apps.document";
 const FOLDER = "application/vnd.google-apps.folder";
@@ -53,7 +55,7 @@ export function createGoogleDriveConnector(options: GoogleDriveConnectorOptions)
     throw new RagValidationError("Drive baseUrl must use https");
   }
   if (base.username || base.password || base.hash) throw new RagValidationError("Drive baseUrl must not embed credentials or a fragment");
-  const maxBytes = options.maxResponseBytes ?? 1_048_576;
+  const maxBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   if (!Number.isInteger(maxBytes) || maxBytes < 1) throw new RagValidationError("maxResponseBytes must be a positive integer");
   const transport =
     options.fetch ??

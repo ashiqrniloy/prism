@@ -7,7 +7,6 @@ import {
   createBrowserManager,
   createBrowserTools,
   DEFAULT_IDLE_RUN_TTL_MS,
-  HARD_IDLE_RUN_TTL_MS,
   normalizeTarget,
   packageName,
   parseSnapshotRefs,
@@ -37,8 +36,8 @@ describe("@arnilo/prism-tools/browser", () => {
     assert.equal(new FakeBrowser().contexts.length, 0);
   });
 
-  it("resolveBrowserLimits rejects overflow", () => {
-    assert.throws(() => resolveBrowserLimits({ maxPages: 999 }), /maxPages/);
+  it("resolveBrowserLimits rejects invalid values; the host value is the cap", () => {
+    assert.equal(resolveBrowserLimits({ maxPages: 999 }).maxPages, 999);
     assert.throws(() => resolveBrowserLimits({ maxSnapshotBytes: 0 }), /maxSnapshotBytes/);
   });
 
@@ -142,7 +141,7 @@ describe("@arnilo/prism-tools/browser", () => {
   it("idle reaper is off by default and idleRunTtlMs validates its bounds", async () => {
     assert.equal(resolveBrowserLimits().idleRunTtlMs, DEFAULT_IDLE_RUN_TTL_MS);
     assert.equal(resolveBrowserLimits({ idleRunTtlMs: 0 }).idleRunTtlMs, 0);
-    for (const invalid of [-1, 1.5, Number.NaN, HARD_IDLE_RUN_TTL_MS + 1]) {
+    for (const invalid of [-1, 1.5, Number.NaN]) {
       assert.throws(() => resolveBrowserLimits({ idleRunTtlMs: invalid }), /idleRunTtlMs/);
     }
     const browser = new FakeBrowser();

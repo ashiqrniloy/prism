@@ -11,12 +11,12 @@ import {
   createPolicyEvaluator,
   evaluateAndAppend,
   exportPolicyDecisions,
-  HARD_POLICY_LIMITS,
   PolicyError,
   preparePolicyDecision,
   recordGuardrailDecision,
   recordPermissionDecision,
   recordToolApprovalDecision,
+  DEFAULT_POLICY_LIMITS,
   resolvePolicyLimits,
 } from "../index.js";
 
@@ -117,7 +117,7 @@ describe("../index.js", () => {
           target: { kind: "t", id: "1" },
           tenantId: "tenant-1",
           userId: "user-1",
-          reason: "x".repeat(HARD_POLICY_LIMITS.maxReasonBytes + 1),
+          reason: "x".repeat(DEFAULT_POLICY_LIMITS.maxReasonBytes + 1),
         } as never),
       /reason exceeds/,
     );
@@ -235,6 +235,7 @@ describe("../index.js", () => {
     const resolved = resolvePolicyLimits();
     assert.equal(resolved.maxDecisionBytes, 8 * 1024);
     assert.equal(resolved.maxExportPageSize, 100);
-    assert.throws(() => resolvePolicyLimits({ maxExportPageSize: HARD_POLICY_LIMITS.maxExportPageSize + 1 }), /maxExportPageSize/);
+    assert.throws(() => resolvePolicyLimits({ maxExportPageSize: 0 }), /maxExportPageSize/);
+    assert.equal(resolvePolicyLimits({ maxExportPageSize: 10_000 }).maxExportPageSize, 10_000);
   });
 });

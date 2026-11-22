@@ -1,3 +1,42 @@
+./a2a A2AAgentCapabilities	interface A2AAgentCapabilities { readonly extendedAgentCard?: boolean; readonly extensions?: readonly A2AAgentExtension[]; readonly pushNotifications?: boolean; readonly streaming?: boolean; }
+./a2a A2AAgentCard	interface A2AAgentCard { readonly capabilities?: A2AAgentCapabilities; readonly defaultInputModes: readonly string[]; readonly defaultOutputModes: readonly string[]; readonly description: string; readonly documentationUrl?: string; readonly iconUrl?: string; readonly name: string; readonly provider?: { readonly organization: string; readonly url: string; }; readonly securityRequirements?: readonly unknown[]; readonly securitySchemes?: Readonly<Record<string, unknown>>; readonly signatures?: readonly A2AAgentCardSignature[]; readonly skills: readonly A2AAgentSkill[]; readonly supportedInterfaces: readonly A2AAgentInterface[]; readonly version: string; }
+./a2a A2AAgentCardSignature	interface A2AAgentCardSignature { readonly header?: Readonly<Record<string, unknown>>; readonly protected: string; readonly signature: string; }
+./a2a A2AAgentExtension	interface A2AAgentExtension { readonly description?: string; readonly params?: Readonly<Record<string, unknown>>; readonly required?: boolean; readonly uri: string; }
+./a2a A2AAgentInterface	interface A2AAgentInterface { readonly protocolBinding: "JSONRPC" | "GRPC" | "HTTP+JSON"; readonly protocolVersion: string; readonly tenant?: string; readonly url: string; }
+./a2a A2AAgentSkill	interface A2AAgentSkill { readonly description: string; readonly examples?: readonly string[]; readonly id: string; readonly inputModes?: readonly string[]; readonly name: string; readonly outputModes?: readonly string[]; readonly tags: readonly string[]; }
+./a2a A2AArtifact	interface A2AArtifact { readonly artifactId: string; readonly name?: string; readonly parts: readonly A2APart[]; }
+./a2a A2AAuthorization	interface A2AAuthorization { readonly ownership?: OwnershipScope; readonly principal: Principal; }
+./a2a A2AAuthorizeInput	interface A2AAuthorizeInput { readonly method: string; readonly request: Request; readonly signal: AbortSignal; }
+./a2a A2AClientError	class A2AClientError extends Error { constructor(code: A2AClientErrorCode, message: string); readonly code: A2AClientErrorCode; }
+./a2a A2AClientErrorCode	type A2AClientErrorCode = "a2a_unsupported" | "a2a_invalid_card" | "a2a_transport" | "a2a_invalid_response" | "a2a_busy" | "a2a_no_pending_task"
+./a2a A2AConfigError	class A2AConfigError extends Error { constructor(message: string); readonly code = "ERR_PRISM_A2A_CONFIG"; }
+./a2a A2AEndpoint	interface A2AEndpoint { readonly card?: A2AAgentCard; readonly token?: string; readonly url: string; }
+./a2a A2AError	class A2AError extends Error { constructor(name: A2AErrorName, message: string, status?: number); readonly code: number; readonly errorName: A2AErrorName; readonly status: number; }
+./a2a A2AErrorName	type A2AErrorName = keyof typeof A2A_ERROR_CODES
+./a2a A2AHandler	interface A2AHandler { (request: Request): Promise<Response>; close(): Promise<void>; readonly card: A2AAgentCard; }
+./a2a A2ALimitName	type A2ALimitName = keyof typeof A2A_LIMITS
+./a2a A2ALimitOptions	type A2ALimitOptions = { readonly [K in A2ALimitName]?: number; }
+./a2a A2ALiteralSecretError	class A2ALiteralSecretError extends Error { constructor(field: string); readonly code = "ERR_PRISM_A2A_LITERAL_SECRET"; }
+./a2a A2AMessage	interface A2AMessage { readonly contextId?: string; readonly extensions?: readonly string[]; readonly messageId: string; readonly metadata?: JsonObject; readonly parts: readonly A2APart[]; readonly referenceTaskIds?: readonly string[]; readonly role: A2ARole; readonly taskId?: string; }
+./a2a A2APart	interface A2APart { readonly data?: JsonValue; readonly filename?: string; readonly mediaType?: string; readonly metadata?: JsonObject; readonly raw?: string; readonly text?: string; readonly url?: string; }
+./a2a A2ARole	type A2ARole = "ROLE_USER" | "ROLE_AGENT"
+./a2a A2AStreamResponse	type A2AStreamResponse = { readonly task: A2ATask; } | { readonly message: A2AMessage; } | { readonly statusUpdate: A2ATaskStatusUpdateEvent; } | { readonly artifactUpdate: A2ATaskArtifactUpdateEvent; }
+./a2a A2ATask	interface A2ATask { readonly artifacts?: readonly A2AArtifact[]; readonly contextId: string; readonly history?: readonly A2AMessage[]; readonly id: string; readonly status: A2ATaskStatus; }
+./a2a A2ATaskArtifactUpdateEvent	interface A2ATaskArtifactUpdateEvent { readonly append?: boolean; readonly artifact: A2AArtifact; readonly contextId: string; readonly lastChunk?: boolean; readonly taskId: string; }
+./a2a A2ATaskState	type A2ATaskState = "TASK_STATE_SUBMITTED" | "TASK_STATE_WORKING" | "TASK_STATE_INPUT_REQUIRED" | "TASK_STATE_AUTH_REQUIRED" | "TASK_STATE_COMPLETED" | "TASK_STATE_FAILED" | "TASK_STATE_CANCELED" | "TASK_STATE_REJECTED"
+./a2a A2ATaskStatus	interface A2ATaskStatus { readonly message?: A2AMessage; readonly state: A2ATaskState; readonly timestamp: string; }
+./a2a A2ATaskStatusUpdateEvent	interface A2ATaskStatusUpdateEvent { readonly contextId: string; readonly status: A2ATaskStatus; readonly taskId: string; }
+./a2a A2A_CARD_PATH	const A2A_CARD_PATH = "/.well-known/agent-card.json"
+./a2a A2A_ERROR_CODES	const A2A_ERROR_CODES: { readonly parseError: -32700; readonly invalidRequest: -32600; readonly methodNotFound: -32601; readonly invalidParams: -32602; readonly internalError: -32603; readonly overloaded: -32000; readonly taskNotFound: -32001; readonly taskNotCancelable: -32002; readonly pushNotificationNotSupported: -32003; readonly unsupportedOperation: -32004; readonly contentTypeNotSupported: -32005; readonly invalidAgentResponse: -32006; readonly extendedAgentCardNotConfigured: -32007; readonly extensionSupportRequired: -32008; readonly versionNotSupported: -32009; }
+./a2a A2A_LIMITS	const A2A_LIMITS: { readonly maxRequestBytes: number; readonly maxResponseBytes: number; readonly maxStreamBytes: number; readonly maxStreamEvents: 10000; readonly maxStreamMs: 120000; readonly taskTimeoutMs: 120000; readonly maxConcurrentTasks: 16; readonly maxTasks: 1024; readonly maxContexts: 256; readonly maxParts: 32; readonly maxHistory: 100; }
+./a2a A2A_LITERAL_SECRET_CODE	const A2A_LITERAL_SECRET_CODE = "ERR_PRISM_A2A_LITERAL_SECRET"
+./a2a A2A_PROTOCOL_VERSION	const A2A_PROTOCOL_VERSION = "1.0"
+./a2a ConnectA2AOptions	interface ConnectA2AOptions { readonly allowLoopback?: boolean; readonly allowedOrigins?: readonly string[]; readonly credentials?: CredentialResolver; readonly endpointId?: string; readonly host?: { readonly ui?: HostUi; }; readonly limits?: A2ALimitOptions; }
+./a2a PRISM_DECISIONS_EXTENSION	const PRISM_DECISIONS_EXTENSION = "https://prism.arnilo.dev/a2a/extensions/decisions/v1"
+./a2a ResolvedA2ALimits	type ResolvedA2ALimits = { readonly [K in A2ALimitName]: number; }
+./a2a ServeA2AOptions	interface ServeA2AOptions { readonly allowModifiedArguments?: boolean; readonly authorize: (input: A2AAuthorizeInput) => A2AAuthorization | false | Promise<A2AAuthorization | false>; readonly card: A2AAgentCard; readonly credentials?: CredentialResolver; readonly limits?: A2ALimitOptions; readonly ownershipFor?: (principal: Principal) => OwnershipScope; readonly redactor?: SecretRedactor; readonly signing?: { readonly key: string; readonly keyId: string; }; }
+./a2a connectA2A	function connectA2A(endpoint: A2AEndpoint, options?: ConnectA2AOptions): Promise<Agent>
+./a2a serveA2A	function serveA2A(agent: Agent, options: ServeA2AOptions): A2AHandler
 ./acp ACP_LIMITS	const ACP_LIMITS: { readonly maxEventBytes: number; readonly maxTextBytes: number; readonly maxReplayEvents: 100; readonly maxStreamEvents: 10000; readonly maxStreamBytes: number; readonly acpDiffBytes: number; readonly acpLocationsPerUpdate: 32; readonly acpImageBytes: number; readonly acpCommandsPerUpdate: 32; }
 ./acp AcpCapabilitiesOptions	interface AcpCapabilitiesOptions { readonly prompt?: { readonly media?: (input: { readonly signal: AbortSignal; }) => boolean | Promise<boolean>; readonly embedded?: (input: { readonly signal: AbortSignal; }) => boolean | Promise<boolean>; }; readonly usage?: AcpUsageSeam; }
 ./acp AcpCapabilitiesSource	interface AcpCapabilitiesSource { readonly capabilities?: AcpCapabilitiesOptions; readonly mcp?: AcpMcpSeams; readonly sessions?: AcpSessionStoreSeams; }
@@ -19,7 +58,7 @@
 ./acp ResolvedAcpClientCapabilities	interface ResolvedAcpClientCapabilities { readonly configOptionBoolean: boolean; readonly elicitation: boolean; readonly fsReadTextFile: boolean; readonly fsWriteTextFile: boolean; readonly plan: boolean; readonly terminal: boolean; }
 ./acp ResolvedAcpLimits	type ResolvedAcpLimits = { readonly [K in AcpLimitName]: number; }
 ./acp ServeAcpHandle	interface ServeAcpHandle { close(): Promise<void>; readonly closed: Promise<void>; }
-./acp ServeAcpOptions	interface ServeAcpOptions { readonly authorize?: (input: { readonly peer: "stdio" | "stream"; }) => boolean | Promise<boolean>; readonly stdio?: true; readonly stream?: Stream; }
+./acp ServeAcpOptions	interface ServeAcpOptions { readonly authorize?: (input: { readonly peer: "stdio" | "stream"; }) => boolean | Promise<boolean>; readonly limits?: AcpLimitOptions; readonly stdio?: true; readonly stream?: Stream; }
 ./acp acpHost	function acpHost(): HostPort
 ./acp createAcpEventMapper	function createAcpEventMapper(options?: AcpEventMapperOptions): AcpEventMapper
 ./acp createAcpLifecycleMapper	function createAcpLifecycleMapper(options?: AcpEventMapperOptions): AcpLifecycleMapper
@@ -120,7 +159,7 @@
 ./ag-ui DEFAULT_MAX_JSON_PROPERTIES	const DEFAULT_MAX_JSON_PROPERTIES = 128
 ./ag-ui DEFAULT_MAX_PATCH_OPERATIONS	const DEFAULT_MAX_PATCH_OPERATIONS = 128
 ./ag-ui DEFAULT_MAX_PROJECTOR_MESSAGES	const DEFAULT_MAX_PROJECTOR_MESSAGES = 128
-./ag-ui DEFAULT_MAX_QUEUED_EVENTS	const DEFAULT_MAX_QUEUED_EVENTS = 128
+./ag-ui DEFAULT_MAX_QUEUED_EVENTS	const DEFAULT_MAX_QUEUED_EVENTS = 4096
 ./ag-ui DEFAULT_MAX_RAW_EVENT_BYTES	const DEFAULT_MAX_RAW_EVENT_BYTES: number
 ./ag-ui DEFAULT_MAX_REASONING_BYTES	const DEFAULT_MAX_REASONING_BYTES: number
 ./ag-ui DEFAULT_MAX_REPLAY_EVENTS	const DEFAULT_MAX_REPLAY_EVENTS = 100
@@ -132,39 +171,6 @@
 ./ag-ui DEFAULT_REQUEST_TIMEOUT_MS	const DEFAULT_REQUEST_TIMEOUT_MS = 120000
 ./ag-ui Dom	interface Dom { createElement(tag: string): DomNode; createTextNode(text: string): DomNode; }
 ./ag-ui DomNode	interface DomNode { addEventListener(type: string, listener: (event: unknown) => void): void; appendChild(child: DomNode): void; readonly children: readonly DomNode[]; readonly nodeName: string; readonly nodeType: number; removeChild(child: DomNode): void; replaceChildren(...children: DomNode[]): void; setAttribute(name: string, value: string): void; textContent: string | null; }
-./ag-ui HARD_AG_UI_LIMITS	const HARD_AG_UI_LIMITS: ResolvedAgUiLimits
-./ag-ui HARD_MAX_A2UI_COMPONENT_DEPTH	const HARD_MAX_A2UI_COMPONENT_DEPTH = 64
-./ag-ui HARD_MAX_A2UI_OPERATION_BYTES	const HARD_MAX_A2UI_OPERATION_BYTES: number
-./ag-ui HARD_MAX_A2UI_OPS_PER_MESSAGE	const HARD_MAX_A2UI_OPS_PER_MESSAGE = 512
-./ag-ui HARD_MAX_A2UI_SURFACES_PER_RUN	const HARD_MAX_A2UI_SURFACES_PER_RUN = 64
-./ag-ui HARD_MAX_ACTIVITY_BYTES	const HARD_MAX_ACTIVITY_BYTES: number
-./ag-ui HARD_MAX_CURSOR_BYTES	const HARD_MAX_CURSOR_BYTES: number
-./ag-ui HARD_MAX_ERROR_BYTES	const HARD_MAX_ERROR_BYTES: number
-./ag-ui HARD_MAX_EVENT_BYTES	const HARD_MAX_EVENT_BYTES: number
-./ag-ui HARD_MAX_INPUT_CONTEXTS	const HARD_MAX_INPUT_CONTEXTS = 256
-./ag-ui HARD_MAX_INPUT_CONTEXT_BYTES	const HARD_MAX_INPUT_CONTEXT_BYTES: number
-./ag-ui HARD_MAX_INPUT_INTERRUPTS	const HARD_MAX_INPUT_INTERRUPTS = 64
-./ag-ui HARD_MAX_INPUT_MEDIA_BYTES	const HARD_MAX_INPUT_MEDIA_BYTES: number
-./ag-ui HARD_MAX_INPUT_MEDIA_PARTS	const HARD_MAX_INPUT_MEDIA_PARTS = 64
-./ag-ui HARD_MAX_INPUT_MESSAGES	const HARD_MAX_INPUT_MESSAGES = 1024
-./ag-ui HARD_MAX_INPUT_TEXT_BYTES	const HARD_MAX_INPUT_TEXT_BYTES: number
-./ag-ui HARD_MAX_INPUT_TOOLS	const HARD_MAX_INPUT_TOOLS = 256
-./ag-ui HARD_MAX_INPUT_TOOL_BYTES	const HARD_MAX_INPUT_TOOL_BYTES: number
-./ag-ui HARD_MAX_JSON_ARRAY_ITEMS	const HARD_MAX_JSON_ARRAY_ITEMS = 8192
-./ag-ui HARD_MAX_JSON_DEPTH	const HARD_MAX_JSON_DEPTH = 64
-./ag-ui HARD_MAX_JSON_PROPERTIES	const HARD_MAX_JSON_PROPERTIES = 4096
-./ag-ui HARD_MAX_PATCH_OPERATIONS	const HARD_MAX_PATCH_OPERATIONS = 4096
-./ag-ui HARD_MAX_PROJECTOR_MESSAGES	const HARD_MAX_PROJECTOR_MESSAGES = 1024
-./ag-ui HARD_MAX_QUEUED_EVENTS	const HARD_MAX_QUEUED_EVENTS = 4096
-./ag-ui HARD_MAX_RAW_EVENT_BYTES	const HARD_MAX_RAW_EVENT_BYTES: number
-./ag-ui HARD_MAX_REASONING_BYTES	const HARD_MAX_REASONING_BYTES: number
-./ag-ui HARD_MAX_REPLAY_EVENTS	const HARD_MAX_REPLAY_EVENTS = 500
-./ag-ui HARD_MAX_REQUEST_BYTES	const HARD_MAX_REQUEST_BYTES: number
-./ag-ui HARD_MAX_STATE_BYTES	const HARD_MAX_STATE_BYTES: number
-./ag-ui HARD_MAX_STREAM_BYTES	const HARD_MAX_STREAM_BYTES: number
-./ag-ui HARD_MAX_STREAM_EVENTS	const HARD_MAX_STREAM_EVENTS = 100000
-./ag-ui HARD_MAX_TEXT_BYTES	const HARD_MAX_TEXT_BYTES: number
-./ag-ui HARD_REQUEST_TIMEOUT_MS	const HARD_REQUEST_TIMEOUT_MS: number
 ./ag-ui PersistenceAgUiReplayOptions	interface PersistenceAgUiReplayOptions<Authorization> { readonly limits?: Pick<ResolvedAgUiLimits, "maxCursorBytes" | "maxReplayEvents">; readonly ownership: (authorization: Authorization) => import("@arnilo/prism").OwnershipScope | undefined; readonly resolveRun: (input: AgUiReplayRequest<Authorization>) => AgUiRunReference | undefined | Promise<AgUiRunReference | undefined>; }
 ./ag-ui ResolvedAgUiA2UiLimits	interface ResolvedAgUiA2UiLimits { readonly maxComponentDepth: number; readonly maxOperationBytes: number; readonly maxOperationsPerMessage: number; readonly maxSurfacesPerRun: number; }
 ./ag-ui ResolvedAgUiLimits	interface ResolvedAgUiLimits { readonly acpAdditionalDirectories: number; readonly acpAdditionalDirectoryPathBytes: number; readonly acpCommandsPerUpdate: number; readonly acpConfigOptions: number; readonly acpDiffBytes: number; readonly acpImageBytes: number; readonly acpLocationsPerUpdate: number; readonly acpMcpHeaderValueBytes: number; readonly acpMcpServerConfigBytes: number; readonly acpMcpServersPerSession: number; readonly acpModesPerSession: number; readonly acpSessionListPage: number; readonly acpSessions: number; readonly maxActivityBytes: number; readonly maxCursorBytes: number; readonly maxErrorBytes: number; readonly maxEventBytes: number; readonly maxInputContextBytes: number; readonly maxInputContexts: number; readonly maxInputInterrupts: number; readonly maxInputMediaBytes: number; readonly maxInputMediaParts: number; readonly maxInputMessages: number; readonly maxInputTextBytes: number; readonly maxInputToolBytes: number; readonly maxInputTools: number; readonly maxJsonArrayItems: number; readonly maxJsonDepth: number; readonly maxJsonProperties: number; readonly maxPatchOperations: number; readonly maxQueuedEvents: number; readonly maxRawEventBytes: number; readonly maxReasoningBytes: number; readonly maxReplayEvents: number; readonly maxRequestBytes: number; readonly maxStateBytes: number; readonly maxStreamBytes: number; readonly maxStreamEvents: number; readonly maxTextBytes: number; readonly requestTimeoutMs: number; }
@@ -228,7 +234,7 @@
 ./channels ChannelBindingInput	interface ChannelBindingInput { readonly agentAlias?: string; readonly connectionId: string; readonly externalActorId: string; readonly externalConversationId: string; readonly generation: number; readonly identity: AgentIdentity; readonly ownership: OwnershipScope; readonly threadId?: string; }
 ./channels ChannelBindingKeyInput	interface ChannelBindingKeyInput { readonly agentAlias?: string; readonly connectionId: string; readonly externalActorId: string; readonly externalConversationId: string; readonly ownership: OwnershipScope; readonly threadId?: string; }
 ./channels ChannelBindingRecord	interface ChannelBindingRecord { readonly agentAlias?: string; readonly generation: number; readonly leafId?: string; readonly sessionId: string; readonly suspended: boolean; readonly suspendedRun?: { readonly operationId: string; readonly runId: string; readonly sessionId: string; readonly approvalId?: string; }; readonly updatedAt: string; }
-./channels ChannelCapabilities	interface ChannelCapabilities { readonly acknowledgement: "telegram_offset" | "none"; readonly controls: "callback" | "command"; readonly maxTextCodeUnits: number; }
+./channels ChannelCapabilities	interface ChannelCapabilities { readonly acknowledgement: "telegram_offset" | "none" | "deadline"; readonly controls: "callback" | "command"; readonly maxTextCodeUnits: number; }
 ./channels ChannelConnectionHandle	interface ChannelConnectionHandle { close(): Promise<void>; drain(options?: { readonly deadlineMs?: number; }): Promise<ChannelDrainResult>; handle(update: unknown): Promise<unknown>; start(): Promise<void>; stop(): Promise<void>; }
 ./channels ChannelCursorKeyInput	interface ChannelCursorKeyInput { readonly connectionId: string; readonly ownership: OwnershipScope; }
 ./channels ChannelCursorRecord	interface ChannelCursorRecord { readonly admitted: number; readonly lastEventId?: string; readonly updatedAt: string; }
@@ -274,15 +280,17 @@
 ./channels CreateChannelPairingInput	interface CreateChannelPairingInput extends OwnershipScope { readonly agentAlias?: string; readonly connectionId: string; readonly externalActorId: string; readonly externalConversationId: string; readonly grantRevision: string; readonly now?: string; readonly threadId?: string; readonly ttlMs?: number; }
 ./channels DEFAULT_CHANNEL_LIMITS	const DEFAULT_CHANNEL_LIMITS: ResolvedChannelLimits
 ./channels DEFAULT_PAIRING_TTL_MS	const DEFAULT_PAIRING_TTL_MS: number
-./channels HARD_CHANNEL_LIMITS	const HARD_CHANNEL_LIMITS: ResolvedChannelLimits
-./channels HARD_PAIRING_TTL_MS	const HARD_PAIRING_TTL_MS: number
+./channels DiscordConnectOptions	interface DiscordConnectOptions { readonly allowBots?: boolean; readonly apiOrigin?: string; readonly applicationId: string; readonly authorize: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>; readonly checkpoints?: CheckpointStore; readonly connectionId?: string; readonly draftIntervalMs?: number; readonly fetch?: typeof globalThis.fetch; readonly leases?: LeaseStore; readonly limits?: ChannelLimits; readonly maxFrameBytes?: number; readonly maxRequestBytes?: number; readonly publicKey?: string; readonly random?: () => number; readonly reconnectBaseMs?: number; readonly sendDrafts?: boolean; readonly token: string; readonly webSocket?: (url: string) => DiscordSocket; }
 ./channels ResolvedChannelLimits	interface ResolvedChannelLimits { readonly approvalTtlMs: number; readonly leaseTtlMs: number; readonly maxActiveSessions: number; readonly maxAttachmentBytes: number; readonly maxInputBytes: number; readonly maxJournalPage: number; readonly maxJournalRecordBytes: number; readonly maxPendingPerBinding: number; readonly maxPendingPerProcess: number; readonly maxResponseBytes: number; readonly maxRoutes: number; readonly maxSeenEventsPerConnection: number; readonly retentionDays: number; readonly stopDeadlineMs: number; }
 ./channels SignalConnectOptions	interface SignalConnectOptions { readonly account: string; readonly authorize?: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>; readonly checkpoints?: CheckpointStore; readonly connect?: (socketPath: string) => Socket; readonly connectionId?: string; readonly cursorOwnership?: OwnershipScope; readonly leases?: LeaseStore; readonly limits?: import("./types.js").ChannelLimits; readonly multiAccount?: boolean; readonly policy?: SignalPolicyGate; readonly signalCliVersion?: typeof SIGNAL_CLI_VERSION; readonly socketPath: string; }
+./channels SlackConnectOptions	interface SlackConnectOptions { readonly apiOrigin?: string; readonly appToken?: string; readonly authorize: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>; readonly checkpoints?: CheckpointStore; readonly connectionId?: string; readonly draftIntervalMs?: number; readonly fetch?: typeof globalThis.fetch; readonly leases?: LeaseStore; readonly limits?: ChannelLimits; readonly maxRequestBytes?: number; readonly sendDrafts?: boolean; readonly signingSecret?: string; readonly token: string; readonly webSocket?: (url: string) => SlackSocket; }
 ./channels StoredChannelRecord	interface StoredChannelRecord<T> { readonly fencingToken?: number; readonly record: T; readonly version: number; }
 ./channels TelegramConnectOptions	interface TelegramConnectOptions { readonly allowGroups?: boolean; readonly apiOrigin?: string; readonly approvalStore?: import("./approvals.js").ChannelApprovalStore; readonly authorize?: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>; readonly checkpoints?: CheckpointStore; readonly connectionId?: string; readonly cursorOwnership?: OwnershipScope; readonly deliveryJournal?: import("./delivery.js").ChannelDeliveryJournal; readonly extractDocumentText?: (bytes: Uint8Array, mimeType: string | undefined, signal?: AbortSignal) => Promise<string>; readonly fetch?: typeof globalThis.fetch; readonly leases?: LeaseStore; readonly limits?: import("./types.js").ChannelLimits; readonly maxAttachmentBytes?: number; readonly ownership?: OwnershipScope; readonly pairing?: { readonly ttlMs?: number; }; readonly pairingStore?: import("./pairing.js").ChannelPairingStore; readonly sendDrafts?: boolean; readonly stateStore?: import("./state.js").ChannelStateStore; readonly synthesize?: (text: string, signal?: AbortSignal) => Promise<{ readonly audio: Uint8Array; readonly format: string; }>; readonly token: string; readonly transcribe?: (audio: Uint8Array, format: string | undefined, signal?: AbortSignal) => Promise<string>; readonly webhookSecret?: string; }
 ./channels UNRESOLVED_OPERATION_STATES	const UNRESOLVED_OPERATION_STATES: readonly ChannelOperationState[]
 ./channels channelHostUi	function channelHostUi(options: ChannelHostUiOptions): HostUi
+./channels connectDiscord	function connectDiscord(agent: Agent, options: DiscordConnectOptions): Promise<ChannelConnectionHandle>
 ./channels connectSignal	function connectSignal(agent: Agent, options: SignalConnectOptions): Promise<ChannelConnectionHandle>
+./channels connectSlack	function connectSlack(agent: Agent, options: SlackConnectOptions): Promise<ChannelConnectionHandle>
 ./channels connectTelegram	function connectTelegram(agent: Agent, options: TelegramConnectOptions): Promise<ChannelConnectionHandle>
 ./channels createChannelApprovalStore	function createChannelApprovalStore(checkpoints: CheckpointStore): ChannelApprovalStore
 ./channels createChannelDeliveryJournal	function createChannelDeliveryJournal(options: ChannelDeliveryJournalOptions): ChannelDeliveryJournal
@@ -296,6 +304,18 @@
 ./channels isSettledReply	function isSettledReply(record: ChannelReplyRecord): boolean
 ./channels resolveChannelLimits	function resolveChannelLimits(input?: ChannelLimits): ResolvedChannelLimits
 ./channels resolveChannelSecretRef	function resolveChannelSecretRef(agent: Agent, ref: string): Promise<string>
+./channels/discord ChannelConnectionHandle	interface ChannelConnectionHandle { close(): Promise<void>; drain(options?: { readonly deadlineMs?: number; }): Promise<ChannelDrainResult>; handle(update: unknown): Promise<unknown>; start(): Promise<void>; stop(): Promise<void>; }
+./channels/discord ChannelSecretSource	type ChannelSecretSource = () => Promise<string>
+./channels/discord DISCORD_GATEWAY_INTENTS	const DISCORD_GATEWAY_INTENTS: number
+./channels/discord DiscordAdapter	interface DiscordAdapter extends ChannelAdapter { gatewayState(): { readonly botUserId: string; readonly sessionId?: string; readonly sequence: number | null; readonly connected: boolean; }; handleDispatch(type: string, data: unknown, receive: ChannelReceive): Promise<unknown>; handleRequest(request: Request, receive: ChannelReceive, publicKey: KeyObject | undefined): Promise<Response>; sendDraft(delta: ChannelAssistantDelta): void; }
+./channels/discord DiscordAdapterOptions	interface DiscordAdapterOptions { readonly allowBots?: boolean; readonly apiOrigin?: string; readonly applicationId: string; readonly botToken: ChannelSecretSource; readonly connectionId: string; readonly draftIntervalMs?: number; readonly fetch?: typeof globalThis.fetch; readonly maxFrameBytes?: number; readonly maxRequestBytes?: number; readonly random?: () => number; readonly reconnectBaseMs?: number; readonly sendDrafts?: boolean; readonly webSocket?: (url: string) => DiscordSocket; }
+./channels/discord DiscordConnectOptions	interface DiscordConnectOptions { readonly allowBots?: boolean; readonly apiOrigin?: string; readonly applicationId: string; readonly authorize: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>; readonly checkpoints?: CheckpointStore; readonly connectionId?: string; readonly draftIntervalMs?: number; readonly fetch?: typeof globalThis.fetch; readonly leases?: LeaseStore; readonly limits?: ChannelLimits; readonly maxFrameBytes?: number; readonly maxRequestBytes?: number; readonly publicKey?: string; readonly random?: () => number; readonly reconnectBaseMs?: number; readonly sendDrafts?: boolean; readonly token: string; readonly webSocket?: (url: string) => DiscordSocket; }
+./channels/discord DiscordSocket	interface DiscordSocket { addEventListener(type: "open" | "message" | "close" | "error", listener: (event: { readonly data?: unknown; readonly code?: number; }) => void): void; close(code?: number, reason?: string): void; send(data: string): void; }
+./channels/discord chunkDiscordText	function chunkDiscordText(text: string, limit?: number): readonly string[]
+./channels/discord connectDiscord	function connectDiscord(agent: Agent, options: DiscordConnectOptions): Promise<ChannelConnectionHandle>
+./channels/discord createDiscordAdapter	function createDiscordAdapter(options: DiscordAdapterOptions): DiscordAdapter
+./channels/discord parseDiscordInteraction	function parseDiscordInteraction(connectionId: string, data: unknown): { readonly event?: ChannelInboundEvent; readonly id: string; readonly token: string; } | undefined
+./channels/discord parseDiscordMessage	function parseDiscordMessage(connectionId: string, data: unknown, options: { readonly botUserId: string; readonly allowBots?: boolean; }): ChannelInboundEvent | undefined
 ./channels/signal ChannelConnectionHandle	interface ChannelConnectionHandle { close(): Promise<void>; drain(options?: { readonly deadlineMs?: number; }): Promise<ChannelDrainResult>; handle(update: unknown): Promise<unknown>; start(): Promise<void>; stop(): Promise<void>; }
 ./channels/signal SIGNAL_CLI_VERSION	const SIGNAL_CLI_VERSION = "0.14.8"
 ./channels/signal SignalAdapter	type SignalAdapter = ChannelAdapter & { health(): SignalAdapterHealth; }
@@ -305,6 +325,17 @@
 ./channels/signal SignalPolicyGate	interface SignalPolicyGate { readonly acceptableUse: "operator_approved"; readonly gplDistribution: "operator_approved"; readonly termsVersion: string; }
 ./channels/signal connectSignal	function connectSignal(agent: Agent, options: SignalConnectOptions): Promise<ChannelConnectionHandle>
 ./channels/signal createSignalAdapter	function createSignalAdapter(options: SignalAdapterOptions): SignalAdapter
+./channels/slack ChannelConnectionHandle	interface ChannelConnectionHandle { close(): Promise<void>; drain(options?: { readonly deadlineMs?: number; }): Promise<ChannelDrainResult>; handle(update: unknown): Promise<unknown>; start(): Promise<void>; stop(): Promise<void>; }
+./channels/slack ChannelSecretSource	type ChannelSecretSource = () => Promise<string>
+./channels/slack SlackAdapter	interface SlackAdapter extends ChannelAdapter { handleRequest(request: Request, receive: ChannelReceive, signingSecret: ChannelSecretSource | undefined): Promise<Response>; sendDraft(delta: ChannelAssistantDelta): void; }
+./channels/slack SlackAdapterOptions	interface SlackAdapterOptions { readonly apiOrigin?: string; readonly appToken?: ChannelSecretSource; readonly botToken: ChannelSecretSource; readonly connectionId: string; readonly draftIntervalMs?: number; readonly fetch?: typeof globalThis.fetch; readonly maxRequestBytes?: number; readonly sendDrafts?: boolean; readonly webSocket?: (url: string) => SlackSocket; }
+./channels/slack SlackConnectOptions	interface SlackConnectOptions { readonly apiOrigin?: string; readonly appToken?: string; readonly authorize: (input: ChannelAuthorizeInput) => ChannelAuthorization | false | undefined | Promise<ChannelAuthorization | false | undefined>; readonly checkpoints?: CheckpointStore; readonly connectionId?: string; readonly draftIntervalMs?: number; readonly fetch?: typeof globalThis.fetch; readonly leases?: LeaseStore; readonly limits?: ChannelLimits; readonly maxRequestBytes?: number; readonly sendDrafts?: boolean; readonly signingSecret?: string; readonly token: string; readonly webSocket?: (url: string) => SlackSocket; }
+./channels/slack SlackSocket	interface SlackSocket { addEventListener(type: "open" | "message" | "close" | "error", listener: (event: { readonly data?: unknown; }) => void): void; close(code?: number, reason?: string): void; send(data: string): void; }
+./channels/slack chunkSlackText	function chunkSlackText(text: string, limit: number): readonly string[]
+./channels/slack connectSlack	function connectSlack(agent: Agent, options: SlackConnectOptions): Promise<ChannelConnectionHandle>
+./channels/slack createSlackAdapter	function createSlackAdapter(options: SlackAdapterOptions): SlackAdapter
+./channels/slack parseSlackBlockActions	function parseSlackBlockActions(connectionId: string, body: unknown): ChannelInboundEvent | undefined
+./channels/slack parseSlackEventCallback	function parseSlackEventCallback(connectionId: string, body: unknown): ChannelInboundEvent | undefined
 ./channels/telegram ChannelConnectionHandle	interface ChannelConnectionHandle { close(): Promise<void>; drain(options?: { readonly deadlineMs?: number; }): Promise<ChannelDrainResult>; handle(update: unknown): Promise<unknown>; start(): Promise<void>; stop(): Promise<void>; }
 ./channels/telegram ChannelSecretSource	type ChannelSecretSource = () => Promise<string>
 ./channels/telegram TelegramAdapter	interface TelegramAdapter extends ChannelAdapter { fetchAttachment(ref: ChannelAttachmentRef): Promise<ChannelAttachmentBytes | undefined>; sendDraft(delta: ChannelAssistantDelta): void; }
@@ -395,7 +426,6 @@
 ./evals DEFAULT_JUDGE_MAX_OUTPUT_BYTES	const DEFAULT_JUDGE_MAX_OUTPUT_BYTES: number
 ./evals DEFAULT_JUDGE_MAX_RUBRIC_BYTES	const DEFAULT_JUDGE_MAX_RUBRIC_BYTES: number
 ./evals DEFAULT_JUDGE_TIMEOUT_MS	const DEFAULT_JUDGE_TIMEOUT_MS = 30000
-./evals DEFAULT_MAX_EXPECTED_CALLS	const DEFAULT_MAX_EXPECTED_CALLS = 64
 ./evals DEFAULT_MAX_SCENARIO_TURNS	const DEFAULT_MAX_SCENARIO_TURNS = 8
 ./evals DEFAULT_MAX_STEP_SCORES	const DEFAULT_MAX_STEP_SCORES = 32
 ./evals DEFAULT_PACK_RULE_PREFIX	const DEFAULT_PACK_RULE_PREFIX = "pack:"
@@ -431,30 +461,13 @@
 ./evals ExperimentReport	interface ExperimentReport<TInput = unknown, TExpected = unknown> { readonly aggregate: ExperimentAggregate; readonly canary?: string; readonly datasetContentHash?: string; readonly datasetId: string; readonly datasetVersion?: string; readonly error?: ErrorInfo; readonly evaluations: readonly EvaluationRecord[]; readonly experimentId: string; readonly items: readonly ExperimentItemResult<TInput, TExpected>[]; readonly manifest?: EvalManifest; readonly split?: Split | readonly Split[]; readonly status: "succeeded" | "failed" | "aborted"; readonly trials?: ExperimentTrials; }
 ./evals ExperimentTrials	interface ExperimentTrials { readonly count: number; readonly sampleCount: number; readonly seed?: number; }
 ./evals FailureInjectionOptions	interface FailureInjectionOptions { readonly denyTools?: readonly string[]; readonly failStore?: boolean; readonly unknownEffect?: boolean; }
+./evals GuardrailFlaggedScorerOptions	interface GuardrailFlaggedScorerOptions { readonly id?: string; readonly pack: string; }
 ./evals GuardrailPackScorerOptions	interface GuardrailPackScorerOptions { readonly forbidTools?: readonly string[]; readonly id?: string; readonly rules?: readonly string[]; }
-./evals HARD_CANDIDATE_MAX_BYTES	const HARD_CANDIDATE_MAX_BYTES: number
-./evals HARD_COMPARISON_CANDIDATES	const HARD_COMPARISON_CANDIDATES = 32
 ./evals HARD_CURATION_ITEM_MAX_BYTES	const HARD_CURATION_ITEM_MAX_BYTES: number
-./evals HARD_DATASET_ITEMS	const HARD_DATASET_ITEMS = 10000
-./evals HARD_EVALUATION_PAGE_CAP	const HARD_EVALUATION_PAGE_CAP = 1000
-./evals HARD_EXPERIMENT_CONCURRENCY_CAP	const HARD_EXPERIMENT_CONCURRENCY_CAP = 32
-./evals HARD_JUDGE_MAX_ATTEMPTS	const HARD_JUDGE_MAX_ATTEMPTS = 3
-./evals HARD_JUDGE_MAX_INPUT_BYTES	const HARD_JUDGE_MAX_INPUT_BYTES: number
-./evals HARD_JUDGE_MAX_OUTPUT_BYTES	const HARD_JUDGE_MAX_OUTPUT_BYTES: number
-./evals HARD_JUDGE_MAX_RUBRIC_BYTES	const HARD_JUDGE_MAX_RUBRIC_BYTES: number
-./evals HARD_JUDGE_TIMEOUT_MS	const HARD_JUDGE_TIMEOUT_MS = 300000
-./evals HARD_MAX_EXPECTED_CALLS	const HARD_MAX_EXPECTED_CALLS = 256
-./evals HARD_MAX_SCENARIO_TURNS	const HARD_MAX_SCENARIO_TURNS = 32
-./evals HARD_MAX_STEP_SCORES	const HARD_MAX_STEP_SCORES = 128
-./evals HARD_MAX_TRIALS	const HARD_MAX_TRIALS = 16
-./evals HARD_REPORT_MAX_BYTES	const HARD_REPORT_MAX_BYTES: number
-./evals HARD_STATS_RESAMPLES	const HARD_STATS_RESAMPLES = 100000
-./evals HARD_TRACE_MAX_BYTES	const HARD_TRACE_MAX_BYTES: number
-./evals HARD_TRACE_PAGES	const HARD_TRACE_PAGES = 100
-./evals HARD_TRACE_PAGE_SIZE	const HARD_TRACE_PAGE_SIZE = 1000
 ./evals InjectionAttack	interface InjectionAttack { readonly goal: { readonly tool?: string; readonly argsContain?: string; readonly textContains?: string; }; readonly id: string; readonly payload: string; }
 ./evals InjectionCarrier	interface InjectionCarrier { readonly position?: "append" | "prepend"; readonly tool: string; }
-./evals InjectionMetrics	interface InjectionMetrics { readonly attackSuccessRate: InjectionRate; readonly benignUtility: InjectionRate; readonly utilityUnderAttack: InjectionRate; }
+./evals InjectionDetection	interface InjectionDetection { readonly caught: InjectionRate; readonly falsePositive: InjectionRate; }
+./evals InjectionMetrics	interface InjectionMetrics { readonly attackSuccessRate: InjectionRate; readonly benignUtility: InjectionRate; readonly detection?: Readonly<Record<string, InjectionDetection>>; readonly utilityUnderAttack: InjectionRate; }
 ./evals InjectionRate	interface InjectionRate { readonly ci95?: { readonly low: number; readonly high: number; }; readonly missing: number; readonly n: number; readonly rate?: number; readonly successes: number; }
 ./evals InjectionSpec	type InjectionSpec = { readonly attackId: null; readonly carrier: null; } | { readonly attackId: string; readonly carrier: InjectionCarrier; readonly payload: string; readonly goal: InjectionAttack["goal"]; }
 ./evals JudgePanelOptions	interface JudgePanelOptions<TInput = unknown, TExpected = unknown> { readonly combine: "majority" | "mean" | "median"; readonly id: string; readonly judges: readonly Scorer<TInput, TExpected>[]; readonly requireDistinctModels?: boolean; }
@@ -475,7 +488,7 @@
 ./evals RubricJudgeOptions	interface RubricJudgeOptions<TInput = unknown, TExpected = unknown> { readonly agent: Agent | (() => Agent | Promise<Agent>); readonly allowSelfJudging?: boolean; readonly id?: string; readonly include?: "answer" | "answer+timeline"; readonly judgedModel?: Pick<ModelConfig, "provider" | "model"> | ((input: ScorerInput<TInput, TExpected>) => Pick<ModelConfig, "provider" | "model"> | undefined); readonly maxAttempts?: number; readonly maxInputBytes?: number; readonly maxOutputBytes?: number; readonly maxRubricBytes?: number; readonly reference?: (item: DatasetItem<TInput, TExpected>) => string | undefined; readonly rubric: JudgeRubric; readonly timeoutMs?: number; }
 ./evals RunComparisonOptions	interface RunComparisonOptions<TInput = unknown, TExpected = unknown> { readonly candidates: Readonly<Record<string, ComparisonCandidate<TInput, TExpected>>>; readonly concurrency?: number; readonly dataset: Dataset<TInput, TExpected>; readonly maxCandidateBytes?: number; readonly maxCandidates?: number; readonly maxScorerOutputBytes?: number; readonly redactor?: SecretRedactor; readonly scorers: readonly PairwiseScorer<TInput, TExpected>[]; readonly secrets?: readonly (string | undefined)[]; readonly seed?: number; readonly signal?: AbortSignal; readonly trials?: number; }
 ./evals RunExperimentOptions	interface RunExperimentOptions<TInput = unknown, TExpected = unknown> { readonly agent: import("@arnilo/prism").Agent | ((extra: Pick<import("@arnilo/prism").AgentConfig, "hooks" | "slots"> & { readonly item: DatasetItem<TInput, TExpected>; }) => Promise<import("@arnilo/prism").Agent>); readonly allowHeldout?: boolean; readonly concurrency?: number; readonly dataset: Dataset<TInput, TExpected>; readonly experimentId?: string; readonly experimentStore?: ExperimentReportStore; readonly hooks?: import("@arnilo/prism").AgentConfig["hooks"]; readonly manifest?: EvalManifest; readonly metadata?: Readonly<Record<string, unknown>>; readonly onItem?: (item: ExperimentItemResult<TInput, TExpected>) => void | Promise<void>; readonly ownership?: OwnershipScope; readonly random?: () => number; readonly redactor?: SecretRedactor; readonly runOptions?: import("@arnilo/prism").RunOptions; readonly sampling?: EvaluationSampling; readonly scorers: readonly Scorer<TInput, TExpected>[]; readonly secrets?: readonly (string | undefined)[]; readonly seed?: number; readonly signal?: AbortSignal; readonly slots?: import("@arnilo/prism").AgentConfig["slots"]; readonly split?: Split | readonly Split[]; readonly store?: EvaluationStore; readonly telemetry?: EvaluationTelemetrySink; readonly timeline?: "off" | "metadata" | "redacted_io"; readonly toAgentInput?: (input: TInput) => string | import("@arnilo/prism").Message | readonly import("@arnilo/prism").Message[]; readonly toEnvironment?: (item: DatasetItem<TInput, TExpected>, result?: RunResult, timeline?: ExecutionTimeline) => unknown | Promise<unknown>; readonly traceId?: string; readonly traceLimits?: TraceLimits; readonly traceResolver?: TraceResolver; readonly trials?: number; }
-./evals RunInjectionSuiteOptions	type RunInjectionSuiteOptions<TInput = unknown, TExpected = unknown> = Omit<RunExperimentOptions<TInput, TExpected>, "agent" | "scorers"> & { readonly agent: Exclude<RunExperimentOptions<TInput, TExpected>["agent"], import("@arnilo/prism").Agent>; readonly utility: Scorer<TInput, TExpected>; }
+./evals RunInjectionSuiteOptions	type RunInjectionSuiteOptions<TInput = unknown, TExpected = unknown> = Omit<RunExperimentOptions<TInput, TExpected>, "agent" | "scorers"> & { readonly agent: Exclude<RunExperimentOptions<TInput, TExpected>["agent"], import("@arnilo/prism").Agent>; readonly utility: Scorer<TInput, TExpected>; readonly detectors?: readonly Scorer<TInput, TExpected>[]; }
 ./evals RunScenarioOptions	interface RunScenarioOptions extends Partial<ScenarioDefinition> { readonly agent: Agent | AgentFactory; readonly hooks?: AgentConfig["hooks"]; readonly slots?: AgentConfig["slots"]; readonly turns?: readonly (string | ScenarioTurn)[]; readonly user?: UserSimulatorSpec; }
 ./evals ScenarioDefinition	interface ScenarioDefinition { readonly environment?: unknown; readonly maxTurns?: number; readonly ownership?: OwnershipScope; readonly redactor?: SecretRedactor; readonly scoreTurns?: "last" | "each"; readonly scorers?: readonly Scorer[]; readonly secrets?: readonly (string | undefined)[]; readonly sessionConfig?: SessionOptions; readonly signal?: AbortSignal; readonly telemetry?: EvaluationTelemetrySink; readonly timeline?: "off" | "metadata" | "redacted_io"; readonly turns?: readonly (string | ScenarioTurn)[]; readonly user?: UserSimulatorSpec; }
 ./evals ScenarioInput	type ScenarioInput = { readonly kind: "scenario"; readonly maxTurns?: number; readonly scoreTurns?: "last" | "each"; } & ({ readonly turns: readonly (string | import("./scenario-runner.js").ScenarioTurn)[]; readonly user?: never; } | { readonly user: UserSimulatorSpec; readonly turns?: never; })
@@ -515,6 +528,7 @@
 ./evals createCitationIntegrityScorer	function createCitationIntegrityScorer<TInput = unknown, TExpected = unknown>(options?: CitationIntegrityScorerOptions): Scorer<TInput, TExpected>
 ./evals createErpInvariantScorers	function createErpInvariantScorers(): readonly Scorer<unknown, unknown>[]
 ./evals createErrorClassScorer	function createErrorClassScorer<TInput = unknown, TExpected = unknown>(options?: ErrorClassScorerOptions): Scorer<TInput, TExpected>
+./evals createGuardrailFlaggedScorer	function createGuardrailFlaggedScorer<TInput = unknown, TExpected = unknown>(options: GuardrailFlaggedScorerOptions): Scorer<TInput, TExpected>
 ./evals createGuardrailPackScorer	function createGuardrailPackScorer<TInput = unknown, TExpected = unknown>(options?: GuardrailPackScorerOptions): Scorer<TInput, TExpected>
 ./evals createInjectionDataset	function createInjectionDataset<TInput = unknown, TExpected = unknown>(options: { readonly id: string; readonly tasks: readonly DatasetItem<TInput, TExpected>[]; readonly attacks?: readonly InjectionAttack[]; readonly carriers: readonly InjectionCarrier[]; }): Dataset<TInput, TExpected>
 ./evals createJudgePanel	function createJudgePanel<TInput = unknown, TExpected = unknown>(options: JudgePanelOptions<TInput, TExpected>): Scorer<TInput, TExpected>
@@ -555,7 +569,7 @@
 ./evals resolveTrialsConfig	function resolveTrialsConfig(trials?: number, seed?: number): Omit<ExperimentTrials, "sampleCount">
 ./evals runComparison	function runComparison<TInput = unknown, TExpected = unknown>(options: RunComparisonOptions<TInput, TExpected>): Promise<ComparisonReport>
 ./evals runExperiment	function runExperiment<TInput = unknown, TExpected = unknown>(options: RunExperimentOptions<TInput, TExpected>): Promise<ExperimentReport<TInput, TExpected>>
-./evals runInjectionSuite	function runInjectionSuite<TInput = unknown, TExpected = unknown>(options: RunInjectionSuiteOptions<TInput, TExpected>): Promise<{ benignUtility: InjectionRate; utilityUnderAttack: InjectionRate; attackSuccessRate: InjectionRate; report: import("./types.js").ExperimentReport<TInput, TExpected>; byAttack: { [k: string]: InjectionMetrics; }; byCarrier: { [k: string]: InjectionMetrics; }; }>
+./evals runInjectionSuite	function runInjectionSuite<TInput = unknown, TExpected = unknown>(options: RunInjectionSuiteOptions<TInput, TExpected>): Promise<{ benignUtility: InjectionRate; utilityUnderAttack: InjectionRate; attackSuccessRate: InjectionRate; report: import("./types.js").ExperimentReport<TInput, TExpected>; detection: Record<string, InjectionDetection>; byAttack: { [k: string]: InjectionMetrics; }; byCarrier: { [k: string]: InjectionMetrics; }; }>
 ./evals runScenario	function runScenario(optionsOrScenario: RunScenarioOptions | ScenarioDefinition, maybeFactory?: AgentFactory, extraOptions?: { readonly hooks?: AgentConfig["hooks"]; readonly slots?: AgentConfig["slots"]; }): Promise<ScenarioResult>
 ./evals scoreRun	function scoreRun<TInput = unknown, TExpected = unknown>(options: ScoreRunOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
 ./evals scoreRunLive	function scoreRunLive<TInput = unknown, TExpected = unknown>(result: RunResult, options: LiveScoreOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
@@ -567,18 +581,22 @@
 ./evals validateReleaseEvalManifest	function validateReleaseEvalManifest(manifest: EvalManifest, report?: ExperimentReport): void
 ./evals wilsonInterval	function wilsonInterval(successes: number, n: number, confidence?: number): Interval
 ./headless AnswerQuery	interface AnswerQuery { readonly limit?: number; readonly sessionId?: string; }
+./headless ContinueInterruptedOptions	interface ContinueInterruptedOptions { readonly concurrency?: number; }
+./headless ContinueInterruptedOutcome	type ContinueInterruptedOutcome = (InterruptedRun & { readonly status: "continued"; readonly result: RunResult; }) | (InterruptedRun & { readonly status: "skipped"; readonly reason: "nothing_to_continue" | "session_not_found"; }) | (InterruptedRun & { readonly status: "failed"; readonly error: unknown; })
 ./headless DEFAULT_MAX_ANSWERS	const DEFAULT_MAX_ANSWERS = 1000
-./headless HARD_MAX_ANSWERS	const HARD_MAX_ANSWERS = 100000
+./headless FindInterruptedRunsOptions	interface FindInterruptedRunsOptions { readonly now?: () => number; readonly olderThanMs?: number; readonly ownership: OwnershipScope; readonly pageSize?: number; }
 ./headless HeadlessError	class HeadlessError extends Error { constructor(code: HeadlessErrorCode); readonly code: HeadlessErrorCode; }
-./headless HeadlessErrorCode	type HeadlessErrorCode = "invalid_missed_policy" | "unknown_target" | "duplicate_schedule" | "past_one_off" | "invalid_cron" | "invalid_timezone" | "schedule_limit" | "invalid_schedule" | "invalid_schedule_state" | "schedule_not_found" | "scheduler_ownership" | "unknown_workflow_command" | "unknown_command" | "invalid_workflow_result" | "firing_limit" | "scheduler_stopping" | "session_not_found" | "resume_authority_required" | "resume_busy" | "stale_decisions" | "no_routes" | "duplicate_route" | "unknown_kind" | "invalid_timeout" | "invalid_limit" | "invalid_route" | "invalid_policy" | "policy_allow_refused"
+./headless HeadlessErrorCode	type HeadlessErrorCode = "invalid_missed_policy" | "unknown_target" | "duplicate_schedule" | "past_one_off" | "invalid_cron" | "invalid_timezone" | "schedule_limit" | "invalid_schedule" | "invalid_schedule_state" | "schedule_not_found" | "scheduler_ownership" | "unknown_workflow_command" | "unknown_command" | "invalid_workflow_result" | "firing_limit" | "scheduler_stopping" | "session_not_found" | "resume_authority_required" | "resume_busy" | "stale_decisions" | "no_routes" | "duplicate_route" | "unknown_kind" | "invalid_timeout" | "invalid_limit" | "invalid_route" | "invalid_policy" | "policy_allow_refused" | "ledger_query_unsupported" | "invalid_ownership"
 ./headless HostUiRoute	interface HostUiRoute { readonly kinds?: readonly HostUiRequestKind[]; readonly name: string; readonly timeoutMs?: number; readonly ui: HostUi; }
+./headless InterruptedRun	interface InterruptedRun { readonly runId: string; readonly sessionId: string; readonly startedAt: string; }
 ./headless PolicyAnswers	type PolicyAnswers = Partial<{ readonly [K in HostUiRequestKind]: "unavailable" | "dismiss" | (K extends "notify" ? "ack" : never); }>
-./headless ResumeAuthority	interface ResumeAuthority { readonly ownership: OwnershipScope; resume(id: string, decisions: readonly Decision[], options?: RunOptions): AsyncIterable<AgentEvent>; session(id: string): Promise<Session>; }
+./headless ResumeAuthority	interface ResumeAuthority { readonly ownership: OwnershipScope; readonly runStateBounds?: RunStateBounds; resume(id: string, decisions: readonly Decision[], options?: RunOptions): AsyncIterable<AgentEvent>; session(id: string): Promise<Session>; }
 ./headless ResumeWhenAnsweredOptions	interface ResumeWhenAnsweredOptions { readonly signal?: AbortSignal; }
 ./headless ResumeWhenAnsweredResult	type ResumeWhenAnsweredResult = { readonly status: "resumed"; readonly events: AsyncIterable<AgentEvent>; } | { readonly status: "aborted" | "already_resolved" | "unavailable"; }
 ./headless RouteHostUiOptions	interface RouteHostUiOptions { readonly answerLog?: CheckpointStore; readonly limits?: { readonly maxAnswers?: number; }; readonly ownership?: OwnershipScope; readonly resumeAuthority?: ResumeAuthority; }
 ./headless RoutedAnswer	interface RoutedAnswer { readonly approvalId?: string; readonly at: string; readonly kind: HostUiRequestKind; readonly route: string; readonly sessionId?: string; readonly status: "answered" | "dismissed" | "unavailable" | "late" | "error"; }
 ./headless RoutedHostUi	interface RoutedHostUi extends HostUi { answers(query?: AnswerQuery): Promise<readonly RoutedAnswer[]>; resumeWhenAnswered(session: Session, pending?: readonly PendingDecision[], options?: ResumeWhenAnsweredOptions): Promise<ResumeWhenAnsweredResult>; }
+./headless RunListing	type RunListing = Pick<ProductionPersistenceStore, "queryRuns">
 ./headless ScheduleInput	type ScheduleInput = { readonly id: string; readonly target: string; } & ({ readonly cron: string; readonly tz?: string; readonly at?: never; } | { readonly at: string | number | Date; readonly cron?: never; readonly tz?: never; })
 ./headless ScheduleState	interface ScheduleState { readonly at?: string; readonly cron?: string; readonly id: string; readonly input: string | JsonObject; readonly lastFiring?: SchedulerFiring; readonly nextRunAt: string | null; readonly scheduleSessionId: string; readonly schemaVersion: 1; readonly status: "active" | "paused" | "completed" | "deleted"; readonly target: string; readonly tz: string; }
 ./headless Scheduler	interface Scheduler { delete(id: string): Promise<void>; list(): Promise<readonly ScheduleState[]>; pause(id: string): Promise<void>; resume(id: string): Promise<void>; schedule(input: ScheduleInput): Promise<ScheduleState>; start(): void; stop(): Promise<void>; trigger(target: string, options?: { readonly input?: unknown; }): Promise<SchedulerFiring>; }
@@ -586,8 +604,10 @@
 ./headless SchedulerFiring	interface SchedulerFiring { readonly dueAt?: string; readonly fencingToken?: number; readonly firingId: string; readonly missed?: number; readonly policy?: "skip" | "run-once"; readonly sessionId?: string; readonly status: RunResult["status"] | WorkflowRunStatus | "skipped" | "lease_lost"; readonly workflowRunId?: string; }
 ./headless SchedulerOptions	interface SchedulerOptions { readonly checkpoints: CheckpointStore; readonly clock?: SchedulerClock; readonly leases?: LeaseStore; readonly limits?: { readonly maxSchedules?: number; readonly maxConcurrentFirings?: number; readonly firingLeaseMs?: number; }; readonly missed?: "skip" | "run-once"; readonly ownership: OwnershipScope; readonly targets: Readonly<Record<string, SchedulerTarget>>; }
 ./headless SchedulerTarget	type SchedulerTarget = { readonly kind: "agent"; readonly agent: Agent; readonly input: string; readonly runOptions?: RunOptions; } | { readonly kind: "workflow"; readonly agent: Agent; readonly command: string; readonly input: JsonObject; } | { readonly kind: "command"; readonly agent: Agent; readonly command: string; readonly input: JsonObject; }
+./headless continueInterrupted	function continueInterrupted(agent: Pick<Agent, "session">, runs: readonly InterruptedRun[], options?: ContinueInterruptedOptions): Promise<ContinueInterruptedOutcome[]>
 ./headless createResumeAuthority	function createResumeAuthority(agent: Agent): ResumeAuthority
 ./headless createScheduler	function createScheduler(options: SchedulerOptions): Scheduler
+./headless findInterruptedRuns	function findInterruptedRuns(runs: RunListing, options: FindInterruptedRunsOptions): Promise<InterruptedRun[]>
 ./headless policyDefault	function policyDefault(answers?: PolicyAnswers): HostUiRoute
 ./headless routeHostUi	function routeHostUi(routes: readonly HostUiRoute[], options?: RouteHostUiOptions): RoutedHostUi
 ./host-builder ApiEntry	interface ApiEntry { readonly exports: readonly ApiExport[]; readonly specifier: string; readonly subpath: string; }
@@ -636,7 +656,7 @@
 ./mcp-server skillResources	function skillResources(skills: readonly Skill[], servedToolNames: readonly string[]): SkillResources
 ./remote AttributionSource	interface AttributionSource { readonly agent: string; readonly agentId: string; readonly endpointId: string; }
 ./remote Authenticate	type Authenticate = (request: Request) => { principal: Principal; } | undefined | Promise<{ principal: Principal; } | undefined>
-./remote CLIENT_METHODS	const CLIENT_METHODS: readonly ["initialize", "sessions.open", "sessions.list", "sessions.resume", "sessions.messages", "run", "steer", "abort", "commands.list", "commands.run", "inspect", "models.list"]
+./remote CLIENT_METHODS	const CLIENT_METHODS: readonly ["initialize", "sessions.open", "sessions.list", "sessions.resume", "sessions.continue", "sessions.messages", "run", "steer", "abort", "commands.list", "commands.run", "inspect", "models.list"]
 ./remote ConnectAgentOptions	interface ConnectAgentOptions { readonly endpointId?: string; readonly host?: { readonly ui?: HostUi; }; readonly limits?: RemoteLimitOptions; readonly mirror?: SessionStore; readonly ownership?: OwnershipScope; }
 ./remote ConnectEndpoint	type ConnectEndpoint = NetworkEndpoint | StdioEndpoint | { readonly kind: "memory"; readonly transport: RemoteTransport; }
 ./remote Dispatcher	interface Dispatcher { close(reason?: string): Promise<void>; initialize(): Promise<InitializeResult>; notify(method: string, params?: JsonObject): Promise<void>; readonly capabilities: RemoteCapabilities; readonly closed: Promise<void>; readonly initialized: boolean; request(method: string, params?: JsonObject): Promise<JsonValue>; }
@@ -656,11 +676,11 @@
 ./remote RemoteCapabilityName	type RemoteCapabilityName = (typeof KNOWN_CAPABILITIES)[number]
 ./remote RemoteClientMethod	type RemoteClientMethod = (typeof CLIENT_METHODS)[number]
 ./remote RemoteError	class RemoteError extends Error { constructor(code: RemoteErrorCode, message: string); readonly code: RemoteErrorCode; }
-./remote RemoteErrorCode	type RemoteErrorCode = "invalid_frame" | "frame_too_large" | "method_not_found" | "invalid_params" | "internal_error" | "busy" | "not_initialized" | "protocol_unsupported" | "unauthorized" | "forbidden_host" | "forbidden_origin" | "body_too_large" | "remote_unsupported" | "disconnected" | "session_not_found" | "limit" | "literal_secret" | "unauthenticated_bind"
+./remote RemoteErrorCode	type RemoteErrorCode = "invalid_frame" | "frame_too_large" | "method_not_found" | "invalid_params" | "internal_error" | "busy" | "not_initialized" | "protocol_unsupported" | "unauthorized" | "forbidden_host" | "forbidden_origin" | "body_too_large" | "remote_unsupported" | "disconnected" | "session_not_found" | "limit" | "literal_secret" | "unauthenticated_bind" | "nothing_to_continue"
 ./remote RemoteHandler	type RemoteHandler = (params: JsonObject, context: DispatcherContext) => Promise<JsonValue | undefined> | JsonValue | undefined
 ./remote RemoteLimitName	type RemoteLimitName = keyof typeof REMOTE_LIMITS
 ./remote RemoteLimitOptions	type RemoteLimitOptions = { readonly [K in RemoteLimitName]?: number; }
-./remote RemoteMethods	interface RemoteMethods { "commands.list": { params: Record<string, never>; result: JsonValue; }; "commands.run": { params: { name: string; args?: JsonValue; sessionId?: string; }; result: JsonValue; }; "models.list": { params: Record<string, never>; result: JsonValue; }; "sessions.list": { params: { query?: JsonObject; }; result: JsonValue; }; "sessions.messages": { params: { sessionId: string; }; result: { messages: readonly JsonObject[]; }; }; "sessions.open": { params: { id?: string; create?: boolean; parent?: JsonObject; }; result: { sessionId: string; leafId?: string; }; }; "sessions.resume": { params: { sessionId: string; decisions: readonly Decision[]; }; result: { runId: string; }; }; abort: { params: { sessionId: string; reason?: string; }; result: null; }; initialize: { params: InitializeParams; result: InitializeResult; }; inspect: { params: Record<string, never>; result: AgentInspection; }; run: { params: { sessionId: string; input: JsonValue; options?: RemoteRunOptions; }; result: { runId: string; }; }; steer: { params: { sessionId: string; input: JsonValue; options?: JsonObject; }; result: null; }; }
+./remote RemoteMethods	interface RemoteMethods { "commands.list": { params: Record<string, never>; result: JsonValue; }; "commands.run": { params: { name: string; args?: JsonValue; sessionId?: string; }; result: JsonValue; }; "models.list": { params: Record<string, never>; result: JsonValue; }; "sessions.continue": { params: { sessionId: string; options?: RemoteRunOptions; }; result: { runId: string; }; }; "sessions.list": { params: { query?: JsonObject; }; result: JsonValue; }; "sessions.messages": { params: { sessionId: string; }; result: { messages: readonly JsonObject[]; }; }; "sessions.open": { params: { id?: string; create?: boolean; parent?: JsonObject; }; result: { sessionId: string; leafId?: string; }; }; "sessions.resume": { params: { sessionId: string; decisions: readonly Decision[]; }; result: { runId: string; }; }; abort: { params: { sessionId: string; reason?: string; }; result: null; }; initialize: { params: InitializeParams; result: InitializeResult; }; inspect: { params: Record<string, never>; result: AgentInspection; }; run: { params: { sessionId: string; input: JsonValue; options?: RemoteRunOptions; }; result: { runId: string; }; }; steer: { params: { sessionId: string; input: JsonValue; options?: JsonObject; }; result: null; }; }
 ./remote RemoteNotificationHandler	type RemoteNotificationHandler = (params: JsonObject) => void
 ./remote RemoteNotifications	interface RemoteNotifications { "agent.event": { event: AgentEvent; }; "run.event": { sessionId: string; runId: string; event: AgentEvent; }; "run.settled": { sessionId: string; runId: string; result: RunResult; }; }
 ./remote RemoteResumeAuthority	interface RemoteResumeAuthority { resume(id: string, decisions: readonly Decision[], options?: RunOptions): AsyncIterable<AgentEvent>; }
@@ -684,7 +704,7 @@
 ./remote isRemoteErrorCode	function isRemoteErrorCode(value: unknown): value is RemoteErrorCode
 ./remote isSupportedProtocol	function isSupportedProtocol(value: unknown): boolean
 ./remote knownCapabilities	function knownCapabilities(value: unknown): RemoteCapabilities
-./remote pendingDecisionsOf	function pendingDecisionsOf(branch: readonly SessionEntry[]): readonly PendingDecision[]
+./remote pendingDecisionsOf	function pendingDecisionsOf(branch: readonly SessionEntry[], bounds?: RunStateBounds): readonly PendingDecision[]
 ./remote readJsonlFrames	function readJsonlFrames(source: AsyncIterable<Uint8Array | string>, maxBytes: number): AsyncGenerator<string | OversizeFrame>
 ./remote remoteHostUi	function remoteHostUi(): HostUi
 ./remote resolveRemoteLimits	function resolveRemoteLimits(options?: RemoteLimitOptions): ResolvedRemoteLimits

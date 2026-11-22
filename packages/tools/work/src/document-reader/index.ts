@@ -40,15 +40,13 @@ export interface DocumentReaderResult {
 // --- caps (module-local; additive package, no shared limits surface) ---
 
 export const DEFAULT_MAX_DOCUMENT_BYTES = 32 * 1024 * 1024;
-export const HARD_MAX_DOCUMENT_BYTES = 512 * 1024 * 1024;
 export const DEFAULT_MAX_DOCUMENT_PAGES = 1000;
-export const HARD_MAX_DOCUMENT_PAGES = 10_000;
 export const DEFAULT_MAX_DOCUMENT_TEXT_BYTES = 2 * 1024 * 1024;
-export const HARD_MAX_DOCUMENT_TEXT_BYTES = 64 * 1024 * 1024;
 
-function validateCap(name: string, value: number, hard: number): number {
-  if (!Number.isInteger(value) || value <= 0 || value > hard) {
-    throw new RangeError(`document-reader ${name} must be an integer in (0, ${hard}], got ${value}`);
+/** A host-set cap: a positive integer. The host's value is the cap (plan 239 Task 5). */
+function validateCap(name: string, value: number): number {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new RangeError(`document-reader ${name} must be a positive integer, got ${value}`);
   }
   return value;
 }
@@ -93,9 +91,9 @@ export interface CreateDocumentReaderOptions {
  * falls through to its 0.1.5 text path).
  */
 export async function createDocumentReader(options: CreateDocumentReaderOptions = {}): Promise<DocumentReader> {
-  const maxBytes = validateCap("maxBytes", options.maxBytes ?? DEFAULT_MAX_DOCUMENT_BYTES, HARD_MAX_DOCUMENT_BYTES);
-  const maxPages = validateCap("maxPages", options.maxPages ?? DEFAULT_MAX_DOCUMENT_PAGES, HARD_MAX_DOCUMENT_PAGES);
-  const maxTextBytes = validateCap("maxTextBytes", options.maxTextBytes ?? DEFAULT_MAX_DOCUMENT_TEXT_BYTES, HARD_MAX_DOCUMENT_TEXT_BYTES);
+  const maxBytes = validateCap("maxBytes", options.maxBytes ?? DEFAULT_MAX_DOCUMENT_BYTES);
+  const maxPages = validateCap("maxPages", options.maxPages ?? DEFAULT_MAX_DOCUMENT_PAGES);
+  const maxTextBytes = validateCap("maxTextBytes", options.maxTextBytes ?? DEFAULT_MAX_DOCUMENT_TEXT_BYTES);
   const usesDefaultParsers = options.parsers === undefined;
   const parsers = options.parsers ?? [
     // Default wiring: the optional peers, probed once at creation (fail closed).
@@ -173,9 +171,4 @@ export {
   DEFAULT_OCR_MAX_RESPONSE_BYTES,
   DEFAULT_OCR_MODEL,
   DEFAULT_OCR_TIMEOUT_MS,
-  HARD_OCR_MAX_BYTES,
-  HARD_OCR_MAX_CONCURRENT,
-  HARD_OCR_MAX_PAGES,
-  HARD_OCR_MAX_RESPONSE_BYTES,
-  HARD_OCR_TIMEOUT_MS,
 } from "./mistral-ocr.js";

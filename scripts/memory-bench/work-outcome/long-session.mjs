@@ -55,7 +55,7 @@ const SUMMARY_PROMPT = /^You summarize /;
  * llm-summary arm compacts at this share of the input cap, as the memory arms do, so its one summary per compaction
  * comes at the same pressure; memory-off and fold keep the kernel's entry gate.
  */
-export const SHIPPED_COMPACT_AT_RATIO = 0.6;
+export const SHIPPED_COMPACT_AT_RATIO = 0.8;
 /**
  * Plan 217's arms, plus gate M-2's (plan 218 Task 6): `WM` (the session profile, no scope on this family since it has
  * no plan) and `STM-only` (deterministic WM), so plan 217's S1 miss is re-measured on the same family.
@@ -636,17 +636,18 @@ function mockSummary(request) {
 
 /**
  * The memory package of an arm: none, this tree's session tiers, or the pinned tree's observational package. Offline
- * the worker is the mock route `worker/stm`; live it is the arm's answer model (as in the robustness suites). The STM
- * arm's chunk store is metered (gate M-1's chunk bytes at peak); the pinned tree has no chunks.
+ * the worker is the mock route `worker/stm`; live it is the arm's answer model (as in the robustness suites). Plan 218.3
+ * Task 4 removed the chunk store, so gate M-1's chunk-bytes meter is gone.
  */
 export async function armMemory(
   arm,
   {
     workerModel = LONG_SESSION_STM_MODEL,
-    chunkMeter,
     stmOverrides = {},
     // Plan 218.1 Task 2: Compact-Bench replays one long history and compacts once at the end, so it passes its own gate.
-    context = { compactAt: { maxTokens: LONG_SESSION_CONTEXT.maxTokens }, recentMessages: 4 },
+    // Plan 218.3 Task 2: the token cap is the between-loop trigger. Task 3: the kept tail is session memory's token rule
+    // (only new input between loops), not the kernel's keepRecentEntries.
+    context = { compactAfterRun: { maxTokens: LONG_SESSION_CONTEXT.maxTokens } },
     // Plan 218.2 Task 8 (the long-horizon family): the package defaults, with no trigger, recent-message or compactAt
     // override; compaction then follows the model's real window.
     defaults = false,
@@ -665,9 +666,7 @@ export async function armMemory(
   const contextConfig = defaults ? {} : { context };
   if (arm === "STM") {
     const { default: memorySystem } = await import("@arnilo/prism-memory-system");
-    const meter = chunkMeter ? [await (await import("../chunk-meter.mjs")).chunkMeterPackage(chunkMeter)] : [];
     return [
-      ...meter,
       memorySystem({
         enabled: true,
         stm,
@@ -845,14 +844,12 @@ export async function runLongSessionPersona({
     main: { calls: 0, inputTokens: 0, outputTokens: 0 },
     ...(arm === "WM" || arm === "STM-only" ? { wm: { calls: 0, items: 0, capStops: 0, capNoItem: 0, stopReasons: {} } } : {}),
   };
-  const chunkMeter = arm === "STM" ? { bytes: 0, peakBytes: 0, chunks: 0, puts: 0, deletes: 0 } : null;
   const agent = await createAgent({
     model,
     packages: [
       providerPackage("long-session-providers", meteredLongSessionProviders(providers, meter, log)),
       ...(await armMemory(arm, {
         ...(workerModel ? { workerModel } : {}),
-        ...(chunkMeter ? { chunkMeter } : {}),
         ...(stmOverrides ? { stmOverrides } : {}),
         defaults,
       })),
@@ -902,7 +899,6 @@ export async function runLongSessionPersona({
     worker: { ...meter.worker },
     main: { ...meter.main },
     eligibleTokens: estimate(eligibleChars),
-    chunkStorePeakBytes: chunkMeter ? chunkMeter.peakBytes : null,
     ...(meter.wm ? { wmCalls: { ...meter.wm } } : {}),
     ...(wmStats ? { session: wmStats } : {}),
     tasks: Object.fromEntries(
@@ -956,7 +952,7 @@ export async function runLongSession({
   providers,
   model,
   checkpoint,
-  // Plan 218.2 Task 8 (`--estimate`): the offline model's window, so compaction at the defaults follows a real one.
+  // The offline model's window, so compaction at the defaults follows a real one.
   offlineContextWindow = 64_000,
 } = {}) {
   if (!offline && (!providers || !model)) throw new Error("LongSessionArguments: live runs pass providers and model");
@@ -967,8 +963,6 @@ export async function runLongSession({
   const chosenArms = arms ?? (offline ? spec.offlineArms : [...spec.arms]);
   for (const arm of chosenArms) if (!spec.arms.includes(arm)) throw new Error(`LongSessionArguments: ${family} has no arm ${arm}`);
   const personas = ids.slice(0, personaLimit ?? ids.length).map((id) => spec.persona(id));
-  // Plan 218.2 Task 8: the long-horizon family spends nothing until the scripted worker shows WM engaging at the defaults.
-  if (!offline && spec.precondition) await spec.precondition({ partition, personaLimit });
   const temp = await mkdtemp(join(tmpdir(), "prism-long-session-"));
   const started = performance.now();
   const rows = {};
@@ -1108,19 +1102,6 @@ async function familySpec(family) {
       arms: rePlan.RE_PLAN_ARMS,
       offlineArms: ["memory-off", "WM"],
       metric: rePlan.RE_PLAN_METRIC,
-    };
-  }
-  if (family === "long-horizon") {
-    const longHorizon = await import("./long-horizon.mjs");
-    return {
-      partitions: longHorizon.longHorizonPartitions,
-      persona: (id) => longHorizon.createLongHorizonSession(Number(id.slice(2))),
-      arms: longHorizon.LONG_HORIZON_ARMS,
-      offlineArms: [...longHorizon.LONG_HORIZON_ARMS],
-      metric: longHorizon.LONG_HORIZON_METRIC,
-      // Every memory arm runs the package defaults (no trigger, recent-message or compactAt override).
-      defaults: true,
-      precondition: longHorizon.assertLongHorizonEngages,
     };
   }
   throw new Error(`LongSessionArguments: unknown family ${family}`);

@@ -10,6 +10,7 @@
   "scripts": {
     "eval:baseline": "bun src/evals/suite.ts --write-baseline",
     "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "test:live:guardrails": "PRISM_LIVE_GUARDRAIL_ARMS=1 bun test --timeout=0 evals/live-guardrails.test.ts",
     "test:live:journey:commandcode": "PRISM_LIVE_JOURNEY_PROVIDER=commandcode bun test --timeout=0 src/__tests__/live-provider-journey.test.ts",
     "test:live:journey:ollama-cloud": "PRISM_LIVE_JOURNEY_PROVIDER=ollama-cloud bun test --timeout=0 src/__tests__/live-provider-journey.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

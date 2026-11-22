@@ -16,6 +16,8 @@ The kernel pages and package READMEs below describe the 0.13.1 contract. The cur
 - [Events](events.md): The dotted `AgentEvent` catalog: every event name, its payload, and when it fires.
 - [Hooks](hooks.md): The hook model: observe, transform, decide, and around hooks, the full catalog, ordering, and error policy.
 - [Host port](host.md): `HostPort` and `HostUi`: how a host answers asks, secrets, and logs, and how a run suspends without one.
+- [Limits](limits.md): Every limit Prism applies, its default, and where a host sets it.
+- [Long-running work](long-running.md): Running agent work for hours or days: limits, session budgets, stall detection, the job driver, and recovery.
 - [Loop](loop.md): The loop slot, `RunController` primitives, `defaultLoop`, suspend and resume, and writing a custom loop.
 - [Manifest](manifest.md): `@arnilo/prism/manifest`: the package manifest format, scopes, merge, install, remove, integrity, and project trust.
 - [Models](models.md): `ModelRef`, the provider registry, the built-in provider, model resolution, and credentials refs.
@@ -99,9 +101,10 @@ Each native package documents itself in its README; the kernel pages above cover
 
 Host libraries serve or drive an agent from outside; they are not loaded as packages.
 
+- [`@arnilo/prism-hosts/a2a`](../packages/hosts/a2a/README.md): Host library serving one Prism agent to A2A 1.0 peers over JSON-RPC, and connecting to an A2A agent as a local `Agent`.
 - [`@arnilo/prism-hosts/acp`](../packages/hosts/acp/README.md): Host library serving one Prism agent over the Agent Client Protocol.
 - [`@arnilo/prism-hosts/ag-ui`](../packages/hosts/ag-ui/README.md): Host library serving a Prism Agent over AG-UI SSE, with protocol adapters and a reference renderer.
-- [`@arnilo/prism-hosts/channels`](../packages/hosts/channels/README.md): Host library serving one Prism agent over Telegram and Signal messaging channels.
+- [`@arnilo/prism-hosts/channels`](../packages/hosts/channels/README.md): Host library serving one Prism agent over Telegram, Signal, Slack, and Discord messaging channels.
 - [`@arnilo/prism-hosts/devtools`](../packages/hosts/devtools/README.md): Host library serving a loopback developer inspector over a Prism agent.
 - [`@arnilo/prism-hosts/evals`](../packages/hosts/evals/README.md): Host library providing evaluations, datasets, scorers, judges, and multi-turn scenarios for Prism agents.
 - [`@arnilo/prism-hosts/headless`](../packages/hosts/headless/README.md): Host library for routed Prism HostUi requests and durable agent/workflow scheduling.

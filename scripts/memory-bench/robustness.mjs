@@ -304,7 +304,7 @@ export const MEMORY_MODEL_CRITERIA_RECORD = "docs/_evidence/memory-bench/memory-
 export const MEMORY_MODEL_ROW_IDS = Object.freeze(
   [
     ["S", 4],
-    ["M", 5],
+    ["M", 7],
     ["R", 6],
     ["T", 8],
     ["L", 4],

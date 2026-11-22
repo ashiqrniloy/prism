@@ -148,7 +148,7 @@ mapped to the existing `mulberry32` 32-bit stream; repeated calls with the same 
 Invalid input, a throwing statistic, or a non-finite statistic result throws `EvalError` with
 `code: "ERR_PRISM_EVAL_STATS"`.
 
-Resamples must be integers in `[1, HARD_STATS_RESAMPLES]` (`100_000`), including when permutation
+Resamples must be positive integers (the host's value is the cap), including when permutation
 enumeration is exact. Bootstrap costs `O(resamples × N)` in expectation for a linear-time statistic,
 plus sorting `resamples` statistics; unequal cluster sizes can produce longer individual resamples.
 Monte Carlo permutation costs `O(resamples × N)`; exact permutation costs `O(2^N × N)` for `N ≤ 16`.
@@ -185,6 +185,7 @@ Custom scorers use `defineScorer`; the built-ins cover the common trajectory che
 | `createToolCallMatchScorer` | `timeline` | with `deny` or `invariant: true` | expected tool calls present, in order or unordered |
 | `createApprovalBeforeEffectScorer({ tools })` | `timeline` | yes | an effect passes only with an `approved` `hitl` step for the same `toolCallId` before it |
 | `createGuardrailPackScorer({ forbidTools })` | `timeline` | yes | no guardrail-pack denial for the forbidden tools |
+| `createGuardrailFlaggedScorer({ pack })` | `timeline` | no | a rule of `pack` fired (any action); a detector measure for the injection suite |
 | `createSchemaScorer` | `timeline` | no | final output parses against a JSON schema |
 | `createErrorClassScorer()` | `timeline` | with `deny` | denied error classes never appear (and scores `0` with no evidence) |
 | `createNoLoopScorer` | `timeline` | yes | no repeated identical tool call |
@@ -290,7 +291,7 @@ const result = await runScenario(
 );
 ```
 
-- `turns` is bounded, not truncated: more turns than `maxTurns` (default 8, hard cap 32) throws `ERR_PRISM_EVAL_SCENARIO_BOUNDS` before the agent is built, so a cut-off scenario cannot pass for the wrong reason.
+- `turns` is bounded, not truncated: more turns than `maxTurns` (default 8; the host's value is the cap) throws `ERR_PRISM_EVAL_SCENARIO_BOUNDS` before the agent is built, so a cut-off scenario cannot pass for the wrong reason.
 - `status` is `succeeded`, `failed`, or `aborted` (a host signal, or a final run the agent aborted). A throwing `assertReply` stops the scenario with `failed` and `ERR_PRISM_EVAL_SCENARIO_ASSERTION` naming the turn.
 - `scoreTurns: "each"` scores every turn on that turn's result and timeline slice, recording `metadata.turnIndex`; the default `"last"` scores only the final turn. `"each"` multiplies scorer calls (and judge cost) by the turn count.
 
@@ -343,7 +344,7 @@ no continuation. The versioned prompt contains only persona, hidden goal, stop
 token, and text conversation: expected answers, environment state, timelines,
 and tool I/O are excluded. The resolved scorer redactor (`redactor` plus
 `secrets`) redacts this data before sending it to the simulator and redacts the
-recorded simulation turns. `timeoutMs` defaults to 30,000 (hard cap 300,000);
+recorded simulation turns. `timeoutMs` defaults to 30,000;
 prompts are capped at 1 MiB and replies at 16 KiB. Empty, oversized, failed, or
 timed-out replies fail the scenario with `ERR_PRISM_EVAL_USER_SIMULATOR` and skip
 its scorers with that reason. Per-turn scoring is deferred until simulation
@@ -440,7 +441,7 @@ items are excluded, so inspect `pairedItems` before drawing conclusions.
 `scorers` selects distinct scorer ids; by default all observed scorer ids from
 both reports are compared and required on every paired item. `seed` defaults to
 zero. `resamples` overrides both bootstrap (default 2,000) and Monte Carlo
-permutation (default 10,000), capped at `HARD_STATS_RESAMPLES`. Invalid numerical
+permutation (default 10,000). Invalid numerical
 options throw `ERR_PRISM_EVAL_STATS`. `alpha` changes significance only; `ci95`
 always has 95% coverage. Comparison is pure and makes no agent calls.
 
@@ -746,8 +747,8 @@ rejects the operation. Empty or single-category agreement and constant-rank
 correlation are `null`, with no fabricated agreement or NaN in serialized reports.
 The confusion matrix has ascending numeric `labels`, human rows and judge columns
 in `counts`. Exact numeric scores are categories; align human and judge scales
-before measuring agreement. Inputs are capped at `HARD_DATASET_ITEMS`, and the
-estimated numeric matrix storage at the report byte ceiling.
+before measuring agreement. The estimated numeric matrix storage is capped at the
+default report byte budget (`DEFAULT_REPORT_MAX_BYTES`).
 
 The report includes unweighted `cohensKappa`, nominal `krippendorffAlpha` for two
 complete raters, and average-tie-rank `spearman`. `scale: "ordinal"` additionally
@@ -796,7 +797,8 @@ console.log(suite.benignUtility, suite.utilityUnderAttack, suite.attackSuccessRa
 ```
 
 The factory receives `hooks`, `slots`, and the current `item` (also available to
-ordinary experiment factories). Forward hooks and slots into `createAgent`.
+ordinary experiment factories). Forward hooks and slots into `createAgent`;
+do not spread `extra`, because `createAgent` rejects the unknown `item` key.
 Factories must create isolated agents; manage their disposal as with
 `runExperiment`. Existing hooks run alongside the injection hook, so approval
 and output guardrails still apply. Each trial has its own injection closure,
@@ -841,3 +843,5 @@ rates. No model judge calls are added.
 Runs = tasks × (1 + attacks × carriers) × trials. Four built-in attacks mean
 **5 runs per task/trial for one carrier**, or **13 for all three**.
 See `examples/eval-injection.ts` for a runnable example that falls for one attack.
+
+**Detectors.** `detectors` takes up to 8 extra scorers with unique ids, for example `createGuardrailFlaggedScorer({ pack: "injection-markers" })`. The scorer gives 1 when any `pack:<pack>/…` rule fired on the timeline, whether that rule denied, redacted, or only flagged. Each detector is reported as `suite.detection[id] = { caught, falsePositive }`: `caught` is its pass rate on attacked items and `falsePositive` its pass rate on benign items, both `InjectionRate`. Per-attack and per-carrier groups also carry `detection` with the attacked side. To compare a no-pack arm with a packs arm, pass both reports to `compareExperiments`. A judge rule that failed under `onError: "allow"` still emits a record, and the timeline does not project its outcome, so `createGuardrailFlaggedScorer` over-counts for packs with judge rules.

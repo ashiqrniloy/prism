@@ -445,7 +445,8 @@ No version bump and no publish.
       - the work-outcome suite (W1–W3, both families);
       - a live multi-session lifecycle on the `long-session` family run across sessions;
       - MemoryArena's development partition, scored by process score and success rate (R5); amended 2026-11-12 by plan 218.1, replacing `longmemeval-m` (multi-session and temporal strata) and `beam-1m`;
-      - LoCoMo's temporal stratum (R6).
+      - LoCoMo's temporal stratum (R6);
+      - AMA-Bench's development split (memory over agent trajectories, arXiv 2602.22769: real trajectories with expert questions, and synthetic trajectories at two lengths), replayed into memory and answered from it, reported beside R5 (added 2026-11-17, owner; fixture `ama-bench` and its partitions are added by criteria amendment when this task runs, after its licence is verified; until then it reads `missing`);
     - Functional: **Verdicts.** R1–R6 come from `acceptance-report.mjs --plan memory-model --gate M-3`. R5 and R6 report all-required evidence coverage per ability beside accuracy (plan 216 Task 2).
       - R3 uses the claim-support panel. If plan 222's calibration has not run yet, R3 is computed with assistant labels as development evidence, and plan 223 repeats it with a person's labels.
       - R4 runs plan 202's safety suite live on `full-r`.

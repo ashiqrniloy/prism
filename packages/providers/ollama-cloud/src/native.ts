@@ -16,11 +16,12 @@ import {
   bytesToBase64,
   createToolNameMap,
   DEFAULT_MAX_BUFFER_BYTES,
+  fetchWithStreamTimeouts,
   normalizeUsage,
   productToolName,
   providerHttpError,
   readBoundedResponseText,
-  readRetryAfterMs,
+  parseRetryAfterMs,
   resolvePreserveThinking,
   resolveProviderApiKey,
   resolveProviderMediaMessages,
@@ -32,7 +33,10 @@ import {
 } from "@arnilo/prism/provider-kit";
 import { ollamaCloudThink } from "./models.js";
 
-/** A single NDJSON line over 1 MiB is not a chat frame; fail before buffering it. */
+/**
+ * A single NDJSON line over 1 MiB is not a chat frame; fail before buffering it. The host raises or lowers it with the
+ * package's `transport.maxEventBytes`; the response never can.
+ */
 export const OLLAMA_CLOUD_MAX_LINE_BYTES = 1_048_576;
 
 export interface OllamaCloudNativePreparedRequest {
@@ -134,6 +138,8 @@ export async function* ollamaCloudNativeEvents(
     readonly baseUrl: string;
     readonly apiKey?: Parameters<typeof resolveProviderApiKey>[0];
     readonly fetch?: typeof fetch;
+    /** NDJSON line ceiling; default {@link OLLAMA_CLOUD_MAX_LINE_BYTES}. */
+    readonly maxLineBytes?: number;
   },
 ): AsyncIterable<ProviderEvent> {
   assertNotAborted(request.signal);
@@ -144,12 +150,11 @@ export async function* ollamaCloudNativeEvents(
     secrets.push(apiKey);
     const prepared = await ollamaCloudNativeBody(request);
     const headers = nativeHeaders(request, apiKey);
-    const response = await (options.fetch ?? fetch)(`${options.baseUrl}/api/chat`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(prepared.body),
-      signal: request.signal,
-    });
+    const response = await fetchWithStreamTimeouts(
+      `${options.baseUrl}/api/chat`,
+      { method: "POST", headers, body: JSON.stringify(prepared.body), signal: request.signal },
+      { fetch: options.fetch, timeouts: request.options?.timeouts },
+    );
 
     if (!response.ok) {
       const bodyText = await readBoundedResponseText(response, { secrets });
@@ -164,7 +169,7 @@ export async function* ollamaCloudNativeEvents(
     const structured = request.options?.structuredOutput !== undefined;
     let structuredText = "";
     let sawDone = false;
-    for await (const line of readNdjsonLines(response.body, request.signal)) {
+    for await (const line of readNdjsonLines(response.body, request.signal, options.maxLineBytes ?? OLLAMA_CLOUD_MAX_LINE_BYTES)) {
       let frame: NativeChatFrame;
       try {
         frame = JSON.parse(line) as NativeChatFrame;
@@ -280,7 +285,7 @@ export function ollamaCloudHttpError(response: Response, bodyText: string, secre
   else if (response.status === 404) hint = "Unknown model; list models with GET /api/tags. ";
   return providerHttpError(
     "Ollama Cloud",
-    { status: response.status, code: response.status, retryAfterMs: readRetryAfterMs(response.headers) },
+    { status: response.status, code: response.status, retryAfterMs: parseRetryAfterMs(response.headers) },
     `${hint}${bodyText}`,
     secrets,
   );
@@ -293,7 +298,11 @@ export function stripJsonFence(text: string): string {
   return match?.[1] !== undefined ? match[1].trim() : trimmed;
 }
 
-async function* readNdjsonLines(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncGenerator<string> {
+async function* readNdjsonLines(
+  body: ReadableStream<Uint8Array>,
+  signal: AbortSignal | undefined,
+  maxLineBytes: number,
+): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -307,15 +316,15 @@ async function* readNdjsonLines(body: ReadableStream<Uint8Array>, signal?: Abort
       while (newline >= 0) {
         const line = buffer.slice(0, newline).replace(/\r$/, "");
         buffer = buffer.slice(newline + 1);
-        assertLineBound(line);
+        assertLineBound(line, maxLineBytes);
         if (line.trim()) yield line;
         newline = buffer.indexOf("\n");
       }
-      assertLineBound(buffer);
+      assertLineBound(buffer, maxLineBytes);
     }
     buffer += decoder.decode();
     const line = buffer.replace(/\r$/, "");
-    assertLineBound(line);
+    assertLineBound(line, maxLineBytes);
     if (line.trim()) yield line;
   } finally {
     try {
@@ -328,9 +337,9 @@ async function* readNdjsonLines(body: ReadableStream<Uint8Array>, signal?: Abort
   }
 }
 
-function assertLineBound(line: string): void {
-  if (new TextEncoder().encode(line).byteLength > OLLAMA_CLOUD_MAX_LINE_BYTES) {
-    throw new Error(`Ollama Cloud native NDJSON line exceeded ${OLLAMA_CLOUD_MAX_LINE_BYTES} bytes`);
+function assertLineBound(line: string, maxLineBytes: number): void {
+  if (new TextEncoder().encode(line).byteLength > maxLineBytes) {
+    throw new Error(`Ollama Cloud native NDJSON line exceeded ${maxLineBytes} bytes`);
   }
 }
 

@@ -126,7 +126,7 @@ describe("agent.inspect()", () => {
     const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])] });
     assert.deepEqual(agent.inspect().store, {
       owner: "kernel",
-      capabilities: ["listSessions", "deleteSession", "searchSessions"],
+      capabilities: ["listSessions", "deleteSession", "searchSessions", "appendMany", "tipCheck"],
     });
 
     const hosted = await createAgent({

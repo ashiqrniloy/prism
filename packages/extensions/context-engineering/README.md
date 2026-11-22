@@ -45,14 +45,16 @@ no change to the request bytes.
 | `budget.reportOmissions` | `false` | Emit a `context.omissions` package event for every dropped row. |
 | `fold.minAgeTurns` | `2` | A tool result is foldable once its turn is this far behind the current one. |
 | `fold.minBytes` | `4096` | Results smaller than this are never folded. |
-| `fold.maxSummaryBytes` | `512` | Cap on the stub body (hard cap 4096). |
+| `fold.maxSummaryBytes` | `512` | Cap on the stub body. |
 | `fold.summarize` | `"truncate"` | `"truncate"` keeps the head of the payload with no model call; `{ model }` summarizes with one model call per newly folded result. |
 | `fold.keepLast` | `3` | Newest tool results batch mode never folds. Ignored when `clearAtLeastTokens` is `0`. |
 | `fold.excludeTools` | `[]` | Tool names whose results are never folded. |
 | `fold.clearAtLeastTokens` | `0` | `0` folds every eligible result per turn; a positive value clears in batches of at least that many tokens. |
 | `toolSearch.disclosure` | `"all"` | `"search"` narrows `draft.tools` to the activated and top-k set and registers `search_tools`. |
-| `toolSearch.topK` | `16` | Tools disclosed per turn (clamped to 64). |
-| `attention.maxInputTokens` | model window | Host input cap; wins over `model.limits.contextWindow`. |
+| `toolSearch.topK` | `16` | Tools disclosed per turn. |
+| `toolSearch.maxIndexTools` | `1024` | Largest tool list the search index scores; a larger list discloses every tool (fail closed). |
+| `toolSearch.maxQueryBytes` | `65536` | Ceiling on a model's `search_tools` query; a longer one is refused. The model never raises it. |
+| `attention.maxInputTokens` | model window | Host input cap; wins over `model.limits.contextWindow` (from the model ref, else its provider's catalog). |
 | `attention.reserveTokens` | `1024` | Output + next-turn headroom subtracted from the window. |
 | `attention.triggerRatio` | `0.75` | Fraction of the cap that opens the fold gate. |
 | `attention.compactRatio` | `0.9` | Fraction of the cap at which `compaction.when` requests a new prefix. Must exceed `triggerRatio`. |
@@ -112,7 +114,7 @@ first. A still-firing gate after every eligible row fails the run closed with `A
 (the honest answer is a new prefix, not silent deletion). The sticky frontier and the fold ledger
 live in the session's own package state, so a reopened session re-applies the same stub bytes. Each
 mutated turn emits an `attention.compiled` package event with counts and the measured ratio inputs.
-Past `compactRatio`, the `compaction.when` handler asks for compaction; below it the handler abstains, so a host trigger (or the kernel `thresholdEntries` fallback) can still fire.
+Past `compactRatio`, the `compaction.when` handler asks for compaction; below it the handler votes `false`, so neither a host trigger nor the kernel's default trigger (80% of the input cap) compacts before attention's own gate. A session-less call still abstains.
 
 **Budget.** The whole draft is measured — messages, context blocks another handler added, and tool
 declarations. Droppable rows are evicted oldest-first, tool results before other history, then the

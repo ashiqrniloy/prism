@@ -22,16 +22,11 @@ export const ASK_USER_DECISION_SUSPEND_REASON = "ask_user_decision" as const;
 export const ASK_USER_DECISION_RATIONALE_COUNT = 3 as const; // max pros/cons per option
 
 export const DEFAULT_MAX_ASK_USER_DECISION_OPTIONS = 6;
-export const HARD_MAX_ASK_USER_DECISION_OPTIONS = 16;
 export const DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES = 2_048;
-export const HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES = 8_192;
 export const DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES = 512;
-export const HARD_MAX_ASK_USER_DECISION_LABEL_BYTES = 2_048;
 export const DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES = 512;
-export const HARD_MAX_ASK_USER_DECISION_BULLET_BYTES = 2_048;
 /** Same ceiling as question text — free-text answers stay short. */
 export const DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES = DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES;
-export const HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES = HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES;
 
 export type AskUserDecisionSelectionMode = "single" | "multiple";
 
@@ -95,30 +90,13 @@ export function resolveAskUserDecisionLimits(
   options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">,
 ): ResolvedAskUserDecisionLimits {
   return {
-    maxOptions: validateCodingLimit(
-      "maxOptions",
-      options?.maxOptions ?? DEFAULT_MAX_ASK_USER_DECISION_OPTIONS,
-      HARD_MAX_ASK_USER_DECISION_OPTIONS,
-    ),
-    maxQuestionBytes: validateCodingLimit(
-      "maxQuestionBytes",
-      options?.maxQuestionBytes ?? DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES,
-      HARD_MAX_ASK_USER_DECISION_QUESTION_BYTES,
-    ),
-    maxLabelBytes: validateCodingLimit(
-      "maxLabelBytes",
-      options?.maxLabelBytes ?? DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES,
-      HARD_MAX_ASK_USER_DECISION_LABEL_BYTES,
-    ),
-    maxBulletBytes: validateCodingLimit(
-      "maxBulletBytes",
-      options?.maxBulletBytes ?? DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES,
-      HARD_MAX_ASK_USER_DECISION_BULLET_BYTES,
-    ),
+    maxOptions: validateCodingLimit("maxOptions", options?.maxOptions ?? DEFAULT_MAX_ASK_USER_DECISION_OPTIONS),
+    maxQuestionBytes: validateCodingLimit("maxQuestionBytes", options?.maxQuestionBytes ?? DEFAULT_MAX_ASK_USER_DECISION_QUESTION_BYTES),
+    maxLabelBytes: validateCodingLimit("maxLabelBytes", options?.maxLabelBytes ?? DEFAULT_MAX_ASK_USER_DECISION_LABEL_BYTES),
+    maxBulletBytes: validateCodingLimit("maxBulletBytes", options?.maxBulletBytes ?? DEFAULT_MAX_ASK_USER_DECISION_BULLET_BYTES),
     maxCustomTextBytes: validateCodingLimit(
       "maxCustomTextBytes",
       options?.maxCustomTextBytes ?? DEFAULT_MAX_ASK_USER_DECISION_CUSTOM_BYTES,
-      HARD_MAX_ASK_USER_DECISION_CUSTOM_BYTES,
     ),
   };
 }

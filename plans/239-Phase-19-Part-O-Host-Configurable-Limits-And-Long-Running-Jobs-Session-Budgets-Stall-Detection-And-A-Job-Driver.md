@@ -1,0 +1,1326 @@
+# Phase 19 Part O — host-configurable limits, and long-running jobs: session budgets, stall detection, and a job driver
+
+## Objectives
+
+- **Every limit Prism applies can be configured by the host. Prism ships the defaults.**
+  - Today some limits are reachable only by editing source:
+    - Delegate children are capped at 200 turns, 1,000 tool calls, 2,000,000 tokens, and one hour, whatever the host configures (`HARD_CHILD_LIMITS`, `packages/extensions/delegate/src/limits.ts:7`).
+    - The workflow loop node fixes 16 tool rounds (`packages/extensions/workflows/src/loop.ts:66`).
+    - The process ceilings are frozen: request/response bytes 64 MiB (`HARD_RUN_LIMITS`, `src/run-limits.ts:67`), durable run state 1 MiB (`HARD_MAX_AGENT_RUN_STATE_BYTES`, `src/agent-run-state.ts:24`), pending decisions and steers (`src/contracts-run-state.ts:176-294`), and session list/search (`src/contracts-core/session.ts:153-197`).
+  - The kernel defines about 150 `DEFAULT_*` / `HARD_*` / `MAX_*` constants in `src/`, and the bundles define about 1,240 more. No inventory says which of them a host can change.
+- **Prism supports agent work that runs for days.**
+  - Every run limit can already be set to `null`. But nothing bounds a job across runs.
+  - A run's limits, including `maxCost`, reset on every `session.run` (`resolveRunLimits`, `src/run-limits.ts:100`).
+  - Nothing detects a run that has stopped making progress, short of a count cap.
+  - Each host writes its own "run until done" loop (`examples/autonomous-coding-loop.ts`).
+  - Nobody has measured what grows over thousands of turns. One known risk: a branch read stops after 64 pages without an error, so a long session can be read short (`MAX_BRANCH_PAGES`, `src/session-stores.ts:73,89`).
+
+## Expected Outcome
+
+- **Limit classes.** Every limit in the kernel and the bundles is in one inventory (`scripts/limits-inventory.json`), in one of three classes:
+  - **policy:** bounds the work an agent does. The host configures it, it has a shipped default, and `null` disables it where the axis allows.
+  - **ceiling:** protects the process. Only the host raises it, at `createAgent` or package config. A run layer, a package, or the model never can.
+  - **format:** a structural invariant of a wire or storage format, such as an identifier length or schema depth. It is not a limit on work. It stays fixed, and the inventory records the reason.
+- **Inventory gate and reference page.** A gate fails on a constant missing from the inventory, and on a policy or ceiling entry with no config path. A generated page, `docs/limits.md`, lists every limit with its default and where to set it.
+- **Session limits.** A session carries limits across its runs: `maxCost`, `maxTotalTokens`, `maxRuns`, and an absolute `deadline`. They are persisted in the session's store, so they survive a restart, and child runs charged to the parent (plan 232) count toward them.
+- **Stall detection.** A run that repeats the same tool round with the same results is stopped by a stall axis, `maxRepeatedToolRounds`, before any count cap is reached.
+- **Job driver.** `@arnilo/prism-extensions/workflows` gains a job driver that runs an agent session until a host predicate says done. It stops on the session limits, a deadline, repeated failed or identical runs, or abort. It checkpoints after each run and resumes after a process restart through `session.continue()` (plan 231).
+- **Long-run soak.** A soak benchmark runs 10,000 turns on one session and holds per-turn overhead and retained memory flat. A reference example and a reference-host scenario run a multi-run job with a simulated crash. A new page, `docs/long-running.md`, explains how to run work for days.
+
+**Roadmap and dependencies.**
+
+- This plan adds **roadmap Phase 19 Part O**, on the owner's instruction of 2026-11-15. Task 2 writes the roadmap amendment and the order change. Part O runs right after Part H (plan 232) and before Part I (plan 233), because it builds on:
+  - Part E: automatic compaction (plan 229 Tasks 4–6).
+  - Part F: tail snapshots and the single writer (plan 230).
+  - Part G: `session.continue()` and turn checkpoints (plan 231).
+  - Part H: `RunOptions.chargeTo` (plan 232).
+- It changes kernel contracts: `AgentConfig`, `SessionOptions`, `RunLimits`, `RunLimitBreach`, a session entry kind, and the hard-ceiling rule. So **Task 1 is the phase review**.
+- The plan covers all seven bundles. The 2026-11-13 exclusion of first-party provider packages applied to that evaluation's findings, not to this request, so `@arnilo/prism-ai` is in the inventory (Task 2 records this).
+- No version bump or publish.
+
+Cost knobs:
+- Session limits cost one store append per run end. With `durability: "turn"` (plan 231), the counters ride the turn checkpoint and cost no extra append. With no session limits configured, there is no write.
+- The stall axis hashes each tool result once per call: one SHA-256 over bytes the kernel already holds.
+- The job driver makes no model call of its own. It costs one workflow checkpoint write per run, plus whatever `done` costs (a host function, or one model call if the host makes it one).
+- Each cost is stated in `docs/long-running.md` and the workflows README.
+
+## Tasks
+
+- [x] Task 1: Phase review (read-only)
+  - Acceptance Criteria:
+    - Functional: The task note records, citing `file:line`:
+      - (a) **Limit inventory counts and classification rules.**
+        - Counts of `DEFAULT_*` / `HARD_*` / `MAX_*` / `MIN_*` constants per bundle, plus literal fallbacks in config resolution (`?? <number>`, for example `loop.ts:66`).
+        - The three-class rule (policy / ceiling / format), with worked examples from the kernel and each bundle.
+        - Every policy or ceiling entry with no host path today, by bundle. This list sets the scope of Tasks 4–6.
+        - The constants that only feed tests or conformance (`src/testing/*`), which are classed as format or test fixtures.
+      - (b) **Long-run growth survey.** For each structure that can grow with turns, runs, or wall time, its bound and what happens at the bound:
+        - per-run counters, `recentToolCalls`, ledgers, subscriber queues, the snapshot cache;
+        - `external_state` (`MAX_EXTERNAL_STATE_ENTRIES`, `src/session/external-state.ts:17`), durable run state (1 MiB), pending steers;
+        - the branch read (`MAX_BRANCH_PAGES`: it truncates without an error);
+        - the timers behind `maxWallTimeMs: null` and `deadlineAt`.
+        - For each, whether plans 229–232 already fix it, and what is left for Task 7.
+      - (c) **What this plan assumes from plans 229–232.** The automatic compaction trigger (229 T4), tail snapshots (230 T3), the tip check (230 T2), `session.continue()` and turn checkpoints (231 T2–T3), and `RunOptions.chargeTo` (232 T2). Each is confirmed landed, or the dependent task here is re-cut.
+      - (d) **Session-limit design inputs.**
+        - Where usage and cost are computed (`RunLimitTracker.recordUsage`, `src/run-limits.ts`) and how a child run's usage reaches the parent (232).
+        - Which session entry kinds exist and how they survive compaction and the tail snapshot.
+        - How `SessionOptions` is read (`src/contracts-core/agent.ts:281-316`).
+        - Whether a session opened by `agent.session(id)` after a restart can recover its counters from the store alone.
+      - (e) **Stall design inputs.** What the tracker already keeps per call (`ToolCallSummary`, `src/contracts-core/run-limits.ts:97-101`; the ring at `src/run-limits.ts:373-403`), and where a tool result's bytes are available to hash without a second serialization (plan 228's memoized sizes).
+      - (f) **Driver placement.** The workflows engine's checkpoints, cyclic execution with `maxSupersteps` (`packages/extensions/workflows/src/define.ts:67,146`), and `suspend`/`resumeWorkflow`, compared with a new subpath. Also whether the driver can be a cyclic workflow of an agent node plus a function node, or needs its own loop.
+      - (g) **Ceiling rule.** Every place that enforces a hard ceiling today, and every path that could raise one: agent config, run options, package config, the manifest, the model. This proves the "host only" rule in Task 4 can be enforced at one seam.
+    - Performance: n/a — read-only.
+    - Code Quality: Findings are written against the task they change.
+    - Security: Records each ceiling a model-reachable or package-reachable path could raise today, if any. Such a path is a defect to fix in Task 4.
+  - Approach:
+    - Documentation Reviewed:
+      - `roadmap.md` §1.4 (fail closed), §2.1 (safety floor: "Hard limits"), §2.3 (`limits`, "hard floor; runs may only narrow"), Phase 19.
+      - `docs/agent.md` "Limits"; `docs/loop.md` (continuations); `packages/extensions/workflows/README.md`; `packages/extensions/delegate/README.md`.
+      - Plans 229 (Task 1 notes on limits), 230, 231, 232.
+    - Options Considered:
+      - Skip the review — rejected: (a) sets the scope of three tasks, and (c) gates five.
+    - Chosen Approach:
+      - Inventory, then confirm or re-cut Tasks 3–12.
+    - API Notes and Examples:
+      ```bash
+      git grep -nE "const (DEFAULT|MAX|HARD|MIN)_[A-Z0-9_]+" -- src packages ':!**/__tests__/**'
+      graft callers resolveRunLimits --depth all
+      graft callers resolveChildLimits --depth all
+      ```
+    - Files to Create/Edit:
+      - `plans/239-…md`: the task note
+    - References:
+      - The owner request of 2026-11-15; plan 229 Task 2 note (the long-job question)
+  - Test Cases to Write:
+    - none — read-only
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no
+    - Docs pages to create/edit:
+      - none
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **Corrected citations.** The Objectives cite stale lines. The current ones are: `resolveRunLimits` `src/run-limits.ts:119` (not :100); `SessionOptions` `src/contracts-core/agent.ts:287-322`; `ToolCallSummary` `src/contracts-core/run-limits.ts:98-103`; the attribution builder `src/run-limits.ts:345-405`. The recent-call ring is not in `run-limits.ts`: it is `RECENT_TOOL_CALL_LIMIT = 10` at `src/agent-session/session/tool-round.ts:440-446`. `MAX_EXTERNAL_STATE_ENTRIES` is at `src/session/external-state.ts:18`.
+    - **(a) Inventory counts.**
+      - The plan's grep, with tests excluded, finds 2,292 matches. 848 of them are generated copies under `packages/hosts/host-builder/data/**`: 844 in `data/api.json` and 4 in `data/examples/*.ts`. **Task 3's gate must exclude `**/data/**`**, as the compat baselines do.
+      - Source constants: 1,443.
+        - By bundle: kernel `src/` 162 (65 `DEFAULT_`, 70 `MAX_`, 27 `HARD_`, 0 `MIN_`); `src/testing/` 26; `@arnilo/prism-extensions` 288; `@arnilo/prism-tools` 491; `@arnilo/prism-hosts` 199; `@arnilo/prism-memory-system` (`packages/memory`) 188; `@arnilo/prism-knowledge` 86; `@arnilo/prism-ai` (`packages/providers`) 3.
+        - By prefix: 669 `DEFAULT_`, 261 `MAX_`, 507 `HARD_`, 6 `MIN_`.
+      - **The prefix rule misses limits.** 111 more limit constants use other names (`*_LIMIT(S)`, `*_CAP`, `*_BYTES`, `*_CHARS`, `*_MS`, `*_PAGES`, `*_DEPTH`, `*_SIZE` and similar): kernel 16, ai 16, extensions 19, tools 20, hosts 16, memory-system 17, knowledge 7.
+        - Examples: `RECENT_TOOL_CALL_LIMIT` (`tool-round.ts:440`), `RETRY_AFTER_HARD_CAP_MS` (`src/models/retry.ts:25`), `RELAY_MAX_BODY_BYTES` (`src/driver-kit/relay-protocol.ts:13`), `ACP_LIMITS` and its unexported `HARD` object (`packages/hosts/acp/src/limits.ts:4,16`), `KILO_CATALOG_BYTES`, `LITELLM_SPEND_WAIT_CAP_MS`, `OLLAMA_CLOUD_MAX_LINE_BYTES`.
+        - **Task 3's matcher covers these suffixes too.** The `ai` bundle's real surface is these 16, not the 3 that the prefix rule finds.
+      - **Literal fallbacks.** 484 `?? <number>` fallbacks exist outside tests. 51 of them sit on a limit-named field: kernel 10, extensions 16, tools 6, hosts 7, memory-system 7, knowledge 5.
+        - Kernel: `driver-kit/guard.ts:135` (`?? 2` concurrent runs), `driver-kit/process/json-rpc.ts:99` (1 MiB line), `driver-kit/process/probe.ts:25`, `driver-kit/profiles.ts:158`, `provider-kit/codecs/anthropic-messages.ts:146` (`?? 4096` max tokens), `provider-kit/codecs/openai-chat.ts:712` (`?? 4` breakpoints), `provider-kit/transport.ts:606-607` (JSON depth 32 / properties 4,096).
+        - Bundles:
+          - `workflows/src/loop.ts:66` (`?? 16`), `workflows/src/event-multiplexer.ts:46`, `workflows/src/memory-checkpoints.ts:33,104`;
+          - the SQLite and Postgres stores' `query.limit ?? 100` (5 each);
+          - `ag-ui/src/projectors.ts:87-88`, `remote/src/connect.ts:196`, `evals/src/trajectory.ts:280` (`maxRepeatedToolCalls ?? 2`);
+          - `coding/src/security/docker-cli.ts:80` (16 MiB), `web/src/obscura/cli.ts:80,95,176`, `research/src/index.ts:61` (`?? 500`);
+          - `memory/core` `maxEntryTextChars ?? 64_384` (3 sites) and `poolMax ?? 10` (2 sites), `memory/system/src/ltm/context.ts:498`;
+          - `knowledge/wiki/src/extension.ts:110-112`, `knowledge/wiki/src/ontology/port.ts:286`, `knowledge/rag/src/connectors/google-drive.ts:56`.
+        - One limit is a literal in an expression, not a fallback: the workflow node retry backoff `Math.min(1000, 25 * attempt)` (`workflows/src/run/node-execution.ts:176`). Task 3 names it.
+      - **The three-class rule classifies by role, not by prefix.** Prefixes mislead:
+        - `DEFAULT_MAX_EVENT_BYTES`, `DEFAULT_MAX_BUFFER_BYTES` and `DEFAULT_MAX_RESPONSE_BODY_BYTES` (`src/provider-kit/transport.ts:5-7`) are ceilings.
+        - `DEFAULT_MAX_PENDING_STEERS` and `DEFAULT_MAX_STICKY_DECISIONS` are enforced as hard caps, with no host path (see (g)).
+        - `MAX_STRUCTURED_OUTPUT_REPAIRS` (`structured-output.ts:19`) is a policy ceiling.
+      - The rule, with worked examples:
+        - **policy** bounds work, has a host path, and accepts `null` where the axis allows.
+          - Kernel: `DEFAULT_RUN_LIMITS` axes (`AgentConfig.limits.*`); `DEFAULT_MAX_CONTINUATIONS` (`limits.maxContinuations`; the constant is not exported, `run-limits.ts:46`); `DEFAULT_BACKGROUND_SETTLE_MS`; `DEFAULT_TOOL_CONCURRENCY` (`tools.concurrency`); the `DEFAULT_RETRY_*` constants (`AgentConfig.retry`); `DEFAULT_SNAPSHOT_CACHE_TTL_MS` (`SessionOptions.snapshotCacheTtlMs`); `DEFAULT_MAX_QUEUED_EVENTS` (`SubscribeOptions`); `DEFAULT_MAX_AGENT_RUN_STATE_BYTES` (the durable `maxStateBytes` option, `agent-run-state.ts:157`).
+          - Bundles: workflows `DEFAULT_MAX_NODES` and its siblings (`WorkflowLimits` on the definition); delegate `DEFAULT_CHILD_LIMITS` (`children.<name>.limits`).
+        - **ceiling** protects the process.
+          - Kernel: `HARD_RUN_LIMITS`; `HARD_MAX_AGENT_RUN_STATE_BYTES`; `HARD_MAX_PENDING_DECISIONS`; `HARD_MAX_SNAPSHOT_CACHE_TTL_MS`; the `HARD_MAX_SESSION_*` constants; `HARD_MAX_SKILL_INSTRUCTION_BYTES`; `MAX_TOOL_CONCURRENCY`; the transport wire caps; `MAX_EXTERNAL_STATE_ENTRIES` / `_BYTES`; `MAX_STATE_VALUE_BYTES`; `MAX_TREE_FILES` / `MAX_TREE_BYTES` (`manifest/integrity.ts:9-10`); `MAX_BRANCH_PAGES`.
+          - Bundles: workflows `HARD_MAX_*` (rejected above the cap, `workflows/src/limits.ts:35-60`); delegate `HARD_CHILD_LIMITS` (silently clamped); ACP `HARD` (rejected).
+        - **format** is a wire or storage invariant: `MAX_SESSION_LINK_ID_LENGTH`, `MAX_KEY_LENGTH`, `MAX_STATE_KEY_LENGTH`, `MAX_EVENT_NAME`, `MAX_SCHEMA_DEPTH` / `MAX_VALUE_DEPTH` / `MAX_PATTERN_LENGTH` (`packages/schema.ts:65-70`), semver `MAX_LENGTH`, `MAX_EFFECT_KEY_BYTES`, `MAX_DECISION_CHOICE_OPTIONS` / `SCORE_LEVELS`, `MAX_SYSTEMONE_*`, `MAX_REDACT_DEPTH`, agent-run-state `MAX_DEPTH` / `MAX_PROPERTIES`, `WORKFLOW_*_SCHEMA_VERSION`.
+          - The prefix also matches constants that are not numeric limits: `DEFAULT_SECRET_REF_DESCRIPTION`, `DEFAULT_SYSTEMONE_PATH`, `DEFAULT_LOAD_SKILL_TOOL_NAME`, `DEFAULT_ENV_ALLOWLIST`, `DEFAULT_COMPACTION_TRIGGER`, `DEFAULT_CHAT_CACHE_BREAKPOINTS`, `DEFAULT_OWNED_COMPAT_KEYS`. They are classed `format` with `reason: "not a limit"`, so the gate still lists them.
+      - **Policy and ceiling entries with no host path today.**
+        - Kernel:
+          - `HARD_RUN_LIMITS` (frozen);
+          - `HARD_MAX_AGENT_RUN_STATE_BYTES`;
+          - pending and sticky decisions (`agent-approval.ts:71,133`; `tool-round.ts:366`);
+          - pending steers and steer bytes (`session.ts:623-627` enforce the `DEFAULT_*` values);
+          - the session list and search `HARD_*` constants;
+          - `HARD_MAX_SKILL_INSTRUCTION_BYTES`;
+          - `MAX_BRANCH_PAGES`;
+          - `RECENT_TOOL_CALL_LIMIT`;
+          - `MAX_EXTERNAL_STATE_*`;
+          - the transport wire caps (per-call options exist, `transport.ts:11-13,374-375`, but no `AgentConfig` or provider-package path);
+          - the codec fallbacks above;
+          - `RETRY_AFTER_HARD_CAP_MS`.
+        - extensions: delegate `HARD_CHILD_LIMITS`, `HARD_MAX_RESULT_MAX_CHARS` and `HARD_RETAINED_RESULT_CHARS` (`delegate/src/runtime.ts:474`); child limits limited to four axes (`delegate/src/config.ts:46-51,109-117`); workflows `HARD_MAX_SUPERSTEPS = 256` (`workflows/src/limits.ts:31`, no `null`), the node retry backoff, and the event multiplexer queue.
+        - hosts: ACP `ACP_LIMITS` / `HARD`. `serveAcp` calls `resolveAcpLimits()` with no host options (`acp/src/serve.ts:55,326`), so even narrowing is unreachable from `serve`. Also AG-UI projector fallbacks.
+        - tools: obscura output and timeouts, the docker output cap, research `maxSources`.
+        - ai: every catalog, auth and spend-log byte cap.
+        - memory-system and knowledge: the fallbacks above.
+        - The exhaustive per-entry list is not hand-written here. Task 3's generator marks each such entry `pending`, and that output is the scope for Tasks 4–6.
+      - **Test-only constants** (`src/testing/`, 26): `driver-conformance.ts:82-84` (`DEFAULT_GRACE_MS`, `DEFAULT_ALLOWED`, `DEFAULT_DENIED`); `memory-event-source.ts:14-35` (22 `DEFAULT_` / `HARD_` pairs for the in-memory event source); `provider-live-scenarios.ts:26` (`DEFAULT_LIVE_CACHE_PREFIX`).
+        - The memory event source pairs are ceilings of a reference implementation. Each already has an options field, so they are classed `ceiling` with that config path. The rest are `format` (`reason: "test fixture"`).
+    - **(b) Long-run growth survey.**
+      - **Per-run counters.** `RunLimitTracker` is created per run and `dispose()`d (`run-limits.ts:213-286`). Bounded; nothing for Task 7.
+      - **Timers.** The wall timer re-arms in chunks of at most 2^31−1 ms and re-checks the clock (`run-limits.ts:258-268`), `unref`'d. `maxWallTimeMs: null` arms no timer, and a restored `deadlineAt` wins (`:246-251`). Already safe for multi-day runs.
+      - **`recentToolCalls`.** A ring of 10, reset per run (`assemble.ts:816`) and cleared at end (`persist.ts:344`). Bounded. It is **not** in `run_checkpoint` (`persist.ts:177-215` writes counters, deadline, tool grant and loop state only).
+      - **Subscriber queues.** `DEFAULT_MAX_QUEUED_EVENTS = 4096` with an overflow policy (`event-subscriber.ts:6`). The remote host and the workflow multiplexer default to 1,024. Bounded.
+      - **Snapshot cache.** It holds the branch snapshot, and a TTL bounds staleness, not size (`agent.ts:313-321`). With a tail-capable store, its size follows the post-compaction tail.
+      - **The JSONL store does not get the tail snapshot.** `store-jsonl` has no `readBranchPath` (`session.ts:1019-1024`; `readSessionSnapshot` falls back to `list()` at `session-stores.ts:123`). Its per-session cache keeps every entry in memory (`jsonl-store.ts:129,166-169,328`). So with JSONL, retained heap and per-run snapshot work both grow linearly with session length. Plan 230 left this as is. **Task 7 is re-cut** (see its amendment).
+      - **`external_state`.** 10,000 entries / 8 MiB per `(vendor, key)` per branch (`external-state.ts:18-20,124-128`). The cap is enforced against `foldExternalState` totals, and compaction carries those totals forward in the checkpoint (`external-state.ts:75-95`, `session.ts:1629-1636`). So compaction never frees capacity, and a driver session that archives every turn fails with `external_state_limit` after 10,000 records. This growth is unfixed and a **Task 7 fix**: per-key rotation or a host-configurable cap (Task 4) plus a documented archive pattern.
+      - **`package_state` append logs.** `prism.state.log(key)` is unbounded per key, kept whole in memory (`src/session/state.ts:104,175-181`). `foldPackageState` copies **every** append record into **every** compaction checkpoint (`state.ts:65-74`, `session.ts:1633`), so each compaction entry grows with the whole log. No first-party package writes it today: `memory/system/src/session/state.ts:6` mentions it only in a comment. This is a latent unbounded growth. **Task 7** either bounds it (a per-key cap, host-configurable) or records it as a known limit in `docs/long-running.md`.
+      - **Durable run state (1 MiB).** Per run, rewritten each checkpoint, not cumulative. Bounded. Load is bounded by the HARD value (`agent-run-state.ts:314-317`); see Task 4 below.
+      - **Pending steers.** 8 messages / 64 KiB per session (`session.ts:623-627`). Bounded.
+      - **Ledgers.** `runLedger` is host-supplied and grows by design. The kernel holds no in-memory copy. Nothing for Task 7.
+      - **The branch read.** The first-party readers (the memory store at `session-stores.ts:513-528`, SQLite `persistence.ts:544+`, Postgres) return the whole chain in **one page**, because the kernel passes no `limit`. So `MAX_BRANCH_PAGES` (`session-stores.ts:73,95`) silently truncates only a third-party store that pages. The run path reads `from: "compaction"` first (`session-stores.ts:122-128`), which shortens the read. Task 4's error-instead-of-truncation fix stands; its test needs a paging reader fixture.
+    - **(c) Plans 229–232: all landed.** Every task is `[x]`, and the code confirms each dependency:
+      - automatic compaction (`autoCompact` / `resolveAutoCompact`, `session.ts:1242-1335`);
+      - the tail snapshot (`readSessionSnapshot`, `session-stores.ts:122-128`);
+      - the tip check (`tipConflict`, `session.ts:957`);
+      - `session.continue()` (`session.ts:775-796`);
+      - turn checkpoints (`writeRunCheckpoint`, `persist.ts:177-215`);
+      - `RunOptions.chargeTo` (`contracts-protocol.ts:123-131`; `provider-round.ts:160-168`).
+      - No task is re-cut for a missing dependency.
+    - **(d) Session-limit inputs.**
+      - **Where usage is charged.** All usage goes through `meterUsage` (`provider-round.ts:122-157`): run turns (`recordProviderUsage`), package calls (`recordPackageCallUsage`, plan 225), and child usage, which arrives via the child's `chargeAncestor` (`:165-168`). A session-scoped tracker charged in `meterUsage`, beside `ctx.limits.recordUsage`, covers all three. That is one seam.
+      - **Gap.** `chargeTo` charges the ancestor's **active run** only. "An ancestor without an active run charges nothing" (`contracts-protocol.ts:128-130`, `provider-round.ts:162`). So an async child that outlives its parent's run would escape a session limit. **Task 8 is amended**: the session tracker is charged on the ancestor *session*, with or without an active run.
+      - **Entry kinds.** `SESSION_ENTRY_KINDS` is at `src/contracts-core/session.ts:8-34`. JSONL validates the kind on read (`jsonl-store.ts:577`) and has a per-kind switch (`:600-637`). A new `session_limits` kind needs both, and an older Prism fails closed on such a session; Task 8's CHANGELOG states it.
+      - **Surviving compaction.** Follow the `run_checkpoint` pattern: pin the newest entry in `keepEntryIds` (`keepNewestRunCheckpoint`, `session.ts:1641-1657`) and in the checkpoint's `pinnedEntryIds` filter (`session.ts:1628`). The tail read then returns it, and a reopened session (`openAgentSession`, `create-agent.ts:185-224`, through `readSessionSnapshot`) recovers counters from the store alone.
+      - **The run ledger is no source of truth.** It is optional.
+      - **`SessionOptions`** is plain options read at `agent.session()`; `snapshotCacheTtlMs` is the validated precedent.
+      - **`deadline`.** `RunLimitTrackerOptions.deadlineAt` already exists (`run-limits.ts:102-107,247-251`). The session deadline is `min(own, session)`.
+    - **(e) Stall inputs.**
+      - `ToolCallSummary` holds `{ id, name, argHash }` (`contracts-core/run-limits.ts:98-103`). `argHash` is `sha256:` + `toolEffectArgumentsHash` (`tool-round.ts:444`), which is canonical JSON. Task 9 reuses it for the result hash.
+      - **No memoized tool-result serialization exists.** Plan 228's memo (`agent-session/helpers.ts:157-172`) is keyed by object identity for request parts, and stores **byte counts, not strings**. A result is sized only when the next request is built. So **Task 9's cost is amended**: one canonical serialization plus one SHA-256 per result.
+      - **The round charge runs before dispatch** (`loop/dispatch.ts:38`, `bindChargeToolRound` at `tool-round.ts:432-436`). The stall check needs the results, so it charges **after** `dispatchToolCallsInOrder` settles. That is still inside `executeTools`, so custom loops are covered.
+      - **The window must join `run_checkpoint` / `StoredAgentRunState`** to survive `continue()`. Store one digest per round (sha256 of the sorted `(name, argHash, resultHash)` set): 8 × ~71 bytes, constant.
+      - **Prior art.** `@arnilo/prism-hosts/evals` already scores repeated calls (`evals/src/trajectory.ts:280`, arguments only). Task 9's definition (calls **and** results) is stricter and does not reuse it.
+    - **(f) Driver placement.** The engine has what the driver needs:
+      - cyclic workflows (`define.ts:66-69` requires `maxSupersteps` on a cycle);
+      - checkpoints;
+      - `suspend` / `resumeWorkflow` (`run/main.ts:106,194`);
+      - interrupted-node handling (`run/main.ts:276-372`).
+      - **An `agentNode` + function-node cycle does not fit.** Three reasons:
+        - (1) A failed run **throws** and fails the node (`nodes/agent-node.ts:158-164`), so the workflow cannot count consecutive failures.
+        - (2) Node retry backoff is fixed at ≤1 s (`node-execution.ts:176`), so it cannot express 30 s → 15 min.
+        - (3) After a crash, the agent node either resumes a suspension with decisions (`agent-node.ts:144-147,211-240`) or re-runs `session.run(input)`. It never calls `session.continue()`. With `node.session` supplied (`:75-76`), it always re-runs.
+      - **Task 10 is re-cut** to a cyclic workflow of **one function node** ("step": continue the session if it owes a turn, else `run(next(state))`; record the outcome as data, never throw; back off by abortable sleep) plus a route back to itself or to the end. This needs no agent-node change and no new subpath.
+      - **Remaining blocker.** `HARD_MAX_SUPERSTEPS = 256` (`limits.ts:31`) caps a job at ≤256 runs and rejects `null` (`validateWorkflowLimit`, `limits.ts:48-53`). Task 5's `maxSupersteps: null` stays required.
+      - **Task 10 also verifies** that the per-superstep checkpoint stays bounded over thousands of supersteps (`DEFAULT_MAX_STATE_HISTORY = 32`, `DEFAULT_MAX_CHECKPOINT_BYTES = 1 MiB`).
+    - **(g) Ceiling enforcement sites and raise paths.**
+      - **Enforcement sites:**
+        - `HARD_RUN_LIMITS`: validated at both layers (`run-limits.ts:184-188`), charged per frame (`:296-299`).
+        - `HARD_MAX_AGENT_RUN_STATE_BYTES`: options (`agent-run-state.ts:157-159`); **load is bounded by the HARD value** (`:314-317`).
+        - Pending decisions: `agent-approval.ts:71`, `tool-round.ts:366`, remote `wire.ts:93`.
+        - Sticky decisions: `agent-approval.ts:133` enforces `DEFAULT_MAX_STICKY_DECISIONS`.
+        - Steers: `session.ts:623-627` enforce the `DEFAULT_*` values.
+        - Session list: `store-jsonl/src/jsonl-store.ts:399`, `store-sqlite/src/persistence.ts:1288`, `store-postgres/src/persistence.ts:1433`, remote `wire.ts:186`.
+        - Skill instructions: `packages/loader.ts:692`, `context-files/src/skills.ts:92-98`, `skill-load.ts:19`.
+        - Snapshot TTL: `agent.ts:329`.
+        - Workflow caps: `workflows/src/limits.ts:35-60`.
+        - Delegate clamps: `delegate/src/limits.ts:13,27`.
+        - ACP caps: `acp/src/limits.ts:16-40`.
+      - **Declared but never enforced:** `HARD_MAX_PENDING_STEERS`, `HARD_MAX_PENDING_STEER_BYTES`, `DEFAULT_MAX_PENDING_DECISIONS`, `HARD_MAX_STICKY_DECISIONS` (`contracts-run-state.ts:177-180,334-340`). All four are public exports.
+      - **"One seam" does not hold as written.** The session-list ceilings are enforced **inside the store packages** and the remote wire. The skill ceiling is enforced inside `context-files`. Each imports the kernel constant, and none of them sees `AgentConfig`. **Task 4 is amended**:
+        - Store ceilings are set on the store's own factory options. A store is host-constructed, so they stay host-only.
+        - The skill ceiling reaches packages read-only (a resolved value on `PackageAPI`).
+        - The rule "host only" is then enforced at two host seams: `createAgent` and host-constructed factories.
+      - **Raise paths today:**
+        - **Agent config:** only up to HARD.
+        - **Package config / manifest:** no route to a kernel ceiling. `PackageAPI` has no limits setter (`packages/api.ts`).
+        - **Model:** no route. The delegate tool takes no limit arguments (`delegate/src/tools.ts:102` reads only config).
+        - **Run options:** cannot pass HARD.
+      - **Security finding: the run layer can widen policy.** It sets any policy axis the agent leaves unset, including `null`, and it raises the byte caps from the 8 MiB default to the 64 MiB ceiling (`run-limits.ts:119-147`, by design and tested at `run-limits.test.ts:70-75`).
+        - `@arnilo/prism-hosts/remote` forwards a **client-sent** `limits` object straight into `RunOptions` (`remote/src/protocol.ts:37-41`, `remote/src/wire.ts:24,65-71`).
+        - So a remote client can disable `maxTurns` / `maxWallTimeMs` and raise the byte caps on an agent whose host left those unset.
+        - This is no HARD breach, but it is a client-reachable widening. **Task 5 is amended** to fix it at the remote wire: client limits only narrow the agent's resolved limits, and a client `null` is rejected. The kernel contract stays: host-authored run options remain trusted.
+        - AG-UI, channels and ACP do not forward client limits.
+    - **Tasks re-cut by this review:** 3 (data exclusion, suffix matcher, not-a-limit reason), 4 (store and package ceiling seams, run-state load, dead constants), 5 (the remote wire fix, ACP `serve` options, node backoff), 7 (store choice; `external_state` and `package_state` growth), 8 (charge without an active ancestor run), 9 (cost, post-round seam, checkpoint digest) and 10 (function-node driver). Each carries an "Amended by Task 1" line.
+    - No code changed; no baseline diff; no sweep.
+
+- [x] Task 2: Roadmap amendment — Phase 19 Part O, the limit classes, and the host-only ceiling rule
+  - Acceptance Criteria:
+    - Functional:
+      - `roadmap.md` Phase 19 gains these entries:
+        - A Part O scope bullet: all limits are host-configurable with shipped defaults; session limits; stall detection; a job driver; long-run soak.
+        - A Part O row, plan 239.
+        - A `Done` line.
+        - An `Order` sentence: Part O runs after H and before I.
+      - The header's `Updated:` line records the owner decision of 2026-11-15.
+      - §2.1's safety-floor row and §2.3's `limits` comment name the three classes. A ceiling may be raised by the host and by no other layer.
+      - The prism-execution skill's invariant "Byte hard caps stay" (`.agents/skills/prism-execution/SKILL.md:70` and its `.claude` copy) is reworded: "A hard ceiling is raised only by the host, at `createAgent` or package config. A run, a package, or the model never raises it. Defaults stay."
+      - `plans/README.md`: the hardening table gains step 8a for plan 239, and the "All plans" row is added.
+    - Performance: n/a — docs.
+    - Code Quality: The amendment changes only the sections named. No other Part is re-scoped.
+    - Security: The amendment states that a ceiling stays fail-closed against every layer except the host. The rule is never weakened to "configurable by anyone".
+  - Approach:
+    - Documentation Reviewed:
+      - `roadmap.md:2509-2591`; plan 238 Task 2 (the pattern of an amendment task)
+    - Options Considered:
+      - Leave the hard ceilings frozen and make only policy limits configurable — rejected: the owner asked for every limit, and a host is trusted (§1.4 "Packages are trusted code"; the host is above packages). The real boundary is "not raisable by an untrusted layer", and Task 4 keeps it.
+      - Let runs raise ceilings — rejected: run options can carry model- or user-derived values in hosts like AG-UI and channels.
+    - Chosen Approach:
+      - Three classes, and ceilings raisable by the host only.
+    - API Notes and Examples:
+      ```md
+      - **O — Host-configurable limits and long-running jobs.** Every limit has a shipped default and a host setting …
+      ```
+    - Files to Create/Edit:
+      - `roadmap.md`, `plans/README.md`, `.agents/skills/prism-execution/SKILL.md`, `.claude/skills/prism-execution/SKILL.md`
+    - References:
+      - Owner request 2026-11-15
+  - Test Cases to Write:
+    - `src/__tests__/docs.test.ts` stays green: the plan is indexed and the roadmap links resolve.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — the contract text only
+    - Docs pages to create/edit:
+      - `roadmap.md`, `plans/README.md`
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **`roadmap.md`.**
+      - Header: `Updated: 2026-11-18` records the owner decision of 2026-11-15 (Part O; three classes; host-only ceilings; order H → O → I; all seven bundles, `@arnilo/prism-ai` included because the 2026-11-13 provider exclusion covered that evaluation only). The 2026-11-14 entry moved to "Previously".
+      - §2.1 "Safety floor" row names policy / ceiling / format. A ceiling is raised by the host only (at `createAgent`, package config, or a host-constructed factory) and stays fail-closed against every other layer.
+      - §2.3 `limits` comment: "hard floor; runs may only narrow" replaced. The old text was also inaccurate: Task 1(g) found the run layer can set axes the agent leaves unset. The new comment says a run never raises a *ceiling*.
+      - Phase 19: Part O scope bullet, `| O | 239 |` row, a Part O `Done` bullet, and the `Order` sentence (O after H, before I).
+      - The host-constructed factory seam (from Task 1(g): stores) is named in the roadmap text, beyond the `createAgent` / package config wording of the acceptance criteria.
+    - **`plans/README.md`.** The step 8a row and the "All plans" row were already present, added when the plan was written. This task added one sentence to the hardening-path intro naming plan 239 as step 8a.
+    - **Skill invariant.** `.agents/skills/prism-execution/SKILL.md:70` is reworded to "Ceilings are raised by the host only…". `.claude/skills/prism-execution/SKILL.md` is the same file on disk (`.claude/skills/prism-execution` is a symlink to the `.agents` directory), so one edit covers both.
+    - Out of scope and left as is: the §5 version table's "Parts B–N carry no version" line (`roadmap.md:1610`). Part O carries no version either, and the acceptance criteria limit edits to the named sections.
+    - Checks: `bun test src/__tests__/docs.test.ts`: 69 pass. `git grep` finds no live use of the old wording outside `plans/` and `docs/history/`. No code changed; no baseline diff; no sweep.
+
+- [x] Task 3: The limit inventory, its gate, and the generated `docs/limits.md`
+  - Acceptance Criteria:
+    - Functional:
+      - `scripts/limits-inventory.json` lists every `DEFAULT_*` / `HARD_*` / `MAX_*` / `MIN_*` constant in `src/` and `packages/` (tests excluded). It also lists every literal numeric fallback Task 1(a) found, each of which is first moved into a named constant in its own file. Each entry has:
+        - `name`, `file`, and `class` (`policy` | `ceiling` | `format`);
+        - for policy and ceiling entries, `config`: the host path, such as `AgentConfig.limits.maxTurns` or `packageConfig["@arnilo/prism-extensions/delegate"].children.<name>.limits`;
+        - `default`, and, for a format entry, `reason`.
+      - `scripts/limits-inventory.test.mjs` (in `bun run test`) fails when:
+        - a matching constant is not listed;
+        - a listed constant no longer exists;
+        - a policy or ceiling entry has neither a `config` path nor `pending: "plan 239 Task N"`.
+      - Policy and ceiling entries that are not configurable today carry `pending` with the task that fixes them (4, 5, or 6). Task 6 removes the last one and makes `pending` an error.
+      - `bun scripts/limits-inventory.mjs --emit-docs` writes `docs/limits.md`: one table per bundle, with each limit, its class, default, and where to set it. A freshness test fails when the page is stale, the same pattern as package-truth.
+      - Amended by Task 1(a):
+        - The scan excludes generated `**/data/**`; `host-builder/data/api.json` alone holds 844 matches.
+        - The matcher also catches limit suffixes (`*_LIMIT(S)`, `*_CAP`, `*_BYTES`, `*_CHARS`, `*_MS`, `*_PAGES`, `*_DEPTH`, `*_SIZE`, and object constants such as `ACP_LIMITS`). That adds 111 constants.
+        - Constants the prefix matches that are not numeric limits are classed `format` with `reason: "not a limit"`.
+        - The workflow node backoff literal (`node-execution.ts:176`) becomes a named constant.
+    - Performance: The gate reads source files once; under 2 s on the tree.
+    - Code Quality: One script and one JSON file; no second source of defaults. The `default` column is read from the constant's initializer where it is a literal, so the page cannot drift from the code.
+    - Security: Ceilings are marked in the page as "host only". The page never shows a secret-bearing value (n/a: limits are numbers).
+  - Approach:
+    - Documentation Reviewed:
+      - `scripts/package-truth.mjs` (`--emit-docs` pattern), `scripts/retired-names.mjs` (inventory-plus-test pattern)
+      - Task 1(a)
+    - Options Considered:
+      - Hand-written docs table only — rejected: it drifts, and nothing fails when a new constant appears.
+      - A lint on every numeric literal — rejected: too noisy. Named constants plus the listed fallbacks are the reviewable surface.
+    - Chosen Approach:
+      - An inventory with a gate, and a page generated from it.
+    - API Notes and Examples:
+      ```json
+      { "name": "HARD_CHILD_LIMITS", "file": "packages/extensions/delegate/src/limits.ts", "class": "ceiling",
+        "config": "packageConfig[\"@arnilo/prism-extensions/delegate\"].ceilings", "pending": "plan 239 Task 5" }
+      ```
+    - Files to Create/Edit:
+      - `scripts/limits-inventory.mjs`, `scripts/limits-inventory.json`, `scripts/limits-inventory.test.mjs`: new
+      - `docs/limits.md`: new, generated
+      - Files where a literal fallback becomes a named constant (from Task 1(a); for example `packages/extensions/workflows/src/loop.ts:66`)
+      - `scripts/run-all-tests.mjs`: needed. Gate tests are listed in `GATE_FILES`; there is no glob.
+      - `src/__tests__/docs.test.ts`: `docs/limits.md` in `kernelPages`
+      - `docs/index.md`: one link
+    - References:
+      - Task 1(a)
+  - Test Cases to Write:
+    - `every_limit_constant_is_inventoried`: adding `const MAX_FOO = 1` to a fixture copy fails the check.
+    - `policy_or_ceiling_needs_a_config_path`.
+    - `limits_page_is_fresh`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — inventory and docs
+    - Docs pages to create/edit:
+      - `docs/limits.md`: new kernel reference page (generated)
+    - `docs/index.md` update: yes — "Every limit Prism applies, its default, and where a host sets it."
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **What changed.**
+      - `scripts/limits-inventory.mjs` (new). It has three modes:
+        - With no flag, it checks and exits 1 on any finding.
+        - `--update` adds new constants with a seed class, drops removed ones, and refreshes `default`. Fields set by hand are kept.
+        - `--emit-docs` writes `docs/limits.md`.
+        - `--strict` is extra: it makes `pending` an error, ready for Task 6.
+      - **How the scan works.** It lists files with `git ls-files --cached --others --exclude-standard` (new files count; deleted files are skipped). It reads `src/` and `packages/` and skips `__tests__`, `*.test.*`, `**/data/**`, `dist` and `node_modules`.
+      - **What it matches.** Any `const` named with a `DEFAULT_`/`HARD_`/`MAX_`/`MIN_` prefix or a limit suffix. Declarations inside functions count, and so do type annotations that span lines (for example `DEFAULT_RUN_LIMITS`).
+      - **Where `default` comes from.** It is read from the initializer: a number when the expression is numeric (`64 * 1024` → 65536), otherwise the compact source text. The gate fails when the JSON and the source differ, so the page cannot drift.
+      - **The gate also catches inline fallbacks.** It fails on a literal `?? <n ≥ 2>` on a limit-named field outside `src/testing/`. This keeps the "named constant" rule from eroding. `attempt` counters are exempt.
+      - `scripts/limits-inventory.json` (new): 1,660 entries (684 policy, 815 ceiling, 161 format).
+      - `scripts/limits-inventory.test.mjs` (new, in the `bun run test` gate stage via `scripts/run-all-tests.mjs` `GATE_FILES`). It has 9 tests:
+        - the named three: `every_limit_constant_is_inventoried`, `policy_or_ceiling_needs_a_config_path`, `limits_page_is_fresh`;
+        - plus `inventory_matches_the_tree` (asserts the scan runs in under 2 s), `a_removed_constant_fails_until_dropped`, `pending_names_a_fixing_task_and_strict_mode_rejects_it`, `a_stale_default_fails`, `a_literal_limit_fallback_fails`, `seed_classifies_by_role`.
+      - `docs/limits.md` (new, generated): one table per bundle (package, limit, class, default with KiB/MiB/s/min units, where to set it, source), plus a collapsed table of fixed constants per bundle.
+        - A ceiling reads "(host only)". A pending entry reads "not configurable yet". The page holds no plan or phase text, because `docs.test.ts` forbids it on kernel pages.
+        - It was added to `kernelPages` in `src/__tests__/docs.test.ts` and linked from `docs/index.md` (Kernel section).
+    - **Literal fallbacks moved into named, unexported constants** (51 sites in 37 files, plus the backoff literal):
+      - **Kernel:**
+        - `driver-kit/guard.ts` `DEFAULT_MAX_CONCURRENT_RUNS`;
+        - `driver-kit/process/json-rpc.ts` `DEFAULT_MAX_CONCURRENT_REQUESTS`, `DEFAULT_MAX_LINE_BYTES`;
+        - `driver-kit/process/probe.ts` `DEFAULT_PROBE_TIMEOUT_MS`;
+        - `driver-kit/profiles.ts` `DEFAULT_STATUS_TIMEOUT_MS`;
+        - `provider-kit/codecs/anthropic-messages.ts` `DEFAULT_MAX_OUTPUT_TOKENS`;
+        - `provider-kit/codecs/openai-chat.ts` `DEFAULT_MAX_CACHE_BREAKPOINTS`;
+        - `provider-kit/transport.ts` `DEFAULT_MAX_JSON_DEPTH`, `DEFAULT_MAX_JSON_PROPERTIES`;
+        - `loop/run-controller.ts` `DEFAULT_CONTROLLER_TOOL_CONCURRENCY` (2 sites).
+      - **Extensions:**
+        - workflows: `loop.ts` `DEFAULT_MAX_TOOL_ROUNDS`, `event-multiplexer.ts` `DEFAULT_MAX_QUEUED_EVENTS`, `memory-checkpoints.ts` `DEFAULT_MAX_PAGE_SIZE` / `DEFAULT_PAGE_LIMIT`, and `run/node-execution.ts` `MAX_RETRY_BACKOFF_MS` / `RETRY_BACKOFF_STEP_MS` (the backoff literal);
+        - store-sqlite and store-postgres: `checkpoints.ts` `DEFAULT_QUERY_LIMIT` / `MAX_QUERY_LIMIT`, `persistence.ts` `DEFAULT_QUERY_LIMIT` (4 sites each);
+        - store-codecs: `evaluations.ts` `DEFAULT_QUERY_LIMIT`.
+      - **Hosts:**
+        - `ag-ui/projectors.ts` `DEFAULT_MAX_STATE_BYTES`, `DEFAULT_MAX_PATCH_OPERATIONS`;
+        - `remote/connect.ts` `DEFAULT_MAX_QUEUED_EVENTS`; `remote/testing.ts` `DEFAULT_TIMEOUT_MS`;
+        - `evals/trajectory.ts` `DEFAULT_MAX_REPEATED_TOOL_CALLS`; `evals/scenario-runner.ts` `DEFAULT_SIMULATED_USER_MAX_TURNS`, `DEFAULT_SIMULATED_RUN_MAX_TURNS`;
+        - `channels/discord-gateway.ts` `DEFAULT_READY_TIMEOUT_MS`;
+        - `headless/recover.ts` `DEFAULT_PAGE_SIZE`, `DEFAULT_RECOVERY_CONCURRENCY`;
+        - `driver-process/driver.ts` `DEFAULT_HOOK_TIMEOUT_MS`.
+      - **Tools:**
+        - `coding/security/approval.ts` `DEFAULT_APPROVAL_TIMEOUT_MS`; `coding/security/docker-cli.ts` `DEFAULT_MAX_OUTPUT_BYTES`;
+        - `web/obscura/cli.ts` `DEFAULT_MAX_OUTPUT_BYTES`, `DEFAULT_TIMEOUT_MS`, `DEFAULT_PROBE_TIMEOUT_MS`; `web/transport.ts` `RATE_LIMIT_BACKOFF_BASE_MS`;
+        - `research/index.ts` `DEFAULT_MAX_SOURCES`, `DEFAULT_MAX_REPAIRS`.
+      - **Memory-system:**
+        - `core/postgres/index.ts` `DEFAULT_MAX_ENTRY_TEXT_CHARS`, `DEFAULT_POOL_MAX` (2 sites each);
+        - `core/vector-memory.ts` `DEFAULT_MAX_ENTRY_TEXT_CHARS`; `core/directory.ts` `DEFAULT_LIST_LIMIT`;
+        - `system/ltm/context.ts` `DEFAULT_INJECT_BUDGET_TOKENS`.
+      - **Knowledge:**
+        - `rag/connectors/google-drive.ts` `DEFAULT_MAX_RESPONSE_BYTES`;
+        - `wiki/extension.ts` `DEFAULT_MAX_SUBJECTS_PER_PASS`, `DEFAULT_MAX_CLAIMS_PER_CONCEPT`;
+        - `wiki/ontology/port.ts` `DEFAULT_MAX_TEXT_CHARS`.
+      - Each value is unchanged. The wiki thresholds `minNotes ?? 5`, `minCoReads ?? 2` and `minIntervalTurns ?? 5` are not limits and stay literal.
+    - **Classification.**
+      - The classes listed in Task 1(a) and (g) are seeded explicitly: the transport byte caps and the four steer/decision `DEFAULT_*` values are ceilings, and seven constants are marked "not a limit".
+      - The host paths Task 1 confirmed are also seeded explicitly:
+        - the `DEFAULT_RUN_LIMITS` axes, `maxContinuations`, `backgroundSettleMs`, `tools.concurrency` and `retry.*`;
+        - `snapshotCacheTtlMs`, `SubscribeOptions.maxQueuedEvents` and `DurableRunStateOptions.maxStateBytes`;
+        - the workflow `WorkflowDefinition.limits.*` defaults;
+        - delegate `children.<name>.limits` and `resultMaxChars`;
+        - the 22 memory-event-source options.
+      - Everything else is classed by a role rule:
+        - a non-numeric initializer is "not a limit";
+        - crypto sizes, calibration constants, scoring weights and fractional thresholds are fixed;
+        - non-`DEFAULT_` identifier lengths, schema/format depths and error-message bounds are fixed;
+        - `DEFAULT_*` is policy;
+        - `HARD_*`, `MAX_*`, `*_CAP`, `*_LIMITS` and other `*_BYTES` are ceilings;
+        - the rest is policy.
+    - **Pending scope (the input to Tasks 4–6).** 1,456 entries are pending: Task 4 has 130 (kernel), Task 5 has 1,029 (extensions 303, tools 483, hosts 243), and Task 6 has 297 (ai 19, memory-system 185, knowledge 93).
+      - 359 pending entries carry a `hint`: the option that already reads the constant (`options.maxBytes ?? DEFAULT_…`).
+      - Many of those are probably host paths already, on a factory or in a package config schema, that the seed did not confirm. See the amendments to Tasks 4–6.
+    - **Findings for later tasks.**
+      - (1) The tree is moving under this plan. While this task ran, a concurrent change added `DEFAULT_KEEP_RECENT_RATIO` (`memory/system/src/session/config.ts`), and the gate caught it. A task that adds a limit runs `--update`, reviews the seeded row, and regenerates the page.
+      - (2) The `config` column is free text, checked only for presence. Nothing proves that the named path exists. Tasks 4–6 should keep paths in the `AgentConfig.x.y` / `packageConfig["…"].x` / `createX({ y })` shapes used here.
+      - (3) Task 6 makes `inventory_matches_the_tree` call `check({ strict: true })`, the same as `--strict`.
+    - **Checks.**
+      - `bun test scripts/limits-inventory.test.mjs`: 9 pass. The scan takes about 0.3–0.9 s at load average ~26.
+      - `src/__tests__/docs.test.ts`, `scripts/run-all-tests.test.mjs` and `scripts/import-hygiene.test.mjs`: 92 pass.
+      - **Typecheck.** Every workspace passes (extensions, tools, hosts, memory, knowledge, providers). The root `tsc` has one error: `src/__tests__/provider-live-scenarios.test.ts:253` (`"tool_use"` vs `ProviderStopReason`). It comes from uncommitted changes to `src/contracts-core/content.ts` and `src/testing/provider-live-scenarios.ts` that are not part of this task.
+      - **Full test run.** `bun test src/__tests__` matches every `src/__tests__` directory in the repo and ran 5,395 tests: 5,283 pass, 7 fail. Of the 7:
+        - **Pass alone:** browser ×2 and remote conformance ×2 (10 s timeouts under load).
+        - **Timing budgets:** `prism_api` <50 ms and the field-policy benchmark.
+        - **Fails before this task:** governance `governance_identity_expiry_denies_tool_call`. It still fails with this task's `run-controller.ts` edit reverted. It is not caused by this task.
+      - workflows, store-sqlite and store-codecs: 268 pass. `biome check` on the new scripts is clean. The organize-imports notes on edited files are on import lines this task did not change.
+    - No export moved: no baseline diff. Nothing retired: no sweep.
+
+- [x] Task 4: Kernel — every kernel limit configurable, ceilings raised by the host only
+  - Acceptance Criteria:
+    - Functional:
+      - **Ceilings.** `AgentConfig.ceilings` (new, host-only) raises or lowers each kernel ceiling Task 1(a) lists. At least:
+        - `maxRequestBytes` / `maxResponseBytes` (today 64 MiB);
+        - durable run state bytes (1 MiB);
+        - pending decisions and sticky decisions; pending steers and steer bytes;
+        - session list/search maxima; the snapshot-cache TTL maximum; skill instruction bytes.
+      - Each ceiling has a default equal to today's value and must be a positive safe integer; `null` is not accepted for a ceiling. `RunOptions`, package config, the manifest, and tool or hook results cannot set `ceilings`: an unknown key there is rejected (plan 229 Task 3's checker).
+      - **Policy.** Every kernel policy constant Task 1(a) lists gets a host path. Examples: `DEFAULT_MAX_CONTINUATIONS` is already `limits.maxContinuations`; `DEFAULT_MAX_QUEUED_EVENTS` is already `SubscribeOptions`. Each missing one is added on the config object that owns its seam (`AgentConfig.limits`, `providerOptions`, `SessionOptions`, a store option). No new top-level key other than `ceilings`.
+      - **The branch read.** `MAX_BRANCH_PAGES` becomes a store-reader option with today's default. Reaching it throws `SessionBranchReadLimitError` (`code: "branch_read_limit"`) instead of returning a short branch. This is a behavior fix: a silent truncation becomes an error.
+      - All `pending: "plan 239 Task 4"` entries are cleared.
+      - Amended by Task 3: the scope is the 130 kernel entries marked `pending: "plan 239 Task 4"` in `scripts/limits-inventory.json` (33 carry a `hint`). Start with a confirmation pass: an entry whose hinted option is already reachable from `createAgent`, `SessionOptions`, `RunOptions` or a public factory gets that path as `config`, with no code change. The JSON row may also be reclassed (for example to `format`) when the review shows it is a wire invariant; the reason goes in the row.
+      - Amended by Task 1(b) and (g):
+        - **Store ceilings.** The session list and search ceilings are enforced inside the JSONL, SQLite and Postgres stores and the remote wire, and none of them sees `AgentConfig`. They become store factory options. A store is host-constructed, so they stay host-only.
+        - **Skill ceiling.** The skill-instruction ceiling reaches `context-files` read-only, as a resolved value on `PackageAPI`.
+        - **Durable state load.** The load path (`agent-run-state.ts:314-317`) bounds against the configured ceiling. A state larger than a lowered ceiling fails closed with a named error.
+        - **Dead constants.** The declared-but-unenforced `HARD_MAX_PENDING_STEERS`, `HARD_MAX_PENDING_STEER_BYTES`, `DEFAULT_MAX_PENDING_DECISIONS` and `HARD_MAX_STICKY_DECISIONS` are either wired (default plus ceiling) or deleted with a baseline diff.
+        - **`external_state` caps.** `MAX_EXTERNAL_STATE_*` gets a host path.
+        - **Branch-read test.** The test uses a paging reader fixture, because first-party stores return one page.
+    - Performance: The resolved ceilings are computed once per agent and read on the hot path as plain numbers, the same as `HARD_RUN_LIMITS` today.
+    - Code Quality: One `resolveCeilings(config)` beside `resolveRunLimits`. `HARD_RUN_LIMITS` stays exported as the default ceilings. No alias for any constant.
+    - Security: The ceiling for a run comes from the agent only. A test proves a run option, a package config, and a model-produced value cannot raise one. The breach error names the ceiling, never a value.
+  - Approach:
+    - Documentation Reviewed:
+      - `src/run-limits.ts:46-160`, `src/agent-run-state.ts:23-26`, `src/contracts-run-state.ts:176-294`, `src/contracts-core/session.ts:153-197`, `src/session-stores.ts:73-98`
+      - Task 1(a), (g)
+    - Options Considered:
+      - Ceilings inside `limits` — rejected: `limits` narrows across layers by `min`, and a ceiling must not be reachable from the run layer at all.
+      - One environment variable per ceiling — rejected: config is the host's surface, and environment variables reach packages.
+    - Chosen Approach:
+      - A separate, host-only `ceilings` object, plus the missing policy paths on their owning seams.
+    - API Notes and Examples:
+      ```ts
+      createAgent({ model, ceilings: { maxResponseBytes: 128 * 1024 * 1024, runStateBytes: 4 * 1024 * 1024 } });
+      ```
+    - Files to Create/Edit:
+      - `src/contracts-core/agent.ts` (`AgentConfig.ceilings`), `src/run-limits.ts`, `src/agent-run-state.ts`, `src/contracts-run-state.ts`, `src/contracts-core/session.ts`, `src/session-stores.ts`, and the readers of each constant (`graft callers` per constant)
+      - `src/agent-session/config-shape.ts` (plan 229 Task 3): the `ceilings` checker
+      - `src/__tests__/ceilings.test.ts`: new
+      - `scripts/limits-inventory.json`, `docs/limits.md` (regenerated)
+      - `scripts/compat-baseline/arnilo__prism.txt`: regenerated (additive, plus the new error class)
+    - References:
+      - Task 1(a), (b), (g)
+  - Test Cases to Write:
+    - `host_can_raise_the_response_byte_ceiling`.
+    - `run_options_cannot_set_ceilings`.
+    - `package_config_cannot_raise_a_kernel_ceiling`.
+    - `branch_read_past_the_page_limit_throws_not_truncates`.
+    - `default_ceilings_equal_the_old_constants`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — a config field, and an error instead of truncation
+    - Docs pages to create/edit:
+      - `docs/agent.md`: `ceilings` row and the limits section
+      - `docs/limits.md`: regenerated
+      - `CHANGELOG.md`: `## [Unreleased]`, Added and Fixed
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **What changed: the ceiling seam.**
+      - `AgentConfig.ceilings` (`AgentCeilings`, `ResolvedAgentCeilings`, `src/contracts-core/agent.ts`) has 14 keys. Each default is the value the kernel enforced before this task:
+        - `maxRequestBytes`, `maxResponseBytes`: 64 MiB.
+        - `runStateBytes`: 1 MiB.
+        - `pendingDecisions`: 128.
+        - `stickyDecisions`: 64, the old *enforced* `DEFAULT_MAX_STICKY_DECISIONS`, not the dead `HARD_` 256.
+        - `pendingSteers`: 8. `pendingSteerBytes`: 64 KiB.
+        - `snapshotCacheTtlMs`: 30 s.
+        - `skillInstructionBytes`: 256 KiB.
+        - `stateValueBytes`: 64 KiB, for package state and external-state entries.
+        - `externalStateEntries`: 10,000. `externalStateBytes`: 8 MiB.
+        - `branchReadPages`: 64.
+        - `toolConcurrency`: 16.
+      - `resolveCeilings` sits beside `resolveRunLimits` in `src/run-limits.ts`. It accepts positive safe integers only, rejects `null` and unknown keys, and returns a frozen object. Its errors name the key, never the value.
+      - `createAgent` resolves the ceilings once, right after the shape check, and binds them to the agent through a `WeakMap` (`bindAgentCeilings` / `ceilingsOf`). A later write to `agent.config.ceilings` is ignored.
+      - `RunOptions` has no `ceilings` key (it is not in `SHARED` in `config-shape.ts`), so a run cannot set one.
+      - Packages read the ceilings frozen as the new `PackageAPI.ceilings`. `docs/packages.md` and the package-API freeze list are updated.
+      - **Every enforcement site reads the ceilings:**
+        - run limits (byte axes; a lowered ceiling also lowers the 8 MiB default);
+        - decision batch and suspension (`agent-approval.ts`, `tool-round.ts`);
+        - steers and the snapshot TTL (`session.ts`);
+        - skill bytes: the loader, both skill registries, `load_skill` and its result cap, persisted skill bodies, `skills.dirs` / `addDir`, contribution discovery, and `context-files` (via `prism.ceilings`);
+        - package and external state;
+        - durable run state (`parseAgentRunState` / `parseSuspendedRunEntry` / `parseRunCheckpoint` / `continuationCheckpoint` take `RunStateBounds`);
+        - tool concurrency.
+    - **What changed: policy paths.**
+      - New policy axis `limits.maxRunStateBytes`, the save bound of a suspension or `run_checkpoint`. It defaults to the old `DEFAULT_MAX_AGENT_RUN_STATE_BYTES` (256 KiB) and may not exceed `ceilings.runStateBytes`. Before this, the internal `DurableRunStateOptions.maxStateBytes` was never set, so the 256 KiB save bound had no host path.
+      - New `AgentConfig.skills.catalog` (`{ maxEntries, maxDescriptionBytes }`, `SkillCatalogOptions`), passed through input assembly and the deferred catalog.
+      - New options:
+        - `assertDecisionRequest(request, model, { maxStateBytes, maxImageBytes })`;
+        - `createMemoryToolEffectStore({ limits })`;
+        - `hashPackageClosure` / `hashPackageTree` `maxTreeFiles` / `maxTreeBytes`;
+        - `DiscoveryOptions.maxSkillBytes`.
+      - `retry.maxRetryAfterMs` is no longer clamped to 600 s (`RETRY_AFTER_HARD_CAP_MS` is deleted): the host's value is the ceiling. The test in `retry-defaults.test.ts` now asserts that a host-raised value is honored.
+    - **Store ceilings (Task 1(g)).**
+      - New kernel contract: `SessionQueryLimits` / `resolveSessionQueryLimits` / `resolveSessionListLimit` / `clipSessionSearchSnippet`. `resolveSessionSearchQuery(query, limits)` takes the limits.
+      - Kernel side: `createMemorySessionStore({ queryLimits })`. The memory store's `search.maxLinear*` options no longer have a `HARD_` cap above them, because the store is host-constructed.
+      - Not done here: the JSONL, SQLite and Postgres stores, `store-codecs` and the remote wire still use the shipped values. They are bundle code, so they move to **Task 5** (see its amendment).
+    - **Branch read.**
+      - `MAX_BRANCH_PAGES` is now the exported `DEFAULT_MAX_BRANCH_PAGES`, plus a `BranchReadOptions.maxPages` option on `getSessionBranchEntries(reader, query, options)` and `readSessionSnapshot`.
+      - Reaching the cap throws `SessionBranchReadLimitError` (`code: "branch_read_limit"`) instead of returning a short branch.
+      - The session and `createAgent` pass `ceilings.branchReadPages`. The test uses a paging-store fixture.
+    - **Dead constants deleted** (baseline diff below): `DEFAULT_MAX_PENDING_DECISIONS`, `HARD_MAX_STICKY_DECISIONS`, `HARD_MAX_PENDING_STEERS`, `HARD_MAX_PENDING_STEER_BYTES`.
+      - Beyond the plan, seven more are deleted:
+        - `DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES`, `DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES`, `HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES` and `HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES` were never read.
+        - `HARD_MAX_SESSION_SEARCH_LINEAR_{SESSIONS,ENTRIES,BYTES}` capped options that only the host sets.
+    - **Inventory: the confirmation pass and reclasses.**
+      - All 120 `pending: "plan 239 Task 4"` rows are cleared; 1,648 rows remain in total.
+      - 78 rows got a `config` path: the new ceilings, the new options, and existing public options the pass confirmed (transport, codec, media, driver-kit, systemOne, compaction, transcript, query defaults).
+      - 42 rows were reclassed `format` with a reason:
+        - preview, detail and diagnostic text bounds (`ASK_PREVIEW_MAX_CHARS`, `TURN_STOP_DETAIL_MAX_BYTES`, …);
+        - decision and relay wire-record fields;
+        - SKILL.md and package-definition shapes;
+        - persisted run-state field counts;
+        - `MAX_NESTED_STICKY_RESUMES`, a protocol rule;
+        - the fallback summary fields.
+      - **Owner review suggested** for three judgment calls. Each was classed `format` with a stated reason rather than given a seam:
+        - `MAX_STRUCTURED_OUTPUT_REPAIRS` (0–3);
+        - `DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES` and `DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH`. Both are validated alike by the session and by every codec, which has no agent context;
+        - `MAX_GUARDRAIL_CONCURRENCY`: no kernel path sets the option it bounds.
+      - `DEFAULT_MAX_SKILL_INSTRUCTION_BYTES` (32 KiB) is never read. It is classed `format` and kept, not deleted, because it is public API.
+    - **Tests.**
+      - `src/__tests__/ceilings.test.ts` (new, 11 tests) holds the five named in the plan:
+        - `default_ceilings_equal_the_old_constants`;
+        - `host_can_raise_the_response_byte_ceiling`;
+        - `run_options_cannot_set_ceilings`;
+        - `package_config_cannot_raise_a_kernel_ceiling` (a frozen `prism.ceilings`, an over-ceiling package skill, and an unknown package config key);
+        - `branch_read_past_the_page_limit_throws_not_truncates`.
+      - Plus six more:
+        - `ceilings_reject_null_unknown_keys_and_non_integers`;
+        - `a_late_config_write_cannot_raise_a_bound_ceiling` (the "model-produced value" case: no model or tool path reaches `AgentConfig`, and even a direct write after creation is ignored);
+        - `durable_state_load_fails_closed_above_a_lowered_ceiling`;
+        - `skill_catalog_bounds_are_host_configurable`;
+        - `memory_tool_effect_store_limits_are_host_set`;
+        - `tool_concurrency_ceiling_is_host_raisable`.
+      - Updated for the new messages, exports and fields: `run-limits`, `agents` (steer), `skills`, `session-index`, `package-api-freeze`, `public-export-contract`, `retry-defaults`, and `scripts/limits-inventory.test.mjs`. The page-freshness check now points at a pending Task 5 row, `HARD_CHILD_LIMITS`.
+    - **Checks.**
+      - Typecheck: the root `tsc` passes except the known `provider-live-scenarios.test.ts:253` error, which Task 3 recorded and which comes from uncommitted changes outside this task. The extensions, hosts and tools workspaces and `tsc -p examples` are clean. `packages/memory/system` errors come from another session's in-flight chunk work.
+      - Full run of `bun test src/__tests__ packages/extensions/{context-files,store-jsonl,store-sqlite} packages/hosts/remote`: 5,398 tests, 12 failures, all outside this task. Re-runs after the last edits: the affected suites 310/310 and the gate/docs set 136/138.
+      - The 12 failures:
+        - **Fail before this task (baseline):** governance identity expiry, the field-policy timing budget, and browser ×2.
+        - **Another session's in-flight work:** chunk store ×4 (memory), and the `sessionEntryForkedFrom` export in public-export and docs.
+        - **Passed alone, or after a re-run under load (~29):** `agent-config-shapes`, and the docs examples (`eval-judges.ts` runs in 0.4 s alone).
+      - `bun scripts/limits-inventory.mjs`: 0 findings. `scripts/limits-inventory.test.mjs`: 9 pass. `docs/limits.md` is regenerated.
+    - **Baseline diff (`arnilo__prism.txt`, 71 lines).**
+      - Additive: `AgentCeilings`, `ResolvedAgentCeilings`, `BranchReadOptions`, `DEFAULT_MAX_BRANCH_PAGES`, `DecisionRequestBounds`, `SESSION_BRANCH_READ_LIMIT_CODE`, `SessionBranchReadLimitError`, `SessionQueryLimits`, `ResolvedSessionQueryLimits`, `SkillCatalogOptions`, `resolveCeilings`, `resolveSessionQueryLimits`, `resolveSessionListLimit`, `clipSessionSearchSnippet`.
+      - New optional fields or params: `AgentConfig.ceilings`, `skills.catalog`, `RunLimits.maxRunStateBytes`, `ResolvedRunLimits.maxRunStateBytes`, `PackageAPI.ceilings`, `CreateMemorySessionStoreOptions.queryLimits`, `SkillRegistryOptions` / `ResolveSkillLoadOptions` / `CreateLoadSkillToolOptions.maxInstructionBytes`, `SkillRenderContext.catalog`, `AssembleProviderInputOptions.skillsCatalog`, `HashPackageClosureOptions` / `HashPackageTreeContext` tree bounds, `DiscoveryOptions.maxSkillBytes`, and the optional bounds params on `resolveRunLimits`, `resolveSessionSearchQuery`, `assertDecisionRequest`, `createMemoryToolEffectStore`, `getSessionBranchEntries`, `parseSuspendedRunEntry`, `validateLoadedSkillBodies`, `snapshotLoadedSkillBodies` and `applyRestoredSkillBodies`.
+      - `RunLimitName` excludes `maxRunStateBytes`.
+      - **Removed (this task):** the 11 dead constants listed above.
+      - Left out of the baseline on purpose: `sessionEntryForkedFrom` and `forkedEntryMetadata`, which belong to another session's in-flight change. The memory-system baseline was restored after `--update-baseline` for the same reason.
+    - **Retired-names sweep.**
+      - `bun scripts/retired-names.mjs --generate`, then the sweep: 0 hits, and `retired-names.test.mjs` passes.
+      - The generated half also picked up other sessions' export changes (for example `withoutStructuredOutput`, and the `A2A_*` names, which are live again).
+      - The sweep had 147 hits before this task's allow entry, all in `docs/limits.md` (Task 3). That page lists live internal constants whose names match exports retired in 0.12. `allow` now lists `docs/limits.md` with that reason.
+    - **Release gate.** `bun scripts/release.mjs gate` also reports failures outside this task's scope:
+      - kernel size budgets (`packedBytes` +58,882, `rootExports` +23, `sourceLines` +1,084, `fileCount` +1). These sum every session's uncommitted work; this task's share is about 14 root exports and about 500 lines.
+      - `@arnilo/prism-ai` "bump required".
+      - Neither was rebaselined here.
+    - **Findings for later tasks.**
+      - Task 5 is amended: the store packages' `queryLimits`; the remote wire's three kernel-constant checks; and the hosts' `parseSuspendedRunEntry` bounds.
+      - Task 6 is amended: provider packages should expose the provider-kit options (transport and SSE caps, `assertDecisionRequest` bounds) on their config.
+      - **Task 7:** the `external_state` cap now has a host path, `ceilings.externalStateEntries` / `externalStateBytes`. Task 7's fix needs only the archive pattern or rotation.
+
+- [x] Task 5: Stable bundles — every package limit configurable
+  - Acceptance Criteria:
+    - Functional:
+      - For `@arnilo/prism-extensions`, `@arnilo/prism-tools`, and `@arnilo/prism-hosts`, every policy or ceiling entry Task 1(a) lists gets a field in that package's config schema. Each field has today's value as its default, and the README configuration table lists it. Known entries:
+        - **delegate:** `HARD_CHILD_LIMITS` and `HARD_MAX_RESULT_MAX_CHARS` / `HARD_RETAINED_RESULT_CHARS` become `ceilings` in the package config. The host sets them; the model's tool arguments still cannot.
+        - **delegate child limits:** they accept every `RunLimits` axis, not only the four of `DEFAULT_CHILD_LIMITS`, and `null` where the kernel accepts it.
+        - **workflows:** the loop node's `maxToolRounds ?? 16` becomes a named default with a config field. `limits.maxSupersteps` accepts `null` (unbounded) for a cyclic workflow the host chooses to leave unbounded; Task 10 needs this.
+        - The coding, web, and browser tools' output and fetch caps; MCP call and list limits; AG-UI, channels, and remote host-library queue and size limits; and whatever else Task 1(a) lists.
+      - A config value that exceeds a package's own ceiling is rejected at load with the package's config error, as today. Clamping without telling the host is replaced by an error (delegate today clamps without notice, `limits.ts:11-16`).
+      - All `pending: "plan 239 Task 5"` entries are cleared.
+      - Amended by Task 3: the scope is 1,029 entries (extensions 303, tools 483, hosts 243); 213 carry a `hint`. This is far more than the "known entries" above. The task starts with a confirmation pass:
+        - Each package's config schema and public factory options are matched against its pending rows. Where a field already exists, the row gets that path as `config`.
+        - Only the rows left after that pass get new fields.
+        - Rows that the review shows are not limits (internal render widths, previews) may be reclassed `format` with a reason.
+        - If the remainder is still too large for one task, split it per bundle (5a extensions, 5b tools, 5c hosts) and record the split here.
+      - Amended by Task 1(a), (f) and (g):
+        - **Remote wire (security defect).** `@arnilo/prism-hosts/remote` today forwards client-sent `limits` into `RunOptions` (`remote/src/wire.ts:65-71`). A client's limits now only narrow the agent's resolved limits, and a client `null` or a byte cap above the resolved value is rejected with `invalid_params`. Test: `remote_client_limits_only_narrow`.
+        - **ACP.** `serveAcp` takes host `limits` options; today `resolveAcpLimits()` is called with none (`acp/src/serve.ts:55,326`).
+        - **Workflow retries.** The workflow node retry backoff becomes a named, configurable value.
+      - Amended by Task 4:
+        - **Store query limits.** The kernel now has `SessionQueryLimits` / `resolveSessionQueryLimits` / `resolveSessionListLimit` / `clipSessionSearchSnippet`, and `resolveSessionSearchQuery(query, limits)`. Each store does the same:
+          - `createJsonlSessionStore`, `createSqlitePersistence` and `createPostgresPersistence` take `queryLimits`;
+          - each resolves it once and passes it to its list, search, snippet clipping (`store-codecs/src/search.ts`) and FTS candidate `LIMIT`;
+          - `searchLinearSessions(…, caps, limits)` already takes the limits for JSONL.
+          - Store conformance gets a case for a raised `maxListLimit`.
+        - **Remote wire.** `wire.ts` still checks the kernel's shipped `HARD_MAX_PENDING_DECISIONS`, `HARD_MAX_SESSION_LIST_LIMIT` and `MAX_DECISION_REASON_BYTES`. A host that raises `ceilings.pendingDecisions` or a store's `maxListLimit` needs the remote host to take matching options, or to defer to the agent's checks.
+        - **Hosts reading suspensions.** `headless/src/pending.ts` and `remote/src/pending.ts` call `parseSuspendedRunEntry(entry)` with the shipped bounds. They should pass `runStateBounds(...)` of the agent's ceilings, so that a host with a raised `runStateBytes` can list its pending decisions.
+        - `@arnilo/prism-tools/web` `normalize.ts` uses the kernel's `HARD_CITATION_EXCERPT_BYTES`. That constant is now `format` (an artifact record field), so the web tool needs no change unless the owner reclasses it.
+      - Amended by the owner decision of 2026-11-18 (asked at the start of execution):
+        - **The host's value is the cap.** A `HARD_*` constant that only bounds a value the host sets (a factory option, a package config field, a host-built workflow definition, host data) is deleted, and the value is validated as a positive integer. This follows Task 4's precedent (`HARD_MAX_SESSION_SEARCH_LINEAR_*`, `retry.maxRetryAfterMs`).
+        - **A ceiling stays only where a non-host value reaches it:** a model's tool argument, a remote client's request, or repository content. Such a ceiling gets a host-only config path. Delegate keeps `ceilings`, because file-defined children are repository content.
+        - All three bundles in one task, not split into 5a/5b/5c.
+    - Performance: n/a — config resolution at load.
+    - Code Quality: Each package reads its limits from its resolved config in one place. No package reads another package's constants.
+    - Security: Tool arguments and model output never reach a ceiling field. A test per package with a model-facing argument proves the argument is clamped to the configured value.
+  - Approach:
+    - Documentation Reviewed:
+      - `packages/extensions/delegate/src/limits.ts`, `config.ts`; `packages/extensions/workflows/src/loop.ts:60-70`; each package's config schema
+      - Task 1(a)
+    - Options Considered:
+      - Keep silent clamping — rejected: a host that sets 4 hours and gets 1 hour without notice cannot run long jobs, which is the defect the owner raised.
+    - Chosen Approach:
+      - Config fields with today's defaults, and rejection instead of clamping.
+    - API Notes and Examples:
+      ```jsonc
+      { "name": "@arnilo/prism-extensions/delegate",
+        "config": { "ceilings": { "maxWallTimeMs": null }, "children": { "worker": { "limits": { "maxWallTimeMs": 14400000 } } } } }
+      ```
+    - Files to Create/Edit:
+      - `packages/extensions/delegate/src/{limits.ts,config.ts}`, `packages/extensions/workflows/src/loop.ts`, and each file Task 1(a) lists under extensions, tools, and hosts
+      - Each package's `README.md` configuration table
+      - `scripts/limits-inventory.json`, `docs/limits.md`
+      - `scripts/compat-baseline/arnilo__prism-{extensions,tools,hosts}.txt`: regenerated
+      - `apps/prism-agent/src/host/*.ts`: only if a host relied on clamping
+    - References:
+      - Task 1(a)
+  - Test Cases to Write:
+    - `delegate_ceiling_is_host_configurable`.
+    - `delegate_value_above_ceiling_is_rejected_not_clamped`.
+    - `delegate_child_accepts_every_run_limit_axis`.
+    - `workflow_loop_node_tool_rounds_is_configurable`.
+    - Per-package conformance from `@arnilo/prism/testing` passes.
+    - `bun run --filter @arnilo/prism-agent test`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — config fields; rejection instead of clamping
+    - Docs pages to create/edit:
+      - The READMEs of the changed packages; `docs/limits.md`
+      - `CHANGELOG.md`: `## [Unreleased]`, Changed
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **Scope and result.** All 1,029 `pending: "plan 239 Task 5"` rows are cleared, and the gate reports 0 findings.
+      - The three bundles held 1,118 inventory rows before and hold 746 after: 399 constants removed, 27 added.
+      - Of the pending rows that remain, 457 got a host `config` path and 173 were classed `format` with a reason.
+      - By bundle, after: extensions 139 policy, 9 ceiling, 111 format; tools 227 policy, 2 ceiling, 81 format; hosts 108 policy, 4 ceiling, 65 format.
+      - The inventory as a whole has 1,276 rows. Only Task 6 rows are still pending.
+    - **What changed: ceilings the host sets.**
+      - **delegate.** New `config.ceilings`: `maxTurns` 200, `maxToolCalls` 1,000, `maxTotalTokens` 2,000,000 and `maxWallTimeMs` 1 h, each raisable or `null`; `resultMaxChars` 64,000; `retainedResultChars` 256,000, and at least `resultMaxChars`.
+        - A child value above a ceiling throws `DelegateCeilingError` (`code: "delegate_ceiling"`) at load. It names the child and the axis. Nothing is clamped.
+        - `children.<name>.limits` takes every `RunLimits` axis except `backgroundSettleMs`, and `null` where the kernel accepts it.
+        - Also new: `activityFlushMs`, `resolveDelegateCeilings` and `assertChildWithinCeilings`.
+        - Renamed: `HARD_CHILD_LIMITS` → `DEFAULT_CHILD_CEILINGS`; `HARD_MAX_RESULT_MAX_CHARS` / `HARD_RETAINED_RESULT_CHARS` → `DEFAULT_MAX_RESULT_MAX_CHARS` / `DEFAULT_RETAINED_RESULT_CHARS`.
+        - The context caps (`HARD_CONTEXT_*`) are gone; `maxConcurrent` and `queueTimeoutMs` have no maximum.
+      - **coding: model-argument ceilings.** New `CodingArgCeilings`, set in package config `ceilings` or `createCodingTools(cwd, { ceilings })`. The keys: `searchMatches`, `searchContextLines`, `repoResults`, `repoDepth`, `shellTimeoutSeconds`, `backgroundWaitSeconds`, `recursiveDeleteEntries`.
+        - Defaults equal the old hard caps.
+        - grep, glob, shell, `shell_output` and delete validate the model's argument against them, and each tool schema names the host's value.
+        - Every other coding `HARD_*` bounded a host option and is deleted. That includes the docker and native sandbox tables and egress.
+        - `validateCodingLimit(name, value, ceiling?)` takes a ceiling only for model arguments.
+      - **context-engineering.** `toolSearch.maxQueryBytes` caps the model's `search_tools` query (default 64 KiB). `toolSearch.maxIndexTools` sets the index size (1,024).
+      - **web.** `fetch.maxChars` caps the model's `web_fetch` `max_chars` (100,000). It is plumbed through `createWebTools` and `createObscuraWebTools` (`maxFetchChars`).
+      - **Remote wire (security fix).** `narrowWireLimits` checks a client's limits against the agent's resolved limits (`resolveRunLimits(agent.config.limits, …, resolveCeilings(...))`). `null`, an unknown axis, `backgroundSettleMs`, a value above the agent's, or a `maxCost` above the agent's or in another currency is `invalid_params`. Test: `remote_client_limits_only_narrow`.
+      - **Decision counts** follow the agent's `ceilings.pendingDecisions`: the remote wire (`parseDecisions({ maxDecisions })`) and A2A (`readDecisions(…, maxDecisions)`). AG-UI drops its own 128 cap, because each decision matches a distinct pending interrupt.
+      - **Session list page.** The remote wire no longer checks `HARD_MAX_SESSION_LIST_LIMIT`. The store refuses a page above its `queryLimits.maxListLimit`, and `sessions.list` maps that `TypeError` to `invalid_params`.
+      - **Suspension reads.** The kernel root now exports `runStateBounds` and the `RunStateBounds` type. Remote `pendingDecisionsOf(branch, bounds)` and headless `ResumeAuthority.runStateBounds` read suspensions with the agent's ceilings.
+    - **What changed: new policy paths.**
+      - **workflows:**
+        - `workflowLoop(def, { maxToolRounds })` and `workflowLoopStrategy(def, { maxToolRounds })` (exported `DEFAULT_MAX_TOOL_ROUNDS` 16; a step's own value wins).
+        - `limits.maxSupersteps: null` leaves a cyclic workflow unbounded (Task 10).
+        - Node `retryBackoff: { stepMs, maxMs }` (`DEFAULT_RETRY_BACKOFF_STEP_MS`, `DEFAULT_MAX_RETRY_BACKOFF_MS`).
+        - `createWorkflowCheckpointAdapter({ maxListLimit })` (`DEFAULT_MAX_LIST_LIMIT`, was `HARD_LIST_PAGE_CAP`).
+        - Graph export `maxNodes` (`DEFAULT_MAX_EXPORT_NODES`).
+        - Gate default `DEFAULT_MAX_GATE_ITERATIONS` (was `HARD_MAX_LOOP_ITERATIONS`).
+        - All `HARD_MAX_*` workflow caps are gone. A checkpoint's loop records are bounded by `maxCheckpointBytes`.
+      - **compaction:** config `reserveTokens`, `maxErrorBytes`, `maxToolResultChars` and `maxTextBlockChars`.
+      - **hooks-json:** config `maxOutputChars` (was `STREAM_CAP`).
+      - **MCP:**
+        - Package config `limits` covers the client bounds on server data, plus `signInTimeoutMs`.
+        - New options `connectMcpCapabilities({ maxCapabilityPages, maxCapabilityItems })`.
+        - The OAuth limit caps and the connected-app caps are removed.
+      - **browser:** package config `limits` (every `BrowserLimitOptions` key).
+      - **stores:**
+        - `queryLimits` on `createJsonlSessionStore`, `createSqlitePersistence` and `createPostgresPersistence`, and on all three package configs. It reaches list, search, snippet clipping and the full-text candidate `LIMIT`.
+        - `maxPageSize` (SQLite and Postgres) covers checkpoint, lifecycle and feedback pages (`DEFAULT_MAX_STORE_PAGE_SIZE` 500).
+        - `feedbackLimits` sets the run-feedback bounds.
+        - The Postgres event source validates stored records against the host's `maxEventBytes`.
+        - Store conformance gains a `query-limits` leg (`StoreConformanceOptions.queryLimits`), and its search checks follow the given limits.
+      - **ACP:** `serveAcp(agent, { limits })`; `resolveAcpLimits()` was called with none.
+      - **governance:** identity, policy, OPA and audit-export caps removed. `AUDIT_EXPORT_HARD_LIMITS` is renamed `AUDIT_EXPORT_LIMITS`. New `createAuditExporter({ maxPendingSiemBatches })` and `verifyAuditBatch({ maxRecords, maxBytes })`.
+      - **Others:** `HARD_*` removed in advisor, context-files, keyring, model-router, observability timeline, store-codecs, guardrail judges, work (connectors, diagrams, documents, extraction, OCR, sheets), research, computer-use, openapi, AG-UI (limits, A2UI, projector, encrypted value), A2A, channels, evals, headless, remote and mcp-server.
+        - Host-builder no longer clamps `checkTimeoutSeconds`.
+        - Telegram keeps the Bot API's own `getUpdates` maxima as protocol bounds.
+    - **Format reclasses (owner review suggested).** 173 rows are classed `format`, each with a reason. Most are wire fields, identifier lengths, diagnostic text bounds, in-memory bookkeeping, or protocol ranges (GitHub `per_page`, Brave/Kagi offsets, Tavily `max_results`, CDP emulate/throttle ranges).
+      - These judgment calls bound work, but have no host path:
+        - the guardrail argument-scan budgets (`MAX_ARG_SCAN_STRINGS`, `MAX_VALUE_SCAN_STRINGS`);
+        - the claim-grounding scan budgets;
+        - the fidelity zip-entry bound;
+        - delegate's summary-call sizes;
+        - the advisor task/criteria text cap;
+        - host-builder's check-output and lookup bounds;
+        - the model-router int32 and 31-day storage bounds.
+    - **Config paths.** Where a bundle package has no package config, or the limit belongs to a function the host calls (coding's per-tool limits, work extraction, evals, AG-UI), the `config` column names the factory option, for example `createReadTool({ maxLines })`. Task 3 accepted that shape.
+      - Package-config fields were added where a package config exists and the knob is a host decision: delegate, compaction, context-engineering, hooks-json, MCP, coding `ceilings`, browser `limits`, web `fetch.maxChars`, and the store `queryLimits` / `maxPageSize`.
+      - Paths for 300+ rows were derived from `options.x ?? DEFAULT_X` in source, then reviewed per file.
+    - **Tests (new):**
+      - `delegate_ceiling_is_host_configurable`, `delegate_value_above_ceiling_is_rejected_not_clamped`, `delegate_child_accepts_every_run_limit_axis`;
+      - `workflow_loop_node_tool_rounds_is_configurable`;
+      - `remote_client_limits_only_narrow`, plus the decision-count ceiling test;
+      - coding `arg-ceilings.test.ts` (model arguments above the default ceilings are refused; the host raises and lowers each);
+      - context-engineering `search_tools` query ceiling;
+      - web `fetchSliceArgs` ceiling;
+      - store `query-limits` conformance runs (JSONL, SQLite; Postgres skips without a database);
+      - MCP `package_limits_config_is_validated`.
+      - About 60 existing tests that asserted a cap now assert that a large host value is accepted and an invalid one refused.
+    - **Checks.**
+      - Suites: `@arnilo/prism-extensions` 1,196 pass, `@arnilo/prism-tools` 1,297 pass, `@arnilo/prism-hosts` 995 pass, `@arnilo/prism-agent` 71 pass, all 0 fail.
+      - `bun run --workspaces --if-present typecheck` and `tsc -p examples` are clean. The root `tsc` still has only the known `provider-live-scenarios.test.ts:253` error (Task 3).
+      - Also passing: `scripts/limits-inventory.test.mjs`, `src/__tests__/docs.test.ts`, `public-export-contract.test.ts` and `retired-names.test.mjs`.
+      - One regression was caught during the checks and fixed: prepending an import to `store-sqlite/src/index.ts` had moved its `/// <reference path="./bun-sqlite.d.ts" />` below a statement, so the directive was dropped and every program that imports the store lost the `bun:sqlite` types.
+    - **Baseline diff (`--update-baseline`).**
+      - **Kernel** (`arnilo__prism.txt`, additive):
+        - `runStateBounds`, `RunStateBounds`;
+        - `StoreConformanceOptions.queryLimits`;
+        - the `query-limits` leg in `STORE_CONFORMANCE_STEPS`.
+      - **Extensions.**
+        - Added: `AUDIT_EXPORT_LIMITS`, `DEFAULT_CHILD_CEILINGS`, `DEFAULT_KMS_TIMEOUT_MS`, `DEFAULT_MAX_EXPORT_NODES`, `DEFAULT_MAX_GATE_ITERATIONS`, `DEFAULT_MAX_LIST_LIMIT`, `DEFAULT_MAX_RESULT_MAX_CHARS`, `DEFAULT_MAX_RETRY_BACKOFF_MS`, `DEFAULT_MAX_STORE_PAGE_SIZE`, `DEFAULT_MAX_TOOLS_INDEX`, `DEFAULT_MAX_TOOLS_SEARCH_QUERY_INPUT_BYTES`, `DEFAULT_MAX_TOOL_ROUNDS`, `DEFAULT_RETAINED_RESULT_CHARS`, `DEFAULT_RETRY_BACKOFF_STEP_MS`, the delegate ceiling types, functions and error, and the store config fields.
+        - Removed: 66 `HARD_*` and three dead constants (`DEFAULT_MAX_SESSIONS`, `DEFAULT_MAX_HOLD_REASON_BYTES`, `AUDIT_EXPORT_HARD_LIMITS` as renamed).
+      - **Tools.**
+        - Added: `CodingArgCeilings`, `DEFAULT_CODING_ARG_CEILINGS`, `ResolvedCodingArgCeilings`, `resolveCodingArgCeilings`, `DEFAULT_MAX_BACKGROUND_TOTAL_PROCESSES`, `MEMO_MAX_BYTES`.
+        - Removed: about 230 `HARD_*`, plus `DEFAULT_MAX_CHECK_NAMES` (dead).
+      - **Hosts.** Removed: about 60 `HARD_*` (`A2A_HARD_LIMITS`, `HARD_AG_UI_LIMITS`, …) and `DEFAULT_MAX_EXPECTED_CALLS` (dead).
+      - The memory-system baseline is unchanged by this task (diffed against a snapshot taken at task start).
+      - The gate's other failures (`@arnilo/prism-ai` bump required, kernel size budgets) were there before this task and were not rebaselined.
+    - **Retired-names sweep.**
+      - `--generate`, then the sweep: 0 hits.
+      - It flagged `HARD_CALL_TIMEOUT_MS` (MCP README), `HARD_DATASET_ITEMS` (evals README) and the now-unthrown `ERR_PRISM_EVAL_TRAJECTORY_BOUNDS`, which appeared in the generated host-builder data. All three are fixed; the host-builder data was regenerated with `bun scripts/host-builder-index.mjs`.
+    - **Docs.**
+      - Package READMEs updated: advisor, compaction, context-engineering, context-files, delegate, hooks-json, MCP, store-codecs, store-jsonl, store-sqlite, store-postgres, workflows, coding, browser, web, openapi, A2A, ACP, evals, mcp-server, remote.
+      - `docs/limits.md` regenerated, and a `CHANGELOG.md` `## [Unreleased]` entry added.
+    - **Findings for later tasks.**
+      - (1) **Kernel layering (Tasks 8–10).** `resolveRunLimits` lets a run layer set an axis the agent left at its default, including `null` (disable), because `minCap` narrows only when both layers set the axis. That is fine for host-authored run options, but any non-host source of `RunOptions.limits` must narrow first, as the remote wire now does. The job driver (Task 10) should pass the session's remaining budget as run limits the same way.
+      - (2) **Task 6.** `limits_page_is_fresh` now asserts a pending Task 6 row (`HARD_MAX_SOURCE_FILES`). Task 6 replaces that assertion when it clears the last pending row.
+      - (3) **Task 6.** The same rule applies to the provider and memory bundles: a `HARD_*` that bounds a host option is deleted, and a ceiling stays only where a provider response, a model argument or a remote client reaches it.
+      - (4) **Literal caps the gate does not see.** The inventory gate catches only named constants and `?? <n>` fallbacks. Literal caps such as `routeHostUi` `timeoutMs ≤ 600000` and mcp-server `keepAliveMs ≤ 300000` stay. A Further Action is to extend the gate to `> <literal>` comparisons on limit-named fields.
+
+- [x] Task 6: Remaining bundles — `@arnilo/prism-ai`, `@arnilo/prism-memory-system`, `@arnilo/prism-knowledge`; the gate goes strict
+  - Acceptance Criteria:
+    - Functional:
+      - The same rule as Task 5 for the provider bundle and the two experimental bundles.
+      - After this task, `scripts/limits-inventory.json` has no `pending` entry, and `limits-inventory.test.mjs` treats `pending` as an error.
+      - Amended by Task 3: the scope is 297 entries (ai 19, memory-system 185, knowledge 93), with the same confirmation pass as Task 5. "Treats `pending` as an error" means `inventory_matches_the_tree` calls `check({ strict: true })`, the same check as `bun scripts/limits-inventory.mjs --strict`.
+      - Amended by Task 5: the same owner rule applies here. A `HARD_*` that only bounds a host-set value is deleted (the host's value is the cap); a ceiling stays, with a host config path, only where a provider response, a model argument, or a remote client reaches it. `scripts/limits-inventory.test.mjs` `limits_page_is_fresh` asserts a pending row (`HARD_MAX_SOURCE_FILES`); replace it when the last pending row is cleared.
+      - Amended by Task 4: some kernel provider-kit limits are host-configurable only as function options. These are the transport timeouts, the SSE event and buffer caps, the response-body cap, JSON depth and properties, `parseJsonObjectArguments` `maxBytes`, `assertDecisionRequest(…, { maxStateBytes, maxImageBytes })`, `resolveMediaContentBlocks({ bounds })`, and the systemOne retry and state options. Each `@arnilo/prism-ai` provider package exposes the ones it calls in its package config, so a host reaches them without editing provider code. Their `docs/limits.md` rows name the provider-kit option today.
+    - Performance: n/a.
+    - Code Quality: Same as Task 5.
+    - Security: Same as Task 5; provider wire caps (event, buffer, and body bytes) are ceilings, so the host only.
+  - Approach:
+    - Documentation Reviewed:
+      - `src/provider-kit/transport.ts:5-8` (the shared wire caps the providers use), each provider and memory package's config schema; Task 1(a)
+    - Options Considered:
+      - Leave the experimental bundles out — rejected: the owner asked for every limit, and the gate would need a permanent exception.
+    - Chosen Approach:
+      - Same mechanism; the gate goes strict at the end.
+    - API Notes and Examples:
+      ```jsonc
+      { "name": "@arnilo/prism-ai/openrouter", "config": { "transport": { "maxEventBytes": 524288 } } }
+      ```
+    - Files to Create/Edit:
+      - Files Task 1(a) lists under `packages/providers/`, `packages/memory/`, `packages/knowledge/` (tentative: the exact list comes from Task 1)
+      - Their READMEs; `scripts/limits-inventory.{json,test.mjs}`; `docs/limits.md`
+      - `scripts/compat-baseline/arnilo__prism-{ai,memory-system,knowledge}.txt`: regenerated
+    - References:
+      - Task 1(a)
+  - Test Cases to Write:
+    - `no_pending_limit_remains`.
+    - `provider_wire_cap_is_host_configurable` (one provider through provider-kit).
+    - Provider conformance and memory package suites pass.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — config fields
+    - Docs pages to create/edit:
+      - The READMEs of the changed packages; `docs/limits.md`
+      - `CHANGELOG.md`: `## [Unreleased]`, Changed
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **Scope and result.** All 295 `pending: "plan 239 Task 6"` rows are cleared, and the inventory has no pending row (1,210 rows in total).
+      - Of the 295: 76 constants were deleted, 105 rows got a host `config` path, and 114 were classed `format` with a reason. 10 constants are new (renames and new defaults), each with a path.
+      - By bundle, after: ai 5 policy, 7 ceiling, 6 format; memory-system 62 policy, 4 ceiling, 104 format; knowledge 30 policy, 7 ceiling, 35 format.
+    - **The gate is strict.** `check()` defaults to `strict: true`, and `bun scripts/limits-inventory.mjs` (no flag) fails on a `pending` row; the `--strict` flag is no longer read.
+      - `--update` still seeds a new constant with `pending: "plan 239 Task N"`. That row is now a review marker: it fails the gate until a reviewer gives it a `config` path or makes it `format` with a `reason`.
+      - Tests: `inventory_matches_the_tree` calls `check({ strict: true })`; new `no_pending_limit_remains`; `pending_names_a_fixing_task_and_strict_mode_rejects_it` builds its own pending row; `limits_page_is_fresh` now asserts `DEFAULT_MAX_SOURCE_FILES` names its host path and that the page has no "not configurable yet". 10 pass.
+    - **What changed: `@arnilo/prism-ai`.**
+      - **Kernel provider-kit (additive).** `createRoutedProvider({ streamLimits })` passes SSE event, SSE buffer and error-body ceilings to the codec it dispatches to. `AnthropicMessagesEventsOptions`, `OpenAIChatEventsOptions` and `OpenAIResponsesEventsOptions` gain `streamLimits`. New `ProviderTransportConfig` and `transportProperty()` (the schema a package puts under `transport`).
+      - The 8 routed provider packages (commandcode, hyper, kilo, litellm, ollama-cloud, openai-codex, opencode-go, openrouter) take a `transport` config: `maxEventBytes`, `maxBufferBytes`, `maxResponseBodyBytes`, and `maxCatalogBytes`. The catalog key is separate because the catalog defaults (4 MiB, Codex 2,000,000 bytes) differ from the 64 KiB error-body default.
+      - The Ollama Cloud native NDJSON line follows `transport.maxEventBytes`, and its structured-output hold-back follows `maxBufferBytes`.
+      - New options: `kiloAuth({ pollIntervalMs, maxBodyBytes })`; `litellmSpendLogs({ pageSize, maxPages, maxBodyBytes })`; `maxBodyBytes` on `listKiloModels`, `listLiteLLMModels`, `listOpenRouterModels` and `listOpenAICodexModels`.
+      - Deleted: `LITELLM_SPEND_WAIT_CAP_MS`, which clamped the host's `waitMs`.
+      - laya, liquid and typesafe are not routed providers; they had no pending row except typesafe's `DECISION_LIMITS` (model metadata, classed `format`).
+    - **What changed: `@arnilo/prism-memory-system`.**
+      - **Deleted (they bounded host values):** `HARD_TOP_K_CAP`, the 12 `HARD_*_CAP` in core `limits.ts`, the eight `HARD_MAX_WORKER_*`/`HARD_MAX_TASK_STATE_BYTES`, `HARD_DIRECTORY_TAGS`, `HARD_DIRECTORY_{TOPICS,FILES,TOKENS}`, `HARD_RULES_TOKENS`, `HARD_CUE_TOKENS`, `HARD_CUES_PER_TURN`, `HARD_VERIFY_AFTER_SESSIONS`, `MAX_GRACE_SESSIONS`, `MAX_FABRIC_CAPACITY_{NOTES,TOKENS}`, `MAX_LESSON_{NUDGE_TURNS,ARCHIVE_SESSIONS}`, `MAX_EXCHANGE_STEPS`, `HARD_PROMOTE_{MIN_TURNS_BETWEEN,MAX_OUTPUT_TOKENS}`, `HARD_FABRIC_MAX_FILE_BYTES`, `HARD_MAX_SCOPE_BYTES`, `HARD_MAX_STM_HABITUATION_WINDOW`, `HARD_MAX_RECALL_PAGE_BYTES`. The literal schema maxima on the same fields (`promote.maxCandidates` 256, `tools.maxFileBytes` 1 MiB) went too.
+      - **The recall window.** `HARD_TOP_K_CAP` was also the fixed 32-hit window `memory.recall` pages over, and the model's `topK`/`page` reach it. It is now `ltm.recall.window` (`DEFAULT_RECALL_WINDOW` 32), threaded through `createFabricRecall`, `createLongTermMemory({ recallWindow })`, the tools and the injection recall.
+      - **New host paths:** `ltm.tools.maxViewEntries` (`DEFAULT_FABRIC_VIEW_ENTRIES` 200, one `memory.view` listing; directory contents are not the host's); session `recallLimits: { pageLimit, pageBytes, maxPageLimit }` (`RecallLimitsConfig`, exported), where `maxPageLimit` (`DEFAULT_MAX_RECALL_PAGE_LIMIT` 100, was `HARD_MAX_RECALL_PAGE_LIMIT`) is the ceiling on the model's `recall` `limit`; `createDeletionPropagator({ maxEdges })` (`DEFAULT_PROPAGATION_EDGES`); `createMarkdownMemoryStores({ lock: { timeoutMs, staleMs } })`. Renamed: `HARD_REPOINT_RECORDS` → `DEFAULT_REPOINT_RECORDS`.
+      - Before this task, the session tier registered the `recall` tool with no page options at all, so `pageLimit`/`pageBytes` had no package-config path. `recallLimits` is that path.
+      - `searchConversation` (a host API) no longer caps `limit`/`topK`, and `WikiOntologyPort.pending` no longer clamps its page (`MAX_ONTOLOGY_PENDING` deleted).
+      - `scope.maxBytes` no longer has its 48 KiB cap. The stored scope must still fit the kernel's `ceilings.stateValueBytes` (default 64 KiB), which the host also sets.
+    - **What changed: `@arnilo/prism-knowledge`.**
+      - RAG: all 20 `HARD_*_CAP` in `limits.ts`, the three `HARD_SYNC_*_CAP`, and `HARD_RETRIEVE_SCOPE_CAP` are deleted. `HARD_CHUNK_SIZE_CAP` had a second job: it capped the `rag_search` query, which the model writes. That is now `retrieveContext(query, { maxQueryChars })` (`DEFAULT_MAX_QUERY_CHARS` 16,384), and `indexChunks` uses `DEFAULT_MAX_CHUNK_CHARS`. `HARD_MAX_SOURCE_FILES` → `DEFAULT_MAX_SOURCE_FILES`, set per source with `sources[].maxFiles`, because repository content reaches it.
+      - Wiki: `MAX_WIKI_SEARCH_HITS`/`MAX_WIKI_READ_IDS` (model arguments) → `DEFAULT_MAX_WIKI_*` with `search.maxSearchHits`/`search.maxReadIds`. Deleted: `MAX_BIND_THRESHOLD`, `MAX_CLAIMS_RENDERED_LIMIT`, `WIKI_MAX_{INPUT,EXTRACT}_BYTES`, and the literal schema maxima on `consolidate.*`. `ingest` no longer clamps a PDF to the RAG 8 MiB cap; it follows `ingest.maxInputBytes`.
+    - **Format reclasses (owner review suggested).** 114 rows. Most are structured-output answer fields (curator and extractor schemas), file and record field bounds (concept codec, lineage, ACL, lifecycle events), port batch contracts (`LtmPort.read`, `WikiOntologyPort.read`/`apply`, `MAX_LTM_PAGE`), in-memory bookkeeping, and render or prompt shape.
+      - These judgment calls bound work but got no host path: the three session render bounds `HARD_MAX_FOLDED_PAYLOAD_BYTES`, `HARD_MAX_RENDERED_MEMORY_BYTES` and `HARD_MAX_RECENT_MESSAGE_RENDER_BYTES`; the scan-page guards (`CUE_SCAN_MAX_PAGES`, `TEAM_SCAN_MAX_PAGES`, `MAX_SCANNED_FILES`, wiki `SCAN_PAGES`/`MAX_BIND_PAGES`/`MAX_UNBOUND_PAGES`); the extractor and decision request shapes.
+      - Scoring thresholds and ranges are classed `format` even where a config key sets them (`DEFAULT_RRF_K`, `DEFAULT_BIND_THRESHOLD`, the dice and weight ranges, `compactAt.ratio`, `wm.targetRatio`). The reason names that key.
+    - **Not touched.** `packages/memory/system/src/session/compactor.ts` was being edited by another session today, and nothing in it was pending.
+    - **Tests.** New: `provider_wire_cap_is_host_configurable` (openrouter; a host-lowered `transport.maxEventBytes` refuses the frame the default admits, and the schema carries the four keys). About 20 tests that asserted a cap now assert that a large host value is accepted and an invalid one refused, including `rejects both or neither scope, and accepts as many scopes as the host passes` (RAG) and a `maxQueryChars` refusal.
+    - **Checks.**
+      - Suites: `@arnilo/prism-ai` 302 pass, memory 836 pass, knowledge 192 pass, `@arnilo/prism-agent` 71 pass (3 skip), host-builder 78 pass, all 0 fail. Kernel provider-kit, codec, routed-provider and public-export suites: 151 + 57 pass (`transportProperty` added to the two export inventories). Gate set (`docs.test.ts`, `limits-inventory.test.mjs`, `retired-names.test.mjs`): 85 pass.
+      - `bun run --workspaces --if-present typecheck` and `tsc -p examples` are clean. The root `tsc` has only the known `provider-live-scenarios.test.ts:253` error (Task 3).
+      - `bun scripts/limits-inventory.mjs`: 0 findings, strict.
+    - **Baseline diff (`--update-baseline`).** Each was diffed against a snapshot taken before the run; extensions, tools and hosts are unchanged.
+      - **Kernel** (additive, provider-kit only): `ProviderTransportConfig`, `transportProperty`, and `streamLimits` on `RoutedProviderOptions` and the three codec event options.
+      - **ai:** `transport` on the 8 providers' config and options; `maxBodyBytes` on the 4 catalog options and `KiloAuthConfig`; `pollIntervalMs` on `KiloAuthConfig`; `pageSize`/`maxPages`/`maxBodyBytes` on `LiteLLMSpendLogsOptions`; `maxLineBytes` on `ollamaCloudNativeEvents`. Removed: `LITELLM_SPEND_WAIT_CAP_MS`.
+      - **memory-system:** `recallWindow`, `recall.window`, `tools.maxViewEntries`, `recallLimits`, `RecallLimitsConfig`, `DeletionPropagatorOptions.maxEdges`, `CreateMarkdownMemoryStoresOptions.lock`. Removed: `HARD_TOP_K_CAP`, `HARD_MEMORY_RETENTION_BATCH_CAP`, and the eight `HARD_MAX_WORKER_*`/`HARD_MAX_TASK_STATE_BYTES` (`./core`).
+      - **knowledge:** added `DEFAULT_MAX_CHUNK_CHARS`, `DEFAULT_MAX_QUERY_CHARS`, `DEFAULT_MAX_SOURCE_FILES`, `RagSourceConfig.maxFiles`, `RetrieveContextOptions.maxQueryChars`, `WikiSearchConfig.maxSearchHits`/`maxReadIds`. Removed: the 23 `./rag` `HARD_*` constants, including `HARD_MAX_SOURCE_FILES`.
+    - **Retired-names sweep.** `--generate`, then the sweep: 2 hits before the fix (`HARD_TOP_K_CAP` in `packages/memory/core/README.md`), 0 after. A manual grep for every deleted name found and fixed the RAG README and a stale internal-names test list. The host-builder data was regenerated (`bun scripts/host-builder-index.mjs`).
+    - **Docs.**
+      - READMEs: RAG (`sources[].maxFiles`, the bounded section), wiki (config table: ranges dropped, two new rows), memory-system (`recall.window`, `tools.maxViewEntries`, `recallLimits`, stale caps, stability-tier rows), memory-core, and the 8 routed providers (`transport` row; Ollama Cloud prose).
+      - Also updated: `docs/provider-kit.md` (`streamLimits`), `docs/limits.md` (regenerated), and `CHANGELOG.md` `## [Unreleased]`.
+      - `scripts/memory-bench/variants.mjs`: two `replace` strings that named `HARD_TOP_K_CAP` now match the new schema line.
+    - **Release gate.** Still reports the failures that predate this task: `@arnilo/prism-ai` "bump required", and the kernel size budgets (sum of every session's uncommitted work; this task adds about 40 kernel lines and no root export).
+    - **Findings for later tasks.**
+      - (1) **Literal caps the gate does not see** (Task 5 finding 4) remain in these bundles too: for example the memory `promote.minScore` maximum 8, `derivableFrom` `maxItems: 16`, and the wiki `wiki.search` query `maxLength: 2000`. They go into the Further Action that extends the gate to literal comparisons.
+
+- [x] Task 7: Long-run soak — 10,000 turns on one session stay flat
+  - Acceptance Criteria:
+    - Functional:
+      - `scripts/benchmark-long-job.mjs` drives one agent, on the mock provider, through 200 runs of 50 turns each on one session (10,000 turns, one tool call per turn). It runs with the default compactor and a durable store (the JSONL store).
+      - At turn 10,000, the median per-turn kernel overhead is within 1.5× of the median at turn 100.
+      - Retained heap after a forced GC grows by no more than 5% between run 50 and run 200.
+      - Store reads per turn are constant (plan 230 tail snapshot).
+      - Every growth Task 1(b) found and plans 229–232 did not fix is fixed here, each with a named test. Candidates: the `external_state` entry cap reached by a long session, and per-run objects kept by a session after the run ends.
+      - The benchmark runs in `bun run test` in a short mode (2,000 turns, ratios only). The full run writes `docs/_evidence/long-run-soak.md`.
+      - Amended by Task 1(b):
+        - **Store choice.** The JSONL store has no `readBranchPath`, so it gets no tail snapshot, and it caches every entry of a session in memory (`jsonl-store.ts:129`). With JSONL, the flat-reads and flat-heap budgets cannot hold.
+        - **Budgeted leg.** The budgets apply to the SQLite store, run deterministically in-process.
+        - **JSONL leg.** A JSONL leg runs and reports its growth. Either JSONL gains a tail read and a bounded cache in this task, or its linear growth is recorded in Compromises and in `docs/long-running.md` ("use a SQL store for long jobs").
+        - **Fixes with named tests.** (1) `external_state`'s per-key cap is never freed by compaction (`foldExternalState` carries totals forward), so a 10,000-record archive fails a long session. (2) `foldPackageState` copies every `prism.state.log` record into every compaction checkpoint (`state.ts:65-74`).
+    - Performance: This task is the performance proof; the budgets go into `scripts/budgets.json` (`longRun`).
+    - Code Quality: The benchmark reuses `scripts/benchmark-session-turn` helpers; no second harness.
+    - Security: n/a — mock provider, no secret.
+  - Approach:
+    - Documentation Reviewed:
+      - `scripts/benchmark-session-turn*` (plan 228), `scripts/budgets.json` (`sessionTurnOverhead`)
+      - Task 1(b)
+    - Options Considered:
+      - A live soak against a real provider — rejected for the gate: cost and nondeterminism. It goes to Further Actions as an owner-run check.
+    - Chosen Approach:
+      - A deterministic mock soak with ratio budgets, which are load-tolerant.
+    - API Notes and Examples:
+      ```bash
+      bun scripts/benchmark-long-job.mjs --runs 200 --turns 50 --out docs/_evidence/long-run-soak.md
+      ```
+    - Files to Create/Edit:
+      - `scripts/benchmark-long-job.mjs`, `scripts/benchmark-long-job.test.mjs`: new
+      - `scripts/budgets.json`: `longRun` ceilings
+      - The fix sites from Task 1(b) (tentative)
+      - `docs/_evidence/long-run-soak.md`: new evidence
+      - `docs/performance.md`: a "Long runs" section
+    - References:
+      - Task 1(b)
+  - Test Cases to Write:
+    - `long_session_turn_overhead_stays_flat` (short mode).
+    - `long_session_heap_stays_flat` (short mode).
+    - One named test per growth fixed.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no, unless a fix changes behavior (then a CHANGELOG Fixed entry)
+    - Docs pages to create/edit:
+      - `docs/performance.md`: "Long runs"
+      - `CHANGELOG.md`: `## [Unreleased]`, Fixed (if any fix)
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **What changed: growth fixes.**
+      - **Compaction tail reads (`src/agent-session/session.ts`).** `compactBranch` previously called `this.entries()`, walking the whole branch from root to leaf on every compaction (`O(N^2)` store reads over 10,000 turns). It now reads `this.snapshot()` and builds the checkpoint from `snapshotTail(snapshot)` (`branchLength`, `foldPackageState(tail.entries, tail.packageState)`, `foldExternalState(tail.entries, tail.externalState)`). Test: `compaction_reads_tail_not_full_branch` (`src/__tests__/session-tail-snapshot.test.ts`).
+      - **Per-run object cleanup (`src/agent-session/session/persist.ts`).** `cleanupRun` now clears `session.activeRunMessages`, `session.activeRunSkills`, `session.tailSegments`, and (when `runStatus !== "suspended"`) `session.activeDurable`, so finished runs do not retain per-run buffers until the next run. Test: `session_releases_per_run_objects_after_run_ends` (`src/__tests__/session-tail-snapshot.test.ts`).
+      - **`external_state` rotation (`src/session/external-state.ts`, `packages/hosts/driver-process/src/turn.ts`).** `ExternalStateData` gains `op?: "append" | "replace"` and `ExternalStateHandle` gains optional `replace?(entries)`. `recordsOf` and `foldExternalState` reset from the latest `"replace"` record while keeping `seq` monotonic, so rotating an archive frees `externalStateEntries` / `externalStateBytes` capacity across compactions without relaxing the append-only cap tested by `external_state_caps_count_records_before_the_compaction`. `driver-process` now uses `replace` for `"vendor-session"`. Test: `external_state_rotation_frees_capacity_across_compaction` (`src/__tests__/external-state.test.ts`).
+      - **`package_state` log bound and rotation (`src/session/state.ts`, `src/packages/errors.ts`, `src/contracts-core/agent.ts`, `src/run-limits.ts`, `src/contracts-core/compaction.ts`).** Added `MAX_STATE_LOG_ENTRIES = 10_000` (`AgentConfig.ceilings.stateLogEntries`, throwing `PackageLoadError` `state_log_limit` when exceeded), `SessionLog.replace?`, `PackageStateData.op?: "set" | "append" | "replace"`, and `foldPackageState(branch, base = [])` which drops pre-rotation records for a key on `"replace"` so compaction checkpoints stay bounded. Test: `package_state_log_cap_and_rotation_bound_compaction_checkpoints` (`src/__tests__/session-state-background.test.ts`).
+    - **Soak benchmark and budgets.**
+      - Exported `countingStore`, `payload`, `percentile` from `scripts/benchmark-scenarios/session-turn-overhead.mjs` and reused them in `scripts/benchmark-long-job.mjs` (new).
+      - Added `longRun` to `scripts/budgets.json` (`maxTurnOverheadRatio: 1.5`, `maxHeapGrowthRatio: 1.05`, `maxStoreReadGrowthRatio: 1.25`), `scripts/benchmark-long-job.test.mjs` (2 tests, added to `GATE_FILES` / `TIMING_FILES` in `scripts/run-all-tests.mjs`), `docs/_evidence/long-run-soak.md`, and the "Long runs" section in `docs/performance.md`.
+      - Full 10,000-turn soak (`bun scripts/benchmark-long-job.mjs --runs 200 --turns 50 --out docs/_evidence/long-run-soak.md`): SQLite completed 200 × 50 turns (9,800 tool calls, 181 default compactions, 0 failures) with turn-100 → end median `1.5977 → 1.9787 ms` (`1.238×`), retained heap after forced GC `8.00 → 7.31 MiB` (`-8.56%` from run 50 to run 200), and `0.767` store reads/turn (`0.772 → 0.756`, `0.980×`). JSONL comparison leg (10 runs / 500 turns) grew `+22.68%` heap and `2.044×` reads/turn (`11.344` reads/turn); left without tail read and recorded for Compromises and `docs/long-running.md` (Task 12).
+    - **Docs, inventory, and baseline.**
+      - Updated `scripts/limits-inventory.json` (`MAX_STATE_LOG_ENTRIES` -> `AgentConfig.ceilings.stateLogEntries`), regenerated `docs/limits.md`, updated `docs/agent.md` ceilings table, and added a `CHANGELOG.md` `## [Unreleased]` entry.
+      - Updated the 6 affected lines in `scripts/compat-baseline/arnilo__prism.txt` (`AgentCeilings`, `CompactionEntryData`, `ExternalStateData`, `ExternalStateHandle`, `PackageLoadErrorCode`, `SessionLog` — all additive / optional).
+    - **Findings for later tasks.**
+      - Task 12 (`docs/long-running.md`) should state that JSONL caches every session entry and lacks `readBranchPath`, so multi-day / long-running jobs should use SQLite or Postgres; and document `ExternalStateHandle.replace` / `SessionLog.replace` + `ceilings.stateLogEntries`.
+    - **Checks.**
+      - `bun test --timeout=0 scripts/benchmark-long-job.test.mjs`: 2 pass (2.06s).
+      - `bun test --timeout=0 scripts/benchmark-session-turn.test.mjs`: 4 pass (solo; hit 40.7 vs 30 ms `p95` when run concurrently with `release.mjs gate`).
+      - `bun test --timeout=0 packages/hosts/driver-process/src/__tests__/`: 125 pass.
+      - `bun test --timeout=0 src/__tests__/external-state.test.ts src/__tests__/session-tail-snapshot.test.ts src/__tests__/session-state-background.test.ts src/__tests__/ceilings.test.ts src/__tests__/compaction.test.ts src/__tests__/compaction-trigger.test.ts src/__tests__/mid-run-compaction.test.ts`: 100 pass (run before the final `driver-process/src/turn.ts` edit; kernel sources unchanged after).
+      - `bun test --timeout=0 src/__tests__/public-export-contract.test.ts src/__tests__/docs.test.ts scripts/limits-inventory.test.mjs scripts/retired-names.test.mjs scripts/run-all-tests.test.mjs`: 144 pass (0 retired-name hits).
+      - `bun run --workspaces --if-present typecheck`: clean; `tsc -p examples --noEmit`: clean; root `tsc` has only the pre-existing `src/__tests__/provider-live-scenarios.test.ts:253` error noted in Task 3.
+      - `bun scripts/limits-inventory.mjs`: 0 findings (strict).
+      - `bun scripts/release.mjs gate`: 0 `compat` diffs; pre-existing failures only (`@arnilo/prism-ai` bump required, `@arnilo/prism-memory-system` packedBytes, and `kernel` size budgets across uncommitted sessions).
+
+- [x] Task 8: Session limits — a budget across runs that survives a restart
+  - Acceptance Criteria:
+    - Functional:
+      - `SessionOptions.limits` and `AgentConfig.sessionLimits` (the default for every session) accept these keys, each optional and each `null`-able:
+        - `maxCost: { amount, currency }`
+        - `maxTotalTokens`
+        - `maxRuns`
+        - `deadline`: an ISO 8601 instant
+      - A session-level value narrows the agent-level value by `min`.
+      - Usage charged to any run of the session counts, including child runs charged through `RunOptions.chargeTo` (plan 232).
+      - Counters persist as a kernel `session_limits` entry:
+        - appended at each run end;
+        - carried in the turn checkpoint when `durability: "turn"` (plan 231);
+        - kept by compaction and the tail snapshot.
+      - A session reopened in a new process restores its counters from the store.
+      - **When a session limit is exhausted:**
+        - At run start, the new run is refused with `SessionLimitError` (`code: "session_limit"`, naming the limit), and nothing is appended.
+        - Mid-run, the run ends `failed` with `limit: { limit, scope: "session", maximum, observed }` and the usual attribution.
+        - `deadline` arms the run's wall timer at `min(maxWallTimeMs, deadline − now)`.
+      - `RunLimitBreach` gains optional `scope: "run" | "session"`. It is absent on run limits, so existing consumers are unchanged.
+      - An unreadable or malformed `session_limits` entry makes the run fail closed with `code: "session_limits_unreadable"`.
+      - `session.limits()` returns the current counters and the remaining amounts.
+      - Amended by Task 1(d):
+        - **Seam.** The session tracker is charged in `meterUsage` (`provider-round.ts:122-157`), which covers run turns, package calls and child usage.
+        - **Async children.** `chargeTo` charges an ancestor's *active run* only (`contracts-protocol.ts:128-130`). So a child's usage is also charged to the ancestor **session's** tracker when that session has no active run. An async child cannot escape a session limit. Test: `async_child_usage_counts_after_the_parent_run_ends`.
+        - **Entry kind.** The `session_limits` kind is added to `SESSION_ENTRY_KINDS` and to the JSONL per-kind validation (`jsonl-store.ts:577,600-637`).
+        - **Compaction.** The entry is pinned through compaction the way `run_checkpoint` is (`session.ts:1628,1641-1657`).
+    - Performance: One append per run end, or none with turn durability. No store read on the hot path: counters are cached on the session after the first snapshot.
+    - Code Quality: The kernel `RunLimitTracker` charges a second, session-scoped tracker. No second accounting path. With no session limit set, nothing is written (proved by a test).
+    - Security: A session limit is host config. Neither the model nor a package can raise it; `PackageAPI` has no setter. The counters entry carries no message content.
+  - Approach:
+    - Documentation Reviewed:
+      - `src/run-limits.ts` (`RunLimitTracker`, `recordUsage`), `src/contracts-core/run-limits.ts:90-95`, `src/contracts-core/agent.ts:281-316`
+      - Plans 231 (turn checkpoint) and 232 (`chargeTo`)
+      - Task 1(c), (d)
+    - Options Considered:
+      - A package (for example `@arnilo/prism-extensions/budget`) that counts usage with hooks — rejected: a limit that a missing package silently drops is not a safety limit (§2.1 places limits in the kernel safety floor), and the counters must be charged inside `recordUsage` to cover child runs.
+      - Persist in package state — rejected: package state belongs to a package; the kernel has no package name to use.
+      - Keep counters only in memory — rejected: a restart would reset a days-long job's budget.
+    - Chosen Approach:
+      - A kernel session-scoped tracker with a kernel entry kind.
+    - API Notes and Examples:
+      ```ts
+      const session = await agent.session({ limits: { maxCost: { amount: 40, currency: "USD" }, deadline: "2026-11-20T00:00:00Z" } });
+      await session.run("…");                // charged to the run and to the session
+      (await session.limits()).remaining;    // { cost: 38.12, runs: null, … }
+      ```
+    - Files to Create/Edit:
+      - `src/contracts-core/{agent,compaction,run-limits,session}.ts`, `src/contracts-protocol.ts`, `src/contracts-run-state.ts`, `src/index.ts`, `src/package-call-seam.ts`, `src/run-limits.ts`, `src/agent-run-state.ts`
+      - `src/agent-session/{config-shape,session}.ts`, `src/agent-session/session/{assemble,persist,provider-round,types}.ts`
+      - `packages/extensions/store-jsonl/src/jsonl-store.ts`, `packages/extensions/observability/src/{timeline,timeline-types}.ts`, `packages/hosts/remote/src/session-proxy.ts`, `packages/hosts/a2a/src/proxy.ts`
+      - `src/testing/compaction-conformance.ts`, `src/testing/store-conformance.ts`
+      - `src/__tests__/session-limits.test.ts` (new), `src/__tests__/{agents,agent-surface-freeze,public-export-contract}.test.ts`
+      - `scripts/compat-baseline/arnilo__prism.txt`, `scripts/compat-baseline/arnilo__prism-extensions.txt`
+    - References:
+      - Task 1(c), (d)
+  - Test Cases to Write:
+    - `session_cost_limit_spans_runs`.
+    - `session_limits_survive_a_process_restart` (JSONL store, new agent instance).
+    - `child_run_usage_counts_toward_the_parent_session`.
+    - `async_child_usage_counts_after_the_parent_run_ends`.
+    - `exhausted_session_refuses_a_new_run_and_appends_nothing`.
+    - `deadline_arms_the_run_wall_timer`.
+    - `malformed_session_limits_entry_fails_closed`.
+    - `no_session_limit_writes_nothing`.
+    - Store and compaction conformance pass with the new entry.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — new options, entry kind, error, breach field
+    - Docs pages to create/edit:
+      - `docs/agent.md`: session limits; `docs/events.md`: `limit.scope`; `docs/slots.md` or the store page: the entry kind
+      - `CHANGELOG.md`: `## [Unreleased]`, Added
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **What changed.**
+      - **Contracts & exports:** Added `SessionLimits` (`maxCost`, `maxTotalTokens`, `maxRuns`, `deadline`), `ResolvedSessionLimits`, `SessionLimitName`, `SessionLimitCounters`, `SessionLimitRemaining`, `SessionLimitsStatus`, `SessionLimitsEntryData` (`SESSION_LIMITS_ENTRY_SCHEMA_VERSION = 1`), `SessionLimitError` (`SESSION_LIMIT_CODE = "session_limit"`), `SessionLimitsUnreadableError` (`SESSION_LIMITS_UNREADABLE_CODE = "session_limits_unreadable"`), and `resolveSessionLimits` (`src/contracts-core/{run-limits,session,agent}.ts`, `src/contracts-run-state.ts`, `src/index.ts`). `AgentConfig.sessionLimits` and `SessionOptions.limits` validate and narrow by `min` (with `null` as uncapped), enforced in `src/agent-session/config-shape.ts` and `resolveSessionLimits`. `RunLimitBreach.limit` widens to `RunLimitName | SessionLimitName` and adds optional `scope?: "run" | "session"` (omitted on run limits). `Session` gains `limits(): Promise<SessionLimitsStatus>`.
+      - **Single accounting seam (`src/run-limits.ts`):** `SessionLimitTracker` wraps a session-scoped `RunLimitTracker` (`scope: "session"`), and each run's `RunLimitTracker` forwards `recordUsage` to it (keeping session counters updated even when a run-level cap fires first) and arms its wall timer at `min(maxWallTimeMs, deadline - now)` via `RunLimitTrackerOptions.sessionDeadlineAt` (breaching with `limit: "deadline", scope: "session"` when the session deadline expires first). `RunLimitTracker` tracks `cost` and `costCurrency` even when `maxCost` is unset on the run tracker. `generateProviderTurn` / `generateWithRetry` (`src/agent-session/session/provider-round.ts`) emit `turn.completed { error }` and let `RunLimitError` pass through unwrapped and unretried so breaches on either the run or an ancestor `chargeTo` target always surface `RunResult.limit` and `run.failed.limit`.
+      - **Persistence, compaction, and restart recovery (`src/agent-session/session.ts`, `persist.ts`, `assemble.ts`, `src/agent-run-state.ts`):** Added `"session_limits"` to `SESSION_ENTRY_KINDS` and `jsonl-store.ts` (`validateSessionEntry`). When any session limit is configured, `session_limits` is appended once per non-suspended terminal run end (and between runs when an async child charges usage via `PackageCallSeam.recordSessionUsage`), carried in `StoredAgentRunState.sessionLimits` inside `run_checkpoint` (`durability: "turn"`) and `suspended_run` (without appending after `suspended_run`, preserving `pendingSuspensionOf`), and pinned across compaction via `keepNewestSessionLimits` and `compactionCheckpoint.pinnedEntryIds` so `readSessionSnapshot` restores counters after restarts and compactions. With no session limit configured, nothing is written. Malformed `session_limits` entries fail closed with `SessionLimitsUnreadableError` (`code: "session_limits_unreadable"`).
+      - **Downstream `Session` proxies & `TimelineExhaustion`:** Added `limits()` (`unsupported("limits()")`) to `packages/hosts/remote/src/session-proxy.ts` and `packages/hosts/a2a/src/proxy.ts`. Widened `TimelineExhaustion.limit` and `FoldState.attribution.limit` in `packages/extensions/observability/src/{timeline-types,timeline}.ts` to `RunLimitName | SessionLimitName`.
+      - **Conformance & docs:** Added `"session-limits"` leg to `STORE_CONFORMANCE_STEPS` / `storeConformance` (`src/testing/store-conformance.ts`) and a `session_limits` entry to `assertCompactorConforms` (`src/testing/compaction-conformance.ts`). Updated `docs/agent.md`, `docs/events.md`, `docs/slots.md`, and `CHANGELOG.md` (`## [Unreleased]`).
+    - **Findings for later tasks.**
+      - Task 10 (job driver): At run start, an exhausted session rejects `session.run()` / `session.continue()` / `session.resume()` with `SessionLimitError` (`code: "session_limit"`), while mid-run exhaustion resolves `RunResult` with `status: "failed"` and `limit.scope === "session"`. The job driver should handle both as terminal session-limit stops.
+    - **Baseline diff (`--update-baseline`).**
+      - `scripts/compat-baseline/arnilo__prism.txt`: added `ResolvedSessionLimits`, `SESSION_LIMITS_ENTRY_SCHEMA_VERSION`, `SESSION_LIMITS_UNREADABLE_CODE`, `SESSION_LIMIT_CODE`, `SessionLimitCounters`, `SessionLimitError`, `SessionLimitName`, `SessionLimitRemaining`, `SessionLimits`, `SessionLimitsEntryData`, `SessionLimitsStatus`, `SessionLimitsUnreadableError`, `resolveSessionLimits`; added optional `AgentConfig.sessionLimits`, `SessionOptions.limits`, `RunLimitTrackerOptions.{scope,sessionDeadlineAt,session}`, `StoredAgentRunState.sessionLimits`, `RunLimitBreach.scope`, and `Session.limits()`; widened `SessionEntryKind` (`"session_limits"`), `RunLimitBreach.limit` (`RunLimitName | SessionLimitName`), and `./testing#STORE_CONFORMANCE_STEPS` (`"session-limits"`).
+      - `scripts/compat-baseline/arnilo__prism-extensions.txt`: widened `./observability#TimelineExhaustion.limit` to `RunLimitName | SessionLimitName`.
+      - `scripts/compat-baseline/arnilo__prism-memory-system.txt` and other bundles: unchanged by this task.
+    - **Retired-names sweep & limits inventory.**
+      - `bun scripts/retired-names.mjs --generate` + `bun scripts/retired-names.mjs`: 0 hits in 2,133 files.
+      - `bun scripts/limits-inventory.mjs`: 0 findings (strict).
+    - **Checks.**
+      - `bun test --timeout=0 src/__tests__/session-limits.test.ts src/__tests__/run-limits.test.ts src/__tests__/package-sessions.test.ts`: 65 pass, 0 fail (12 new tests in `session-limits.test.ts`, including store & compaction conformance).
+      - `bun test --timeout=0 src/__tests__/session-tail-snapshot.test.ts`: 13 pass, 0 fail.
+      - `bun test --timeout=0 src/__tests__/docs.test.ts src/__tests__/public-export-contract.test.ts src/__tests__/agent-surface-freeze.test.ts src/__tests__/agents.test.ts src/__tests__/kernel-constraints.test.ts scripts/limits-inventory.test.mjs scripts/retired-names.test.mjs`: 217 pass, 0 fail.
+      - `bun test --timeout=0 packages/extensions/store-jsonl/src/__tests__/ packages/extensions/store-sqlite/src/__tests__/ packages/extensions/compaction/src/__tests__/ packages/extensions/observability/src/__tests__/ packages/hosts/a2a/src/__tests__/`: all passed (339 pass across the batch including `remote`; `remote/src/__tests__/conformance.test.ts` timed out under batch load and passed 6/6 solo).
+      - Workspace typechecks (`@arnilo/prism-tools`, `@arnilo/prism-hosts`, `@arnilo/prism-extensions`, `@arnilo/prism-agent`): all pass; root `tsc --noEmit` has only the pre-existing `src/__tests__/provider-live-scenarios.test.ts:253` error noted in Task 3.
+
+- [x] Task 9: Stall detection — a run that repeats itself is stopped
+  - Acceptance Criteria:
+    - Functional:
+      - `RunLimits.maxRepeatedToolRounds` (default 5; `null` disables; narrows by `min`).
+      - A tool round counts as repeated when its set of `(name, argHash, resultHash)` equals one of the previous 8 rounds of the run.
+      - When the count of consecutive repeated rounds reaches the limit, the run fails with `limit: "maxRepeatedToolRounds"`. The attribution lists the repeated calls' names and hashes, never their arguments or results.
+      - A round with any new argument or any changed result resets the count, so polling a changing status is not a stall.
+      - `ToolCallSummary` gains `resultHash`.
+      - Counters and the window ride the turn checkpoint (plan 231), so a continued run keeps them.
+      - The job driver (Task 10) applies the same rule across runs: consecutive runs with identical outcomes.
+      - Amended by Task 1(e):
+        - **Post-round seam.** The round charge runs *before* dispatch (`loop/dispatch.ts:38`). The stall check runs *after* `dispatchToolCallsInOrder` settles, through a new post-round seam inside `executeTools`.
+        - **Checkpoint.** The window is stored as one digest per round in `StoredAgentRunState` / `run_checkpoint`.
+    - Performance: One canonical serialization plus one SHA-256 per tool result (amended by Task 1(e): plan 228 memoizes byte counts by identity, not serialized text, so no serialization can be reused). The window is 8 round digests, so memory is constant.
+    - Code Quality: Hashing reuses the existing `argHash` helper; no new hashing code.
+    - Security: Hashes only. No argument or result text enters the attribution or the checkpoint.
+  - Approach:
+    - Documentation Reviewed:
+      - `src/run-limits.ts:355-405` (attribution, recent calls), `src/contracts-core/run-limits.ts:97-101`; Task 1(e)
+    - Options Considered:
+      - A model-judged progress check — rejected for the kernel: it costs a model call per check. It goes to Further Actions as a package.
+      - A turns-without-new-text heuristic — rejected: a long tool-only phase is legitimate work.
+      - Identical calls only, without results — rejected: it stops legitimate polling.
+    - Chosen Approach:
+      - Exact repetition of calls and results, which is cheap, deterministic, and never wrong about "nothing changed".
+    - API Notes and Examples:
+      ```ts
+      createAgent({ model, limits: { maxTurns: null, maxRepeatedToolRounds: 5 } });
+      ```
+    - Files to Create/Edit:
+      - `src/contracts-core/run-limits.ts`, `src/run-limits.ts`, `src/loop/run-controller.ts` (charge at round end), `src/agent-session/session/tool-round.ts`
+      - `src/__tests__/run-limits.test.ts`
+      - `docs/agent.md` limits table; `scripts/limits-inventory.json`; `docs/limits.md`
+      - `scripts/compat-baseline/arnilo__prism.txt`: regenerated (additive)
+    - References:
+      - Task 1(e)
+  - Test Cases to Write:
+    - `identical_rounds_with_identical_results_stall`.
+    - `polling_with_changing_results_is_not_a_stall`.
+    - `stall_attribution_holds_hashes_only`.
+    - `stall_counter_survives_continue` (with `durability: "turn"`).
+    - `custom_loop_charges_the_stall_axis` (the axis is charged inside `executeTools`, not by the default loop).
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — a new default axis
+    - Docs pages to create/edit:
+      - `docs/agent.md`: the limits table; `docs/limits.md`
+      - `CHANGELOG.md`: `## [Unreleased]`, Added (behavior-changing: a default of 5)
+      - `docs/migration.md`: one line
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-18):
+    - **What changed.**
+      - **Contracts.** `RunLimits.maxRepeatedToolRounds` / `ResolvedRunLimits.maxRepeatedToolRounds` (in `DEFAULT_RUN_LIMITS`, default 5, `null` disables, layers narrow by `min` through the existing policy-axis path). It becomes a `RunLimitName`, so a breach is `{ limit: "maxRepeatedToolRounds", maximum, observed }`. `RunLimitCounters.repeatedToolRounds?` is optional, so counters saved before this task still parse (they restore as 0). `ToolCallSummary.resultHash?` is set once the call's round settles. `StoredAgentRunState.toolRoundDigests?` holds the window. `src/contracts-core/run-limits.ts`, `src/agent-run-state.ts`.
+      - **Tracker (`src/run-limits.ts`).** `RunLimitTracker.recordToolRound(digest)` keeps the last `STALL_WINDOW_SIZE` (8) round digests and the consecutive-repeat count. It breaches when the count **reaches** the cap (`>=`, as the acceptance criteria say; the other count axes breach above the cap). `RunLimitTrackerOptions.toolRoundDigests` restores the window; `tracker.toolRoundDigests` reads it. `isToolRoundDigestWindow` validates a persisted window. The `charge()` signature now excludes `maxRepeatedToolRounds`, which is not additive.
+      - **Seam.** A new internal `onToolRoundSettled(calls, results)` on the run-controller internals (`src/loop/run-controller.ts`) runs inside `executeTools` after `dispatchToolCallsInOrder` settles and before `onToolRoundComplete`, so custom loops are charged and the turn checkpoint carries the updated window. `bindChargeStallRound` (`src/agent-session/session/tool-round.ts`) builds the digest: `sha256:` over the sorted `name\0argHash\0resultHash` parts, through `toolEffectArgumentsHash`. It also stamps `resultHash` on the recent-call ring, so the `run.failed` / `RunResult.attribution.recentToolCalls` carry names and hashes only. `toolResultHash` hashes `{ content, value, error }` (not the call id or metadata). A result that is not canonical JSON is hashed after a JSON round trip; if even that fails, the round is keyed on its call ids, so it never counts as a repeat. A round that staged an approval is not charged.
+      - **Persistence.** `toolRoundDigests` is written into `run_checkpoint` (`writeRunCheckpoint`) and `suspended_run` (`suspendDurable`) when non-empty. It is restored at run start from `resumed.state` (`assemble.ts`), and `parseAgentRunState` fails closed on a malformed window. `publicState` strips it.
+      - **Config surfaces.** Added the axis to the `AgentConfig.limits` key list (`src/agent-session/config-shape.ts`) and to `@arnilo/prism-hosts/remote`'s narrowing wire keys (`packages/hosts/remote/src/wire.ts`).
+      - **Tests.** New `src/__tests__/stall-detection.test.ts` (9 tests): the five planned cases plus `new_arguments_with_the_same_result_are_not_a_stall`, `a_repeat_of_any_round_in_the_window_counts`, `null_disables_the_axis_and_layers_narrow_by_min`, and `a_malformed_window_fails_closed`. Three existing tests loop identical rounds to exercise other caps, so they now set `maxRepeatedToolRounds: null`: `agents.test.ts` "runs a disabled maxToolRounds (null)…" and `workflows/loop.test.ts` `workflow_loop_node_tool_rounds_is_configurable`. `run-limits.test.ts`'s default-shape assertion gains the axis. Prerequisite fix: `session-limits.test.ts` (Task 8) had tool `execute` results without `toolCallId`/`name`, which failed root `tsc`; they now return full `ToolResult`s.
+      - **Docs.** `docs/agent.md` limits table and a stall-axis paragraph; `docs/limits.md` regenerated (`STALL_WINDOW_SIZE` is a `format` row with a reason, and `DEFAULT_RUN_LIMITS` shows the new axis); `CHANGELOG.md` `## [Unreleased]` (behaviour change: default 5); `docs/migration.md` one line.
+    - **Findings for later tasks.**
+      - Task 10: `RunResult.attribution.recentToolCalls` now carries `resultHash`, but only on a limit death. For `maxIdenticalOutcomes`, the driver should hash each run's final text plus the tool-call hashes itself, through the same `toolEffectArgumentsHash` helper. A run that ends on `maxRepeatedToolRounds` is a failed run (`limit` set, `scope` absent). The driver counts it toward `maxConsecutiveFailures` and should not retry it blindly.
+      - Task 11: the 30-run job scenario should leave the stall axis at its default. A mock provider that repeats one tool call with one result will now stall in 6 rounds.
+    - **Baseline diff (`--update-baseline`).** `arnilo__prism.txt`: `DEFAULT_RUN_LIMITS`, `RunLimits`, `ResolvedRunLimits` gain `maxRepeatedToolRounds`; `RunLimitCounters` gains `repeatedToolRounds?`; `ToolCallSummary` gains `resultHash?`; `StoredAgentRunState` gains `toolRoundDigests?`; `RunLimitTrackerOptions` gains `toolRoundDigests?`; `RunLimitTracker` gains `recordToolRound` / `toolRoundDigests`, and `charge()` narrows its `limit` parameter to exclude `maxRepeatedToolRounds`. `RunLimitName` widens to include it. All are additive apart from the `charge()` narrowing (internal class; the root exports only its type). The regeneration also rewrote the other bundle baselines from the current tree, which carries other in-flight uncommitted work (plan 218.3's memory-system changes and earlier Part O tasks). `@arnilo/prism-memory-system`'s declaration emit failed during the run on `system/src/session/scope.ts:303,308` (JsonValue). That is another plan's work in progress, so its baseline should be regenerated again once that work compiles. `bun scripts/release.mjs gate`: compat clean for `@arnilo/prism`, `-hosts`, and `-extensions`. The gate's other findings (version bump required, kernel/tarball budgets) are release-time items and pre-existing.
+    - **Sweeps.** `bun scripts/retired-names.mjs`: no retired name (the test passes). `bun scripts/limits-inventory.mjs`: this task's rows are clean. The gate currently reports 2 findings for `DEFAULT_WM_LOOKAHEAD_RECORDS` / `DEFAULT_WM_LOOKAHEAD_TOKENS` (`packages/memory/system/src/session/config.ts`). Those constants appeared in the tree during this task from concurrent memory-system work and are left to that work to classify.
+    - **Checks.**
+      - `bun test --timeout=0 src/__tests__/{agents,run-limits,stall-detection,session-limits,run-checkpoint,loop-state,public-export-contract,agent-surface-freeze,docs}.test.ts packages/extensions/{workflows,delegate,observability} packages/hosts/remote`: 721 pass, 0 fail.
+      - Full `bun test src/__tests__` (all workspaces): after the fixes above, the remaining failures are outside this task, and each fails with the stall axis effectively off: `host-surface-gate` (allow-list entries for the Task 4/5 imports `resolveCeilings`/`runStateBounds`/`resolveRunLimits`, and a stale `HARD_MAX_SESSION_LIST_LIMIT`), `prefix-stability-conformance` (2), `agent-config-validation` `wrong_typed_known_keys_are_rejected` (the tools.concurrency message after Task 4), and `packages/tools/browser` (2).
+      - Typecheck: root `tsc --noEmit` has only the pre-existing `src/__tests__/provider-live-scenarios.test.ts:253` error; `packages/hosts`, `packages/extensions`, `packages/tools`, and `apps/prism-agent` are clean.
+
+- [x] Task 10: The job driver — run a session until done, across restarts
+  - Acceptance Criteria:
+    - Functional:
+      - `@arnilo/prism-extensions/workflows` exports `runAgentJob(session, spec)` and `resumeAgentJob(session, spec, jobId, { decisions? })` (amended at execution: `done` and `next` are host functions a checkpoint cannot hold, so a resume takes the spec again; `spec.checkpoints` carries the store). The `spec` fields:
+        - `input`: the first message;
+        - `next(state)`: the next message, or `undefined` to continue the branch as it stands;
+        - `done(state)`: a host predicate, which may call a model;
+        - `maxRuns` (amended at execution: default 100, `DEFAULT_JOB_MAX_RUNS`; `null` is unbounded);
+        - `maxConsecutiveFailures` (default 3);
+        - `maxIdenticalOutcomes` (default 3);
+        - `retry`: backoff for a failed run (default: 30 s doubling to 15 min);
+        - `checkpoints`: a workflow checkpoint store.
+      - Each iteration:
+        - If the branch owes a model turn, it calls `session.continue()` (plan 231). Otherwise it calls `session.run(next(state))`.
+        - It records the outcome, writes a checkpoint, and evaluates `done`.
+      - **The job stops** on:
+        - `done` returning true;
+        - a session limit (Task 8);
+        - `maxRuns`;
+        - `maxConsecutiveFailures`;
+        - `maxIdenticalOutcomes` (identical final text hash and tool-call hashes);
+        - the host's abort signal.
+      - It returns an `AgentJobResult { status, reason, runs, usage, lastRun }`.
+      - After a process restart, `resumeAgentJob` reads the newest checkpoint and continues. A run that was in flight is continued through `session.continue()`, not restarted.
+      - The job emits `job.started`, `job.run`, and `job.stopped` package events on the session. A suspension inside a run (an approval) suspends the job, and the job resumes with `session.resume`.
+      - The driver is built on the workflows engine, so it gets checkpoints and `suspend` without new machinery. Its `maxSupersteps` is set from `maxRuns`, and is `null` (unbounded) when `maxRuns` is `null`. That needs `maxSupersteps: null`, which Task 5 adds.
+      - Amended by Task 1(f):
+        - **Shape.** The driver is **not** an `agentNode` cycle. An agent node throws on a failed run (`agent-node.ts:158-164`), node retry backoff is fixed at ≤1 s (`node-execution.ts:176`), and the node re-runs instead of calling `continue()` after a crash (`agent-node.ts:144-147`).
+        - **Workflow.** The job is a cyclic workflow of one function node ("step") plus a route back to itself or to the end. Each step:
+          - checks whether the session owes a turn (plan 231 Task 5's finder), calling `session.continue()` if so and `session.run(next(state))` otherwise;
+          - records failures as data, never as a throw;
+          - applies backoff as an abortable sleep.
+        - **Restarts.** An interrupted step is idempotent by construction, because it re-reads the session state.
+        - **Checkpoint size.** A test proves the workflow checkpoint stays bounded over 1,000 supersteps.
+      - Amended at execution:
+        - **Checkpoint growth.** The superstep scheduler appended one iteration record per node execution, so a 1,000-run job's checkpoint grew by ~700 bytes a run. `WorkflowLimits.maxIterationRecords` (new, unset keeps all) keeps the newest records; the job sets 4. Workflow `state` is not used for the job's counters: `updateState` fails past `maxStateHistory` (32) versions. The counters are the step node's output.
+        - **Supersteps.** `maxSupersteps` is `4 × maxRuns + 4`: two supersteps per run, doubled for steps re-entered by a restart or an approval. The step enforces `maxRuns` itself.
+        - **Events** go through `spec.prism` (the workflows package's runtime events), with `jobId` and `sessionId` in the data; the driver holds only a public `Session`, which has no package-event seam.
+    - Performance: The driver adds one checkpoint write per run and no model call. Its cost table goes in the README.
+    - Code Quality: No loop of its own if the workflow engine can express it (Task 1(f)). No retry logic duplicated from the kernel's provider retry: the job retries whole runs only.
+    - Security: The job runs with the session's principal and limits. It cannot raise either. `done` is host code.
+  - Approach:
+    - Documentation Reviewed:
+      - `packages/extensions/workflows/src/{define.ts,loop.ts,nodes/agent-node.ts}`, `README.md` (the bounded iterate-until-done pattern)
+      - `examples/autonomous-coding-loop.ts`
+      - Plan 231 (`continue`), Task 8
+    - Options Considered:
+      - A kernel `session.runUntil()` — rejected: a capability that can be a package is a package (§1.4), and the workflows package already has durable checkpoints.
+      - A new `jobs` subpath — rejected unless Task 1(f) finds the workflow engine cannot express it. A new subpath duplicates checkpointing.
+      - Host-written loops, documented only — rejected: every host re-implements resume, backoff, and stall detection across runs.
+    - Chosen Approach:
+      - A thin driver in the workflows package over its engine.
+    - API Notes and Examples:
+      ```ts
+      const result = await runAgentJob(session, {
+        input: "Migrate every service to the new auth client.",
+        done: async ({ lastRunResult }) => lastRunResult?.text.includes("ALL SERVICES MIGRATED") ?? false,
+        maxRuns: null, checkpoints,
+      });
+      ```
+    - Files to Create/Edit:
+      - `packages/extensions/workflows/src/job.ts`: new; `src/index.ts` exports
+      - `packages/extensions/workflows/src/__tests__/agent-job.test.ts`: new
+      - `packages/extensions/workflows/README.md`: "Agent jobs", with the cost table
+      - `scripts/compat-baseline/arnilo__prism-extensions.txt`: regenerated (additive)
+    - References:
+      - Task 1(f); `examples/autonomous-coding-loop.ts`
+  - Test Cases to Write:
+    - `job_runs_until_done`.
+    - `job_stops_on_session_limit`.
+    - `job_stops_after_consecutive_failures_with_backoff`.
+    - `job_stops_on_identical_outcomes`.
+    - `job_resumes_after_restart_and_continues_the_in_flight_run`.
+    - `job_suspends_on_approval_and_resumes`.
+    - `job_unbounded_runs_with_null_max_runs`.
+    - Added at execution: `job_stops_at_max_runs`, `job_checkpoint_stays_bounded_over_1000_supersteps`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — a new package export
+    - Docs pages to create/edit:
+      - `packages/extensions/workflows/README.md`
+      - `CHANGELOG.md`: `## [Unreleased]`, Added
+    - `docs/index.md` update: no (the README is already linked)
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-18):
+    - **What changed.**
+      - **Driver (`packages/extensions/workflows/src/job.ts`, new).** `runAgentJob(session, spec)` and `resumeAgentJob(session, spec, jobId, { decisions? })` run a cyclic workflow (`AGENT_JOB_WORKFLOW_ID = "prism.agent-job"`) of one function node (`step`) and a route back to it. Each step: an abortable backoff after a failure (`retry.baseMs × 2^(failures − 1)`, at most `retry.maxMs`; defaults 30 s / 15 min); then, on the first run with an unchanged leaf, `session.run(input)`; else `session.continue()`, falling back on `SessionContinueError` to `session.run(next(view))` (or the stop `nothing_to_continue` when `next` returns `undefined`). The step records the outcome as data and never throws for a failed run. `SessionLimitError` at start, or a `scope: "session"` breach, stops with `session_limit`; an aborted run or signal stops with `aborted`. After each run that did not fail, it hashes the final text plus tool calls and results (call ids excluded) for `maxIdenticalOutcomes`, then evaluates `done`. A suspended run returns `suspend({ reason: "approval_required", data: { state, pending } })`, and `resumeAgentJob` with `decisions` approves the workflow resume, so the step calls `session.resume` through the agent node's `resumeChild`.
+      - **Restart idempotency.** The job state records the session leaf after each run. On resume, the state comes from the suspension's copy or the step's newest iteration output, else the job input's `startLeafId`. A changed leaf with a branch that owes a turn is continued. A changed leaf with nothing to continue is a run that finished after the last checkpoint: it is recorded from the branch (`branchRunResult`, extracted from `resumeChild` in `nodes/agent-node.ts`), never sent again. `AgentDecisionError` from `continue()` (the process died while a run waited on an approval) suspends the job.
+      - **Engine (`WorkflowLimits.maxIterationRecords`).** `onNodeSucceeded` (`run/node-execution.ts`) trims a cyclic non-loop node's iteration ledger to the newest N. `validateLoopCheckpointFields` (`checkpoint-core.ts`) accepts a ledger that starts at `iteration − length`. A count mismatch still fails with "does not match". Unset keeps today's behaviour.
+      - **Exports.** `index.ts` exports the driver, its types, `AGENT_JOB_EVENTS`, `AGENT_JOB_WORKFLOW_ID`, and `DEFAULT_JOB_*` constants.
+      - **Docs.** Workflows README: "Agent jobs" with the cost table, plus `maxIterationRecords` in the engine section. `CHANGELOG.md` `## [Unreleased]`. `scripts/limits-inventory.json`: five `DEFAULT_JOB_*` policy rows with config paths. `docs/limits.md` regenerated.
+    - **Findings for later tasks.**
+      - Task 11: resume with `resumeAgentJob(session, spec, jobId)`. The spec must keep the same `maxRuns`, because the workflow definition hash includes `maxSupersteps`. A crash is simulated by a provider that never answers in process A, then a fresh agent over the same session store and checkpoints. `done` sees `lastRunResult` (the `RunResult` in this process), which is absent right after a restart when the step recovered a finished run. Then it is read back from the branch (text and content only, no usage).
+      - Task 12: abort is terminal. An aborted job's workflow ends, and a later `resumeAgentJob` returns the stored stop. A host that wants to pause should not abort; it should let the process die and resume. Usage counts only runs whose `RunResult` the driver saw: a resumed (approved) run and a recovered run carry no usage, and the session's own `limits()` remains the budget of record.
+    - **Baseline diff (`--update-baseline`).** `arnilo__prism-extensions.txt` (additive): `./workflows` gains `AGENT_JOB_EVENTS`, `AGENT_JOB_WORKFLOW_ID`, `AgentJobResult`, `AgentJobRunSummary`, `AgentJobSpec`, `AgentJobState`, `AgentJobStatus`, `AgentJobStopReason`, `AgentJobUsage`, `AgentJobView`, `DEFAULT_JOB_MAX_CONSECUTIVE_FAILURES`, `DEFAULT_JOB_MAX_IDENTICAL_OUTCOMES`, `DEFAULT_JOB_MAX_RUNS`, `DEFAULT_JOB_RETRY_BASE_MS`, `DEFAULT_JOB_RETRY_MAX_MS`, `ResumeAgentJobOptions`, `resumeAgentJob`, and `runAgentJob`. `WorkflowLimits` gains `maxIterationRecords?`. No other baseline changed. The gate's remaining findings (the `@arnilo/prism-ai` version bump, kernel and memory-system size budgets) are pre-existing release-time items.
+    - **Sweeps.** `bun scripts/limits-inventory.mjs`: 0 findings. `retired-names.test.mjs`: passes.
+    - **Checks.**
+      - `bun test packages/extensions/workflows`: 202 pass, 0 fail, including 9 new tests in `agent-job.test.ts`.
+      - `bun test src/__tests__/docs.test.ts scripts/limits-inventory.test.mjs scripts/retired-names.test.mjs packages/extensions/workflows`: 287 pass.
+      - `bun test packages/extensions`: 1,204 pass, 1 fail. The failure is the load-sensitive `field policy microbenchmark` overhead check, outside this task.
+      - Typecheck: `packages/extensions`, `packages/hosts`, `packages/tools`, and `apps/prism-agent` are clean. Root `tsc` has only the pre-existing `provider-live-scenarios.test.ts:253` error.
+
+- [x] Task 11: Example and reference-host scenario — a multi-run job with a crash
+  - Acceptance Criteria:
+    - Functional:
+      - `examples/long-running-job.ts`, on the mock provider:
+        - runs a job of 30 runs with session limits and the stall axis;
+        - simulates a process death mid-run (a fresh agent over the same JSONL store);
+        - resumes with `resumeAgentJob`;
+        - finishes on `done`, printing usage and stop reason.
+      - It runs under the example execution gate and emits no secret.
+      - `apps/prism-agent/src/scenarios/long-job.ts`: the coding agent runs a job through the same driver with the reference host's own limits. It is deterministic on the mock provider.
+      - The reference host's agents gain a host setting for session limits (`config.ts`), unset by default.
+    - Performance: The example finishes in under 5 s.
+    - Code Quality: The example imports only public surfaces.
+    - Security: No credential; the mock provider only.
+  - Approach:
+    - Documentation Reviewed:
+      - `examples/README.md`, `scripts/e2e-coverage.json`, `apps/prism-agent/src/scenarios/long-session.ts`
+    - Options Considered:
+      - Extend `autonomous-coding-loop.ts` — rejected: it demonstrates a workflow with a human gate; one example per idea.
+    - Chosen Approach:
+      - A new example and a new scenario.
+    - API Notes and Examples:
+      ```bash
+      bun examples/long-running-job.ts
+      ```
+    - Files to Create/Edit:
+      - `examples/long-running-job.ts`: new; `examples/README.md`; `scripts/e2e-coverage.json`
+      - `apps/prism-agent/src/scenarios/long-job.ts`: new; the scenario registry; `apps/prism-agent/src/host/config.ts`
+      - `packages/hosts/host-builder/data/*`: regenerated (`bun scripts/host-builder-index.mjs`); `scripts/host-builder-evals/criteria.lock.json`: the `indexes` hash only
+    - References:
+      - Task 10
+  - Test Cases to Write:
+    - `examples_demos_run_to_completion_and_emit_no_secret` covers the new example.
+    - `long_job_scenario_finishes_after_a_simulated_crash`.
+    - `bun run --filter @arnilo/prism-agent test`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — example and host
+    - Docs pages to create/edit:
+      - `examples/README.md`; `apps/prism-agent/README.md`: the scenario
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-18):
+    - **What changed.**
+      - **Example (`examples/long-running-job.ts`, new).** A 30-run job through `runAgentJob` on the mock provider, with `sessionLimits: { maxRuns: 40, maxTotalTokens: 100_000 }` and the run limits and stall axis at their defaults. Each run calls a `record` tool with its step number (the count of user messages, so a continued run keeps its number), then reports. Process A's provider hangs on run 12's second turn, after the tool round. Process B is a fresh agent over the same `jsonlStore({ dir })` directory: `resumeAgentJob` continues the in-flight run and runs to `done`. It prints `{ status: "done", reason: "done", runs: 30, usage.totalTokens: 2950, sessionRuns: 30, remainingRuns: 10, userMessages: 30, toolRuns: 30 }` in about 0.3 s. It imports only `@arnilo/prism`, `/provider-kit`, `store-jsonl`, and `workflows`.
+      - **Checkpoints in the example are the memory adapter** (`createMemoryWorkflowCheckpoints`), shared by both "processes", with a comment naming `createWorkflowCheckpoints({ store: persistence.checkpoints })` for a real host. No JSONL checkpoint store exists. The reference-host scenario uses the durable path (SQLite checkpoints on `storePath`).
+      - **Gates.** The example is in `docs.test.ts`'s demo list with an exact-output assertion, so the examples execution gate does not respawn it. `scripts/e2e-coverage.json` `./workflows` gains `agent-job.test.ts` (missing since Task 10) and the example.
+      - **Reference host.** `HostConfig.sessionLimits?: SessionLimits` (`apps/prism-agent/src/host/config.ts`). The loader checks it is an object with only `maxCost`, `maxTotalTokens`, `maxRuns`, and `deadline`, and `createAgent` validates the values, failing closed. `sessionLimitsConfig(config)` passes it to all four workers (coding, research, orchestrator, external). It is unset by default.
+      - **Scenario (`apps/prism-agent/src/scenarios/long-job.ts`, new).** The coding worker (`createCodingWorker`, with the host's own packages and limits) runs a 30-run job. Each run writes `progress/step-N.txt` through the coding `write` tool. Checkpoints are `createWorkflowCheckpoints` over the same SQLite file. Process A dies inside run 12, after its write. A fresh worker resumes. Test `apps/prism-agent/src/__tests__/long-job.test.ts` has three tests: `long_job_scenario_finishes_after_a_simulated_crash` (crash mid-run; `done` at 30 runs; after the crash, 1 + 2 × 18 model requests, so the in-flight run is continued; 30 user messages, 30 tool results, 30 files), `the_host_session_limits_count_runs_across_the_crash` (session counters 30 runs and 2,950 tokens: 59 answered 50-token turns; the hung turn charged nothing; the job's usage agrees), and `host_config_session_limits_are_unset_by_default_and_reject_unknown_keys`.
+      - **Docs.** `examples/README.md` (run line and demo entry); `apps/prism-agent/README.md` (`sessionLimits` paragraph in the config section and a "long job" scenario row).
+      - **Host-builder index.** Regenerated by `bun scripts/host-builder-index.mjs` (adds `examples/long-running-job.ts`; 120 examples). `criteria.lock.json`: only the `indexes` hash was updated.
+    - **Findings for later tasks.**
+      - Task 12: the example's code blocks are the source for `docs/long-running.md`. Two facts to state there. First, a hung turn charges no tokens, so the session counter shows only answered turns. Second, process A's abandoned run must be released only after process B has finished: an abort is terminal for the job (Task 10). Its late writes then fail the checkpoint version check and leave B's branch intact.
+    - **Baseline diff.** None: no export moved.
+    - **Sweeps.** No retired name or limit constant added.
+    - **Checks.**
+      - `bun run --filter @arnilo/prism-agent test`: 74 pass, 1 skip (the live journey), 0 fail.
+      - `bun test --timeout=0 src/__tests__/docs.test.ts`: 69 pass, including the new demo.
+      - `bun test scripts/e2e-coverage.test.mjs`: 8 pass.
+      - `tsc -p examples/tsconfig.json` and `apps/prism-agent` typecheck: clean.
+      - `bun test scripts/host-builder-evals/run.test.mjs packages/hosts/host-builder`: 92 pass, 4 fail, all outside this task. (1) `criteria_preregistered`: the `skill` hash differs because of uncommitted skill edits from other work; the plan allows only the `indexes` hash here. (2–4) The `headless-host` oracle and the builder-shell test: a coding-tool run now suspends on approval, from in-flight tools and kernel work. This task changes no tool or kernel code.
+
+- [x] Task 12: `docs/long-running.md` — how to run work for days
+  - Acceptance Criteria:
+    - Functional: A new kernel page in the API page structure covers:
+      - **Limits:** the three classes, with a link to `docs/limits.md`.
+      - **One run versus many runs on a session,** and when to choose each. The recommendation is many bounded runs on one session.
+      - **Configuration:** run limits set to `null`, plus session limits as the spend guard. Ceilings and when to raise them.
+      - **The stall axis.**
+      - **The job driver.**
+      - **Durability:** `durability: "turn"`, `continue()`, `resumeAgentJob`.
+      - **Compaction** for long sessions.
+      - **A cost table** for every knob in this plan.
+      - **Failure behavior:** what stops a job, and what the host sees.
+    - Performance: n/a — docs.
+    - Code Quality: The page has no plan or phase narrative (`docs.test.ts` rule). Every code block is taken from the example of Task 11.
+    - Security: The page states that raising a ceiling is a host decision, and names the risks: memory for bytes, and spend for null run limits without session limits.
+  - Approach:
+    - Documentation Reviewed:
+      - `.agents/skills/create-plan/references/prism-wiki.md` (API page structure); `docs/agent.md` "Limits"
+    - Options Considered:
+      - A section in `docs/agent.md` only — rejected: the topic spans the kernel, the workflows package, and stores.
+    - Chosen Approach:
+      - One kernel page, linked from `docs/agent.md` and the workflows README.
+    - API Notes and Examples:
+      ```md
+      # Long-running work
+      ## What it does …
+      ```
+    - Files to Create/Edit:
+      - `docs/long-running.md`: new; `docs/index.md`: one link; `src/__tests__/docs.test.ts`: `kernelPages`
+      - `docs/agent.md`: replace the short long-job paragraph (plan 229 Task 2) with a link
+      - `CHANGELOG.md`: `## [Unreleased]`, Docs
+    - References:
+      - Tasks 3–11
+  - Test Cases to Write:
+    - `src/__tests__/docs.test.ts` (page indexed, links resolve, no phase narrative).
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — docs
+    - Docs pages to create/edit:
+      - `docs/long-running.md`: new
+    - `docs/index.md` update: yes — "Running agent work for hours or days: limits, session budgets, stall detection, the job driver, and recovery."
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-18):
+    - **What changed.**
+      - **`docs/long-running.md` (new kernel page, API page structure).** Sections: What it does; When to use it (one run versus many bounded runs on one session; the recommendation is many runs driven by `runAgentJob`); Limits (the three classes, linking `docs/limits.md`); Inputs (run limits, session limits, ceilings and when to raise each, the stall axis, the job driver's `spec` table, durability, stores, compaction with `SessionLog.replace` / `ExternalStateHandle.replace` rotation); Outputs and events, with a "What stops a job, and what the host sees" table built from `AgentJobStatus` / `AgentJobStopReason` in `job.ts`; a request/response example; the implementation example; extension notes; security and performance notes with the cost table for every knob; related APIs.
+      - **Code blocks** are taken from `examples/long-running-job.ts` (the agent factory, the spec, process A and process B). The page states the Task 10/11 facts: an abort is terminal for a job (pause by letting the process stop), job `usage` omits resumed and recovered runs so `session.limits()` is the budget of record, a hung turn charges no tokens, and the abandoned process-A run is released only after B finishes. It states the Task 7 finding: JSONL has no tail read and grows linearly, so long jobs use SQLite or Postgres.
+      - **Security** paragraph: raising a ceiling is a host decision; the risks named are memory (byte ceilings) and spend (`null` run limits without session limits).
+      - **Links.** `docs/index.md` (one entry, the planned sentence); `src/__tests__/docs.test.ts` `kernelPages` gains `long-running`; `docs/agent.md` "Limits": the short long-job paragraph is replaced by a link; the workflows README "Agent jobs" links the page; `CHANGELOG.md` `## [Unreleased]`: a Documentation entry.
+    - **Findings for later tasks.** None. The editor showed type errors in `src/__tests__/stall-detection.test.ts`; root `tsc` does not reproduce them (stale diagnostics).
+    - **Baseline diff / sweeps.** None: no export or limit constant changed.
+    - **Checks.**
+      - `bun test --timeout=0 src/__tests__/docs.test.ts`: 69 pass (page indexed, links resolve, no phase or plan narrative).
+      - Linked anchors checked by hand: `agent.md#limits`, `#ceilings`, `#continuing-a-run`, `slots.md#when-the-compaction-slot-runs`, `performance.md#long-runs`, workflows README `#agent-jobs`.
+      - Root `tsc --noEmit`: only the pre-existing `src/__tests__/provider-live-scenarios.test.ts:253` error.
+
+## Verification (whole plan)
+
+- `bun run build:core`
+- `bun run typecheck`
+- `bun test --timeout=0 src/__tests__/run-limits.test.ts src/__tests__/ceilings.test.ts src/__tests__/session-limits.test.ts`
+- `bun test --timeout=0 scripts/limits-inventory.test.mjs scripts/benchmark-long-job.test.mjs`
+- `bun run --filter @arnilo/prism-extensions test`
+- `bun run --filter @arnilo/prism-tools test`
+- `bun run --filter @arnilo/prism-hosts test`
+- `bun run --filter @arnilo/prism-agent test`
+- `bun scripts/limits-inventory.mjs --emit-docs` (no diff)
+- `bun scripts/benchmark-long-job.mjs --runs 200 --turns 50 --out docs/_evidence/long-run-soak.md`
+- `bun test --timeout=0 src/__tests__/docs.test.ts`
+- `bun run test`
+- `bun scripts/release.mjs gate`
+
+## Compromises Made
+
+- To be filled after tasks are completed and tests pass.
+
+## Further Actions
+
+- To be filled after task completion with improvements, rationale, and priority.

@@ -197,10 +197,13 @@ describe("extractor budget, reasoning level and truncation (plan 188.10 Task 5)"
 
   it("promote_schema_rejects_out_of_range_budget", () => {
     const schema = memoryFabricPromoteSchema as unknown as JsonSchema;
-    for (const maxOutputTokens of [0, 255, 32_769, 8192.5]) {
+    for (const maxOutputTokens of [0, 255, 8192.5]) {
       assert.equal(validateJsonSchema(schema, { maxOutputTokens }).ok, false, "the schema bounds the budget");
       assert.throws(() => resolvePromoteConfig({ maxOutputTokens }), /promote.maxOutputTokens/);
     }
+    // Plan 239: above the 256 floor, the host's budget is the cap.
+    assert.equal(validateJsonSchema(schema, { maxOutputTokens: 65_536 }).ok, true);
+    assert.equal(resolvePromoteConfig({ maxOutputTokens: 65_536 }).maxOutputTokens, 65_536);
     assert.equal(validateJsonSchema(schema, { thinkingLevel: "very-high" }).ok, false, "an unknown level is a config error");
     assert.throws(() => resolvePromoteConfig({ thinkingLevel: "very-high" }), /promote.thinkingLevel/);
     assert.deepEqual(

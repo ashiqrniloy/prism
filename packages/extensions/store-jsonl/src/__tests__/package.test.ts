@@ -51,7 +51,7 @@ describe("jsonl store package", () => {
     assert.equal(view.slots.store, "@arnilo/prism-extensions/store-jsonl");
     assert.deepEqual(view.store, {
       owner: "@arnilo/prism-extensions/store-jsonl",
-      capabilities: ["listSessions", "deleteSession", "searchSessions"],
+      capabilities: ["listSessions", "deleteSession", "searchSessions", "appendMany", "tipCheck"],
     });
   });
 

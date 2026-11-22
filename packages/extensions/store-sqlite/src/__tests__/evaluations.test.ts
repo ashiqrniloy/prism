@@ -19,7 +19,11 @@ import { applySqliteMigrations } from "../migrations.js";
 test("migration_upgrades_existing_database_and_reopens_evaluations", async () => {
   const db = new Database(":memory:");
   applySqliteMigrations(db);
-  db.exec("DROP TABLE prism_evaluations; DROP TABLE prism_experiment_reports; DELETE FROM prism_migrations WHERE name = '011_evaluations'");
+  // Rewind to schema 10: undo 013 (a SQLite no-op), 012 (plan 230 Task 2), and 011.
+  db.exec("DROP INDEX prism_session_entries_linear_parent_unique; ALTER TABLE prism_session_entries DROP COLUMN linear");
+  db.exec(
+    "DROP TABLE prism_evaluations; DROP TABLE prism_experiment_reports; DELETE FROM prism_migrations WHERE name IN ('011_evaluations', '012_session_entry_linear', '013_session_entry_seq')",
+  );
   db.exec("INSERT INTO prism_sessions (id, created_at, updated_at) VALUES ('old', '2026-01-01', '2026-01-01')");
   const history = db.prepare("SELECT name, checksum FROM prism_migrations ORDER BY version").all();
   const store = createSqlitePersistence({ database: db, filename: ":memory:", evaluationRedactor: createSecretRedactor(["eval-secret"]) });
@@ -37,7 +41,11 @@ test("migration_upgrades_existing_database_and_reopens_evaluations", async () =>
   const reopened = createSqlitePersistence({ database: db, filename: ":memory:" });
   assert.ok(db.prepare("SELECT id FROM prism_sessions WHERE id = 'old'").get());
   assert.deepEqual(
-    db.prepare("SELECT name, checksum FROM prism_migrations WHERE name != '011_evaluations' ORDER BY version").all(),
+    db
+      .prepare(
+        "SELECT name, checksum FROM prism_migrations WHERE name NOT IN ('011_evaluations', '012_session_entry_linear', '013_session_entry_seq') ORDER BY version",
+      )
+      .all(),
     history,
   );
   assert.equal((await reopened.evaluations.query()).items.length, 1);

@@ -20,12 +20,9 @@ import {
   DEFAULT_MAX_BLOCKED_URL_PATTERNS,
   DEFAULT_MAX_CONSOLE_ENTRIES,
   DEFAULT_MAX_EVALUATE_RESULT_BYTES,
-  HARD_MAX_BLOCKED_URL_PATTERNS,
-  HARD_MAX_CONSOLE_ENTRIES,
   HARD_MAX_DEVICE_SCALE_FACTOR,
   HARD_MAX_EMULATE_DIMENSION,
   HARD_MAX_EMULATE_UA_BYTES,
-  HARD_MAX_EVALUATE_RESULT_BYTES,
   HARD_MAX_THROTTLE_KBPS,
   HARD_MAX_THROTTLE_LATENCY_MS,
 } from "../limits.js";
@@ -311,20 +308,22 @@ describe("cdp policy + limits", () => {
     assert.equal(isSideEffectAction("observe"), false);
   });
 
-  it("new limits default/hard pairs and validation", () => {
+  it("new limits defaults and validation; the host's value is the cap", () => {
     assert.equal(DEFAULT_MAX_EVALUATE_RESULT_BYTES, 64 * 1024);
-    assert.equal(HARD_MAX_EVALUATE_RESULT_BYTES, 256 * 1024);
     assert.equal(DEFAULT_MAX_CONSOLE_ENTRIES, 200);
-    assert.equal(HARD_MAX_CONSOLE_ENTRIES, 500);
     assert.equal(DEFAULT_MAX_BLOCKED_URL_PATTERNS, 32);
-    assert.equal(HARD_MAX_BLOCKED_URL_PATTERNS, 128);
     const resolved = resolveBrowserLimits({});
     assert.equal(resolved.maxEvaluateResultBytes, DEFAULT_MAX_EVALUATE_RESULT_BYTES);
     assert.equal(resolved.maxConsoleEntries, DEFAULT_MAX_CONSOLE_ENTRIES);
     assert.equal(resolved.maxBlockedUrlPatterns, DEFAULT_MAX_BLOCKED_URL_PATTERNS);
-    assert.throws(() => resolveBrowserLimits({ maxEvaluateResultBytes: HARD_MAX_EVALUATE_RESULT_BYTES + 1 }), /maxEvaluateResultBytes/);
-    assert.throws(() => resolveBrowserLimits({ maxConsoleEntries: HARD_MAX_CONSOLE_ENTRIES + 1 }), /maxConsoleEntries/);
-    assert.throws(() => resolveBrowserLimits({ maxBlockedUrlPatterns: HARD_MAX_BLOCKED_URL_PATTERNS + 1 }), /maxBlockedUrlPatterns/);
+    const raised = resolveBrowserLimits({
+      maxEvaluateResultBytes: 4 * 1024 * 1024,
+      maxConsoleEntries: 5_000,
+      runWallTimeMs: 4 * 3_600_000,
+    });
+    assert.equal(raised.maxEvaluateResultBytes, 4 * 1024 * 1024);
+    assert.equal(raised.runWallTimeMs, 4 * 3_600_000);
+    assert.throws(() => resolveBrowserLimits({ maxBlockedUrlPatterns: 1.5 }), /maxBlockedUrlPatterns/);
     assert.throws(() => resolveBrowserLimits({ maxConsoleEntries: 0 }), /maxConsoleEntries/);
     assert.ok(HARD_MAX_THROTTLE_LATENCY_MS > 0);
     assert.ok(HARD_MAX_THROTTLE_KBPS > 0);

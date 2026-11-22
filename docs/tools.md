@@ -112,7 +112,7 @@ never creates or enables a tool, and an empty or missing `allow` means no allow 
 narrows its tools through `RunOptions.tools.only`, which can only shrink the agent's set.
 
 `dispatchToolCall(options)` runs one call against a registry and returns a `ToolResult`: it validates
-the arguments, charges `maxToolCalls`, redacts secrets from the result, and records the call. A run
+the arguments against `parameters` (see "Argument validation"), charges `maxToolCalls`, redacts secrets from the result, and records the call. A run
 reaches it only through `RunController.executeTools`, which always fires `tool.call` first on the arguments
 that will execute.
 
@@ -122,6 +122,142 @@ import { createToolRegistry, dispatchToolCall, filterTools } from "@arnilo/prism
 const registry = createToolRegistry([], { duplicate: "error" });
 const active = filterTools(registry.list(), { allow: ["echo"] });
 ```
+
+## Argument validation
+
+Before a tool runs, the kernel checks `call.arguments` against the tool's own `parameters` schema. A
+violation blocks the call: `tool.completed` carries `status: "blocked"` and `reason: "invalid_arguments"`,
+the result's `error.code` is `invalid_arguments`, and the tool never runs. The message names each
+failing JSON-pointer path and what it expected (`/path: must be of type string; /bogus: is not allowed`),
+at most 8 paths and 1 KiB, and never an argument value. A tool with no `parameters` accepts any JSON
+object.
+
+The check uses the kernel's JSON Schema subset (`type`, `properties`, `required`, `additionalProperties`,
+`items`, `minItems`/`maxItems`, `enum`, `const`, `minimum`/`maximum`, `minLength`/`maxLength`, `pattern`,
+`oneOf`, `anyOf`) in a tolerant mode built for schemas the kernel does not own:
+
+- A keyword outside the subset (`format`, `$ref`, `allOf`, …) is ignored and the rest of the schema is
+  still checked. Annotation keywords (`$schema`, `$id`, `x-*`, `examples`, …) are ignored silently.
+- A subschema whose keyword values the subset cannot read (a `type` array, a bad `pattern`, a schema that is
+  not an object) accepts anything; its siblings are still checked.
+- `additionalProperties` follows the schema as written: absent means allowed. Package config validation is
+  unchanged and stays fail-closed.
+- No defaults are applied and `x-prism-secret` is ignored: the tool receives exactly the arguments the model
+  sent, and the effect key hashes those.
+
+When part of a schema is ignored, registration records one `info` `package.status` note naming the tool and
+what was skipped (under the owning package, or `kernel` for a host tool); `agent.inspect().statusNotes` lists it.
+
+Switches:
+
+| Switch | Effect |
+| --- | --- |
+| `AgentConfig.tools.validation: "off"` | Restores the 0.14.0 behavior for the whole agent. Default `"schema"`. |
+| `ToolDefinition.validateArguments: false` | One tool opts out, for a tool that repairs its own arguments (`edit` accepts `edits` as a JSON string). |
+| `AgentConfig.validator`, `RunOptions.validate` | Still run, after the built-in check, and can still reject (`reason: "validation_failed"`). |
+
+`dispatchToolCall` takes the same `validation` option. The check is one in-memory pass per call with no
+model request; schemas compile once and are cached.
+
+## Interruption and timeouts
+
+A tool call ends when its run is aborted, the run's wall limit passes, or a time limit on the call
+passes, even when the tool ignores its signal. The kernel races `execute` against the call's signal:
+
+- **Abort or wall limit.** The call settles at once with `error.code: "tool_aborted"` and one
+  `tool.completed { status: "error" }`. A wall-limit breach still ends the run with its single
+  `run.failed { limit: "maxWallTimeMs" }`; the settled call does not change that.
+- **Timeout.** `ToolDefinition.timeoutMs` and `limits.maxToolTimeMs` (default none) bound one call; the
+  smaller applies, so a tool cannot ask for more than the run allows. On expiry the call settles with
+  `error.code: "tool_timeout"` and `context.signal` is aborted so a cooperative tool stops its work. A
+  timeout ends the call, not the run. No timer is armed for a call with no timeout.
+- **A dispatched durable effect** that is interrupted settles through the unknown-effect path
+  (`ERR_PRISM_TOOL_EFFECT_UNKNOWN`), never as a clean failure, because the tool may have done its work.
+
+`context.signal` is a per-call signal: the run signal combined with one only the kernel can abort. Tools
+keep reading `context.signal`; they cannot extend their own deadline.
+
+The race covers `execute` only. The awaits before it (effect-store `begin`, `beforeExecute`, the
+`dispatched` mark) are not bounded. **Detached promise caveat for tool authors:** when a call is
+interrupted, the tool's promise is detached, not cancelled. Its late result is dropped, its late rejection
+is swallowed, and its later `context.progress` calls emit nothing, but code that ignores `context.signal`
+keeps running. Pass the signal to every `fetch`, child process and sleep so an interrupted call stops its
+work.
+
+## Parallel rounds
+
+The calls of one model turn run at the same time, bounded by `AgentConfig.tools.concurrency` (integer
+1–16, default `4`; `1` restores the 0.14.0 serial dispatch). `RunOptions.tools.concurrency` can only
+lower it for one run. The default loop passes the value to `executeTools`; a custom loop's explicit
+`options.concurrency` wins, and the resumed-run replay of approved calls stays serial.
+
+A round stays serial when any call's tool is `exclusive`, declares no `effects`, or is not in the registry:
+undeclared and unknown effects fail closed. `load_skill` and `search_tools` are `exclusive` because they
+change run state while they execute. MCP bridge tools declare `effect` but no `effects`, so a round with an
+MCP call is serial.
+
+- **Gating is per round.** `tool.call` runs for the whole round, and `ask` answers are collected (or the run
+  suspends) before any call starts. A denied or pending call never runs in either mode.
+- **Order.** Results are appended to the transcript in call order. `tool.started` and `tool.completed` of
+  different calls interleave, and each carries its `toolCallId`; do not assume a `tool.completed` follows its
+  `tool.started` directly.
+- **Failure.** A failing call does not cancel its siblings. A run-control error (limit breach, suspension,
+  abort) stops the round, and every call that did not finish gets one result.
+- **Tool authors.** Mark a tool `exclusive: true` when it cannot overlap another call of its round
+  (it reads or writes state the model's other calls also touch). Writes to one path already queue per path
+  in the coding tools. `delegate`'s `maxConcurrent` (default 4) equals the round default; async
+  delegations and every depth of a delegation tree count toward it, and a call over it waits up to
+  `queueTimeoutMs` for a slot.
+
+## Tools that run a child
+
+A tool whose `execute` runs a child agent run (a linked session opened with `PackageAPI.sessions.open`,
+for example) can let the child's approvals reach the parent's host. When the child run suspends,
+`execute` throws `AgentDelegationSuspendedError(ref, pendingDecisions)` with the child's run ref and its
+`RunResult.pending`, and the tool defines `resumeNested`:
+
+```ts
+import { AgentDelegationSuspendedError, type ToolDefinition } from "@arnilo/prism";
+
+const delegate: ToolDefinition = {
+  name: "delegate",
+  effects: ["execute"],
+  async execute(args, context) {
+    const result = await child.run(String(args.task), { interactive: false });
+    if (result.status === "suspended") {
+      throw new AgentDelegationSuspendedError({ runId: result.runId, sessionId: child.id }, result.pending ?? []);
+    }
+    return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+  },
+  // `decisions` carry the child's own approval ids; return the child's outcome.
+  async resumeNested(nested, decisions, context) {
+    return resumeChild(nested.ref, decisions);
+  },
+};
+```
+
+- The kernel stages the call like a gated `ask`: the round's other calls still run, then the parent run
+  suspends with the child's decisions under root-visible ids and an `attribution.path` naming the call and
+  the child ([Nested pending decisions](agent.md#nested-pending-decisions)).
+- `session.resume` on the parent calls `resumeNested(nested, decisions, context)` once per suspended call,
+  with only that child's decisions. Return `{ status: "completed", value }` or `{ status: "failed", code,
+  message }` to settle the call (one `tool.completed`, one transcript row), or `{ status: "suspended",
+  pendingDecisions }` to suspend the parent again. `context` is the hosting call's tool context.
+- `resumeNested` is also called without a host round trip when the parent run already holds an
+  `allow_for_run` / `reject_for_run` for every new ask of that child.
+- A tool that throws the error without `resumeNested` gets an `ERR_PRISM_DECISION_INVALID` tool result:
+  the call fails closed and the parent run continues. The child stays suspended.
+
+- `context.interactive` is the calling run's `RunOptions.interactive` (default `true`). Pass it to the child's
+  run: a headless parent then gets a child whose asks suspend (and reach the host through the parent's
+  `session.resume`), while an interactive parent's child prompts the host directly, with its own `sessionId`.
+- A parent resumed in a new process has no child session open. `resumeNested` reopens it with
+  `prism.sessions.open({ parent: { sessionId: context.sessionId }, id: nested.ref.sessionId })`, and keeps whatever
+  else it needs to resume (which child config, for example) on the parent session (`prism.state.session`), not in
+  process memory. `@arnilo/prism-extensions/delegate` does both.
+
+Cost: nothing on a run whose tools never throw the error. A nested suspension costs what a gated `ask`
+costs, plus one `resumeNested` call per resume.
 
 ## Request/response example
 
@@ -155,13 +291,17 @@ const agent = await createAgent({
 ## Host tools and per-run narrowing
 
 `AgentConfig.tools` is `{ add?: readonly ToolDefinition[] }`. The kernel merges it with package
-tools, minus `disable.tools`. A duplicate name fails closed, including a host tool named
+tools and what package tool sources (`PackageAPI.tools.source`) supply, minus `disable.tools`. A duplicate name fails closed, including a host tool named
 `load_skill` or `search_tools` (the kernel registers those when progressive skills disclosure or
 tool search is active).
 
 `RunOptions.tools` is `{ only?: readonly string[] }`. Omitted sends every registered tool; an empty
 array sends none; an unknown name fails the run closed. A durable resume intersects the list with
 the checkpointed grant, so a resumed run can never widen tool authority.
+
+The tool set is fixed for a run. The run snapshots it once at start: tool sources are called then, and a
+tool a source adds or removes while the run is going (an MCP server's `tools/list_changed`, a reconnect)
+takes effect at the next run. A run already going keeps calling the tools it started with.
 
 ## Progressive skill loading
 

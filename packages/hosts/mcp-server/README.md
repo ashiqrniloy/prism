@@ -64,7 +64,7 @@ try {
 | `origin` | The bridge origin every served call is attributed to. |
 | `prefix` | Prepended to each served tool name in `tools/list` and `tools/call`. |
 | `resources` | Static `{ uri, name, mimeType?, text }` resources, each bounded to 256 KiB. `skillResources` builds the entries for skills that go with the served tools ([below](#lending-skills-with-tools)). |
-| `limits` | `{ maxConcurrentCalls?, resultBytes? }`. Defaults 8 / 1 MiB; hard caps 64 / 8 MiB. Caps text, `structuredContent`, and the envelope body alike. |
+| `limits` | `{ maxConcurrentCalls?, resultBytes? }`. Defaults 8 / 1 MiB; the host's values are the caps. Caps text, `structuredContent`, and the envelope body alike. |
 | `permissionTool` | `{ name, effects?, rewrite?, codec? }`: also serve a permission-prompt tool backed by `run.ask`. |
 | `relay` | `{ command }`, required for `stdio-relay`. |
 | `headerEnv` | The bearer-token variable name. Default `PRISM_MCP_TOKEN`. |
@@ -189,8 +189,8 @@ answers `unavailable` (a Phase 14+ gap).
   throwing callback denies. `PrismMcpAuthorization.ownership` is passed through unchanged — identity
   enforcement belongs to the agent's own governance hooks.
 - Results and errors are redacted with `options.redactor` (default `agent.config.redactor`) and
-  truncated to `maxResultBytes` (default 1 MiB, hard cap 8 MiB). `maxPromptBytes` bounds one prompt
-  (default 64 KiB, hard cap 1 MiB).
+  truncated to `maxResultBytes` (default 1 MiB). `maxPromptBytes` bounds one prompt
+  (default 64 KiB). The host's values are the caps.
 - `serveTools` results are already redacted by the kernel (`dispatchToolCall` applies the agent's
   redactor) and truncated to `limits.resultBytes` here. Its resource `text` is host-supplied and
   served verbatim, so **never put a secret in a `resources` entry**.

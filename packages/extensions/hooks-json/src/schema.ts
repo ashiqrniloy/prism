@@ -199,7 +199,14 @@ export function parseHooksConfig(input: string | object): HooksConfig {
   const events: Partial<Record<HookEventName, readonly HookDefinition[]>> = {};
 
   for (const [name, value] of Object.entries(wrapped)) {
-    if (name === "additionalContextLimit" || name === "hooks" || name === "description" || name === "allowCommands" || name === "env")
+    if (
+      name === "additionalContextLimit" ||
+      name === "maxOutputChars" ||
+      name === "hooks" ||
+      name === "description" ||
+      name === "allowCommands" ||
+      name === "env"
+    )
       continue;
     if (!KNOWN_EVENTS.has(name)) {
       fail(`unknown hook event ${JSON.stringify(name)} (supported: ${HOOK_EVENT_NAMES.join(", ")})`);

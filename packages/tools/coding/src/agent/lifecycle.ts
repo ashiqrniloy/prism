@@ -24,15 +24,10 @@ export type {
 } from "./lifecycle-events.js";
 
 export const DEFAULT_LIFECYCLE_MAX_EVENT_BYTES = 16_384;
-export const HARD_LIFECYCLE_MAX_EVENT_BYTES = 65_536;
 export const DEFAULT_LIFECYCLE_MAX_PATH_BYTES = 4_096;
-export const HARD_LIFECYCLE_MAX_PATH_BYTES = 16_384;
 export const DEFAULT_LIFECYCLE_MAX_REASON_BYTES = 1_024;
-export const HARD_LIFECYCLE_MAX_REASON_BYTES = 16_384;
 export const DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES = 256;
-export const HARD_LIFECYCLE_MAX_TOOL_NAME_BYTES = 4_096;
 export const DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS = 64;
-export const HARD_LIFECYCLE_MAX_CONFIG_KEYS = 256;
 
 export interface CodingLifecycleLimits {
   readonly maxEventBytes?: number;
@@ -58,9 +53,9 @@ export class CodingLifecycleError extends Error {
   }
 }
 
-function validate(name: string, value: number, hard: number): number {
+function validate(name: string, value: number): number {
   try {
-    return validateCodingLimit(name, value, hard);
+    return validateCodingLimit(name, value);
   } catch (error) {
     throw new CodingLifecycleError(error instanceof Error ? error.message : String(error));
   }
@@ -68,19 +63,11 @@ function validate(name: string, value: number, hard: number): number {
 
 export function resolveCodingLifecycleLimits(limits?: CodingLifecycleLimits): ResolvedCodingLifecycleLimits {
   return {
-    maxEventBytes: validate("maxEventBytes", limits?.maxEventBytes ?? DEFAULT_LIFECYCLE_MAX_EVENT_BYTES, HARD_LIFECYCLE_MAX_EVENT_BYTES),
-    maxPathBytes: validate("maxPathBytes", limits?.maxPathBytes ?? DEFAULT_LIFECYCLE_MAX_PATH_BYTES, HARD_LIFECYCLE_MAX_PATH_BYTES),
-    maxReasonBytes: validate(
-      "maxReasonBytes",
-      limits?.maxReasonBytes ?? DEFAULT_LIFECYCLE_MAX_REASON_BYTES,
-      HARD_LIFECYCLE_MAX_REASON_BYTES,
-    ),
-    maxToolNameBytes: validate(
-      "maxToolNameBytes",
-      limits?.maxToolNameBytes ?? DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES,
-      HARD_LIFECYCLE_MAX_TOOL_NAME_BYTES,
-    ),
-    maxConfigKeys: validate("maxConfigKeys", limits?.maxConfigKeys ?? DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS, HARD_LIFECYCLE_MAX_CONFIG_KEYS),
+    maxEventBytes: validate("maxEventBytes", limits?.maxEventBytes ?? DEFAULT_LIFECYCLE_MAX_EVENT_BYTES),
+    maxPathBytes: validate("maxPathBytes", limits?.maxPathBytes ?? DEFAULT_LIFECYCLE_MAX_PATH_BYTES),
+    maxReasonBytes: validate("maxReasonBytes", limits?.maxReasonBytes ?? DEFAULT_LIFECYCLE_MAX_REASON_BYTES),
+    maxToolNameBytes: validate("maxToolNameBytes", limits?.maxToolNameBytes ?? DEFAULT_LIFECYCLE_MAX_TOOL_NAME_BYTES),
+    maxConfigKeys: validate("maxConfigKeys", limits?.maxConfigKeys ?? DEFAULT_LIFECYCLE_MAX_CONFIG_KEYS),
   };
 }
 

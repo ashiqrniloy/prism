@@ -12,6 +12,10 @@ import type { ObscuraProcessLimits } from "./limits.js";
 import { resolveObscuraProcessLimits } from "./limits.js";
 import { validateObscuraCommand } from "./process.js";
 
+const DEFAULT_MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
+const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_PROBE_TIMEOUT_MS = 5_000;
+
 export interface ObscuraCliRunResult {
   readonly stdout: string;
   readonly stderr: string;
@@ -77,7 +81,7 @@ export async function runObscuraCli(options: ObscuraCliRunOptions): Promise<Obsc
     windowsHide: true,
   });
 
-  const maxOutput = options.maxOutputBytes ?? 2 * 1024 * 1024;
+  const maxOutput = options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   if (!Number.isFinite(maxOutput) || maxOutput <= 0 || maxOutput > 8 * 1024 * 1024) {
     throw new ObscuraError("ERR_OBSCURA_LIMIT", "maxOutputBytes out of range");
   }
@@ -92,7 +96,7 @@ export async function runObscuraCli(options: ObscuraCliRunOptions): Promise<Obsc
       kill(child);
       reject(new ObscuraError("ERR_OBSCURA_ABORTED", "obscura cli aborted"));
     };
-    const deadline = options.timeoutMs ?? 30_000;
+    const deadline = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     timer = setTimeout(() => {
       settled = true;
       kill(child);
@@ -173,7 +177,7 @@ export async function probeObscuraVersion(options: ObscuraVersionProbeOptions): 
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
       args: ["--version"],
-      timeoutMs: options.timeoutMs ?? 5_000,
+      timeoutMs: options.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS,
       maxOutputBytes: 64 * 1024,
     });
     const version = parseObscuraVersion(run.stdout.trim() === "" ? run.stderr : run.stdout);

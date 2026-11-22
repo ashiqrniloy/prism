@@ -4,7 +4,6 @@ import { estimateTextBytes, estimateTextTokens } from "@arnilo/prism";
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2;
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4_096;
 export const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512;
-export const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4_096;
 export const DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST = 3;
 export const DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0;
 
@@ -63,14 +62,15 @@ export function resolveToolResultFold(
   const maxSummaryBytes = options.maxSummaryBytes ?? DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES;
   const keepLast = options.keepLast ?? DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST;
   const clearAtLeastTokens = options.clearAtLeastTokens ?? DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS;
-  assertPositiveInt(minAgeTurns, "minAgeTurns", 1, 1_024);
-  assertPositiveInt(minBytes, "minBytes", 1, 32 * 1024 * 1024);
-  assertPositiveInt(maxSummaryBytes, "maxSummaryBytes", 1, HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES);
-  assertRange(keepLast, "keepLast", 0, 1_024);
-  assertRange(clearAtLeastTokens, "clearAtLeastTokens", 0, 2_000_000);
+  // Host-set: the host's value is the cap (plan 239 Task 5).
+  assertRange(minAgeTurns, "minAgeTurns", 1);
+  assertRange(minBytes, "minBytes", 1);
+  assertRange(maxSummaryBytes, "maxSummaryBytes", 1);
+  assertRange(keepLast, "keepLast", 0);
+  assertRange(clearAtLeastTokens, "clearAtLeastTokens", 0);
   const excludeTools = [...(options.excludeTools ?? [])];
-  if (excludeTools.length > 1_024 || excludeTools.some((name) => typeof name !== "string" || name.length === 0 || name.length > 256)) {
-    throw new TypeError("toolResultFold.excludeTools must be at most 1024 non-empty names of at most 256 characters");
+  if (excludeTools.some((name) => typeof name !== "string" || name.length === 0 || name.length > 256)) {
+    throw new TypeError("toolResultFold.excludeTools must be non-empty names of at most 256 characters");
   }
   return {
     minAgeTurns,
@@ -284,13 +284,9 @@ function readToolResultTurn(metadata: Readonly<Record<string, unknown>> | undefi
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
-function assertPositiveInt(value: number, name: string, min: number, max: number): void {
-  assertRange(value, name, min, max);
-}
-
-function assertRange(value: number, name: string, min: number, max: number): void {
-  if (!Number.isSafeInteger(value) || value < min || value > max) {
-    throw new TypeError(`toolResultFold.${name} must be a safe integer from ${min} to ${max}`);
+function assertRange(value: number, name: string, min: number): void {
+  if (!Number.isSafeInteger(value) || value < min) {
+    throw new TypeError(`toolResultFold.${name} must be a safe integer of at least ${min}`);
   }
 }
 

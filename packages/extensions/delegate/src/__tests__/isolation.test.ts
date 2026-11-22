@@ -130,15 +130,14 @@ async function harness(options: HarnessOptions): Promise<Harness> {
   const agent = await createAgent({
     id: "isolation-parent",
     model: { provider: "mock", model: "m" },
-    // A coding tool's durable write needs a principal and an ownership scope; the delegate forwards both.
+    // A coding tool's durable write needs a principal and an ownership scope; the child session inherits both.
     principal: { kind: "user", id: "tester" },
+    ownership: { tenantId: "local" },
     slots: { store: createMemorySessionStore() },
     packages: [
       providerPackage("mock-provider", [provider]),
       ...(options.coding === false ? [] : [toolsCoding({ root: options.repo, workspace: { enabled: true } } as never)]),
       delegate({
-        // The child appends under the parent's scope: a coding tool's durable effect (a write) needs one.
-        ownership: { tenantId: "local" },
         children: (options.children ?? { coder: { inherit: ["@arnilo/prism-tools/coding"], isolation: "worktree" } }) as never,
       }),
       ...((options.packages ?? []) as never[]),
@@ -261,8 +260,10 @@ describe("delegate worktree isolation", () => {
 
   it("isolation_without_workspace_service_fails_before_run", async () => {
     const repo = await fixture();
+    // The service is the agent's, consumed at call time: with no package providing it, the delegation fails closed.
     const run = await harness({
       repo,
+      coding: false,
       children: { coder: { inherit: [], isolation: "worktree" } },
     });
     const text = run.toolText();

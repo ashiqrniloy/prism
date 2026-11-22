@@ -105,4 +105,42 @@ describe("external state", () => {
     });
     assert.equal(code, "state_not_json");
   });
+
+  it("external_state_rotation_frees_capacity_across_compaction", async () => {
+    const store = createMemorySessionStore();
+    const agent = await createAgent({
+      ceilings: { externalStateEntries: 4 },
+      slots: {
+        store,
+        loop: driverLoop(async (run) => {
+          const log = run.state("transcript");
+          await log.append([1, 2, 3]);
+          // Rotate to the latest checkpoint so later turns never hit external_state_limit.
+          await log.replace?.([3]);
+          await log.append([4, 5, 6]);
+        }),
+      },
+    });
+    const session = await agent.session({ id: "s-rotate", create: true });
+    const first = await session.run("go");
+    assert.equal(first.status, "completed");
+    await session.compact();
+    let loaded: readonly JsonValue[] = [];
+    const secondAgent = await createAgent({
+      ceilings: { externalStateEntries: 4 },
+      slots: {
+        store,
+        loop: driverLoop(async (run) => {
+          const log = run.state("transcript");
+          await log.replace?.([6]);
+          await log.append([7, 8]);
+          loaded = await log.load();
+        }),
+      },
+    });
+    const reopened = await secondAgent.session({ id: "s-rotate" });
+    const second = await reopened.run("go-2");
+    assert.equal(second.status, "completed");
+    assert.deepEqual(loaded, [6, 7, 8]);
+  });
 });

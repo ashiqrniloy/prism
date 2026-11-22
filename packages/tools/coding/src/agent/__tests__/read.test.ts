@@ -575,18 +575,12 @@ test("read options and request pagination reject invalid limits", async () => {
       { path: "page.txt", offset: 0 },
       { path: "page.txt", offset: Infinity },
       { path: "page.txt", limit: -1 },
-      { path: "page.txt", limit: 100_001 },
     ];
     for (const args of invalidPages) {
       const result = await tool.execute(args, ctx());
       assert.match(result.error?.message ?? "", /positive safe integer/);
     }
-    for (const options of [
-      { maxLines: Infinity },
-      { maxBytes: 0 },
-      { maxImageBytes: 32 * 1024 * 1024 + 1 },
-      { maxScanBytes: 1024 * 1024 * 1024 + 1 },
-    ]) {
+    for (const options of [{ maxLines: Infinity }, { maxBytes: 0 }, { maxImageBytes: 1.5 }, { maxScanBytes: -1 }]) {
       assert.throws(() => createReadTool(cwd, options), /positive safe integer/);
     }
   } finally {

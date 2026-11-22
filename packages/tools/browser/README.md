@@ -39,6 +39,7 @@ bun add playwright-core@1.63.0
 | `uploadRoots` | `string[]` | none | Absolute roots uploads may read from (realpath-contained; symlink escapes rejected). |
 | `quarantine` | `string` | none | Absolute quarantine directory; enables download support when set. |
 | `cdp` | `"auto"` \| `"on"` \| `"off"` | `"auto"` | CDP capability gating for `browser_evaluate`, `browser_observe`, and the CDP actions. |
+| `limits` | `BrowserLimitOptions` | `DEFAULT_BROWSER_LIMITS` | Pages, actions, snapshots, timeouts, network requests, uploads, downloads, screenshots and evaluate/console bounds. Each is the host's value with no ceiling above it; the model's actions are bounded by it. |
 
 An unknown key fails `createAgent` with the kernel's config error naming the key. A missing
 `playwright-core` (or a failed launch) registers nothing and writes a `warn` status note; it never

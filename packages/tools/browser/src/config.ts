@@ -1,3 +1,4 @@
+import { type BrowserLimitOptions, DEFAULT_BROWSER_LIMITS } from "./limits.js";
 import type { JsonSchema } from "@arnilo/prism";
 
 /** Host attestation that real egress is forced through an isolated proxy/firewall. */
@@ -31,6 +32,8 @@ export interface ToolsBrowserConfig {
   readonly quarantine?: string;
   /** CDP capability gating: `"auto"` (default), `"on"`, or `"off"`. */
   readonly cdp?: "auto" | "on" | "off";
+  /** Browser run limits; each defaults to `DEFAULT_BROWSER_LIMITS` and the host's value is the cap. */
+  readonly limits?: BrowserLimitOptions;
 }
 
 const originList: JsonSchema = {
@@ -68,5 +71,13 @@ export const toolsBrowserConfigSchema: JsonSchema = {
     uploadRoots: pathList,
     quarantine: { type: "string", minLength: 1, maxLength: 4096 },
     cdp: { type: "string", enum: ["auto", "on", "off"], default: "auto" },
+    limits: {
+      type: "object",
+      description: "Browser run limits (pages, actions, snapshots, timeouts, network, uploads, downloads, screenshots).",
+      properties: Object.fromEntries(
+        Object.keys(DEFAULT_BROWSER_LIMITS).map((key) => [key, { type: "integer", minimum: key === "idleRunTtlMs" ? 0 : 1 }]),
+      ),
+      additionalProperties: false,
+    },
   },
 };

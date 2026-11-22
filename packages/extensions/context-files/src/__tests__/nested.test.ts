@@ -89,9 +89,10 @@ function draftWithRead(callId: string): ContextDraft {
 }
 
 describe("context-files nested instructions", () => {
-  it("nested_config_rejects_out_of_bounds_limits", () => {
-    for (const maxFileBytes of [0, 65_537, 1.5]) assert.throws(() => resolveNestedConfig({ maxFileBytes }), /nested.maxFileBytes/);
-    for (const maxFiles of [0, 17, 1.5]) assert.throws(() => resolveNestedConfig({ maxFiles }), /nested.maxFiles/);
+  it("nested_config_rejects_invalid_limits_and_keeps_any_host_value", () => {
+    for (const maxFileBytes of [0, -1, 1.5]) assert.throws(() => resolveNestedConfig({ maxFileBytes }), /nested.maxFileBytes/);
+    for (const maxFiles of [0, -1, 1.5]) assert.throws(() => resolveNestedConfig({ maxFiles }), /nested.maxFiles/);
+    assert.deepEqual(resolveNestedConfig({ maxFileBytes: 1_000_000, maxFiles: 64 }), { maxFileBytes: 1_000_000, maxFiles: 64 });
   });
 
   it("nested_paths_require_matching_calls_and_move_checks_both_directories", async () => {

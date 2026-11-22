@@ -83,7 +83,7 @@ Network endpoint `token` is the resolved bearer value (for example `served.token
 | `maxPendingRequests` | 64 | 1024 | Outstanding outbound requests. |
 | `maxQueuedEvents` | 1000 | 100,000 | Queued transport events. |
 
-All limits are positive safe integers; values above hard maxima are rejected. Slow consumers disconnect rather than grow an unbounded queue.
+All limits are positive safe integers, and the host's value is the cap. Slow consumers disconnect rather than grow an unbounded queue.
 
 ## Protocol
 
@@ -95,6 +95,7 @@ JSON-RPC 2.0 frames negotiate `prism.remote/1` in `initialize`. Unsupported vers
 | `sessions.open` | client → server | Create or reopen a session, optionally with parent links. |
 | `sessions.list` | client → server | List sessions with a query. |
 | `sessions.resume` | client → server | Resume pending decisions. |
+| `sessions.continue` | client → server | `Session.continue()`: a run with no new input on a branch that owes a model turn. Rejects with `nothing_to_continue` when nothing is owed; the proxy turns that into `SessionContinueError`. |
 | `sessions.messages` | client → server | Read branch messages. |
 | `run` | client → server | Start a run; returns run id. |
 | `steer` | client → server | Steer an active session. |
@@ -114,7 +115,7 @@ Every inbound wire payload is validated before reaching the kernel; unknown or o
 
 | Surface | Allowed fields & bounds | Rejected / stripped |
 | --- | --- | --- |
-| `run.options` / `sessions.resume.options` | `metadata` (object), `limits` (object), `interactive` (boolean) | `principal`, `ownership`, `redactor`, `runLedger`, `signal`, and any unknown key (`invalid_params`). |
+| `run.options` / `sessions.resume.options` / `sessions.continue.options` | `metadata` (object), `limits` (object: run-limit axes that only narrow the agent's resolved limits; `null`, an unknown axis, or a value above the agent's is `invalid_params`), `interactive` (boolean) | `principal`, `ownership`, `redactor`, `runLedger`, `signal`, and any unknown key (`invalid_params`). |
 | `sessions.resume.decisions[]` | `approvalId` (non-empty string ≤ 256), `outcome` (`allow_once` \| `allow_for_run` \| `reject_once` \| `reject_for_run`), `reason` (string ≤ 2 KiB), `elicitation` (JSON object, only for pending `elicitation` decisions), `modifiedArguments` (JSON object, only when `allowModifiedArguments: true`) | `modifiedArguments` when `allowModifiedArguments` is omitted/`false`, `elicitation` on `tool_approval` decisions, and any extra key (`invalid_params`). |
 | `steer.options` | `softInterrupt` (boolean) | Any other key or non-boolean `softInterrupt` (`invalid_params`). |
 | `sessions.list.query` | `cursor` (non-empty string ≤ 512), `limit` (integer `1..100`), `order` (`"asc"` \| `"desc"`), `agentId`, `parentSessionId`, `workflowRunId`, `delegationId`, `actorAgent` (non-empty strings ≤ `MAX_SESSION_LINK_ID_LENGTH`), `actorKind` (`"prism"` \| `"external"`) | Client-supplied `tenantId`, `accountId`, `userId` are stripped (server `ownershipFor` scope applies); any other key or out-of-range value is `invalid_params`. |
@@ -135,6 +136,8 @@ Mirroring trusts the remote's redaction and stores messages as received, without
 `remoteHostUi()` is a plain `HostUi`. Pass the same object to `createAgent({ host: { ui } })` and `serveAgent(agent, { hostUi: ui })`. No attached client or a lost connection answers `unavailable`. Only kernel asks and elicitations have durable suspension semantics; other package requests fail closed under their own contract. Use a persistent store on the served agent to survive restarts.
 
 A later client initializes and opens the suspended session; the server reads pending decisions from the remote branch and sends UI requests, then resumes from answers. Unavailable answers leave decisions pending. Explicit `session.resume(decisions)` also works. A disconnected active proxy run rejects with `disconnected`; reconnect and reopen the session to inspect or continue it. Disposing a stdio proxy terminates its owned child, so persistence is needed for later recovery.
+
+Events are forwarded unchanged. A provider attempt that ends with `turn.completed { error }` may be retried after it streamed output; a remote client discards that attempt's deltas ([Events](../../../docs/events.md#failed-attempts)).
 
 The proxy caches `inspect()` and command descriptors at initialization. Unsupported local operations fail with `remote_unsupported`; there is no local execution fallback. No extra model calls are made by this library.
 
@@ -164,8 +167,8 @@ Host matching includes the port and is exact, case insensitive. Default allowed 
 
 Every connection opened on a served agent is partitioned by its authenticated `Principal` (`kind` and `id`). Single-principal transports (`stdio`, memory, or loopback bearer authentication where `authenticate` is omitted) share the default single-principal partition, which also acts as operator.
 
-- **Session isolation floor:** `ServerState.sessions` is keyed by principal and session id, backed by an $O(1)$ `sessionOwners` map. Independently of `ownershipFor`, any wire call (`sessions.open(id)`, `sessions.messages`, `run`, `steer`, `abort`, `sessions.resume`, or `commands.run` with `sessionId`) for a session owned by another principal rejects with `session_not_found`.
-- **Kernel ownership scope (`ownershipFor`):** When `ownershipFor: (principal) => OwnershipScope` is configured on `serveAgent`, the derived scope is passed into `sessions.open` (`SessionOptions.ownership`), `sessions.list` (stripping any client-supplied ownership keys), `run`, `sessions.resume`, and reconnect pending-decision resume (`RunOptions.ownership`).
+- **Session isolation floor:** `ServerState.sessions` is keyed by principal and session id, backed by an $O(1)$ `sessionOwners` map. Independently of `ownershipFor`, any wire call (`sessions.open(id)`, `sessions.messages`, `run`, `steer`, `abort`, `sessions.resume`, `sessions.continue`, or `commands.run` with `sessionId`) for a session owned by another principal rejects with `session_not_found`.
+- **Kernel ownership scope (`ownershipFor`):** When `ownershipFor: (principal) => OwnershipScope` is configured on `serveAgent`, the derived scope is passed into `sessions.open` (`SessionOptions.ownership`), `sessions.list` (stripping any client-supplied ownership keys), `run`, `sessions.resume`, `sessions.continue`, and reconnect pending-decision resume (`RunOptions.ownership`).
 - **Owner-routed `remoteHostUi` and pending delivery:** Requests carrying `request.sessionId` route in $O(1)$ to a bound connection of that session's owning principal, or return `unavailable` (suspending the run durably) if that principal has no bound connection. On connect, `deliverPending` delivers only the connecting principal's suspended sessions.
 - **Operator-only agent-scoped requests and events (`operator`):** `hostUi` requests without a `sessionId` and `agent.event` notifications without a `sessionId` (or from host-local sessions not owned by a remote principal) route only to connections where `operator(principal) === true` (or single-principal connections). Session-scoped `agent.event` notifications (`session.opened`, `background.*`) reach only that session's owning principal.
 

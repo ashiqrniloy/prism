@@ -25,15 +25,7 @@ import memorySystem, {
 } from "../../index.js";
 import { createObservationalFlush } from "../flush.js";
 import { foldObservationalMemoryLedger } from "../ledger.js";
-import {
-  DEFAULT_SCOPE_MAX_BYTES,
-  type EpisodeScope,
-  NO_SCOPE_TEXT,
-  prepareScope,
-  renderScopeBlock,
-  SCOPE_SET,
-  SCOPE_SYSTEM_RULE,
-} from "../scope.js";
+import { DEFAULT_SCOPE_MAX_BYTES, type EpisodeScope, prepareScope, renderScopeBlock, SCOPE_SET, SCOPE_SYSTEM_RULE } from "../scope.js";
 import { type MemoryObservation, OBSERVATIONS_RECORDED } from "../types.js";
 import { runWm } from "../workers/wm.js";
 import { clientFor } from "./helpers.js";
@@ -190,7 +182,12 @@ describe("episode scope", () => {
       expect(JSON.stringify(request)).not.toContain("episode_scope");
     }
     for (const request of [...seen.wm, ...seen.rehearsal]) {
-      expect(text(request, "user")).toContain(`<episode_scope>\n${SCOPE_MARK}\n</episode_scope>`);
+      const user = text(request, "user");
+      const open = user.indexOf("<episode_scope>");
+      const close = user.indexOf("</episode_scope>", open + 1);
+      expect(open).toBeGreaterThanOrEqual(0);
+      expect(close).toBeGreaterThan(open);
+      expect(user.slice(open, close)).toContain(SCOPE_MARK);
       expect(text(request, "system").startsWith(SCOPE_SYSTEM_RULE)).toBe(true);
     }
   });
@@ -212,9 +209,10 @@ describe("episode scope", () => {
     expect(block.match(/<\/episode_scope>/g)?.length).toBe(1);
     expect(block.endsWith("</episode_scope>")).toBe(true);
     expect(block).toContain("&lt;/episode_scope>");
-    // The config scope fails the load over the cap, and maxBytes is bounded.
+    // The config scope fails the load over the cap; maxBytes is the host's (plan 239), only an invalid value is refused.
     expect(() => resolveMemorySystemConfig({ scope: { text: "x".repeat(65), maxBytes: 64 } })).toThrow(/scope_too_large/);
-    expect(() => resolveMemorySystemConfig({ scope: { maxBytes: 1_000_000 } })).toThrow(/scope.maxBytes/);
+    expect(resolveMemorySystemConfig({ scope: { maxBytes: 1_000_000 } }).scope.maxBytes).toBe(1_000_000);
+    expect(() => resolveMemorySystemConfig({ scope: { maxBytes: 0 } })).toThrow(/scope.maxBytes/);
     expect(resolveMemorySystemConfig({}).scope).toEqual({ maxBytes: DEFAULT_SCOPE_MAX_BYTES });
   });
 
@@ -366,19 +364,11 @@ describe("episode scope", () => {
     }
   });
 
-  it("no_scope_uses_task_state_as_episode", async () => {
+  it("no_scope_skips_wm_and_omits_scope_block_for_rehearsal", async () => {
     const { seen } = await runPass(undefined);
-    for (const request of [...seen.wm, ...seen.rehearsal]) expect(text(request, "user")).toContain(`<episode_scope>\n${NO_SCOPE_TEXT}`);
-    const taskState = {
-      id: "bbbbbbbbbbbb",
-      goal: "Ship the campaign suites",
-      nextSteps: ["verify retry fix"],
-      sourceEntryIds: ["e1"],
-    };
-    const block = renderScopeBlock(undefined, taskState);
-    expect(block).toContain(NO_SCOPE_TEXT);
-    expect(block).toContain("Current task state:");
-    expect(block).toContain("Ship the campaign suites");
-    expect(block.endsWith("</episode_scope>")).toBe(true);
+    expect(seen.stm.length).toBeGreaterThan(0);
+    expect(seen.wm.length).toBe(0);
+    expect(seen.rehearsal.length).toBeGreaterThan(0);
+    for (const request of seen.rehearsal) expect(text(request, "user")).not.toContain("<episode_scope>");
   });
 });

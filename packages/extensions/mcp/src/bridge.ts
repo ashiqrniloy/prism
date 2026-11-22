@@ -7,7 +7,7 @@ import manifest from "../../package.json" with { type: "json" };
 import { DEFAULT_CALL_TIMEOUT_MS, DEFAULT_LIST_CACHE_TTL_MS, DEFAULT_MAX_RESULT_BYTES } from "./constants.js";
 import { boundedMcpErrorMessage, mapMcpContentToBlocks, mcpCallError, summarizeMcpContent } from "./content.js";
 import { measureBoundedJson } from "./json-bounds.js";
-import { type McpClientLimitsInput, type ResolvedMcpClientLimits, resolveMcpClientLimits } from "./limits.js";
+import { type McpClientLimitsInput, type ResolvedMcpBridgeLimits, type ResolvedMcpClientLimits, resolveMcpClientLimits } from "./limits.js";
 import { assertValidServerId, defaultMcpNamePrefix, formatMcpToolName } from "./names.js";
 import { createMcpTransport } from "./transport.js";
 import type {
@@ -36,7 +36,7 @@ interface BridgeState {
   readonly transport: Transport;
   readonly serverId: string;
   readonly namePrefix: string;
-  readonly limits: ResolvedMcpClientLimits;
+  readonly limits: ResolvedMcpBridgeLimits;
   tools: ToolDefinition[];
   remoteTools: ListedMcpTool[];
   appTools: McpAppTool[];
@@ -46,6 +46,7 @@ interface BridgeState {
   cacheHint?: McpCacheHint;
   closed: boolean;
   listRefresh?: Promise<void>;
+  readonly onConnectionLost?: (error: unknown) => void;
 }
 
 export async function connectMcpTools(options: ConnectMcpToolsOptions): Promise<McpToolBridge> {
@@ -58,7 +59,7 @@ export async function connectMcpTools(options: ConnectMcpToolsOptions): Promise<
     // SDK listChanged hook (legacy notification or modern subscriptions/listen):
     // refresh the bounded local list. Background refresh is best effort — errors
     // surface on the next explicit refresh or tool access, matching notification semantics.
-    if (state) void refreshBridgeTools(state, { force: true }).catch(() => void 0);
+    if (state) void refreshBridgeTools(state, { force: true }).catch((error) => noteConnectionError(state!, error));
   });
   state = createBridgeState(client, transport, options);
 
@@ -70,12 +71,13 @@ export async function connectMcpTools(options: ConnectMcpToolsOptions): Promise<
   try {
     await client.connect(transport, {
       signal: options.signal,
-      timeout: state.limits.callTimeoutMs,
-      maxTotalTimeout: state.limits.callTimeoutMs,
+      timeout: state.limits.connectTimeoutMs,
+      maxTotalTimeout: state.limits.connectTimeoutMs,
     });
     options.signal?.throwIfAborted();
     if (state.mcpApps) assertMcpAppsNegotiated(client);
-    await refreshBridgeTools(state, { force: true, signal: options.signal });
+    // The first list belongs to connect; later refreshes use callTimeoutMs.
+    await refreshBridgeTools(state, { force: true, signal: options.signal, timeoutMs: state.limits.connectTimeoutMs });
   } catch (error) {
     options.signal?.removeEventListener("abort", abortListener);
     await closeBridge(state);
@@ -107,6 +109,7 @@ async function listAllMcpToolsWithHint(
   client: Client,
   signal: AbortSignal | undefined,
   input: McpClientLimitsInput = {},
+  timeoutMs?: number,
 ): Promise<{ readonly tools: ListedMcpTool[]; readonly cacheHint: McpCacheHint | undefined }> {
   const limits = resolveMcpClientLimits(input, {
     maxResultBytes: DEFAULT_MAX_RESULT_BYTES,
@@ -119,6 +122,7 @@ async function listAllMcpToolsWithHint(
   let pages = 0;
   let totalSchemaBytes = 0;
   let cacheHint: McpCacheHint | undefined;
+  const pageTimeoutMs = timeoutMs ?? limits.callTimeoutMs;
 
   do {
     signal?.throwIfAborted();
@@ -132,8 +136,8 @@ async function listAllMcpToolsWithHint(
     // own page cap — neither is acceptable behind Prism MCP's bounded loop.
     const page = await client.listTools(cursor === undefined ? { cursor: "" } : { cursor }, {
       signal,
-      timeout: limits.callTimeoutMs,
-      maxTotalTimeout: limits.callTimeoutMs,
+      timeout: pageTimeoutMs,
+      maxTotalTimeout: pageTimeoutMs,
     });
     if (cacheHint === undefined) {
       cacheHint = parseCacheHint((page as { readonly _meta?: unknown })._meta, page);
@@ -326,11 +330,19 @@ function createBridgeState(client: Client, transport: Transport, options: Attach
     effect: options.effect,
     listFetchedAt: 0,
     closed: false,
+    ...(options.onConnectionLost ? { onConnectionLost: options.onConnectionLost } : {}),
   };
 
   client.setNotificationHandler("notifications/tools/list_changed", () => {
     state.listFetchedAt = 0;
   });
+  // A stdio child that exits closes the transport, which lands here, so `isClosed` turns true. An explicit
+  // close sets `closed` first and is never reported as a drop.
+  const previous = client.onclose;
+  client.onclose = () => {
+    previous?.();
+    dropBridge(state, new McpBridgeError(`MCP server "${state.serverId}" closed the connection`));
+  };
   return state;
 }
 
@@ -355,7 +367,7 @@ function createBridgeFacade(state: BridgeState): McpToolBridge {
 
 async function refreshBridgeTools(
   state: BridgeState,
-  options?: { readonly force?: boolean; readonly signal?: AbortSignal },
+  options?: { readonly force?: boolean; readonly signal?: AbortSignal; readonly timeoutMs?: number },
 ): Promise<void> {
   assertOpen(state);
   const now = Date.now();
@@ -366,7 +378,12 @@ async function refreshBridgeTools(
   }
 
   state.listRefresh = (async () => {
-    const { tools: remoteTools, cacheHint } = await listAllMcpToolsWithHint(state.client, options?.signal, state.limits);
+    const { tools: remoteTools, cacheHint } = await listAllMcpToolsWithHint(
+      state.client,
+      options?.signal,
+      state.limits,
+      options?.timeoutMs,
+    );
     state.cacheHint = cacheHint;
     const appTools = state.mcpApps ? remoteTools.map((tool) => toMcpAppTool(tool, state)) : [];
     const nextTools = mapMcpToolsToDefinitions(
@@ -431,9 +448,13 @@ async function callRemoteTool(
       listeners.push(() => context.signal?.removeEventListener("abort", onAbort));
     }
   }
-  const timeout = setTimeout(() => {
-    abortController.abort(new McpBridgeError(`MCP tool call timed out after ${state.limits.callTimeoutMs}ms`));
-  }, state.limits.callTimeoutMs);
+  // The SDK checks maxTotalTimeout only when progress arrives, so a call that keeps
+  // reporting progress could otherwise run up to maxCallTimeMs + callTimeoutMs. This
+  // timer is the exact absolute bound; the SDK timer is the no-progress bound.
+  const maxCallTimeError = new McpBridgeError(
+    `MCP server "${state.serverId}" tool call exceeded maxCallTimeMs (${state.limits.maxCallTimeMs}ms)`,
+  );
+  const timeout = setTimeout(() => abortController.abort(maxCallTimeError), state.limits.maxCallTimeMs);
   listeners.push(() => clearTimeout(timeout));
 
   // Retained discovered definition drives both SEP-2243 `Mcp-Param-*` header
@@ -444,7 +465,11 @@ async function callRemoteTool(
       {
         signal: abortController.signal,
         timeout: state.limits.callTimeoutMs,
-        maxTotalTimeout: state.limits.callTimeoutMs,
+        maxTotalTimeout: state.limits.maxCallTimeMs,
+        // SDK 2.4.0 attaches a progressToken only when onprogress is set; without
+        // it the server cannot report progress and resetTimeoutOnProgress is inert.
+        resetTimeoutOnProgress: true,
+        onprogress: () => undefined,
         ...(remoteTool === undefined ? {} : { toolDefinition: remoteTool }),
       },
     );
@@ -487,15 +512,37 @@ async function callRemoteTool(
       metadata,
     };
   } catch (error) {
+    noteConnectionError(state, error);
     return {
       toolCallId: context.toolCallId,
       name: prefixedName,
-      error: mcpCallError(boundedMcpErrorMessage(error, Math.min(8 * 1024, state.limits.maxResultBytes))),
+      error: mcpCallError(
+        boundedMcpErrorMessage(
+          // The SDK wraps a non-SdkError abort reason as `String(reason)`; report our own error unwrapped.
+          abortController.signal.reason === maxCallTimeError ? maxCallTimeError : (callTimeoutError(state, error) ?? error),
+          Math.min(8 * 1024, state.limits.maxResultBytes),
+        ),
+      ),
       metadata: { mcp: { serverId: state.serverId, remoteName } },
     };
   } finally {
     for (const dispose of listeners) dispose();
   }
+}
+
+/** Name the server and the limit on an SDK request timeout; other errors pass through. */
+function callTimeoutError(state: BridgeState, error: unknown): McpBridgeError | undefined {
+  if (error instanceof McpBridgeError) return undefined;
+  const data = record((error as { readonly data?: unknown } | null)?.data);
+  if (typeof data?.maxTotalTimeout === "number") {
+    return new McpBridgeError(`MCP server "${state.serverId}" tool call exceeded maxCallTimeMs (${state.limits.maxCallTimeMs}ms)`);
+  }
+  if (typeof data?.timeout === "number") {
+    return new McpBridgeError(
+      `MCP server "${state.serverId}" tool call timed out after callTimeoutMs (${state.limits.callTimeoutMs}ms) without progress`,
+    );
+  }
+  return undefined;
 }
 
 async function closeBridge(state: BridgeState): Promise<void> {
@@ -514,6 +561,43 @@ async function closeBridge(state: BridgeState): Promise<void> {
     await state.transport.close();
   } catch {
     /* Best-effort shutdown. */
+  }
+}
+
+/**
+ * Whether a request error means the connection is gone: the SDK's closed or not-connected errors, an HTTP 404
+ * (the server dropped the session), or a network failure. A request timeout or a server error is not a drop.
+ */
+function isMcpConnectionLostError(error: unknown): boolean {
+  for (let current = error, depth = 0; current && depth < 4; current = (current as { cause?: unknown }).cause, depth += 1) {
+    const value = current as { readonly code?: unknown; readonly status?: unknown; readonly message?: unknown; readonly name?: unknown };
+    if (value.code === "CONNECTION_CLOSED" || value.code === "NOT_CONNECTED") return true;
+    if (value.status === 404) return true;
+    if (
+      typeof value.code === "string" &&
+      /^(ECONNREFUSED|ECONNRESET|EPIPE|ENOTFOUND|EHOSTUNREACH|ConnectionRefused|ConnectionClosed|UND_ERR_SOCKET)$/.test(value.code)
+    ) {
+      return true;
+    }
+    if (typeof value.message === "string" && /^(Not connected|Connection closed|fetch failed)$|Unable to connect/.test(value.message))
+      return true;
+  }
+  return false;
+}
+
+/** A failed request that shows the connection is gone closes the bridge and reports the drop. */
+function noteConnectionError(state: BridgeState, error: unknown): void {
+  if (isMcpConnectionLostError(error)) dropBridge(state, error);
+}
+
+/** Closes the bridge after a drop and notifies once; a bridge Prism closed itself is never reported. */
+function dropBridge(state: BridgeState, error: unknown): void {
+  if (state.closed) return;
+  void closeBridge(state);
+  try {
+    state.onConnectionLost?.(error);
+  } catch {
+    /* The listener owns its failures. */
   }
 }
 

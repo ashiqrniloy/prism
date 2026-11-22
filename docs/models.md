@@ -150,16 +150,106 @@ echoes the `Authorization` header is redacted. A spec with no `credential` sends
 
 ### Retry
 
-`AgentConfig.retry` governs run turns and `models.client` alike (one loop, `retryLoop` in `src/models/retry.ts`).
-A `models.client` call is retried only before its first event reaches the caller; after that a failure is a
-redacted `error` event. `done.stopReason` lands on the closed taxonomy on both paths.
+Retry is on by default. `AgentConfig.retry` governs run turns and `models.client` alike (one loop, `retryLoop`
+in `src/models/retry.ts`); `RunOptions.retry` overrides it per run, field by field.
 
-Transience is the `ErrorInfo` the provider failure carries: a numeric status in the transient set, a transient
-network code, or a message naming congestion. One exception is deliberate — a failure classified
-`failureClass: "quota"` is never retried (`isTransientErrorInfo`), because the same attempt spends the same
-allowance and cannot succeed until the caller acts. A plan usage limit (a `429` whose body names usage or quota,
-e.g. Sign in with ChatGPT's `subscription_sharing_usage_limit_exceeded`) therefore stops the run and the user sees
-where to look, while an ordinary `429` rate limit still backs off.
+| Setting | Behavior |
+| --- | --- |
+| `retry` omitted | The default policy: 4 attempts, 500 ms base delay doubling per attempt, 30 s cap, ±25% jitter. |
+| `retry: false` (agent or run) | No retry. A run's `retry: { … }` turns it back on for that run. |
+| `retry: { maxAttempts, baseDelayMs, maxDelayMs, maxRetryAfterMs }` | The default policy with these fields; omitted fields keep their defaults. |
+| `retry: { policy }` | Your `RetryPolicy` decides every retry. |
+| `retry: { afterOutput: false }` | A run turn whose stream fails after output began is final, as in 0.14.0. Default `true`. |
+
+A provider's backpressure hint (`retry-after-ms`, or `Retry-After` in seconds or as an HTTP date) is the delay,
+exactly, with no jitter and not capped by `maxDelayMs`, when it is at most `maxRetryAfterMs` (default 60,000 ms;
+no setting goes above 600,000 ms). A longer hint does not sleep: the turn fails at once with the original error,
+its `failureClass` (usually `rate_limited`) and `retryAfterMs`, so the host can decide when to try again. A retry
+wait ends at once when the run is aborted or passes its wall limit.
+
+**After output began.** A run turn whose stream fails with a transient failure (by the rule below, which
+includes the [timeouts](#timeouts)) after its first event is retried too, under the same policy and attempt
+budget. The failed attempt ends with `turn.completed { error }`, appends nothing to the branch and dispatches
+none of its tool calls; the next attempt opens with `turn.started { attempt, retry }`, and its output is the
+turn's. A consumer drops the deltas of an attempt that ended with `error` ([Events](events.md)). A failure that
+is not transient stays final. `afterOutput: false` turns this off.
+
+A `models.client` call is retried only before its first event reaches the caller; after that a failure is a
+redacted `error` event (`afterOutput` does not apply). `done.stopReason` lands on the closed taxonomy on both paths.
+
+Transience is read from the structured fields of the `ErrorInfo` the failure carries, never from its message
+(`isTransientErrorInfo`):
+
+- **Never retried:** `name: "AbortError"` (the run's own abort), and `failureClass` `quota`, `auth`, `permanent`
+  or `context_overflow`.
+- **Retried:** a `code` of 408, 425, 429, 500, 502, 503 or 504; a network code (`ECONNRESET`, `ECONNREFUSED`,
+  `ECONNABORTED`, `ETIMEDOUT`, `EAI_AGAIN`, `ENETUNREACH`, `ENOTFOUND`, `EPIPE`, `UND_ERR_CONNECT_TIMEOUT`,
+  which covers what Bun's `fetch` throws for a reset, a refused connection and a DNS failure); or `failureClass`
+  `transient` or `rate_limited`.
+- **Anything else is final**, including 409 and a failure that only *says* "timeout" or "unavailable".
+
+Quota is excluded deliberately: the same attempt spends the same allowance and cannot succeed until the caller
+acts. A plan usage limit (a `429` whose body names usage or quota, e.g. Sign in with ChatGPT's
+`subscription_sharing_usage_limit_exceeded`) therefore stops the run and the user sees where to look, while an
+ordinary `429` rate limit still backs off.
+
+**Cost.** A successful turn costs nothing extra. A turn that keeps failing costs at most `maxAttempts - 1`
+(by default three) more provider requests, each billed like the first. A stream that drops after output costs
+one more request and re-bills that turn's input tokens. Usage the provider reported for a failed attempt is
+recorded once; an attempt that reported none and is retried projects no estimate (the retry is metered), while
+a final failure keeps its estimate. Set `retry: false`, `afterOutput: false`, or a lower `maxAttempts`, to cap
+that.
+
+### Timeouts
+
+Every provider turn request has a connect timeout and an idle timeout, set through
+`ProviderRequestOptions.timeouts` on `AgentConfig.providerOptions` or `RunOptions.providerOptions` (a run's
+value overrides the agent's field by field):
+
+| Field | Default | Fires when |
+| --- | --- | --- |
+| `connectMs` | 60,000 | no response headers arrive in time |
+| `idleMs` | 300,000 | no bytes arrive for this long while the body is being read |
+
+`null` disables one. A timeout aborts that request and fails it with `code: "ETIMEDOUT"`,
+`failureClass: "transient"`, and a message naming the timeout and its duration (no response body), so the default
+retry policy retries it like a reset connection. Any bytes keep a stream alive, SSE comments and `ping` frames
+included, and the idle timer runs only while a read is pending, so a slow consumer is not a stalled provider.
+The run's own abort still wins and is reported as an abort. Catalog, quota, OAuth and spend-log calls are not
+turn requests and carry no timer; SystemOne decision calls keep their whole-call `timeoutMs` and also get these
+timers per attempt.
+
+```ts
+createAgent({ model, providerOptions: { timeouts: { connectMs: 30_000, idleMs: 120_000 } } });
+session.run("long job", { providerOptions: { timeouts: { idleMs: null } } }); // this run only: no idle limit
+```
+
+## Structured output
+
+A session run asks for structured output with `providerOptions.structuredOutput: { name, schema, strict?, mode?, repair? }`.
+The run's result carries `output` (the parsed value) when the final reply parses as JSON (one fenced code block
+is tolerated) and satisfies the schema, or `outputError` (`invalid_json` | `schema_mismatch`, at most 8
+`{ path, message }` entries) when it does not. `RunResult.text` and `status` do not change.
+
+| `mode` | What the provider request carries |
+| --- | --- |
+| `"auto"` (default) | Native when the run's model declares `capabilities.structuredOutput` (`true` or `"json_schema"`), else prompted. Resolved once per run, before any provider call or hook. |
+| `"native"` | The schema as the wire's response format (`response_format`, `text.format`, Ollama `format`). A model without the capability fails closed with `StructuredOutputError("unsupported_model")`, naming `mode: "prompted"`. |
+| `"prompted"` | No native option. One system instruction block carries the schema name and its canonical JSON and asks for a single JSON object as the final answer; tool calls before it stay allowed. The block sits in the stable prefix and is byte-identical on every turn of the run, so it caches. |
+
+The Anthropic Messages wire has no JSON-schema response format: its codec fails closed on a native
+request, and Kilo declares the capability on its Chat and Responses routes only, so `auto` sends those
+models the prompted block. A direct provider request (`generate()` outside a session run) supports native only.
+
+`repair` (0–3, default 1): when the run ends naturally and the final reply is invalid, `run.end()` sends one
+user message listing the violations' paths and expected shapes (never the reply's content) and the loop runs
+again, at most `repair` times per run. Repair runs after the `run.end` hook declines to continue, in the
+primitive, so every loop that calls `run.end()` gets it. Repairs are counted apart from
+`limits.maxContinuations`; a durable resume restarts the count. A reply still invalid after the last repair
+ends the run normally with `outputError`.
+
+Cost: each repair is one extra model turn, only on an invalid reply; `repair: 0` disables it. Prompted mode
+adds the schema's size in input tokens to every request (cache-stable).
 
 ## Agents with no model
 

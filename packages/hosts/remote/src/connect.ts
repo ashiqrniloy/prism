@@ -23,6 +23,8 @@ import type { RemoteTransport } from "./transport.js";
 
 import { connectNetwork, type NetworkEndpoint } from "./transports/client.js";
 
+const DEFAULT_MAX_QUEUED_EVENTS = 1024;
+
 export type ConnectEndpoint = NetworkEndpoint | StdioEndpoint | { readonly kind: "memory"; readonly transport: RemoteTransport };
 
 export interface ConnectAgentOptions {
@@ -193,9 +195,13 @@ export async function connectAgent(endpoint: ConnectEndpoint, options: ConnectAg
       return proxy.session;
     },
     subscribe(subscribeOptions) {
-      const channel = createChannel<AgentEvent>(subscribeOptions?.maxQueuedEvents ?? 1024, subscribeOptions?.overflow ?? "close", () => {
-        agentSubscribers.delete(channel);
-      });
+      const channel = createChannel<AgentEvent>(
+        subscribeOptions?.maxQueuedEvents ?? DEFAULT_MAX_QUEUED_EVENTS,
+        subscribeOptions?.overflow ?? "close",
+        () => {
+          agentSubscribers.delete(channel);
+        },
+      );
       agentSubscribers.add(channel);
       return channel;
     },

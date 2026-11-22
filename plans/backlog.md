@@ -1600,6 +1600,112 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - What: `AgentConfig.compaction.maxSummaryChars` reaches the default compactor.
 - Why: only the constructor option is read today, and there `0` means unlimited (plan 217 Task 5 finding).
 
+## MCP bridge tools declare `effect` but no `effects`, so MCP rounds never run in parallel
+- Review (plan 226 Task 4, 2026-11-15): post-0.14. Additive: deriving `effects` from `effectForRemoteTool` changes no contract and only lets read-only MCP calls overlap.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/226-Phase-19-Part-B-Tool-Dispatch-Argument-Validation-Interruptible-Tools-Timeouts-And-Parallel-Rounds.md
+- What: Declare `effects` on the tools in `packages/extensions/mcp/src/bridge.ts:255-257`, derived from `effectForRemoteTool`.
+- Why: A round with an undeclared-effects tool stays serial, so every round that holds an MCP call is serial today.
+
+## Await bounds before `execute` (effect-store `begin`, `beforeExecute`, `markDispatched`)
+- Review (plan 226 Task 4, 2026-11-15): post-0.14.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/226-Phase-19-Part-B-Tool-Dispatch-Argument-Validation-Interruptible-Tools-Timeouts-And-Parallel-Rounds.md
+- What: Race the awaits that run before `execute` against the call's signal and timeout.
+- Why: A hung effect store still hangs a call; Task 3's race covers `execute` only.
+
+## Audit event consumers for a `tool.started` / `tool.completed` adjacency assumption
+- Review (plan 226 Task 4, 2026-11-15): before the next release that ships parallel rounds.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/226-Phase-19-Part-B-Tool-Dispatch-Argument-Validation-Interruptible-Tools-Timeouts-And-Parallel-Rounds.md
+- What: Check the ACP and AG-UI mappers and the reference host's renderers against events of different calls interleaving.
+- Why: Parallel rounds interleave the events; the host suites pass, but no consumer was audited for the assumption.
+
+## Read-your-writes for `state.log` appends
+- Review (plan 226 Task 4, 2026-11-15): post-0.14.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/226-Phase-19-Part-B-Tool-Dispatch-Argument-Validation-Interruptible-Tools-Timeouts-And-Parallel-Rounds.md
+- Compromise: `SessionStateStore.write` is visible at once; `append` still becomes visible only after its append resolves.
+- Implications: A package that reads its own `state.log` in a tool hook while parallel calls append can see a stale list.
+
+
+## OpenAI Chat codec default `reasoningReplay: "fold"` replays reasoning as assistant text
+- Review (plan 227 Task 5, 2026-11-15): owner call. Changing the default alters every Chat-wire provider's request body.
+- Closed (2026-11-15): resolved. The default is now `drop` in `openAIChatBody` and `serializeOpenAIChatMessage`; `fold` stays as an explicit opt-in. Only routes that set no replay mode change (the built-in `openai-compatible` provider, `createOpenAICompatibleProvider`, custom routes); every shipped provider package sets its own. Test: `openai_chat_default_replay_drops_reasoning_text`. `createOpenAICompatibleProvider` now forwards a `reasoningReplay` option (test `openai_compatible_forwards_reasoning_replay`).
+- Section: Further Actions
+- Priority: P2
+- Source: plans/227-Phase-19-Part-C-Provider-Turns-Retry-By-Default-Honest-Backoff-Stream-Timeouts-Mid-Stream-Recovery-And-Thinking-Replay.md
+- What: Decide whether the Chat codec default becomes `drop` (or `fold` only for the producing provider).
+- Why: Same defect class as the Anthropic fix in plan 227 Task 5: another provider's reasoning reaches the model as if the assistant had said it (`openai-chat.ts:175,375,399`).
+
+## Thinking signatures carry no provenance
+- Review (plan 227 Task 5, 2026-11-15): post-0.14. Additive contract field.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/227-Phase-19-Part-C-Provider-Turns-Retry-By-Default-Honest-Backoff-Stream-Timeouts-Mid-Stream-Recovery-And-Thinking-Replay.md
+- What: Record the producing provider/route on `ThinkingContent` and have the Anthropic codec replay `thinking` only for its own signatures.
+- Why: The Chat codec stores a `reasoning_details` JSON list in `signature` (`openai-chat.ts:555`); on the Anthropic route with `preserveThinking` on it goes out as a `thinking` block with a foreign signature and the vendor rejects the request.
+
+## SystemOne decision model double retry on the `generate()` path
+- Review (plan 227 Task 2, 2026-11-15): post-0.14.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/227-Phase-19-Part-C-Provider-Turns-Retry-By-Default-Honest-Backoff-Stream-Timeouts-Mid-Stream-Recovery-And-Thinking-Replay.md
+- What: Pass `maxRetries: 0` to `postSystemOne` on the `generate()` path (`ollama-cloud/provider.ts:75`) and let `retryLoop` own it; keep the SystemOne loop for `decide()`.
+- Why: Turn retry (4 attempts) times SystemOne retry (3) is up to 12 requests on a dead endpoint.
+
+## Retry notice arrives after the backoff wait
+- Review (plan 227 Task 4, 2026-11-15): post-0.14, if hosts ask. Additive event field.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/227-Phase-19-Part-C-Provider-Turns-Retry-By-Default-Honest-Backoff-Stream-Timeouts-Mid-Stream-Recovery-And-Thinking-Replay.md
+- What: Add `turn.completed.retry: { delayMs }` when the loop has already decided to retry.
+- Why: `turn.started.retry` rides the next attempt's opener, so a host cannot show "retrying in N s" during a long `Retry-After` wait.
+
+## Bump `@arnilo/prism-ai` when plan 227 ships
+- Review (plan 227 Task 2, 2026-11-15): at the release that ships plan 227.
+- Section: Further Actions
+- Priority: P1
+- Source: plans/227-Phase-19-Part-C-Provider-Turns-Retry-By-Default-Honest-Backoff-Stream-Timeouts-Mid-Stream-Recovery-And-Thinking-Replay.md
+- What: Bump `@arnilo/prism-ai` in the release plan.
+- Why: Its providers moved to `parseRetryAfterMs`; `scripts/release.mjs gate` fails `ranges` until the bump.
+
+## ACP clients lose token streaming per attempt
+- Review (plan 227 Task 4, 2026-11-15): post-0.14.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/227-Phase-19-Part-C-Provider-Turns-Retry-By-Default-Honest-Backoff-Stream-Timeouts-Mid-Stream-Recovery-And-Thinking-Replay.md
+- Compromise: The ACP mapper buffers each attempt's text/thought chunks until `turn.completed` without `error`, because ACP has no retract.
+- Implications: ACP clients see whole-attempt chunks; revisit if ACP gains a retract or the owner prefers streaming with `retry.afterOutput: false`.
+
+## Remote client channel does not coalesce
+- Review (plan 228 Task 3, 2026-11-15): post-0.14.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/228-Phase-19-Part-D-Event-Delivery-Live-Streaming-Under-Caps-Subscriber-Coalescing-And-Cheap-Byte-Accounting.md
+- What: Give the remote client queue (`packages/hosts/remote/src/channel.ts`, used by `connect.ts` and `session-proxy.ts`) the kernel merge rule, and make `"coalesce"` its default. This needs `mergeDeltaEvents` exported on a host-facing subpath.
+- Why: It accepts `"coalesce"` but treats it as `"close"`, so a slow remote consumer still fails its iterator at 1,024 events.
+
+## Lower the session-turn-overhead growth ceilings after plan 228
+- Review (plan 228 Task 4, 2026-11-15): post-0.14.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/228-Phase-19-Part-D-Event-Delivery-Live-Streaming-Under-Caps-Subscriber-Coalescing-And-Cheap-Byte-Accounting.md
+- What: Re-measure `session-turn-overhead` on an idle machine, and lower `scripts/budgets.json#sessionTurnOverhead.ceilings.maxGrowthRatio` from 10.
+- Why: Memoized request sizing removed the O(request) charge per attempt: memory `growthRatio` measured 2.1–3.4 under load, against 3.8–25 before. A ceiling of 10 would not catch a regression.
+
+## `maxResponseBytes` does not count JSON escaping
+- Review (plan 228 Task 4, 2026-11-15): post-0.14.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/228-Phase-19-Part-D-Event-Delivery-Live-Streaming-Under-Caps-Subscriber-Coalescing-And-Cheap-Byte-Accounting.md
+- Compromise: Streamed deltas are charged at the UTF-8 length of their strings plus 64 bytes, not at their serialized length.
+- Implications: A quote-heavy tool-argument delta is charged below its JSON size. The cap still bounds memory held. Revisit only if a host relies on the cap as a wire-size bound.
+
 ## Failed-check `status` on small STM workers (English)
 - Review (plan 218.2 Task 9, 2026-11-16): memory track, before gate M-2's sittings (plan 218 Task 6). No public contract change.
 - Section: Further Actions
@@ -1640,3 +1746,345 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - What: Regenerate `scripts/memory-bench/defaults.json` with the workers' `thinkingLevel: "low"` (plan 218, 2026-11-12) and without the removed `fabric.*` keys, with a recorded reason.
 - Why: `calibrate`'s `config_defaults_match_evidence` has failed at HEAD since before plan 218.2, so the bench suite never reads green.
 
+## Package compaction voters resolve the input cap from `session.model` only
+- Review (plan 229, 2026-11-16): post-0.14. No public contract change.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/229-Phase-19-Part-E-Workable-Defaults-Run-Limits-AgentConfig-Validation-Automatic-Compaction-And-A-Useful-Fallback-Summary.md
+- What: Resolve the input cap through the provider catalog in `@arnilo/prism-extensions/compaction` (with a `trigger`) and in the context-engineering attention compiler. This is the cached `describeModel` lookup the kernel trigger uses since plan 229 Task 4.
+- Why: With a bare `"provider/model"` ref, an `input_ratio` gate in either package cannot resolve a cap, while the kernel default trigger can.
+- Closed (2026-11-16): resolved by plan 229 Further Actions P2. Both packages describe the session model through `prism.models.client(model).resolve()` (the loader's cached `describeModel`) when it declares no window. The compaction vote does this only for a cap-reading trigger. Context engineering warms its per-model attention compiler before `context.build` and `compaction.when` read it, and its request accounting uses the same cap. Covered by `input_ratio_trigger_resolves_cap_from_provider_catalog` and `attention_resolves_cap_from_provider_catalog`. No public API change.
+
+## `CompactionOptions.keepRecentTokens`
+- Review (plan 229, 2026-11-16): post-0.14. Additive.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/229-Phase-19-Part-E-Workable-Defaults-Run-Limits-AgentConfig-Validation-Automatic-Compaction-And-A-Useful-Fallback-Summary.md
+- What: Add `keepRecentTokens` to `CompactionOptions` and forward it through `CompactionContext` to the default compactor.
+- Why: Today only `DefaultCompactorOptions` has it (plan 229 Task 5). A host sizes the tail per agent by count, or by constructing the compactor itself.
+
+## Chunk the split-turn prefix summary in LLM compaction
+- Review (plan 229, 2026-11-16): post-0.14. No public contract change.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/229-Phase-19-Part-E-Workable-Defaults-Run-Limits-AgentConfig-Validation-Automatic-Compaction-And-A-Useful-Fallback-Summary.md
+- What: Apply the rolling-chunk path from plan 229 Task 6 to `summarizeTurnPrefix` in `packages/extensions/compaction/src/strategy.ts`.
+- Why: The turn prefix is bounded only by `keepRecentTokens` (default 20,000), so a summary model with a smaller window still overflows that call and falls back to the kernel compactor.
+
+## Append-only JSONL `appendMany` for an existing session
+- Review (plan 230, 2026-11-16): post-0.14. No public contract change.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/230-Phase-19-Part-F-Session-Stores-Single-Writer-Appends-Tail-Snapshots-One-Statement-Append-And-Atomic-Fork.md
+- What: When the session file already exists, write an `appendMany` batch to `@arnilo/prism-extensions/store-jsonl` with one `appendFile` plus a size check instead of rewriting the whole file through a temp file and a rename.
+- Why: Plan 230 Task 5's JSONL `appendMany` rewrites the file, which costs O(file) for a batch added to a long session. Fork writes a new file, so it does not pay this.
+
+## Postgres `appendMany` relies on `INSERT … SELECT … ORDER BY` for `seq` order
+- Review (plan 230, 2026-11-16): watch item. No public contract change.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/230-Phase-19-Part-F-Session-Stores-Single-Writer-Appends-Tail-Snapshots-One-Statement-Append-And-Atomic-Fork.md
+- Compromise: The batch statement inserts `ORDER BY ord` and relies on identity values being assigned in that order. PostgreSQL does this in practice but does not document it as a guarantee.
+- Implications: If a future server version reorders the assignment, `list()` order could differ from branch order for a forked session. Branch reads order by walk depth and are unaffected. `append_many_is_one_statement_and_fork_uses_it` would catch it.
+
+## Persist the dispatched effect key with each tool call
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: Continuation settlement (Task 2) keys the effect lookup on the arguments stored in the assistant message. A call whose arguments a `tool.call` hook rewrote before dispatch is not found and settles as `tool_call_interrupted` even when its effect was dispatched.
+- Implications: A rewritten-argument call with a durable effect can be reported as interrupted rather than outcome-unknown, so the model may repeat a non-idempotent effect. Fix: persist the dispatched arguments hash or effect key with the call.
+
+## Counter-only turn checkpoints for loops without per-run state
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: `durability: "turn"` with a custom loop that declares neither `snapshot`/`restore` nor `state: "run"` fails every run at start (`ERR_PRISM_LOOP_NOT_DURABLE`) instead of writing checkpoints that carry counters only.
+- Implications: Hosts must drop `"turn"` for such loops (for example `workflowLoopStrategy`), losing counter and deadline restore on continue.
+
+## Restore turn numbering on a restored continuation
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: A continuation restored from a `run_checkpoint` restarts turn numbering at 1 while its `turns` counter carries on; `RunControllerInternals.startTurn` is never set.
+- Implications: Turn-indexed hooks and events see restarted numbers after a continuation.
+
+## Revisit the shared strategy-level loop state guard
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: A second concurrent run on one strategy-level (`snapshot`/`restore`) loop object now fails closed with `ERR_PRISM_LOOP_SHARED_STATE` instead of silently sharing state. Stateless loops that define `snapshot`/`restore` are caught too.
+- Implications: Behavior change for hosts sharing such a loop across concurrent sessions; the fix is to declare `state: "run"`.
+
+## Close the abandoned ledger row when a run is continued under a new id
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: A continuation without a turn checkpoint runs under a new run id, so the killed run's ledger row stays `running`. Every later `findInterruptedRuns` sweep lists it again, and `continue()` skips it as `nothing_to_continue`.
+- Implications: Stale `running` rows accumulate and cost one session open per row per sweep. Fix: write a terminal record (for example `aborted` with `abortReason: "continued"`) or a `continuedFrom` link when the continuation starts.
+
+## Give the run ledger a liveness signal for interrupted-run sweeps
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: `findInterruptedRuns` tells a dead run from a live one only by `olderThanMs` measured from `startedAt`; the ledger has no heartbeat, lease, or last-activity field.
+- Implications: Two hosts sharing a store can continue the same long run at once when it outlives `olderThanMs`. Fix: a `lastActivityAt` heartbeat on `RunRecord` or a per-run lease through the store's `leases` service.
+
+## Sweep interrupted runs at the start of the reference host's schedule process
+- Review (plan 231, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/231-Phase-19-Part-G-Run-Recovery-Continue-After-A-Crash-Or-Failure-Turn-Checkpoints-And-Per-Run-Loop-State.md
+- Compromise: The reference host's recovery sweep is the explicit `prism-agent recover` command; the long-lived `schedule` process does not sweep at start.
+- Implications: A scheduler host must run `recover` separately after a crash. Fix: sweep in `scheduleCommand` when `recovery` is set, under `SCHEDULE_OWNERSHIP`.
+
+## Memory system skips delegate child sessions
+- Review (plan 232 Task 4, 2026-11-17): post-0.14, after the plan 218.1 screen. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/232-Phase-19-Part-H-Sub-Agents-Children-As-Linked-Sessions-Nested-Approvals-Shared-Budget-Depth-And-Child-Activity.md
+- Compromise: A delegate child is now a session of the parent agent, so `@arnilo/prism-memory-system` builds STM/WM tiers and runs LTM recall for every child session. Plan 232 Task 4 made `advisor` skip child sessions but left the memory system unchanged: its sources are pinned by the running plan 218.1 benchmark fingerprints, and an edit there invalidates them.
+- Implications: A child session pays observer passes and recall per child, and its observations land in its own ledger. Fix: gate the STM read (`session/setup.ts` `read`) and the LTM `enabled` toggle (`ltm/index.ts`) on `(session.depth ?? 0) > 0`, with a config switch to keep children, plus a test that a child session writes no observation.
+
+## Keep a run's model override across a durable resume
+- Review (plan 232 Task 4, 2026-11-17): post-0.14. Kernel behavior; additive field on the suspended run state.
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/232-Phase-19-Part-H-Sub-Agents-Children-As-Linked-Sessions-Nested-Approvals-Shared-Budget-Depth-And-Child-Activity.md
+- Compromise: `session.resume` refuses `RunOptions.model` ("Durable runs require model, loop, and effect store on AgentConfig for fingerprinting"), and the suspended state does not record the run's model. A delegate child with its own `model` that suspends therefore continues on the agent's model after the resume.
+- Implications: A child configured on a cheaper or different model switches models mid-run after an approval. Fix: persist the run's resolved model in `StoredAgentRunState` and reuse it on resume (fingerprinting it with the state), so a resume needs no per-run model.
+
+## A read of a stored session's pending decisions
+- Review (plan 232 Task 4, 2026-11-17): post-0.14. Additive kernel read.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/232-Phase-19-Part-H-Sub-Agents-Children-As-Linked-Sessions-Nested-Approvals-Shared-Budget-Depth-And-Child-Activity.md
+- Compromise: A host can only learn a suspended session's approval ids from the `run.suspended` event of that session's stream. For an async delegate child it never subscribed to, the delegate puts the child session id and its approval ids (at most 16) on the `finished` `delegate.step` event.
+- Implications: A host that missed the event, or a child with more than 16 pending decisions, cannot resume it without reading the store. Fix: a kernel read such as `agent.sessions.pending(id)` returning the stored suspension's `PendingDecision`s.
+
+## Route an in-flight MCP call to the reconnected bridge
+- Review (plan 234 Task 5, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/234-Phase-19-Part-J-MCP-Package-Call-Timeouts-OAuth-Sign-In-Live-Tool-Lists-And-Reconnect.md
+- What: When a run that snapshotted an MCP tool calls it after the server reconnected, call the new bridge's tool of the same name if its identity digest is unchanged.
+- Why: Today the call returns "reconnected; its tools are available from the next run", so a drop during a long run costs that call.
+
+## Notice an idle HTTP MCP server's drop
+- Review (plan 234 Task 5, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/234-Phase-19-Part-J-MCP-Package-Call-Timeouts-OAuth-Sign-In-Live-Tool-Lists-And-Reconnect.md
+- Compromise: HTTP drop detection classifies failed requests (SDK closed/not-connected codes, a 404, listed network error codes and messages). An idle server that goes away is noticed only at the next request, and an error outside the list leaves the server `connected`.
+- Implications: The first call after an unnoticed drop fails and starts the reconnect. Fix: treat the SSE stream's terminal `onerror` ("Maximum reconnection attempts") as a drop, and widen the classifier from field reports.
+
+## Per-server MCP reconnect override
+- Review (plan 234 Task 5, 2026-11-17): post-0.14. Additive config.
+- Section: Further Actions
+- Priority: P4
+- Source: plans/234-Phase-19-Part-J-MCP-Package-Call-Timeouts-OAuth-Sign-In-Live-Tool-Lists-And-Reconnect.md
+- What: `servers[].reconnect`, overriding the plane-level `reconnect` the way the time limits already do.
+- Why: One flaky server and one stable server cannot have different backoff today.
+
+## Revoke MCP OAuth tokens on logout
+- Review (plan 234 Task 3, 2026-11-17): post-0.14. No public contract change required to track it.
+- Section: Further Actions
+- Priority: P4
+- Source: plans/234-Phase-19-Part-J-MCP-Package-Call-Timeouts-OAuth-Sign-In-Live-Tool-Lists-And-Reconnect.md
+- What: `mcp:logout` calls `McpClientAuth.revoke()` (RFC 7009) before deleting the stored record.
+- Why: Today only the local record is deleted, so the refresh token stays valid at the authorization server until it expires.
+
+## Live tool-calling coverage for structured output
+- Section: Further Actions
+- Priority: P2
+- Source: plans/235-Phase-19-Part-K-Structured-Output-Validated-Result-Prompted-Fallback-And-Repair.md
+- What: Extend `liveScenarioStructuredOutput` (`src/testing/provider-live-scenarios.ts`) to validate the reply with `parseStructuredOutput` and add a tool-calling run with structured output.
+- Why: Native schemas are sent next to `tools` on every turn (`response_format`, `text.format`, Ollama `format`); no test or live scenario proves gateways accept that combination.
+- Closed (2026-11-17): the scenario code is done (plan 235 Further Actions). `liveScenarioStructuredOutput` validates through `parseStructuredOutput`, and the new `structured-tool-loop` scenario (`liveScenarioStructuredToolLoop`, test `live_structured_output_with_tool_calls`) is a session run: native mode with `repair: 0` on routes that declare the capability, prompted mode otherwise. It runs by default in every `runProviderLiveScenarios` suite; it is hermetically tested in `src/__tests__/provider-live-scenarios.test.ts`. The first credentialed live pass is still owed: run each provider's `live.test.ts` with `PRISM_LIVE_PROVIDER_TESTS=1`.
+
+## Rebaseline release gates after the Phase 19 plans land
+- Section: Further Actions
+- Priority: P2
+- Source: plans/235-Phase-19-Part-K-Structured-Output-Validated-Result-Prompted-Fallback-And-Repair.md
+- What: Rebaseline `scripts/budgets.json` (kernel packed/unpacked bytes, root and per-package export counts, sourceLines, non-null counts) with reasons and regenerate the phase54 package map and package-truth docs.
+- Why: `bun run test` and `release.mjs gate` fail on these tree-wide gates while several uncommitted plans sit in the working tree; plans 235 Tasks 2–3 contribute a few exports and lines.
+
+## Structured-output repair count across durable resume
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/235-Phase-19-Part-K-Structured-Output-Validated-Result-Prompted-Fallback-And-Repair.md
+- Compromise: The repair counter is run-local, like `continuations`, so a durable resume restarts it.
+- Implications: A run suspended between an invalid reply and its repair can take up to `repair` more model turns after resume; persist the count in loop state if an exact bound is needed.
+
+## Live tests for the A2A host library and the Slack and Discord channels
+- Section: Further Actions
+- Priority: P2
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: Opt-in live tests under `bun run test:live`, modeled on `packages/hosts/channels/src/__tests__/telegram-live.test.ts`: an A2A 1.0 round trip against a public peer (`connectA2A`) and from one (`serveA2A`), a Slack Socket Mode mention and reply, and a Discord Gateway Identify plus a DM reply.
+- Why: The plan header promised them and none were written; every proof runs on scripted transports or a loopback peer, so a wire detail the platforms read differently from their docs is caught only in production.
+
+## Discord: tell the user when a Gateway message is refused as retryable
+- Section: Further Actions
+- Priority: P2
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: When `admit` answers `capacity`, `unavailable`, or `stopped` for a Gateway `MESSAGE_CREATE`, send a short "busy, try again" reply to the conversation through the runtime's notice path.
+- Why: Discord never redelivers a Gateway event, so today the message is dropped with no feedback (the HTTP Interactions endpoint answers 503 instead).
+
+## Slack and Discord: follow-ups in a bound thread without a mention
+- Section: Further Actions
+- Priority: P2
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: Admit a non-mention message only when its conversation (Slack thread, Discord thread channel) already has a binding. Slack also needs `channels:history`/`groups:history` and a `message` subscription.
+- Why: Both adapters require a mention in guild and channel conversations, so a conversation in a bound thread must keep mentioning the bot. Checking the binding keeps an authorized user's unrelated chatter from starting turns.
+
+## Slack and Discord: attachments
+- Section: Further Actions
+- Priority: P3
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: Wire a bounded, MIME-checked `fetchAttachment`: Slack `files.info` plus an authenticated download, Discord `attachments[].url` from the CDN.
+- Why: Both adapters read text only; image input works on Telegram but not here.
+
+## Slack and Discord: replace approval buttons with the outcome after a click
+- Section: Further Actions
+- Priority: P4
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: Answer a Discord click with callback type 7 (`UPDATE_MESSAGE`) and a Slack click with `chat.update`, replacing the buttons with "Allowed" or "Denied".
+- Why: The buttons stay on the message after a click; the runtime refuses the second use, but the user sees live-looking buttons.
+
+## Discord: sharding and slash commands
+- Section: Further Actions
+- Priority: P4
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: `shard: [id, count]` on Identify with one Gateway socket per shard, and `/new`, `/status`, `/cancel` as `APPLICATION_COMMAND` interactions.
+- Why: One Gateway session covers up to 2,500 guilds; today commands are typed text (`!new` or `/new`).
+
+## A2A: verify peer Agent Card signatures
+- Section: Further Actions
+- Priority: P3
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: `connectA2A(…, { cardKeys })`: verify the card's JWS over the RFC 8785 canonical card against host-pinned keys, as 0.12 did.
+- Why: `connectA2A` accepts unsigned and signed cards alike; only the origin rule protects the endpoint.
+
+## A2A: durable task state across restarts
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- Compromise: `serveA2A` keeps its task registry in process (a terminal task after a restart answers `-32001`, and there is no replay cursor), and `connectA2A` holds a task that waits for decisions in its own process (`a2a_no_pending_task` after a restart).
+- Implications: A restarted client cannot resume a peer's `INPUT_REQUIRED` task. Fix by storing the task id in the workflow's node state or a host store; server-side replay needs a public durable event cursor.
+
+## A2A: dropped operations
+- Section: Further Actions
+- Priority: P4
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: `ListTasks`, push-notification config, and the extended Agent Card.
+- Why: Dropped from plan 236 scope (`-32004`, `-32003`, `-32007`); revisit when a peer needs them.
+
+## Consolidate `pendingDecisionsOf` across host libraries
+- Section: Further Actions
+- Priority: P4
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- What: One shared rule for the suspended-run tip, now copied in `remote/src/pending.ts`, `headless/src/pending.ts`, and `a2a/src/pending.ts`; either a host-internal module or a public kernel `pendingSuspensionOf`.
+- Why: Three copies of one rule drift; a kernel export is a contract change and was out of plan 236's scope.
+
+## `ChannelCapabilities.acknowledgement` widened under `--allow-break`
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- Compromise: Plan 236 Task 4 added `"deadline"` to the union and regenerated the compat baseline with `--allow-break`, with no version bump; the `hosts` tarball budget was also rebaselined in Task 3 (+6.6% packed).
+- Implications: A host that switches exhaustively over `acknowledgement` must handle `"deadline"`; the next `@arnilo/prism-hosts` release notes should say so.
+
+## `connectA2A` abort settles `failed` under load
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/236-Phase-19-Part-L-Interop-A2A-Host-Library-And-Slack-And-Discord-Channels.md
+- Compromise: `packages/hosts/a2a/src/__tests__/connect.test.ts` `abort_cancels_the_remote_task` once saw `failed` instead of `aborted` for an abort 100 ms into a run, in a loaded full `bun run test`; it passes alone.
+- Implications: An abort that lands while the stream is still opening may be reported as a failure. Check the proxy's abort path before the first frame (`proxy.ts`), and settle `aborted` whenever the local abort flag is set.
+
+## Guardrail detection rates rest on a mock model and four benign pages
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- Compromise: `injection-markers` and `pii` were measured on a scripted mock model with 4 benign pages (`docs/_evidence/guardrails-2026-11.md`). No live run backs any number.
+- Implications: False-positive intervals are wide (1/4, 0.05–0.70). The README quotes counts, not general rates, until a live arm and a larger benign set are measured.
+
+## `createGuardrailFlaggedScorer` over-counts packs with judge rules
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- Compromise: The scorer counts every fired `pack:<pack>/…` record. A judge rule that failed under `onError: "allow"` also emits one, and the timeline does not project `metadata.outcome`.
+- Implications: An arm with judge rules would report judge failures as catches. No measured arm uses a judge rule.
+
+## Plan 237 whole-plan verification blocked by unrelated work
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- Compromise: Plan 237 closed with its own suites green, but the whole-plan verification is not fully green. `build:core`/`typecheck` stop at `src/__tests__/provider-live-scenarios.test.ts:253`, the threat suites' built-entrypoint tests fail with that build, the release gate still reports the kernel budget growth and the `@arnilo/prism-ai` bump, and the hosts suite fails in `a2a` and `remote` (uncommitted work). `bun run test` (whole repo) was not run.
+- Implications: Rerun the plan 237 verification list once those land, before the next release cut.
+
+## Kernel: opt-in hold of `message.delta` until `model.response` passes
+- Section: Further Actions
+- Priority: P2
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Add an opt-in limit that holds `message.delta` events until the `model.response` transforms have run.
+- Why: `limits.bufferOutput` flushes inside `generateProviderTurn`, before `model.response`. No setting today keeps unchecked output from subscribers, so output guardrails protect only the transcript and `message.completed`.
+
+## MCP: mark tool results `untrusted_external`
+- Section: Further Actions
+- Priority: P2
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Set `metadata.trust: "untrusted_external"` on MCP tool results in `packages/extensions/mcp`.
+- Why: The kernel envelope and `injection-markers` skip MCP results today unless the host lists each tool in `options.tools`.
+
+## Claim-grounding: record a non-blocking flag as `allow`
+- Section: Further Actions
+- Priority: P3
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Align governance claim-grounding with the guardrail-packs vocabulary: `action: "allow"` plus `metadata.outcome: "flag"`.
+- Why: It records a flag as `tripwire`, which the timeline and the `guardrail_pack` scorer read as a denial.
+
+## Kernel: a `decision.call` package event
+- Section: Further Actions
+- Priority: P4
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Emit a `decision.call` package event (no hook) for decision calls made with a session.
+- Why: A decisions-path judge call is charged to the run but invisible in the event stream and the timeline.
+
+## Manifest: per-package capability grants
+- Section: Further Actions
+- Priority: P4
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Let a host or manifest withhold a capability a package declares (for example `models` from guardrail-packs).
+- Why: Today "withhold `models`" can only be tested with a re-declared package definition.
+
+## Run the live guardrail arm and record it
+- Section: Further Actions
+- Priority: P2
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Run `bun run test:live:guardrails` in `apps/prism-agent` and add its counts, model id, and dataset hash to `docs/_evidence/guardrails-2026-11.md`.
+- Why: The guardrail-packs README makes no live claim. Real-model attack success with and without packs is unmeasured.
+
+## `injection-markers`: fewer false positives, wider coverage, new held-out set
+- Section: Further Actions
+- Priority: P3
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Stop `role-spoofing` firing on chat-transcript samples, and cover paraphrased and non-English override phrasing. Measure on a new held-out set.
+- Why: Measured held-out catch is 12/30 on clean pages, with 1/4 benign pages flagged. The plan 237 Task 4 held-out set becomes in-sample for any detector change.
+
+## `pii` phone detector: tracking numbers, and a measured catch rate
+- Section: Further Actions
+- Priority: P3
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Require separators or a country/area-code shape in `phone` so long digit runs (tracking numbers) do not match. Add personal-data attacks to the suite so `pii` gets a catch rate.
+- Why: `phone` flagged a parcel tracking number on a benign page, and `pii` catch is unmeasured.
+
+## Timeline: project `metadata.outcome` for guardrail records
+- Section: Further Actions
+- Priority: P4
+- Source: plans/237-Phase-19-Part-M-Guardrails-Content-Stages-Detector-Packs-And-Model-Judged-Rules.md
+- What: Carry the record's `metadata.outcome` into the guardrail timeline step.
+- Why: `createGuardrailFlaggedScorer` cannot tell a judge `onError: "allow"` record from a catch.

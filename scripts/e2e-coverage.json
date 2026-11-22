@@ -17,10 +17,14 @@
           "src/__tests__/artifacts-coverage.test.ts",
           "src/__tests__/ask-resolution.test.ts",
           "examples/custom-loop.ts",
+          "examples/continue-after-failure.ts",
+          "examples/structured-output.ts",
+          "src/__tests__/session-continue.test.ts",
           "examples/decision-models.ts",
           "examples/define-package.ts",
           "examples/manifest.ts",
           "examples/session.ts",
+          "examples/parallel-tools.ts",
           "examples/approval.ts",
           "examples/host-hooks.ts",
           "src/__tests__/cache-helpers.test.ts",
@@ -222,6 +226,8 @@
       },
       "./mcp": {
         "suites": [
+          "packages/extensions/mcp/src/__tests__/oauth-package.test.ts",
+          "examples/mcp-oauth.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],
         "mode": ""
@@ -272,7 +278,9 @@
           "packages/extensions/workflows/src/__tests__/parent-session.test.ts",
           "packages/extensions/workflows/src/__tests__/route-node.test.ts",
           "packages/extensions/workflows/src/__tests__/run.test.ts",
-          "packages/extensions/workflows/src/__tests__/scoped-state.test.ts"
+          "packages/extensions/workflows/src/__tests__/scoped-state.test.ts",
+          "packages/extensions/workflows/src/__tests__/agent-job.test.ts",
+          "examples/long-running-job.ts"
         ],
         "mode": ""
       },
@@ -319,7 +327,8 @@
       },
       "./guardrail-packs": {
         "suites": [
-          "packages/extensions/guardrail-packs/src/__tests__/package.test.ts"
+          "packages/extensions/guardrail-packs/src/__tests__/package.test.ts",
+          "packages/extensions/guardrail-packs/src/__tests__/content-stages.test.ts"
         ],
         "mode": ""
       },
@@ -426,6 +435,16 @@
         ],
         "mode": ""
       },
+      "./a2a": {
+        "suites": [
+          "examples/a2a-client.ts",
+          "examples/a2a-server.ts",
+          "packages/hosts/a2a/src/__tests__/connect.test.ts",
+          "packages/hosts/a2a/src/__tests__/import.test.ts",
+          "packages/hosts/a2a/src/__tests__/serve.test.ts"
+        ],
+        "mode": ""
+      },
       "./acp": {
         "suites": [
           "packages/hosts/acp/src/__tests__/capabilities.test.ts",
@@ -465,6 +484,20 @@
       "./channels/signal": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      },
+      "./channels/slack": {
+        "suites": [
+          "examples/channel-slack.ts",
+          "packages/hosts/channels/src/__tests__/slack.test.ts"
+        ],
+        "mode": ""
+      },
+      "./channels/discord": {
+        "suites": [
+          "examples/channel-discord.ts",
+          "packages/hosts/channels/src/__tests__/discord.test.ts"
         ],
         "mode": ""
       },

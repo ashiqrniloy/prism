@@ -19,7 +19,6 @@ import type { ResolvedWebLimits, WebFetchAdapter, WebLimits } from "../types.js"
 import { convertHtml, decodeBody } from "./convert.js";
 
 export const DEFAULT_MAX_REDIRECTS = 5;
-export const HARD_MAX_REDIRECTS = 10;
 /** One pinned, redirect-free request. Injected in tests; the default is the kernel's primitive. */
 export type NativeFetchRequest = (url: URL, init: RequestInit) => Promise<Response>;
 
@@ -46,8 +45,8 @@ export function createNativeFetch(options: NativeFetchOptions): WebFetchAdapter 
   if (typeof options.userAgent !== "string" || options.userAgent.length === 0)
     throw new WebToolError("ERR_PRISM_WEB_INPUT", "native fetch needs a userAgent");
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
-  if (!Number.isSafeInteger(maxRedirects) || maxRedirects < 0 || maxRedirects > HARD_MAX_REDIRECTS)
-    throw new WebToolError("ERR_PRISM_WEB_INPUT", `maxRedirects must be an integer between 0 and ${HARD_MAX_REDIRECTS}`);
+  if (!Number.isSafeInteger(maxRedirects) || maxRedirects < 0)
+    throw new WebToolError("ERR_PRISM_WEB_INPUT", "maxRedirects must be a non-negative integer");
   const limits = resolveWebLimits(options.limits);
   const request = options.request ?? pinnedRequest(options, limits);
   return {

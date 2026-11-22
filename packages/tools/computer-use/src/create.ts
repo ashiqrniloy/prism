@@ -46,6 +46,8 @@ export interface ComputerUseLinuxToolsOptions {
 
 export interface ComputerUseLinuxTools {
   readonly tools: readonly ToolDefinition[];
+  /** Whether the MCP bridge to the binary has closed; the package then supplies no tools (plan 234 Task 4). */
+  readonly isClosed?: boolean;
   close(): Promise<void>;
 }
 
@@ -101,6 +103,9 @@ export async function createComputerUseLinuxTools(options: ComputerUseLinuxTools
 
   return {
     tools,
+    get isClosed() {
+      return bridge.isClosed === true;
+    },
     close: () => bridge.close(),
   };
 

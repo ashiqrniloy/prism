@@ -73,14 +73,6 @@ export const DEFAULT_IDENTITY_LIMITS: ResolvedIdentityLimits = {
   maxPrincipalIdBytes: 256,
 };
 
-export const HARD_IDENTITY_LIMITS: ResolvedIdentityLimits = {
-  maxScopes: 256,
-  maxScopeBytes: 512,
-  maxMetadataBytes: 16 * 1024,
-  maxCredentialRefBytes: 2 * 1024,
-  maxPrincipalIdBytes: 2 * 1024,
-};
-
 export class IdentityError extends Error {
   readonly code = "ERR_PRISM_IDENTITY";
   constructor(
@@ -94,26 +86,11 @@ export class IdentityError extends Error {
 
 export function resolveIdentityLimits(input: IdentityLimits = {}): ResolvedIdentityLimits {
   return {
-    maxScopes: bound("maxScopes", input.maxScopes, DEFAULT_IDENTITY_LIMITS.maxScopes, HARD_IDENTITY_LIMITS.maxScopes),
-    maxScopeBytes: bound("maxScopeBytes", input.maxScopeBytes, DEFAULT_IDENTITY_LIMITS.maxScopeBytes, HARD_IDENTITY_LIMITS.maxScopeBytes),
-    maxMetadataBytes: bound(
-      "maxMetadataBytes",
-      input.maxMetadataBytes,
-      DEFAULT_IDENTITY_LIMITS.maxMetadataBytes,
-      HARD_IDENTITY_LIMITS.maxMetadataBytes,
-    ),
-    maxCredentialRefBytes: bound(
-      "maxCredentialRefBytes",
-      input.maxCredentialRefBytes,
-      DEFAULT_IDENTITY_LIMITS.maxCredentialRefBytes,
-      HARD_IDENTITY_LIMITS.maxCredentialRefBytes,
-    ),
-    maxPrincipalIdBytes: bound(
-      "maxPrincipalIdBytes",
-      input.maxPrincipalIdBytes,
-      DEFAULT_IDENTITY_LIMITS.maxPrincipalIdBytes,
-      HARD_IDENTITY_LIMITS.maxPrincipalIdBytes,
-    ),
+    maxScopes: bound("maxScopes", input.maxScopes, DEFAULT_IDENTITY_LIMITS.maxScopes),
+    maxScopeBytes: bound("maxScopeBytes", input.maxScopeBytes, DEFAULT_IDENTITY_LIMITS.maxScopeBytes),
+    maxMetadataBytes: bound("maxMetadataBytes", input.maxMetadataBytes, DEFAULT_IDENTITY_LIMITS.maxMetadataBytes),
+    maxCredentialRefBytes: bound("maxCredentialRefBytes", input.maxCredentialRefBytes, DEFAULT_IDENTITY_LIMITS.maxCredentialRefBytes),
+    maxPrincipalIdBytes: bound("maxPrincipalIdBytes", input.maxPrincipalIdBytes, DEFAULT_IDENTITY_LIMITS.maxPrincipalIdBytes),
   };
 }
 
@@ -318,10 +295,11 @@ function assertPrincipalBounds(principal: Principal, limits: ResolvedIdentityLim
   }
 }
 
-function bound(name: string, value: number | undefined, fallback: number, hard: number): number {
+/** A host-set identity limit: a positive safe integer. The host's value is the cap (plan 239 Task 5). */
+function bound(name: string, value: number | undefined, fallback: number): number {
   const resolved = value ?? fallback;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard) {
-    throw new RangeError(`${name} must be a positive safe integer no greater than ${hard}`);
+  if (!Number.isSafeInteger(resolved) || resolved < 1) {
+    throw new RangeError(`${name} must be a positive safe integer`);
   }
   return resolved;
 }

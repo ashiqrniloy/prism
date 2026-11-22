@@ -78,7 +78,7 @@ export async function resumeWhenAnswered(
   const signal = options.signal;
   if (signal?.aborted) return { status: "aborted" };
   const session = await authority.session(supplied.id);
-  const current = pendingDecisionsOf(await session.entries());
+  const current = pendingDecisionsOf(await session.entries(), authority.runStateBounds);
   if (!current.length) return { status: "already_resolved" };
   // Caller-provided descriptors never supply prompts or schemas; they must match this suspension.
   if (pending && (pending.length !== current.length || pending.some((item, i) => item.approvalId !== current[i]?.approvalId)))

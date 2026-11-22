@@ -11,13 +11,7 @@ import type {
 import { resolveRedactor } from "@arnilo/prism";
 import { defineDataset } from "./dataset.js";
 import { EvalError } from "./errors.js";
-import {
-  DEFAULT_TRACE_PAGE_SIZE,
-  DEFAULT_TRACE_PAGES,
-  HARD_CURATION_ITEM_MAX_BYTES,
-  HARD_TRACE_PAGE_SIZE,
-  HARD_TRACE_PAGES,
-} from "./limits.js";
+import { DEFAULT_TRACE_PAGE_SIZE, DEFAULT_TRACE_PAGES, HARD_CURATION_ITEM_MAX_BYTES } from "./limits.js";
 import { limit as bound, createPersistenceTraceResolver, pages } from "./trace.js";
 import type { Dataset, DatasetItem, EvaluationTrace, TraceLimits } from "./types.js";
 import { mapPool, normalizeConcurrency } from "./util.js";
@@ -117,8 +111,8 @@ export async function datasetFromRuns<TInput = unknown, TExpected = unknown>(
 ): Promise<CurateResult<TInput, TExpected>> {
   input.signal?.throwIfAborted();
   const concurrency = normalizeConcurrency(input.concurrency);
-  const pageSize = bound(input.traceLimits?.pageSize, DEFAULT_TRACE_PAGE_SIZE, HARD_TRACE_PAGE_SIZE, "pageSize");
-  const maxPages = bound(input.traceLimits?.maxPages, DEFAULT_TRACE_PAGES, HARD_TRACE_PAGES, "maxPages");
+  const pageSize = bound(input.traceLimits?.pageSize, DEFAULT_TRACE_PAGE_SIZE, "pageSize");
+  const maxPages = bound(input.traceLimits?.maxPages, DEFAULT_TRACE_PAGES, "maxPages");
   const resolver = createPersistenceTraceResolver(input.store);
   const ownership = input.ownership;
   const skipped: CurationSkip[] = [];

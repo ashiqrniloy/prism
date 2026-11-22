@@ -16,12 +16,6 @@ import {
   DEFAULT_MAX_INDEX_UPDATE_BYTES,
   DEFAULT_MAX_INDEX_UPDATE_FILES,
   DEFAULT_MAX_REPO_RESULTS,
-  HARD_MAX_INDEX_QUERY_TIMEOUT_MS,
-  HARD_MAX_INDEX_SNIPPET_BYTES,
-  HARD_MAX_INDEX_STALE_MAX_AGE_MS,
-  HARD_MAX_INDEX_UPDATE_BYTES,
-  HARD_MAX_INDEX_UPDATE_FILES,
-  HARD_MAX_REPO_RESULTS,
   validateCodingLimit,
 } from "../limits.js";
 import { isPathInsideRoot } from "./path.js";
@@ -126,32 +120,12 @@ export interface IndexLimitOptions {
 
 export function resolveIndexLimits(options?: IndexLimitOptions): ResolvedIndexLimits {
   return {
-    maxUpdateFiles: validateCodingLimit(
-      "maxUpdateFiles",
-      options?.maxUpdateFiles ?? DEFAULT_MAX_INDEX_UPDATE_FILES,
-      HARD_MAX_INDEX_UPDATE_FILES,
-    ),
-    maxUpdateBytes: validateCodingLimit(
-      "maxUpdateBytes",
-      options?.maxUpdateBytes ?? DEFAULT_MAX_INDEX_UPDATE_BYTES,
-      HARD_MAX_INDEX_UPDATE_BYTES,
-    ),
-    maxResults: validateCodingLimit("maxResults", options?.maxResults ?? DEFAULT_MAX_REPO_RESULTS, HARD_MAX_REPO_RESULTS),
-    maxSnippetBytes: validateCodingLimit(
-      "maxSnippetBytes",
-      options?.maxSnippetBytes ?? DEFAULT_MAX_INDEX_SNIPPET_BYTES,
-      HARD_MAX_INDEX_SNIPPET_BYTES,
-    ),
-    staleMaxAgeMs: validateCodingLimit(
-      "staleMaxAgeMs",
-      options?.staleMaxAgeMs ?? DEFAULT_MAX_INDEX_STALE_MAX_AGE_MS,
-      HARD_MAX_INDEX_STALE_MAX_AGE_MS,
-    ),
-    queryTimeoutMs: validateCodingLimit(
-      "queryTimeoutMs",
-      options?.queryTimeoutMs ?? DEFAULT_MAX_INDEX_QUERY_TIMEOUT_MS,
-      HARD_MAX_INDEX_QUERY_TIMEOUT_MS,
-    ),
+    maxUpdateFiles: validateCodingLimit("maxUpdateFiles", options?.maxUpdateFiles ?? DEFAULT_MAX_INDEX_UPDATE_FILES),
+    maxUpdateBytes: validateCodingLimit("maxUpdateBytes", options?.maxUpdateBytes ?? DEFAULT_MAX_INDEX_UPDATE_BYTES),
+    maxResults: validateCodingLimit("maxResults", options?.maxResults ?? DEFAULT_MAX_REPO_RESULTS),
+    maxSnippetBytes: validateCodingLimit("maxSnippetBytes", options?.maxSnippetBytes ?? DEFAULT_MAX_INDEX_SNIPPET_BYTES),
+    staleMaxAgeMs: validateCodingLimit("staleMaxAgeMs", options?.staleMaxAgeMs ?? DEFAULT_MAX_INDEX_STALE_MAX_AGE_MS),
+    queryTimeoutMs: validateCodingLimit("queryTimeoutMs", options?.queryTimeoutMs ?? DEFAULT_MAX_INDEX_QUERY_TIMEOUT_MS),
   };
 }
 
@@ -337,10 +311,7 @@ export function createIndexedRepositoryOperations(
 
       const timeoutMs = Math.min(request.deadlineMs ?? resolved.queryTimeoutMs, resolved.queryTimeoutMs);
       const deadlineAt = Date.now() + timeoutMs;
-      const maxResults = Math.min(
-        resolved.maxResults,
-        validateCodingLimit("maxMatches", request.maxMatches ?? resolved.maxResults, HARD_MAX_REPO_RESULTS),
-      );
+      const maxResults = Math.min(resolved.maxResults, validateCodingLimit("maxMatches", request.maxMatches ?? resolved.maxResults));
       let queryResult: RepositoryIndexQueryResult;
       try {
         queryResult = await Promise.race([

@@ -1,22 +1,16 @@
 import type { AgentEventRecord, ProductionPersistenceStore, RunRecord, ToolCallRecord, UsageRecord } from "@arnilo/prism";
 import { resolveRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import {
-  DEFAULT_TRACE_MAX_BYTES,
-  DEFAULT_TRACE_PAGE_SIZE,
-  DEFAULT_TRACE_PAGES,
-  HARD_TRACE_MAX_BYTES,
-  HARD_TRACE_PAGE_SIZE,
-  HARD_TRACE_PAGES,
-} from "./limits.js";
+import { DEFAULT_TRACE_MAX_BYTES, DEFAULT_TRACE_PAGE_SIZE, DEFAULT_TRACE_PAGES } from "./limits.js";
 import type { EvaluationTrace, TraceResolver, TraceResolverInput } from "./types.js";
 import { exactOwnershipMatches } from "./util.js";
 
 /** Shared integer-limit selector with the trace hard ceilings. */
-export function limit(value: number | undefined, fallback: number, hard: number, name: string): number {
+/** A host-set trace limit: a positive integer. The host's value is the cap (plan 239 Task 5). */
+export function limit(value: number | undefined, fallback: number, name: string): number {
   const selected = value ?? fallback;
-  if (!Number.isInteger(selected) || selected < 1 || selected > hard) {
-    throw new EvalError(`${name} must be an integer in [1, ${hard}]`, "ERR_PRISM_EVAL_TRACE_BOUNDS");
+  if (!Number.isInteger(selected) || selected < 1) {
+    throw new EvalError(`${name} must be a positive integer`, "ERR_PRISM_EVAL_TRACE_BOUNDS");
   }
   return selected;
 }
@@ -44,9 +38,9 @@ export async function pages<T>(
 export function createPersistenceTraceResolver(store: ProductionPersistenceStore): TraceResolver {
   return async (input: TraceResolverInput): Promise<EvaluationTrace> => {
     input.signal?.throwIfAborted();
-    const pageSize = limit(input.limits?.pageSize, DEFAULT_TRACE_PAGE_SIZE, HARD_TRACE_PAGE_SIZE, "pageSize");
-    const maxPages = limit(input.limits?.maxPages, DEFAULT_TRACE_PAGES, HARD_TRACE_PAGES, "maxPages");
-    const maxBytes = limit(input.limits?.maxBytes, DEFAULT_TRACE_MAX_BYTES, HARD_TRACE_MAX_BYTES, "maxBytes");
+    const pageSize = limit(input.limits?.pageSize, DEFAULT_TRACE_PAGE_SIZE, "pageSize");
+    const maxPages = limit(input.limits?.maxPages, DEFAULT_TRACE_PAGES, "maxPages");
+    const maxBytes = limit(input.limits?.maxBytes, DEFAULT_TRACE_MAX_BYTES, "maxBytes");
     const ownership = { tenantId: input.tenantId, accountId: input.accountId, userId: input.userId };
     const query = { sessionId: input.sessionId, runId: input.runId, order: "asc" as const, limit: pageSize, ...ownership };
 

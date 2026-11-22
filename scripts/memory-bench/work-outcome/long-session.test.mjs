@@ -132,13 +132,13 @@ test("project_grep_searches_the_root_and_directories", async () => {
   assert.equal(grep({ pattern: from, path: "sr" }), "(no matches)");
 });
 
-// Plan 218.2 Task 8: the baseline arms, the long-horizon family at the shipped triggers, and whole-run cost.
+// Plan 218.2 Task 8: the baseline arms and the package-default memory arms (the long-horizon family left with plan
+// 218.3 Task 12; Session-Bench replaced it).
 
 test("fold_and_llm_summary_arms_load_no_memory_package", async () => {
   const { armMemory, BASELINE_ARMS, LONG_SESSION_ARMS } = await import("./long-session.mjs");
   const { RE_PLAN_ARMS } = await import("./re-plan.mjs");
-  const { LONG_HORIZON_ARMS } = await import("./long-horizon.mjs");
-  for (const arms of [LONG_SESSION_ARMS, RE_PLAN_ARMS, LONG_HORIZON_ARMS]) for (const arm of BASELINE_ARMS) assert.ok(arms.includes(arm));
+  for (const arms of [LONG_SESSION_ARMS, RE_PLAN_ARMS]) for (const arm of BASELINE_ARMS) assert.ok(arms.includes(arm));
   const names = async (arm, options) => (await armMemory(arm, options)).map((entry) => entry.definition.name);
   assert.deepEqual(await names("fold"), ["@arnilo/prism-extensions/context-engineering"]);
   assert.deepEqual(await names("llm-summary"), ["@arnilo/prism-extensions/compaction"]);
@@ -148,16 +148,16 @@ test("fold_and_llm_summary_arms_load_no_memory_package", async () => {
   // At the defaults the summary comes at the memory system's compactAt ratio, not at the kernel's entry gate.
   assert.deepEqual((await armMemory("llm-summary", { workerModel: "w/x", defaults: true }))[0].config.trigger, {
     type: "input_ratio",
-    ratio: 0.6,
+    ratio: 0.8,
   });
   for (const arm of BASELINE_ARMS) for (const name of await names(arm)) assert.ok(!/memory/.test(name), `${arm} loads ${name}`);
 });
 
-test("long_horizon_arms_use_package_defaults", async () => {
+test("default_memory_arms_use_package_defaults", async () => {
+  // `defaults: true` is the package-default call LOCA-Bench's adapter makes (external/loca-bench/adapter.mjs).
   const { armMemory } = await import("./long-session.mjs");
-  const { LONG_HORIZON_ARMS } = await import("./long-horizon.mjs");
   const overrides = /triggerTokens|recentMessages|compactAt|messageTokens|"context"/;
-  for (const arm of LONG_HORIZON_ARMS.filter((id) => id === "WM" || id === "STM-only")) {
+  for (const arm of ["WM", "STM-only"]) {
     const [entry] = await armMemory(arm, { defaults: true, stmOverrides: { triggerTokens: 5 } });
     assert.equal(entry.definition.name, "@arnilo/prism-memory-system");
     assert.doesNotMatch(JSON.stringify(entry.config), overrides, `${arm} overrides a trigger`);
@@ -166,90 +166,3 @@ test("long_horizon_arms_use_package_defaults", async () => {
   const [short] = await armMemory("WM");
   assert.match(JSON.stringify(short.config), /triggerTokens/);
 });
-
-test("long_horizon_family_partitions_frozen_label_blind_and_long", async () => {
-  const horizon = await import("./long-horizon.mjs");
-  const committed = JSON.parse(await readFile(new URL("../work-outcome-long-horizon.json", import.meta.url), "utf8"));
-  assert.deepEqual(committed, horizon.longHorizonPartitionFile(), "the committed file is the draw, byte for byte");
-  assert.equal((await horizon.longHorizonPartitions()).idsHash, committed.idsHash);
-  assert.deepEqual(horizon.drawLongHorizonPartitions([...horizon.longHorizonSessionIds()].reverse()), horizon.drawLongHorizonPartitions());
-  const { MEMORY_MODEL_CRITERIA } = await import("../robustness.mjs");
-  const { createHash } = await import("node:crypto");
-  const fixture = MEMORY_MODEL_CRITERIA.fixtures.index.find((entry) => entry.id === "long-horizon");
-  assert.equal(fixture.hashOf, "scripts/memory-bench/work-outcome-long-horizon.json");
-  // The index pins the sha256 of the frozen partition file (the re-plan convention).
-  assert.equal(
-    fixture.hash,
-    createHash("sha256")
-      .update(await readFile(new URL("../work-outcome-long-horizon.json", import.meta.url)))
-      .digest("hex"),
-  );
-  const session = horizon.createLongHorizonSession(0);
-  assert.equal(session.projects.length, horizon.LONG_HORIZON_PROJECTS);
-  // Every project's dependent tasks come after every project's source tasks.
-  const firstDependent = session.tasks.findIndex((task) => task.taskId === "task3" || task.taskId === "task6");
-  assert.equal(firstDependent, session.projects.length * 4);
-  assert.ok(session.tasks.slice(firstDependent).every((task) => task.taskId === "task3" || task.taskId === "task6"));
-  // No prompt names what a dependent task needs; each names its own project.
-  for (const project of session.projects) {
-    const own = session.tasks.filter((task) => task.project === project.id);
-    for (const task of own) assert.match(task.prompt, new RegExp(`^Task \\d\\. \\[project ${project.id}\\] `));
-    const [task3, task6] = ["task3", "task6"].map((id) => own.find((task) => task.taskId === id).prompt);
-    for (const value of [project.labels.to, project.labels.modulePath, project.labels.moduleBase]) assert.ok(!task3.includes(value));
-    for (const value of [project.labels.key, project.labels.configPath]) assert.ok(!task6.includes(value));
-  }
-});
-
-test("long_horizon_refuses_to_run_when_wm_does_not_engage_at_defaults", async () => {
-  const { assertLongHorizonEngages, LONG_HORIZON_MIN_WM_PASSES } = await import("./long-horizon.mjs");
-  const row = (persona, items) => ({
-    persona,
-    arm: "WM",
-    eligibleTokens: 150_000,
-    session: { passes: items.length, items, compactions: 1 },
-  });
-  const engaged = Array(LONG_HORIZON_MIN_WM_PASSES).fill(2);
-  // One session short of the rule (passes with no item do not count) refuses the whole family.
-  await assert.rejects(
-    assertLongHorizonEngages({ report: { usage: [row("lh3", engaged), row("lh2", [...engaged.slice(1), 0, 0])] } }),
-    /LongHorizonPrecondition: .*4 passes with an item in lh2.*not run/,
-  );
-  await assert.rejects(assertLongHorizonEngages({ report: { usage: [] } }), /LongHorizonPrecondition/);
-  const reading = await assertLongHorizonEngages({ report: { usage: [row("lh3", engaged), row("lh2", engaged)] } });
-  assert.equal(reading.engaged, true);
-});
-
-test("report_carries_whole_run_tokens_per_successful_task_for_every_arm", async () => {
-  const { LONG_HORIZON_ARMS, LONG_HORIZON_MIN_ELIGIBLE_TOKENS, createLongHorizonSession, longHorizonEngagement } = await import(
-    "./long-horizon.mjs"
-  );
-  const started = performance.now();
-  const report = await runLongSession({ family: "long-horizon", offline: true, personaLimit: 1 });
-  assert.deepEqual(report.arms, [...LONG_HORIZON_ARMS]);
-  for (const arm of LONG_HORIZON_ARMS) {
-    const cost = report.cost[arm];
-    for (const side of ["main", "workers"])
-      for (const key of ["inputTokens", "cachedInputTokens", "outputTokens"]) assert.equal(typeof cost[side][key], "number");
-    assert.equal(
-      cost.wholeRunTokens,
-      cost.main.inputTokens + cost.main.outputTokens + cost.workers.inputTokens + cost.workers.outputTokens,
-    );
-    assert.ok(cost.successfulTasks > 0 && cost.successfulTasks <= cost.gradedTasks, arm);
-    assert.equal(cost.wholeRunTokensPerSuccessfulTask, Math.round(cost.wholeRunTokens / cost.successfulTasks));
-    assert.ok(cost.compactionBlockChars.compactions > 0, `${arm} compacts in a long session`);
-  }
-  // Only the arms with a worker spend worker tokens; the llm-summary arm's summaries are worker calls.
-  assert.equal(report.cost["memory-off"].workers.inputTokens, 0);
-  assert.equal(report.cost.fold.workers.inputTokens, 0);
-  for (const arm of ["llm-summary", "STM-only", "WM"]) assert.ok(report.cost[arm].workers.inputTokens > 0, arm);
-  // A complete session is at least 150K eligible tokens, and WM engages at the defaults on the scripted worker.
-  assert.ok(report.usage.find((row) => row.arm === "WM").eligibleTokens >= LONG_HORIZON_MIN_ELIGIBLE_TOKENS);
-  assert.equal(longHorizonEngagement(report).engaged, true);
-  assert.equal(report.summary.WM.successRate, 1);
-  // Ids and counts only: no label of any project.
-  const text = JSON.stringify(report);
-  for (const project of createLongHorizonSession(Number(report.personas[0].slice(2))).projects)
-    for (const value of [project.labels.from, project.labels.to, project.labels.key, project.labels.configPath])
-      assert.ok(!text.includes(value));
-  assert.ok(performance.now() - started < 600_000, "the offline family stays well under 20 minutes");
-}, 900_000);

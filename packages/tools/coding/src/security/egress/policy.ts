@@ -1,7 +1,7 @@
 /** Allow-list egress policy: deny-all default, exact host/port/protocol rules, frozen presets. */
 
 import { createHash } from "node:crypto";
-import { DEFAULT_MAX_EGRESS_RULES, HARD_MAX_EGRESS_RULES } from "./limits.js";
+import { DEFAULT_MAX_EGRESS_RULES } from "./limits.js";
 import { EgressError } from "./types.js";
 
 export type EgressProtocol = "http" | "https";
@@ -97,8 +97,8 @@ export interface CreateEgressPolicyOptions {
 
 export function createEgressPolicy(options: CreateEgressPolicyOptions = {}): EgressPolicy {
   const maxRules = options.maxRules ?? DEFAULT_MAX_EGRESS_RULES;
-  if (!Number.isSafeInteger(maxRules) || maxRules < 1 || maxRules > HARD_MAX_EGRESS_RULES) {
-    throw new EgressError("ERR_PRISM_EGRESS_POLICY", `maxRules must be a positive safe integer at most ${HARD_MAX_EGRESS_RULES}`);
+  if (!Number.isSafeInteger(maxRules) || maxRules < 1) {
+    throw new EgressError("ERR_PRISM_EGRESS_POLICY", "maxRules must be a positive safe integer");
   }
   const seen = new Set<string>();
   const rules: EgressRule[] = [];

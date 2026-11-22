@@ -7,6 +7,8 @@ export const SKILL_LOAD_ERROR_CODE = "skill_load_failed" as const;
 export const SKILL_UNAVAILABLE_ERROR_CODE = "skill_unavailable" as const;
 /** HARD_MAX_SKILL_INSTRUCTION_BYTES (262_144) + a 1_024-byte header allowance. */
 export const MAX_LOAD_SKILL_RESULT_BYTES = 263_168;
+/** The header allowance a `load_skill` result adds to the instruction ceiling. */
+const LOAD_SKILL_HEADER_BYTES = 1_024;
 /** Failure text keeps the pre-body bound so an error never fills the context. */
 const MAX_LOAD_SKILL_ERROR_BYTES = 512;
 
@@ -25,8 +27,26 @@ export interface LoadedSkillBodiesEntry {
   readonly instructions: string;
 }
 
+/**
+ * Bounds of a persisted bodies payload (plan 239 Task 4): `bodyBytes` is the agent's `ceilings.skillInstructionBytes`
+ * and `totalBytes` its `ceilings.runStateBytes`. Defaults: {@link MAX_PERSISTED_SKILL_BODY_BYTES},
+ * {@link HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES}.
+ */
+export interface SkillBodyBounds {
+  readonly bodyBytes: number;
+  readonly totalBytes: number;
+}
+
+const DEFAULT_SKILL_BODY_BOUNDS: SkillBodyBounds = {
+  bodyBytes: MAX_PERSISTED_SKILL_BODY_BYTES,
+  totalBytes: HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES,
+};
+
 /** Fail-closed shape/cap validation for a persisted bodies payload (load and save sides). */
-export function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[] {
+export function validateLoadedSkillBodies(
+  value: unknown,
+  bounds: SkillBodyBounds = DEFAULT_SKILL_BODY_BOUNDS,
+): asserts value is readonly LoadedSkillBodiesEntry[] {
   if (!Array.isArray(value) || value.length > MAX_PERSISTED_SKILL_BODIES) {
     throw new SkillLoadError(`Loaded-skill bodies exceed ${MAX_PERSISTED_SKILL_BODIES} entries`);
   }
@@ -43,12 +63,12 @@ export function validateLoadedSkillBodies(value: unknown): asserts value is read
       throw new SkillLoadError("Malformed loaded-skill body entry: instructions must be a string");
     }
     const bodyBytes = Buffer.byteLength(instructions, "utf8");
-    if (bodyBytes > MAX_PERSISTED_SKILL_BODY_BYTES) {
-      throw new SkillLoadError(`Loaded-skill body exceeds ${MAX_PERSISTED_SKILL_BODY_BYTES} bytes`);
+    if (bodyBytes > bounds.bodyBytes) {
+      throw new SkillLoadError(`Loaded-skill body exceeds ${bounds.bodyBytes} bytes`);
     }
     totalBytes += Buffer.byteLength(name, "utf8") + bodyBytes;
-    if (totalBytes > HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES) {
-      throw new SkillLoadError(`Loaded-skill bodies exceed ${HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES} total bytes`);
+    if (totalBytes > bounds.totalBytes) {
+      throw new SkillLoadError(`Loaded-skill bodies exceed ${bounds.totalBytes} total bytes`);
     }
   }
 }
@@ -62,6 +82,7 @@ export function snapshotLoadedSkillBodies(
   skills: readonly Skill[],
   loaded: LoadedSkillSet,
   restored?: ReadonlyMap<string, string>,
+  bounds?: SkillBodyBounds,
 ): LoadedSkillBodiesEntry[] {
   const byName = new Map(skills.map((skill) => [skill.name, skill]));
   const entries: LoadedSkillBodiesEntry[] = [];
@@ -70,7 +91,7 @@ export function snapshotLoadedSkillBodies(
     if (!instructions) continue;
     entries.push({ name, instructions });
   }
-  validateLoadedSkillBodies(entries); // refuses oversize with a recorded error (never truncates)
+  validateLoadedSkillBodies(entries, bounds); // refuses oversize with a recorded error (never truncates)
   return entries;
 }
 
@@ -79,8 +100,12 @@ export function snapshotLoadedSkillBodies(
  * instructions of known skills and append synthesized skills for names the live
  * registry no longer serves, so the exact loaded text renders registry-independently.
  */
-export function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[] {
-  validateLoadedSkillBodies(bodies);
+export function applyRestoredSkillBodies(
+  skills: readonly Skill[],
+  bodies: readonly LoadedSkillBodiesEntry[],
+  bounds?: SkillBodyBounds,
+): readonly Skill[] {
+  validateLoadedSkillBodies(bodies, bounds);
   if (bodies.length === 0) return skills;
   const out = skills.map((skill) => {
     const body = bodies.find((entry) => entry.name === skill.name);
@@ -129,6 +154,8 @@ export interface ResolveSkillLoadOptions {
   readonly advertisedToolNames?: readonly string[];
   /** The tool answers an already-loaded skill as a normal result; direct callers keep the failure. */
   readonly allowLoaded?: boolean;
+  /** Largest skill instructions in bytes: the agent's `ceilings.skillInstructionBytes`. Default {@link HARD_MAX_SKILL_INSTRUCTION_BYTES}. */
+  readonly maxInstructionBytes?: number;
 }
 
 export function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill {
@@ -156,8 +183,9 @@ export function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill {
   if (!skill.instructions?.trim()) throw new SkillLoadError(`Skill ${skill.name} has no instructions to load`);
 
   const bytes = estimateTextBytes(skill.instructions);
-  if (bytes > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
-    throw new SkillLoadError(`Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes)`);
+  const maxBytes = options.maxInstructionBytes ?? HARD_MAX_SKILL_INSTRUCTION_BYTES;
+  if (bytes > maxBytes) {
+    throw new SkillLoadError(`Skill ${skill.name} instructions exceed ceilings.skillInstructionBytes (${maxBytes} bytes)`);
   }
 
   if (!options.allowLoaded && options.loaded?.has(skill.name)) throw new SkillLoadError(`Skill ${skill.name} is already loaded`);
@@ -170,6 +198,11 @@ export interface CreateLoadSkillToolOptions {
   readonly loaded?: LoadedSkillSet;
   readonly tools?: readonly ToolDefinition[];
   readonly name?: string;
+  /**
+   * Largest skill instructions in bytes: the agent's `ceilings.skillInstructionBytes`. The result text is capped
+   * at this plus a 1,024-byte header allowance. Default {@link HARD_MAX_SKILL_INSTRUCTION_BYTES}.
+   */
+  readonly maxInstructionBytes?: number;
 }
 
 interface SkillLoadToolMetadata {
@@ -211,6 +244,8 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
     name: toolName,
     description: "Load the full instructions for an active skill by exact name.",
     effects: ["read"],
+    // Mutates the session's loaded-skill order during `execute`; a parallel round would make it racy.
+    exclusive: true,
     parameters: {
       type: "object",
       properties: {
@@ -243,6 +278,7 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
           activeSkillNames: metadata?.activeSkillNames,
           advertisedToolNames: metadata?.advertisedToolNames ?? (metadata?.activeTools ?? options.tools)?.map((tool) => tool.name),
           allowLoaded: true,
+          maxInstructionBytes: options.maxInstructionBytes,
         });
         const alreadyLoaded = loaded.has(skill.name);
         // Always stamp this run: a reload of an earlier-run name makes the body current again.
@@ -262,7 +298,10 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
         const header = skill.path
           ? `Loaded skill ${skill.name}. Skill directory: ${skillDirname(skill.path)}. Paths in these instructions are relative to it.`
           : `Loaded skill ${skill.name}.`;
-        const text = capLoadSkillText(`${header}\n\n${skill.instructions}`);
+        const text = capLoadSkillText(
+          `${header}\n\n${skill.instructions}`,
+          options.maxInstructionBytes === undefined ? MAX_LOAD_SKILL_RESULT_BYTES : options.maxInstructionBytes + LOAD_SKILL_HEADER_BYTES,
+        );
         return {
           toolCallId: context.toolCallId,
           name: toolName,

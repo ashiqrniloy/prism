@@ -40,7 +40,7 @@ import {
   stateRelPath,
   RETIRED_WORKING_DIRECTORY,
 } from "./layout.js";
-import { createWriteLock } from "./lock.js";
+import { createWriteLock, type WriteLockOptions } from "./lock.js";
 import {
   type IndexEntry,
   type LogEntry,
@@ -77,6 +77,8 @@ export interface CreateMarkdownMemoryStoresOptions {
   readonly dimensions?: number;
   /** Reconcile batching caps; defaults to the shared memory limits. */
   readonly limits?: MemoryLimitsInput;
+  /** File-lock timing: how long a writer waits (default 5 s) and when a lock is stale (default 30 s). */
+  readonly lock?: WriteLockOptions;
   /**
    * Names why a parsed note cannot be read by the package that owns its metadata, or returns `undefined`.
    * A note with `fabric.v` above 1 is always unreadable without this. An unreadable note is indexed and
@@ -208,7 +210,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   const root = resolve(requireNonEmptyString(options.root, "root"));
   await mkdir(root, { recursive: true, mode: 0o700 });
   const limits = resolveMemoryLimits(options.limits ?? {});
-  const lock = createWriteLock(root);
+  const lock = createWriteLock(root, options.lock);
   const indexPath = options.index?.path !== undefined ? resolve(root, options.index.path) : join(root, INDEX_DB_FILE);
   const fileMapPath = join(root, FILE_MAP_FILE);
   const fileMapJournalPath = join(root, FILE_MAP_JOURNAL_FILE);

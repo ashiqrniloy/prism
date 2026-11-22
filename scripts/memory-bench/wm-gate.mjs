@@ -97,16 +97,12 @@ export const M2_HARNESS_PATHS = Object.freeze([
   "scripts/memory-bench/run.mjs",
   "scripts/memory-bench/ablations.mjs",
   "scripts/memory-bench/datasets.mjs",
-  "scripts/memory-bench/chunk-meter.mjs",
   "scripts/memory-bench/long-session.mjs",
   "scripts/memory-bench/work-outcome/long-session.mjs",
   "scripts/memory-bench/work-outcome/long-session-live.mjs",
   "scripts/memory-bench/work-outcome/re-plan.mjs",
-  // Plan 218.2 Task 8: the runner imports the long-horizon family for that family only.
-  "scripts/memory-bench/work-outcome/long-horizon.mjs",
   "scripts/memory-bench/work-outcome-long-session.json",
   "scripts/memory-bench/work-outcome-re-plan.json",
-  "scripts/memory-bench/work-outcome-long-horizon.json",
 ]);
 /** The family files the OM-before worktree needs; nothing under its pinned product paths. */
 export const M2_WORKTREE_COPY = Object.freeze([

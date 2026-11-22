@@ -13,12 +13,14 @@ import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-boun
 import { buildObservationalMemoryProjection, createFoldedMemoryDetails, type ObservationalMemoryProjection } from "./projection.js";
 import { DEFAULT_KEEP_RECENT_ENTRIES, selectRecentMessageEntryIds } from "./recent-messages.js";
 import { renderObservationalMemory } from "./render.js";
+import { type EpisodeScope, remainingStepOrdinals } from "./scope.js";
 import type { MemoryObservation, MemoryWmItem } from "./types.js";
 
 export interface ObservationalMemoryCompactorOptions {
   readonly name?: string;
   readonly keepRecentEntries?: number;
-  readonly observationsPoolMaxTokens?: number;
+  /** The folded pool's budget, fixed or per compaction (session memory scales it with the input cap). */
+  readonly observationsPoolMaxTokens?: number | ((context: CompactionContext) => number);
   readonly secrets?: readonly (string | undefined)[];
   /** Render recall guidance in the summary only when the host exposes recall. Default `true`. */
   readonly advertiseRecall?: boolean;
@@ -28,6 +30,13 @@ export interface ObservationalMemoryCompactorOptions {
    * its session log already holds.
    */
   readonly ledgerOf?: (context: CompactionContext) => ObservationalMemoryLedger;
+  /**
+   * The entries the compaction keeps, in branch order, from the first kept entry on (plan 218.3 Task 3: session memory's
+   * token cut after STM has covered the rest). Absent: recent messages plus every entry STM has not covered.
+   */
+  readonly keepEntryIds?: (context: CompactionContext) => readonly string[];
+  /** The config scope (`scope.text`): orders WM items by step before any `scope.set` (plan 218.3 Task 8). */
+  readonly scopeFallback?: EpisodeScope;
 }
 
 const DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
@@ -38,8 +47,13 @@ export function createObservationalMemoryCompactor(options: ObservationalMemoryC
     name,
     compact(context) {
       throwIfAborted(context.signal);
-      const keepRecentEntries = Math.max(0, context.keepRecentEntries ?? options.keepRecentEntries ?? DEFAULT_KEEP_RECENT_ENTRIES);
-      const keepEntryIds = coverageAwareKeepEntryIds(context.entries, keepRecentEntries, options.ledgerOf?.(context));
+      const keepEntryIds =
+        options.keepEntryIds?.(context) ??
+        coverageAwareKeepEntryIds(
+          context.entries,
+          Math.max(0, context.keepRecentEntries ?? options.keepRecentEntries ?? DEFAULT_KEEP_RECENT_ENTRIES),
+          options.ledgerOf?.(context),
+        );
       const firstKeptEntryId = keepEntryIds[0];
       const firstKeptIndex = firstKeptEntryId
         ? context.entries.findIndex((entry) => entry.id === firstKeptEntryId)
@@ -51,7 +65,8 @@ export function createObservationalMemoryCompactor(options: ObservationalMemoryC
         : buildObservationalMemoryProjection(context.entries, firstKeptEntryId);
       const fullActiveObservations = activeObservations(projection.full);
       const fullObservationTokens = fullActiveObservations.reduce((sum, item) => sum + item.tokenCount, 0);
-      const maxTokens = options.observationsPoolMaxTokens ?? DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS;
+      const pool = options.observationsPoolMaxTokens;
+      const maxTokens = (typeof pool === "function" ? pool(context) : pool) ?? DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS;
       const fullFold = fullObservationTokens > maxTokens;
       const source = fullFold
         ? {
@@ -82,6 +97,7 @@ export function createObservationalMemoryCompactor(options: ObservationalMemoryC
         advertiseRecall: options.advertiseRecall,
         taskState: projection.full.taskState,
         discardedCount: Object.keys(projection.full.tombstones ?? {}).length,
+        remainingSteps: remainingStepOrdinals(projection.full, options.scopeFallback),
       });
       const data: CompactionEntryData & { readonly memory: unknown } = {
         throughEntryId,

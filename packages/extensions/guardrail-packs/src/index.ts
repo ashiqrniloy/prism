@@ -1,19 +1,21 @@
 /**
  * `@arnilo/prism-extensions/guardrail-packs` — the built-in guardrail packs as one package.
  *
- * Four restrictive-only packs (`coding-standard`, `destructive-commands`, `validation-respect`,
- * `secrets-hygiene`) compile once in `setup` onto the kernel's `tool.call` decide seam and
- * `tool.result` transform seam. A pack can only `deny`, `tripwire`, or `ask`; it never grants a
- * capability or widens a tool allow-list. Pack-owned state lives in package session state, so it
- * survives a resume and forks with the session.
+ * Restrictive-only packs compile once in `setup`. Tool-call rules (`coding-standard`,
+ * `destructive-commands`, `validation-respect`, `secrets-hygiene`) run on the `tool.call` decide seam
+ * and can `deny`, `tripwire`, or `ask`. Content rules (`pii`, `output-secrets`, `injection-markers`,
+ * or an inline rule with a `stage`) run on `run.input`, `model.response`, and `tool.result` and can
+ * `deny`, `redact`, or `flag`. A pack never grants a capability, widens a tool allow-list, or adds
+ * content. Pack-owned state lives in package session state, so it survives a resume and forks with
+ * the session. A hook is registered only for a stage some configured rule uses.
  *
  * ```ts
  * import guardrailPacks from "@arnilo/prism-extensions/guardrail-packs";
  *
- * packages: [guardrailPacks({ packs: ["destructive-commands", "secrets-hygiene"] })];
+ * packages: [guardrailPacks({ packs: ["destructive-commands", "secrets-hygiene", "injection-markers"] })];
  * ```
  */
-import manifest from "../../package.json" with { type: "json" };
+
 import {
   definePackage,
   type HookContext,
@@ -23,6 +25,7 @@ import {
   type ToolCallHookPayload,
   type ToolResult,
 } from "@arnilo/prism";
+import manifest from "../../package.json" with { type: "json" };
 import {
   describeGuardrailPacks,
   GUARDRAIL_PACKS_PACKAGE,
@@ -36,6 +39,8 @@ import {
   snapshotPackState,
 } from "./compile.js";
 import { type GuardrailPacksConfig, guardrailPacksConfigSchema } from "./config.js";
+import { DEFAULT_MAX_SCAN_CHARS, installContentStages } from "./content.js";
+import { createJudgeRunner } from "./judge.js";
 
 export type { GuardrailPackRow, GuardrailRunResult, ResolvedPack, RunGuardrailListOptions } from "./compile.js";
 export {
@@ -51,9 +56,30 @@ export {
 } from "./compile.js";
 export type { GuardrailPacksConfig } from "./config.js";
 export { guardrailPacksConfigSchema } from "./config.js";
+export type { ContentAction, ContentHit, ContentRule, ContentScanResult, ContentStage } from "./content.js";
+export { applyContentRules, DEFAULT_MAX_SCAN_CHARS, GUARDRAIL_CONTENT_PRIORITY } from "./content.js";
+export type { GuardrailPackInput, GuardrailPackRef, GuardrailRule, GuardrailRuleAction, GuardrailRuleStage } from "./contracts.js";
+export type { ContentDetector } from "./detectors/index.js";
+export { CONTENT_DETECTOR_IDS, CONTENT_DETECTORS, luhnValid } from "./detectors/index.js";
+export type {
+  GuardrailJudge,
+  JudgeErrorKind,
+  JudgeVerdict,
+  ResolvedJudge,
+} from "./judge.js";
+export {
+  DEFAULT_JUDGE_MAX_INPUT_CHARS,
+  DEFAULT_JUDGE_THRESHOLD,
+  DEFAULT_JUDGE_TIMEOUT_MS,
+  JUDGE_INSTRUCTION,
+  MAX_JUDGE_CACHE_ENTRIES_PER_RUN,
+} from "./judge.js";
 export { codingStandardPack } from "./packs/coding-standard.js";
 export { destructiveCommandsPack } from "./packs/destructive-commands.js";
 export { BUILT_IN_GUARDRAIL_PACK_IDS, BUILT_IN_GUARDRAIL_PACKS } from "./packs/index.js";
+export { injectionMarkersPack } from "./packs/injection-markers.js";
+export { outputSecretsPack } from "./packs/output-secrets.js";
+export { piiPack } from "./packs/pii.js";
 export { secretsHygienePack } from "./packs/secrets-hygiene.js";
 export type { GuardrailPackDefinition, GuardrailPackRules } from "./packs/types.js";
 export { validationRespectPack } from "./packs/validation-respect.js";
@@ -106,40 +132,56 @@ function install(prism: PackageAPI<GuardrailPacksConfig>, resolved: readonly Res
   });
   if (resolved.length === 0) return;
 
+  const contentRules = resolved.flatMap((pack) => pack.contentRules);
+  const judgeModels = contentRules.flatMap((rule) => (rule.judge ? [rule.judge.model] : []));
+  installContentStages(prism as PackageAPI<unknown>, {
+    rules: contentRules,
+    // Clients are made now, so an instance without `models` fails `setup` closed.
+    ...(judgeModels.length > 0 ? { judge: createJudgeRunner((prism as PackageAPI<unknown>).models, judgeModels) } : {}),
+    versions: new Map(resolved.map((pack) => [pack.id, pack.version])),
+    maxScanChars: prism.config.maxScanChars ?? DEFAULT_MAX_SCAN_CHARS,
+  });
+
+  const hasToolCallRules = resolved.some((pack) => pack.rules.length > 0);
+  const hasObservers = resolved.some((pack) => pack.observe !== undefined);
+  if (!hasToolCallRules && !hasObservers) return;
+
   // One `set` per observer change, never per call. The session's branch is the source of truth.
   const packsState = prism.state.session<JsonValue>("packs", {});
 
-  prism.hooks.on("tool.call", async (payload: ToolCallHookPayload, context: HookContext): Promise<ToolCallDecision | undefined> => {
-    const session = context.session;
-    if (!session) return undefined;
-    const state = readPackState(resolved, packsState.get(session));
-    const guards = packGuardrails(resolved, state);
-    if (guards.length === 0) return undefined;
-    const result = await runGuardrailList({
-      stage: "tool_input",
-      guards,
-      value: { type: "tool_call", id: payload.callId, name: payload.name, arguments: payload.args },
-      context: {
-        sessionId: payload.sessionId,
-        runId: payload.runId,
-        toolCallId: payload.callId,
-        toolName: payload.name,
-        metadata: {},
-        signal: context.signal,
-      },
-      emit: (event) => {
-        if (event.type === "package.event") context.emit(event.name, event.data ?? null);
-      },
-      package: GUARDRAIL_PACKS_PACKAGE,
+  if (hasToolCallRules)
+    prism.hooks.on("tool.call", async (payload: ToolCallHookPayload, context: HookContext): Promise<ToolCallDecision | undefined> => {
+      const session = context.session;
+      if (!session) return undefined;
+      const state = readPackState(resolved, packsState.get(session));
+      const guards = packGuardrails(resolved, state);
+      if (guards.length === 0) return undefined;
+      const result = await runGuardrailList({
+        stage: "tool_input",
+        guards,
+        value: { type: "tool_call", id: payload.callId, name: payload.name, arguments: payload.args },
+        context: {
+          sessionId: payload.sessionId,
+          runId: payload.runId,
+          toolCallId: payload.callId,
+          toolName: payload.name,
+          metadata: {},
+          signal: context.signal,
+        },
+        emit: (event) => {
+          if (event.type === "package.event") context.emit(event.name, event.data ?? null);
+        },
+        package: GUARDRAIL_PACKS_PACKAGE,
+      });
+      const terminal = result.terminal;
+      if (!terminal) return undefined;
+      if (terminal.action === "interrupt") {
+        return { ask: guardrailRefusalText(terminal, "Approval required") ?? "Approval required by guardrail rule" };
+      }
+      return { deny: guardrailRefusalText(terminal) ?? "Tool call blocked by guardrail" };
     });
-    const terminal = result.terminal;
-    if (!terminal) return undefined;
-    if (terminal.action === "interrupt") {
-      return { ask: guardrailRefusalText(terminal, "Approval required") ?? "Approval required by guardrail rule" };
-    }
-    return { deny: guardrailRefusalText(terminal) ?? "Tool call blocked by guardrail" };
-  });
 
+  if (!hasObservers) return;
   prism.hooks.on(
     "tool.result",
     async (result: ToolResult & { readonly sessionId?: string; readonly runId?: string }, context: HookContext) => {
@@ -173,13 +215,22 @@ function install(prism: PackageAPI<GuardrailPacksConfig>, resolved: readonly Res
   );
 }
 
+/** Whether any inline rule asks a model. Built-in packs never do. */
+export function hasJudgeRule(config: GuardrailPacksConfig): boolean {
+  return (config.packs ?? []).some(
+    (pack) => typeof pack === "object" && pack !== null && (pack.rules ?? []).some((rule) => rule?.judge !== undefined),
+  );
+}
+
 function createDefinition() {
   return definePackage<GuardrailPacksConfig>({
     name: PACKAGE,
     version: manifest.version,
-    description: "Built-in guardrail packs: restrictive-only rules over tool.call and tool.result.",
+    description: "Built-in guardrail packs: restrictive-only rules over tool calls, run input, model output, and tool results.",
     requires: { api: 1 },
-    capabilities: ["session-state"],
+    // `models` only for an instance with a judge rule (plan 237 Task 3).
+    capabilities: ["session-state", "models"],
+    capabilitiesFor: (config) => (hasJudgeRule(config) ? ["session-state", "models"] : ["session-state"]),
     config: guardrailPacksConfigSchema,
     setup(prism) {
       // Validate and compile once, so an unknown id, a duplicate rule id, or an invalid pattern

@@ -40,18 +40,6 @@ import type { SessionTiers } from "./session/setup.js";
 // The library surface: the components, the `memory.system` service, the session tiers (ledger, render, config) and
 // long-term memory (notes, stores, recall, lifecycle, OKF bundles, the `memory.ltm` port).
 export {
-  type ChunkOp,
-  type ChunkPrepareFailure,
-  type ChunkReferrer,
-  type ChunkStore,
-  type ChunkStoreLocation,
-  createSqliteChunkStore,
-  MEMORY_CHUNK_STORE_SERVICE,
-  type PreparedChunk,
-  SqliteChunkStore,
-  type StoredChunk,
-} from "./chunks.js";
-export {
   MEMORY_SYSTEM_COMPONENTS,
   type MemorySystemComponent,
   type MemorySystemComponents,
@@ -87,7 +75,7 @@ const definition = definePackage<MemorySystemConfig>({
   capabilitiesFor(config) {
     // A config with a missing dependency holds nothing; `setup` then fails with the named error.
     try {
-      return memorySystemCapabilities(resolveMemorySystemComponents(config));
+      return memorySystemCapabilities(resolveMemorySystemComponents(config), { compaction: config.context?.compaction !== false });
     } catch {
       return [];
     }

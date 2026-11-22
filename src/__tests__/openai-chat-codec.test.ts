@@ -187,7 +187,9 @@ describe("OpenAI Chat codec: reasoning_details (plan 203 Task 3)", () => {
       text: "internal",
       data: JSON.stringify({ type: "reasoning.text", text: "internal" }),
     };
-    const body = openAIChatBody(request({ messages: [{ role: "assistant", content: [thinking, text("answer")] }] }));
+    const body = openAIChatBody(request({ messages: [{ role: "assistant", content: [thinking, text("answer")] }] }), {
+      reasoningReplay: "fold",
+    });
     const message = (body.messages as readonly JsonObject[])[0]!;
     assert.equal("reasoning_details" in message, false);
     assert.deepEqual(
@@ -198,6 +200,27 @@ describe("OpenAI Chat codec: reasoning_details (plan 203 Task 3)", () => {
       ],
       "fold mode keeps its existing text placement",
     );
+  });
+
+  it("openai_chat_default_replay_drops_reasoning_text", async () => {
+    // Plan 227 Further Action: the default no longer folds reasoning into assistant `content`.
+    const thinking: ContentBlock = { type: "thinking", text: "foreign reasoning", signature: "sig" };
+    const call: ContentBlock = { type: "tool_call", id: "c1", name: "first", arguments: {} };
+    const body = openAIChatBody(
+      request({
+        messages: [
+          { role: "assistant", content: [thinking, text("answer")] },
+          { role: "assistant", content: [thinking, call] },
+          { role: "assistant", content: [thinking] },
+        ],
+      }),
+      { preserveThinking: () => true },
+    );
+    const [plain, withCall, onlyThinking] = body.messages as readonly JsonObject[];
+    assert.deepEqual(plain, { role: "assistant", content: "answer" });
+    assert.equal(withCall!.content, null);
+    assert.equal(onlyThinking!.content, "");
+    assert.equal(JSON.stringify(body).includes("foreign reasoning"), false);
   });
 });
 

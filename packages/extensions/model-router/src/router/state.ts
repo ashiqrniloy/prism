@@ -3,7 +3,6 @@ import { ModelRouterError } from "./errors.js";
 import type { ModelRouterAttribution, ModelRouterStateKey, ModelRouterStateOwner, ModelRouterStateStore, PaidWorkKind } from "./types.js";
 
 const DEFAULT_CLEANUP_LIMIT = 100;
-const HARD_CLEANUP_LIMIT = 500;
 // ponytail: fixed 24h closed-state retention; expose a router TTL only if operators need a different bound.
 const CIRCUIT_IDLE_TTL_MS = 24 * 60 * 60_000;
 const MAX_WINDOW_MS = 31 * 24 * 60 * 60_000;
@@ -608,7 +607,7 @@ function positiveInteger(value: unknown, label: string, max: number): void {
 
 function resolveCleanupLimit(value: number | undefined): number {
   const limit = value ?? DEFAULT_CLEANUP_LIMIT;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_CLEANUP_LIMIT) {
+  if (!Number.isSafeInteger(limit) || limit < 1) {
     throw new ModelRouterError("cleanup limit out of range", "ERR_PRISM_MODEL_ROUTER_STATE");
   }
   return limit;

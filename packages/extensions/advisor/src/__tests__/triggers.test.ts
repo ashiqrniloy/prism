@@ -78,6 +78,8 @@ async function run(options: {
   readonly advice: readonly string[] | "error";
   readonly config?: Record<string, unknown>;
   readonly limits?: Record<string, number>;
+  /** Run in a child session, linked to a root session (`delegate` opens these). */
+  readonly child?: boolean;
 }): Promise<{ seen: Seen; events: AgentEvent[]; result: RunResult }> {
   executed.length = 0;
   const seen: Seen = { advisor: [], parent: [] };
@@ -98,7 +100,8 @@ async function run(options: {
     ],
   });
   agents.push(agent);
-  const session = await agent.session();
+  const root = await agent.session();
+  const session = options.child === true ? await agent.session({ parent: { sessionId: root.id } }) : root;
   const result = await session.run("do the task");
   return { seen, events, result };
 }
@@ -167,6 +170,20 @@ describe("advisor review triggers", () => {
       data.map((entry) => entry.verdict),
       ["revise", "proceed"],
     );
+  });
+
+  it("child_sessions_are_skipped", async () => {
+    // Plan 232 Task 4: an advisor per child session would multiply model calls; the parent's run reviews the result.
+    const { seen, events, result } = await run({
+      plan: ["tool", "text"],
+      advice: ['{"verdict":"revise","advice":"no"}'],
+      config: { triggers: { beforeTools: ["write"], beforeFinish: true } },
+      child: true,
+    });
+    assert.equal(result.status, "completed");
+    assert.equal(seen.advisor.length, 0);
+    assert.equal(executed.length, 1);
+    assert.equal(consultData(events).length, 0);
   });
 
   it("before_finish_respects_max_continuations", async () => {

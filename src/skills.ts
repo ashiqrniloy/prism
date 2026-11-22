@@ -9,7 +9,10 @@ export interface ResolveActiveSkillsOptions {
   readonly tools?: readonly ToolDefinition[];
 }
 
-export interface SkillRegistryOptions extends DuplicateRegistrationOptions {}
+export interface SkillRegistryOptions extends DuplicateRegistrationOptions {
+  /** Largest skill instructions in bytes: the agent's `ceilings.skillInstructionBytes`. Default {@link HARD_MAX_SKILL_INSTRUCTION_BYTES}. */
+  readonly maxInstructionBytes?: number;
+}
 
 /**
  * Whether two registrations are the same skill: same name, same source file, same body. A child that
@@ -28,8 +31,9 @@ export function createSkillRegistry(skills: readonly Skill[] = [], options: Skil
       const existing = byName.get(skill.name);
       if (existing && isSameSkill(existing, skill)) return;
       assertCanRegister(byName, skill.name, "skill", skill.name, options.duplicate);
-      if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
-        throw new RangeError(`Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes)`);
+      const maxBytes = options.maxInstructionBytes ?? HARD_MAX_SKILL_INSTRUCTION_BYTES;
+      if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > maxBytes) {
+        throw new RangeError(`Skill ${skill.name} instructions exceed ceilings.skillInstructionBytes (${maxBytes} bytes)`);
       }
       byName.set(skill.name, skill);
     },

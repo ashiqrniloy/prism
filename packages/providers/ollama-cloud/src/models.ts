@@ -3,7 +3,7 @@ import {
   providerHttpError,
   readBoundedResponseJson,
   readBoundedResponseText,
-  readRetryAfterMs,
+  parseRetryAfterMs,
   snapThinkingLevel,
   type ThinkingCompatFamily,
   type SecretSource,
@@ -388,7 +388,7 @@ async function requestJson<T>(
     const bodyText = await readBoundedResponseText(response, { secrets: options.secrets });
     throw providerHttpError(
       "Ollama Cloud",
-      { status: response.status, code: response.status, retryAfterMs: readRetryAfterMs(response.headers) },
+      { status: response.status, code: response.status, retryAfterMs: parseRetryAfterMs(response.headers) },
       `${redactSecrets(bodyText, options.secrets)}`,
       options.secrets,
     );

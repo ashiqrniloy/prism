@@ -2,8 +2,7 @@ import { MemoryValidationError } from "./errors.js";
 import { recordBlocked } from "./lineage.js";
 import type { MemoryInvalidationRecord, MemoryVectorRecord } from "./types.js";
 
-/** Most tags one `topTags` call returns, so a memory with thousands of distinct tags cannot flood a turn. */
-export const HARD_DIRECTORY_TAGS = 500;
+const DEFAULT_LIST_LIMIT = 20;
 
 /**
  * An active note is one a recall at `asOf` could return: it carries a fabric `kind`, is inside its
@@ -16,7 +15,7 @@ export interface MemoryDirectoryQuery {
 }
 
 export interface MemoryTopTagsQuery extends MemoryDirectoryQuery {
-  /** Defaults to 20, capped at {@link HARD_DIRECTORY_TAGS}. */
+  /** Defaults to 20; the caller's value is the cap. */
   readonly limit?: number;
 }
 
@@ -33,9 +32,8 @@ export function resolveDirectoryAsOf(asOf: string | undefined): string {
 }
 
 export function resolveDirectoryLimit(limit: number | undefined): number {
-  const resolved = limit ?? 20;
+  const resolved = limit ?? DEFAULT_LIST_LIMIT;
   if (!Number.isInteger(resolved) || resolved < 1) throw new MemoryValidationError("limit must be a positive integer");
-  if (resolved > HARD_DIRECTORY_TAGS) throw new MemoryValidationError(`limit exceeds hard cap ${HARD_DIRECTORY_TAGS}`);
   return resolved;
 }
 

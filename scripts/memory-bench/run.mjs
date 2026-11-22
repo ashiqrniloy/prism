@@ -402,11 +402,13 @@ export async function liveProviders(refs, temp, fetchOptions) {
         secretEnv: [spec.secret, "OPENCODE_API_KEY"],
       });
       proxies.push({ proxy, usageLog, provider: id });
+      const base = benchmarkFetch({ ...fetchOptions, patient: fetchOptions?.patient ?? fetchOptions?.freeOnly === true });
       providers.push(
         module[spec.create]({
           apiKey: () => key,
           baseUrl: proxy.url,
-          fetch: benchmarkFetch({ ...fetchOptions, patient: fetchOptions?.patient ?? fetchOptions?.freeOnly === true }),
+          // `wrapFetch` (Session-Bench's live run, plan 218.3 Task 11): an outer layer, e.g. quota waits past the patient retries.
+          fetch: fetchOptions?.wrapFetch ? fetchOptions.wrapFetch(base) : base,
         }),
       );
     }

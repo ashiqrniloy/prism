@@ -203,11 +203,11 @@ describe("tools-coding hard denies", () => {
     const deny = createHardDenyHook({
       targets,
       readOnly: false,
-      commandRules: [{ pattern: "rm -rf /", action: "deny", reason: "destructive" }],
+      commandRules: [{ pattern: "terraform destroy", action: "deny", reason: "destructive" }],
     });
     const decision = await deny({
       name: "shell",
-      args: { command: "rm -rf / --no-preserve-root" },
+      args: { command: "terraform destroy -auto-approve" },
       effects: ["execute"],
       callId: "c",
       sessionId: "s",

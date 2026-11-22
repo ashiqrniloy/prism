@@ -13,6 +13,7 @@ import { type AdvisorRuntime, generateText, messageText } from "./consult.js";
 import { capText, checkEvidence, clampEvidenceMaxChars, MAX_TASK_CHARS, renderEvidence, type ValidationEvidence } from "./evidence.js";
 import { registerTaskCapture, type TaskStore } from "./task-capture.js";
 import { COMPLETE_JSON_INSTRUCTION, eventData, MAX_MISSING_CHARS, MAX_MISSING_ITEMS, parseCompletionVerdict } from "./verdict.js";
+import { isChildSession } from "./child.js";
 
 /** The `delegate` service's shape this package needs. Structural, so there is no runtime import of it. */
 export interface ValidatorDelegateService {
@@ -177,7 +178,7 @@ export interface ValidateCompletionInput {
   readonly criteria?: string;
   /** Host-assembled evidence, at most `MAX_EVIDENCE_BLOCKS` blocks. */
   readonly evidence?: readonly ValidationEvidence[];
-  /** Budget for all evidence text. Default 48,000, capped at 120,000. */
+  /** Budget for all evidence text. Default 48,000. */
   readonly evidenceMaxChars?: number;
   readonly signal?: AbortSignal;
 }
@@ -276,6 +277,7 @@ export function registerValidation(
 
   registerTaskCapture(prism, tasks);
   prism.hooks.on("run.end", async (payload: RunEndPayload, hook): Promise<RunEndDecision | undefined> => {
+    if (isChildSession(hook)) return undefined;
     const round = payload.continuations + 1;
     const captured = tasks.get(payload.runId);
     const labelled = captured === undefined ? "inferred" : "captured";

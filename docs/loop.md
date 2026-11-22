@@ -9,6 +9,7 @@ when the run ends. It receives one handle, `RunController`, and reaches the kern
 interface LoopStrategy {
   readonly name: string;
   readonly revision?: string;
+  readonly state?: "run";
   run(run: RunController): Promise<void>;
   snapshot?(): JsonValue;
   restore?(snapshot: JsonValue): void;
@@ -46,6 +47,8 @@ against the loop.
 | `ask(request, support?)` | put an external agent's tool call to the `tool.call` gate |
 | `steers()` | async iterable of `session.steer()` input, after `run.input` |
 | `emit(name, data)` | emit one `package.event` owned by the loop's slot owner (`"kernel"` for the default loop) |
+| `checkpoint(value)` | record this run's loop state (see [Loop state](#loop-state)) |
+| `restored` | the loop state of the run being resumed or continued; `undefined` on a fresh run |
 
 `turn` options: `tools: false` sends no tools; `tools: [names]` narrows the run grant; `system`
 overrides the system prompt for that turn.
@@ -65,8 +68,8 @@ way:
    end.
 
 The kernel writes one `suspended_run` session entry through the store slot, as a child of the branch
-leaf, so it is the branch tip. It carries the pending decisions, the loop's `snapshot()` when the loop
-declares one, the loop `name`/`revision`, the hook registration-id set, and the full run state. No
+leaf, so it is the branch tip. It carries the pending decisions, the loop state (the latest
+`run.checkpoint` value, or `snapshot()` on a strategy-level loop), the loop `name`/`revision`, the hook registration-id set, and the full run state. No
 host store is needed. Continue it with `session.resume(decisions)` on
 `agent.session({ id })`, in the same process or a new one over the same store (see
 [agent.md](agent.md#runresult-and-sessionresume)). `loadSuspendedRunEntry(store, sessionId)` reads the
@@ -126,6 +129,37 @@ const agent = await createAgent({ model, slots: { loop: planThenAct } });
 The runnable [`examples/custom-loop.ts`](../examples/custom-loop.ts) supplies a plan-then-act loop and a host
 `tool.call` gate that denies a `network` tool; the denial reaches the model as a tool result.
 
+## Loop state
+
+A loop that keeps state across a suspension or a [continuation](agent.md#continuing-a-run) declares
+`state: "run"` and keeps that state on the run:
+
+```ts
+const loop: LoopStrategy = {
+  name: "phased", revision: "2", state: "run",
+  async run(run) {
+    let phase = (run.restored as { phase: number } | undefined)?.phase ?? 0;
+    for (; phase < 3; phase++) { run.checkpoint({ phase }); await step(run, phase); }
+  },
+};
+```
+
+- `run.checkpoint(value)` keeps the latest value by reference. The kernel JSON-normalizes, redacts and
+  bounds it (256 KiB, `ERR_PRISM_LOOP_SNAPSHOT` above) only when it persists: in the `suspended_run`
+  entry and, with `durability: "turn"`, in each `run_checkpoint` entry.
+- `run.restored` is that value on `session.resume` and on a checkpoint-restored `session.continue()`,
+  after the loop `name` and `revision` match (`ERR_PRISM_LOOP_REVISION` otherwise). On a resume that
+  records nothing new, the restored value is persisted again.
+- `state: "run"` counts as durable without `snapshot`/`restore`. It must be declared on the strategy,
+  because durability is decided before `run()` starts.
+
+Strategy-level `snapshot()`/`restore()` still work, for one run at a time. A strategy that defines
+either and does not declare `state: "run"` serves one active run per strategy object, counted across
+every agent that shares the object: a second run fails before it starts with `AgentLoopStateError`
+(`ERR_PRISM_LOOP_SHARED_STATE`). `assertConcurrentLoopResume(strategy)` from `@arnilo/prism/testing`
+runs two sessions that suspend and resume at the same time on one strategy and returns each session's
+stored loop state.
+
 ## Model-less loops and `run.model`
 
 A loop strategy may declare two optional fields:
@@ -140,17 +174,20 @@ A loop strategy may declare two optional fields:
 A loop that drives an external agent never calls `turn()`; it reports what the agent does and asks before the agent acts.
 
 - `observe(activity: ExternalActivity)`: text and thinking go through `message.delta` / `message.append` (redacted, persisted with `origin`). `tool.started` / `tool.progress` / `tool.completed` emit the catalog `tool.*` events with `origin.executedBy: "external"`, and `tool.started` charges `maxToolCalls`. `skill`, `file`, `plan`, `subagent`, `compaction`, `notice`, and `raw` emit `package.event`s named `agent.<kind>`, owned by the loop slot owner. A `subagent` `started` opens a nested `origin` (`depth + 1`, `subagentId`, `parentToolCallId`) that later activity inherits until it `completed`. `usage` folds into `RunResult.usage` and the limits. `observe` never fires `tool.call`, so a driver cannot claim Prism executed a vendor tool.
-- `ask(request, { rewrite?, respond? })`: fires `tool.call` with `origin` and `request.effects`. `allow` returns `{ allow: true }`; `deny` returns `{ allow: false, reason }`; `rewrite` and `respond` pass through only when the matching flag is set, else deny `rewrite_unsupported` / `respond_unsupported`. `ask` resolves inline through `host.ui`. With no answer it stages a suspension on a resumable loop (`snapshot` and `restore`, or the default loop) and returns `approval_pending`; the run suspends when `run()` returns. A non-resumable loop returns `non_interactive`. A throwing gate, a `dismissed` answer, and a declined confirm are all denies.
+- `ask(request, { rewrite?, respond? })`: fires `tool.call` with `origin` and `request.effects`. `allow` returns `{ allow: true }`; `deny` returns `{ allow: false, reason }`; `rewrite` and `respond` pass through only when the matching flag is set, else deny `rewrite_unsupported` / `respond_unsupported`. `ask` resolves inline through `host.ui`. With no answer it stages a suspension on a resumable loop (`state: "run"`, `snapshot` and `restore`, or the default loop) and returns `approval_pending`; the run suspends when `run()` returns. A non-resumable loop returns `non_interactive`. A throwing gate, a `dismissed` answer, and a declined confirm are all denies.
 - `steers()`: yields each message `session.steer()` queues, after the `run.input` transform. It adds no polling, and ends when the run aborts or the consumer stops. A loop that never calls it keeps today's behavior: steers apply at `turn()`.
 - `state(key)`: `append(entries)` persists one `external_state` record (`{ vendor, key, seq, data }`; `vendor` is the loop's `name`, `seq` counts records per key) and `load()` returns the key's entries in append order. Each entry is JSON, redacted before it is measured, and at most 64 KiB; a key holds at most 10 000 entries and 8 MiB per branch, and passing a cap rejects with `external_state_limit` (a non-JSON entry rejects with `state_not_json`). The records ride the session's branch, so `fork()` copies them and deleting the session deletes them; `session.messages()` never shows them, and they appear in no event or `inspect()`. Why not `prism.state.log`: that log belongs to a package, has no per-key caps, and shares its kind with values tools and folds read.
-- `end()`: first `run.end` continue wins, capped by `limits.maxContinuations` (then `{ continue: false }`).
+- `end()`: first `run.end` continue wins, capped by `limits.maxContinuations` (then `{ continue: false }`). When the hook declines and the run asked for structured output, an invalid final reply queues one repair message (its violations' paths) and returns `{ continue: true }`, at most `structuredOutput.repair` times (default 1) and never after a stop or limit. Repairs do not count against `maxContinuations`; see [Structured output](models.md#structured-output).
 
 ## Extension and configuration notes
 
-- `revision` joins the durable fingerprint; a custom loop on a durable run must declare `snapshot`
-  and `restore`.
+- `revision` joins the durable fingerprint; a custom loop on a durable run must declare `state: "run"`,
+  or `snapshot` and `restore`.
 - `emit(name, data)` can produce only a `package.event`. A `name` equal to a catalog event or hook name
   (`tool.completed`, `run.started`, …) throws `emit_reserved_name`, so a loop cannot forge an event a primitive owns.
+- The default loop passes `AgentConfig.tools.concurrency` (default 4) to `executeTools`, so the calls of one
+  turn run together unless the round holds an `exclusive` tool, a tool without `effects`, or an unknown tool
+  (see [tools.md](tools.md) "Parallel rounds"). A custom loop gets `concurrency: 1` unless it passes its own.
 - `executeTools` is re-entrant: several overlapping calls (a broker answering concurrent callbacks) each fire
   `tool.call` once per call and append their results as they finish. Results come back in input order, and a
   denied call comes back as a `hook_denied` result and an approval-pending call as a result with
@@ -161,10 +198,14 @@ A loop that drives an external agent never calls `turn()`; it reports what the a
   drops, at the loop's next `turn()`, at the tool-round ceiling and at the run's end; `assertToolRoundSettlement`
   from `@arnilo/prism/testing` holds a custom loop to it. `maxToolRounds` is checked in `turn()`, so
   concurrent rounds only increment the counter.
+- `turn()` retries a provider attempt that failed transiently, before or after output (`retry.afterOutput`, see
+  [models.md](models.md#retry)). A loop only ever sees the attempt that succeeded: a failed attempt's text and tool
+  calls never reach `turn.toolCalls` or the branch. `assertDroppedStreamRecovery` from `@arnilo/prism/testing`
+  checks a custom loop against a stream that drops after a text delta and a tool call.
 - `origin` (an `EventOrigin`) is passed to the `tool.call` payload and stamped on that call's `tool.started`/`tool.completed`
   events. Absent means "this agent, executed by Prism".
-- `compaction.when` fires at the existing auto-compaction check point. Handlers vote `true` (compact), `false` (veto), or `undefined` (abstain); the configured `trigger`/`thresholdEntries` decides only when every registered handler abstains or none is registered.
-- A provider rejection for size recovers once inside the same turn. `classifyProviderFailure` stamps `context_overflow` from the route's body (`context_length_exceeded`, `maximum context length`, `context window exceeds limit`, `prompt is too long` on 400/413/422); a route with no distinguishable body still recovers when its 400/413/422 arrives while our estimated input exceeds the model's declared window. The session then compacts through the `compaction` slot with `trigger: "overflow"` (the provider already decided, so `compaction.when` is not consulted), rebuilds the request through `context.build`/`model.request`, and retries the call once. `maxTurns` is not charged again, and the rejected attempt records no projected usage. A second overflow, an overflow after output started, or a failing compaction fails the run with `ContextOverflowError` (`code: "context_overflow"`), whose message carries the estimated input and the declared window — never prompt text.
+- `compaction.when` fires at the existing auto-compaction check point. Handlers vote `true` (compact), `false` (veto), or `undefined` (abstain); the kernel trigger (`compaction.trigger`, else `thresholdEntries`, else `DEFAULT_COMPACTION_TRIGGER`, 80% of the input cap) decides only when every registered handler abstains or none is registered. `compaction: false` turns that trigger off; see [slots.md](slots.md#when-the-compaction-slot-runs).
+- A provider rejection for size recovers once inside the same turn. `classifyProviderFailure` stamps `context_overflow` from the route's body (`context_length_exceeded`, `maximum context length`, `context window exceeds limit`, `prompt is too long` on 400/413/422); a route with no distinguishable body still recovers when its 400/413/422 arrives while our estimated input exceeds the model's declared window. The session then compacts through the `compaction` slot with `trigger: "overflow"` (the provider already decided, so `compaction.when` is not consulted), rebuilds the request through `context.build`/`model.request`, and retries the call once. `maxTurns` is not charged again, and the rejected attempt records no projected usage. A second overflow, an overflow after output started, or a failing compaction fails the run with `ContextOverflowError` (`code: "context_overflow"`), whose message carries the estimated input and the declared window — never prompt text. A compactor may decline the overflow compaction by throwing (session memory does when one message alone exceeds the window); the run then ends without a retry, and the message reads "the request was rejected and compaction could not shrink it".
 
 ## Security and performance notes
 

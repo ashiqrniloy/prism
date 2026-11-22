@@ -1345,9 +1345,9 @@ export const FEATURES = [
   {
     id: "om.compaction",
     group: "om",
-    name: "OM compaction (compaction slot from the ledger, compactAt / trigger, recent messages)",
+    name: "Session memory compaction (compaction slot from the ledger; mid-loop compactAt, between-loop compactAfterRun)",
     owner: OM,
-    config: ["om:context", "om:context.recentMessages", "om:context.compactAt.*", "om:context.trigger.*"],
+    config: ["om:context", "om:context.compaction", "om:context.compactAt.*", "om:context.compactAfterRun.*"],
     defaultRef: "observational.context",
     cost: { modelCalls: "0 extra (summarizes from the ledger)", writes: "compaction entry", tokens: "replaces the transcript prefix" },
     roles: ["accuracy", "cost"],

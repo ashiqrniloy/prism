@@ -10,12 +10,12 @@ import {
   definePackage,
   type ModelProvider,
   type PackageInstance,
+  PackageLoadError,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
   providerToolCall,
   type Session,
-  SlotConflictError,
   toolCallContent,
 } from "@arnilo/prism";
 import memoryCompaction from "@arnilo/prism-extensions/compaction";
@@ -37,8 +37,9 @@ import memorySystem from "@arnilo/prism-memory-system";
  *    counts, the rendered ledger, and whether `recall` was offered to the model.
  * 5. **The host holds no memory logic.** This file lists packages, runs commands, reads the session's
  *    entries, and reads `memory.session.status` events. Nothing here touches a ledger, a worker, or a prompt.
- * 6. **The slot conflict fails closed.** Listing both memory packages without an assignment rejects
- *    with `SlotConflictError`; assigning `slots.compaction` resolves it and `inspect()` names the owner.
+ * 6. **One compaction system per agent.** Listing LLM compaction beside session memory's compaction fails
+ *    `createAgent` (`PackageLoadError`, `memory_system_compaction_conflict`) whatever the slot assignment; turning
+ *    session memory's off (`context: { compaction: false }`) leaves the slot to LLM compaction and `inspect()` names it.
  *
  * Imports only `@arnilo/prism`, the two memory packages, and `@arnilo/prism-extensions/store-sqlite`; the mock
  * provider is inline, so there is no credential and no network. The first turn carries a sentinel
@@ -121,7 +122,7 @@ async function buildAgent(dir: string, recorder: Recorder): Promise<DemoAgent> {
       mockProviderPackage(recorder),
       // The package is inert until a session's `memory:session` toggle turns it on. `triggerTokens: 1` makes the
       // first eligible turn cross the observation threshold, so one pass runs in one turn.
-      memorySystem({ stm: { model: OBSERVER_MODEL, triggerTokens: 1 }, context: { recentMessages: 2 } }),
+      memorySystem({ stm: { model: OBSERVER_MODEL, triggerTokens: 1 } }),
     ],
     hooks: (hooks: { on: (name: "package.event", handler: (payload: unknown) => void) => void }) => {
       hooks.on("package.event", (payload) => events.push(payload as AgentEvent));
@@ -153,28 +154,29 @@ async function waitForObservations(agent: Agent, session: Session, atLeast: numb
   }
 }
 
-/** Criterion 6: the slot conflict fails closed, and naming an owner resolves it. */
+/** Criterion 6: two compaction systems fail closed, and turning session memory's off leaves the slot to the other. */
 async function slotAssignment(): Promise<{ conflict: string; owner: string }> {
   const recorder: Recorder = { requests: [] };
-  const both = () => [mockProviderPackage(recorder), memorySystem({}), memoryCompaction({})];
   let conflict = "";
   try {
-    await createAgent({ model: MAIN_MODEL, packages: both() });
+    await createAgent({
+      model: MAIN_MODEL,
+      packages: [mockProviderPackage(recorder), memoryCompaction({}), memorySystem({})],
+      slots: { compaction: OM_PACKAGE },
+    });
   } catch (error) {
-    assert.ok(error instanceof SlotConflictError, `expected SlotConflictError, got ${String(error)}`);
-    assert.equal(error.code, "ERR_PRISM_SLOT_CONFLICT");
-    assert.deepEqual(error.owners, [OM_PACKAGE, COMPACTION_PACKAGE]);
-    conflict = error.code;
+    assert.ok(error instanceof PackageLoadError, `expected PackageLoadError, got ${String(error)}`);
+    assert.match(error.message, /memory_system_compaction_conflict/);
+    conflict = "memory_system_compaction_conflict";
   }
-  assert.equal(conflict, "ERR_PRISM_SLOT_CONFLICT", "two providers and no assignment must fail closed");
+  assert.equal(conflict, "memory_system_compaction_conflict", "two compaction systems must fail closed");
 
   const resolved = await createAgent({
     model: MAIN_MODEL,
-    packages: both(),
-    slots: { compaction: OM_PACKAGE },
+    packages: [mockProviderPackage(recorder), memoryCompaction({}), memorySystem({ context: { compaction: false } })],
   });
   const owner = (await resolved.inspect()).slots.compaction;
-  assert.equal(owner, OM_PACKAGE, "the assignment names the owner");
+  assert.equal(owner, COMPACTION_PACKAGE, "with session compaction off, LLM compaction owns the slot");
   await resolved.dispose();
   return { conflict, owner };
 }

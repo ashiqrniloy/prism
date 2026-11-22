@@ -204,14 +204,14 @@ function toolSearchTools(
   session: SessionContext,
 ): readonly import("@arnilo/prism").ToolDefinition[] | undefined {
   if (config.toolSearch?.disclosure !== "search" || !draft.tools?.length) return draft.tools;
-  const topK = config.toolSearch.topK;
+  const { disclosure: _disclosure, ...search } = config.toolSearch;
   // Publish the turn's index first, so `search_tools` scores against exactly the offered tools.
-  deps.searchTools?.publish(session, draft.tools, topK);
+  deps.searchTools?.publish(session, draft.tools, search);
   const activated = new Set(readActivatedNames(deps.activatedState.get(session)));
   return selectDisclosedTools({
     tools: draft.tools,
     input: messages,
-    search: { topK },
+    search,
     activated: { has: (name) => activated.has(name) },
   });
 }

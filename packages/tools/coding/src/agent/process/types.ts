@@ -15,17 +15,6 @@ import {
   DEFAULT_MAX_TERMINAL_RESIZES_PER_MINUTE,
   DEFAULT_MAX_TERMINAL_ROWS,
   DEFAULT_MAX_TERMINAL_TERM_BYTES,
-  HARD_MAX_PROCESS_INPUT_BYTES,
-  HARD_MAX_PROCESS_LIFETIME_MS,
-  HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES,
-  HARD_MAX_PROCESS_SESSIONS,
-  HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES,
-  HARD_MAX_PTY_ATTACH_TIMEOUT_MS,
-  HARD_MAX_PTY_BACKEND_METADATA_BYTES,
-  HARD_MAX_TERMINAL_COLUMNS,
-  HARD_MAX_TERMINAL_RESIZES_PER_MINUTE,
-  HARD_MAX_TERMINAL_ROWS,
-  HARD_MAX_TERMINAL_TERM_BYTES,
   validateCodingLimit,
 } from "../limits.js";
 export interface ProcessSandboxHandle {
@@ -166,52 +155,22 @@ export interface ResolvedProcessSessionLimits {
 
 export function resolveProcessSessionLimits(limits?: ProcessSessionLimits): ResolvedProcessSessionLimits {
   return {
-    maxSessions: validateCodingLimit("maxSessions", limits?.maxSessions ?? DEFAULT_MAX_PROCESS_SESSIONS, HARD_MAX_PROCESS_SESSIONS),
-    maxInputBytes: validateCodingLimit(
-      "maxInputBytes",
-      limits?.maxInputBytes ?? DEFAULT_MAX_PROCESS_INPUT_BYTES,
-      HARD_MAX_PROCESS_INPUT_BYTES,
-    ),
-    maxLifetimeMs: validateCodingLimit(
-      "maxLifetimeMs",
-      limits?.maxLifetimeMs ?? DEFAULT_MAX_PROCESS_LIFETIME_MS,
-      HARD_MAX_PROCESS_LIFETIME_MS,
-    ),
-    maxOutputChunkBytes: validateCodingLimit(
-      "maxOutputChunkBytes",
-      limits?.maxOutputChunkBytes ?? DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES,
-      HARD_MAX_PROCESS_OUTPUT_CHUNK_BYTES,
-    ),
-    maxTotalOutputBytes: validateCodingLimit(
-      "maxTotalOutputBytes",
-      limits?.maxTotalOutputBytes ?? DEFAULT_MAX_PROCESS_TOTAL_OUTPUT_BYTES,
-      HARD_MAX_PROCESS_TOTAL_OUTPUT_BYTES,
-    ),
-    maxTerminalColumns: validateCodingLimit(
-      "maxTerminalColumns",
-      limits?.maxTerminalColumns ?? DEFAULT_MAX_TERMINAL_COLUMNS,
-      HARD_MAX_TERMINAL_COLUMNS,
-    ),
-    maxTerminalRows: validateCodingLimit("maxTerminalRows", limits?.maxTerminalRows ?? DEFAULT_MAX_TERMINAL_ROWS, HARD_MAX_TERMINAL_ROWS),
-    maxTerminalTermBytes: validateCodingLimit(
-      "maxTerminalTermBytes",
-      limits?.maxTerminalTermBytes ?? DEFAULT_MAX_TERMINAL_TERM_BYTES,
-      HARD_MAX_TERMINAL_TERM_BYTES,
-    ),
+    maxSessions: validateCodingLimit("maxSessions", limits?.maxSessions ?? DEFAULT_MAX_PROCESS_SESSIONS),
+    maxInputBytes: validateCodingLimit("maxInputBytes", limits?.maxInputBytes ?? DEFAULT_MAX_PROCESS_INPUT_BYTES),
+    maxLifetimeMs: validateCodingLimit("maxLifetimeMs", limits?.maxLifetimeMs ?? DEFAULT_MAX_PROCESS_LIFETIME_MS),
+    maxOutputChunkBytes: validateCodingLimit("maxOutputChunkBytes", limits?.maxOutputChunkBytes ?? DEFAULT_MAX_PROCESS_OUTPUT_CHUNK_BYTES),
+    maxTotalOutputBytes: validateCodingLimit("maxTotalOutputBytes", limits?.maxTotalOutputBytes ?? DEFAULT_MAX_PROCESS_TOTAL_OUTPUT_BYTES),
+    maxTerminalColumns: validateCodingLimit("maxTerminalColumns", limits?.maxTerminalColumns ?? DEFAULT_MAX_TERMINAL_COLUMNS),
+    maxTerminalRows: validateCodingLimit("maxTerminalRows", limits?.maxTerminalRows ?? DEFAULT_MAX_TERMINAL_ROWS),
+    maxTerminalTermBytes: validateCodingLimit("maxTerminalTermBytes", limits?.maxTerminalTermBytes ?? DEFAULT_MAX_TERMINAL_TERM_BYTES),
     maxTerminalResizesPerMinute: validateCodingLimit(
       "maxTerminalResizesPerMinute",
       limits?.maxTerminalResizesPerMinute ?? DEFAULT_MAX_TERMINAL_RESIZES_PER_MINUTE,
-      HARD_MAX_TERMINAL_RESIZES_PER_MINUTE,
     ),
-    maxPtyAttachTimeoutMs: validateCodingLimit(
-      "maxPtyAttachTimeoutMs",
-      limits?.maxPtyAttachTimeoutMs ?? DEFAULT_MAX_PTY_ATTACH_TIMEOUT_MS,
-      HARD_MAX_PTY_ATTACH_TIMEOUT_MS,
-    ),
+    maxPtyAttachTimeoutMs: validateCodingLimit("maxPtyAttachTimeoutMs", limits?.maxPtyAttachTimeoutMs ?? DEFAULT_MAX_PTY_ATTACH_TIMEOUT_MS),
     maxPtyBackendMetadataBytes: validateCodingLimit(
       "maxPtyBackendMetadataBytes",
       limits?.maxPtyBackendMetadataBytes ?? DEFAULT_MAX_PTY_BACKEND_METADATA_BYTES,
-      HARD_MAX_PTY_BACKEND_METADATA_BYTES,
     ),
   };
 }

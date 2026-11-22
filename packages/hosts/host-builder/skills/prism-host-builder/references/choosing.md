@@ -45,8 +45,10 @@ provide one slot with no assignment fail the load (`ERR_PRISM_SLOT_CONFLICT`). A
 `slots`, as `node_modules/@arnilo/prism/docs/slots.md` shows.
 
 - Need summarised history: `@arnilo/prism-extensions/compaction` (stable). Example: `examples/compaction.ts`.
-- Need observational memory too: `@arnilo/prism-memory-system` also claims `compaction`. List both and
-  assign the owner you want. Example: `examples/session-memory.ts`.
+- Need session memory too: `@arnilo/prism-memory-system`'s session tiers are a compaction system of their own (on by
+  default). One compaction system runs per agent: either list the memory system alone, or keep LLM compaction and set
+  the memory system's `context: { compaction: false }`. Listing both compaction systems fails `createAgent`.
+  Example: `examples/session-memory.ts`.
 - Need a different loop (workflow, external agent): `slots.loop`, or a package that claims it
   (`@arnilo/prism-extensions/workflows`, `@arnilo/prism-hosts/driver-process`). Example: `examples/custom-loop.ts`.
 

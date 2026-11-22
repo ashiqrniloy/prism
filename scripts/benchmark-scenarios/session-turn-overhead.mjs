@@ -35,14 +35,14 @@ export const PAYLOAD_BYTES = fixture.payloadBytes;
 
 const TOOL_NAME = "fetch_record";
 
-function percentile(values, ratio) {
+export function percentile(values, ratio) {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.max(0, Math.ceil(sorted.length * ratio) - 1)] ?? 0;
 }
 
-function payload(seed) {
+export function payload(seed, bytes = PAYLOAD_BYTES) {
   const unit = `record ${seed} field value lorem ipsum dolor sit amet `;
-  return unit.repeat(Math.ceil(PAYLOAD_BYTES / unit.length)).slice(0, PAYLOAD_BYTES);
+  return unit.repeat(Math.ceil(bytes / unit.length)).slice(0, bytes);
 }
 
 /** Turn 1 of a run asks for the tool; the turn after a tool result replies with ~2 KB of text. */
@@ -63,7 +63,7 @@ function createScriptedProvider(stats) {
 }
 
 /** Counts entries the kernel reads back; every other store method passes through unchanged. */
-function countingStore(store, counter) {
+export function countingStore(store, counter) {
   return new Proxy(store, {
     get(target, property, receiver) {
       const value = Reflect.get(target, property, receiver);

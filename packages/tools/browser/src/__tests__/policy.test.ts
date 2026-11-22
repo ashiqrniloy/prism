@@ -41,7 +41,7 @@ describe("browser Task 6 policy", () => {
     assert.equal(limits.maxNetworkRequests, 1_000);
     assert.equal(limits.maxDownloads, 8);
     assert.equal(limits.maxScreenshotBytes, 10 * 1024 * 1024);
-    assert.throws(() => resolveBrowserLimits({ maxNetworkRequests: 99_999 }), /maxNetworkRequests/);
+    assert.equal(resolveBrowserLimits({ maxNetworkRequests: 99_999 }).maxNetworkRequests, 99_999);
   });
 
   it("classifies hosts and blocks private/loopback/file/data/devtools by default", () => {

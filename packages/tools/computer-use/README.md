@@ -2,7 +2,8 @@
 
 The first-party Linux desktop tools as a Prism package. The default export is a `definePackage`
 definition whose `setup` resolves the host-owned `computer-use-linux` MCP binary on `PATH`,
-connects over stdio, registers the upstream desktop tools, and registers the bundled
+connects over stdio, supplies the upstream desktop tools through a tool source (so they are offered
+only while the MCP bridge to the binary is open, read at each run start), and registers the bundled
 `computer-use-linux` skill.
 
 ## Install

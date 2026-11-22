@@ -3,7 +3,7 @@ import type { MemoryVectorRecord } from "@arnilo/prism-memory-system/core";
 import { RagValidationError } from "./errors.js";
 import { isValidContentHash } from "./hash.js";
 import { ingestionStatus } from "./ingestion-status.js";
-import { HARD_CHUNK_SIZE_CAP, resolveRagLimits } from "./limits.js";
+import { DEFAULT_MAX_CHUNK_CHARS, resolveRagLimits } from "./limits.js";
 import type { IndexChunksOptions, IndexChunksResult } from "./types.js";
 import { assertBytes, assertNotAborted, byteLength, nonEmpty, requireScope, requireSourceId } from "./util.js";
 
@@ -21,7 +21,7 @@ export async function indexChunkBatches(
   const limits = resolveRagLimits({
     embedBatchSize: options.batchSize,
     maxChunks: options.maxChunks,
-    chunkSize: options.maxChunkChars ?? HARD_CHUNK_SIZE_CAP,
+    chunkSize: options.maxChunkChars ?? DEFAULT_MAX_CHUNK_CHARS,
     maxVectorDimensions: options.maxVectorDimensions,
     maxMetadataBytes: options.maxMetadataBytes,
   });

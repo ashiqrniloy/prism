@@ -27,6 +27,9 @@ export {
 } from "./driver-conformance.js";
 export { createScriptedHostUi, type ScriptedAnswer, type ScriptedHostUi } from "./host-ui.js";
 export {
+  assertConcurrentLoopResume,
+  assertDroppedStreamRecovery,
+  assertStructuredOutputRepair,
   assertToolRoundSettlement,
   echoTool,
   type LoopConformanceOptions,

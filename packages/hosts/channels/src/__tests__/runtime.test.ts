@@ -231,6 +231,41 @@ describe("plan 080 Telegram draft streaming", () => {
     await runtime.stop();
   });
 
+  it("channel_draft_resets_on_failed_attempt", async () => {
+    // Plan 227 Task 4: the first attempt streams, then drops with a transient reset and is retried;
+    // the preview restarts from the retried attempt's text instead of appending to the dead one.
+    const previews: string[] = [];
+    let attempts = 0;
+    const provider: ModelProvider = {
+      id: "mock",
+      async *generate() {
+        attempts += 1;
+        if (attempts === 1) {
+          yield providerTextDelta("dead draft");
+          // `retryAfterMs: 0` makes the default policy retry at once.
+          yield { type: "error", error: { message: "socket reset", code: "ECONNRESET", failureClass: "transient", retryAfterMs: 0 } };
+          return;
+        }
+        yield providerTextDelta("live ");
+        yield providerTextDelta("answer");
+        yield providerDone();
+      },
+    };
+    const { runtime, delivered } = harness({
+      agent: await agentWith(provider, createMemorySessionStore()),
+      onAssistantDelta: (delta) => previews.push(delta.text),
+    });
+    assert.equal((await runtime.admit(event({ eventId: "retry-1" }))).status, "accepted");
+    await runtime.drain();
+    assert.equal(attempts, 2);
+    assert.deepEqual(previews, ["dead draft", "live ", "live answer"]);
+    assert.deepEqual(
+      delivered.map((reply) => [reply.kind, reply.text]),
+      [["final", "live answer"]],
+    );
+    await runtime.stop();
+  });
+
   it("stops previewing after cancellation and never delivers a final reply for an aborted run", async () => {
     const previews: string[] = [];
     const provider: ModelProvider = {

@@ -19,11 +19,11 @@ import { bounded } from "./bounds.js";
 import type { CreatePrismMcpWebHandlerOptions, PrismMcpStdioHandle, PrismMcpWebHandler, ServePrismMcpStdioOptions } from "./types.js";
 
 const DEFAULT_MAX_HTTP_REQUEST_BYTES = 1024 * 1024;
-const HARD_MAX_HTTP_REQUEST_BYTES = 8 * 1024 * 1024;
 const DEFAULT_MAX_HTTP_RESPONSE_BYTES = 2 * 1024 * 1024;
-const HARD_MAX_HTTP_RESPONSE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_SERVER_CALL_TIMEOUT_MS = 60_000;
-const HARD_SERVER_CALL_TIMEOUT_MS = 30 * 60_000;
+const DEFAULT_MAX_CONCURRENT_REQUESTS = 32;
+const DEFAULT_MAX_SESSIONS = 32;
+const DEFAULT_MAX_SUBSCRIPTIONS = 1024;
 
 /**
  * Dual-era web handler. Modern (2026-07-28) traffic is served by the SDK's
@@ -42,27 +42,17 @@ export async function createPrismMcpWebHandler(
   options: CreatePrismMcpWebHandlerOptions = {},
 ): Promise<PrismMcpWebHandler> {
   const createServer: McpServerFactory = typeof server === "function" ? server : () => server;
-  const maxRequestBytes = bounded(options.maxRequestBytes, DEFAULT_MAX_HTTP_REQUEST_BYTES, HARD_MAX_HTTP_REQUEST_BYTES, "maxRequestBytes");
-  const maxResponseBytes = bounded(
-    options.maxResponseBytes,
-    DEFAULT_MAX_HTTP_RESPONSE_BYTES,
-    HARD_MAX_HTTP_RESPONSE_BYTES,
-    "maxResponseBytes",
-  );
-  const maxConcurrentRequests = bounded(options.maxConcurrentRequests, 32, 512, "maxConcurrentRequests");
-  const requestTimeoutMs = bounded(
-    options.requestTimeoutMs,
-    DEFAULT_SERVER_CALL_TIMEOUT_MS,
-    HARD_SERVER_CALL_TIMEOUT_MS,
-    "requestTimeoutMs",
-  );
+  const maxRequestBytes = bounded(options.maxRequestBytes, DEFAULT_MAX_HTTP_REQUEST_BYTES, "maxRequestBytes");
+  const maxResponseBytes = bounded(options.maxResponseBytes, DEFAULT_MAX_HTTP_RESPONSE_BYTES, "maxResponseBytes");
+  const maxConcurrentRequests = bounded(options.maxConcurrentRequests, DEFAULT_MAX_CONCURRENT_REQUESTS, "maxConcurrentRequests");
+  const requestTimeoutMs = bounded(options.requestTimeoutMs, DEFAULT_SERVER_CALL_TIMEOUT_MS, "requestTimeoutMs");
   const stateful = options.sessionIdGenerator !== undefined;
   if (stateful && (!options.resolveIdentity || !options.allowedOrigins?.length))
     throw new McpBridgeError("Stateful MCP sessions require resolveIdentity and exact allowedOrigins");
   const protectedResource = options.protectedResource === undefined ? undefined : normalizeProtectedResource(options.protectedResource);
-  const maxSessions = bounded(options.maxSessions, 32, 512, "maxSessions");
+  const maxSessions = bounded(options.maxSessions, DEFAULT_MAX_SESSIONS, "maxSessions");
   const sessions = new Map<string, string>();
-  const maxSubscriptions = bounded(options.maxSubscriptions, 1024, 4096, "maxSubscriptions");
+  const maxSubscriptions = bounded(options.maxSubscriptions, DEFAULT_MAX_SUBSCRIPTIONS, "maxSubscriptions");
   if (
     options.keepAliveMs !== undefined &&
     (!Number.isSafeInteger(options.keepAliveMs) || options.keepAliveMs < 0 || options.keepAliveMs > 300_000)
@@ -208,7 +198,7 @@ export function servePrismMcpStdio(server: McpServer | McpServerFactory, options
     legacy: options.legacy ?? "serve",
     ...(options.transport !== undefined ? { transport: options.transport } : {}),
     ...(options.maxSubscriptions !== undefined
-      ? { maxSubscriptions: bounded(options.maxSubscriptions, 1024, 4096, "maxSubscriptions") }
+      ? { maxSubscriptions: bounded(options.maxSubscriptions, DEFAULT_MAX_SUBSCRIPTIONS, "maxSubscriptions") }
       : {}),
   });
 }

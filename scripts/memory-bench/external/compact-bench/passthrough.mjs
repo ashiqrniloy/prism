@@ -129,7 +129,8 @@ export async function startPassthrough({
       const headers = new Headers();
       for (const [name, value] of req.headers) {
         const lower = name.toLowerCase();
-        if (["authorization", "x-api-key", "host", "content-length", "connection"].includes(lower)) continue;
+        // `user-agent`: OpenCode Go's edge answers Python-urllib's agent with an HTML 403 (2026-11-17 screen references).
+        if (["authorization", "x-api-key", "host", "content-length", "connection", "user-agent"].includes(lower)) continue;
         headers.set(name, value);
       }
       headers.set("authorization", `Bearer ${key}`);

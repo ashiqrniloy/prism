@@ -35,6 +35,11 @@ export async function assertCompactorConforms(
       kind: "message",
       message: { role: "user", content: [{ type: "text", text: `old ${secrets[0] ?? "history"}` }] },
     }),
+    createSessionEntry({
+      sessionId: "s",
+      kind: "session_limits",
+      data: { schemaVersion: 1, runs: 1, totalTokens: 100, cost: 0.01, currency: "USD" },
+    }),
     createSessionEntry({ sessionId: "s", kind: "message", message: { role: "assistant", content: [{ type: "text", text: "recent" }] } }),
   ];
 

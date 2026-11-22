@@ -8,8 +8,16 @@ import { LOCK_FILE } from "./layout.js";
  * `<root>/.lock` (`open wx`). A stale lock (dead owner pid, or older than 30 s) is reclaimed.
  */
 
+/** How long a writer waits for the store lock (`lock.timeoutMs`). */
 const LOCK_TIMEOUT_MS = 5_000;
+/** A lock file older than this is taken over (`lock.staleMs`). */
 const LOCK_STALE_MS = 30_000;
+
+/** The markdown store's file-lock timing; the host's values are the caps. */
+export interface WriteLockOptions {
+  readonly timeoutMs?: number;
+  readonly staleMs?: number;
+}
 
 function isAlive(pid: number): boolean {
   try {
@@ -22,7 +30,7 @@ function isAlive(pid: number): boolean {
 
 const sleep = (ms: number) => new Promise<void>((resolveSleep) => setTimeout(resolveSleep, ms));
 
-async function acquireFileLock(lockPath: string): Promise<() => Promise<void>> {
+async function acquireFileLock(lockPath: string, timeoutMs: number, staleMs: number): Promise<() => Promise<void>> {
   const start = Date.now();
   let delay = 10;
   for (;;) {
@@ -40,14 +48,14 @@ async function acquireFileLock(lockPath: string): Promise<() => Promise<void>> {
       const info = await stat(lockPath);
       const raw = await readFile(lockPath, "utf8").catch(() => "");
       const pid = Number.parseInt(raw.trim(), 10);
-      if (!Number.isFinite(pid) || !isAlive(pid) || Date.now() - info.mtimeMs > LOCK_STALE_MS) {
+      if (!Number.isFinite(pid) || !isAlive(pid) || Date.now() - info.mtimeMs > staleMs) {
         await rm(lockPath, { force: true });
         continue;
       }
     } catch {
       // The lock disappeared between attempts; retry immediately.
     }
-    if (Date.now() - start > LOCK_TIMEOUT_MS) {
+    if (Date.now() - start > timeoutMs) {
       throw new MemoryValidationError(`timed out acquiring the markdown store lock: ${lockPath}`);
     }
     await sleep(delay);
@@ -60,13 +68,21 @@ export interface WriteLock {
   drain(): Promise<void>;
 }
 
-export function createWriteLock(root: string): WriteLock {
+export function createWriteLock(root: string, options: WriteLockOptions = {}): WriteLock {
   const lockPath = join(root, LOCK_FILE);
+  const timeoutMs = options.timeoutMs ?? LOCK_TIMEOUT_MS;
+  const staleMs = options.staleMs ?? LOCK_STALE_MS;
+  for (const [name, value] of [
+    ["timeoutMs", timeoutMs],
+    ["staleMs", staleMs],
+  ] as const) {
+    if (!Number.isSafeInteger(value) || value < 1) throw new MemoryValidationError(`lock.${name} must be a positive integer`);
+  }
   let tail: Promise<unknown> = Promise.resolve();
   return {
     run<T>(fn: () => Promise<T>): Promise<T> {
       const next = tail.then(async () => {
-        const release = await acquireFileLock(lockPath);
+        const release = await acquireFileLock(lockPath, timeoutMs, staleMs);
         try {
           return await fn();
         } finally {

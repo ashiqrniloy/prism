@@ -10,11 +10,14 @@ export type {
   MemorySystemRehearsalPolicy,
   MemorySystemWmPolicy,
   MemorySystemWorkerConfig,
+  RecallLimitsConfig,
   ResolvedMemorySystemConfig,
   ResolvedWorkerSettings,
 } from "./config.js";
 export {
+  type MemorySystemCompactAfterRun,
   type MemorySystemCompactAt,
+  type ResolvedCompactAfterRun,
   type ResolvedCompactAt,
   resolveMemorySystemConfig,
 } from "./config.js";
@@ -28,6 +31,8 @@ export {
 export type {
   RecallBranchPageRequest,
   RecallBranchPageResult,
+  RecallEntryPageRequest,
+  RecallEntryPageResult,
   RecallPageDetail,
   RecallPageDirection,
 } from "./recall.js";
@@ -36,20 +41,20 @@ export type {
   RecentMessageWindowOptions,
 } from "./recent-messages.js";
 export { buildObservationalMemoryContextBlocks } from "./recent-messages.js";
-export type { EpisodeScope, ScopeSetData } from "./scope.js";
-export { SCOPE_SET } from "./scope.js";
+export type { EpisodeScope, ScopeProgress, ScopeSetData, ScopeStep, ScopeStepData, ScopeStepState } from "./scope.js";
+export { SCOPE_SET, SCOPE_STEP } from "./scope.js";
 export type {
   BoundaryRecordedData,
   FoldedMemoryDetails,
   MemoryAttribution,
   MemoryBoundary,
   MemoryBoundaryReason,
-  MemoryChunkRef,
   MemoryDurable,
   MemoryEventKind,
   MemoryEventStatus,
   MemoryId,
   MemoryObservation,
+  MemoryObservationFallback,
   MemoryRelevance,
   MemoryTaskState,
   MemoryTombstone,
@@ -61,12 +66,14 @@ export type {
   TaskStateRecordedData,
   WmBudgetUnmet,
   WmCompression,
+  WmLookAhead,
   WmRecordedData,
   WmRejudge,
 } from "./types.js";
 export {
   BOUNDARY_RECORDED,
   MemorySessionLedgerError,
+  memoryObservationFallbackValues,
   OBSERVATIONS_RECORDED,
   OBSERVATIONS_REPEATED,
   OBSERVATIONS_TOMBSTONED,

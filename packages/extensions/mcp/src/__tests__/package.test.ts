@@ -14,6 +14,7 @@ import {
   PackageLoadError,
   providerDone,
   providerTextDelta,
+  toolCallContent,
 } from "@arnilo/prism";
 import { bindManifestInstance, createScriptedHostUi, mockProvider, packageConformance } from "@arnilo/prism/testing";
 import { InMemoryTransport } from "@modelcontextprotocol/client";
@@ -572,5 +573,113 @@ describe("@arnilo/prism-extensions/mcp native package", () => {
     const parsed = JSON.parse(result.stdout.trim()) as { before: boolean; after: boolean };
     assert.equal(parsed.before, false, "@modelcontextprotocol/client was imported by an agent that does not list the mcp package");
     assert.equal(parsed.after, true, "the probe cannot see @modelcontextprotocol/client even after importing it");
+  });
+});
+
+describe("@arnilo/prism-extensions/mcp live tool lists (plan 234 Task 4)", () => {
+  /** A raw-transport agent whose provider calls `call` (when set) in the second run and records what each turn saw. */
+  async function liveAgent(transports: () => import("@modelcontextprotocol/client").Transport, call?: string) {
+    const offered: string[][] = [];
+    const provider = mockProvider(
+      [
+        [providerTextDelta("first"), providerDone()],
+        ...(call
+          ? [
+              [{ type: "tool_call" as const, call: toolCallContent("call-1", call, { msg: "hi" }) }, providerDone()],
+              [providerTextDelta("second"), providerDone()],
+            ]
+          : [[providerTextDelta("second"), providerDone()]]),
+      ],
+      { onRequest: (request) => offered.push((request.tools ?? []).map((tool) => tool.name)) },
+    );
+    const service = definePackage({
+      name: "raw-transport-live",
+      version: "1.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        prism.services.provide("mcp.transport", {
+          get live() {
+            return transports();
+          },
+        });
+      },
+    });
+    const agent = await createAgent({
+      model: testModel,
+      packages: [provider, service, mcp({ servers: [{ id: "live", transport: "raw", allow: "raw" }] })],
+    });
+    const session = await agent.session();
+    const toolResults = async () =>
+      (await session.entries()).flatMap((entry) =>
+        entry.kind === "message" && entry.message ? entry.message.content.filter((block) => block.type === "tool_result") : [],
+      ) as Array<{ name: string; error?: { message: string } }>;
+    return { agent, session, offered, toolResults };
+  }
+
+  async function until(check: () => boolean, label: string): Promise<void> {
+    for (let i = 0; i < 300; i += 1) {
+      if (check()) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error(`timed out waiting for ${label}`);
+  }
+
+  it("mcp_tool_added_after_list_changed_is_callable_next_run", async () => {
+    const { clientTransport, server } = await createInMemoryFixture(["echo"]);
+    const { agent, session, offered, toolResults } = await liveAgent(() => clientTransport, "mcp:live:added");
+    await session.run("one");
+    assert.deepEqual(offered[0], ["mcp:live:echo"]);
+
+    server.registerTool("added", { description: "Tool added later", inputSchema: { msg: z.string().optional() } }, async () => ({
+      content: [{ type: "text" as const, text: "added ran" }],
+    }));
+    await until(() => agent.tools.some((tool) => tool.name === "mcp:live:added"), "the list_changed refresh");
+    const result = await session.run("two");
+    assert.equal(result.status, "completed");
+    assert.ok(offered[1]?.includes("mcp:live:added"));
+    const results = await toolResults();
+    assert.equal(results.length, 1);
+    assert.equal(results[0]?.error, undefined, JSON.stringify(results[0]));
+    await agent.dispose();
+  });
+
+  it("mcp_tool_removed_by_the_server_disappears_next_run", async () => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const server = new McpServer({ name: "removal-fixture", version: "1.0.0" }, { capabilities: { tools: { listChanged: true } } });
+    server.registerTool("keep", { description: "kept" }, async () => ({ content: [{ type: "text", text: "kept" }] }));
+    const doomed = server.registerTool("doomed", { description: "removed later" }, async () => ({
+      content: [{ type: "text", text: "x" }],
+    }));
+    await server.connect(serverTransport);
+    const { agent, session, offered } = await liveAgent(() => clientTransport);
+    await session.run("one");
+    assert.deepEqual(offered[0], ["mcp:live:keep", "mcp:live:doomed"]);
+
+    doomed.remove();
+    await until(() => !agent.tools.some((tool) => tool.name === "mcp:live:doomed"), "the removal");
+    await session.run("two");
+    assert.deepEqual(offered[1], ["mcp:live:keep"]);
+    await agent.dispose();
+  });
+
+  it("mcp_tool_is_callable_after_reconnect", async () => {
+    // Regression (plan 234 Task 1): registered tools kept the first bridge's `execute`, so every call failed with
+    // McpBridgeClosedError after `mcp:reconnect`. The source reads the new bridge's tools.
+    const fixtures = [await createInMemoryFixture(["echo"]), await createInMemoryFixture(["echo"])];
+    let next = 0;
+    const { agent, session, toolResults } = await liveAgent(() => {
+      const fixture = fixtures[Math.min(next, fixtures.length - 1)];
+      next += 1;
+      return fixture!.clientTransport;
+    }, "mcp:live:echo");
+    await session.run("one");
+    const reconnected = (await agent.commands.run("mcp:reconnect", { id: "live" })) as { state: string };
+    assert.equal(reconnected.state, "connected");
+    const result = await session.run("two");
+    assert.equal(result.status, "completed");
+    const results = await toolResults();
+    assert.equal(results.length, 1);
+    assert.equal(results[0]?.error, undefined, JSON.stringify(results[0]));
+    await agent.dispose();
   });
 });

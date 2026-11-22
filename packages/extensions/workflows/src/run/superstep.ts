@@ -119,7 +119,7 @@ export async function executeSuperstepScheduler(state: SchedulerState, options: 
       }
 
       // Check budget before scheduling this wave
-      if (maxSupersteps !== undefined && state.superstep >= maxSupersteps) {
+      if (maxSupersteps !== undefined && maxSupersteps !== null && state.superstep >= maxSupersteps) {
         fatalError = new WorkflowSuperstepLimitError(state.superstep, maxSupersteps);
         state.status = "failed";
         markRemaining(state, "aborted");

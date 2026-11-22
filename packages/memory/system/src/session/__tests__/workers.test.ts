@@ -33,6 +33,7 @@ function provider(events: readonly ProviderEvent[]): ModelProvider {
 describe("observational memory workers", () => {
   it("observer_records_source_backed_observations_with_allowed_source_ids_only", async () => {
     const observations = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor(
         provider([
@@ -58,6 +59,7 @@ describe("observational memory workers", () => {
     // argument shape, so they answered in prose and the observer pass recorded nothing.
     let seen: unknown;
     const observer = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor({
         id: "mock",
@@ -71,7 +73,6 @@ describe("observational memory workers", () => {
     assert.deepEqual(observer, []);
     const parameters = seen as { properties?: Record<string, unknown>; required?: string[] } | undefined;
     assert.deepEqual(Object.keys(parameters?.properties ?? {}).sort(), [
-      "chunks",
       "corrects",
       "description",
       "durable",
@@ -145,6 +146,7 @@ describe("observational memory workers", () => {
 
   it("treats text-only provider turns as no-op worker output", async () => {
     const observations = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor(provider([providerTextDelta("No observation."), providerThinkingDelta("No tool."), providerDone()])),
       maxTurns: 1,
@@ -169,7 +171,13 @@ describe("observational memory workers", () => {
         yield providerDone();
       },
     };
-    const recorded = await runStm({ entries: [source], client: clientFor(model), maxTurns: 4, maxToolCallsPerTurn: 2 });
+    const recorded = await runStm({
+      verbatimUserChars: 0,
+      entries: [source],
+      client: clientFor(model),
+      maxTurns: 4,
+      maxToolCallsPerTurn: 2,
+    });
     assert.deepEqual(
       recorded.map((record) => record.description),
       ["one", "two", "three"],
@@ -189,7 +197,7 @@ describe("observational memory workers", () => {
         yield providerDone();
       },
     };
-    const capped = await runStm({ entries: [source], client: clientFor(greedy), maxTurns: 4, maxToolCalls: 2 });
+    const capped = await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(greedy), maxTurns: 4, maxToolCalls: 2 });
     assert.deepEqual(
       capped.map((record) => record.description),
       ["a1", "b1"],
@@ -212,7 +220,7 @@ describe("observational memory workers", () => {
         yield providerDone();
       },
     };
-    assert.equal((await runStm({ entries: [source], client: clientFor(clean), maxTurns: 4 })).length, 2);
+    assert.equal((await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(clean), maxTurns: 4 })).length, 2);
     assert.equal(turns, 1, "no closing call after a clean turn");
     // A rejected event (`{ ok: false }`) gets the model another turn to correct it.
     let again = 0;
@@ -225,7 +233,7 @@ describe("observational memory workers", () => {
         yield providerDone();
       },
     };
-    const fixed = await runStm({ entries: [source], client: clientFor(rejected), maxTurns: 4 });
+    const fixed = await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(rejected), maxTurns: 4 });
     assert.deepEqual(
       fixed.map((record) => record.description),
       ["fixed"],
@@ -241,7 +249,7 @@ describe("observational memory workers", () => {
         else yield* [event("k2", "second"), providerDone()];
       },
     };
-    assert.equal((await runStm({ entries: [source], client: clientFor(capped), maxTurns: 4 })).length, 2);
+    assert.equal((await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(capped), maxTurns: 4 })).length, 2);
     assert.equal(cut, 2);
   });
 
@@ -267,11 +275,17 @@ describe("observational memory workers", () => {
       resolve: async () => described,
       generate: (request: never) => provider.generate({ ...(request as object), model: bare } as never),
     };
-    await runStm({ entries: [source], client: client as never, maxTurns: 1, thinkingLevel: "none" });
+    await runStm({ verbatimUserChars: 0, entries: [source], client: client as never, maxTurns: 1, thinkingLevel: "none" });
     assert.deepEqual(seen[0]?.options?.compat, { reasoning_effort: "none" });
     // Without `resolve` (a hand-built client), the bare model maps nothing, as before.
     seen.length = 0;
-    await runStm({ entries: [source], client: { model: bare, generate: client.generate } as never, maxTurns: 1, thinkingLevel: "none" });
+    await runStm({
+      verbatimUserChars: 0,
+      entries: [source],
+      client: { model: bare, generate: client.generate } as never,
+      maxTurns: 1,
+      thinkingLevel: "none",
+    });
     assert.equal(seen[0]?.options?.compat?.reasoning_effort, undefined);
   });
 
@@ -386,6 +400,7 @@ describe("observational memory workers", () => {
   it("all_unknown_turn_is_not_clean", async () => {
     let requests = 0;
     const recorded = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor({
         id: "mock",
@@ -413,6 +428,7 @@ describe("observational memory workers", () => {
     // The tool-call limits are no longer failures for STM (plan 217 Task 6): see stm_refuses_calls_past_the_limits.
     await assert.rejects(
       runStm({
+        verbatimUserChars: 0,
         entries: [source],
         client: clientFor(
           provider([
@@ -523,7 +539,13 @@ describe("observational memory workers", () => {
     const controller = new AbortController();
     controller.abort(new Error("stop"));
     await assert.rejects(
-      runStm({ entries: [source], client: clientFor(provider([providerDone()])), maxTurns: 1, signal: controller.signal }),
+      runStm({
+        verbatimUserChars: 0,
+        entries: [source],
+        client: clientFor(provider([providerDone()])),
+        maxTurns: 1,
+        signal: controller.signal,
+      }),
       /stop/,
     );
   });
@@ -552,7 +574,13 @@ describe("observational memory workers", () => {
     };
 
     // `endAfterCleanTurn: false` so the second request (the replayed transcript) is sent at all.
-    const observations = await runStm({ entries: [source], client: clientFor(memoryProvider), maxTurns: 2, endAfterCleanTurn: false });
+    const observations = await runStm({
+      verbatimUserChars: 0,
+      entries: [source],
+      client: clientFor(memoryProvider),
+      maxTurns: 2,
+      endAfterCleanTurn: false,
+    });
 
     assert.equal(observations.length, 1);
     const replay = requests[1]?.messages.slice(-2) as Message[] | undefined;
@@ -567,6 +595,7 @@ describe("observational memory workers", () => {
   it("stamps sessionId and cacheKey on worker generate", async () => {
     let request!: ProviderRequest;
     await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor({
         id: "mock",
@@ -585,6 +614,7 @@ describe("observational memory workers", () => {
   it("host providerOptions.sessionId wins over worker sessionId", async () => {
     let request!: ProviderRequest;
     await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor({
         id: "mock",

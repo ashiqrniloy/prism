@@ -2,6 +2,8 @@ import type { EventOrigin, JsonValue } from "@arnilo/prism";
 
 export const MAX_DELEGATE_STEP_BYTES = 4 * 1024;
 export const MAX_DELEGATE_ID_BYTES = 256;
+/** A suspended child's approval ids a `finished` step lists; a host resumes the child session with them. */
+export const MAX_DELEGATE_STEP_APPROVALS = 16;
 export type DelegateStepPhase = "started" | "milestone" | "finished" | "error";
 
 export interface DelegateStepInput {
@@ -10,6 +12,10 @@ export interface DelegateStepInput {
   readonly turn?: number;
   readonly status?: string;
   readonly totalTokens?: number;
+  /** The child session, on `finished`: where a host resumes a suspended async child. */
+  readonly sessionId?: string;
+  /** A suspended child's pending approval ids (at most `MAX_DELEGATE_STEP_APPROVALS`), never their arguments. */
+  readonly approvalIds?: readonly string[];
 }
 
 export class DelegateStepError extends Error {
@@ -32,6 +38,12 @@ export function delegateStepData(input: DelegateStepInput): JsonValue {
   if (input.turn !== undefined) data.turn = count(input.turn, "turn");
   if (input.status !== undefined) data.status = text(input.status, "status");
   if (input.totalTokens !== undefined) data.totalTokens = count(input.totalTokens, "totalTokens");
+  if (input.sessionId !== undefined) data.sessionId = text(input.sessionId, "sessionId");
+  if (input.approvalIds !== undefined) {
+    if (!Array.isArray(input.approvalIds) || input.approvalIds.length > MAX_DELEGATE_STEP_APPROVALS)
+      throw new DelegateStepError("approvalIds");
+    data.approvalIds = input.approvalIds.map((id) => text(id, "approvalIds"));
+  }
   if (new TextEncoder().encode(JSON.stringify(data)).byteLength > MAX_DELEGATE_STEP_BYTES) throw new DelegateStepError("bytes");
   return data;
 }
@@ -48,7 +60,7 @@ function text(value: unknown, field: string): string {
   return value;
 }
 
-// The child's origin (K3): `agent` is the configured child name and `agentId` the child agent's id, so a
+// The child's origin (K3): `agent` is the configured child name and `agentId` the stable `delegate-<name>` label, so a
 // UI routes a child's activity with the same code it uses for a vendor agent. Bounded like every other id.
 function originRecord(origin: EventOrigin): JsonValue {
   const out: Record<string, JsonValue> = {

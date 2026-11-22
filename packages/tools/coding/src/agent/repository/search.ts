@@ -2,7 +2,7 @@
  * Moved verbatim from repository.ts; public surface unchanged behind the barrel. */
 
 import { lstat, open } from "node:fs/promises";
-import { HARD_MAX_SEARCH_CONTEXT_LINES, HARD_MAX_SEARCH_MATCHES, validateCodingLimit, validateCodingLimitAllowZero } from "../limits.js";
+import { validateCodingLimit, validateCodingLimitAllowZero } from "../limits.js";
 import { compileGlob } from "../glob-match.js";
 import { assertDeadline, assertNotAborted, isBinaryBuffer, resolveRepoPath } from "./path.js";
 import type {
@@ -145,8 +145,8 @@ export async function searchLocal(
   const matcher = request.matcher ?? literalMatcher(request.query, caseSensitive, defaults.maxPatternBytes, defaults.maxLineBytes);
 
   const resolved = await resolveRepoPath(request.root, request.path);
-  const maxMatches = validateCodingLimit("maxMatches", request.maxMatches ?? defaults.maxMatches, HARD_MAX_SEARCH_MATCHES);
-  const context = validateCodingLimitAllowZero("context", request.context ?? defaults.maxContextLines, HARD_MAX_SEARCH_CONTEXT_LINES);
+  const maxMatches = validateCodingLimit("maxMatches", request.maxMatches ?? defaults.maxMatches);
+  const context = validateCodingLimitAllowZero("context", request.context ?? defaults.maxContextLines);
   const exclude = new Set(request.exclude ?? defaults.exclude);
   const globMatch = request.glob !== undefined ? compileGlob(request.glob) : undefined;
   const deadlineAt = request.deadlineMs !== undefined ? Date.now() + request.deadlineMs : Date.now() + defaults.maxTimeMs;

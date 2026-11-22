@@ -13,16 +13,12 @@ import { BrowserError } from "./errors.js";
 
 /** Checkpoint URL: 8 KiB default / 16 KiB hard. */
 export const DEFAULT_MAX_CHECKPOINT_URL_BYTES = 8 * 1024;
-export const HARD_MAX_CHECKPOINT_URL_BYTES = 16 * 1024;
 /** Domain state hash: 256 B default / 1 KiB hard. */
 export const DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES = 256;
-export const HARD_MAX_DOMAIN_STATE_HASH_BYTES = 1024;
 /** Host data ref (ref only, never a body): 2 KiB default / 8 KiB hard. */
 export const DEFAULT_MAX_HOST_DATA_REF_BYTES = 2 * 1024;
-export const HARD_MAX_HOST_DATA_REF_BYTES = 8 * 1024;
 /** Checkpoints retained per run: 16 default / 64 hard (oldest evicted). */
 export const DEFAULT_MAX_CHECKPOINTS_PER_RUN = 16;
-export const HARD_MAX_CHECKPOINTS_PER_RUN = 64;
 
 export interface BrowserCheckpoint {
   readonly checkpointId: string;
@@ -83,35 +79,21 @@ function validateBytes(name: string, value: string | undefined, max: number, req
   return value;
 }
 
-function validateCount(name: string, value: number | undefined, def: number, hard: number): number {
+/** A host-set checkpoint limit: a positive safe integer. The host's value is the cap (plan 239 Task 5). */
+function validateCount(name: string, value: number | undefined, def: number): number {
   const resolved = value ?? def;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard) {
-    throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `${name} must be a positive safe integer at most ${hard}`);
+  if (!Number.isSafeInteger(resolved) || resolved < 1) {
+    throw new BrowserError("ERR_PRISM_BROWSER_LIMIT", `${name} must be a positive safe integer`);
   }
   return resolved;
 }
 
 export function resolveBrowserCheckpointLimits(input: BrowserCheckpointLimitOptions = {}): BrowserCheckpointLimits {
   return {
-    maxUrlBytes: validateCount("maxUrlBytes", input.maxUrlBytes, DEFAULT_MAX_CHECKPOINT_URL_BYTES, HARD_MAX_CHECKPOINT_URL_BYTES),
-    maxDomainStateHashBytes: validateCount(
-      "maxDomainStateHashBytes",
-      input.maxDomainStateHashBytes,
-      DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES,
-      HARD_MAX_DOMAIN_STATE_HASH_BYTES,
-    ),
-    maxHostDataRefBytes: validateCount(
-      "maxHostDataRefBytes",
-      input.maxHostDataRefBytes,
-      DEFAULT_MAX_HOST_DATA_REF_BYTES,
-      HARD_MAX_HOST_DATA_REF_BYTES,
-    ),
-    maxCheckpointsPerRun: validateCount(
-      "maxCheckpointsPerRun",
-      input.maxCheckpointsPerRun,
-      DEFAULT_MAX_CHECKPOINTS_PER_RUN,
-      HARD_MAX_CHECKPOINTS_PER_RUN,
-    ),
+    maxUrlBytes: validateCount("maxUrlBytes", input.maxUrlBytes, DEFAULT_MAX_CHECKPOINT_URL_BYTES),
+    maxDomainStateHashBytes: validateCount("maxDomainStateHashBytes", input.maxDomainStateHashBytes, DEFAULT_MAX_DOMAIN_STATE_HASH_BYTES),
+    maxHostDataRefBytes: validateCount("maxHostDataRefBytes", input.maxHostDataRefBytes, DEFAULT_MAX_HOST_DATA_REF_BYTES),
+    maxCheckpointsPerRun: validateCount("maxCheckpointsPerRun", input.maxCheckpointsPerRun, DEFAULT_MAX_CHECKPOINTS_PER_RUN),
   };
 }
 

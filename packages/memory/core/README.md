@@ -46,7 +46,7 @@ const { createPostgresVectorStore } = await import("@arnilo/prism-memory-system/
 | Lineage and deletion | `stampLineage`, `recordBlocked`, `listInvalidatedIds`, `revokedIdsAbsent`, `createDeletionPropagator` | Append-only invalidation records, layer ordering, and the deletion propagator over `DeletionPropagationHandler`s. |
 | Repointing | `repointSource`, `applySourceRenames` | Move or rename an indexed source without re-embedding. |
 | Scoring | `resolveRecallScoring`, `rerankRecallHits`, `deriveEntryImportance` | Composite recall scoring (similarity, recency, importance) with the documented tie-break. |
-| Limits and validation | `resolveMemoryLimits`, `HARD_TOP_K_CAP`, `estimateTokens`, `validateAgainstJsonSchema`, `mergeJsonObjects`, `assertFiniteVector` | The shared caps, token estimate, and JSON validation the packages bound their inputs with. |
+| Limits and validation | `resolveMemoryLimits`, `estimateTokens`, `validateAgainstJsonSchema`, `mergeJsonObjects`, `assertFiniteVector` | The shared limit defaults (the host's value is the cap), token estimate, and JSON validation the packages bound their inputs with. |
 | Errors | `MemoryError`, `MemoryValidationError`, `MemoryValidationCode`, `MemoryLimitError`, `MemoryScopeError`, `MemoryConflictError`, `MemoryAbortError` | The one error family every memory package throws. A `MemoryValidationError`'s `code` is `validation`, or a named migration code: `working_memory_retired` or `episode_kind_not_available`. |
 
 ## Cost, security, and failure behavior
@@ -273,7 +273,7 @@ later minor version (the same promise plan 185 Task 5 makes for the kernel).
   `createSqliteMemoryStores` and `buildSqliteMemoryDdl` (`./sqlite`), and the Postgres stores, DDL builders,
   `qualifyTable`, `quoteIdentifier`, `queryPostgres`, `DEFAULT_MEMORY_SCHEMA` and `DEFAULT_VECTOR_TABLE` (`./postgres`).
 - **Memory-package shared helpers — no host promise.** The rest of the root (`assert*`, `lexical*`, `fuseRankings`,
-  `redactJson`, `scopeKey`, `stampLineage`, `resolveMemoryLimits`, `HARD_TOP_K_CAP`, and so on) exists because
+  `redactJson`, `scopeKey`, `stampLineage`, `resolveMemoryLimits`, `RECALL_OVERSAMPLE`, and so on) exists because
   `memory-fabric`, `memory-rag`, `memory-wiki` and `memory-compaction` import it. A host should not. They may change in
   a minor version.
 - **Not exported.** Tuning constants (`DEFAULT_*`, `HARD_*` other than the three above), cursor codecs, directory

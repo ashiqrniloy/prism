@@ -762,11 +762,17 @@ describe("@arnilo/prism-extensions/mcp OAuth client (RFC 9728 + PKCE + refresh)"
     await as.close();
   });
 
-  it("refuses out-of-bounds caps at construction", () => {
+  it("refuses invalid caps at construction; the host's value is the cap", () => {
+    assert.doesNotThrow(() =>
+      createMcpClientAuth(
+        { ...baseAuthOptions(memoryState(), () => {}), limits: { discoveryCacheTtlMs: 10_000_000 } },
+        { serverUrl: "https://x", fetch },
+      ),
+    );
     assert.throws(
       () =>
         createMcpClientAuth(
-          { ...baseAuthOptions(memoryState(), () => {}), limits: { discoveryCacheTtlMs: 10_000_000 } },
+          { ...baseAuthOptions(memoryState(), () => {}), limits: { discoveryCacheTtlMs: 0 } },
           { serverUrl: "https://x", fetch },
         ),
       (error: unknown) => error instanceof McpOAuthError && error.code === "ERR_PRISM_MCP_OAUTH_STATE",

@@ -35,6 +35,9 @@ const compatModel = {
 
 Native NDJSON lines are capped at 1 MiB. Structured-output replies are buffered to strip the
 measured JSON fence, capped at 512 KiB; ordinary text streams without whole-response buffering.
+The host sets both in the package's `transport` config (`maxEventBytes` for a native line or an SSE
+event, `maxBufferBytes` for the SSE and structured-output buffer, `maxResponseBodyBytes` for an error
+body); a provider response never raises them.
 Finishing or rejecting a stream cancels its reader.
 
 The Anthropic Messages route is not shipped: Task 1 measured reuse there too, but the native route is

@@ -7,13 +7,13 @@
  * parsing, usage mapping, retryable/non-retryable error classification — and carries no
  * vendor constants: base URLs, model ids and env var names stay in the provider packages.
  */
-import type { JsonObject, Usage } from "../contracts.js";
+import type { JsonObject, ProviderRequestTimeouts, Usage } from "../contracts.js";
 import type { SecretSource } from "./provider-package.js";
 import { createDefaultRetryPolicy, waitForRetry } from "../models/retry.js";
 import { isJsonObject } from "../config.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
-import { readBoundedResponseJson, readBoundedResponseText } from "./transport.js";
-import { parseErrorBody, providerHttpError, readRetryAfterMs } from "./retry-http.js";
+import { fetchWithStreamTimeouts, parseRetryAfterMs, readBoundedResponseJson, readBoundedResponseText } from "./transport.js";
+import { parseErrorBody, providerHttpError } from "./retry-http.js";
 import { normalizeUsage } from "./usage.js";
 
 /** Text, structured criteria, or message-part arrays accepted as question instructions. */
@@ -156,17 +156,22 @@ export interface SystemOneClientOptions {
   readonly apiKey?: SecretSource;
   /** Fetch implementation; defaults to global `fetch` (tests inject a fake). */
   readonly fetch?: typeof fetch;
+  /** Connect/idle timeouts per attempt (defaults 60 s / 300 s; `null` disables one). A whole-call deadline is separate. */
+  readonly timeouts?: ProviderRequestTimeouts;
   /** Retries after the first attempt. Default: {@link DEFAULT_SYSTEMONE_MAX_RETRIES}. */
   readonly maxRetries?: number;
-  /** Base backoff before jitter, forwarded to the shared retry policy. */
+  /** Base backoff before jitter, forwarded to the shared retry policy. Default 100 ms. */
   readonly baseDelayMs?: number;
-  /** Backoff ceiling — also caps a `Retry-After` hint. Forwarded to the shared retry policy. */
+  /** Backoff ceiling — also caps a `Retry-After` hint. Forwarded to the shared retry policy. Default 1,000 ms. */
   readonly maxDelayMs?: number;
   /** Symmetric jitter fraction, forwarded to the shared retry policy. Default 0.25. */
   readonly jitter?: number;
   /** Random source for jitter (tests); defaults to `Math.random`. */
   readonly random?: () => number;
 }
+
+const SYSTEMONE_BASE_DELAY_MS = 100;
+const SYSTEMONE_MAX_DELAY_MS = 1000;
 
 /** Retries after the first attempt when {@link SystemOneClientOptions.maxRetries} is omitted. */
 export const DEFAULT_SYSTEMONE_MAX_RETRIES = 2;
@@ -259,7 +264,11 @@ export async function postSystemOne(
 
   for (let attempt = 1; ; attempt += 1) {
     signal?.throwIfAborted();
-    const response = await fetchImpl(url, { method: "POST", headers, body: payload, signal });
+    const response = await fetchWithStreamTimeouts(
+      url,
+      { method: "POST", headers, body: payload, signal },
+      { fetch: fetchImpl, timeouts: options.timeouts },
+    );
     if (response.ok) {
       return await readBoundedResponseJson<SystemOneResponse>(response, { signal, secrets, shape: isSystemOneResponse });
     }
@@ -267,7 +276,7 @@ export async function postSystemOne(
     const bodyText = await readBoundedResponseText(response, { secrets });
     const status = response.status;
     const retryable = isRetryableSystemOneStatus(status);
-    const retryAfterMs = retryable ? readRetryAfterMs(response.headers) : undefined;
+    const retryAfterMs = retryable ? parseRetryAfterMs(response.headers) : undefined;
     const decision = { status, code: status, retryAfterMs, errorCode: readErrorCode(bodyText) };
     if (!retryable) throw systemOneError(options.provider, decision, bodyText, secrets, false);
 
@@ -290,20 +299,26 @@ function systemOneRetryDecision(
   retryAfterMs: number | undefined,
   signal?: AbortSignal,
 ) {
+  // Decision calls keep their own short backoff (100 ms base, 1 s ceiling) rather than the turn
+  // defaults, and a `Retry-After` hint is capped at that ceiling, as before plan 227: a decision is a
+  // fast side call under a whole-call deadline, not a turn worth waiting a minute for.
+  const baseDelayMs = Math.max(0, options.baseDelayMs ?? SYSTEMONE_BASE_DELAY_MS);
+  const maxDelayMs = Math.max(baseDelayMs, options.maxDelayMs ?? SYSTEMONE_MAX_DELAY_MS);
   const policy = createDefaultRetryPolicy({
     name: `${options.provider} systemone`,
     maxAttempts: maxRetries + 1,
-    baseDelayMs: options.baseDelayMs,
-    maxDelayMs: options.maxDelayMs,
+    baseDelayMs,
+    maxDelayMs,
     jitter: options.jitter,
     random: options.random,
     transientCodes: [status],
   });
+  const hint = retryAfterMs === undefined ? {} : { retryAfterMs: Math.min(retryAfterMs, maxDelayMs) };
   return policy.decide({
     sessionId: "systemone",
     runId: "systemone",
     attempt,
-    error: { name: "SystemOneError", message: "retryable System One response", code: status, retryAfterMs },
+    error: { name: "SystemOneError", message: "retryable System One response", code: status, ...hint },
     signal,
   });
 }

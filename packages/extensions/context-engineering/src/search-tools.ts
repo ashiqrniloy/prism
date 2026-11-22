@@ -12,7 +12,13 @@
  */
 import type { JsonObject, SessionContext, SessionState, ToolDefinition } from "@arnilo/prism";
 import type { ToolSearchState } from "./tool-search.js";
-import { createActiveToolSet, createSearchToolsTool, createToolSearchIndex, SEARCH_TOOLS_TOOL_NAME } from "./tool-search.js";
+import {
+  createActiveToolSet,
+  createSearchToolsTool,
+  createToolSearchIndex,
+  SEARCH_TOOLS_TOOL_NAME,
+  type ToolsSearchOptions,
+} from "./tool-search.js";
 import { readActivatedNames, writeActivatedNames } from "./state.js";
 
 /** `ToolSearchState` with the two fields `publish` rewrites between turns. */
@@ -20,7 +26,7 @@ export type MutableToolSearchState = { -readonly [K in keyof ToolSearchState]: T
 
 export interface SearchToolsWiring {
   /** Publishes this turn's tool index for a session. Called by the `context.build` handler. */
-  publish(session: SessionContext, tools: readonly ToolDefinition[], topK: number): void;
+  publish(session: SessionContext, tools: readonly ToolDefinition[], search: ToolsSearchOptions & { readonly topK: number }): void;
   /** The activation tool. Registered only when `toolSearch.disclosure === "search"`. */
   tool: ToolDefinition;
 }
@@ -55,6 +61,9 @@ export function createSearchToolsWiring(options: {
     get topK() {
       return current(cell).topK;
     },
+    get maxQueryBytes() {
+      return current(cell).maxQueryBytes;
+    },
   };
   const base = createSearchToolsTool(facade);
   const tool: ToolDefinition = {
@@ -71,10 +80,11 @@ export function createSearchToolsWiring(options: {
   };
 
   return {
-    publish: (session, tools, topK) => {
+    publish: (session, tools, search) => {
       const state = stateFor(session);
-      state.index = createToolSearchIndex(tools, (tool) => tool.name === SEARCH_TOOLS_TOOL_NAME);
-      state.topK = topK;
+      state.index = createToolSearchIndex(tools, (tool) => tool.name === SEARCH_TOOLS_TOOL_NAME, search.maxIndexTools);
+      state.topK = search.topK;
+      if (search.maxQueryBytes !== undefined) state.maxQueryBytes = search.maxQueryBytes;
     },
     tool,
   };

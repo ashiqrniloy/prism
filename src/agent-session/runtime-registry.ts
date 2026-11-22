@@ -84,7 +84,7 @@ export function assignedLoop(agent: Agent): LoopStrategy | undefined {
 /** Whether packages add or `disable` removes any tool, so the host's own tools are not the whole view. */
 export function packagesAffectTools(agent: Agent): boolean {
   const packages = tryAgentRuntime(agent)?.packages;
-  return Boolean(packages && (packages.tools().length > 0 || packages.disabled.tools.size > 0));
+  return Boolean(packages && (packages.tools().length > 0 || packages.disabled.tools.size > 0 || packages.hasToolSources));
 }
 
 /**
@@ -92,16 +92,27 @@ export function packagesAffectTools(agent: Agent): boolean {
  * `agent.config` stays the host's input and a host registry is never mutated, so every reader goes
  * through here (plan 146 Task 1 A2). The host's own list is returned untouched when nothing merges.
  */
-export function agentToolList(agent: Agent): readonly ToolDefinition[] {
-  return toolListFor(agent.config, tryAgentRuntime(agent)?.packages);
+export function agentToolList(agent: Agent, options: ToolListOptions = {}): readonly ToolDefinition[] {
+  return toolListFor(agent.config, tryAgentRuntime(agent)?.packages, options);
+}
+
+/** `sources: false` leaves out `tools.source` tools (the durable-run fingerprint, plan 234 Task 4). */
+export interface ToolListOptions {
+  readonly sources?: boolean;
 }
 
 /** The same merge for a config/package pair that is not the agent's committed runtime (reload assembly). */
-export function toolListFor(config: AgentConfig, packages: LoadedPackages | undefined): readonly ToolDefinition[] {
+export function toolListFor(
+  config: AgentConfig,
+  packages: LoadedPackages | undefined,
+  options: ToolListOptions = {},
+): readonly ToolDefinition[] {
   const host = config.tools?.add ?? [];
   const added = packages?.tools() ?? [];
+  // Read once per call: the loader already dropped invalid and conflicting source tools with a note.
+  const sourced = options.sources === false ? [] : (packages?.sourceTools() ?? []);
   const disabled = packages?.disabled.tools;
-  if (added.length === 0 && !disabled?.size) return host;
+  if (added.length === 0 && sourced.length === 0 && !disabled?.size) return host;
   const kept = host.filter((tool) => !disabled?.has(tool.name));
   const names = new Set(kept.map((tool) => tool.name));
   for (const { owner, tool } of added) {
@@ -111,7 +122,9 @@ export function toolListFor(config: AgentConfig, packages: LoadedPackages | unde
     }
     names.add(tool.name);
   }
-  return [...kept, ...added.map((entry) => entry.tool)];
+  // A host registry that grew a source tool's name after the snapshot check: the host keeps it.
+  const extra = sourced.filter((entry) => !names.has(entry.tool.name)).map((entry) => entry.tool);
+  return [...kept, ...added.map((entry) => entry.tool), ...extra];
 }
 
 /**
@@ -139,7 +152,6 @@ export function skillSourceFor(config: AgentConfig, packages: LoadedPackages | u
 
 /** The package that registered `tool`, when a package did. */
 export function toolOwner(agent: Agent, tool: string): string | undefined {
-  return tryAgentRuntime(agent)
-    ?.packages.tools()
-    .find((entry) => entry.tool.name === tool)?.owner;
+  const packages = tryAgentRuntime(agent)?.packages;
+  return packages?.tools().find((entry) => entry.tool.name === tool)?.owner ?? packages?.sourceToolOwner(tool);
 }

@@ -9,6 +9,7 @@ import type { ContextBlock } from "@arnilo/prism";
 
 import { activeObservations, activeWmItems, type ObservationalMemoryLedger } from "./ledger.js";
 import { renderObservationalMemory } from "./render.js";
+import { type EpisodeScope, remainingStepOrdinals } from "./scope.js";
 import type { MemoryObservation, MemoryTaskState, MemoryWmItem } from "./types.js";
 
 export interface MemoryBlockOptions {
@@ -18,11 +19,19 @@ export interface MemoryBlockOptions {
   /** Render recall guidance only while the `recall` tool is actually exposed. */
   readonly advertiseRecall?: boolean;
   readonly maxBytes?: number;
+  /** The scope's remaining step ordinals: WM items for the next step render first (plan 218.3 Task 8). */
+  readonly remainingSteps?: readonly number[];
+  /** The config scope (`scope.text`), read for the step order before any `scope.set`. */
+  readonly scopeFallback?: EpisodeScope;
 }
 
 export function observationalMemoryBlock(ledger: ObservationalMemoryLedger, options: MemoryBlockOptions = {}): readonly ContextBlock[] {
   const observations = activeObservations(ledger);
-  return memoryBlocksFrom(activeWmItems(ledger), observations, { ...options, taskState: ledger.taskState });
+  return memoryBlocksFrom(activeWmItems(ledger), observations, {
+    ...options,
+    taskState: ledger.taskState,
+    remainingSteps: remainingStepOrdinals(ledger, options.scopeFallback),
+  });
 }
 
 export function memoryBlocksFrom(
@@ -35,6 +44,7 @@ export function memoryBlocksFrom(
     maxTaskStateBytes: options.maxTaskStateBytes,
     secrets: options.secrets ?? [],
     advertiseRecall: options.advertiseRecall,
+    ...(options.remainingSteps?.length ? { remainingSteps: options.remainingSteps } : {}),
     ...(options.maxBytes === undefined ? {} : { maxBytes: options.maxBytes }),
   });
   return content

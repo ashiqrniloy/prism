@@ -149,7 +149,6 @@ function sanitizeCredentialRefs(refs: readonly string[] = [], redactor?: SecretR
   return Object.freeze(sanitized);
 }
 
-const HARD_MAX_CONNECTED_APPS = 32;
 const MAX_CONNECTED_APP_IDENTIFIER_BYTES = 128;
 
 function copyConnectedApps(value: unknown): HostCompositionReport["connectedApps"] {
@@ -162,9 +161,7 @@ function copyConnectedApps(value: unknown): HostCompositionReport["connectedApps
 }
 
 function copyConnectedAppIdentifiers(value: unknown, name: "appIds" | "serverIds"): readonly string[] {
-  if (!Array.isArray(value) || value.length > HARD_MAX_CONNECTED_APPS) {
-    throw new HostCompositionError(`Connected app ${name} must contain at most ${HARD_MAX_CONNECTED_APPS} identifiers`);
-  }
+  if (!Array.isArray(value)) throw new HostCompositionError(`Connected app ${name} must be an array of identifiers`);
   return Object.freeze(
     value.map((identifier) => {
       if (
@@ -230,11 +227,10 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
   }
 
   // 6. Governance coverage
+  // The kernel's built-in argument check (plan 226) counts until `tools.validation` is `"off"`.
+  const builtinValidation = config !== undefined && (config as { tools?: { validation?: unknown } }).tools?.validation !== "off";
   const hasValidator = Boolean(
-    (config && "validator" in config && typeof (config as { validator?: unknown }).validator === "function") ||
-      (config &&
-        "toolArgumentValidator" in config &&
-        typeof (config as { toolArgumentValidator?: { validate?: unknown } }).toolArgumentValidator?.validate === "function"),
+    builtinValidation || (config && "validator" in config && typeof (config as { validator?: unknown }).validator === "function"),
   );
   // Roadmap §2.4: the tool gate is a `tool.call` registration, declared through `hooks`.
   const hasToolGate = typeof config?.hooks === "function";
@@ -282,8 +278,8 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
     }
 
     // Verified identity verification. `AgentConfig` carries no `identity` field (the identity is
-    // projected onto `principal`), so a host may still hand one in for the readiness check.
-    const identity = options.identity ?? (config as { readonly identity?: AgentIdentity } | undefined)?.identity;
+    // projected onto `principal`, and `createAgent` rejects the key), so the host hands it in here.
+    const identity = options.identity;
     if (connectedApps !== undefined && identity?.verified !== true) {
       errors.push("Business connected apps require a verified identity");
     }

@@ -20,7 +20,7 @@ Every agent is one `createAgent` call with a package list. The host code for eac
 
 | Agent | Source | Why it has these packages |
 | --- | --- | --- |
-| orchestrator | [`src/host/orchestrator.ts`](src/host/orchestrator.ts) | `workflows` for the graph, `delegate` for a research child, and one `definePackage` that registers the host's `build` command |
+| orchestrator | [`src/host/orchestrator.ts`](src/host/orchestrator.ts) | `workflows` for the graph, `delegate` for a research child (a tool-less session linked to the calling session, stored in the shared SQLite file), and one `definePackage` that registers the host's `build` command |
 | coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and `memory-compaction`; with `memory` set, also `memory-fabric` and `memory-system` (and `@arnilo/prism-knowledge/wiki` when `ontology` is on, with or without `memory`) |
 | research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `tools-research` (the citation ledger and `run.end` check), `memory-compaction`, and the same fold/accounting with a 20% block cap; `memory-rag` only when `embeddings` is set, and `memory-fabric` with `memory-system` only when `memory` is set |
 | external | [`src/host/external.ts`](src/host/external.ts) | a host-owned adapter over `driver-process`, for a vendor CLI the host does not control |
@@ -102,6 +102,11 @@ straight to the package:
 | `web.domains` | `{ allow?: string[], block?: string[] }` | Host-enforced hostname permission for search results and every fetch path. This is the host's policy, not a model argument: the research worker cannot widen it. |
 | `web.cache` | `{ ttlSeconds: number, maxEntries?: number, maxBytes?: number }` | Opt-in per-session page cache. Off unless present; entries are dropped when the session closes and never persisted. |
 
+`sessionLimits` (`{ maxCost?, maxTotalTokens?, maxRuns?, deadline? }`, each `null` to disable) is a budget across
+every run of one session, on every worker, that survives a restart (`AgentConfig.sessionLimits`). Unset by default:
+each run keeps only its own limits. It is the spend guard for long jobs, where run limits may be `null`. The loader
+checks its keys; `createAgent` validates the values and fails closed.
+
 The config loader validates types and unknown keys and leaves range checks to the package, which
 fails the package load with a field-naming error. The research worker's approval allow-list stays
 `web_fetch`, `web_search`, `rag_search`, `cite`, and Obscura's native `obscura_fetch`/`obscura_scrape`
@@ -140,6 +145,13 @@ runs on `ontologyModel` (a model ref, never a key) when the config names one and
 model otherwise. The host adds the package and nothing else. The wiki is unmeasured, which is why it is
 not the default.
 
+`compaction` picks the workers' compaction system; one runs per agent. `"llm"` (the default) keeps LLM compaction
+(`@arnilo/prism-extensions/compaction`) with tool-result folding, and the memory system's session tiers only record
+and recall (`context: { compaction: false }`; a session turns them on with `memory:session`). `"session-memory"`
+(needs `memory`) turns session memory on for every session and makes it the only compaction, on its two triggers:
+mid-loop at 0.8 of the input cap, and between loops at the model's measured budget (below), else 80,000 tokens. The
+workers then list neither LLM compaction nor folding.
+
 The markdown store lives under `<dirname(storePath)>/memory`, inside the host's data directory, and
 the fabric jails it to that `tools.root`. Exchanges are shared by every session on one store: the
 fabric takes its tenant from `scopes.tenantId` (default `prism`) and its user scope from a fixed
@@ -153,9 +165,9 @@ Both workers size their gates from one table, [`src/host/context-budgets.ts`](sr
 A key is `provider/model`; the number is the effective input budget measured by plan 194 Task 6, and
 the entry's comment names its evidence file.
 
-| Model | Measured budget | Fold batch (`clearAtLeastTokens`) | Compaction trigger | OM `compactAt` |
+| Model | Measured budget | Fold batch (`clearAtLeastTokens`) | Compaction trigger | Session memory `compactAfterRun` (`compaction: "session-memory"`) |
 | --- | ---: | ---: | --- | --- |
-| `opencode-go/mimo-v2.5` | 96,000 | 9,600 (10%) | `threshold_tokens` 96,000 | `{ ratio: 0.6, maxTokens: 96,000 }` |
+| `opencode-go/mimo-v2.5` | 96,000 | 9,600 (10%) | `threshold_tokens` 96,000 | `{ maxTokens: 96,000 }` |
 
 An unlisted model gets `input_ratio` 0.6 of its input cap, the package's 4,096-token fold batch, and
 one `info` status note per agent. The coding worker uses the `coding` compaction profile; the research
@@ -275,13 +287,14 @@ Scheduler and target agents share one ownership scope; the scheduler refuses a t
 
 ## Entry points
 
-[`bin/prism-agent.ts`](bin/prism-agent.ts) dispatches four commands:
+[`bin/prism-agent.ts`](bin/prism-agent.ts) dispatches five commands:
 
 ```bash
 prism-agent run [--agent orchestrator|coding|research] [--config <file>] [--session <id>] <prompt>
 prism-agent resume --session <id> [--config <file>] [--agent <name>] [--decision <approvalId>=allow|deny]...
 prism-agent acp [--agent orchestrator|coding|research] [--config <file>]
 prism-agent schedule [--config <file>]
+prism-agent recover [--agent orchestrator|coding|research] [--config <file>]
 ```
 
 `--config` defaults to `./prism-agent.json` and must name a file. Credential values stay refs in that file; they are not accepted on the command line.
@@ -297,6 +310,8 @@ prism-agent schedule [--config <file>]
 | 4 | A completed research run whose `research.verify` verdict is `failed`. `pending` is not 4 |
 
 Precedence is `2 > 3 > 1 > 4 > 0`. `resume` without `--agent` uses the session actor written at `run`.
+
+`recover` is the startup sweep for runs a dead process left behind. It needs the opt-in `recovery` block in the config (`{ "recovery": { "olderThanMs": 60000 } }`), which also gives every worker a SQLite run ledger on `storePath` ([`src/host/store.ts`](src/host/store.ts)). It lists the ledger's `running` rows in the agent's ownership scope with `findInterruptedRuns`, keeps the sessions whose actor is `--agent`, and calls `continueInterrupted` ([`@arnilo/prism-hosts/headless`](../../packages/hosts/headless/README.md#recovering-interrupted-runs)). It writes one `{"type":"prism-agent.recovery","sessionId","runId","status"}` line per run (`skipped` lines carry a `reason`), then the exit line. Exit codes follow the table above over the continued runs; nothing to continue exits 0. Without the block, `recover` exits 2 and no ledger is written.
 
 `acp` speaks ACP over stdio only, for manual interactive testing from an ACP-capable editor. A Zed `settings.json` entry:
 
@@ -331,6 +346,8 @@ The same leg runs in `release:gate` after the client-neutrality check, and `run-
 | remote worker | remote events carry `origin.remote` and `executedBy: "external"`, the session is mirrored, and the remote approval is answered by the host's `HostUi` |
 | headless approval | a run suspends, a channel answers, and a fresh process resumes and completes |
 | scheduled run | a firing fires once per tick across two processes, under both missed policies |
+| recover after crash | a coding run is killed after its tool round, `prism-agent recover` finishes it with no new user message, and a second sweep skips it |
+| long job | a 30-run coding job through `runAgentJob` ([`src/scenarios/long-job.ts`](src/scenarios/long-job.ts)) dies inside run 12; a fresh worker over the same SQLite file resumes it with `resumeAgentJob`, continues the in-flight run without re-running its tool, and finishes on `done`, with `sessionLimits` counting all 30 runs across both processes |
 | one-shot JSONL | the event stream matches a golden file |
 | research citations | every cited source resolves to a ledger entry, and an unresolved citation fails `run.end` |
 | secrets | a credential ref never reaches the event stream, and a literal is rejected by the package |

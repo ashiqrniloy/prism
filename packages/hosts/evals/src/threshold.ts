@@ -1,7 +1,7 @@
 import { resolveRedactor } from "@arnilo/prism";
 import { compareExperiments } from "./compare-experiments.js";
 import { EvalError } from "./errors.js";
-import { DEFAULT_REPORT_MAX_BYTES, HARD_REPORT_MAX_BYTES } from "./limits.js";
+import { DEFAULT_REPORT_MAX_BYTES } from "./limits.js";
 import type { ComparisonReport, EvaluationThresholds, ExperimentReport } from "./types.js";
 import { assertFiniteUnitInterval } from "./util.js";
 
@@ -107,8 +107,8 @@ export function serializeEvaluationReport(
   } = {},
 ): string {
   const maxBytes = options.maxBytes ?? DEFAULT_REPORT_MAX_BYTES;
-  if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > HARD_REPORT_MAX_BYTES) {
-    throw new EvalError(`maxBytes must be an integer in [1, ${HARD_REPORT_MAX_BYTES}]`, "ERR_PRISM_EVAL_REPORT_BOUNDS");
+  if (!Number.isInteger(maxBytes) || maxBytes < 1) {
+    throw new EvalError("maxBytes must be a positive integer", "ERR_PRISM_EVAL_REPORT_BOUNDS");
   }
   const redactor = resolveRedactor(options.redactor, options.secrets);
   const json = JSON.stringify(redactor ? redactor.redact(report) : report, null, 2);

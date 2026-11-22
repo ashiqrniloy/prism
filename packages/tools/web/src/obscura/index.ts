@@ -20,8 +20,6 @@ export { ObscuraError } from "./errors.js";
 export {
   DEFAULT_OBSCURA_PROCESS_LIMITS,
   DEFAULT_OBSCURA_WEB_LIMITS,
-  HARD_OBSCURA_PROCESS_LIMITS,
-  HARD_OBSCURA_WEB_LIMITS,
   type ObscuraProcessLimits,
   type ObscuraWebLimits,
   resolveObscuraProcessLimits,

@@ -42,6 +42,7 @@ ACP v1 serving lives in [`@arnilo/prism-hosts/acp`](../acp/README.md) (plan 161)
 
 ## Cost, security, and failure behavior
 
+- **Retried provider attempts:** a `turn.completed` with `error` is not a `RUN_ERROR` (the run may retry it; a final failure arrives as `run.failed`). The mapper ends the failed attempt's text and reasoning messages, and the retry's `turn.started` emits a `prism.retry` custom event (with `includeCustomEvents`) whose `discardMessageIds` names them, since AG-UI cannot retract text.
 - **Narrow-only session ownership:** `createAgUiHandler` passes `authorization.ownership` both when opening the session (`agent.session({ id: threadId, create, ownership: authorization.ownership })`) and on `session.stream` / `session.resume`. Both session opens happen before the SSE response starts.
 - **Indistinguishable `404` on absent or foreign sessions:** `SessionNotFoundError` and `OwnershipScopeError` map to `404 ERR_PRISM_AG_UI_NOT_FOUND` (`{"error":{"code":"ERR_PRISM_AG_UI_NOT_FOUND","message":"Session not found"}}`) before the SSE stream opens, so a response never distinguishes an absent thread from another user's thread.
 - **Scoped pending interrupts:** the handler's in-memory `pending` interrupt map records `authorization.ownership` alongside `threadId` and `approvalId`. A resume request from a different ownership scope is rejected before any session open as a foreign interrupt (`400 ERR_PRISM_AG_UI_INPUT`, matching a wrong `threadId`).
@@ -49,7 +50,7 @@ ACP v1 serving lives in [`@arnilo/prism-hosts/acp`](../acp/README.md) (plan 161)
 
 ## Limits and security
 
-Defaults / hard: request/event/state/activity/reasoning/raw 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 256 tools/contexts, 8 / 64 interrupts, 16 / 64 media parts; patches 128 / 4096 operations; JSON depth 16 / 64, properties 128 / 4096, arrays 512 / 8192; replay 100 / 500 records; queue 128 / 4096 events; stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. SSE only; WebSocket/protobuf/push stay undeclared. Overflow closes with a bounded error. Resume decisions are bounded to 128 entries, 8 KiB reasons, and 64 KiB payloads before the kernel re-validates them.
+Defaults / hard: request/event/state/activity/reasoning/raw 64 KiB / 1 MiB; input 128 / 1024 messages, 32 / 256 tools/contexts, 8 / 64 interrupts, 16 / 64 media parts; patches 128 / 4096 operations; JSON depth 16 / 64, properties 128 / 4096, arrays 512 / 8192; replay 100 / 500 records; queue 4096 / 4096 events (a lagging client's adjacent deltas are coalesced; overflow fails the stream and the run still settles); stream 10,000 / 100,000 events and 10 / 64 MiB; request wall time 120 seconds / 30 minutes. SSE only; WebSocket/protobuf/push stay undeclared. Overflow closes with a bounded error. Resume decisions are bounded to 128 entries, 8 KiB reasons, and 64 KiB payloads before the kernel re-validates them.
 
 Run the demos with `bun examples/ag-ui-server.ts` (approval interrupt/resume), `bun examples/ag-ui-a2ui.ts` (A2UI painting), and `bun examples/ag-ui-mcp-apps.ts` (MCP Apps proxy).
 

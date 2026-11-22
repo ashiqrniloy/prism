@@ -8,7 +8,7 @@ import type { PersistencePage, SessionEntry, SessionEntryQuery } from "@arnilo/p
 // adapter authors implement and test against before shipping dialect-specific DDL.
 
 /** Current shared persistence schema version for production database adapters. */
-export const PERSISTENCE_SCHEMA_VERSION = 11;
+export const PERSISTENCE_SCHEMA_VERSION = 13;
 
 export type PersistenceTableName =
   | "prism_tenants"
@@ -32,7 +32,7 @@ export type PersistenceTableName =
   | "prism_tenant_quotas"
   | "prism_migrations";
 
-export type PersistenceColumnType = "text" | "integer" | "number" | "boolean" | "json" | "timestamp";
+export type PersistenceColumnType = "text" | "integer" | "bigint" | "number" | "boolean" | "json" | "timestamp";
 
 export interface PersistenceColumnDefinition {
   readonly name: string;
@@ -42,6 +42,8 @@ export interface PersistenceColumnDefinition {
   readonly defaultValue?: string;
   /** Column participates in tenant isolation boundaries when true. */
   readonly tenantScoped?: boolean;
+  /** Dialects that carry this column; omitted means every dialect. */
+  readonly dialects?: readonly PersistenceSchemaDialect[];
 }
 
 export interface PersistenceForeignKeyDefinition {
@@ -67,6 +69,8 @@ export interface PersistenceIndexDefinition {
   readonly unique?: boolean;
   /** Human-readable query-plan purpose for adapter authors and tests. */
   readonly purpose: string;
+  /** Dialects that carry this index; omitted means every dialect. */
+  readonly dialects?: readonly PersistenceSchemaDialect[];
 }
 
 /** Dialect-neutral schema model shared by SQLite and PostgreSQL adapters. */
@@ -116,6 +120,12 @@ const SESSION_LINK_COLUMNS: readonly PersistenceColumnDefinition[] = [
   { name: "actor_agent", type: "text", nullable: true },
   { name: "actor_vendor", type: "text", nullable: true },
 ];
+
+/** Partial unique index enforcing one linear (tip-checked) child per parent (plan 230 Task 2, migration 012). */
+export const SESSION_ENTRIES_LINEAR_INDEX = "prism_session_entries_linear_parent_unique";
+
+/** PostgreSQL-only `(session_id, seq)` index ordering entries by insertion (plan 230 Task 4, migration 013). */
+export const SESSION_ENTRIES_SEQ_INDEX = "prism_session_entries_session_seq_idx";
 
 const SESSION_LINK_INDEXES = [
   {
@@ -263,6 +273,10 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
           { name: "summary", type: "text", nullable: true },
           { name: "data", type: "json", nullable: true },
           { name: "metadata", type: "json", nullable: true },
+          // Plan 230 Task 2: 1 for a tip-checked (linear) append; one linear child per parent.
+          { name: "linear", type: "integer", defaultValue: "0" },
+          // Plan 230 Task 4: PostgreSQL insertion order (identity). SQLite orders by its stable rowid instead.
+          { name: "seq", type: "bigint", dialects: ["postgres"] },
         ],
         foreignKeys: [
           { columns: ["session_id"], referencesTable: "prism_sessions", referencesColumns: ["id"] },
@@ -579,6 +593,20 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
         purpose: "append parent validation and recursive branch reads",
       },
       {
+        name: SESSION_ENTRIES_LINEAR_INDEX,
+        table: "prism_session_entries",
+        columns: ["session_id", "parent_id"],
+        unique: true,
+        purpose: "tip check: one linear child per parent (partial index WHERE linear = 1)",
+      },
+      {
+        name: SESSION_ENTRIES_SEQ_INDEX,
+        table: "prism_session_entries",
+        columns: ["session_id", "seq"],
+        purpose: "insertion-ordered entry listing and latest-leaf lookup (SQLite uses rowid)",
+        dialects: ["postgres"],
+      },
+      {
         name: "prism_session_append_idempotency_unique",
         table: "prism_session_append_idempotency",
         columns: ["session_id", "expected_parent_id", "idempotency_key"],
@@ -707,90 +735,104 @@ export function createPersistenceSchemaModel(): PersistenceSchemaModel {
 function migrationStep(version: number, name: string, description: string): PersistenceMigrationStep {
   const model = createPersistenceSchemaModel();
   const content =
-    version === 11
-      ? {
-          tables: model.tables.filter((table) => table.name === "prism_evaluations" || table.name === "prism_experiment_reports"),
-          indexes: model.indexes.filter((index) => index.table === "prism_evaluations" || index.table === "prism_experiment_reports"),
-        }
-      : version === 1
-        ? {
-            tables: model.tables
-              .filter(
-                (table) =>
-                  table.name !== "prism_run_feedback" &&
-                  table.name !== "prism_agent_event_streams" &&
-                  table.name !== "prism_evaluations" &&
-                  table.name !== "prism_experiment_reports",
-              )
-              .map((table) =>
-                table.name === "prism_usage"
-                  ? { ...table, columns: table.columns.filter((column) => !["scope", "turn", "attempt"].includes(column.name)) }
-                  : table.name === "prism_sessions"
-                    ? {
-                        ...table,
-                        columns: table.columns.filter((column) => !SESSION_LINK_COLUMNS.some((link) => link.name === column.name)),
-                      }
-                    : table,
-              ),
-            indexes: model.indexes
-              .filter(
-                (index) =>
-                  !index.name.startsWith("prism_usage_session_scope_") &&
-                  !index.name.startsWith("prism_run_feedback_") &&
-                  !index.name.startsWith("prism_evaluations_") &&
-                  !index.name.startsWith("prism_experiment_reports_") &&
-                  !index.name.startsWith("prism_sessions_link_") &&
-                  !index.name.startsWith("prism_agent_event_streams_") &&
-                  !index.name.startsWith("prism_agent_events_owner_timestamp_"),
-              )
-              .map((index) =>
-                index.name === "prism_agent_events_run_sequence_idx"
-                  ? (() => {
-                      const { unique: _unique, ...legacy } = index;
-                      return legacy;
-                    })()
-                  : index,
-              ),
-          }
-        : version === 7
-          ? { indexes: ["prism_agent_events_owner_timestamp_sequence_idx"] }
-          : version === 8
-            ? { table: "prism_sessions", columns: ["version"] }
-            : version === 10
-              ? {
-                  table: "prism_sessions",
-                  columns: SESSION_LINK_COLUMNS.map((column) => column.name),
-                  indexes: SESSION_LINK_INDEXES.map((index) => index.name),
-                }
-              : version === 9
-                ? { table: "prism_runs", columns: ["prompt_version"] }
-                : version === 6
+    version === 13
+      ? { table: "prism_session_entries", columns: ["seq"], indexes: [SESSION_ENTRIES_SEQ_INDEX], dialects: ["postgres"] }
+      : version === 12
+        ? { table: "prism_session_entries", columns: ["linear"], indexes: [SESSION_ENTRIES_LINEAR_INDEX] }
+        : version === 11
+          ? {
+              tables: model.tables.filter((table) => table.name === "prism_evaluations" || table.name === "prism_experiment_reports"),
+              indexes: model.indexes.filter((index) => index.table === "prism_evaluations" || index.table === "prism_experiment_reports"),
+            }
+          : version === 1
+            ? {
+                tables: model.tables
+                  .filter(
+                    (table) =>
+                      table.name !== "prism_run_feedback" &&
+                      table.name !== "prism_agent_event_streams" &&
+                      table.name !== "prism_evaluations" &&
+                      table.name !== "prism_experiment_reports",
+                  )
+                  .map((table) =>
+                    table.name === "prism_usage"
+                      ? { ...table, columns: table.columns.filter((column) => !["scope", "turn", "attempt"].includes(column.name)) }
+                      : table.name === "prism_sessions"
+                        ? {
+                            ...table,
+                            columns: table.columns.filter((column) => !SESSION_LINK_COLUMNS.some((link) => link.name === column.name)),
+                          }
+                        : table.name === "prism_session_entries"
+                          ? { ...table, columns: table.columns.filter((column) => column.name !== "linear" && column.name !== "seq") }
+                          : table,
+                  ),
+                indexes: model.indexes
+                  .filter(
+                    (index) =>
+                      !index.name.startsWith("prism_usage_session_scope_") &&
+                      !index.name.startsWith("prism_run_feedback_") &&
+                      !index.name.startsWith("prism_evaluations_") &&
+                      !index.name.startsWith("prism_experiment_reports_") &&
+                      !index.name.startsWith("prism_sessions_link_") &&
+                      !index.name.startsWith("prism_agent_event_streams_") &&
+                      !index.name.startsWith("prism_agent_events_owner_timestamp_") &&
+                      index.name !== SESSION_ENTRIES_LINEAR_INDEX &&
+                      index.name !== SESSION_ENTRIES_SEQ_INDEX,
+                  )
+                  .map((index) =>
+                    index.name === "prism_agent_events_run_sequence_idx"
+                      ? (() => {
+                          const { unique: _unique, ...legacy } = index;
+                          return legacy;
+                        })()
+                      : index,
+                  ),
+              }
+            : version === 7
+              ? { indexes: ["prism_agent_events_owner_timestamp_sequence_idx"] }
+              : version === 8
+                ? { table: "prism_sessions", columns: ["version"] }
+                : version === 10
                   ? {
-                      tables: ["prism_agent_event_streams"],
-                      indexes: ["prism_agent_events_run_sequence_idx"],
+                      table: "prism_sessions",
+                      columns: SESSION_LINK_COLUMNS.map((column) => column.name),
+                      indexes: SESSION_LINK_INDEXES.map((index) => index.name),
                     }
-                  : version === 2
-                    ? { table: "prism_usage", columns: ["scope", "turn", "attempt"], indexes: ["prism_usage_session_scope_recorded_idx"] }
-                    : version === 3
+                  : version === 9
+                    ? { table: "prism_runs", columns: ["prompt_version"] }
+                    : version === 6
                       ? {
-                          tables: ["prism_run_feedback"],
-                          indexes: model.indexes.filter((index) => index.name.startsWith("prism_run_feedback_")).map((index) => index.name),
+                          tables: ["prism_agent_event_streams"],
+                          indexes: ["prism_agent_events_run_sequence_idx"],
                         }
-                      : version === 4
-                        ? // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
-                          { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
-                        : version === 5
+                      : version === 2
+                        ? {
+                            table: "prism_usage",
+                            columns: ["scope", "turn", "attempt"],
+                            indexes: ["prism_usage_session_scope_recorded_idx"],
+                          }
+                        : version === 3
                           ? {
-                              tables: ["prism_legal_holds", "prism_tenant_quotas"],
-                              indexes: [
-                                "prism_legal_holds_owner_resource_idx",
-                                "prism_legal_holds_created_id_idx",
-                                "prism_tenant_quotas_owner_kind_idx",
-                              ],
+                              tables: ["prism_run_feedback"],
+                              indexes: model.indexes
+                                .filter((index) => index.name.startsWith("prism_run_feedback_"))
+                                .map((index) => index.name),
                             }
-                          : (() => {
-                              throw new Error(`Unknown migration version ${version}`);
-                            })();
+                          : version === 4
+                            ? // Adapter-local FTS objects (SQLite FTS5 / Postgres tsvector) map to this canonical name.
+                              { search: ["prism_session_search"], indexes: ["prism_sessions_updated_id_idx"] }
+                            : version === 5
+                              ? {
+                                  tables: ["prism_legal_holds", "prism_tenant_quotas"],
+                                  indexes: [
+                                    "prism_legal_holds_owner_resource_idx",
+                                    "prism_legal_holds_created_id_idx",
+                                    "prism_tenant_quotas_owner_kind_idx",
+                                  ],
+                                }
+                              : (() => {
+                                  throw new Error(`Unknown migration version ${version}`);
+                                })();
   return {
     version,
     name,
@@ -816,6 +858,16 @@ export function createPersistenceMigrationContract(): PersistenceMigrationContra
       migrationStep(9, "009_run_prompt_version", "Add a nullable prompt_version JSON provenance ref column to prism_runs."),
       migrationStep(10, "010_session_links", "Add nullable, indexed session link and actor columns to prism_sessions."),
       migrationStep(11, "011_evaluations", "Add bounded ownership-scoped evaluations and experiment summaries."),
+      migrationStep(
+        12,
+        "012_session_entry_linear",
+        "Add a NOT NULL DEFAULT 0 linear column to prism_session_entries and a partial unique index of one linear child per parent.",
+      ),
+      migrationStep(
+        13,
+        "013_session_entry_seq",
+        "PostgreSQL: add a backfilled BIGINT identity seq column to prism_session_entries and a (session_id, seq) index. SQLite: no change (rowid).",
+      ),
     ],
     lockGuidance:
       "Acquire a dialect-specific migration lock before applying steps (PostgreSQL advisory lock; SQLite exclusive transaction). Only one process should migrate at a time.",
@@ -986,14 +1038,19 @@ function normalizedDefault(value: string | undefined): string | undefined {
     .replace(/::[a-z_ ]+$/, "");
 }
 
+function inDialect(dialects: readonly PersistenceSchemaDialect[] | undefined, dialect: PersistenceSchemaDialect): boolean {
+  return dialects === undefined || dialects.includes(dialect);
+}
+
 function compatibleColumnType(dialect: PersistenceSchemaDialect, actual: string, expected: PersistenceColumnType): boolean {
   const type = actual.trim().toUpperCase();
   if (dialect === "sqlite") {
-    if (expected === "integer" || expected === "boolean") return type === "INTEGER";
+    if (expected === "integer" || expected === "bigint" || expected === "boolean") return type === "INTEGER";
     if (expected === "number") return type === "REAL";
     return type === "TEXT";
   }
   if (expected === "integer") return type === "INTEGER";
+  if (expected === "bigint") return type === "BIGINT";
   if (expected === "boolean") return type === "BOOLEAN";
   if (expected === "number") return type === "DOUBLE PRECISION";
   return type === "TEXT";
@@ -1007,7 +1064,8 @@ export function assertPersistenceSchemaShape(
 ): void {
   assertPersistenceSchemaModel(model);
   const actualTables = new Map(shape.tables.map((table) => [table.name, table]));
-  for (const expected of model.tables) {
+  for (const table of model.tables) {
+    const expected = { ...table, columns: table.columns.filter((column) => inDialect(column.dialects, dialect)) };
     const actual = actualTables.get(expected.name);
     if (!actual) throw new Error(`Persistence schema missing table ${expected.name}`);
     if (actual.columns.length !== expected.columns.length)
@@ -1045,7 +1103,7 @@ export function assertPersistenceSchemaShape(
     }
   }
   const actualIndexes = new Map(shape.indexes.map((index) => [index.name, index]));
-  for (const expected of model.indexes) {
+  for (const expected of model.indexes.filter((index) => inDialect(index.dialects, dialect))) {
     const actual = actualIndexes.get(expected.name);
     if (!actual) throw new Error(`Persistence schema missing required index ${expected.name}`);
     if (
@@ -1096,13 +1154,17 @@ export function assertAdapterSchemaMatchesModel(
   adapterTables: readonly string[],
   adapterIndexes: readonly string[],
   model: PersistenceSchemaModel = createPersistenceSchemaModel(),
+  dialect?: PersistenceSchemaDialect,
 ): void {
   assertPersistenceSchemaModel(model);
   const tables = new Set(adapterTables);
   for (const table of model.tables.map((item) => item.name)) {
     if (!tables.has(table)) throw new Error(`Adapter schema missing table ${table}`);
   }
-  for (const index of model.indexes) {
+  // A dialect-restricted index is required only when the caller names that dialect.
+  for (const index of model.indexes.filter(
+    (item) => item.dialects === undefined || (dialect !== undefined && item.dialects.includes(dialect)),
+  )) {
     if (!adapterIndexes.includes(index.name)) {
       throw new Error(`Adapter schema missing required index ${index.name}`);
     }

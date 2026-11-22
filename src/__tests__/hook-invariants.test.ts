@@ -80,6 +80,7 @@ describe("hook invariants", () => {
     assert.deepEqual(controllerKeys, [
       "append",
       "ask",
+      "checkpoint",
       "emit",
       "end",
       "executeTools",
@@ -87,6 +88,7 @@ describe("hook invariants", () => {
       "limits",
       "model",
       "observe",
+      "restored",
       "session",
       "signal",
       "state",

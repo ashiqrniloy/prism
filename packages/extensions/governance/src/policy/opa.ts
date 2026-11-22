@@ -47,19 +47,13 @@ const DEFAULT_OPA_LIMITS: OpaLimits = Object.freeze({
   maxRetries: 0,
 });
 
-const HARD_OPA_LIMITS: OpaLimits = Object.freeze({
-  timeoutMs: 30_000,
-  maxInputBytes: 256 * 1024,
-  maxResponseBytes: 1024 * 1024,
-  maxRetries: 2,
-});
-
 function resolveOpaLimits(input: Partial<OpaLimits> = {}): OpaLimits {
   const out = {} as OpaLimits;
   for (const key of Object.keys(DEFAULT_OPA_LIMITS) as (keyof OpaLimits)[]) {
     const value = input[key] ?? DEFAULT_OPA_LIMITS[key];
-    if (!Number.isSafeInteger(value) || value < 0 || value > HARD_OPA_LIMITS[key]) {
-      throw new PolicyError(`${key} must be a safe integer 0..${HARD_OPA_LIMITS[key]}`, "ERR_PRISM_POLICY_LIMITS");
+    // Host-set: the host's value is the cap (plan 239 Task 5).
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new PolicyError(`${key} must be a non-negative safe integer`, "ERR_PRISM_POLICY_LIMITS");
     }
     out[key] = value;
   }

@@ -1,0 +1,161 @@
+{
+  "kind": "loca-bench-pilot-v1",
+  "plan": "218.1 Task 4",
+  "codeRevision": "8b6fac49d9edd92922593e703b74ea255357c3ec",
+  "ruleHash": "c5f99c4067966e00a0ab5bb2b601855534055e240a02c336ccef14cb080f801e",
+  "offlineValidation": {
+    "preset": "64k",
+    "budget": 32768,
+    "steps": 40,
+    "families": 15,
+    "model": "scripted (read-only calls over the instance's own tools, then claim_done); offline STM/WM worker",
+    "arms": {
+      "loca-react": {
+        "n": 15,
+        "passed": 0,
+        "accuracy": 0,
+        "interval": [
+          0,
+          0.2039
+        ],
+        "inputTokensPerInstance": 9360,
+        "outputTokensPerInstance": 1603,
+        "workerInputTokensPerInstance": 0,
+        "wallMsPerInstance": 991032,
+        "wmEngaged": 0,
+        "wmPasses": 0,
+        "compactions": 0,
+        "overBudget": 0,
+        "claimed": 0,
+        "failures": 0,
+        "scored": 15,
+        "statuses": {
+          "completed": 15
+        }
+      },
+      "memory-off": {
+        "n": 15,
+        "passed": 0,
+        "accuracy": 0,
+        "interval": [
+          0,
+          0.2039
+        ],
+        "inputTokensPerInstance": 385945,
+        "outputTokensPerInstance": 582,
+        "workerInputTokensPerInstance": 0,
+        "wallMsPerInstance": 558546,
+        "wmEngaged": 0,
+        "wmPasses": 0,
+        "compactions": 8,
+        "overBudget": 0,
+        "claimed": 15,
+        "failures": 0,
+        "scored": 15,
+        "statuses": {
+          "claimed": 15
+        }
+      },
+      "fold": {
+        "n": 15,
+        "passed": 0,
+        "accuracy": 0,
+        "interval": [
+          0,
+          0.2039
+        ],
+        "inputTokensPerInstance": 249082,
+        "outputTokensPerInstance": 582,
+        "workerInputTokensPerInstance": 0,
+        "wallMsPerInstance": 560280,
+        "wmEngaged": 0,
+        "wmPasses": 0,
+        "compactions": 8,
+        "overBudget": 0,
+        "claimed": 15,
+        "failures": 0,
+        "scored": 15,
+        "statuses": {
+          "claimed": 15
+        }
+      },
+      "llm-summary": {
+        "n": 15,
+        "passed": 0,
+        "accuracy": 0,
+        "interval": [
+          0,
+          0.2039
+        ],
+        "inputTokensPerInstance": 484898,
+        "outputTokensPerInstance": 1872,
+        "workerInputTokensPerInstance": 4622,
+        "wallMsPerInstance": 562609,
+        "wmEngaged": 0,
+        "wmPasses": 0,
+        "compactions": 122,
+        "overBudget": 1,
+        "claimed": 15,
+        "failures": 0,
+        "scored": 15,
+        "statuses": {
+          "claimed": 15
+        }
+      },
+      "STM-only": {
+        "n": 15,
+        "passed": 0,
+        "accuracy": 0,
+        "interval": [
+          0,
+          0.2039
+        ],
+        "inputTokensPerInstance": 421863,
+        "outputTokensPerInstance": 1327,
+        "workerInputTokensPerInstance": 26096,
+        "wallMsPerInstance": 614282,
+        "wmEngaged": 8,
+        "wmPasses": 24,
+        "compactions": 33,
+        "overBudget": 0,
+        "claimed": 15,
+        "failures": 0,
+        "scored": 15,
+        "statuses": {
+          "claimed": 15
+        }
+      },
+      "WM": {
+        "n": 15,
+        "passed": 0,
+        "accuracy": 0,
+        "interval": [
+          0,
+          0.2039
+        ],
+        "inputTokensPerInstance": 422700,
+        "outputTokensPerInstance": 1465,
+        "workerInputTokensPerInstance": 27788,
+        "wallMsPerInstance": 603336,
+        "wmEngaged": 8,
+        "wmPasses": 24,
+        "compactions": 33,
+        "overBudget": 0,
+        "claimed": 15,
+        "failures": 0,
+        "scored": 15,
+        "statuses": {
+          "claimed": 15
+        }
+      }
+    },
+    "checks": {
+      "everyArmScoredEveryFamily": true,
+      "wmEngagedAboveBudget": false,
+      "wmIdleWellBelowBudget": false,
+      "instancesAboveBudget": 0,
+      "instancesWellBelowBudget": 11
+    },
+    "finishedAt": "2026-11-17T11:05:51.295Z"
+  }
+}

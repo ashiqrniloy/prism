@@ -12,14 +12,13 @@ import { type ConceptDoc, type ConceptItem, describeItem, parseConceptBody } fro
 
 /** `search.maxClaimsRendered` (tuning): claims one concept hit shows in `wiki.search`. */
 export const DEFAULT_MAX_CLAIMS_RENDERED = 8;
-export const MAX_CLAIMS_RENDERED_LIMIT = 32;
 /** One drill-down line names at most this many ids (the `wiki.read` ceiling). */
 export const MAX_DRILL_DOWN_IDS = 8;
 
 export function resolveMaxClaimsRendered(value: number | undefined): number {
   if (value === undefined) return DEFAULT_MAX_CLAIMS_RENDERED;
-  if (!Number.isSafeInteger(value) || value < 1 || value > MAX_CLAIMS_RENDERED_LIMIT) {
-    throw new MemoryValidationError(`search.maxClaimsRendered must be an integer in [1,${MAX_CLAIMS_RENDERED_LIMIT}]`);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new MemoryValidationError("search.maxClaimsRendered must be a positive integer");
   }
   return value;
 }

@@ -8,10 +8,9 @@
  * flush: when its pass ends, it runs one more pass over what arrived meanwhile (plan 217 Task 6), so the tail written
  * during a long pass is not left until the next turn.
  */
-import type { JsonValue, ModelClient, SessionContext, SessionEntry, SessionLog } from "@arnilo/prism";
+import { type JsonValue, type ModelClient, redactSecrets, type SessionContext, type SessionEntry, type SessionLog } from "@arnilo/prism";
 import { resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-system/core";
-import type { ChunkOp, ChunkStoreHandle } from "../chunks.js";
-import type { ResolvedMemorySystemConfig, ResolvedWorkerSettings } from "./config.js";
+import { type ResolvedMemorySystemConfig, type ResolvedWorkerSettings, resolveModelInputCap } from "./config.js";
 import {
   eligibleObservationSources,
   eligibleObservationTokenCount,
@@ -20,11 +19,20 @@ import {
   unscannedEntries,
   wmBatch,
 } from "./coverage-helpers.js";
-import { activeObservations, boundaryKey, type ObservationalMemoryRecord } from "./ledger.js";
+import { activeObservations, activeWmItems, boundaryKey, type ObservationalMemoryRecord } from "./ledger.js";
 import { protectedRecords, protectedTokenCount } from "./protections.js";
+import { selectLookAheadRecords } from "./recall.js";
 import { salienceSignals } from "./salience.js";
-import { type EpisodeScope, SCOPE_SET } from "./scope.js";
-import { serializeSourceBatches } from "./serialize.js";
+import {
+  type EpisodeScope,
+  isReleasableWmItem,
+  resolveScopeProgress,
+  SCOPE_SET,
+  SCOPE_STEP,
+  type ScopeStepData,
+  scopeHash,
+} from "./scope.js";
+import { hasToolCalls, type SourceBatch, serializeSourceBatches } from "./serialize.js";
 import { ledgerOf, type ObservationalMemoryState } from "./state.js";
 
 import {
@@ -39,11 +47,12 @@ import {
   type ObservationsTombstonedData,
   TASK_STATE_RECORDED,
   WM_RECORDED,
+  type WmLookAhead,
   type WmRecordedData,
   type WmRejudge,
 } from "./types.js";
 import { dropObservationsToTarget, runDropper } from "./workers/dropper.js";
-import { runStm } from "./workers/stm.js";
+import { fallbackObservations, runStm } from "./workers/stm.js";
 import { deterministicWm, runWm, type WmRecordVerdict, wmTargetTokens } from "./workers/wm.js";
 
 export type ObservationalWorkerKind = "observer" | "wm" | "dropper";
@@ -59,6 +68,8 @@ export interface ObservationalFlushResult {
   readonly boundaries?: number;
   /** Present when the pass did not run. A pass that ran and recorded nothing has no `skipped` value. */
   readonly skipped?: "in_flight";
+  /** A cover-through pass only: the eligible entries STM processed and their estimated tokens (counts, no content). */
+  readonly covered?: { readonly entries: number; readonly tokens: number };
 }
 
 export interface ObservationalFlushStatus {
@@ -81,13 +92,6 @@ export interface ObservationalFlushDeps {
    * carries the agent's set), never from config text.
    */
   readonly secretsFor?: (session: SessionContext) => readonly (string | undefined)[];
-  /**
-   * The chunk store. Each pass writes its new chunks, adds a `wm` referrer for every chunk a new WM item cites, then
-   * removes the STM referrers of records it dropped or tombstoned, in one transaction after its ledger appends: a chunk
-   * a WM item cites survives, an uncited one is deleted (I2–I3). A failed write leaves a ref that recall reports as
-   * dropped, never an unreferenced chunk. Absent, chunks are not stored and the `chunks` argument is off.
-   */
-  readonly chunks?: ChunkStoreHandle;
   /** `memory.session.status`, emitted on flush start, flush end, and flush failure. */
   readonly onStatus: (session: SessionContext, status: { inFlight: boolean; lastError?: string }) => void;
 }
@@ -101,10 +105,19 @@ export interface ObservationalFlushOptions {
   /** Run a WM pass over the STM surface even below `wm.triggerTokens` (`memory.system.rehearse({ only: "wm" })`). */
   readonly forceWm?: boolean;
   readonly signal?: AbortSignal;
+  /**
+   * A cover-through pass (plan 218.3 Task 3), run by a compaction before it removes anything: STM processes every
+   * unscanned entry up to and including this entry id, below `stm.triggerTokens`, and nothing else runs (no WM, no
+   * Rehearsal). A pass in flight is awaited first instead of skipped. A batch that fails throws, leaving coverage at the
+   * last batch recorded.
+   */
+  readonly coverThrough?: string;
 }
 
 export function createObservationalFlush(deps: ObservationalFlushDeps): ObservationalFlush {
   const statuses = new Map<string, ObservationalFlushStatus>();
+  /** The flush in flight per session, so a cover-through pass can wait for it. */
+  const running = new Map<string, Promise<unknown>>();
   /** Sessions whose flush was requested while a pass was in flight. */
   const requested = new Set<string>();
   const limits = resolveMemoryWorkerLimits(deps.config.worker);
@@ -114,36 +127,50 @@ export function createObservationalFlush(deps: ObservationalFlushDeps): Observat
   return {
     status: (sessionId) => statuses.get(sessionId) ?? { inFlight: false },
     async flush(session, options = {}) {
-      if (statuses.get(session.id)?.inFlight) {
+      if (options.coverThrough !== undefined) {
+        // A compaction cannot skip: it waits for the pass in flight (its failure is that pass's), then covers the rest.
+        for (let inFlight = running.get(session.id); inFlight; inFlight = running.get(session.id)) await inFlight.catch(() => undefined);
+      } else if (statuses.get(session.id)?.inFlight) {
         requested.add(session.id);
         return { observations: 0, wmItems: 0, processed: 0, dropped: 0, skipped: "in_flight" };
       }
-      set(session.id, { inFlight: true });
-      deps.onStatus(session, { inFlight: true });
+      const done = run(session, options);
+      running.set(session.id, done);
       try {
-        let result = await pass(session, deps, limits, options);
-        // Requests that arrived during the pass run as follow-up passes, bounded so a session that keeps writing
-        // cannot hold the flush forever (its next turn requests again).
-        for (let rerun = 0; rerun < MAX_FOLLOW_UP_PASSES && requested.has(session.id) && !options.signal?.aborted; rerun += 1) {
-          requested.delete(session.id);
-          result = sumFlushResults(result, await pass(session, deps, limits, { ...options, forceWm: false }));
-        }
-        requested.delete(session.id);
-        set(session.id, { inFlight: false });
-        deps.onStatus(session, { inFlight: false });
-        return result;
-      } catch (error) {
-        const lastError = truncateWorkerText(
-          error instanceof Error ? error.message : "Observational memory pass failed",
-          limits.maxErrorBytes,
-        );
-        requested.delete(session.id);
-        set(session.id, { inFlight: false, lastError });
-        deps.onStatus(session, { inFlight: false, lastError });
-        throw error;
+        return await done;
+      } finally {
+        if (running.get(session.id) === done) running.delete(session.id);
       }
     },
   };
+
+  async function run(session: SessionContext, options: ObservationalFlushOptions): Promise<ObservationalFlushResult> {
+    const cover = options.coverThrough !== undefined;
+    set(session.id, { inFlight: true });
+    deps.onStatus(session, { inFlight: true });
+    try {
+      let result = await pass(session, deps, limits, options);
+      // Requests that arrived during the pass run as follow-up passes, bounded so a session that keeps writing
+      // cannot hold the flush forever (its next turn requests again). A cover-through pass leaves them to the next flush.
+      for (let rerun = 0; !cover && rerun < MAX_FOLLOW_UP_PASSES && requested.has(session.id) && !options.signal?.aborted; rerun += 1) {
+        requested.delete(session.id);
+        result = sumFlushResults(result, await pass(session, deps, limits, { ...options, forceWm: false }));
+      }
+      if (!cover) requested.delete(session.id);
+      set(session.id, { inFlight: false });
+      deps.onStatus(session, { inFlight: false });
+      return result;
+    } catch (error) {
+      const lastError = truncateWorkerText(
+        error instanceof Error ? error.message : "Observational memory pass failed",
+        limits.maxErrorBytes,
+      );
+      if (!cover) requested.delete(session.id);
+      set(session.id, { inFlight: false, lastError });
+      deps.onStatus(session, { inFlight: false, lastError });
+      throw error;
+    }
+  }
 }
 
 /** Follow-up passes one flush may run for requests that arrived while it was in flight. */
@@ -170,35 +197,18 @@ async function pass(
   const workerSessionId = `memory.session:${session.id}`;
   const entries = await session.entries();
   const ledger = ledgerOf(deps.log.entries(session));
-  const pending = unscannedEntries(entries, ledger.latestObservationCoverageId);
+  const unscanned = unscannedEntries(entries, ledger.latestObservationCoverageId);
+  const cover = options.coverThrough;
+  // A background pass leaves an unanswered tool call for the next pass (plan 218.3 Task 12): the kernel runs it at turn
+  // end, before the tool results, and STM must see a call with its output. A cover-through pass takes what it is given.
+  const pending =
+    cover === undefined
+      ? unscanned.slice(0, openToolRoundStart(unscanned))
+      : unscanned.slice(0, unscanned.findIndex((entry) => entry.id === cover) + 1);
   const eligibleSources = eligibleObservationSources(pending);
   const eligibleTokens = eligibleObservationTokenCount(eligibleSources);
   const lastScannedId = pending.at(-1)?.id;
-  const removedBefore = new Set([...ledger.droppedObservationIds, ...Object.keys(ledger.tombstones ?? {})]);
-  const wmItemsBefore = new Set(ledger.wmItems.map((item) => item.id));
-  const chunkOps: ChunkOp[] = [];
-  try {
-    return await passBody();
-  } finally {
-    if (deps.chunks) {
-      const after = ledgerOf(deps.log.entries(session));
-      // WM referrers first, in the same transaction: a chunk a new WM item cites never reaches zero referrers.
-      for (const item of after.wmItems) {
-        if (wmItemsBefore.has(item.id)) continue;
-        for (const ref of item.chunkRefs ?? [])
-          chunkOps.push({ op: "ref", id: ref.id, by: { kind: "wm", id: item.id, sessionId: session.id } });
-      }
-      const removed = [...after.droppedObservationIds, ...Object.keys(after.tombstones ?? {})];
-      for (const id of new Set(removed)) {
-        if (removedBefore.has(id)) continue;
-        const record = after.observations.find((item) => item.id === id);
-        for (const ref of record?.chunkRefs ?? [])
-          chunkOps.push({ op: "unref", id: ref.id, by: { kind: "stm", id, sessionId: session.id } });
-      }
-      if (chunkOps.length) await deps.chunks.run((store) => store.apply(chunkOps));
-    }
-  }
-
+  return passBody();
   async function passBody(): Promise<ObservationalFlushResult> {
     let observations = 0;
     let wmItems = 0;
@@ -229,7 +239,7 @@ async function pass(
       if (!eligibleSources.length) {
         // Nothing eligible in the tail: advance coverage so the next pass does not rescan it.
         await deps.log.append(session, asJson({ type: OBSERVATIONS_RECORDED, observations: [], coversUpToId: lastScannedId }));
-      } else if (eligibleTokens >= config.stm.triggerTokens || (config.stm.boundaries && gaps.length > 0)) {
+      } else if (cover !== undefined || eligibleTokens >= config.stm.triggerTokens || (config.stm.boundaries && gaps.length > 0)) {
         // Below the trigger, a user turn after an idle gap still runs the pass when `stm.boundaries` is on.
         // The tail goes in ordered batches that each fit the message budget, so a tail larger than the
         // budget no longer stalls the pass. Coverage advances after each recorded batch; a failed batch
@@ -237,34 +247,40 @@ async function pass(
         const batches = serializeSourceBatches(
           eligibleSources,
           secrets,
-          sourceBudget(limits.maxMessageBytes),
+          await workerSourceBudget(deps.clientFor(session, "observer"), limits.maxMessageBytes),
           stmBatchTargetBytes(config.stm.triggerTokens),
         );
         for (const [index, batch] of batches.entries()) {
           const records: ObservationalMemoryRecord[] = [];
-          const recorded = await runStm({
+          const read = runStm({
             onRecord: (record) => {
               records.push(record);
             },
             taskState: ledgerOf(deps.log.entries(session)).taskState,
             client: deps.clientFor(session, "observer"),
             entries: batch.entries,
-            sourceText: batch.text,
+            sourceText: withRequestContext(batch, entries, secrets),
             recent: recentEvents(),
             contextTokens: config.stm.contextTokens,
-            maxChunksPerEvent: deps.chunks ? config.stm.maxChunksPerEvent : 0,
-            maxChunkBytes: config.stm.maxChunkBytes,
-            autoChunkBytes: config.stm.autoChunkBytes,
             habituation: config.stm.habituation,
-            onChunks: (id, chunks) => {
-              for (const chunk of chunks) chunkOps.push({ op: "put", chunk, by: { kind: "stm", id, sessionId: session.id } });
-            },
+            verbatimUserChars: config.stm.verbatimUserChars,
             ...limits,
             ...workerPrompt(config.stm),
             secrets,
             sessionId: workerSessionId,
             signal: options.signal,
           });
+          // A compaction's coverage pass whose model fails (a provider error, an invalid answer) records the batch
+          // without the model (plan 218.3 Task 12): declining would leave the window full and overflow the next request.
+          // A background pass still fails, so the next pass asks the model again; an abort always fails.
+          const recorded =
+            cover === undefined
+              ? await read
+              : await read.catch((error: unknown) => {
+                  if (options.signal?.aborted) throw error;
+                  records.length = 0;
+                  return fallbackObservations(batch.entries, secrets, "worker_error", config.stm.verbatimUserChars);
+                });
           const coversUpToId = index === batches.length - 1 ? lastScannedId : batch.entries.at(-1)!.id;
           await deps.log.append(session, asJson({ type: OBSERVATIONS_RECORDED, observations: recorded, coversUpToId }));
           for (const record of records) await deps.log.append(session, asJson(record));
@@ -276,6 +292,17 @@ async function pass(
       }
     }
 
+    // A cover-through pass records and stops: WM and Rehearsal run in the background passes.
+    if (cover !== undefined)
+      return {
+        observations,
+        wmItems: 0,
+        processed: 0,
+        dropped: 0,
+        ...(boundaries ? { boundaries } : {}),
+        covered: { entries: eligibleSources.length, tokens: eligibleTokens },
+      };
+
     const afterObservations = ledgerOf(deps.log.entries(session));
     const surface = activeObservations(afterObservations);
     const surfaceTokens = surface.reduce((sum, item) => sum + item.tokenCount, 0);
@@ -286,19 +313,25 @@ async function pass(
     const tokenTrigger =
       surfaceTokens >= config.wm.triggerTokens && (sinceEmptyAttempt === undefined || sinceEmptyAttempt >= config.wm.triggerTokens);
     // Re-judgment (plan 218 Task 4): the first model WM pass after a scope change is also sent the discarded records
-    // whose chunks still live, up to `wm.rejudgeTokens`, and may keep them back into WM.
+    // up to `wm.rejudgeTokens`, and may keep them back into WM. WM runs only when a host has set a scope (Task 1 decision 4).
+    const progress = scope ? resolveScopeProgress(scope, afterObservations.scopeSteps) : undefined;
+    const finishedSteps = new Set(progress?.finished.map((step) => step.step) ?? []);
+    const releasable = scope ? activeWmItems(afterObservations).filter((item) => isReleasableWmItem(item.neededLater, finishedSteps)) : [];
     const scopeChange =
-      config.wm.enabled && config.wm.policy === "model" && config.wm.rejudgeTokens > 0
+      config.wm.enabled && scope && config.wm.policy === "model" && config.wm.rejudgeTokens > 0
         ? pendingScopeChange(deps.log.entries(session))
         : undefined;
-    if (config.wm.enabled && (surface.length || scopeChange) && (options.forceWm === true || tokenTrigger || newBoundary)) {
+    if (
+      config.wm.enabled &&
+      scope &&
+      (surface.length || scopeChange || releasable.length) &&
+      (options.forceWm === true || tokenTrigger || newBoundary)
+    ) {
       // The batch: the oldest records up to `wm.batchTokens`; `judge` gives every verdict in one call (plan 218.2 Task 5),
       // so no record limit tied to the call cap applies. The rest waits for the next pass.
       let batch = wmBatch(surface, config.wm.batchTokens);
       const record = (data: Omit<WmRecordedData, "type">) => deps.log.append(session, asJson({ type: WM_RECORDED, ...data }));
-      const rejudge = scopeChange
-        ? await rejudgeCandidates(afterObservations, config.wm.rejudgeTokens, session.id, deps.chunks)
-        : undefined;
+      const rejudge = scopeChange ? rejudgeCandidates(afterObservations, config.wm.rejudgeTokens) : undefined;
       // Protections (I5) and the target are code: the discard tool refuses a protected record, and a batch whose
       // protected records alone exceed the target records `budget_unmet` instead of losing them.
       // A link protection that lapsed (plan 218.2 Task 3) is recorded as `protection_lapsed` on the pass.
@@ -308,6 +341,7 @@ async function pass(
         return protectedRecords(afterObservations, records, {
           salience: signals,
           protectRequestPasses: config.wm.protectRequestPasses,
+          finishedSteps,
           onLapse: (id) => lapsed.add(id),
         });
       };
@@ -318,6 +352,18 @@ async function pass(
         config.wm.targetRatio,
       );
       let protectedTokens = protectedTokenCount(batch, protections);
+      // Look-ahead (plan 218.3 Task 8): earlier records matching the remaining steps, bounded by `wm.lookAheadRecords`
+      // and `wm.lookAheadTokens`; selected from the ledger by code, so a pass with no remaining step costs what it did.
+      // Records still on the STM surface reach WM through its batches with every verdict, so only records already taken
+      // off it (tombstoned, dropped) are offered, never the re-judged ones twice.
+      const lookAhead =
+        config.wm.policy === "model" && progress?.remaining.length
+          ? selectLookAheadRecords(afterObservations, progress.remaining, {
+              maxRecords: config.wm.lookAheadRecords,
+              maxTokens: config.wm.lookAheadTokens,
+              exclude: new Set([...surface, ...(rejudge?.records ?? [])].map((record) => record.id)),
+            })
+          : [];
       let output: Awaited<ReturnType<typeof runWm>>;
       for (let attempt = 0; ; attempt += 1) {
         try {
@@ -332,6 +378,7 @@ async function pass(
                   protections,
                   targetRatio: config.wm.targetRatio,
                   ...(rejudge?.records.length ? { rejudge: rejudge.records } : {}),
+                  ...(lookAhead.length ? { lookAhead } : {}),
                   ...(scope ? { scope } : {}),
                   ...(afterObservations.taskState ? { taskState: afterObservations.taskState } : {}),
                   ...limits,
@@ -362,6 +409,8 @@ async function pass(
       const batchVerdicts = new Map([...output.verdicts].filter(([id]) => byId.has(id)));
       const keptBack = [...output.verdicts].filter(([id]) => !byId.has(id));
       const keptBackItemIds = new Set(keptBack.map(([, verdict]) => verdict.itemId));
+      const lookAheadIds = new Set(lookAhead.map(({ record }) => record.id));
+      const lookAheadKept = keptBack.filter(([id]) => lookAheadIds.has(id));
       const processedIds = [...batchVerdicts.keys()];
       const compression = {
         processedTokens: processedIds.reduce((sum, id) => sum + (byId.get(id)?.tokenCount ?? 0), 0),
@@ -379,9 +428,17 @@ async function pass(
               rejudge: {
                 ...(scopeChange.hash ? { scopeHash: scopeChange.hash } : {}),
                 offered: rejudge.records.length,
-                kept: keptBack.map(([id]) => id),
-                chunkDropped: rejudge.chunkDropped,
+                kept: keptBack.filter(([id]) => !lookAheadIds.has(id)).map(([id]) => id),
               } satisfies WmRejudge,
+            }
+          : {}),
+        ...(lookAhead.length
+          ? {
+              lookAhead: {
+                offered: lookAhead.length,
+                tokens: lookAhead.reduce((sum, { record }) => sum + record.tokenCount, 0),
+                kept: lookAheadKept.map(([id]) => id),
+              } satisfies WmLookAhead,
             }
           : {}),
         boundaries: boundaryCount,
@@ -393,6 +450,25 @@ async function pass(
           session,
           asJson({ type: OBSERVATIONS_TOMBSTONED, observationIds: ids, reason, at } satisfies ObservationsTombstonedData),
         );
+      if (output.finishedSteps?.length && progress) {
+        const stepByOrdinal = new Map(progress.steps.map((step) => [step.step, step]));
+        for (const finished of output.finishedSteps) {
+          const stepObj = stepByOrdinal.get(finished.step);
+          if (!stepObj) continue;
+          await deps.log.append(
+            session,
+            asJson({
+              type: SCOPE_STEP,
+              step: finished.step,
+              status: "finished",
+              stepHash: scopeHash(stepObj.text),
+              evidenceIds: finished.evidenceIds,
+              source: "wm",
+              at,
+            } satisfies ScopeStepData),
+          );
+        }
+      }
       wmItems = output.items.length;
       processed = processedIds.length;
     }
@@ -515,16 +591,10 @@ function lastRejudgedHash(records: readonly JsonValue[], end: number): string | 
 }
 
 /**
- * Discarded STM records a re-judgment may offer, newest tombstone first, up to `maxTokens`. A record whose chunks were
- * all deleted is not offered and is named in `chunkDropped`; a record without chunks is offered on its own line. A chunk
- * is live while this session holds a referrer for it (the store answers `get` per session).
+ * Discarded STM records a re-judgment may offer, newest tombstone first, up to `maxTokens`. Their evidence is the
+ * cited entries on the branch, so every discarded record is offerable (plan 218.3 Task 4: no chunk liveness gate).
  */
-async function rejudgeCandidates(
-  ledger: ReturnType<typeof ledgerOf>,
-  maxTokens: number,
-  sessionId: string,
-  chunks: ChunkStoreHandle | undefined,
-): Promise<{ readonly records: readonly MemoryObservation[]; readonly chunkDropped: readonly string[] }> {
+function rejudgeCandidates(ledger: ReturnType<typeof ledgerOf>, maxTokens: number): { readonly records: readonly MemoryObservation[] } {
   const tombstones = ledger.tombstones ?? {};
   const byId = new Map(ledger.observations.map((record) => [record.id, record]));
   const discarded = Object.entries(tombstones)
@@ -533,27 +603,13 @@ async function rejudgeCandidates(
     .sort((a, b) => b.index - a.index)
     .map(({ record }) => record);
   const records: MemoryObservation[] = [];
-  const chunkDropped: string[] = [];
   let tokens = 0;
   for (const record of discarded) {
     if (tokens + record.tokenCount > maxTokens) continue;
-    const refs = record.chunkRefs ?? [];
-    if (refs.length) {
-      const live = chunks
-        ? await chunks.run(async (store) => {
-            for (const ref of refs) if (await store.get(ref.id, sessionId)) return true;
-            return false;
-          })
-        : false;
-      if (!live) {
-        chunkDropped.push(record.id);
-        continue;
-      }
-    }
     records.push(record);
     tokens += record.tokenCount;
   }
-  return { records, chunkDropped };
+  return { records };
 }
 
 /** Tombstone records for one WM pass, one per verdict reason: `wm keep <item>`, `wm summarize <item>`, `wm discard <reason>`. */
@@ -582,6 +638,21 @@ export function sourceBudget(maxMessageBytes: number): number {
   return Math.max(256, Math.floor(maxMessageBytes / 2));
 }
 
+/** The share of the worker model's input cap one STM source batch may take; the rest holds the prompt and tool turns. */
+export const STM_SOURCE_CAP_RATIO = 0.5;
+
+/**
+ * Bytes one STM source batch may take: {@link sourceBudget}, and at most half the worker model's input cap (4 bytes a
+ * token) when the model declares one (plan 218.3 Task 12). Without it, one tool result larger than the worker's window
+ * travelled whole, overflowed the worker on every pass, and coverage never moved, so no compaction could cut.
+ */
+export async function workerSourceBudget(client: ModelClient, maxMessageBytes: number): Promise<number> {
+  const bytes = sourceBudget(maxMessageBytes);
+  const model = client.resolve ? await client.resolve().catch(() => client.model) : client.model;
+  const cap = resolveModelInputCap(model);
+  return cap === undefined ? bytes : Math.max(256, Math.min(bytes, Math.floor(cap * STM_SOURCE_CAP_RATIO * 4)));
+}
+
 /**
  * Where an STM batch of several entries closes: about twice the trigger in characters (`triggerTokens` counts
  * `ceil(len / 4)`, so 8 bytes per token is two triggers' worth), and never under 32 KB. A backlog (a failed pass, a pass skipped while
@@ -604,4 +675,46 @@ function taskStateContent(state: MemoryTaskState): string {
 /** A record is JSON by construction (its fields are strings, numbers, and validated observations). */
 function asJson(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
+}
+
+/**
+ * Where an unanswered tool round starts in `entries` (an assistant tool call whose results have not all arrived), or
+ * `entries.length` when the tail has none.
+ */
+export function openToolRoundStart(entries: readonly SessionEntry[]): number {
+  let at = entries.length - 1;
+  while (at >= 0 && !isEligibleObservationSourceEntry(entries[at]!)) at -= 1;
+  let results = 0;
+  while (at >= 0 && entries[at]!.message?.role === "tool") {
+    results += 1;
+    at -= 1;
+    while (at >= 0 && !isEligibleObservationSourceEntry(entries[at]!)) at -= 1;
+  }
+  if (at < 0 || !hasToolCalls(entries[at]!)) return entries.length;
+  const calls = (entries[at]!.message!.content as readonly { type?: string }[]).filter((block) => block.type === "tool_call").length;
+  return results < calls ? at : entries.length;
+}
+
+/** Bytes of the current user request a batch without one carries as context. */
+export const REQUEST_CONTEXT_BYTES = 1_000;
+
+/**
+ * A batch's source text, led by the current user request when the batch holds none (plan 218.3 Task 12): a tool
+ * output is recorded for what the task needs from it. The line is context only; STM cites the batch's own entries.
+ */
+export function withRequestContext(batch: SourceBatch, branch: readonly SessionEntry[], secrets: readonly (string | undefined)[]): string {
+  if (batch.entries.some((entry) => entry.message?.role === "user")) return batch.text;
+  const first = batch.entries[0];
+  const start = first === undefined ? -1 : branch.findIndex((entry) => entry.id === first.id);
+  const request =
+    start < 0
+      ? undefined
+      : [...branch.slice(0, start)].reverse().find((entry) => entry.kind === "message" && entry.message?.role === "user");
+  if (!request) return batch.text;
+  // The request's text only, without its entry id: the batch's own entries are the ones to cite.
+  const content = request.message!.content;
+  const raw = typeof content === "string" ? content : content.map((part) => (part.type === "text" ? part.text : "")).join(" ");
+  const text = truncateWorkerText(redactSecrets(raw.trim(), secrets), REQUEST_CONTEXT_BYTES);
+  if (!text) return batch.text;
+  return `[context, not a source: the current user request, recorded earlier] ${text}\n${batch.text}`;
 }

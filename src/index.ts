@@ -1,17 +1,26 @@
 export type { AgentEventSourceErrorCode, CheckpointRestoreAudit, CheckpointRestoreAuditEntry } from "./contracts-protocol.js";
 export { AgentEventSourceError, isKnownAgentEventType, isTerminalAgentEventType } from "./contracts-protocol.js";
 export { ContextOverflowError } from "./agent-session/context-overflow.js";
-export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
+export type { PendingToolCall, RunStateBounds, StoredAgentRunState } from "./agent-run-state.js";
+export { sessionEntryForkedFrom } from "./session/fork-lineage.js";
 export {
   AGENT_RUN_STATE_SCHEMA_VERSION,
   agentFingerprint,
   DEFAULT_MAX_AGENT_RUN_STATE_BYTES,
   HARD_MAX_AGENT_RUN_STATE_BYTES,
+  runStateBounds,
 } from "./agent-run-state.js";
 export { SubscriberOverflowError } from "./agent-session/event-subscriber.js";
 export { createAgent } from "./agents.js";
 export type { DefaultCompactorOptions } from "./compaction.js";
-export { createDefaultCompactor, isCompactionEntryData } from "./compaction.js";
+export {
+  createDefaultCompactor,
+  DEFAULT_COMPACTION_MAX_SUMMARY_CHARS,
+  DEFAULT_KEEP_RECENT_TOKENS_FLOOR,
+  isCompactionEntryData,
+} from "./compaction.js";
+export type { FileOperationDetails } from "./file-ops.js";
+export { collectFileOperations, formatFileOperations } from "./file-ops.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
 export type {
@@ -80,8 +89,15 @@ export type {
   ResolveShouldCompactInput,
   ResolveShouldCompactOptions,
   ResumeNestedRun,
+  ResolvedSessionLimits,
   RunLimitCounters,
   RunLimitName,
+  SessionLimitCounters,
+  SessionLimitName,
+  SessionLimitRemaining,
+  SessionLimits,
+  SessionLimitsEntryData,
+  SessionLimitsStatus,
   StickyDecision,
   TokenEstimate,
   TokenEstimateConfidence,
@@ -110,17 +126,15 @@ export {
   assertDecisionsSupported,
   assertEmbeddingsSupported,
   assertSessionMetadataKey,
+  DEFAULT_COMPACTION_TRIGGER,
   DEFAULT_MAX_DECISION_IMAGE_BYTES,
   DEFAULT_MAX_DECISION_STATE_BYTES,
-  DEFAULT_MAX_PENDING_DECISIONS,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
-  DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
-  DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   DEFAULT_MAX_STICKY_DECISIONS,
   DEFAULT_SESSION_LIST_LIMIT,
@@ -133,19 +147,11 @@ export {
   HARD_MAX_DECISION_REASON_BYTES,
   HARD_MAX_ELICITATION_BYTES,
   HARD_MAX_PENDING_DECISIONS,
-  HARD_MAX_PENDING_STEER_BYTES,
-  HARD_MAX_PENDING_STEERS,
   HARD_MAX_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_SEARCH_CURSOR_BYTES,
-  HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES,
   HARD_MAX_SESSION_SEARCH_LIMIT,
-  HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
-  HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
-  HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   HARD_MAX_SESSION_SEARCH_QUERY_BYTES,
-  HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
-  HARD_MAX_STICKY_DECISIONS,
   assertSessionLinkFilter,
   assertSessionLinks,
   isSessionAppendConflict,
@@ -157,29 +163,45 @@ export {
   MAX_ACTION_CONSTRAINT_BYTES,
   MAX_ACTION_CONSTRAINTS,
   MAX_ATTRIBUTION_DEPTH,
+  MAX_NESTED_STICKY_RESUMES,
   MAX_DECISION_CHOICE_OPTIONS,
   MAX_DECISION_QUESTIONS,
   MAX_DECISION_REASON_BYTES,
   MAX_DECISION_SCORE_LEVELS,
   MAX_ELICITATION_BYTES,
+  MAX_SESSION_LINK_DEPTH,
   MAX_SESSION_LINK_ID_LENGTH,
+  MAX_SESSION_SEED_ENTRIES,
   modelSupportsDecisions,
   modelSupportsEmbeddings,
   OWNERSHIP_WIDEN_CODE,
   OwnershipScopeError,
+  resolveSessionListLimit,
+  resolveSessionQueryLimits,
   resolveSessionSearchQuery,
   resolveShouldCompact,
   SESSION_APPEND_CONFLICT_CODE,
+  SESSION_CONFLICT_CODE,
   SESSION_ENTRY_KINDS,
   SESSION_ENTRY_SCHEMA_VERSION,
+  SESSION_LIMIT_CODE,
+  SESSION_LIMITS_ENTRY_SCHEMA_VERSION,
+  SESSION_LIMITS_UNREADABLE_CODE,
   SESSION_LINKS_DATA_KEY,
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_NOT_FOUND_CODE,
+  SESSION_NOTHING_TO_CONTINUE_CODE,
   SESSION_SEARCH_UNSUPPORTED_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_MAX_LENGTH,
   SESSION_TITLE_METADATA_KEY,
+  clipSessionSearchSnippet,
+  SESSION_BRANCH_READ_LIMIT_CODE,
   SessionAppendConflictError,
+  SessionBranchReadLimitError,
+  SessionContinueError,
+  SessionLimitError,
+  SessionLimitsUnreadableError,
   SessionMetadataConflictError,
   SessionNotFoundError,
   SessionSearchUnsupportedError,
@@ -343,7 +365,9 @@ export {
   DEFAULT_RUN_LIMITS,
   HARD_RUN_LIMITS,
   RunLimitError,
+  resolveCeilings,
   resolveRunLimits,
+  resolveSessionLimits,
 } from "./run-limits.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
 export {
@@ -358,9 +382,11 @@ export {
   TrustDeniedError,
 } from "./security.js";
 export type {
+  BranchReadOptions,
   CreateMemorySessionStoreOptions,
   CreateSessionEntryOptions,
   MemorySessionSearchMode,
+  SessionAppendBatch,
   SessionBranch,
   SessionBranchOptions,
   SessionContextSnapshot,
@@ -368,6 +394,7 @@ export type {
 export {
   createMemorySessionStore,
   createSessionEntry,
+  DEFAULT_MAX_BRANCH_PAGES,
   getSessionBranchEntries,
   listSessionBranches,
   rebuildSessionContext,
@@ -376,10 +403,11 @@ export {
   sessionLinksOfEntry,
   sessionStoreCapabilities,
   summaryLinkFields,
+  validateSessionAppendBatch,
 } from "./session-stores.js";
 export { selectTranscript, type TranscriptOptions, type TranscriptSlice } from "./agent-session/transcript.js";
 export { createSessionIndex } from "./agent/sessions.js";
-export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js";
+export type { LoadedSkillSet, SkillCatalogOptions, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js";
 export {
   createLoadedSkillSet,
   DEFAULT_MAX_SKILL_CATALOG_ENTRIES,
@@ -429,6 +457,7 @@ export type { ToolEffectErrorCode } from "./tool-effects.js";
 export { createMemoryToolEffectStore, ToolEffectError } from "./tool-effects.js";
 export type {
   DispatchToolCallOptions,
+  ToolArgumentValidation,
   ToolArgumentValidationError,
   ToolArgumentValidationResult,
   ToolArgumentValidator,

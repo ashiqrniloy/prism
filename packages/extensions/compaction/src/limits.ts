@@ -1,13 +1,13 @@
 export const DEFAULT_MAX_SUMMARY_TOKENS = 16_384;
-export const HARD_MAX_SUMMARY_TOKENS = 131_072;
 export const DEFAULT_RESERVE_TOKENS = 16_384;
-export const HARD_RESERVE_TOKENS = 131_072;
 export const DEFAULT_MAX_SUMMARY_ERROR_BYTES = 1024;
-export const HARD_MAX_SUMMARY_ERROR_BYTES = 8 * 1024;
+/** Summary calls one compaction may make over an oversized history (plan 229 Task 6). */
+export const DEFAULT_MAX_CHUNKS = 6;
 
-export function validateCompactionLimit(name: string, value: number, hardCap: number): number {
-  if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {
-    throw new RangeError(`${name} must be a positive safe integer at most ${hardCap}`);
+/** A host-set compaction limit: a positive safe integer. The host's value is the cap (plan 239 Task 5). */
+export function validateCompactionLimit(name: string, value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive safe integer`);
   }
   return value;
 }

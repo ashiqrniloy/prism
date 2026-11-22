@@ -27,9 +27,6 @@ export const DEFAULT_CAPACITY: Readonly<Record<"user" | "agent" | "project", Cap
 
 export const DEFAULT_EXCHANGE_CAPACITY: ExchangeCapacityLimits = Object.freeze({ hotTokens: 200_000 });
 
-export const MAX_FABRIC_CAPACITY_NOTES = 10_000;
-export const MAX_FABRIC_CAPACITY_TOKENS = 1_000_000;
-
 export function capacityForLevel(level: MemoryNoteScope, capacity?: Readonly<Record<string, CapacityLimits>>): CapacityLimits {
   // A path note lives in its project's resource, so it shares the project budget.
   const key = level === "path" ? "project" : level;

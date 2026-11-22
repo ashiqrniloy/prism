@@ -61,6 +61,53 @@ describe("createAcpEventMapper", () => {
     assert.doesNotMatch(JSON.stringify(output), /SECRET|\/private/);
   });
 
+  it("acp_discards_failed_attempt_text", async () => {
+    // Plan 227 Task 4: chunks are held per attempt; a failed attempt's are dropped, a clean one's flushed.
+    const mapper = createAcpEventMapper({});
+    const base = { sessionId: "session-1", runId: "run-1" } as const;
+    const metadata = { providerId: "mock", model: { provider: "mock", model: "mock" } };
+    const started = (attempt: number) =>
+      mapper.map({
+        type: "turn.started",
+        ...base,
+        turn: 1,
+        metadata: { ...metadata, attempt },
+        ...(attempt > 1 ? { attempt, retry: { delayMs: 0, error: { message: "reset", code: "ECONNRESET" } } } : {}),
+      });
+    const delta = (kind: "text" | "thinking", text: string) =>
+      mapper.map({ type: "message.delta", ...base, content: { type: kind, text } });
+    const output = [
+      ...(await started(1)),
+      ...(await delta("thinking", "dead thought")),
+      ...(await delta("text", "dead text")),
+      ...(await mapper.map({ type: "turn.completed", ...base, turn: 1, metadata, error: { message: "reset", code: "ECONNRESET" } })),
+    ];
+    assert.deepEqual(output, [], "nothing from the failed attempt reaches the client");
+    const held = [...(await started(2)), ...(await delta("thinking", "live thought")), ...(await delta("text", "live text"))];
+    assert.deepEqual(held, [], "a running attempt's chunks are held");
+    const flushed = await mapper.map({ type: "turn.completed", ...base, turn: 1, metadata });
+    assert.deepEqual(
+      flushed.map((update) =>
+        update.sessionUpdate === "agent_message_chunk" || update.sessionUpdate === "agent_thought_chunk"
+          ? [update.sessionUpdate, update.content.type === "text" ? update.content.text : ""]
+          : [],
+      ),
+      [
+        ["agent_thought_chunk", "live thought"],
+        ["agent_message_chunk", "live text"],
+      ],
+    );
+    // The completed message adds nothing: both kinds already streamed for the attempt that counted.
+    assert.deepEqual(
+      await mapper.map({
+        type: "message.completed",
+        ...base,
+        message: { role: "assistant", content: [{ type: "text", text: "live text" }] },
+      }),
+      [],
+    );
+  });
+
   it("B1: emits usage_update with the host-reported context window; omits it when the seam is absent, throws, or returns an invalid size", async () => {
     const turn = {
       type: "turn.completed" as const,

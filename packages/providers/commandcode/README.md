@@ -29,6 +29,7 @@ The bare definition uses the schema defaults, so `packages: [commandcode]` is th
 | --- | --- | --- | --- |
 | `apiKey` | `env:`/`keyring:` ref | `env:COMMAND_CODE_API_KEY` | Resolved through the credentials slot on every request. A literal key is rejected (`secret_literal`). |
 | `baseUrl` | string | `https://api.commandcode.ai/provider/v1` | Official base. |
+| `transport` | object | transport defaults | Wire ceilings the host sets; a provider response never raises them. `maxEventBytes` (SSE event, default 256 KiB), `maxBufferBytes` (SSE buffer, default 512 KiB), `maxResponseBodyBytes` (an error body, default 64 KiB). |
 | `zdr` | boolean | `false` | Sends the provider-owned `x-cmd-zdr: 1` header on every route. |
 | `models` | `ModelConfig[]` | — | Static catalog. When absent, `models()` asks `GET /models`. |
 

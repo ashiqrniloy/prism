@@ -26,7 +26,9 @@ export interface OpenAICompatibleProviderOptions {
   readonly buildBodyExtra?: (request: ProviderRequest) => JsonObject | undefined;
   /** Transform messages before serialization (e.g. cache-control markers). Defaults to `request.messages`. */
   readonly mapMessages?: (request: ProviderRequest) => readonly Message[];
-  /** Custom message serializer (e.g. `reasoning_content` replay). Defaults to assert + `serializeOpenAIChatMessage`. */
+  /** How stored thinking is replayed; see `OpenAIChatCodecOptions.reasoningReplay`. Default `drop`. */
+  readonly reasoningReplay?: OpenAIChatCodecOptions["reasoningReplay"];
+  /** Custom message serializer (wins over `reasoningReplay`). Defaults to assert + `serializeOpenAIChatMessage`. */
   readonly serializeMessage?: (message: Message, request: ProviderRequest) => JsonObject;
   /** Custom usage mapping (e.g. provider cost fields). Defaults to `mapOpenAIChatUsage`. */
   readonly mapUsage?: (usage: unknown) => Usage | undefined;
@@ -76,6 +78,7 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
               typeof options.chatCompletionsUrl === "function" ? options.chatCompletionsUrl(req) : options.chatCompletionsUrl!
           : undefined,
         codec: {
+          reasoningReplay: options.reasoningReplay,
           mapMessages: options.mapMessages,
           serializeMessage: options.serializeMessage,
           buildBodyExtra: options.buildBodyExtra,

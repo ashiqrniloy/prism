@@ -17,7 +17,8 @@ export type RemoteErrorCode =
   | "session_not_found"
   | "limit"
   | "literal_secret"
-  | "unauthenticated_bind";
+  | "unauthenticated_bind"
+  | "nothing_to_continue";
 
 export class RemoteError extends Error {
   readonly code: RemoteErrorCode;
@@ -48,6 +49,7 @@ const JSON_RPC_CODES: Record<RemoteErrorCode, number> = {
   limit: -32011,
   literal_secret: -32012,
   unauthenticated_bind: -32013,
+  nothing_to_continue: -32014,
 };
 
 export function jsonRpcCodeOf(code: RemoteErrorCode): number {

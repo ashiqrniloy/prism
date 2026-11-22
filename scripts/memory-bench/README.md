@@ -115,8 +115,8 @@ and the draw file's hash (`6fb271e6…` → `9bdc8924…`), and the verifier ref
   step in `docs/_evidence/memory-bench/memory-model/baselines.json`);
 - the retrieval-set construction rules and the threshold-fit rule (plan 219.1 adds the set hashes by amendment);
 - the fixture index with each fixture's owner plan (plan 217 Task 6's amendment adds the `long-session-replay` and
-  `long-session` hashes, plan 218 Task 5's moves `long-session-replay` and adds `re-plan`, plan 218.2 Task 1's adds `worker-replay` and Task 8's
-  `long-horizon`;
+  `long-session` hashes, plan 218 Task 5's moves `long-session-replay` and adds `re-plan`, plan 218.2 Task 1's adds `worker-replay`,
+  plan 218.3 Task 12's (amendment 11) hashes `session-bench` and removes plan 218.2 Task 8's `long-horizon` with its family;
   `assertMemoryModelFixture()` refuses a gate read of an unhashed or drifted fixture);
 - R1's threshold, fixed with `power.mjs`.
 
@@ -155,13 +155,13 @@ timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only stm --out 
 | Probe | Checks |
 |---|---|
 | `stm.outcome` | every task ends with an `outcome` naming its changes and verification, each with an outcome boundary |
-| `stm.recall-verbatim` (S2) | after compaction, recall returns the large test log's chunk and the code-read chunk byte-equal to the source; no other tool runs |
+| `stm.recall-verbatim` (S2) | after compaction, `recall { id, detail: "full" }` returns the large test log and the code read byte-equal from the session store (the large one in pages, following each page's `recall { entry, offset }`); no other tool runs. Until plan 218.3 Task 4 it checked stored chunks |
 | `stm.scope-blind` | no STM request carries the scope, WM or LTM sentinel, while the main model sees the scope |
 | `stm.habituation` | polling (×8, ×3) and the identical failure (×3) are one record each with that count; habituation off records each |
 | `stm.boundaries` | outcome, task-state and idle-gap markers; with `stm.boundaries` the idle gap alone runs one pass below the trigger |
 | `stm.oversized-tail` | with a 64 KB worker budget the 118 KB read is cut into its own batch; every pass completes and coverage moves past it |
-| `stm.referrer-delete` | the only deleted chunk is the superseded fact's, through the zero-referrer path of `apply`; no live chunk holds the secret |
-| `stm.cost` | worker tokens and chunk bytes per 10k eligible tokens, against the pinned pre-redesign observer |
+| `stm.no-session-copy` | no ledger record carries a tool output (records cite entry ids), and a superseded record's source entries stay on the branch. Replaced `stm.referrer-delete` when plan 218.3 Task 4 removed the chunk store |
+| `stm.cost` | worker tokens per 10k eligible tokens, against the pinned pre-redesign observer (chunk bytes until plan 218.3 Task 4) |
 
 Measured on the fixture (`docs/_evidence/memory-bench/217/stm-probes.json`; 15 s, deterministic). Token counts use
 the probe's counter, `ceil(len/4)` of the scripted worker's calls and of each worker request. The worker is scripted,
@@ -174,7 +174,8 @@ so the output side measures the record shape, not a model's choices. The input s
 | worker input tokens | 48,734 | 40,926 |
 | chunk bytes stored | 127 (9 chunks, 588 bytes) | — |
 
-Stored chunks take 1.8% of the bytes of the entries they cover (the rule caps it at 25%) and 0.32% of the transcript.
+Stored chunks took 1.8% of the bytes of the entries they cover (the rule capped it at 25%) and 0.32% of the transcript.
+Plan 218.3 Task 4 removed the chunk store; the figures above are plan 217's record.
 Habituation saved 11 records (45 kept). Task 6 regenerated the file three times: after the STM batch-target fix (one backlog now splits in two), after
 the per-exchange instruction (about 340 bytes longer, so input per pass rises), and after the follow-up passes
 and clean-turn ending (103 passes, was 101);
@@ -221,9 +222,9 @@ timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only wm --out d
 | `wm.protected` (M2) | a WM model that discards everything loses no protected record (task state, fact, unresolved error, open question), and the protected share records `budget_unmet` |
 | `wm.target-ratio` (M3) | at the default trigger, the median achieved ratio over passes without `budget_unmet` is at most `wm.targetRatio` + 0.1. A correction survives a 0.05 target, with the model and with the deterministic policy |
 | `wm.prefix-stable` (M4) | every main request repeats the previous context and messages byte for byte, except across a compaction (31 WM passes before the first one) |
-| `wm.rejudge` | after the re-plan, the next pass is offered the discarded lint result (no chunks) and keeps it with `neededLater: step 8`. The code read whose chunk died at its discard is in `chunkDropped`. With `rejudgeTokens: 0` nothing comes back |
+| `wm.rejudge` | after the re-plan, the next pass is offered the discarded lint result and keeps it with `neededLater: step 8`. The code read (in `chunkDropped` until plan 218.3 Task 4) is offered too: evidence stays in the session store. With `rejudgeTokens: 0` nothing comes back |
 | `wm.incremental` | a pass adds items and supersedes only the items a call named; the WM set never shrinks otherwise |
-| `wm.referrer-delete` | a chunk is deleted only by its last referrer. Every chunk an active WM item cites is live |
+| `wm.evidence-readable` | every source entry an active WM item's cited records name stays on the branch after their tombstones. Replaced `wm.referrer-delete` (plan 218.3 Task 4) |
 | `wm.attribution` | the user's figure is its own `user` event, and the estimate is an `assistant` proposal in the WM request and in `memory:session:view`. The WM item keeps the mark |
 | `wm.knowledge-update` | the port change (8080 → 9090, dated) stays an item of its own after a pass that summarises its neighbours |
 
@@ -261,9 +262,9 @@ are gate M-2's (plan 218 Task 6).
 timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family re-plan --offline [--partition dev] [--output report.json]
 ```
 
-### Baseline arms, the long-horizon family and whole-run cost (plan 218.2 Task 8)
+### Baseline arms and whole-run cost (plan 218.2 Task 8)
 
-Two cheap baselines join the long-session, re-plan and long-horizon families (`armMemory`). Each is built from a package
+Two cheap baselines join the long-session and re-plan families (`armMemory`). Each is built from a package
 that already ships, and neither loads a memory package:
 
 - `fold`: `@arnilo/prism-extensions/context-engineering` with `fold: { summarize: "truncate" }`. Old tool output is
@@ -272,34 +273,14 @@ that already ships, and neither loads a memory package:
 - `llm-summary`: `@arnilo/prism-extensions/compaction` on the arm's worker model, one summary call per compaction.
   The meter counts its summary calls as worker calls.
 
-`work-outcome/long-horizon.mjs` is the family at the shipped triggers. Each of its 6 sessions (`lh0`–`lh5`) chains 13
-long-session projects (`codingProject` under seed `prism-218.2-long-horizon`). Every project's source tasks run first
-(rename, build log, config, deploy log), then every project's dependent tasks. Each prompt names its project
-(`Task 1. [project p3] …`), and the tools act on that project's files.
-
-- Sessions: a complete session holds about 154K eligible tokens.
-- Defaults: the memory arms set no `stm.triggerTokens`, `context.recentMessages` or `context.compactAt`, so compaction
-  follows the model's window. `llm-summary` compacts at the memory system's default ratio (0.6 of the input cap);
-  memory-off and `fold` keep the entry gate.
-- Partitions: `work-outcome-long-horizon.json` holds 2 / 2 / 2 sessions, drawn by
-  `SHA-256("prism-218.2-long-horizon:" + id)`. Criteria amendment 9 pins the file.
-- Precondition: before any spend, the scripted worker must record at least 5 WM passes with an item in every session
-  at the defaults (`assertLongHorizonEngages`). A live run refuses otherwise.
-
-`--estimate` writes `docs/_evidence/memory-bench/218.2/long-horizon-manifest.json`: the precondition reading and the
-estimated live tokens per arm and model. The estimate is the offline run at `contextWindow` (default 128K), scaled by
-gate M-1's live/offline ratio on the long-session family. No gate names the family yet, so it has no live job.
+Task 8's long-horizon family (13 chained projects per session at the package defaults) was deleted by plan 218.3
+Task 12, as plan 218.1 Task 5 had planned: Session-Bench (below) replaces it as the session tiers' benchmark.
 
 Every family report now carries `cost` per arm: input, cached-input and output tokens of the main model and of the
 workers, whole-run tokens per successful task (a graded task whose check passes), and the compaction block's size in
 characters at each compaction. It comes from the family meter of the run that produced each row. A live job's own
 `inputTokens` is the wire proxy's spend: it covers every process run of the attempt, so it counts re-runs
 (`218.2/m1-whole-run-trace.json`). Gate M-2's `m2FamilyCost` reports both.
-
-```sh
-timeout 1200 bun scripts/memory-bench/work-outcome/run.mjs --family long-horizon --arms memory-off,fold,llm-summary,STM-only,WM --offline
-timeout 1200 bun scripts/memory-bench/work-outcome/run.mjs --family long-horizon --estimate
-```
 
 ### Gate M-1: STM against the pinned pre-redesign observer (plan 217 Task 6, paid)
 
@@ -334,9 +315,8 @@ identical items only, and an unfinished item is reported unpaired.
 | S4 | the largest STM / OM-before worker-token ratio over every (model, scope) cell: worker tokens per question on the suite sample (the first 2 dev questions per model and suite, identical ids in both arms, each a full 1–1.2M-token history), per 10k eligible tokens on the family. A ratio above 1.25 passes only with `217/s4-justification.md` |
 
 The performance block reports, per arm, worker calls and tokens, context-block bytes per question, chunk-store bytes
-at peak, cost and p95 answer latency. The chunk-store figure comes from `chunk-meter.mjs`, which supplies the STM arm's
-default in-memory store through `memory.chunks`; the arm itself is unchanged. The family's worker and eligible tokens
-come from `meteredLongSessionProviders`.
+at peak (from `chunk-meter.mjs`, removed with the chunk store by plan 218.3 Task 4; the gate's recorded figures stay),
+cost and p95 answer latency. The family's worker and eligible tokens come from `meteredLongSessionProviders`.
 
 ```sh
 timeout 120 bun scripts/memory-bench/campaign.mjs --plan memory-model --gate M-1 --partition dev --manifest   # memory-model/M-1/manifest.json
@@ -511,7 +491,7 @@ by its FAIL_TO_PASS tests). The harness is in `external/compact-bench/`:
 |---|---|
 | `fetch.mjs` | Clones upstream at commit `9dd9a3f5…` and downloads the dataset at revision `ff20521e…` into `~/.cache/prism/compact-bench/` (about 200 MB), every file checked against `SHA256SUMS`, whose own hash is pinned (`94a7c697…`). A mismatch is refused; a branch name is not a pin. |
 | `draw.mjs` | The frozen draw `work-outcome-compact-bench.json`: 30 of the 146 retention sessions (largest-remainder share per `client`, then ascending `SHA-256("prism-218.1-compact-bench:" + sample_id)`; only `sample_id` and `client` are read) and the 22 validated outcome instances (`e1/prepass24.txt` minus the two excluded pytest instances). `--check` re-draws and compares byte for byte. |
-| `adapter.mjs` | Prism as the summarizer: the history in upstream's own transcript view (`transcript()` for retention, `build_transcript()` for outcome, the same caps the LLM summarizers get) is replayed as turns through a session with the arm's memory (`armMemory` from the long-session family: `memory-off`, `OM-before`, `STM-only`, `WM`); a local scripted model plays the recorded assistant lines, so only the memory worker is a model. No automatic compaction; one `session.compact()` at the end; S is the next request as the model sees it: memory block (context blocks and summary messages, uncapped) then the kept messages as upstream lines. The block alone and the STM chunk text (reachable through `recall`) are scored beside S, never added to it. |
+| `adapter.mjs` | Prism as the summarizer: the history in upstream's own transcript view (`transcript()` for retention, `build_transcript()` for outcome, the same caps the LLM summarizers get) is replayed as turns through a session with the arm's memory (`armMemory` from the long-session family: `memory-off`, `OM-before`, `STM-only`, `WM`); a local scripted model plays the recorded assistant lines, so only the memory worker is a model. No automatic compaction; one `session.compact()` at the end; S is the next request as the model sees it: memory block (context blocks and summary messages, uncapped) then the kept messages as upstream lines. The block alone is scored beside S, never added to it (the STM chunk text was too, until plan 218.3 Task 4 removed the chunk store). |
 | `seam.py` | Run with `python3 -I`. `retention` scores S records with upstream's `e2_score.compress_one` (its `summarize` replaced by the record's S); `task` runs upstream's `run.py` task track and writes each `prism-*` model's S to the summary cache `e1_xb` reads first, so PRE, POST and the tests stay upstream's (one round only; a missing S is refused); `self-check` asserts the pinned seams exist. |
 | `passthrough.mjs` | Loopback-only server for upstream's Messages (`CB_MESSAGES_URL`) and Chat (`CB_CHAT_URL`) calls to OpenCode Go: accepts only the local placeholder key, sends the real key from the environment (Messages: `x-api-key` and bearer; Chat: bearer), adds `x-opencode-session`, sets `thinking: {type: "disabled"}` on the continuation agent's (`minimax-m3.1-flash`) Messages requests, and forwards through the wire proxy, which records exchanges and usage. 403 to a non-loopback peer. |
 
@@ -577,6 +557,55 @@ timeout 50400 bun scripts/memory-bench/worker-replay/run.mjs --gate docs/_eviden
 The WM fixture's records carry the fields a correct recorder would write (`status`, `corrects`, `durable`, `resolves`):
 today's product ignores them, and plan 218.2 Task 3's protections read them, so the WM replay measures WM on good STM
 output whichever product runs it. The offline counts check the pipeline and are not measurements.
+
+### Session-Bench (plan 218.3 Tasks 9-12)
+
+Session-Bench is the benchmark for the session tiers. Each session runs 8 to 14 tool-using tasks in one session. The
+session follows a scope document, and the context outgrows a 32K window at least four times. Later tasks depend on
+earlier work that has left the window. The methodology, the dependency classes (`D1` to `D4`, `C`), the guardrails (G1
+to G10) and the limits are in [`session-bench/README.md`](session-bench/README.md).
+
+| File | Role |
+| --- | --- |
+| `session-bench/env/workspace.mjs` | A deterministic simulated workspace: files, tickets, channels, config and rule checks, with 13 tools and a per-task call log. |
+| `session-bench/templates/` | Three template families, and the builder that turns a seed and an id into one session. |
+| `session-bench/checks.mjs` | The state checks. v2 (plan 218.3 Task 11) compares scalars by their string form, because the tools accept strings. v3 (Task 12): the D4 check requires the new value only, and the D3 check fails when one of the feature's look-alike flags is also on. |
+| `session-bench/agents.mjs` | The scripted oracle and amnesic agents, and the re-derivation count. |
+| `session-bench/generate.mjs` | The generator. It writes `work-outcome-session-bench.json` (v3; v1's seed and ids; v3 adds two look-alike flags per feature, so the sessions hash moved): the seed, `templateHash`, `sessionsHash`, `scopesHash`, the label-blind 12/4/4 draw per family and `idsHash`. `--check` regenerates the file byte for byte. |
+| `session-bench/score.mjs` | The blind scorer and the pre-registered `ANALYSIS`. |
+| `session-bench/guardrails.mjs` | G1 to G10, checked before any paid call. |
+| `session-bench/arms/prism.mjs` | Every arm's configuration: the decision arms `memory-off-llm`, `STM-only` and `STM+WM`, the side arms, and the calibration arms `oracle-context` and `amnesic`. |
+| `session-bench/arms/references.mjs` | The side arms `claude-code-prompt` and `codex-prompt`: Prism's LLM compaction with a production summary prompt, read from the pinned Compact-Bench checkout and checked by hash. |
+| `session-bench/arms/third-party.mjs` | The third-party candidates and why each is included or not; the side arm `mem0` (Mem0 3.3.1 at its documented defaults, installed into the cache from `arms/lock/mem0/`, its model and embedding calls metered through a local endpoint); the screen's embedder (BGE-M3 FP16 on llama.cpp `llama-server` with Vulkan on the GPU, built into the cache at pinned tags, model checked by sha256; a recorded G10 deviation). |
+| `session-bench/arms/pins.mjs` | The gate record's `sessionBench` section, computed from the code. |
+| `session-bench/run.mjs` | The runner. A harness wrapper enforces the window W and meters every call. `--live` hands over to `live.mjs`. |
+| `session-bench/live.mjs` | The live runner (plan 218.3 Task 11): the test run's pre-registered rule (frozen at v2), the gate check, checkpointed (arm, session) jobs on the LOCA-Bench pilot's pool, quota waits inside the request, the token ceiling, check-ins, the live guardrails and the screen's size. A rule names its own gate section, evidence path and embedder, so Task 12's screen runs on it. |
+| `session-bench/screen.mjs` | The decision screen (plan 218.3 Task 12): its rule (`sessionBenchScreen` in gate M-2's record), the dev-only refusal, and the pre-registered verdict (STM ships, WM's policy, side-arm findings, detectable effect). Its own entry point. |
+
+Criteria amendment 10 added the `session-bench` fixture to the index, unhashed. Amendment 11 (plan 218.3 Task 12,
+owner decision `sessionBenchRows`) hashes it and adds rows M6 (`WM` vs `STM-only`) and M7 (`STM-only` vs
+`memory-off-llm`) under gate M-2; S3's held-out reading is Session-Bench `heldout-a`.
+
+The screen's live runner (plan 218.3 Task 12, rule `a1c6df8d…`) adds:
+- **Seven arms:** the six decision and side arms plus `memory-off-drop`, which is `memory-off-llm`'s cut with the dropped messages replaced by one fixed line: no summary, no STM, no WM.
+- **Memory workers on their own model.** The rule's `worker` is `opencode-go/muse-spark-1.3-contributor`. A worker call that sets no reasoning effort of its own gets the rule's effort (`workerReasoningEffort: low`). With `workerOutput: "window"`, a worker call may write what W leaves after its input.
+- **Worker faults are never rows.** A job is a `SessionBenchWorkerFault` if any memory-worker call failed after every retry and wait (`meter.workerErrors`, with its error kinds on the fault line), or if any STM batch was recorded without the model (`meter.stmFallbacks`). Such a job leaves no row and runs again. Its third fault stops the run for the owner.
+  - A worker call that the session aborted at close is counted as `meter.workerAborts` and is not a fault. That is a background pass still in flight after the last task.
+- **A provider usage-limit answer stops the run** (exit 3). That is a 402, 403 or 429 naming a usage, credit or quota limit. Every later request of the job fails at once.
+- **Diagnostics only:** `runArmSession({ inspect })` and `runLiveJob({ inspect, wrapProviders })` hand a replay the session store and the providers, for a scratchpad diagnostic that reads the ledger. A screen run never sets them.
+
+The screen's result is in `docs/_evidence/memory-bench/218/README.md`.
+
+```sh
+timeout 600  bun scripts/memory-bench/session-bench/generate.mjs --check
+timeout 1800 bun scripts/memory-bench/session-bench/guardrails.mjs
+timeout 1800 bun scripts/memory-bench/session-bench/run.mjs --offline
+timeout 900  bun test --timeout=0 scripts/memory-bench/session-bench
+timeout 3000 bun scripts/memory-bench/session-bench/arms/third-party.mjs --install-embedder   # the screen's BGE-M3 (llama.cpp/Vulkan)
+timeout 60   bun scripts/memory-bench/session-bench/screen.mjs --rule                        # the screen's rule and hash
+# paid, on the owner's word, as a systemd --user unit:
+bun scripts/memory-bench/session-bench/screen.mjs --live [--status | --report | --pause | --resume]
+```
 
 ## Measurement repair protocol
 

@@ -16,9 +16,7 @@ import type { ContextFilesConfig } from "./config.js";
 import { agentFileCandidates } from "./layers.js";
 
 export const DEFAULT_NESTED_MAX_FILE_BYTES = 16_384;
-export const HARD_NESTED_MAX_FILE_BYTES = 65_536;
 export const DEFAULT_NESTED_MAX_FILES = 16;
-export const HARD_NESTED_MAX_FILES = 16;
 
 export interface ResolvedNestedConfig {
   readonly maxFileBytes: number;
@@ -33,12 +31,9 @@ export function resolveNestedConfig(value: ContextFilesConfig["nested"]): Resolv
   }
   const maxFileBytes = value.maxFileBytes ?? DEFAULT_NESTED_MAX_FILE_BYTES;
   const maxFiles = value.maxFiles ?? DEFAULT_NESTED_MAX_FILES;
-  if (!Number.isInteger(maxFileBytes) || maxFileBytes < 1 || maxFileBytes > HARD_NESTED_MAX_FILE_BYTES) {
-    throw new RangeError(`nested.maxFileBytes must be an integer from 1 to ${HARD_NESTED_MAX_FILE_BYTES}`);
-  }
-  if (!Number.isInteger(maxFiles) || maxFiles < 1 || maxFiles > HARD_NESTED_MAX_FILES) {
-    throw new RangeError(`nested.maxFiles must be an integer from 1 to ${HARD_NESTED_MAX_FILES}`);
-  }
+  // Host config: the host's value is the cap (plan 239 Task 5).
+  if (!Number.isSafeInteger(maxFileBytes) || maxFileBytes < 1) throw new RangeError("nested.maxFileBytes must be a positive integer");
+  if (!Number.isSafeInteger(maxFiles) || maxFiles < 1) throw new RangeError("nested.maxFiles must be a positive integer");
   return { maxFileBytes, maxFiles };
 }
 

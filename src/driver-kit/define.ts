@@ -1,4 +1,4 @@
-import type { HostPort, JsonValue, LoopStrategy, RunController, SkillRegistry, ToolDefinition } from "../index.js";
+import type { HostPort, LoopStrategy, RunController, SkillRegistry, ToolDefinition } from "../index.js";
 import type { PackageAPI, PackageDefinition } from "../packages/api.js";
 import { definePackage } from "../packages/define.js";
 import type { JsonSchema } from "../packages/schema.js";
@@ -186,7 +186,20 @@ export function createDriverLoop<Extra extends object>(
     revision: definition.revision,
     usesModel: false,
     runModel: definition.descriptor.models,
+    // Per-run state (plan 231 Task 4): one driver loop serves concurrent sessions. The loop revision stays the
+    // driver's own: a runtime-equal check would reject every minor upgrade and preempt the typed error, so the
+    // binary's major version travels in the run's loop state instead.
+    state: "run",
     async run(run) {
+      const stored = (run.restored as { binaryMajor?: string | null } | null | undefined)?.binaryMajor;
+      const current = binary === undefined ? undefined : majorOf(binary.version);
+      if (stored !== undefined && stored !== null && current !== stored) {
+        throw new DriverError(
+          "driver_revision_mismatch",
+          `the run was stored under ${definition.vendor} major version ${stored}, found ${current ?? "no binary"}`,
+        );
+      }
+      run.checkpoint({ binaryMajor: current ?? null });
       if (binary === undefined) {
         throw new DriverError("driver_unavailable", `the ${definition.vendor} binary was not found; check the driver's binary setting`);
       }
@@ -206,20 +219,6 @@ export function createDriverLoop<Extra extends object>(
         });
       } finally {
         lease?.release();
-      }
-    },
-    // The loop revision stays the driver's own: a runtime-equal check would reject every minor upgrade and
-    // preempt the typed error. The binary's major version travels in the snapshot instead.
-    snapshot: () => ({ binaryMajor: binary === undefined ? null : majorOf(binary.version) }) satisfies JsonValue,
-    restore(snapshot) {
-      const stored = (snapshot as { binaryMajor?: string | null } | null)?.binaryMajor;
-      if (stored === undefined || stored === null) return;
-      const current = binary === undefined ? undefined : majorOf(binary.version);
-      if (current !== stored) {
-        throw new DriverError(
-          "driver_revision_mismatch",
-          `the run was stored under ${definition.vendor} major version ${stored}, found ${current ?? "no binary"}`,
-        );
       }
     },
   };

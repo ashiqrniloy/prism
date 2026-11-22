@@ -5,19 +5,15 @@ import {
   DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
   DEFAULT_JUDGE_MAX_RUBRIC_BYTES,
   DEFAULT_JUDGE_TIMEOUT_MS,
-  HARD_JUDGE_MAX_ATTEMPTS,
-  HARD_JUDGE_MAX_INPUT_BYTES,
-  HARD_JUDGE_MAX_OUTPUT_BYTES,
-  HARD_JUDGE_MAX_RUBRIC_BYTES,
-  HARD_JUDGE_TIMEOUT_MS,
 } from "./limits.js";
 import type { ModelJudgeOptions, Scorer } from "./types.js";
 import { validateScoreResult } from "./util.js";
 
-export function bounded(value: number | undefined, fallback: number, hard: number, name: string): number {
+/** A host-set eval limit: a positive integer. The host's value is the cap (plan 239 Task 5). */
+export function bounded(value: number | undefined, fallback: number, name: string): number {
   const selected = value ?? fallback;
-  if (!Number.isInteger(selected) || selected < 1 || selected > hard) {
-    throw new EvalError(`${name} must be an integer in [1, ${hard}]`, "ERR_PRISM_EVAL_JUDGE_BOUNDS");
+  if (!Number.isInteger(selected) || selected < 1) {
+    throw new EvalError(`${name} must be a positive integer`, "ERR_PRISM_EVAL_JUDGE_BOUNDS");
   }
   return selected;
 }
@@ -29,11 +25,11 @@ export function createModelJudge<TInput = unknown, TExpected = unknown>(
   if (!options.id.trim() || !options.rubric.trim() || !options.rubricVersion.trim()) {
     throw new EvalError("judge id, rubric, and rubricVersion are required", "ERR_PRISM_EVAL_JUDGE");
   }
-  const timeoutMs = bounded(options.timeoutMs, DEFAULT_JUDGE_TIMEOUT_MS, HARD_JUDGE_TIMEOUT_MS, "timeoutMs");
-  const maxAttempts = bounded(options.maxAttempts, DEFAULT_JUDGE_MAX_ATTEMPTS, HARD_JUDGE_MAX_ATTEMPTS, "maxAttempts");
-  const maxOutputBytes = bounded(options.maxOutputBytes, DEFAULT_JUDGE_MAX_OUTPUT_BYTES, HARD_JUDGE_MAX_OUTPUT_BYTES, "maxOutputBytes");
-  const maxInputBytes = bounded(options.maxInputBytes, DEFAULT_JUDGE_MAX_INPUT_BYTES, HARD_JUDGE_MAX_INPUT_BYTES, "maxInputBytes");
-  const maxRubricBytes = bounded(options.maxRubricBytes, DEFAULT_JUDGE_MAX_RUBRIC_BYTES, HARD_JUDGE_MAX_RUBRIC_BYTES, "maxRubricBytes");
+  const timeoutMs = bounded(options.timeoutMs, DEFAULT_JUDGE_TIMEOUT_MS, "timeoutMs");
+  const maxAttempts = bounded(options.maxAttempts, DEFAULT_JUDGE_MAX_ATTEMPTS, "maxAttempts");
+  const maxOutputBytes = bounded(options.maxOutputBytes, DEFAULT_JUDGE_MAX_OUTPUT_BYTES, "maxOutputBytes");
+  const maxInputBytes = bounded(options.maxInputBytes, DEFAULT_JUDGE_MAX_INPUT_BYTES, "maxInputBytes");
+  const maxRubricBytes = bounded(options.maxRubricBytes, DEFAULT_JUDGE_MAX_RUBRIC_BYTES, "maxRubricBytes");
   if (Buffer.byteLength(options.rubric) > maxRubricBytes)
     throw new EvalError("model judge rubric byte limit exceeded", "ERR_PRISM_EVAL_JUDGE_BOUNDS");
 

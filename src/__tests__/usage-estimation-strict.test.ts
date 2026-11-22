@@ -203,19 +203,18 @@ describe('usageEstimation: "strict" (plan 103 T5)', () => {
     assert.equal(fallback.usage.length, 2);
   });
 
-  it("the constructor still fails closed on an out-of-union value", async () => {
-    const agent = await createAgent({
-      id: "usage-bogus",
-      slots: { store: createMemorySessionStore() },
-      model: MODEL,
-      packages: [providerPackage("test-provider", [scriptedProvider([providerDone()], { count: 0 })])],
-      usageEstimation: "sometimes" as never,
-    });
+  it("createAgent fails closed on an out-of-union value (plan 229 Task 3)", async () => {
     await assert.rejects(
-      async () => await agent.session({ id: "usage-bogus-session", create: true }),
+      createAgent({
+        id: "usage-bogus",
+        slots: { store: createMemorySessionStore() },
+        model: MODEL,
+        packages: [providerPackage("test-provider", [scriptedProvider([providerDone()], { count: 0 })])],
+        usageEstimation: "sometimes" as never,
+      }),
       (thrown: unknown) => {
         assert.ok(thrown instanceof TypeError);
-        assert.match(thrown.message, /usageEstimation must be "fallback", "off", or "strict"/);
+        assert.match(thrown.message, /AgentConfig\.usageEstimation must be "fallback" or "off" or "strict"/);
         return true;
       },
     );

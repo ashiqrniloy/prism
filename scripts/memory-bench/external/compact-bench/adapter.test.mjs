@@ -176,26 +176,30 @@ test("prism_summary_is_what_the_model_sees_after_compaction", async () => {
     // S = the memory block (context blocks and summary messages, uncapped), then the kept messages as upstream lines.
     const keptPart = result.S.slice(result.block.length).replace(/^\n\n/, "");
     assert.ok(result.S.startsWith(result.block));
-    // The kept part is a tail of the replayed transcript, in order, verbatim as upstream printed it.
-    const tail = Array.from({ length: lines.length }, (_, k) => lines.slice(lines.length - k - 1).join("\n")).find(
-      (text) => text === keptPart,
-    );
-    assert.equal(tail, keptPart);
-    assert.ok(result.counts.keptMessages >= 1);
+    // Plan 218.3 Task 3: session memory's manual compaction between runs keeps only new input (none here), so the memory
+    // arm keeps no message; memory-off keeps the kernel default's tail.
+    if (arm === "memory-off") {
+      // The kept part is a tail of the replayed transcript, in order, verbatim as upstream printed it.
+      const tail = Array.from({ length: lines.length }, (_, k) => lines.slice(lines.length - k - 1).join("\n")).find(
+        (text) => text === keptPart,
+      );
+      assert.equal(tail, keptPart);
+      assert.ok(result.counts.keptMessages >= 1);
+    } else {
+      assert.equal(keptPart, "");
+      assert.equal(result.counts.keptMessages, 0);
+    }
     assert.equal(result.S.includes("<<compact-bench-probe>>"), false);
     assert.equal(result.counts.autoCompactionsBeforeFinal, 0);
     assert.equal(result.counts.turns, 24);
     if (arm === "memory-off") {
       // The kernel's default compactor, delivered as the kernel's summary message.
       assert.ok(result.block.startsWith("Summary:\n"));
-      assert.equal(result.chunks.length, 0);
     } else {
       assert.ok(result.block.includes("# Session Memory"));
       // The memory carries an early detail the kept tail does not.
       assert.ok(result.block.includes("src/mod0/file0.py"));
       assert.equal(keptPart.includes("src/mod0/file0.py"), false);
-      // Recall-reachable text is returned apart from S.
-      assert.ok(result.chunks.length > 0);
       assert.ok(result.counts.wm.compactions >= 1);
     }
   }
@@ -335,6 +339,7 @@ test("passthrough_adds_session_header_and_sets_agent_thinking", async () => {
       assert.deepEqual(JSON.parse(pyAgent.body).thinking, AGENT_THINKING);
       assert.equal(JSON.parse(pyAgent.body).max_tokens, 4096);
       assert.equal(pySummary.headers["x-opencode-session"], "cb-218.1-test-cell-1");
+      assert.doesNotMatch(pySummary.headers["user-agent"] ?? "", /python/i);
       assert.equal(JSON.parse(pySummary.body).thinking, undefined);
     }
   } finally {

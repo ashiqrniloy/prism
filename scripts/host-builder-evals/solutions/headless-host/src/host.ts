@@ -13,6 +13,7 @@ export async function createHost(options: HostOptions): Promise<Agent> {
     model: options.model,
     ownership: { tenantId: "local" },
     principal: { kind: "user", id: "local" },
-    packages: [...options.providers, toolsCoding({ root: options.root }), contextFiles({ root: options.root })],
+    // No UI and no approval package: `guard: "off"` lets shell run instead of asking (plan 233 Task 2).
+    packages: [...options.providers, toolsCoding({ root: options.root, guard: "off" }), contextFiles({ root: options.root })],
   });
 }

@@ -229,8 +229,10 @@ export interface RetrieveContextOptions {
   readonly lexical?: "fts" | "bm25" | "off";
   /** Only reciprocal-rank fusion is supported. */
   readonly fusion?: "rrf";
-  /** RRF smoothing constant (default 60, capped). */
+  /** RRF smoothing constant (default 60). */
   readonly rrfK?: number;
+  /** Characters the query may carry (default 16,384). A `rag_search` query comes from the model. */
+  readonly maxQueryChars?: number;
   readonly filter?: JsonObject;
   /** Host-verified ACL. Not `filter`. Unsupported stores fail closed. */
   readonly authorization?: RagAccessConstraint;

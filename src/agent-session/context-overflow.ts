@@ -8,6 +8,11 @@ export interface ContextOverflowCounts {
   readonly started?: boolean;
   /** The request had already been compacted once. */
   readonly afterCompaction?: boolean;
+  /**
+   * The recovery compaction threw (it failed, or the compaction owner declined because nothing it could remove would
+   * make the request fit), so no compacted request was sent.
+   */
+  readonly compactionFailed?: boolean;
 }
 
 /**
@@ -47,8 +52,10 @@ export function contextOverflowMessage(counts: ContextOverflowCounts): string {
   const window = counts.windowTokens === undefined ? "the model window" : `window ${count(counts.windowTokens)}`;
   const tail = counts.started
     ? "the model had already started a response"
-    : counts.afterCompaction
-      ? "the retry was rejected after compaction"
-      : "the request was rejected";
+    : counts.compactionFailed
+      ? "the request was rejected and compaction could not shrink it"
+      : counts.afterCompaction
+        ? "the retry was rejected after compaction"
+        : "the request was rejected";
   return `input ~${count(counts.estimatedTokens)} tokens exceeds ${window}: ${tail}`;
 }

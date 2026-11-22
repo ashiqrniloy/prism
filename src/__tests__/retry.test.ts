@@ -29,8 +29,8 @@ describe("retry policy", () => {
     }
   });
 
-  it("honors error.retryAfterMs capped at maxDelayMs", async () => {
-    const policy = createDefaultRetryPolicy({ baseDelayMs: 10, maxDelayMs: 1000, jitter: 0 });
+  it("honors error.retryAfterMs exactly within maxRetryAfterMs, unjittered and uncapped by maxDelayMs", async () => {
+    const policy = createDefaultRetryPolicy({ baseDelayMs: 10, maxDelayMs: 1000, jitter: 0.5, random: () => 0 });
     const context: RetryContext = {
       sessionId: "s1",
       runId: "r1",
@@ -41,11 +41,10 @@ describe("retry policy", () => {
     assert.deepEqual(await policy.decide(context), { retry: true, delayMs: 500 });
     assert.deepEqual(await policy.decide({ ...context, error: { ...context.error, retryAfterMs: 60_000 } }), {
       retry: true,
-      delayMs: 1000,
+      delayMs: 60_000,
     });
-    // Jitter still applies on top of the hint.
-    const jittered = createDefaultRetryPolicy({ baseDelayMs: 10, maxDelayMs: 1000, jitter: 0.5, random: () => 0 });
-    assert.equal((await jittered.decide(context)).delayMs, 250);
+    // A hint past the bound stops retrying instead of sleeping.
+    assert.deepEqual(await policy.decide({ ...context, error: { ...context.error, retryAfterMs: 60_001 } }), { retry: false });
   });
 
   it("errorToErrorInfo carries a numeric retryAfterMs hint", () => {
@@ -66,7 +65,9 @@ describe("retry policy", () => {
       (await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: { message: "bad request", code: 400 } })).retry,
       false,
     );
-    assert.equal(isTransientErrorInfo({ message: "temporary unavailable" }), true);
+    // Message text is never read: only `name`, `failureClass` and `code` decide.
+    assert.equal(isTransientErrorInfo({ message: "temporary unavailable" }), false);
+    assert.equal(isTransientErrorInfo({ message: "socket connection aborted", code: "ECONNABORTED" }), true);
   });
 
   it("a quota 429 is never retried while a rate limited 429 still is", async () => {

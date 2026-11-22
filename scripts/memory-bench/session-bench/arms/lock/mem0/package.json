@@ -1,0 +1,8 @@
+{
+  "name": "session-bench-mem0",
+  "private": true,
+  "description": "Plan 218.3 Task 10: Mem0 (Apache-2.0) for Session-Bench, installed into a cache directory, never the Prism workspace.",
+  "dependencies": {
+    "mem0ai": "3.3.1"
+  }
+}

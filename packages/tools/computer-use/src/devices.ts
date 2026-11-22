@@ -13,10 +13,8 @@ import { redactSecrets, type RunLimits, type SecretRedactor } from "@arnilo/pris
 
 /** Audio / screenshot / stream chunk: 1 MiB default / 8 MiB hard. */
 export const DEFAULT_DEVICE_MAX_CHUNK_BYTES = 1 * 1024 * 1024;
-export const HARD_DEVICE_MAX_CHUNK_BYTES = 8 * 1024 * 1024;
 /** Concurrent device sessions per identity: 1 default / 4 hard. */
 export const DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS = 1;
-export const HARD_DEVICE_MAX_CONCURRENT_SESSIONS = 4;
 
 export type DeviceKind = "voice" | "desktop-control";
 
@@ -77,10 +75,11 @@ export interface DevicePolicyOptions {
   readonly runLimits?: RunLimits;
 }
 
-function validateCap(name: string, value: number | undefined, def: number, hard: number): number {
+/** A host-set device cap: a positive safe integer. The host's value is the cap (plan 239 Task 5). */
+function validateCap(name: string, value: number | undefined, def: number): number {
   const resolved = value ?? def;
-  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard) {
-    throw new DevicePolicyError("ERR_PRISM_DEVICE_INPUT", `${name} must be a positive safe integer at most ${hard}`);
+  if (!Number.isSafeInteger(resolved) || resolved < 1) {
+    throw new DevicePolicyError("ERR_PRISM_DEVICE_INPUT", `${name} must be a positive safe integer`);
   }
   return resolved;
 }
@@ -95,17 +94,11 @@ export function resolveDevicePolicy(adapter: DeviceAdapter, options: DevicePolic
     enabled: adapter.enabled === true,
     // Approval is required unless the host explicitly opts out (it should not).
     requireApproval: adapter.requireApproval !== false,
-    maxChunkBytes: validateCap(
-      "maxChunkBytes",
-      options.maxChunkBytes ?? adapter.limits?.maxChunkBytes,
-      DEFAULT_DEVICE_MAX_CHUNK_BYTES,
-      HARD_DEVICE_MAX_CHUNK_BYTES,
-    ),
+    maxChunkBytes: validateCap("maxChunkBytes", options.maxChunkBytes ?? adapter.limits?.maxChunkBytes, DEFAULT_DEVICE_MAX_CHUNK_BYTES),
     maxConcurrentSessions: validateCap(
       "maxConcurrentSessions",
       options.maxConcurrentSessions ?? adapter.limits?.maxConcurrentSessions,
       DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
-      HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
     ),
     ...(adapter.sandbox ? { sandbox: adapter.sandbox } : {}),
     ...(adapter.network ? { network: adapter.network } : {}),

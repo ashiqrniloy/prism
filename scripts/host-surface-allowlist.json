@@ -32,7 +32,9 @@
     "SessionEntry",
     "OwnershipScope",
     "isTerminalAgentEventType",
-    "isSessionNotFound"
+    "isSessionNotFound",
+    "SessionContinueError",
+    "SESSION_NOTHING_TO_CONTINUE_CODE"
   ],
   "phase11": [
     "CredentialResolver",
@@ -65,7 +67,6 @@
     "RunController",
     "OwnershipScopeError",
     "HARD_MAX_PENDING_DECISIONS",
-    "HARD_MAX_SESSION_LIST_LIMIT",
     "MAX_DECISION_REASON_BYTES",
     "MAX_SESSION_LINK_ID_LENGTH",
     "SessionListQuery",
@@ -88,5 +89,12 @@
     "SessionStore",
     "SESSION_LINKS_DATA_KEY",
     "RunResultStatus"
+  ],
+  "phase19": [
+    "ResolvedRunLimits",
+    "resolveRunLimits",
+    "resolveCeilings",
+    "RunStateBounds",
+    "runStateBounds"
   ]
 }

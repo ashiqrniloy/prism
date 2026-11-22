@@ -37,8 +37,11 @@ export interface ChannelAdmission {
 }
 
 export interface ChannelCapabilities {
-  /** Telegram advances a poll offset; Signal has no transport acknowledgment step. */
-  readonly acknowledgement: "telegram_offset" | "none";
+  /**
+   * Telegram advances a poll offset; Signal has no transport acknowledgment step; Slack (and
+   * Discord) acknowledge each delivery within a platform deadline after `admit` settles.
+   */
+  readonly acknowledgement: "telegram_offset" | "none" | "deadline";
   readonly controls: "callback" | "command";
   /** Platform text ceiling for one outbound message, in UTF-16 code units. */
   readonly maxTextCodeUnits: number;

@@ -55,7 +55,8 @@ async function initRepo(): Promise<string> {
 
 test("resolveGitLimits rejects overflow", () => {
   assert.throws(() => resolveGitLimits({ maxPaths: 0 }), /maxPaths/);
-  assert.throws(() => resolveGitLimits({ maxPatchBytes: 10 ** 12 }), /maxPatchBytes/);
+  assert.throws(() => resolveGitLimits({ maxPatchBytes: 1.5 }), /maxPatchBytes/);
+  assert.equal(resolveGitLimits({ maxPatchBytes: 1024 ** 3 }).maxPatchBytes, 1024 ** 3);
 });
 
 test("parsePorcelainV2 ordinary/untracked/rename/branch", () => {

@@ -25,9 +25,7 @@ import type { PrismMcpAuthorization, ServeMcpHandle, ServeMcpOptions } from "./t
 
 const DEFAULT_TOOL_NAME = "prompt";
 const DEFAULT_MAX_PROMPT_BYTES = 64 * 1024;
-const HARD_MAX_PROMPT_BYTES = 1024 * 1024;
 const DEFAULT_MAX_RESULT_BYTES = 1024 * 1024;
-const HARD_MAX_RESULT_BYTES = 8 * 1024 * 1024;
 const APPROVAL_OUTCOMES: readonly ApprovalOutcome[] = ["allow_once", "allow_for_run", "reject_once", "reject_for_run"];
 const APPROVAL_SCHEMA: ElicitRequestFormParams["requestedSchema"] = {
   type: "object",
@@ -49,8 +47,8 @@ export function serveMcp(agent: Agent, options: ServeMcpOptions): ServeMcpHandle
   if (transports !== 1) throw new McpBridgeError("serveMcp takes exactly one of { stdio: true }, { transport }, or { http }");
   const toolName = options.toolName ?? DEFAULT_TOOL_NAME;
   if (!toolName) throw new McpBridgeError("toolName must be non-empty");
-  const maxPromptBytes = bounded(options.maxPromptBytes, DEFAULT_MAX_PROMPT_BYTES, HARD_MAX_PROMPT_BYTES, "maxPromptBytes");
-  const maxResultBytes = bounded(options.maxResultBytes, DEFAULT_MAX_RESULT_BYTES, HARD_MAX_RESULT_BYTES, "maxResultBytes");
+  const maxPromptBytes = bounded(options.maxPromptBytes, DEFAULT_MAX_PROMPT_BYTES, "maxPromptBytes");
+  const maxResultBytes = bounded(options.maxResultBytes, DEFAULT_MAX_RESULT_BYTES, "maxResultBytes");
   const redactor = options.redactor ?? agent.config.redactor;
   const host = isMcpHost(agent.config.host) ? agent.config.host : undefined;
   const sessions = new Map<string, Session>();

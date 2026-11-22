@@ -12,7 +12,7 @@ import type {
 import { createAccessRecheck } from "./access-recheck.js";
 import { RagError, RagLimitError, RagScopeError, RagValidationError } from "./errors.js";
 import { fuseRankings } from "@arnilo/prism-memory-system/core";
-import { HARD_CHUNK_SIZE_CAP, HARD_RETRIEVE_SCOPE_CAP, resolveRagLimits } from "./limits.js";
+import { DEFAULT_MAX_QUERY_CHARS, resolveRagLimits } from "./limits.js";
 import { rerankHits } from "./rerank.js";
 import type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js";
 import type { RagCitation, RagContentTrust, RagContextResult, RagHit, RagProvenance, RagScope, RetrieveContextOptions } from "./types.js";
@@ -33,7 +33,9 @@ const SCOPE_QUERY_CONCURRENCY = 4;
 
 export async function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult> {
   nonEmpty(query, "query");
-  if (query.length > HARD_CHUNK_SIZE_CAP) throw new RagValidationError(`query exceeds ${HARD_CHUNK_SIZE_CAP} characters`);
+  const maxQueryChars = options.maxQueryChars ?? DEFAULT_MAX_QUERY_CHARS;
+  if (!Number.isSafeInteger(maxQueryChars) || maxQueryChars < 1) throw new RagLimitError("maxQueryChars must be an integer >= 1");
+  if (query.length > maxQueryChars) throw new RagValidationError(`query exceeds ${maxQueryChars} characters`);
   const scopes = resolveRetrieveScopes(options);
   const limits = resolveRagLimits({
     topK: options.topK,
@@ -465,7 +467,6 @@ function resolveRetrieveScopes(options: RetrieveContextOptions): RagScope[] {
   if (hasScope && hasScopes) throw new RagValidationError("provide either scope or scopes, not both");
   if (!hasScope && !hasScopes) throw new RagValidationError("scope or scopes is required");
   const raw = hasScopes ? options.scopes! : [options.scope!];
-  if (raw.length > HARD_RETRIEVE_SCOPE_CAP) throw new RagLimitError(`scopes exceeds hard cap ${HARD_RETRIEVE_SCOPE_CAP}`);
   const seen = new Set<string>();
   const resolved: RagScope[] = [];
   for (const item of raw) {

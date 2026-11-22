@@ -47,6 +47,10 @@ Registers one decide handler, id `@arnilo/prism-extensions/approval:tool.call`. 
 
 A matching rule or session grant allows without asking, except in `deny`.
 
+## Services provided
+
+`tool-policy`: a frozen marker `{ package: "@arnilo/prism-extensions/approval" }`. It tells a tool package's unsandboxed default gate that this package decides, so `@arnilo/prism-tools/coding` stops asking before each `shell` command and leaves the call to the mode (plan 233 Task 3). `governance` provides the same marker; with both loaded, the first one set up holds it and the other skips it instead of failing with `service_conflict`.
+
 ## Failure behavior
 
 Hard denies from a tool package stay in force in every mode, including `auto`, because any deny wins at `tool.call`. This package never returns `allow` in order to override another handler's deny.

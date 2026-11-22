@@ -88,7 +88,7 @@ describe("PackageAPI registry reads", () => {
       skills: { add: [skill("host-skill")] },
       packages: [definition],
     });
-    const tools = held.api!.tools.list() as ToolDefinition[];
+    const tools = held.api!.tools.list() as unknown as ToolDefinition[];
     assert.throws(() => tools.push(tool("x")), TypeError);
     assert.throws(() => {
       (tools[0] as { name: string }).name = "renamed";

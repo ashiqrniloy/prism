@@ -56,6 +56,7 @@ The **host** stays in control:
 ```ts
 import { createAgent } from "@arnilo/prism";
 import coding from "@arnilo/prism-tools/coding";
+import approval from "@arnilo/prism-extensions/approval";
 import hyper from "@arnilo/prism-ai/hyper";
 import memorySystem from "@arnilo/prism-memory-system";
 
@@ -64,6 +65,7 @@ const agent = await createAgent({
   packages: [
     hyper({ apiKey: "env:HYPER_API_KEY" }),
     coding({ root: process.cwd() }),
+    approval({ mode: "edits" }), // without a policy package, coding asks before every shell command
     memorySystem({ stm: { model: "hyper/claude-haiku-4-5" } }),
   ],
   host: { ui: myUi }, // answers approvals, questions, secrets
@@ -120,7 +122,7 @@ Memory is two tiers over one store, and each tier is its own package subpath; th
 
 **The ontology.** `@arnilo/prism-knowledge/wiki` is knowledge outside memory: one concept per subject in its own store, with itemized claims, each citing the memory notes or ingested sources it rests on. An agent searches it with `wiki.search`, which returns concepts with the ids their claims cite, and drills down with `wiki.read`. The wiki reads memory only through a read-only port and never writes it; forgetting a cited memory note removes the claims that rested on it, with no model call. It also runs without memory, on its own sources. The cost is a background model call per due subject on the model the host names in `consolidate.model`; installing the package is what opts in. It is unmeasured, so nothing here claims it improves answers.
 
-**Host libraries** connect an agent to the outside world or to a person, so they are libraries rather than packages — subpaths of `@arnilo/prism-hosts` that register nothing. They take an `Agent` and serve it, or route its requests: `@arnilo/prism-hosts/acp`, `@arnilo/prism-hosts/ag-ui`, `@arnilo/prism-hosts/mcp-server`, `@arnilo/prism-hosts/channels`, `@arnilo/prism-hosts/remote` (serve an agent to remote clients, or connect to one), and `@arnilo/prism-hosts/headless` (answer host-port requests without a person).
+**Host libraries** connect an agent to the outside world or to a person, so they are libraries rather than packages — subpaths of `@arnilo/prism-hosts` that register nothing. They take an `Agent` and serve it, or route its requests: `@arnilo/prism-hosts/a2a` (serve an agent to A2A 1.0 peers, or call one as an `Agent`), `@arnilo/prism-hosts/acp`, `@arnilo/prism-hosts/ag-ui`, `@arnilo/prism-hosts/mcp-server`, `@arnilo/prism-hosts/channels`, `@arnilo/prism-hosts/remote` (serve an agent to remote clients, or connect to one), and `@arnilo/prism-hosts/headless` (answer host-port requests without a person).
 
 **Prism Agent** is the reference host. It is a coding agent built only on `@arnilo/prism` and the manifest, and it is not published. Its [walkthrough](apps/prism-agent/README.md) shows how a host assembles the pieces above.
 

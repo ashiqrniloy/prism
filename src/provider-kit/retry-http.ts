@@ -20,22 +20,6 @@ interface RetryDecisionFields {
   readonly retryAfterMs?: number;
 }
 
-/** `Retry-After` sources: a `Headers` instance or a plain header record. */
-type RetryHeaders = Headers | Record<string, string> | undefined;
-
-/**
- * `Retry-After` as milliseconds, read from the header (seconds) or — when the caller passes
- * `bodyRetryAfter` — from a numeric/string body field (NeuralWatt's `error.retry_after`;
- * callers that do not honor a body field leave it undefined). Malformed or negative values
- * yield `undefined` (no hint) rather than a bogus delay.
- */
-export function readRetryAfterMs(headers: RetryHeaders, bodyRetryAfter?: unknown): number | undefined {
-  const raw = readHeader(headers, "retry-after") ?? readNumber(bodyRetryAfter);
-  if (raw === undefined) return undefined;
-  const seconds = Number(raw);
-  return Number.isFinite(seconds) && seconds >= 0 ? Math.round(seconds * 1000) : undefined;
-}
-
 /** `error` object of a provider error envelope, or `undefined` for any other body shape. */
 export function parseErrorBody(body: unknown): { error?: Record<string, unknown> } | undefined {
   if (!body || typeof body !== "object" || Array.isArray(body)) return undefined;
@@ -68,21 +52,4 @@ export function providerHttpError(
     configurable: false,
   });
   return error;
-}
-
-function readHeader(headers: RetryHeaders, name: string): string | undefined {
-  if (!headers) return undefined;
-  if (headers instanceof Headers) return headers.get(name) ?? undefined;
-  const lower = name.toLowerCase();
-  const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === lower);
-  const value = entry?.[1];
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function readNumber(value: unknown): number | undefined {
-  return typeof value === "number"
-    ? value
-    : typeof value === "string" && value.trim() && Number.isFinite(Number(value))
-      ? Number(value)
-      : undefined;
 }

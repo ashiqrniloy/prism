@@ -29,12 +29,12 @@ advisor({
 | --- | --- | --- |
 | `model` | required | The advisor's own model (`"provider/model"` or `{ provider, model }`). Setup fails naming the field when absent; an unresolvable model is a `warn` status note and registers nothing. |
 | `instructions` | built-in prompt | Replaces the advisor's instructions. |
-| `context` | `{ lastTurns: 6, maxChars: 24_000 }` | The slice of the conversation the advisor reads. `lastTurns` capped at 50, `maxChars` at 120,000; a larger value is clamped with one `info` note. |
-| `adviceMaxChars` | `4_000` | Cap on the advice text, hard cap 16,000. |
+| `context` | `{ lastTurns: 6, maxChars: 24_000 }` | The slice of the conversation the advisor reads. The host's values are the caps; nothing is clamped. |
+| `adviceMaxChars` | `4_000` | Cap on the advice text. |
 | `tool` | `true` | Register the `advise` tool. |
 | `triggers.beforeTools` | off | Consult before each named tool call. |
 | `triggers.beforeFinish` | off | Consult at the natural end of each run. |
-| `maxConsultsPerRun` | `3` | Model calls one run may spend on consults, hard cap 20. |
+| `maxConsultsPerRun` | `3` | Model calls one run may spend on consults. |
 | `validate` | off | Completion validation; see below. |
 
 `triggers.beforeFinish` and `validate` together fail config validation: both are `run.end` reviews and the first continuation wins, so one would be silently inert.
@@ -105,7 +105,7 @@ Each round, the validator reads `selectTranscript(payload.history, validate.cont
 **Fails closed.** A model or child error, a timeout, an unparseable verdict, a missing service or unknown child (`validator_engine_unavailable`), never yields `verified`. With `onError: "continue"` and rounds left the run continues with `Validation could not run (<reason code>). Check your work explicitly and state the evidence.`; otherwise the run ends. The event is `error` either way.
 
 - `engine: "model"` (default) is one model call per round. `engine: { child }` is one delegation through the `delegate` service, bounded by that child's own `limits`; give it tight limits and read-only tools.
-- `maxRounds` defaults to 2, hard cap 10. Rounds are counted by the run's continuations and are **not** spent from `maxConsultsPerRun`. The effective cap is the smaller of `maxRounds` and the continuations left, so a host with `limits.maxContinuations: 0` gets no validation rounds.
+- `maxRounds` defaults to 2; the host's value is the cap. Rounds are counted by the run's continuations and are **not** spent from `maxConsultsPerRun`. The effective cap is the smaller of `maxRounds` and the continuations left, so a host with `limits.maxContinuations: 0` gets no validation rounds.
 - The task is captured from the run's input (the `run.input` hook carries the run id), so a mid-run steer cannot replace it. A run whose input was empty (a resume, a restart) falls back to the first user message of the history, and the event says `task: "inferred"`.
 - Rounds are not a gate the runtime enforces on the result: **the host treats a run as done only when the run's last `validator.verdict` is `verified`**. A run reporting `completed` alone does not mean verified.
 
@@ -136,7 +136,7 @@ advisorPackage({
 });
 ```
 
-The evidence source runs on `run.end`, after the worker stopped. A throw is the `error` reason code `evidence_failed`. All evidence text shares `validate.evidenceMaxChars` (default 48,000, hard cap 120,000). A short block keeps its text and the rest is split evenly. A cut block carries `[truncated: shown the first N of M chars]`, and a block the host marks `truncated: true` carries `[truncated: the host cut this evidence before validation]`. At most 16 blocks.
+The evidence source runs on `run.end`, after the worker stopped. A throw is the `error` reason code `evidence_failed`. All evidence text shares `validate.evidenceMaxChars` (default 48,000). A short block keeps its text and the rest is split evenly. A cut block carries `[truncated: shown the first N of M chars]`, and a block the host marks `truncated: true` carries `[truncated: the host cut this evidence before validation]`. At most 16 blocks.
 
 ### Standalone validation (a workflow gate)
 

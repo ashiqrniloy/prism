@@ -4,7 +4,7 @@ Connect Model Context Protocol servers to a Prism agent, and bridge their tools.
 
 ## What it does
 
-`@arnilo/prism-extensions/mcp` is a native Prism package. List it and it connects each allowed server during `setup`, registers the discovered tools with `effects`, and exposes status, reconnect, and close as package commands. The MCP client library (`connectMcpTools`, `McpToolBridge`, `createMcpClientAuth`, the transports, and the bounds) stays exported for hosts that build their own bridge.
+`@arnilo/prism-extensions/mcp` is a native Prism package. List it and it connects each allowed server during `setup`, supplies each server's current tools with `effects` through a tool source, and exposes status, reconnect, and close as package commands. The MCP client library (`connectMcpTools`, `McpToolBridge`, `createMcpClientAuth`, the transports, and the bounds) stays exported for hosts that build their own bridge.
 
 ## When to use it
 
@@ -52,21 +52,61 @@ const agent = await createAgent({
 | `servers[].env` | `Record<string, string \| { ref }>` | — | A secret value must be a `{ ref }`; a literal is allowed for non-secrets. |
 | `servers[].url` | `string` | required for HTTP | |
 | `servers[].headers` | `Record<string, { ref, prefix? }>` | — | Ref-only. Resolved through `prism.credentials.resolve` at connect. |
+| `servers[].auth` | `{ kind: "oauth", tokens, scopes?, clientId?, callback? }` | — | HTTP only. Signs in with OAuth; see [OAuth](#oauth). |
 | `servers[].allowedOrigins` | `string[]` | the URL origin | Exact origins for the HTTP transport. |
 | `servers[].allow` | `string \| string[]` | — | Required per server unless the plane `allow` is set. |
 | `servers[].namePrefix` | `string` | `mcp:<id>` | Remote tools are `mcp:<id>:<toolName>`. |
-| `servers[].connectTimeoutMs` | `integer` | `15000` | Per-server connect bound. |
+| `servers[].connectTimeoutMs` | `integer` | `15000` | Bounds connect and the first `tools/list` only. |
+| `servers[].callTimeoutMs` | `integer` | `60000` | Bounds one tool call without progress; each server progress notification resets it. Later `tools/list` refreshes use it too. |
+| `servers[].maxCallTimeMs` | `integer` | `300000` | Ends a tool call however much progress arrives. Must be at least `callTimeoutMs`. |
 | `servers[].readOnly` | `boolean` | `false` | `true` registers tools with `effects: ["read"]`; `false` gives `["external"]`. |
 | `servers[].enabled` | `boolean` | `true` | `false` reports `disabled`. |
 | `allow` | `string \| string[]` | — | Plane-level allow list; a server must match its own `allow` and this one. |
 | `trusted` | `string[]` | `[]` | Fingerprints (`mcpServerFingerprint`) trusted without a prompt. Ignored from the project scope. |
-| `connectTimeoutMs` | `integer` | `15000` | Plane-level default. |
+| `connectTimeoutMs` / `callTimeoutMs` / `maxCallTimeMs` | `integer` | `15000` / `60000` / `300000` | Plane-level defaults; a server's own value wins. |
+| `reconnect.attempts` | `integer` ≥ 0 | `5` | Automatic reconnect attempts after a drop. `0` disables: a dropped server is `failed` with `reason: "connection_lost"`. |
+| `reconnect.baseDelayMs` / `reconnect.maxDelayMs` | `integer` | `1000` / `30000` | Attempt *n* waits `min(maxDelayMs, baseDelayMs × 2^(n-1))`. |
+| `limits` | `object` | client defaults | Bounds on what every server sends: `maxListPages` (20), `maxTools` (500), `maxCursorBytes`, `maxToolNameBytes`, `maxToolDescriptionBytes`, `maxToolSchemaBytes`, `maxTotalToolSchemaBytes`, `maxJsonDepth`, `maxJsonProperties`, `maxResultBytes` (10,000,000), `listCacheTtlMs` (30,000). The host's values are the caps. |
+| `signInTimeoutMs` | `integer` | `300000` | How long a person has to finish an OAuth sign-in. |
+
+The host's values are the caps: hours are allowed. A non-positive value, or a `maxCallTimeMs` below `callTimeoutMs`, fails the load. A call that runs out of time returns a tool error naming the server and the limit, and the request is cancelled on the server: `notifications/cancelled` on the 2025 protocol, or an aborted HTTP request on a 2026-07-28 Streamable HTTP connection. Aborting the run cancels a call at once.
 
 A `raw` server takes its transport from the `mcp.transport` service, keyed by server id. A missing service or entry makes that server `failed`.
 
 ### Capabilities
 
-`host-ui`, `credentials`. `host-ui` is used for the project-trust prompt; `credentials` resolves every header and secret env ref.
+`host-ui`, `credentials`, and `credentials:write` when any server has `auth`. `host-ui` is used for the project-trust prompt and OAuth sign-in; `credentials` resolves every header and secret env ref; `credentials:write` stores and deletes the OAuth sign-in record. Without `credentials:write`, an `auth` entry fails the load with `capability_missing`.
+
+### OAuth
+
+```ts
+{
+  id: "tracker",
+  transport: "http",
+  url: "https://mcp.example.com/mcp",
+  allow: "https://mcp.example.com",
+  auth: { kind: "oauth", tokens: "keyring:mcp-tracker" },
+}
+```
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| `tokens` | required | A writable `keyring:` ref. An `env:` ref or a literal fails the load. |
+| `scopes` | — | Requested during authorization. |
+| `clientId` | — | A static client id, or an `https://` client metadata URL (CIMD). Omitted: dynamic client registration. |
+| `callback` | `"listen"` | `listen` binds a loopback listener on `127.0.0.1`; `paste` asks `host.ui` (`input`) for the full callback URL. |
+
+When the server answers 401 at connect, or on `mcp:login`, the package runs the library flow: discovery, registration or the configured client, and PKCE. It sends the authorization URL through `host.ui` `open-url`, then waits up to 5 minutes for the callback, outside the connect timer, and connects again on a fresh transport. During `setup` the wait does not hold `createAgent`: the server reports `failed` with `reason: "auth_required"` and `signingIn: true` at once, the sign-in continues in the background, and its tools reach the next run once it connects. Disposing the agent or running `mcp:login` cancels that wait.
+
+- The loopback listener accepts one callback, checks `state`, and closes. The `paste` path takes the full callback URL so `state` and `iss` are checked; a bare code is refused.
+- The redirect URI's port is saved with the record and tried first. If it is busy, a random port is used and a dynamically registered client registers again.
+- The whole sign-in record (tokens, client registration, discovery, PKCE verifier, authorization state) is one JSON record in the ref's `Secret.metadata`, bounded at 64 KiB. The access token is the secret value, so the kernel redacts it. Tokens never appear in events, status notes, `inspect()`, or errors.
+- Refresh happens inside the flow on expiry, with no prompt, and the new tokens are written back.
+- With no `host.ui`, or an `unavailable` or dismissed answer, the server is `failed` with `reason: "auth_required"` and no URL is opened.
+- Plaintext and loopback discovery and token endpoints are allowed only when the server URL is itself loopback.
+- An `auth` entry is part of the server fingerprint, so a project manifest that adds one asks for trust again.
+
+A server without `auth` that answers 401 is `failed`, with a status note naming the `auth` field.
 
 ### Project trust
 
@@ -76,11 +116,35 @@ A server whose `servers` config came from the **project** manifest connects only
 
 | Command | Args | Result |
 | --- | --- | --- |
-| `mcp:status` | — | `{ servers: [{ id, state, toolCount, added?, error?, reason? }] }` |
-| `mcp:reconnect` | `{ id }` | Reconnects one server; trust is not re-asked for an already-trusted server. |
-| `mcp:close` | `{ id? }` | Closes one server, or all of them. |
+| `mcp:status` | — | `{ servers: [{ id, state, toolCount, added?, error?, reason?, signingIn?, attempt?, attempts? }] }` |
+| `mcp:reconnect` | `{ id }` | Reconnects one server now, interactively, and stops a pending automatic reconnect; trust is not re-asked for an already-trusted server. |
+| `mcp:close` | `{ id? }` | Closes one server, or all of them, and stops a pending reconnect or sign-in. |
+| `mcp:login` | `{ id }` | OAuth servers only. Drops the stored tokens, signs in through `host.ui`, and reconnects. |
+| `mcp:logout` | `{ id }` | OAuth servers only. Deletes the stored sign-in record and closes the server (`reason: "signed_out"`). |
 
-Each transition emits an `mcp.status` package event with the server status. A tool that first appears after a reconnect is counted in `added` and a status note says to recreate the agent.
+Each transition emits an `mcp.status` package event with the server status. A tool that first appears after a reconnect is counted in `added`.
+
+| State | Meaning |
+| --- | --- |
+| `connected` | The server's tools reach new runs. |
+| `reconnecting` | The connection dropped; `attempt` of `attempts` is waiting or connecting. |
+| `failed` | Connect failed, reconnect gave up, or sign-in is needed (`reason: "auth_required"`, `"connection_lost"`, `"credential_unavailable"`, …). |
+| `disabled` | `enabled: false`, outside `allow`, or not trusted (`reason`). |
+| `closed` | `mcp:close`, `mcp:logout`, or dispose. |
+
+### Reconnect
+
+The bridge reports a drop when a stdio child exits, or when an HTTP request fails with a closed connection, a network error, or a 404 (the server dropped the session). A request timeout or a server error is not a drop. The package then reconnects with the `reconnect` backoff, emitting `reconnecting` before each attempt and `connected` or `failed` at the end; failed attempts in between are not reported one by one.
+
+- While a server is not `connected`, its tools leave new runs. A call from a run already going returns a tool error naming the server's state.
+- Each attempt resolves credentials again, so a rotated secret is picked up and a removed one fails closed (`credential_unavailable`, no further attempts).
+- Trust is not asked again: the trust cache is keyed by `mcpServerFingerprint`, so only a server whose fingerprint changed asks.
+- An automatic reconnect never opens a sign-in. A 401 that a token refresh cannot fix ends the attempts with `reason: "auth_required"`; run `mcp:login`.
+- `mcp:reconnect`, `mcp:login`, `mcp:logout`, `mcp:close`, and dispose cancel a pending reconnect.
+
+### Live tool lists
+
+The package registers one tool source per server (`PackageAPI.tools.source`) instead of registering tools in `setup`. At the start of each run the kernel reads the server's current list: tools a `tools/list_changed` notification, a reconnect, or a late sign-in added appear, tools the server removed disappear, and a run already going keeps the set it started with. A server that is not `connected` supplies no tools. A tool whose name another package or the host already holds is dropped with a status note. No agent needs recreating.
 
 ### Effects
 
@@ -88,7 +152,7 @@ Bridged tools declare `effects: ["external"]`, or `["read"]` with `readOnly: tru
 
 ## Cost
 
-Servers connect concurrently in `setup`, so setup latency is the slowest server's `connectTimeoutMs`, not the sum. With no servers configured, `setup` registers nothing.
+Servers connect concurrently in `setup`, so setup latency is the slowest server's `connectTimeoutMs`, not the sum; an OAuth sign-in does not add to it. With no servers configured, `setup` registers nothing. A live tool list costs one in-memory read per server per run start; the server is asked again only after a `list_changed` notification. Reconnect makes requests only after a drop, at most `reconnect.attempts` connects per drop, and nothing polls a connected server.
 
 ## Client library
 

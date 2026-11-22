@@ -53,6 +53,8 @@ interface HarnessOptions {
   readonly config?: MemoryFabricConfig;
   readonly script?: readonly (readonly ProviderEvent[])[];
   readonly extraPackages?: readonly PackageInstance[];
+  /** Session memory's compaction; off when an extra package shortens the context itself (plan 218.3 Task 2). */
+  readonly sessionCompaction?: boolean;
 }
 
 async function harness(options: HarnessOptions = {}) {
@@ -62,7 +64,11 @@ async function harness(options: HarnessOptions = {}) {
   });
   const agent = await createAgent({
     model: { provider: "mock", model: "main" },
-    packages: [provider, memorySystem({ ltm: options.config ?? {} }), ...(options.extraPackages ?? [])],
+    packages: [
+      provider,
+      memorySystem({ ltm: options.config ?? {}, ...(options.sessionCompaction === false ? { context: { compaction: false } } : {}) }),
+      ...(options.extraPackages ?? []),
+    ],
   });
   return { agent, requests };
 }
@@ -127,6 +133,7 @@ describe("long-term memory package (plan 158 Task 4; moved by plan 216 Task 5)",
   it("passive recall runs once per user turn and preserves tail bytes through tool rounds", async () => {
     const { agent, requests } = await harness({
       config: { inject: { minSimilarity: 0.35 }, consolidate: false },
+      sessionCompaction: false,
       extraPackages: [
         contextEngineering({ fold: { minAgeTurns: 1, minBytes: 1, maxSummaryBytes: 32 }, budget: { maxInputTokens: 20_000 } }),
       ],

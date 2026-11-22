@@ -51,18 +51,12 @@ const STATUS_GLYPHS: Readonly<Record<TodoStatus, string>> = {
 };
 
 export const DEFAULT_MAX_TODO_ITEMS = 50;
-export const HARD_MAX_TODO_ITEMS = 200;
 export const DEFAULT_MAX_TODO_CONTENT_BYTES = 512;
-export const HARD_MAX_TODO_CONTENT_BYTES = 4_096;
 export const DEFAULT_MAX_TODO_ID_BYTES = 128;
-export const HARD_MAX_TODO_ID_BYTES = 512;
 
 export const DEFAULT_MAX_TODO_NO_PROGRESS = 2;
-export const HARD_MAX_TODO_NO_PROGRESS = 20;
 export const DEFAULT_MAX_TODO_STEER_ITEMS = 20;
-export const HARD_MAX_TODO_STEER_ITEMS = 50;
 export const DEFAULT_MAX_TODO_STEER_BYTES = 4_096;
-export const HARD_MAX_TODO_STEER_BYTES = 16_384;
 
 export interface TodoWriteToolOptions {
   readonly maxItems?: number;
@@ -78,20 +72,20 @@ export interface ResolvedTodoWriteLimits {
 
 export function resolveTodoWriteLimits(options?: TodoWriteToolOptions): ResolvedTodoWriteLimits {
   return {
-    maxItems: validateCodingLimit("maxItems", options?.maxItems ?? DEFAULT_MAX_TODO_ITEMS, HARD_MAX_TODO_ITEMS),
-    maxContentBytes: validateCodingLimit(
-      "maxContentBytes",
-      options?.maxContentBytes ?? DEFAULT_MAX_TODO_CONTENT_BYTES,
-      HARD_MAX_TODO_CONTENT_BYTES,
-    ),
-    maxIdBytes: validateCodingLimit("maxIdBytes", options?.maxIdBytes ?? DEFAULT_MAX_TODO_ID_BYTES, HARD_MAX_TODO_ID_BYTES),
+    maxItems: validateCodingLimit("maxItems", options?.maxItems ?? DEFAULT_MAX_TODO_ITEMS),
+    maxContentBytes: validateCodingLimit("maxContentBytes", options?.maxContentBytes ?? DEFAULT_MAX_TODO_CONTENT_BYTES),
+    maxIdBytes: validateCodingLimit("maxIdBytes", options?.maxIdBytes ?? DEFAULT_MAX_TODO_ID_BYTES),
   };
 }
 
+/**
+ * Reading a stored list: the host's write limits may be any size, so a stored list is bounded only by the
+ * kernel's `ceilings.stateValueBytes`, which every package-state write already passed.
+ */
 const READ_LIMITS: ResolvedTodoWriteLimits = {
-  maxItems: HARD_MAX_TODO_ITEMS,
-  maxContentBytes: HARD_MAX_TODO_CONTENT_BYTES,
-  maxIdBytes: HARD_MAX_TODO_ID_BYTES,
+  maxItems: Number.MAX_SAFE_INTEGER,
+  maxContentBytes: Number.MAX_SAFE_INTEGER,
+  maxIdBytes: Number.MAX_SAFE_INTEGER,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -342,17 +336,11 @@ function continueDecision(open: readonly TodoItem[], maxSteerItems: number, maxS
  */
 export function createTodoContinuationDecision(options?: TodoContinuationOptions): TodoContinuationDecision {
   const maxNoProgress =
-    options?.maxNoProgress === undefined
-      ? DEFAULT_MAX_TODO_NO_PROGRESS
-      : validateCodingLimit("maxNoProgress", options.maxNoProgress, HARD_MAX_TODO_NO_PROGRESS);
+    options?.maxNoProgress === undefined ? DEFAULT_MAX_TODO_NO_PROGRESS : validateCodingLimit("maxNoProgress", options.maxNoProgress);
   const maxSteerItems =
-    options?.maxSteerItems === undefined
-      ? DEFAULT_MAX_TODO_STEER_ITEMS
-      : validateCodingLimit("maxSteerItems", options.maxSteerItems, HARD_MAX_TODO_STEER_ITEMS);
+    options?.maxSteerItems === undefined ? DEFAULT_MAX_TODO_STEER_ITEMS : validateCodingLimit("maxSteerItems", options.maxSteerItems);
   const maxSteerBytes =
-    options?.maxSteerBytes === undefined
-      ? DEFAULT_MAX_TODO_STEER_BYTES
-      : validateCodingLimit("maxSteerBytes", options.maxSteerBytes, HARD_MAX_TODO_STEER_BYTES);
+    options?.maxSteerBytes === undefined ? DEFAULT_MAX_TODO_STEER_BYTES : validateCodingLimit("maxSteerBytes", options.maxSteerBytes);
   const onNoProgressStop = options?.onNoProgressStop;
 
   // Per-run continuation counters; one decision instance is reused across runs.

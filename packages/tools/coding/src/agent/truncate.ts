@@ -10,7 +10,7 @@
  * Never returns partial lines (except the documented tail single-line edge case).
  */
 
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, HARD_MAX_BYTES, HARD_MAX_LINES, validateCodingLimit } from "./limits.js";
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, validateCodingLimit } from "./limits.js";
 
 export { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "./limits.js";
 
@@ -79,8 +79,8 @@ export function formatSize(bytes: number): string {
  * returns empty content with firstLineExceedsLimit=true.
  */
 export function truncateHead(content: string, options: TruncationOptions = {}): TruncationResult {
-  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
-  const maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
+  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES);
   const totalBytes = Buffer.byteLength(content, "utf-8");
   const lines = splitLinesForCounting(content);
   const totalLines = lines.length;
@@ -162,8 +162,8 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
  * the byte limit.
  */
 export function truncateTail(content: string, options: TruncationOptions = {}): TruncationResult {
-  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES, HARD_MAX_LINES);
-  const maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES, HARD_MAX_BYTES);
+  const maxLines = validateCodingLimit("maxLines", options.maxLines ?? DEFAULT_MAX_LINES);
+  const maxBytes = validateCodingLimit("maxBytes", options.maxBytes ?? DEFAULT_MAX_BYTES);
   const totalBytes = Buffer.byteLength(content, "utf-8");
   const lines = splitLinesForCounting(content);
   const totalLines = lines.length;

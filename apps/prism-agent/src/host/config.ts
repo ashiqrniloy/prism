@@ -1,5 +1,15 @@
 import { readFileSync } from "node:fs";
-import type { HookRegistrar, HostPort, HostUi, ModelRef, OwnershipScope, PackageInstance, RunLimits } from "@arnilo/prism";
+import type {
+  AgentConfig,
+  HookRegistrar,
+  HostPort,
+  HostUi,
+  ModelRef,
+  OwnershipScope,
+  PackageInstance,
+  RunLimits,
+  SessionLimits,
+} from "@arnilo/prism";
 import type { ToolsWebCacheConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig } from "@arnilo/prism-tools/web";
 
 /** Modes the approval package owns. Passed through; the package validates. */
@@ -37,6 +47,13 @@ export interface HostConfig {
   /** Opt-in memory for the research and coding workers. `coding` adds standing decisions and path rules. */
   readonly memory?: "conversational" | "coding";
   /**
+   * The workers' compaction system; one runs per agent (plan 218.3 Task 2). `"llm"` (default): LLM compaction with
+   * tool-result folding, and session memory (when `memory` is set) only records and recalls. `"session-memory"` (needs
+   * `memory`): session memory is on for every session and is the only compaction, on its two triggers; LLM compaction
+   * and folding are not listed.
+   */
+  readonly compaction?: "llm" | "session-memory";
+  /**
    * Opt-in wiki: adds `@arnilo/prism-knowledge/wiki`, whose store lives under `<workspace>/.prism/wiki`. A background pass
    * consolidates evidence (its own ingested sources, and long-term memory's notes read-only when `memory` is on) into cited
    * concepts that `wiki.search` returns. Default off. The pass is extra model calls, on `ontologyModel` when set and on
@@ -64,6 +81,20 @@ export interface HostConfig {
     readonly brief?: { readonly cron: string; readonly prompt: string };
     readonly build?: { readonly cron: string };
   };
+  /**
+   * Opt-in run recovery. On: every worker records runs in a SQLite run ledger on `storePath`, and
+   * `prism-agent recover` continues the runs a dead process left `running` (`@arnilo/prism-hosts/headless`).
+   */
+  readonly recovery?: {
+    /** Only runs started at least this long ago are continued. Default 60 000. */
+    readonly olderThanMs?: number;
+  };
+  /**
+   * Session limits for every worker (`AgentConfig.sessionLimits`): a cost, token, run, or deadline budget across all
+   * runs of one session that survives a restart. Unset: no session budget, only each run's own limits. The kernel
+   * validates the values.
+   */
+  readonly sessionLimits?: SessionLimits;
   readonly external?: {
     readonly binary: string;
     readonly args?: readonly string[];
@@ -90,6 +121,11 @@ export interface HostDeps {
   readonly hooks?: (hooks: HookRegistrar) => void;
 }
 
+/** `sessionLimits` for `createAgent`, only when the host set it. */
+export function sessionLimitsConfig(config: HostConfig): Pick<AgentConfig, "sessionLimits"> {
+  return config.sessionLimits === undefined ? {} : { sessionLimits: config.sessionLimits };
+}
+
 /** `deps.host` wins; otherwise a bare `deps.ui` becomes one. */
 export function hostPortOf(deps: HostDeps): HostPort | undefined {
   if (deps.host !== undefined) return deps.host;
@@ -104,13 +140,18 @@ const HOST_KEYS = new Set([
   "web",
   "embeddings",
   "memory",
+  "compaction",
   "ontology",
   "ontologyModel",
   "maxRepairs",
   "gate",
   "external",
   "schedule",
+  "recovery",
+  "sessionLimits",
 ]);
+const SESSION_LIMIT_KEYS = new Set(["maxCost", "maxTotalTokens", "maxRuns", "deadline"]);
+const RECOVERY_KEYS = new Set(["olderThanMs"]);
 const GATE_KEYS = new Set(["command"]);
 const MODEL_KEYS = new Set(["orchestrator", "coding", "research"]);
 const WEB_KEYS = new Set(["backend", "apiKey", "obscuraBinary", "searxngOrigin", "fetch", "domains", "cache"]);
@@ -233,6 +274,12 @@ export function loadHostConfig(path: string): HostConfig {
   if (parsed.memory !== undefined && parsed.memory !== "conversational" && parsed.memory !== "coding") {
     throw new Error("prism-agent config memory must be conversational or coding");
   }
+  if (parsed.compaction !== undefined && parsed.compaction !== "llm" && parsed.compaction !== "session-memory") {
+    throw new Error("prism-agent config compaction must be llm or session-memory");
+  }
+  if (parsed.compaction === "session-memory" && parsed.memory === undefined) {
+    throw new Error("prism-agent config compaction: session-memory needs memory");
+  }
   if (parsed.ontology !== undefined && typeof parsed.ontology !== "boolean") {
     throw new Error("prism-agent config ontology must be a boolean");
   }
@@ -312,6 +359,20 @@ export function loadHostConfig(path: string): HostConfig {
       ...(buildOut === undefined ? {} : { build: buildOut }),
     };
   }
+  let recovery: { olderThanMs?: number } | undefined;
+  if (parsed.recovery !== undefined) {
+    if (!isRecord(parsed.recovery)) throw new Error("prism-agent config recovery must be an object");
+    assertKeys(parsed.recovery, RECOVERY_KEYS, "recovery");
+    const olderThanMs = parsed.recovery.olderThanMs;
+    if (olderThanMs !== undefined && (typeof olderThanMs !== "number" || !Number.isFinite(olderThanMs) || olderThanMs < 0)) {
+      throw new Error("prism-agent config recovery.olderThanMs must be a non-negative number");
+    }
+    recovery = olderThanMs === undefined ? {} : { olderThanMs };
+  }
+  if (parsed.sessionLimits !== undefined) {
+    if (!isRecord(parsed.sessionLimits)) throw new Error("prism-agent config sessionLimits must be an object");
+    assertKeys(parsed.sessionLimits, SESSION_LIMIT_KEYS, "sessionLimits");
+  }
   return {
     models: {
       orchestrator: modelRef(parsed.models.orchestrator, "models.orchestrator"),
@@ -332,11 +393,15 @@ export function loadHostConfig(path: string): HostConfig {
     },
     ...(embeddings === undefined ? {} : { embeddings }),
     ...(parsed.memory === "conversational" || parsed.memory === "coding" ? { memory: parsed.memory } : {}),
+    ...(parsed.compaction === "llm" || parsed.compaction === "session-memory" ? { compaction: parsed.compaction } : {}),
     ...(parsed.ontology === true ? { ontology: true } : {}),
     ...(parsed.ontologyModel === undefined ? {} : { ontologyModel: modelRef(parsed.ontologyModel, "ontologyModel") }),
     ...(typeof parsed.maxRepairs === "number" ? { maxRepairs: parsed.maxRepairs } : {}),
     ...(gate === undefined ? {} : { gate }),
     ...(external === undefined ? {} : { external }),
     ...(schedule === undefined ? {} : { schedule }),
+    ...(recovery === undefined ? {} : { recovery }),
+    // Shape only here: `createAgent` validates every axis and fails closed.
+    ...(parsed.sessionLimits === undefined ? {} : { sessionLimits: parsed.sessionLimits as SessionLimits }),
   };
 }

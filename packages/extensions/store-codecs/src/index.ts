@@ -438,6 +438,7 @@ export function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionR
   };
 }
 
+export * from "./branch-tail.js";
 export * from "./checkpoint.js";
 export * from "./cursor.js";
 export * from "./feedback.js";

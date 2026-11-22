@@ -8,11 +8,11 @@ import { contextFiles } from "@arnilo/prism-extensions/context-files";
 import { type HooksJsonConfig, hooksJson } from "@arnilo/prism-extensions/hooks-json";
 import { toolsCoding } from "@arnilo/prism-tools/coding";
 import type { HostConfig, HostDeps } from "./config.js";
-import { hostPortOf } from "./config.js";
+import { hostPortOf, sessionLimitsConfig } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
-import { memoryProfileFor } from "./memory.js";
+import { memoryProfileFor, sessionMemoryCompacts } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
-import { sqlitePackage } from "./store.js";
+import { runLedgerConfig, sqlitePackage } from "./store.js";
 
 const COMPACTION = "@arnilo/prism-extensions/compaction";
 
@@ -25,16 +25,19 @@ function hooksFromWorkspace(workspace: string) {
 
 export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}): Promise<Agent> {
   const host = hostPortOf(deps);
+  // One compaction system per agent (plan 218.3 Task 2): session memory, or LLM compaction with tool-result folding.
+  const sessionCompaction = sessionMemoryCompacts(config);
   return createAgent({
     name: "coding",
     model: config.models.coding,
     principal: { kind: "user", id: "prism-agent" },
     ownership: { tenantId: "prism-agent", userId: "prism-agent" },
     ...(host === undefined ? {} : { host }),
+    ...runLedgerConfig(config),
+    ...sessionLimitsConfig(config),
     ...(deps.limits === undefined ? {} : { limits: deps.limits }),
     ...(deps.hooks === undefined ? {} : { hooks: deps.hooks }),
-    // Compaction and the memory system's session tiers (opt-in) both claim the compaction slot. The assignment is the SDK's conflict resolution.
-    slots: { compaction: COMPACTION },
+    ...(sessionCompaction ? {} : { slots: { compaction: COMPACTION } }),
     packages: [
       sqlitePackage(config.storePath),
       toolsCoding({ root: config.workspace, principal: { id: "prism-agent" } }),
@@ -44,14 +47,18 @@ export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}
       ...ontologyPackages(config, config.workspace),
       contextFiles({ root: config.workspace }),
       hooksFromWorkspace(config.workspace),
-      compaction({ profile: "coding", trigger: compactionTriggerFor(config.models.coding) }),
+      ...(sessionCompaction ? [] : [compaction({ profile: "coding", trigger: compactionTriggerFor(config.models.coding) })]),
       contextEngineering({
-        fold: {
-          minAgeTurns: 2,
-          minBytes: 2_048,
-          keepLast: 3,
-          clearAtLeastTokens: foldClearAtLeastTokensFor(config.models.coding),
-        },
+        ...(sessionCompaction
+          ? {}
+          : {
+              fold: {
+                minAgeTurns: 2,
+                minBytes: 2_048,
+                keepLast: 3,
+                clearAtLeastTokens: foldClearAtLeastTokensFor(config.models.coding),
+              },
+            }),
         accounting: true,
       }),
       contextBudgetNotice(config.models.coding),

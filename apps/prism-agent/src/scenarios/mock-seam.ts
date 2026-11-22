@@ -7,6 +7,18 @@ export function mockPackages(kind: string): readonly PackageInstance[] {
     return [mockProvider([[providerToolCall(toolCallContent("w1", "write", { path: "note.txt", content: "approved" })), providerDone()]])];
   }
   if (kind === "write-resume") return [mockProvider([[providerTextDelta("done"), providerDone()]])];
+  // A process death after a completed tool round: the second model request kills the process outright.
+  if (kind === "write-then-crash") {
+    let requests = 0;
+    return [
+      mockProvider([[providerToolCall(toolCallContent("w1", "write", { path: "note.txt", content: "written" })), providerDone()]], {
+        onRequest() {
+          requests += 1;
+          if (requests === 2) process.kill(process.pid, "SIGKILL");
+        },
+      }),
+    ];
+  }
   if (kind === "text") return [mockProvider([[providerTextDelta("ok"), providerDone()]])];
   // Scheduled firings: one reply per tick, enough for every tick a scenario drives.
   if (kind === "schedule-text") {

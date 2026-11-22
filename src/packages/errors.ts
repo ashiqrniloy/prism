@@ -50,6 +50,8 @@ export type PackageLoadErrorCode =
   | "state_not_json"
   /** A session state value is over the 64 KiB bound. */
   | "state_too_large"
+  /** A `package_state` log append would pass the per-key entry cap. */
+  | "state_log_limit"
   /** An `external_state` append would pass the per-key entry or byte cap, or one entry is over 64 KiB. */
   | "external_state_limit"
   | "terminal_env_secret"

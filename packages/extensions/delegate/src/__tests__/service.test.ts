@@ -42,12 +42,22 @@ const mock: ModelProvider = {
 };
 
 let captured: DelegateService | undefined;
+let view: SessionContext | undefined;
 const consumer = definePackage({
   name: "service-consumer",
   version: "0.12.1",
   requires: { api: 1 },
+  capabilities: ["background", "session-state"],
   setup(prism) {
     captured = prism.services.consume<DelegateService>(DELEGATE_SERVICE);
+    // The kernel's own view of a session, as a package gets it: `chargeTo` accepts nothing else.
+    prism.commands.register({
+      name: "capture-session",
+      description: "test only",
+      run: (_args, context) => {
+        view = context.session;
+      },
+    });
   },
 });
 
@@ -58,7 +68,8 @@ async function build(children: Record<string, unknown>, maxConcurrent?: number):
     slots: { store: createMemorySessionStore() },
     packages: [
       providerPackage("mock-provider", [mock]),
-      delegate({ children, ...(maxConcurrent === undefined ? {} : { maxConcurrent }) } as never),
+      // `queueTimeoutMs: 0` keeps the immediate refusal these tests assert.
+      delegate({ children, queueTimeoutMs: 0, ...(maxConcurrent === undefined ? {} : { maxConcurrent }) } as never),
       consumer,
     ],
   });
@@ -66,13 +77,12 @@ async function build(children: Record<string, unknown>, maxConcurrent?: number):
   return agent;
 }
 
-function contextOf(session: Session): SessionContext {
-  return {
-    id: session.id,
-    model: { provider: "mock", model: "m" },
-    entries: () => session.entries(),
-    background: () => undefined,
-  };
+/** The session as a package sees it: the kernel's view, captured through a command of the consumer package. */
+async function contextOf(agent: Agent, session: Session): Promise<SessionContext> {
+  view = undefined;
+  await agent.commands.run("capture-session", {}, { session });
+  assert.ok(view, "the command saw the session");
+  return view;
 }
 
 describe("delegate service", () => {
@@ -93,7 +103,7 @@ describe("delegate service", () => {
       child: "reviewer",
       input: "review it",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome);
     assert.equal(outcome.status, "completed");
@@ -106,9 +116,9 @@ describe("delegate service", () => {
     const agent = await build({ reviewer: { inherit: [] } });
     const session = await agent.session();
     const service = captured as DelegateService;
-    const started = await service.start({ child: "reviewer", input: "review it", mode: "async", session: contextOf(session) });
+    const started = await service.start({ child: "reviewer", input: "review it", mode: "async", session: await contextOf(agent, session) });
     assert.ok("delegationId" in started);
-    const outcome = await service.wait(started.delegationId, contextOf(session));
+    const outcome = await service.wait(started.delegationId, await contextOf(agent, session));
     assert.equal(outcome.status, "completed");
     assert.match(outcome.text, /child answer/);
   });
@@ -117,8 +127,11 @@ describe("delegate service", () => {
     const agent = await build({ reviewer: { inherit: [] } }, 1);
     const session = await agent.session();
     const service = captured as DelegateService;
-    const running = service.start({ child: "reviewer", input: "x", mode: "sync", session: contextOf(session) });
-    await assert.rejects(() => service.start({ child: "reviewer", input: "y", mode: "sync", session: contextOf(session) }), /At most 1/);
+    const running = service.start({ child: "reviewer", input: "x", mode: "sync", session: await contextOf(agent, session) });
+    await assert.rejects(
+      async () => service.start({ child: "reviewer", input: "y", mode: "sync", session: await contextOf(agent, session) }),
+      /At most 1/,
+    );
     const outcome = await running;
     assert.ok("status" in outcome && outcome.status === "completed");
   });
@@ -135,7 +148,8 @@ describe("delegate service", () => {
     const agent = await build({ reviewer: { inherit: [] } });
     const session = await agent.session();
     await assert.rejects(
-      () => (captured as DelegateService).start({ child: "made-up", input: "x", mode: "sync", session: contextOf(session) }),
+      async () =>
+        (captured as DelegateService).start({ child: "made-up", input: "x", mode: "sync", session: await contextOf(agent, session) }),
       /Unknown child/,
     );
   });
@@ -148,7 +162,7 @@ describe("delegate service", () => {
       child: "reviewer",
       input: "x",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
       inherit: ["@arnilo/prism-tools/coding"],
     } as never);
     assert.ok("status" in outcome && outcome.status === "completed");
@@ -164,13 +178,13 @@ describe("delegate service", () => {
     const tool = schemas.at(-1) as { description: string; parameters: { properties: { child: { enum: string[] } } } };
     assert.equal(tool.description.includes("verifier"), false);
     assert.deepEqual(tool.parameters.properties.child.enum, ["reviewer"]);
-    assert.match(JSON.stringify(result), /Unknown child/);
+    assert.match(JSON.stringify(result), /\/child: must be one of the allowed values/);
 
     const outcome = await (captured as DelegateService).start({
       child: "verifier",
       input: "check it",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome && outcome.status === "completed", "the service still starts it");
   });
@@ -191,7 +205,7 @@ describe("delegate service", () => {
       child: "verifier",
       input: "check",
       mode: "sync",
-      session: contextOf(session),
+      session: await contextOf(agent, session),
     });
     assert.ok("status" in outcome && outcome.status === "completed");
   });

@@ -7,6 +7,7 @@ import type {
   ProviderStopReason,
   RunLimitName,
   SecretRedactor,
+  SessionLimitName,
   ToolCallSummary,
   TurnBudgets,
   Usage,
@@ -129,7 +130,7 @@ export interface TimelineTurn {
  * breach.
  */
 export interface TimelineExhaustion {
-  readonly limit: RunLimitName;
+  readonly limit: RunLimitName | SessionLimitName;
   readonly maximum?: number;
   readonly observed?: number;
   readonly currency?: string;

@@ -90,7 +90,11 @@ export function createCompactionContextCache(log: SessionLog<JsonValue>, config:
       const state = sessions.get(session.id) ?? reconcile(session);
       await state.pending;
       return state.mode === "pinned" && state.ledger
-        ? observationalMemoryBlock(state.ledger, { advertiseRecall: config.recall, maxTaskStateBytes: config.worker.maxTaskStateBytes })
+        ? observationalMemoryBlock(state.ledger, {
+            advertiseRecall: config.recall,
+            maxTaskStateBytes: config.worker.maxTaskStateBytes,
+            ...(config.scope.text ? { scopeFallback: config.scope.text } : {}),
+          })
         : [];
     },
     mode(session: SessionContext): ContextMode {

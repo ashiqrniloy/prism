@@ -1,11 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
 import { CredentialDecryptError, CredentialStoreTimeoutError } from "./errors.js";
-import {
-  DEFAULT_MAX_VAULT_BYTES,
-  HARD_KEYCHAIN_TIMEOUT_MS,
-  HARD_MAX_ENVELOPE_FILE_BYTES,
-  resolveEncryptedCredentialStoreLimits,
-} from "./limits.js";
+import { DEFAULT_MAX_VAULT_BYTES, DEFAULT_KMS_TIMEOUT_MS, resolveEncryptedCredentialStoreLimits } from "./limits.js";
 
 const IV_BYTES = 12;
 const AUTH_TAG_BYTES = 16;
@@ -29,7 +24,7 @@ export interface KmsEnvelope {
 
 export interface HostKmsCryptoOptions {
   readonly maxPlaintextBytes?: number;
-  /** Hard cap 60s (Phase 8 freeze). Default 60s. */
+  /** Wrap/unwrap timeout. Default 60s (`DEFAULT_KMS_TIMEOUT_MS`). */
   readonly timeoutMs?: number;
 }
 
@@ -37,9 +32,7 @@ export interface HostKmsCryptoOptions {
 export async function encryptWithHostKms(plaintext: Uint8Array, kms: HostKms, options: HostKmsCryptoOptions = {}): Promise<KmsEnvelope> {
   const maxPlaintext = options.maxPlaintextBytes ?? DEFAULT_MAX_VAULT_BYTES;
   const fileCap = resolveEncryptedCredentialStoreLimits().maxFileBytes;
-  if (!Number.isSafeInteger(maxPlaintext) || maxPlaintext < 1 || maxPlaintext > HARD_MAX_ENVELOPE_FILE_BYTES) {
-    throw new RangeError(`maxPlaintextBytes must be 1..${HARD_MAX_ENVELOPE_FILE_BYTES}`);
-  }
+  if (!Number.isSafeInteger(maxPlaintext) || maxPlaintext < 1) throw new RangeError("maxPlaintextBytes must be a positive safe integer");
   if (plaintext.byteLength > maxPlaintext) throw new RangeError(`Plaintext exceeds ${maxPlaintext} byte limit`);
   const dek = randomBytes(DEK_BYTES);
   const iv = randomBytes(IV_BYTES);
@@ -115,10 +108,10 @@ export function createMemoryHostKms(seed = "prism-test-kms"): HostKms {
   };
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs = HARD_KEYCHAIN_TIMEOUT_MS): Promise<T> {
-  const ms = timeoutMs ?? HARD_KEYCHAIN_TIMEOUT_MS;
-  if (!Number.isSafeInteger(ms) || ms < 1 || ms > HARD_KEYCHAIN_TIMEOUT_MS) {
-    throw new RangeError(`timeoutMs must be 1..${HARD_KEYCHAIN_TIMEOUT_MS}`);
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = DEFAULT_KMS_TIMEOUT_MS): Promise<T> {
+  const ms = timeoutMs ?? DEFAULT_KMS_TIMEOUT_MS;
+  if (!Number.isSafeInteger(ms) || ms < 1) {
+    throw new RangeError("timeoutMs must be a positive safe integer");
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

@@ -74,7 +74,7 @@ the loaded/not-loaded split. Rounds restart at 1.
 Version 3 (2026-11-06) followed transcripts of single trials (`--items web-no-answer,web-two-hop --dump-dir <dir>` writes
 every tool call of each trial). They showed that most failures were measurement defects, not skill effects:
 
-- The kernel stops a run after `maxToolRounds` (default 8) tool rounds and reports `turn_limit`. Versions 1 and 2 raised
+- The kernel stops a run after `maxToolRounds` (default 8 at the time; 49 since plan 229) tool rounds and reports `turn_limit`. Versions 1 and 2 raised
   `maxTurns` only, so every run that needed a ninth round ended in both arms. The limits now set `maxToolRounds`.
 - The web fixtures named products after real projects (Plover, Quill, Ferret), so models distrusted the fixture pages and
   searched the real web. The web arm now says the questions concern the documentation site.

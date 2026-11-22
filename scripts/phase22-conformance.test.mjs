@@ -71,17 +71,18 @@ describe("phase 22 state concurrency conformance", () => {
       const eventsSchema = schema();
       const sessionProbes = await assertStateConcurrencyConforms({
         sessions: () => makeStore(schema()),
+        appends: () => makeStore(schema()),
         events: { reopenable: true, create: async () => (await makeStore(eventsSchema)).events },
       });
       // The harness exposes these two probes for the factories above. Checkpoints and approvals are
       // not state-concurrency probes — `storeConformance` owns them (`package-state`, `session-links`,
       // `external-state`), and the `@arnilo/prism-extensions/store-postgres` leg runs that suite.
-      for (const probe of ["conversation-metadata-cas", "cursor-resume"]) {
+      for (const probe of ["conversation-metadata-cas", "cursor-resume", "tip-race"]) {
         assert.ok(sessionProbes.includes(probe), `postgres session leg did not execute probe ${probe}`);
       }
       assert.deepEqual(
         [...sessionProbes].sort(),
-        ["conversation-metadata-cas", "cursor-resume"],
+        ["conversation-metadata-cas", "cursor-resume", "tip-race"],
         "the durable leg must execute exactly the probes the harness offers",
       );
     } finally {

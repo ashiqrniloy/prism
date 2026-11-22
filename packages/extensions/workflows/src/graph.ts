@@ -1,5 +1,5 @@
 import { WorkflowDefinitionError } from "./errors.js";
-import { DEFAULT_MAX_NODES, HARD_MAX_NODES } from "./limits.js";
+import { DEFAULT_MAX_NODES } from "./limits.js";
 import type {
   ConditionalNodeDefinition,
   WorkflowCheckpointValue,
@@ -35,7 +35,7 @@ export interface WorkflowGraphView {
   readonly definitionHash: string;
   readonly nodes: readonly WorkflowGraphNode[];
   readonly edges: readonly WorkflowGraphEdge[];
-  readonly limits?: { readonly maxSupersteps?: number };
+  readonly limits?: { readonly maxSupersteps?: number | null };
 }
 
 // ─── Graph Run Overlay Types (R-G3) ───────────────────────────────────────────
@@ -95,9 +95,6 @@ export function serializeWorkflowGraph(workflow: WorkflowDefinition): WorkflowGr
   const nodeEntries = Object.entries(workflow.nodes ?? {});
   if (nodeEntries.length > maxNodes) {
     throw new WorkflowDefinitionError(`Workflow nodes count (${nodeEntries.length}) exceeds maxNodes limit of ${maxNodes}`);
-  }
-  if (nodeEntries.length > HARD_MAX_NODES) {
-    throw new WorkflowDefinitionError(`Workflow nodes count (${nodeEntries.length}) exceeds hard limit of ${HARD_MAX_NODES}`);
   }
 
   // Stable sort nodes by ID ascending

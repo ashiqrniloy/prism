@@ -34,7 +34,6 @@ import {
 } from "../../packages/memory/system/src/ltm/exchanges.ts";
 import { isToolsConfig, memoryConfigs } from "./ablations.mjs";
 import { BENCH_SCOPE } from "./bench-scope.mjs";
-import { chunkMeterPackage, createChunkMeter } from "./chunk-meter.mjs";
 import { injectionLogger, textOf, tokens } from "./injection-log.mjs";
 import {
   conceptCites,
@@ -1429,9 +1428,6 @@ export async function replay(question, options, providers, state) {
   // The session tiers and long-term memory are one package (plan 216 Task 5): an arm with long-term memory lists one
   // `memorySystem` below, carrying the session config too when the arm has it.
   if (useOm && !usesFabric) packages.push(memorySystem(config.observational));
-  // Plan 217 Task 6 (gate M-1): the STM arm's chunk store, metered through `memory.chunks` (same in-memory store).
-  const chunkMeter = useOm && !usesFabric ? createChunkMeter() : null;
-  if (chunkMeter) packages.push(await chunkMeterPackage(chunkMeter));
   if (isHybrid && embedder) {
     packages.push(
       definePackage({
@@ -1970,7 +1966,6 @@ export async function replay(question, options, providers, state) {
       answerRetries: metrics.answerRetries,
       turns: metrics.agentSteps,
       turnTrace: metrics.turnTrace,
-      ...(chunkMeter ? { chunkStorePeakBytes: chunkMeter.peakBytes, chunkStoreChunks: chunkMeter.chunks } : {}),
       writes: metrics.writes,
       visibleChannels: [
         ...new Set([

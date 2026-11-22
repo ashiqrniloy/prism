@@ -156,8 +156,9 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   // Plan 206 Task 2 adds `@arnilo/prism-ai/ollama-cloud`, so 84. Plan 215 Task 14 adds
   // `@arnilo/prism-hosts/host-builder`, so 85. Plan 215 Task 26 added the kernel's `./net` and `./artifacts` subpaths; plan 216
   // Task 3 regenerated the manifest (the knowledge renames keep the count), so 87. Plan 216 Task 5 folded
-  // the fabric package into `@arnilo/prism-memory-system`, so 86.
-  assert.equal(summary.total, 86);
+  // the fabric package into `@arnilo/prism-memory-system`, so 86. Plan 236 Tasks 2, 4 and 5 add
+  // `@arnilo/prism-hosts/a2a`, `./channels/slack` and `./channels/discord`, so 89.
+  assert.equal(summary.total, 89);
   assert.equal(summary.pending, 4, "four surfaces are unannotated after the 0.13 regeneration");
 });
 

@@ -2,9 +2,10 @@ import type { JsonObject, ModelProvider, ProviderRequest } from "@arnilo/prism";
 import {
   anthropicAdaptiveThinking,
   createRoutedProvider,
+  parseRetryAfterMs,
   providerHttpError,
+  type ProviderTransportConfig,
   type RoutedProviderRoute,
-  readRetryAfterMs,
   sanitizeCacheKey,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
@@ -64,6 +65,8 @@ export const COMMAND_CODE_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-message
 };
 
 export interface CommandCodeProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   /** Defaults to official `https://api.commandcode.ai/provider/v1`. */
   readonly baseUrl?: string;
@@ -89,7 +92,7 @@ export function commandCodeHttpError(response: Response, bodyText: string, secre
     hint = "The model is served by a different route; compat.route or routeForCommandCodeModel picks the wire. ";
   return providerHttpError(
     "Command Code",
-    { status: response.status, code: response.status, retryAfterMs: readRetryAfterMs(response.headers) },
+    { status: response.status, code: response.status, retryAfterMs: parseRetryAfterMs(response.headers) },
     hint + bodyText,
     secrets,
   );
@@ -97,6 +100,7 @@ export function commandCodeHttpError(response: Response, bodyText: string, secre
 
 export function createCommandCodeProvider(options: CommandCodeProviderOptions = {}): ModelProvider {
   return createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "commandcode",
     baseUrl: options.baseUrl ?? COMMAND_CODE_DEFAULT_BASE_URL,
     apiKey: options.apiKey,

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ModelConfig, ProviderEvent, ProviderRequest } from "../contracts.js";
+import { toolCallContent } from "../index.js";
 import { replayFetch } from "../provider-kit/wire-replay.js";
 import {
   executeProviderLiveScenarios,
@@ -10,6 +11,7 @@ import {
   liveScenarioCacheProbe,
   liveScenarioErrorResponse,
   liveScenarioStructuredOutput,
+  liveScenarioStructuredToolLoop,
   liveScenarioTextStream,
   liveScenarioToolLoop,
   runProviderLiveScenarios,
@@ -92,6 +94,7 @@ describe("provider live scenarios", () => {
       route: "openai",
       secrets: ["fake-key"],
       structuredOutput: "json_schema",
+      schema: structuredFixture.requestBody.response_format.json_schema.schema,
     });
     assert.equal(structRes.ok, true);
     assert.equal(typeof structRes.value, "object");
@@ -169,8 +172,11 @@ describe("provider live scenarios", () => {
         openai: {
           model: "deepseek-v4-pro",
           structuredOutput: "json_schema",
+          structuredSchema: structuredFixture.requestBody.response_format.json_schema.schema,
         },
       },
+      // The structured tool loop is a session run; it has its own hermetic test below.
+      scenarios: ["text", "tool-loop", "structured-output", "abort", "error", "cache"],
       secrets: ["fake-key"],
       isHermetic: true,
     });
@@ -214,6 +220,95 @@ describe("provider live scenarios", () => {
     assert.equal(firstBlock.type === "text" ? firstBlock.text : undefined, 'Return {"ok":true}');
     assert.equal(requests[1]?.model.model, "prism-no-such-model:1b", "error scenario must use the hook model");
     assert.ok(requests[1]!.messages.length > 0, "error scenario with a hook model sends a normal message");
+  });
+
+  it("live_structured_output_validates_the_reply_against_the_schema", async () => {
+    const reply = '{"nope":"reply-content-marker"}';
+    const provider = {
+      id: "fake",
+      async *generate(): AsyncIterable<ProviderEvent> {
+        yield { type: "content_delta", content: { type: "text", text: reply } };
+        yield { type: "done", stopReason: "end_turn" };
+      },
+    };
+    const model: ModelConfig = { provider: "fake", model: "m" };
+    await assert.rejects(
+      () => liveScenarioStructuredOutput({ provider, model, route: "openai", secrets: [], structuredOutput: "json_schema" }),
+      (error: Error) => {
+        assert.match(error.message, /schema_mismatch/);
+        assert.ok(!error.message.includes("reply-content-marker"), "the failure must not quote the reply");
+        return true;
+      },
+    );
+  });
+
+  function structuredToolLoopProvider(finalReply: string) {
+    const requests: ProviderRequest[] = [];
+    const provider = {
+      id: "fake",
+      async *generate(request: ProviderRequest): AsyncIterable<ProviderEvent> {
+        requests.push(request);
+        if (!request.messages.some((message) => message.role === "tool")) {
+          yield { type: "tool_call", call: toolCallContent("call-1", "get_weather", { location: "Tokyo" }) };
+          yield { type: "done", stopReason: "tool_calls" };
+          return;
+        }
+        yield { type: "content_delta", content: { type: "text", text: finalReply } };
+        yield { type: "done", stopReason: "end_turn" };
+      },
+    };
+    return { provider, requests };
+  }
+
+  it("live_structured_tool_loop_sends_the_native_schema_next_to_tools_on_every_turn", async () => {
+    const { provider, requests } = structuredToolLoopProvider('{"location":"Tokyo","temperature":"18C"}');
+    const result = await executeProviderLiveScenarios({
+      provider,
+      routes: { openai: { model: "m", structuredOutput: "json_schema" } },
+      scenarios: ["structured-tool-loop"],
+    });
+    const details = result.scenarios[0]!.details as { mode: string; requests: number; toolCalls: number; value: unknown };
+    assert.equal(details.mode, "native");
+    assert.equal(details.requests, 2);
+    assert.equal(details.toolCalls, 1);
+    assert.deepEqual(details.value, { location: "Tokyo", temperature: "18C" });
+    for (const request of requests) {
+      assert.equal(request.options?.structuredOutput?.repair, 0, "native mode proves the schema without a repair");
+      assert.ok(request.tools?.some((tool) => tool.name === "get_weather"));
+    }
+  });
+
+  it("live_structured_tool_loop_uses_prompted_mode_without_the_capability", async () => {
+    const { provider, requests } = structuredToolLoopProvider('```json\n{"location":"Tokyo","temperature":"18C"}\n```');
+    const res = await liveScenarioStructuredToolLoop({
+      provider,
+      model: { provider: "fake", model: "m" },
+      route: "anthropic",
+      secrets: [],
+    });
+    assert.equal(res.mode, "prompted");
+    assert.equal(res.requests, 2);
+    for (const request of requests) assert.equal(request.options?.structuredOutput, undefined);
+  });
+
+  it("live_structured_tool_loop_fails_on_an_invalid_native_reply_without_quoting_it", async () => {
+    const { provider, requests } = structuredToolLoopProvider('{"location":"reply-content-marker"}');
+    await assert.rejects(
+      () =>
+        liveScenarioStructuredToolLoop({
+          provider,
+          model: { provider: "fake", model: "m" },
+          route: "openai",
+          secrets: [],
+          structuredOutput: "json_schema",
+        }),
+      (error: Error) => {
+        assert.match(error.message, /schema_mismatch/);
+        assert.ok(!error.message.includes("reply-content-marker"), "the failure must not quote the reply");
+        return true;
+      },
+    );
+    assert.equal(requests.length, 2, "native mode runs with repair: 0");
   });
 
   it("live_scenarios_skip_without_credentials", async () => {

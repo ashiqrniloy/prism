@@ -124,10 +124,7 @@ export function transformVariantSource(path, source, input = []) {
         'minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.2 },',
         'minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.35 },',
       );
-      replace(
-        'topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 12 },',
-        'topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 3 },',
-      );
+      replace('topK: { type: "integer", minimum: 1, default: 12 },', 'topK: { type: "integer", minimum: 1, default: 3 },');
       replace(
         'budgetTokens: { type: "integer", minimum: 1, default: 4000 },',
         'budgetTokens: { type: "integer", minimum: 1, default: 600 },',

@@ -18,17 +18,22 @@ type ToolSearchInput = string | Message | readonly Message[];
 export type ToolsDisclosure = "all" | "search";
 
 export interface ToolsSearchOptions {
-  /** Top-k tools disclosed per turn. Default 16; clamped to the hard cap. */
+  /** Top-k tools disclosed per turn. Default 16. */
   readonly topK?: number;
+  /** Largest tool list the lexical index scores; a larger list discloses every tool (fail closed). Default 1,024. */
+  readonly maxIndexTools?: number;
+  /** Ceiling on a `search_tools` query the model sends, and on the user text scanned per turn. Default 65,536 bytes. */
+  readonly maxQueryBytes?: number;
 }
 
 export const SEARCH_TOOLS_TOOL_NAME = "search_tools";
 export const DEFAULT_TOOLS_SEARCH_TOP_K = 16;
-export const HARD_MAX_TOOLS_SEARCH_TOP_K = 64;
-/** Frozen index cap; larger registries fail closed to full disclosure. */
-export const HARD_MAX_TOOLS_INDEX = 1024;
+/** Default index cap (`toolSearch.maxIndexTools`); a larger registry fails closed to full disclosure. */
+export const DEFAULT_MAX_TOOLS_INDEX = 1024;
+/** Query prefix the scorer reads. */
 export const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4_096;
-export const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65_536;
+/** Default ceiling on a model's `search_tools` query (`toolSearch.maxQueryBytes`); a longer one is refused. */
+export const DEFAULT_MAX_TOOLS_SEARCH_QUERY_INPUT_BYTES = 65_536;
 
 export const TOOL_DISCLOSURE_ERROR_CODE = "tool_disclosure_exceeded" as const;
 
@@ -103,9 +108,13 @@ function tokenize(text: string): string[] {
 
 /** ponytail: O(n·d) lexical index, rebuilt on registry change by the caller — embedder-backed
  *  scoring through a host-supplied embedder if accuracy fixtures fall short (plan 041). */
-export function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex {
-  if (tools.length > HARD_MAX_TOOLS_INDEX) {
-    throw new ToolDisclosureError(`Tool index exceeds hard cap (${HARD_MAX_TOOLS_INDEX} tools)`);
+export function createToolSearchIndex(
+  tools: readonly ToolDefinition[],
+  skip?: (tool: ToolDefinition) => boolean,
+  maxTools: number = DEFAULT_MAX_TOOLS_INDEX,
+): ToolSearchIndex {
+  if (tools.length > maxTools) {
+    throw new ToolDisclosureError(`Tool index exceeds its cap (${maxTools} tools)`);
   }
   const postings = new Map<string, PostingEntry[]>();
   for (const [toolIndex, tool] of tools.entries()) {
@@ -172,6 +181,8 @@ export interface ToolSearchState {
   readonly index: ToolSearchIndex;
   readonly activated: ActiveToolSet;
   readonly topK: number;
+  /** Ceiling on a model's query; default {@link DEFAULT_MAX_TOOLS_SEARCH_QUERY_INPUT_BYTES}. */
+  readonly maxQueryBytes?: number;
 }
 
 export function createToolSearchState(options: {
@@ -179,12 +190,15 @@ export function createToolSearchState(options: {
   readonly activated: ActiveToolSet;
   readonly search?: ToolsSearchOptions;
 }): ToolSearchState {
-  const requested = options.search?.topK;
-  const topK =
-    requested === undefined ? DEFAULT_TOOLS_SEARCH_TOP_K : Math.min(Math.max(1, Math.trunc(requested)), HARD_MAX_TOOLS_SEARCH_TOP_K);
+  const topK = Math.max(1, Math.trunc(options.search?.topK ?? DEFAULT_TOOLS_SEARCH_TOP_K));
   // ponytail: index built once per run; mid-run registry mutation is not observed — rebuild by starting a new run.
-  const index = createToolSearchIndex(options.tools, (tool) => tool.name === SEARCH_TOOLS_TOOL_NAME);
-  return { index, activated: options.activated, topK };
+  const index = createToolSearchIndex(options.tools, (tool) => tool.name === SEARCH_TOOLS_TOOL_NAME, options.search?.maxIndexTools);
+  return {
+    index,
+    activated: options.activated,
+    topK,
+    ...(options.search?.maxQueryBytes === undefined ? {} : { maxQueryBytes: options.search.maxQueryBytes }),
+  };
 }
 
 /** Provider-facing narrowing: activated tools ∪ top-k for the turn. Fails closed — any
@@ -201,9 +215,15 @@ export function selectDisclosedTools(options: {
     const keep = new Set<string>();
     for (const tool of options.tools)
       if (tool.name === SEARCH_TOOLS_TOOL_NAME || options.activated?.has(tool.name) === true) keep.add(tool.name);
-    const index = createToolSearchIndex(options.tools, (tool) => tool.name === SEARCH_TOOLS_TOOL_NAME);
-    const topK = Math.min(Math.max(1, Math.trunc(options.search?.topK ?? DEFAULT_TOOLS_SEARCH_TOP_K)), HARD_MAX_TOOLS_SEARCH_TOP_K);
-    for (const match of scoreTools(index, inputText(options.input), topK, options.queryByteCap ?? DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES))
+    const index = createToolSearchIndex(options.tools, (tool) => tool.name === SEARCH_TOOLS_TOOL_NAME, options.search?.maxIndexTools);
+    const topK = Math.max(1, Math.trunc(options.search?.topK ?? DEFAULT_TOOLS_SEARCH_TOP_K));
+    const scanBytes = options.search?.maxQueryBytes ?? DEFAULT_MAX_TOOLS_SEARCH_QUERY_INPUT_BYTES;
+    for (const match of scoreTools(
+      index,
+      inputText(options.input, scanBytes),
+      topK,
+      options.queryByteCap ?? DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES,
+    ))
       keep.add(match.name);
     const disclosed = options.tools.filter((tool) => keep.has(tool.name));
     if (disclosed.length > 0) return disclosed;
@@ -219,7 +239,7 @@ export function selectDisclosedTools(options: {
   }
 }
 
-function inputText(input: ToolSearchInput): string {
+function inputText(input: ToolSearchInput, maxBytes: number): string {
   if (typeof input === "string") return input;
   const messages =
     input === null || input === undefined || Array.isArray(input) === false ? [input as Message] : (input as readonly Message[]);
@@ -228,7 +248,7 @@ function inputText(input: ToolSearchInput): string {
     for (const block of message.content) {
       if (block.type === "text") {
         text += `${block.text}\n`;
-        if (text.length > HARD_MAX_TOOLS_SEARCH_QUERY_BYTES) return text;
+        if (text.length > maxBytes) return text;
       }
     }
   }
@@ -243,6 +263,8 @@ export function createSearchToolsTool(state: ToolSearchState, queryByteCap = DEF
     name: SEARCH_TOOLS_TOOL_NAME,
     description: `Search available tools by relevance. Returns up to k tool names with short descriptions and marks them active so their full definitions appear on the next turn. Try queries made of tool keywords.`,
     effects: ["read"],
+    // Activates tools for the next turn; keep it ordered against other calls of its round.
+    exclusive: true,
     parameters: {
       type: "object",
       properties: { query: { type: "string" }, k: { type: "integer", minimum: 1 } },
@@ -255,8 +277,9 @@ export function createSearchToolsTool(state: ToolSearchState, queryByteCap = DEF
         error: { code: "ERR_PRISM_TOOL_SEARCH_INVALID", message },
       });
       if (typeof args.query !== "string" || args.query.trim().length === 0) return fail("query must be a non-empty string");
-      if (Buffer.byteLength(args.query, "utf8") > HARD_MAX_TOOLS_SEARCH_QUERY_BYTES)
-        return fail(`query exceeds ${HARD_MAX_TOOLS_SEARCH_QUERY_BYTES} bytes`);
+      // Model-facing: the host's `toolSearch.maxQueryBytes` is the ceiling; the model never raises it.
+      const maxQueryBytes = state.maxQueryBytes ?? DEFAULT_MAX_TOOLS_SEARCH_QUERY_INPUT_BYTES;
+      if (Buffer.byteLength(args.query, "utf8") > maxQueryBytes) return fail(`query exceeds ${maxQueryBytes} bytes`);
       const k = args.k === undefined ? state.topK : typeof args.k === "number" && Number.isInteger(args.k) ? args.k : NaN;
       if (Number.isNaN(k) || k < 1) return fail("k must be an integer >= 1");
       const matches = scoreTools(state.index, args.query, k, queryByteCap);
@@ -288,8 +311,8 @@ export interface ToolDisclosureConformanceOptions {
   readonly tools: readonly ToolDefinition[];
   /** Host allow/deny bounds applied before disclosure (same input the runtime narrows). */
   readonly filter?: ToolFilterInput;
-  /** Search options under test (topK). */
-  readonly search?: { readonly topK?: number };
+  /** Search options under test (topK, maxIndexTools, maxQueryBytes). */
+  readonly search?: ToolsSearchOptions;
   /** Turn text used for the relevance query. Defaults to a zero-match probe. */
   readonly input?: string;
   /** Secret values that must never appear in model-facing search output. */
@@ -303,7 +326,7 @@ export interface ToolDisclosureConformanceOptions {
  * denied tool is never described; the generated `search_tools` tool is always
  * kept and its output is inert — names plus byte-truncated descriptions only,
  * no JSON structure, no secret values — and activation stays disclosed beside
- * the turn top-k next turn. Fails closed: an index over the hard cap discloses
+ * the turn top-k next turn. Fails closed: an index over its cap discloses
  * the full eligible list. Throws on the first violation.
  */
 export function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void {
@@ -348,8 +371,8 @@ export function assertToolDisclosureConforms(options: ToolDisclosureConformanceO
     throw new Error("Disclosure order is not deterministic for identical turns");
   }
 
-  // 4. Fail closed past the index hard cap: full eligible list, never zero, never wider.
-  const oversized = Array.from({ length: HARD_MAX_TOOLS_INDEX + 1 }, (_, index) => ({
+  // 4. Fail closed past the index cap: full eligible list, never zero, never wider.
+  const oversized = Array.from({ length: (options.search?.maxIndexTools ?? DEFAULT_MAX_TOOLS_INDEX) + 1 }, (_, index) => ({
     name: `cap_${index}`,
     description: "Fixture tool beyond the frozen index cap.",
     parameters: { type: "object", properties: {} },

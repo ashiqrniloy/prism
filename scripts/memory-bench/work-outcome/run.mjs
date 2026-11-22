@@ -5,8 +5,6 @@
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --offline [--partition dev] [--output report.json]
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family long-session --offline   # plan 217 Task 5 (S1)
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family re-plan --offline        # plan 218 Task 5 (M1)
- *   timeout 1200 bun scripts/memory-bench/work-outcome/run.mjs --family long-horizon --offline  # plan 218.2 Task 8
- *   timeout 1200 bun scripts/memory-bench/work-outcome/run.mjs --family long-horizon --estimate # its live estimate
  *
  * Every session is one `runScenario` (plan 200) over a fresh `createAgent`, driven by the evals user simulator and
  * graded by `createStateMatchScorer` plus the scripted checks in `metrics.mjs`. A persona's sessions share one
@@ -827,7 +825,6 @@ function parseArgs(argv) {
     else if (arg === "--arms") options.arms = argv[++index].split(",");
     else if (arg === "--personas") options.personaLimit = Number(argv[++index]);
     else if (arg === "--family") options.family = argv[++index];
-    else if (arg === "--estimate") options.estimate = true;
     else throw new Error(`MemoryBenchArguments: unknown flag ${arg}`);
   }
   return options;
@@ -836,15 +833,7 @@ function parseArgs(argv) {
 if (import.meta.main) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    if (options.estimate) {
-      // Plan 218.2 Task 8: the live estimate per arm and model, written into the family's manifest before any gate names it.
-      if (options.family !== "long-horizon") throw new Error("MemoryBenchArguments: --estimate is for --family long-horizon");
-      const { writeLongHorizonManifest } = await import("./long-horizon-estimate.mjs");
-      const manifest = await writeLongHorizonManifest(options.output ? { path: options.output } : {});
-      console.log(JSON.stringify({ precondition: manifest.precondition.engaged, estimate: manifest.estimate.totals }, null, 1));
-      process.exit(0);
-    }
-    if (options.family === "long-session" || options.family === "re-plan" || options.family === "long-horizon") {
+    if (options.family === "long-session" || options.family === "re-plan") {
       // Plan 217 Task 5: the long-session family (S1); plan 218 Task 5: the re-plan family (M1). Their live runs go
       // through the gate campaigns (gate M-1, plan 217 Task 6; gate M-2, plan 218 Task 6).
       if (!options.offline) throw new Error(`MemoryBenchGate: live ${options.family} runs go through a gate campaign`);

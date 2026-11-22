@@ -103,6 +103,28 @@ describe("@arnilo/prism-tools/computer-use package", () => {
     }
   });
 
+  it("tools_computer_use_tools_leave_when_the_bridge_closes", async () => {
+    // Plan 234 Task 4: the tools come from a source, so a closed bridge supplies none to the next run.
+    let bridgeClosed = false;
+    const bridge = {
+      ...fakeBridge([remoteTool("doctor"), remoteTool("click")]),
+      get isClosed() {
+        return bridgeClosed;
+      },
+    };
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [bridgeProbe(bridge), toolsComputerUse({ command: process.execPath, device: DEVICE, runLimits: RUN_LIMITS })],
+    });
+    try {
+      assert.equal(agent.tools.length, 2);
+      bridgeClosed = true;
+      assert.equal(agent.tools.length, 0);
+    } finally {
+      await agent.dispose();
+    }
+  });
+
   it("tools_computer_use_mutating_denied_in_auto", async () => {
     const desktop = await createComputerUseLinuxTools({
       platform: "linux",

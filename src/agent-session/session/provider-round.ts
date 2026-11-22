@@ -5,6 +5,7 @@ import { estimateMessageTokens, estimateRequestExtrasTokens, resolveInputCap } f
 import type {
   ContentBlock,
   CostCatalog,
+  ErrorInfo,
   Message,
   ModelConfig,
   ProviderEvent,
@@ -21,15 +22,17 @@ import type {
 } from "../../contracts.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
 import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
+import { RunLimitError } from "../../run-limits.js";
 import { tryAgentRuntime } from "../runtime-registry.js";
 import { normalizeStopReason, providerError, providerToolCallDeltaContent } from "../../models/events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
-import { mergeRetry, retryLoop } from "../../models/retry.js";
+import { isTransientErrorInfo, mergeRetry, type RetryProbe, retryLoop } from "../../models/retry.js";
 import { estimateTextTokensForFamily } from "../../usage-estimation.js";
 import {
   bridgeAbort,
   isSteerSoftInterrupt,
-  jsonBytes,
+  providerEventBytes,
+  requestBytes,
   ProviderTurnFailure,
   providerContent,
   randomId,
@@ -37,23 +40,14 @@ import {
   SteerSoftInterrupt,
   throwIfAborted,
 } from "../helpers.js";
+import { mergeContentBlocks } from "../coalesce.js";
 import type { RoundContext, SessionHost } from "./types.js";
+import type { PackageUsageScope } from "../../package-call-seam.js";
 
 function pushCoalescedContent(content: ContentBlock[], block: ContentBlock): void {
-  const last = content.at(-1);
-  if (last?.type === "text" && block.type === "text") {
-    content[content.length - 1] = { type: "text", text: last.text + block.text };
-    return;
-  }
-  if (last?.type === "thinking" && block.type === "thinking" && !last.redacted && !block.redacted) {
-    content[content.length - 1] = {
-      type: "thinking",
-      text: last.text + block.text,
-      ...((block.signature ?? last.signature) ? { signature: block.signature ?? last.signature } : {}),
-    };
-    return;
-  }
-  content.push(block);
+  const merged = mergeContentBlocks(content.at(-1), block);
+  if (merged) content[content.length - 1] = merged;
+  else content.push(block);
 }
 
 /** Resolve the per-request input cap for turn-budget metadata (plan 087 T1). A model without a
@@ -103,10 +97,15 @@ function normalizeTurnStopReason(native: ProviderStopReason | undefined, calls: 
  * did not report a cost itself. Stale/unknown quotes, catalog failures, or
  * non-`per_million_tokens` units degrade to usage-only (cost untouched).
  */
-async function withCatalogCost(catalog: CostCatalog | undefined, model: ModelConfig, usage: Usage, signal: AbortSignal): Promise<Usage> {
+export async function withCatalogCost(
+  catalog: CostCatalog | undefined,
+  model: ModelConfig,
+  usage: Usage,
+  signal?: AbortSignal,
+): Promise<Usage> {
   if (!catalog || usage.cost !== undefined) return usage;
   try {
-    const quote = await catalog.get(model.model, { signal });
+    const quote = await catalog.get(model.model, signal ? { signal } : {});
     if (!quote || (quote.unit !== undefined && quote.unit !== "per_million_tokens")) return usage;
     const uncachedInput = Math.max(0, (usage.inputTokens ?? 0) - (usage.cacheReadTokens ?? 0) - (usage.cacheWriteTokens ?? 0));
     const cost =
@@ -130,7 +129,7 @@ async function meterUsage(
   ctx: RoundContext,
   model: ModelConfig,
   usage: Usage | undefined,
-  scope: "provider_turn" | "package_call",
+  scope: "provider_turn" | PackageUsageScope,
   row: { readonly turn?: number; readonly attempt?: number } = {},
 ): Promise<Usage | undefined> {
   const { session, limits, runUsage, runId } = ctx;
@@ -145,7 +144,10 @@ async function meterUsage(
     session.activeInputMeter = { tokens: effective.inputTokens, source: effective.estimated === true ? "estimated" : "reported" };
   }
   runUsage.add(effective);
-  if (!session.activeLedger) return effective;
+  if (!session.activeLedger) {
+    await chargeAncestor(session, model, effective);
+    return effective;
+  }
   const usageRecord: UsageRecord = {
     id: randomId("usage"),
     sessionId: session.id,
@@ -157,7 +159,21 @@ async function meterUsage(
     ...session.activeOwnership,
   };
   await session.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, session.activeRedactor));
+  await chargeAncestor(session, model, effective);
   return effective;
+}
+
+/**
+ * Plan 232 Task 2: mirrors a usage this run recorded onto the `RunOptions.chargeTo` ancestor's active run, as a
+ * `child_run` row. That run's own `chargeTo` mirrors it on, so each level costs one call. When the ancestor has no
+ * active run (an async child outliving its parent's run), no `child_run` ledger row is written while its session
+ * limits (if any) are still charged (plan 239 Task 8). A breach aborts the ancestor's run and throws here.
+ */
+async function chargeAncestor(session: RoundContext["session"], model: ModelConfig, usage: Usage): Promise<void> {
+  const seam = session.activeChargeTo;
+  if (!seam) return;
+  if (seam.recordUsage) await seam.recordUsage(model, usage, undefined, "child_run");
+  else if (seam.recordSessionUsage) await seam.recordSessionUsage(model, usage);
 }
 
 export async function recordProviderUsage(
@@ -179,9 +195,10 @@ export function recordPackageCallUsage(
   ctx: RoundContext,
   model: ModelConfig,
   usage: Usage | undefined,
-  request: ProviderRequest,
+  request: ProviderRequest | undefined,
+  scope: PackageUsageScope = "package_call",
 ): Promise<Usage | undefined> {
-  return meterUsage(ctx, model, usage ?? estimateTurnUsage(ctx.session, model, request), "package_call");
+  return meterUsage(ctx, model, usage ?? estimateTurnUsage(ctx.session, model, request), scope);
 }
 
 /**
@@ -286,32 +303,51 @@ export async function generateWithRetry(
 ): Promise<ProviderTurnResult> {
   const retry = mergeRetry(session.agent.config.retry, options.retry);
   const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
-  return retryLoop((attempt) => generateProviderTurn(session, request, runId, signal, secrets, turn, attempt, recordUsage, toolResults), {
+  // Plan 227 Task 4: a failure after output began is final only when `afterOutput` is off or the failure is
+  // not transient. The failed attempt appended nothing; consumers discard its deltas (docs/events.md).
+  const afterOutput = retry?.afterOutput !== false;
+  const isFinal = (info: ErrorInfo, observable: boolean) => observable && (!afterOutput || !isTransientErrorInfo(info));
+  let opening: TurnRetry | undefined;
+  const attemptTurn = (attempt: number, willRetry: RetryProbe) => {
+    const retried = opening;
+    opening = undefined;
+    return generateProviderTurn(session, request, runId, signal, secrets, turn, attempt, recordUsage, toolResults, {
+      ...(retried ? { retry: retried } : {}),
+      willRetry: (info, observable) => willRetry(info, isFinal(info, observable)),
+    });
+  };
+  return retryLoop(attemptTurn, {
     retry,
     sessionId: session.id,
     runId,
     signal,
     passthrough: (error) =>
-      isSteerSoftInterrupt(error) || error instanceof ProviderOverflowRecovery || error instanceof ContextOverflowError,
+      isSteerSoftInterrupt(error) ||
+      error instanceof RunLimitError ||
+      error instanceof ProviderOverflowRecovery ||
+      error instanceof ContextOverflowError,
     classify(error) {
       const failure = error instanceof ProviderTurnFailure ? error : undefined;
-      return {
-        info: failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets),
-        final: failure?.observable,
-      };
+      const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
+      return { info, final: failure ? isFinal(info, failure.observable) : undefined };
     },
-    // A retry re-opens the turn: `turn.started` again, with the attempt and the redacted cause.
-    onRetry: (info, delayMs, attempt) =>
-      session.emit({
-        type: "turn.started",
-        sessionId: session.id,
-        runId,
-        turn,
-        attempt,
-        metadata: createProviderTurnMetadata(request, session.activeProvider?.id ?? request.model.provider, { attempt }),
-        retry: { delayMs, error: info },
-      }),
+    // A retry re-opens the turn: the next attempt's own `turn.started` carries `attempt` and the redacted cause.
+    onRetry: (info, delayMs) => {
+      opening = { delayMs, error: info };
+    },
   });
+}
+
+/** The retry decision that opened an attempt, as `turn.started.retry` carries it. */
+interface TurnRetry {
+  readonly delayMs: number;
+  readonly error: ErrorInfo;
+}
+
+/** What `generateWithRetry` tells one attempt: why it was opened, and how to ask whether its failure will be retried. */
+interface TurnAttemptContext {
+  readonly retry?: TurnRetry;
+  readonly willRetry?: (info: ErrorInfo, observable: boolean) => Promise<boolean>;
 }
 
 export async function generateProviderTurn(
@@ -325,9 +361,10 @@ export async function generateProviderTurn(
   recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>,
   // biome-ignore lint/correctness/noUnusedFunctionParameters: the name is part of the published declaration surface (scripts/compat-baseline/arnilo__prism.txt).
   toolResults: readonly ToolResult[] = [],
+  attemptContext: TurnAttemptContext = {},
 ): Promise<ProviderTurnResult> {
   session.activeLimits!.charge("maxProviderAttempts");
-  session.activeLimits!.charge("maxRequestBytes", jsonBytes(request));
+  session.activeLimits!.charge("maxRequestBytes", requestBytes(request));
   const startedAt = performance.now();
   const providerId = session.activeProvider?.id ?? request.model.provider;
   const buildMetadata = (extra: Omit<ProviderTurnMetadata, "providerId" | "model"> = {}) =>
@@ -338,6 +375,7 @@ export async function generateProviderTurn(
     runId,
     turn,
     metadata: buildMetadata(),
+    ...(attemptContext.retry ? { attempt, retry: attemptContext.retry } : {}),
   });
   const content: ContentBlock[] = [];
   const calls: ToolCallContent[] = [];
@@ -348,10 +386,10 @@ export async function generateProviderTurn(
   let nativeStopReason: ProviderStopReason | undefined;
   let usageRecorded = false;
   let effectiveUsage: Usage | undefined;
-  const bufferedOutput: import("../../contracts.js").AgentEvent[] = [];
-  const bufferOutput = Boolean(session.activeLimitOutputBuffer);
+  // `limits.bufferOutput` (plan 228 Task 2): held until usage is charged; otherwise each delta goes out live.
+  const bufferedOutput: import("../../contracts.js").AgentEvent[] | undefined = session.activeLimitOutputBuffer ? [] : undefined;
   const emitOutput = (event: import("../../contracts.js").AgentEvent) => {
-    if (bufferOutput) bufferedOutput.push(event);
+    if (bufferedOutput) bufferedOutput.push(event);
     else session.emit(event);
   };
   const recordTurnUsage = async (): Promise<Usage | undefined> => {
@@ -383,7 +421,7 @@ export async function generateProviderTurn(
     );
     for await (const event of stream) {
       throwIfAborted(turnAbort.signal);
-      session.activeLimits!.charge("maxResponseBytes", jsonBytes(event));
+      session.activeLimits!.charge("maxResponseBytes", providerEventBytes(event));
       if (event.type === "error") throw new ProviderTurnFailure(event.error, started);
       if (event.type === "usage") usage = event.usage;
       if (event.type === "done") {
@@ -425,7 +463,7 @@ export async function generateProviderTurn(
       throw usageMissingFailure(turn);
     }
     await recordTurnUsage();
-    if (bufferOutput) for (const event of bufferedOutput) session.emit(event);
+    if (bufferedOutput) for (const event of bufferedOutput) session.emit(event);
     const latencyMs = Math.round(performance.now() - startedAt);
     session.emit({
       type: "turn.completed",
@@ -466,6 +504,12 @@ export async function generateProviderTurn(
     // A rejected request was never processed: do not project (or bill) an estimate for it. The retry
     // records the call that actually ran; a provider that did report usage keeps it.
     if (overflow && usage === undefined) usageRecorded = true;
+    // Plan 227 Task 4: an attempt the loop will retry projects no estimate either; the retry is the
+    // call that gets metered. Usage the provider did report is recorded once, and a final failure
+    // keeps its estimate. The policy is asked once; the loop reuses the answer.
+    const observable = error instanceof ProviderTurnFailure ? error.observable : started;
+    if (usage === undefined && !usageRecorded && (await attemptContext.willRetry?.(info, observable).catch(() => false)))
+      usageRecorded = true;
     await recordTurnUsage();
     session.emit({
       type: "turn.completed",
@@ -487,6 +531,7 @@ export async function generateProviderTurn(
       if (started) throw new ContextOverflowError(contextOverflowMessage(counts), counts, info);
       throw new ProviderOverflowRecovery(info, counts);
     }
+    if (error instanceof RunLimitError) throw error;
     if (error instanceof ProviderTurnFailure) throw error;
     throw new ProviderTurnFailure(info, started);
   } finally {

@@ -65,6 +65,7 @@ describe("speaker attribution (plan 218 Task 4.1)", () => {
       [["x1"], undefined],
     ];
     const events = await runStm({
+      verbatimUserChars: 0,
       entries: [user, assistant, tool, custom],
       client: clientFor(
         scripted(
@@ -121,9 +122,14 @@ describe("speaker attribution (plan 218 Task 4.1)", () => {
   });
 
   it("stm_instruction_keeps_user_facts_apart_from_assistant_plans", () => {
-    assert.match(DEFAULT_STM_INSTRUCTION, /the user states is its own event citing the user's entry/);
-    assert.match(DEFAULT_STM_INSTRUCTION, /never folded into one about what the assistant suggested or calculated/);
-    assert.match(DEFAULT_STM_INSTRUCTION, /an assistant's plan or estimate is a proposal, not something that happened/);
+    assert.match(
+      DEFAULT_STM_INSTRUCTION,
+      /the user states, and each change to an earlier one, is its own statement citing the user's entry/,
+    );
+    // Plan 218.5 Task 1, fix 2: a user statement is never folded into an outcome or a request either.
+    assert.match(DEFAULT_STM_INSTRUCTION, /never folded into an outcome, a request or what the assistant suggested/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /a change sets corrects and supersedes the earlier record/);
+    assert.match(DEFAULT_STM_INSTRUCTION, /An assistant's plan or estimate is a proposal/);
     assert.ok(DEFAULT_STM_INSTRUCTION.length <= 2_100, `${DEFAULT_STM_INSTRUCTION.length} characters`);
   });
 

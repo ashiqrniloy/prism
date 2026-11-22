@@ -7,9 +7,7 @@ export const DEFAULT_SOURCE_TOOLS = ["web_fetch", "web_search", "web_extract", "
 export const DEFAULT_REDACT_QUERY = ["key", "token", "api_key", "access_token", "sig", "signature"] as const;
 
 export const DEFAULT_MAX_REPAIRS = 1;
-export const HARD_MAX_REPAIRS = 3;
 export const DEFAULT_MAX_SOURCES = 500;
-export const HARD_MAX_SOURCES = 5_000;
 
 export interface ToolsResearchConfig {
   readonly sourceTools?: readonly string[];
@@ -33,8 +31,8 @@ export const toolsResearchConfigSchema: JsonSchema = {
   additionalProperties: false,
   properties: {
     sourceTools: { ...stringList(32), default: [...DEFAULT_SOURCE_TOOLS] },
-    maxRepairs: { type: "integer", minimum: 0, maximum: HARD_MAX_REPAIRS, default: DEFAULT_MAX_REPAIRS },
-    maxSources: { type: "integer", minimum: 1, maximum: HARD_MAX_SOURCES, default: DEFAULT_MAX_SOURCES },
+    maxRepairs: { type: "integer", minimum: 0, default: DEFAULT_MAX_REPAIRS },
+    maxSources: { type: "integer", minimum: 1, default: DEFAULT_MAX_SOURCES },
     requireCitations: { type: "boolean", default: false },
     redactQuery: { ...stringList(32), default: [...DEFAULT_REDACT_QUERY] },
   },

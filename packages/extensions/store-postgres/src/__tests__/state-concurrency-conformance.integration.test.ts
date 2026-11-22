@@ -46,12 +46,13 @@ describeProtected("state concurrency conformance (postgres)", () => {
     const eventsSchema = schema();
     const probes = await assertStateConcurrencyConforms({
       sessions: () => makeStore(),
+      appends: () => makeStore(),
       events: {
         reopenable: true,
         create: async () => (await makeStore(eventsSchema)).events,
       },
     });
-    for (const probe of ["conversation-metadata-cas", "cursor-resume"]) {
+    for (const probe of ["conversation-metadata-cas", "cursor-resume", "tip-race"]) {
       if (!probes.includes(probe)) throw new Error(`postgres run did not execute probe ${probe}`);
     }
   });

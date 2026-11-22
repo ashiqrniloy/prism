@@ -145,14 +145,17 @@ describe("session snapshot cache (plan 210 Task 0.3)", () => {
       else if (roll < 0.85 && branch.length > 0 && sessions.length < 4) {
         sessions.push((await session.fork({ at: branch[Math.floor(random() * branch.length)]!.id })) as RuntimeAgentSession);
       } else if (roll < 0.9) {
-        // Resume: a new handle on the same session and leaf.
-        sessions[sessions.indexOf(session)] = new RuntimeAgentSession({
+        // Resume: a new handle on the same session and leaf. The leaf may have a linear child already, so the
+        // handle branches there on purpose with checkout(); a plain stale-leaf append is tip-checked (plan 230 Task 2).
+        const resumed = new RuntimeAgentSession({
           agent,
           id: session.id,
           store: memory,
           leafId: leaf,
           snapshotCacheTtlMs: 30_000,
         });
+        await resumed.checkout(leaf);
+        sessions[sessions.indexOf(session)] = resumed;
       } else await session.appendEntry(message(session.id, leaf, "user", `tail${step}`));
       for (const each of sessions) await check(each, step);
     }
@@ -208,6 +211,40 @@ describe("session snapshot cache (plan 210 Task 0.3)", () => {
     assert.equal(await memory.deleteSession!("gone"), true, "another handle deletes the session");
     await sleep(5);
     await assert.rejects(session.snapshot(), /Unknown session leaf/, "the rebuild fails as it does without the cache");
+  });
+
+  it("append_during_the_branch_read_is_not_an_unknown_leaf", async () => {
+    // A memory worker's record lands while `snapshot()` reads the branch: the snapshot is of the leaf it asked
+    // for, never "Unknown session leaf", and it is not cached under the newer leaf.
+    const memory = createMemorySessionStore();
+    let session!: RuntimeAgentSession;
+    let racing: SessionEntry | undefined;
+    const store: SessionStore = {
+      ...memory,
+      append: (entry, options) => memory.append(entry, options),
+      list: (sessionId) => memory.list(sessionId),
+      get: memory.get?.bind(memory),
+      async readBranchPath(query) {
+        const page = await memory.readBranchPath!(query);
+        if (racing) {
+          const entry = racing;
+          racing = undefined;
+          await session.appendEntry(entry);
+        }
+        return page;
+      },
+    };
+    session = new RuntimeAgentSession({ agent: await testAgent(), id: "race", store, snapshotCacheTtlMs: 1 });
+    const first = message("race", undefined, "user", "one");
+    await session.appendEntry(first);
+    await sleep(5);
+    const second = message("race", first.id, "assistant", "two");
+    racing = second;
+    const value = await session.snapshot();
+    assert.equal(value.leafId, first.id);
+    const after = await session.snapshot();
+    assert.equal(after.leafId, second.id, "the next snapshot reads the moved tip");
+    assert.equal(after.entries.length, 2);
   });
 
   it("store_without_get_falls_back_to_full_rebuild", async () => {

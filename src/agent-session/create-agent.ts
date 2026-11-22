@@ -1,17 +1,24 @@
 /** create-agent (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 import { ModelError } from "./model-errors.js";
+import { assertAgentConfigShape, assertSessionOptionsShape } from "./config-shape.js";
 import { parseModelRef } from "../models/ref.js";
 import type {
   Agent,
   AgentConfig,
   ResolvedAgentConfig,
   AgentEvent,
+  OwnershipScope,
   Session,
   SessionOptions,
   Skill,
   SubscribeOptions,
 } from "../contracts.js";
-import { SessionNotFoundError } from "../contracts-core/session.js";
+import {
+  MAX_SESSION_LINK_DEPTH,
+  MAX_SESSION_SEED_ENTRIES,
+  type SessionSeedEntry,
+  SessionNotFoundError,
+} from "../contracts-core/session.js";
 import { AgentDisposedError } from "../contracts.js";
 import { inspectAgent } from "../agent/inspect.js";
 import { createHookBus } from "../hooks/index.js";
@@ -20,14 +27,16 @@ import { type LoadedPackages, loadPackages } from "../packages/loader.js";
 import { createSlotDefaults, createSlotRegistry } from "../slots/index.js";
 import { registerSkillCatalog } from "../skills-catalog.js";
 import { KERNEL_VERSION } from "../version.js";
-import { entriesInScope, getSessionBranchEntries } from "../session-stores.js";
+import { bindAgentCeilings, resolveCeilings } from "../run-limits.js";
+import { entriesInScope, readSessionSnapshot } from "../session-stores.js";
 import { createModelIndex } from "../agent/models.js";
 import { createSessionIndex, narrowScope } from "../agent/sessions.js";
 import { skillInfos, toolInfos } from "../agent/views.js";
 import { EventSubscriber } from "./event-subscriber.js";
 import { randomId } from "./helpers.js";
 import { type AgentRuntime, registerAgentRuntime, skillSourceFor, toolListFor } from "./runtime-registry.js";
-import { RuntimeAgentSession } from "./session.js";
+import { RuntimeAgentSession, type RuntimeSessionInternals } from "./session.js";
+import type { PackageSessionOpenOptions } from "../packages/api.js";
 
 export { agentRuntime, tryAgentRuntime, type AgentRuntime } from "./runtime-registry.js";
 
@@ -46,9 +55,9 @@ function agentDisposedAbort(): Error {
 }
 
 /** The fs read lives in `node/`, so the kernel root's static imports stay fs-free. */
-async function readSkillDirectory(path: string): Promise<readonly Skill[]> {
+async function readSkillDirectory(path: string, maxSkillBytes: number): Promise<readonly Skill[]> {
   const { loadSkillDirectory } = await import("../node/contribution-discovery.js");
-  return loadSkillDirectory(path);
+  return loadSkillDirectory(path, { maxSkillBytes });
 }
 
 /** Read `AgentConfig.skills.dirs` once per agent, through the same reader as `PackageAPI.skills.addDir`. */
@@ -80,6 +89,10 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       );
     }
   }
+  // Plan 229 Task 3: an unknown key or a wrong-shaped one fails here, before any package loads.
+  assertAgentConfigShape(input);
+  // Plan 239 Task 4: resolved once from the host's own config and bound to the agent below; nothing later raises one.
+  const ceilings = resolveCeilings(input.ceilings);
 
   // `model` parses once here; everything below reads a `ModelSpec`. A bad reference fails creation closed.
   // An object ref is already a `ModelSpec`, so the host's own config object stays `agent.config`.
@@ -97,7 +110,7 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
 
   // Values `credentials.resolve` returned: the bus and the loader redact them from here on.
   const secrets: string[] = [];
-  const readSkillDir = internals.readSkillDir ?? readSkillDirectory;
+  const readSkillDir = internals.readSkillDir ?? ((path: string) => readSkillDirectory(path, ceilings.skillInstructionBytes));
   // `createAgent` and `reload()` assemble through this one view: `skills.list()` during setup sees the
   // host's own config, never the packages being replaced.
   const registryView: { config: ResolvedAgentConfig; packages: LoadedPackages | undefined } = { config, packages: undefined };
@@ -126,6 +139,7 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       redactor: baseConfig.redactor,
       kernelVersion: internals.kernelVersion ?? KERNEL_VERSION,
       hostConfig: nextConfig,
+      ceilings,
       secrets,
       readSkillDir,
       fetch: internals.fetch,
@@ -133,6 +147,7 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       registry: {
         tools: () => toolListFor(registryView.config, registryView.packages),
         skills: () => skillSourceFor(registryView.config, registryView.packages),
+        openSession: (options) => openChildSession(options),
       },
     });
     return { config: nextConfig, packages: loaded };
@@ -171,6 +186,108 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
   // Computed on first read and not rebuilt per access; a disposed agent exposes nothing.
   let toolView: ReturnType<typeof toolInfos> | undefined;
   let skillView: ReturnType<typeof skillInfos> | undefined;
+  async function openAgentSession(options: SessionOptions | undefined, internals: RuntimeSessionInternals): Promise<Session> {
+    if (disposed) throw new AgentDisposedError();
+    if (options && "store" in (options as Record<string, unknown>) && (options as Record<string, unknown>).store !== undefined) {
+      throw new TypeError(
+        'Session options no longer accept "store"; configure the store slot on the agent via AgentConfig.slots.store instead',
+      );
+    }
+    assertSessionOptionsShape(options);
+    const resolvedStore = currentSlots.resolve("store", currentConfig.slots?.store);
+    // Plan 177 Task 4: the session's scope narrows the agent's; a conflicting field throws before any read.
+    const sessionScope = narrowScope(effective.ownership, options?.ownership, "Session");
+    // Plan 177 Task 5: register before the open, so a dispose that starts mid-open still closes it.
+    const openSession = async (id: string, open: (session: RuntimeAgentSession) => Promise<void>): Promise<Session> => {
+      const session = new RuntimeAgentSession({ ...options, ...internals, id, ownership: sessionScope, agent, store: resolvedStore });
+      openSessions.add(session);
+      try {
+        await open(session);
+      } catch (error) {
+        openSessions.delete(session);
+        throw error;
+      }
+      if (disposed) {
+        await session.close();
+        throw new AgentDisposedError();
+      }
+      return session;
+    };
+    if (!options?.id) return openSession(randomId("session"), (session) => session.openNewSession());
+    // Plan 230 Task 3: the open reads the branch from its newest compaction on, and the session keeps it as its snapshot.
+    const snapshot = await readSessionSnapshot(
+      resolvedStore,
+      { sessionId: options.id, leafId: options.leafId },
+      { maxPages: ceilings.branchReadPages },
+    );
+    if (snapshot.entries.length === 0) {
+      if (!options.create) throw new SessionNotFoundError(options.id);
+      return openSession(options.id, (session) => session.openNewSession());
+    }
+    // Fail closed: an entry that does not carry the session's effective scope is another scope's (or unscoped).
+    if (!entriesInScope(snapshot.entries, sessionScope)) {
+      throw new SessionNotFoundError(options.id);
+    }
+    return openSession(options.id, (session) => session.openResumedSession(snapshot));
+  }
+
+  /**
+   * Plan 232 Task 2: `PackageAPI.sessions.open`. The parent must be a session of this agent that is open now; the
+   * child inherits its scope (narrowed, never widened), is stamped one level deeper, and closes with it.
+   */
+  async function openChildSession(options: PackageSessionOpenOptions): Promise<Session> {
+    const { parent: parentLink, seed, ownership, actor, metadata, id } = assertChildSessionOptions(options);
+    let parent: RuntimeAgentSession | undefined;
+    for (const session of openSessions) {
+      if (session.id === parentLink.sessionId && !session.isClosing()) {
+        parent = session;
+        break;
+      }
+    }
+    if (!parent) throw new TypeError("sessions.open: parent.sessionId must name an open session of this agent");
+    const depth = parent.depth + 1;
+    if (depth > MAX_SESSION_LINK_DEPTH)
+      throw new TypeError(`sessions.open: a child would be ${depth} links deep; the most is ${MAX_SESSION_LINK_DEPTH}`);
+    const scope = narrowScope(parent.scope, ownership, "Session");
+    if (id !== undefined) return reopenChildSession(parent, id, scope);
+    const child = (await openAgentSession(
+      {
+        parent: parentLink,
+        ...(actor !== undefined ? { actor } : {}),
+        ...(metadata !== undefined ? { metadata } : {}),
+        ...(scope !== undefined ? { ownership: scope } : {}),
+      },
+      { depth, ...(seed !== undefined ? { seed } : {}) },
+    )) as RuntimeAgentSession;
+    child.openParent = parent;
+    parent.children.add(child);
+    if (parent.isClosing()) {
+      await child.close();
+      throw new TypeError("sessions.open: the parent session closed while the child was opening");
+    }
+    return child;
+  }
+
+  /**
+   * Plan 232 Task 4: a stored child of `parent`, reopened (a parent resumed in a new process reaches its suspended
+   * child this way). The child's own links decide: a session linked to another parent, or to none, is refused.
+   */
+  async function reopenChildSession(parent: RuntimeAgentSession, id: string, scope: OwnershipScope | undefined): Promise<Session> {
+    for (const open of parent.children) if (open.id === id && !open.isClosing()) return open;
+    const child = (await openAgentSession({ id, ...(scope !== undefined ? { ownership: scope } : {}) }, {})) as RuntimeAgentSession;
+    if (child.parentSessionId !== parent.id) {
+      await child.close();
+      throw new TypeError("sessions.open: id must name a child session of parent.sessionId");
+    }
+    child.openParent = parent;
+    parent.children.add(child);
+    if (parent.isClosing()) {
+      await child.close();
+      throw new TypeError("sessions.open: the parent session closed while the child was opening");
+    }
+    return child;
+  }
+
   const agent: Agent = {
     id: agentId,
     get config() {
@@ -178,6 +295,8 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
     },
     get tools() {
       if (disposed) return Object.freeze([]);
+      // A `tools.source` answers the current set, so the view is read fresh instead of cached (plan 234 Task 4).
+      if (registryView.packages?.hasToolSources) return toolInfos(agent);
       return (toolView ??= toolInfos(agent));
     },
     get skills() {
@@ -190,46 +309,8 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       packages: () => currentPackages,
       redactor: () => currentPackages.redactor(currentConfig.redactor),
     }),
-    async session(options?: SessionOptions) {
-      if (disposed) throw new AgentDisposedError();
-      if (options && "store" in (options as Record<string, unknown>) && (options as Record<string, unknown>).store !== undefined) {
-        throw new TypeError(
-          'Session options no longer accept "store"; configure the store slot on the agent via AgentConfig.slots.store instead',
-        );
-      }
-      const resolvedStore = currentSlots.resolve("store", currentConfig.slots?.store);
-      // Plan 177 Task 4: the session's scope narrows the agent's; a conflicting field throws before any read.
-      const sessionScope = narrowScope(effective.ownership, options?.ownership, "Session");
-      // Plan 177 Task 5: register before the open, so a dispose that starts mid-open still closes it.
-      const openSession = async (id: string, open: (session: RuntimeAgentSession) => Promise<void>): Promise<Session> => {
-        const session = new RuntimeAgentSession({ ...options, id, ownership: sessionScope, agent: this, store: resolvedStore });
-        openSessions.add(session);
-        try {
-          await open(session);
-        } catch (error) {
-          openSessions.delete(session);
-          throw error;
-        }
-        if (disposed) {
-          await session.close();
-          throw new AgentDisposedError();
-        }
-        return session;
-      };
-      if (!options?.id) return openSession(randomId("session"), (session) => session.openNewSession());
-      const branchReader = resolvedStore.readBranchPath;
-      const branch = branchReader
-        ? (await branchReader.call(resolvedStore, { sessionId: options.id, leafId: options.leafId })).items
-        : getSessionBranchEntries(await resolvedStore.list(options.id), { leafId: options.leafId });
-      if (branch.length === 0) {
-        if (!options.create) throw new SessionNotFoundError(options.id);
-        return openSession(options.id, (session) => session.openNewSession());
-      }
-      // Fail closed: an entry that does not carry the session's effective scope is another scope's (or unscoped).
-      if (!entriesInScope(branch, sessionScope)) {
-        throw new SessionNotFoundError(options.id);
-      }
-      return openSession(options.id, (session) => session.openResumedSession(branch));
+    session(options?: SessionOptions) {
+      return openAgentSession(options, {});
     },
     subscribe(options: SubscribeOptions = {}) {
       const subscriber = new EventSubscriber(agentId, { ...options, acrossRuns: true }, () => agentSubscribers.delete(subscriber));
@@ -334,5 +415,63 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
     emitAgentEvent,
   };
   registerAgentRuntime(agent, runtime);
+  bindAgentCeilings(agent, ceilings);
   return agent;
+}
+
+/** `PackageAPI.sessions.open` options, checked before anything opens: a child is a conversation, never a config bag. */
+function assertChildSessionOptions(options: PackageSessionOpenOptions): PackageSessionOpenOptions {
+  if (!options || typeof options !== "object") throw new TypeError("sessions.open needs an options object");
+  const known = new Set(["parent", "actor", "metadata", "ownership", "seed", "id"]);
+  for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`sessions.open: unknown option ${JSON.stringify(key)}`);
+  const parent = options.parent as unknown as Record<string, unknown> | undefined;
+  if (!parent || typeof parent !== "object" || typeof parent.sessionId !== "string" || parent.sessionId.length === 0) {
+    throw new TypeError("sessions.open: parent.sessionId is required");
+  }
+  for (const key of Object.keys(parent)) {
+    if (key !== "sessionId" && key !== "delegationId" && key !== "workflowRunId") {
+      throw new TypeError(`sessions.open: parent.${key} is not a child link; use sessionId, delegationId or workflowRunId`);
+    }
+  }
+  if (options.id !== undefined) {
+    if (typeof options.id !== "string" || options.id.length === 0) throw new TypeError("sessions.open: id must be a non-empty string");
+    for (const key of ["seed", "actor", "metadata"] as const) {
+      if (options[key] !== undefined)
+        throw new TypeError(`sessions.open: ${key} cannot be given with id; a reopened child keeps what it recorded`);
+    }
+  }
+  const seed = options.seed;
+  if (seed !== undefined) {
+    if (!Array.isArray(seed)) throw new TypeError("sessions.open: seed must be an array");
+    if (seed.length > MAX_SESSION_SEED_ENTRIES)
+      throw new TypeError(`sessions.open: seed holds at most ${MAX_SESSION_SEED_ENTRIES} entries`);
+    for (const [index, entry] of (seed as SessionSeedEntry[]).entries()) assertSeedEntry(entry, index);
+  }
+  return options;
+}
+
+function assertSeedEntry(entry: SessionSeedEntry, index: number): void {
+  const value = entry as unknown as Record<string, unknown>;
+  const path = `sessions.open: seed[${index}]`;
+  if (!value || typeof value !== "object") throw new TypeError(`${path} must be an object`);
+  if (value.kind === "summary") {
+    if (typeof value.summary !== "string" || Object.keys(value).some((key) => key !== "kind" && key !== "summary")) {
+      throw new TypeError(`${path} must be { kind: "summary", summary: string }`);
+    }
+    return;
+  }
+  if (value.kind === "message") {
+    const message = value.message as Record<string, unknown> | undefined;
+    if (
+      !message ||
+      typeof message !== "object" ||
+      (message.role !== "user" && message.role !== "assistant" && message.role !== "tool") ||
+      !Array.isArray(message.content) ||
+      Object.keys(value).some((key) => key !== "kind" && key !== "message")
+    ) {
+      throw new TypeError(`${path} must be { kind: "message", message } with a user, assistant or tool message`);
+    }
+    return;
+  }
+  throw new TypeError(`${path}.kind must be "message" or "summary"; got ${JSON.stringify(value.kind)}`);
 }

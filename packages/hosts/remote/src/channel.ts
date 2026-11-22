@@ -1,8 +1,12 @@
 import { RemoteError } from "./errors.js";
 
-export type Overflow = "close" | "drop_oldest" | "drop_newest";
+/**
+ * `coalesce` is accepted for parity with the kernel's `SubscriberOverflowPolicy` but does not merge yet: it
+ * behaves as `close` (plan 228 Further Actions).
+ */
+export type Overflow = "coalesce" | "close" | "drop_oldest" | "drop_newest";
 
-/** A bounded single-consumer async queue. A full queue follows `overflow`; `close` ends the stream with a `limit` error. */
+/** A bounded single-consumer async queue. A full queue follows `overflow`; `close`/`coalesce` end the stream with a `limit` error. */
 export interface Channel<T> extends AsyncIterable<T> {
   push(value: T): void;
   /** Ends the stream after the queued values drain. A given error surfaces once the queue is empty. */

@@ -1,0 +1,5734 @@
+{
+  "kind": "compact-bench-screen-v1",
+  "plan": "218.1",
+  "task": 3,
+  "step": 2,
+  "branch": "A",
+  "ruleHash": "697cb31d045af4a5f321680112e933756c2af624b6df2aee849f9a4911311e01",
+  "rule": {
+    "suite": "compact-bench-retention",
+    "sessions": 30,
+    "draw": "scripts/memory-bench/work-outcome-compact-bench.json (retention, 30 sessions, label-blind)",
+    "worker": "opencode-go/muse-spark-1.3-contributor",
+    "referenceSummarizer": "opencode-go/muse-spark-1.3-contributor through upstream's e2_score.compress_one (CB_SUMMARIZER_API=chat, the local pass-through); upstream's default output cap",
+    "branches": {
+      "A": {
+        "arms": [
+          "memory-off",
+          "OM-before",
+          "STM-only",
+          "WM"
+        ],
+        "candidate": "WM"
+      },
+      "B": {
+        "arms": [
+          "memory-off",
+          "OM-before",
+          "session"
+        ],
+        "candidate": "session"
+      }
+    },
+    "references": [
+      "claude-code",
+      "codex",
+      "anchor_index",
+      "mask-tail"
+    ],
+    "maskTail": "no model call: the session's transcript view, newest lines first, tool lines with their output cleared, cut to the candidate arm's S character count for the same session",
+    "variant": "every decision reads S (the memory block plus the kept messages, what the model sees after compaction); the block alone and the STM chunks are reported beside it, never decided on",
+    "estimate": "candidate minus comparator, points of retained details (recall x 100), paired per session",
+    "interval": "95% bootstrap over sessions (each session one cluster), 10,000 resamples, seed 7",
+    "nonInferiorPoints": 5,
+    "rules": {
+      "A": {
+        "ship": "STM + WM ships as the session default if WM vs the Claude Code prompt has interval lower bound >= -5 and WM vs memory-off has interval lower bound > 0",
+        "deterministic": "if WM does not beat STM-only (interval lower bound <= 0), the deterministic WM policy is the default: the same retention, no WM model call",
+        "loses": "if WM's interval upper bound is < 0 against the Claude Code prompt or anchor_index, the finding goes to the owner before any plan builds on WM; it holds the decision for the owner and does not change it",
+        "m5": "M5 (WM vs STM-only, criteria nonInferior) reads the paired estimate over all sessions; the sessions where this screen's WM run engaged are reported beside it"
+      },
+      "B": {
+        "ship": "STM is supported as the session memory if session vs the Claude Code prompt has interval lower bound >= -5 and session vs memory-off has interval lower bound > 0",
+        "loses": "if session's interval upper bound is < 0 against the Claude Code prompt or anchor_index, the finding goes to the owner; it holds the decision for the owner and does not change it",
+        "m5": "M5 stays missing; the screen makes no claim about WM"
+      },
+      "maskTail": "if the candidate does not beat mask-tail (interval lower bound <= 0), the finding goes to the owner with the verdict; it decides nothing by itself",
+      "notShown": "a candidate that neither ships nor loses clearly ships nothing; the finding goes to the owner"
+    },
+    "cannotShow": [
+      "one model family (Muse worker and summarizer)",
+      "30 sessions detect large differences only",
+      "histories are capped at 250,000 characters by upstream, so long-horizon WM behaviour is out of reach",
+      "no long-term memory"
+    ],
+    "maxInputTokens": {
+      "A": 30000000,
+      "B": 20000000
+    },
+    "iterations": 10000,
+    "seed": 7
+  },
+  "productHash": "e6c0dda51f81acaea3ed62cdd147946bd7fe1951954ee4baa037fbf892eea783",
+  "memoryHash": "35e9b7e16dcd295ce1455846af8d2170d6c9a8a3259e6d1057d479a716d6f8f3",
+  "probe": {
+    "branch": "A",
+    "engaged": 30,
+    "of": 30
+  },
+  "drawSha256": "e38d844d1cfbf965487acc0b9bdeb169ac32249a5f20a99ac47f5dbfb18ca1af",
+  "approvedAt": "2026-11-16T15:43:16.098Z",
+  "finishedAt": "2026-11-17T05:37:22.139Z",
+  "upstream": {
+    "codeRevision": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+    "datasetRevision": "ff20521e6a2293ba74317efb076f0c338ca5fb6b"
+  },
+  "verdict": {
+    "branch": "A",
+    "candidate": "WM",
+    "ruleHash": "697cb31d045af4a5f321680112e933756c2af624b6df2aee849f9a4911311e01",
+    "pairs": {
+      "memory-off": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": -2.63,
+        "ciLow": -6.34,
+        "ciHigh": 0.35
+      },
+      "OM-before": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": -35.47,
+        "ciLow": -44.39,
+        "ciHigh": -26.47
+      },
+      "STM-only": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": -0.44,
+        "ciLow": -1.54,
+        "ciHigh": 0.92
+      },
+      "claude-code": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": -0.18,
+        "ciLow": -4.73,
+        "ciHigh": 5.01
+      },
+      "codex": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": 5,
+        "ciLow": 0.94,
+        "ciHigh": 10.19
+      },
+      "anchor_index": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": -62.69,
+        "ciLow": -70.68,
+        "ciHigh": -54.93
+      },
+      "mask-tail": {
+        "n": 30,
+        "unpaired": {
+          "candidate": 0,
+          "comparator": 0
+        },
+        "estimate": 4.14,
+        "ciLow": 1.4,
+        "ciHigh": 7.35
+      }
+    },
+    "findings": [
+      "WM loses clearly against the Claude Code prompt or anchor_index: to the owner",
+      "WM is not shown to ship (non-inferior to Claude Code and above memory-off): to the owner"
+    ],
+    "nonInferior": true,
+    "beatsOff": false,
+    "holdForOwner": true,
+    "decision": "not-shown",
+    "toOwner": true
+  },
+  "m5": {
+    "model": "muse",
+    "n": 30,
+    "unpaired": {
+      "candidate": 0,
+      "comparator": 0
+    },
+    "estimate": -0.44,
+    "ciLow": -1.54,
+    "ciHigh": 0.92,
+    "engagedOnly": {
+      "n": 30,
+      "unpaired": {
+        "candidate": 0,
+        "comparator": 0
+      },
+      "estimate": -0.44,
+      "ciLow": -1.54,
+      "ciHigh": 0.92
+    }
+  },
+  "meanRetentionPoints": {
+    "memory-off/context": {
+      "n": 30,
+      "mean": 15.56
+    },
+    "memory-off/block": {
+      "n": 30,
+      "mean": 13.76
+    },
+    "OM-before/context": {
+      "n": 30,
+      "mean": 48.4
+    },
+    "OM-before/block": {
+      "n": 30,
+      "mean": 8.2
+    },
+    "STM-only/context": {
+      "n": 30,
+      "mean": 13.37
+    },
+    "STM-only/block": {
+      "n": 30,
+      "mean": 7.56
+    },
+    "STM-only/chunks": {
+      "n": 27,
+      "mean": 1.87
+    },
+    "WM/context": {
+      "n": 30,
+      "mean": 12.94
+    },
+    "WM/block": {
+      "n": 30,
+      "mean": 7.37
+    },
+    "WM/chunks": {
+      "n": 26,
+      "mean": 1.47
+    },
+    "mask-tail/context": {
+      "n": 30,
+      "mean": 8.79
+    },
+    "anchor_index/context": {
+      "n": 30,
+      "mean": 75.63
+    },
+    "claude-code/context": {
+      "n": 30,
+      "mean": 13.11
+    },
+    "codex/context": {
+      "n": 30,
+      "mean": 7.94
+    }
+  },
+  "sChars": {
+    "memory-off": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 8883,
+        "blockChars": 8008
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 9731,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 10993,
+        "blockChars": 8004
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 10984,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 9401,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 10749,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 11120,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 10334,
+        "blockChars": 8005
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 10866,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 9407,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 9286,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 12008,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 10656,
+        "blockChars": 6610
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 12631,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 22248,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 14033,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 9868,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 13749,
+        "blockChars": 8007
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 11412,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 10898,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 13604,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 11660,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 11082,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 15796,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 13175,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 13356,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 9179,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 9178,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 8905,
+        "blockChars": 8009
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 10391,
+        "blockChars": 8009
+      }
+    ],
+    "OM-before": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 58080,
+        "blockChars": 3451
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 249674,
+        "blockChars": 4572
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 127148,
+        "blockChars": 2682
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 105609,
+        "blockChars": 4118
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 229875,
+        "blockChars": 1996
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 90789,
+        "blockChars": 2454
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 177491,
+        "blockChars": 1637
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 120018,
+        "blockChars": 7877
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 140270,
+        "blockChars": 7591
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 79907,
+        "blockChars": 741
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 89788,
+        "blockChars": 3067
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 53699,
+        "blockChars": 4859
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 8679,
+        "blockChars": 4155
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 94492,
+        "blockChars": 2476
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 66427,
+        "blockChars": 9505
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 193409,
+        "blockChars": 4442
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 37668,
+        "blockChars": 1999
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 236153,
+        "blockChars": 3534
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 30137,
+        "blockChars": 5221
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 205103,
+        "blockChars": 2710
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 39523,
+        "blockChars": 5256
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 226514,
+        "blockChars": 2357
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 66389,
+        "blockChars": 3599
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 69597,
+        "blockChars": 4135
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 71336,
+        "blockChars": 2438
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 233379,
+        "blockChars": 8674
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 105771,
+        "blockChars": 2874
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 230328,
+        "blockChars": 1787
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 233267,
+        "blockChars": 4000
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 21161,
+        "blockChars": 5063
+      }
+    ],
+    "STM-only": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 3651,
+        "blockChars": 2776
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 12764,
+        "blockChars": 11042
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 9407,
+        "blockChars": 6418
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 7725,
+        "blockChars": 4750
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 24484,
+        "blockChars": 23092
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 7055,
+        "blockChars": 4315
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 14635,
+        "blockChars": 11524
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 11331,
+        "blockChars": 9002
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 11795,
+        "blockChars": 8938
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 10286,
+        "blockChars": 8888
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 6839,
+        "blockChars": 5562
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 6872,
+        "blockChars": 2873
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 6157,
+        "blockChars": 2111
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 7582,
+        "blockChars": 2960
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 18860,
+        "blockChars": 4621
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 10241,
+        "blockChars": 4217
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 4542,
+        "blockChars": 2683
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 14291,
+        "blockChars": 8549
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 5673,
+        "blockChars": 2270
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 11046,
+        "blockChars": 8157
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 7742,
+        "blockChars": 2147
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 9207,
+        "blockChars": 5556
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 4577,
+        "blockChars": 1504
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 11280,
+        "blockChars": 3493
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 8478,
+        "blockChars": 3312
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 20282,
+        "blockChars": 14935
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 5352,
+        "blockChars": 4182
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 14104,
+        "blockChars": 12935
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 16609,
+        "blockChars": 15713
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 5264,
+        "blockChars": 2882
+      }
+    ],
+    "WM": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 6391,
+        "blockChars": 5516
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 6028,
+        "blockChars": 4306
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 7289,
+        "blockChars": 4300
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 7265,
+        "blockChars": 4290
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 11289,
+        "blockChars": 9897
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 6060,
+        "blockChars": 3320
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 16805,
+        "blockChars": 13694
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 7664,
+        "blockChars": 5335
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 8185,
+        "blockChars": 5328
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 8732,
+        "blockChars": 7334
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 7465,
+        "blockChars": 6188
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 6620,
+        "blockChars": 2621
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 6178,
+        "blockChars": 2132
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 6794,
+        "blockChars": 2172
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 17328,
+        "blockChars": 3089
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 15761,
+        "blockChars": 9737
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 6356,
+        "blockChars": 4497
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 13393,
+        "blockChars": 7651
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 5818,
+        "blockChars": 2415
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 7232,
+        "blockChars": 4343
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 8001,
+        "blockChars": 2406
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 7280,
+        "blockChars": 3629
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 5258,
+        "blockChars": 2185
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 10032,
+        "blockChars": 2245
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 7605,
+        "blockChars": 2439
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 17848,
+        "blockChars": 12501
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 4065,
+        "blockChars": 2895
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 8232,
+        "blockChars": 7063
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 15449,
+        "blockChars": 14553
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 7263,
+        "blockChars": 4881
+      }
+    ],
+    "mask-tail": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 6391
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 6028
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 7289
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 7265
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 11289
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 6060
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 16805
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 7664
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 8185
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 8732
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 7465
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 6620
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 6178
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 6794
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 17328
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 15761
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 6356
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 13393
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 5818
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 7232
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 8001
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 7280
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 5258
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 10032
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 7605
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 17848
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 4065
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 8232
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 15449
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 7263
+      }
+    ],
+    "claude-code": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 7885
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 12405
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 15263
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 12202
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 9046
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 10579
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 6900
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 4905
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 10723
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 9913
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 11254
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 13972
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 127
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 13293
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 17599
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 14288
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 7588
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 14699
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 15255
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 14224
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 12680
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 17812
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 10414
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 13458
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 12104
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 15705
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 8107
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 12730
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 10542
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 8697
+      }
+    ],
+    "codex": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 1364
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 3509
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 6534
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 1823
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 3711
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 1313
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 1701
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 14
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 11
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 1928
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 2376
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 2589
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 2535
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 3440
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 4639
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 3978
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 2001
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 3957
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 2965
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 1858
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 3514
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 3301
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 2216
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 4054
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 2824
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 4494
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 1898
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 4723
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 3156
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 2063
+      }
+    ],
+    "anchor_index": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "sChars": 4172
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "sChars": 4996
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "sChars": 3372
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "sChars": 3931
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "sChars": 5461
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "sChars": 3581
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "sChars": 5186
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "sChars": 5319
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "sChars": 3103
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "sChars": 3547
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "sChars": 5787
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "sChars": 2546
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "sChars": 293
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "sChars": 3801
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "sChars": 3086
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "sChars": 708
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "sChars": 2852
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "sChars": 4263
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "sChars": 1562
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "sChars": 3174
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "sChars": 701
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "sChars": 3322
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "sChars": 2761
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "sChars": 4070
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "sChars": 2826
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "sChars": 2348
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "sChars": 2330
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "sChars": 7966
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "sChars": 1340
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "sChars": 803
+      }
+    ]
+  },
+  "sessions": {
+    "memory-off/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.08527131782945736,
+        "atoms": 129,
+        "hits": 11
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.037037037037037035,
+        "atoms": 108,
+        "hits": 4
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.009523809523809525,
+        "atoms": 105,
+        "hits": 1
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.08823529411764706,
+        "atoms": 68,
+        "hits": 6
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.01,
+        "atoms": 100,
+        "hits": 1
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.023391812865497075,
+        "atoms": 171,
+        "hits": 4
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.06417112299465241,
+        "atoms": 187,
+        "hits": 12
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0.02702702702702703,
+        "atoms": 37,
+        "hits": 1
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.029411764705882353,
+        "atoms": 102,
+        "hits": 3
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 56,
+        "hits": 0
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.09259259259259259,
+        "atoms": 54,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.05172413793103448,
+        "atoms": 58,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.06451612903225806,
+        "atoms": 62,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.13095238095238096,
+        "atoms": 84,
+        "hits": 11
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.26666666666666666,
+        "atoms": 15,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.10526315789473684,
+        "atoms": 38,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.29577464788732394,
+        "atoms": 71,
+        "hits": 21
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.75,
+        "atoms": 8,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.029411764705882353,
+        "atoms": 34,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.3611111111111111,
+        "atoms": 36,
+        "hits": 13
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.5,
+        "atoms": 36,
+        "hits": 18
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.625,
+        "atoms": 8,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.18421052631578946,
+        "atoms": 38,
+        "hits": 7
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.26,
+        "atoms": 50,
+        "hits": 13
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.041237113402061855,
+        "atoms": 97,
+        "hits": 4
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "memory-off/block": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.08527131782945736,
+        "atoms": 129,
+        "hits": 11
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.037037037037037035,
+        "atoms": 108,
+        "hits": 4
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.009523809523809525,
+        "atoms": 105,
+        "hits": 1
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.08823529411764706,
+        "atoms": 68,
+        "hits": 6
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.01,
+        "atoms": 100,
+        "hits": 1
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.023391812865497075,
+        "atoms": 171,
+        "hits": 4
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.06417112299465241,
+        "atoms": 187,
+        "hits": 12
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0.02702702702702703,
+        "atoms": 37,
+        "hits": 1
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.029411764705882353,
+        "atoms": 102,
+        "hits": 3
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 56,
+        "hits": 0
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.09259259259259259,
+        "atoms": 54,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.017241379310344827,
+        "atoms": 58,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.016129032258064516,
+        "atoms": 62,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.05952380952380952,
+        "atoms": 84,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.2,
+        "atoms": 15,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.07894736842105263,
+        "atoms": 38,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.11267605633802817,
+        "atoms": 71,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.75,
+        "atoms": 8,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.029411764705882353,
+        "atoms": 34,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.3055555555555556,
+        "atoms": 36,
+        "hits": 11
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.4722222222222222,
+        "atoms": 36,
+        "hits": 17
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.625,
+        "atoms": 8,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.15789473684210525,
+        "atoms": 38,
+        "hits": 6
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.26,
+        "atoms": 50,
+        "hits": 13
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.041237113402061855,
+        "atoms": 97,
+        "hits": 4
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "OM-before/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.49612403100775193,
+        "atoms": 129,
+        "hits": 64
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.1111111111111111,
+        "atoms": 108,
+        "hits": 12
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.09523809523809523,
+        "atoms": 105,
+        "hits": 10
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.4264705882352941,
+        "atoms": 68,
+        "hits": 29
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.63,
+        "atoms": 100,
+        "hits": 63
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.3508771929824561,
+        "atoms": 171,
+        "hits": 60
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.7540106951871658,
+        "atoms": 187,
+        "hits": 141
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0.5135135135135135,
+        "atoms": 37,
+        "hits": 19
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.5882352941176471,
+        "atoms": 102,
+        "hits": 60
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.3392857142857143,
+        "atoms": 56,
+        "hits": 19
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.5370370370370371,
+        "atoms": 54,
+        "hits": 29
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.29310344827586204,
+        "atoms": 58,
+        "hits": 17
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.7903225806451613,
+        "atoms": 62,
+        "hits": 49
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.25,
+        "atoms": 84,
+        "hits": 21
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.4666666666666667,
+        "atoms": 15,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.15789473684210525,
+        "atoms": 38,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.5352112676056338,
+        "atoms": 71,
+        "hits": 38
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.21428571428571427,
+        "atoms": 28,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.9402985074626866,
+        "atoms": 67,
+        "hits": 63
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.875,
+        "atoms": 8,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.4117647058823529,
+        "atoms": 34,
+        "hits": 14
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.9722222222222222,
+        "atoms": 36,
+        "hits": 35
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.7222222222222222,
+        "atoms": 36,
+        "hits": 26
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.625,
+        "atoms": 8,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.6578947368421053,
+        "atoms": 38,
+        "hits": 25
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.72,
+        "atoms": 50,
+        "hits": 36
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.4329896907216495,
+        "atoms": 97,
+        "hits": 42
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0.14285714285714285,
+        "atoms": 7,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "OM-before/block": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.05426356589147287,
+        "atoms": 129,
+        "hits": 7
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.06481481481481481,
+        "atoms": 108,
+        "hits": 7
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 105,
+        "hits": 0
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.10294117647058823,
+        "atoms": 68,
+        "hits": 7
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.01,
+        "atoms": 100,
+        "hits": 1
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.011695906432748537,
+        "atoms": 171,
+        "hits": 2
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.0053475935828877,
+        "atoms": 187,
+        "hits": 1
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0.05405405405405406,
+        "atoms": 37,
+        "hits": 2
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.0196078431372549,
+        "atoms": 102,
+        "hits": 2
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 56,
+        "hits": 0
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.12962962962962962,
+        "atoms": 54,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.017241379310344827,
+        "atoms": 58,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.06451612903225806,
+        "atoms": 62,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.10714285714285714,
+        "atoms": 84,
+        "hits": 9
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.2,
+        "atoms": 15,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.02631578947368421,
+        "atoms": 38,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 71,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.014925373134328358,
+        "atoms": 67,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.375,
+        "atoms": 8,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.029411764705882353,
+        "atoms": 34,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.027777777777777776,
+        "atoms": 36,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.16666666666666666,
+        "atoms": 36,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 8,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.15789473684210525,
+        "atoms": 38,
+        "hits": 6
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.14,
+        "atoms": 50,
+        "hits": 7
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.030927835051546393,
+        "atoms": 97,
+        "hits": 3
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0.14285714285714285,
+        "atoms": 7,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "STM-only/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.05426356589147287,
+        "atoms": 129,
+        "hits": 7
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.07407407407407407,
+        "atoms": 108,
+        "hits": 8
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.01904761904761905,
+        "atoms": 105,
+        "hits": 2
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.08823529411764706,
+        "atoms": 68,
+        "hits": 6
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.02,
+        "atoms": 100,
+        "hits": 2
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.03508771929824561,
+        "atoms": 171,
+        "hits": 6
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.03208556149732621,
+        "atoms": 187,
+        "hits": 6
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.0784313725490196,
+        "atoms": 102,
+        "hits": 8
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.07142857142857142,
+        "atoms": 56,
+        "hits": 4
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.05555555555555555,
+        "atoms": 54,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.05172413793103448,
+        "atoms": 58,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.06451612903225806,
+        "atoms": 62,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.10714285714285714,
+        "atoms": 84,
+        "hits": 9
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.26666666666666666,
+        "atoms": 15,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.07894736842105263,
+        "atoms": 38,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.2535211267605634,
+        "atoms": 71,
+        "hits": 18
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.5,
+        "atoms": 8,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.058823529411764705,
+        "atoms": 34,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.3055555555555556,
+        "atoms": 36,
+        "hits": 11
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.08333333333333333,
+        "atoms": 36,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.625,
+        "atoms": 8,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.13157894736842105,
+        "atoms": 38,
+        "hits": 5
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.3,
+        "atoms": 50,
+        "hits": 15
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.061855670103092786,
+        "atoms": 97,
+        "hits": 6
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0.058823529411764705,
+        "atoms": 17,
+        "hits": 1
+      }
+    ],
+    "STM-only/block": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.031007751937984496,
+        "atoms": 129,
+        "hits": 4
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.07407407407407407,
+        "atoms": 108,
+        "hits": 8
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.01904761904761905,
+        "atoms": 105,
+        "hits": 2
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.08823529411764706,
+        "atoms": 68,
+        "hits": 6
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.02,
+        "atoms": 100,
+        "hits": 2
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.03508771929824561,
+        "atoms": 171,
+        "hits": 6
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.03208556149732621,
+        "atoms": 187,
+        "hits": 6
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.0784313725490196,
+        "atoms": 102,
+        "hits": 8
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.07142857142857142,
+        "atoms": 56,
+        "hits": 4
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.05555555555555555,
+        "atoms": 54,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.017241379310344827,
+        "atoms": 58,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.11764705882352941,
+        "atoms": 17,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.016129032258064516,
+        "atoms": 62,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.08333333333333333,
+        "atoms": 84,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.2,
+        "atoms": 15,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.02631578947368421,
+        "atoms": 38,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.09859154929577464,
+        "atoms": 71,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.5,
+        "atoms": 8,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.058823529411764705,
+        "atoms": 34,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 36,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.027777777777777776,
+        "atoms": 36,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 8,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.13157894736842105,
+        "atoms": 38,
+        "hits": 5
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.3,
+        "atoms": 50,
+        "hits": 15
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.061855670103092786,
+        "atoms": 97,
+        "hits": 6
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0.058823529411764705,
+        "atoms": 17,
+        "hits": 1
+      }
+    ],
+    "STM-only/chunks": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 129,
+        "hits": 0
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.027777777777777776,
+        "atoms": 108,
+        "hits": 3
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.01904761904761905,
+        "atoms": 105,
+        "hits": 2
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.014705882352941176,
+        "atoms": 68,
+        "hits": 1
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.01,
+        "atoms": 100,
+        "hits": 1
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.0213903743315508,
+        "atoms": 187,
+        "hits": 4
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0.02702702702702703,
+        "atoms": 37,
+        "hits": 1
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.00980392156862745,
+        "atoms": 102,
+        "hits": 1
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 56,
+        "hits": 0
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0,
+        "atoms": 54,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 58,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 62,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 84,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.06666666666666667,
+        "atoms": 15,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.02631578947368421,
+        "atoms": 38,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.014084507042253521,
+        "atoms": 71,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.014925373134328358,
+        "atoms": 67,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.029411764705882353,
+        "atoms": 34,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 36,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.027777777777777776,
+        "atoms": 36,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 8,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.10526315789473684,
+        "atoms": 38,
+        "hits": 4
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.06,
+        "atoms": 50,
+        "hits": 3
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.030927835051546393,
+        "atoms": 97,
+        "hits": 3
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "WM/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.10077519379844961,
+        "atoms": 129,
+        "hits": 13
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.046296296296296294,
+        "atoms": 108,
+        "hits": 5
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 105,
+        "hits": 0
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.029411764705882353,
+        "atoms": 68,
+        "hits": 2
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 100,
+        "hits": 0
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 171,
+        "hits": 0
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.026737967914438502,
+        "atoms": 187,
+        "hits": 5
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.00980392156862745,
+        "atoms": 102,
+        "hits": 1
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.03571428571428571,
+        "atoms": 56,
+        "hits": 2
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.018518518518518517,
+        "atoms": 54,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.06896551724137931,
+        "atoms": 58,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.06451612903225806,
+        "atoms": 62,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.10714285714285714,
+        "atoms": 84,
+        "hits": 9
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.26666666666666666,
+        "atoms": 15,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.07894736842105263,
+        "atoms": 38,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.2535211267605634,
+        "atoms": 71,
+        "hits": 18
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.5,
+        "atoms": 8,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.058823529411764705,
+        "atoms": 34,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.3055555555555556,
+        "atoms": 36,
+        "hits": 11
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.08333333333333333,
+        "atoms": 36,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.625,
+        "atoms": 8,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.13157894736842105,
+        "atoms": 38,
+        "hits": 5
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.28,
+        "atoms": 50,
+        "hits": 14
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.05154639175257732,
+        "atoms": 97,
+        "hits": 5
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0.14285714285714285,
+        "atoms": 7,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0.058823529411764705,
+        "atoms": 17,
+        "hits": 1
+      }
+    ],
+    "WM/block": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.08527131782945736,
+        "atoms": 129,
+        "hits": 11
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.046296296296296294,
+        "atoms": 108,
+        "hits": 5
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 105,
+        "hits": 0
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.029411764705882353,
+        "atoms": 68,
+        "hits": 2
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 100,
+        "hits": 0
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 171,
+        "hits": 0
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.016042780748663103,
+        "atoms": 187,
+        "hits": 3
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.00980392156862745,
+        "atoms": 102,
+        "hits": 1
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.03571428571428571,
+        "atoms": 56,
+        "hits": 2
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.018518518518518517,
+        "atoms": 54,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.05172413793103448,
+        "atoms": 58,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.11764705882352941,
+        "atoms": 17,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.016129032258064516,
+        "atoms": 62,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 84,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.26666666666666666,
+        "atoms": 15,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.05263157894736842,
+        "atoms": 38,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.14084507042253522,
+        "atoms": 71,
+        "hits": 10
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.5,
+        "atoms": 8,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.058823529411764705,
+        "atoms": 34,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 36,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.05555555555555555,
+        "atoms": 36,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 8,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.13157894736842105,
+        "atoms": 38,
+        "hits": 5
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.26,
+        "atoms": 50,
+        "hits": 13
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.05154639175257732,
+        "atoms": 97,
+        "hits": 5
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0.14285714285714285,
+        "atoms": 7,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0.058823529411764705,
+        "atoms": 17,
+        "hits": 1
+      }
+    ],
+    "WM/chunks": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.07751937984496124,
+        "atoms": 129,
+        "hits": 10
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.009259259259259259,
+        "atoms": 108,
+        "hits": 1
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 105,
+        "hits": 0
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.014705882352941176,
+        "atoms": 68,
+        "hits": 1
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 100,
+        "hits": 0
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 171,
+        "hits": 0
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.0106951871657754,
+        "atoms": 187,
+        "hits": 2
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 102,
+        "hits": 0
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 56,
+        "hits": 0
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0,
+        "atoms": 54,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.017241379310344827,
+        "atoms": 58,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 62,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 84,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.06666666666666667,
+        "atoms": 15,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.02631578947368421,
+        "atoms": 38,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 71,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 67,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 34,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 36,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 8,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.07894736842105263,
+        "atoms": 38,
+        "hits": 3
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.06,
+        "atoms": 50,
+        "hits": 3
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.020618556701030927,
+        "atoms": 97,
+        "hits": 2
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "mask-tail/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.046511627906976744,
+        "atoms": 129,
+        "hits": 6
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.009259259259259259,
+        "atoms": 108,
+        "hits": 1
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 105,
+        "hits": 0
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.058823529411764705,
+        "atoms": 68,
+        "hits": 4
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 100,
+        "hits": 0
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.017543859649122806,
+        "atoms": 171,
+        "hits": 3
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.016042780748663103,
+        "atoms": 187,
+        "hits": 3
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 102,
+        "hits": 0
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 56,
+        "hits": 0
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.07407407407407407,
+        "atoms": 54,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.05172413793103448,
+        "atoms": 58,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.06451612903225806,
+        "atoms": 62,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.07142857142857142,
+        "atoms": 84,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.26666666666666666,
+        "atoms": 15,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.07894736842105263,
+        "atoms": 38,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.15492957746478872,
+        "atoms": 71,
+        "hits": 11
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 28,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.25,
+        "atoms": 8,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 34,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.3055555555555556,
+        "atoms": 36,
+        "hits": 11
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.1388888888888889,
+        "atoms": 36,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.375,
+        "atoms": 8,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.15789473684210525,
+        "atoms": 38,
+        "hits": 6
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 50,
+        "hits": 0
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 97,
+        "hits": 0
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "anchor_index/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.8914728682170543,
+        "atoms": 129,
+        "hits": 115
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.5185185185185185,
+        "atoms": 108,
+        "hits": 56
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.5333333333333333,
+        "atoms": 105,
+        "hits": 56
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 1,
+        "atoms": 68,
+        "hits": 68
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.4,
+        "atoms": 100,
+        "hits": 40
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.5029239766081871,
+        "atoms": 171,
+        "hits": 86
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.44919786096256686,
+        "atoms": 187,
+        "hits": 84
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0.8108108108108109,
+        "atoms": 37,
+        "hits": 30
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.6470588235294118,
+        "atoms": 102,
+        "hits": 66
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.9464285714285714,
+        "atoms": 56,
+        "hits": 53
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.8703703703703703,
+        "atoms": 54,
+        "hits": 47
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.5344827586206896,
+        "atoms": 58,
+        "hits": 31
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 1,
+        "atoms": 17,
+        "hits": 17
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.3709677419354839,
+        "atoms": 62,
+        "hits": 23
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.5833333333333334,
+        "atoms": 84,
+        "hits": 49
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 1,
+        "atoms": 15,
+        "hits": 15
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 1,
+        "atoms": 38,
+        "hits": 38
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.6056338028169014,
+        "atoms": 71,
+        "hits": 43
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 1,
+        "atoms": 28,
+        "hits": 28
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.5671641791044776,
+        "atoms": 67,
+        "hits": 38
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 1,
+        "atoms": 8,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.7941176470588235,
+        "atoms": 34,
+        "hits": 27
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.75,
+        "atoms": 36,
+        "hits": 27
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.2222222222222222,
+        "atoms": 36,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 1,
+        "atoms": 8,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.9473684210526315,
+        "atoms": 38,
+        "hits": 36
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 1,
+        "atoms": 50,
+        "hits": 50
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.7422680412371134,
+        "atoms": 97,
+        "hits": 72
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 1,
+        "atoms": 7,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 1,
+        "atoms": 17,
+        "hits": 17
+      }
+    ],
+    "claude-code/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.13953488372093023,
+        "atoms": 129,
+        "hits": 18
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.07407407407407407,
+        "atoms": 108,
+        "hits": 8
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.047619047619047616,
+        "atoms": 105,
+        "hits": 5
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.16176470588235295,
+        "atoms": 68,
+        "hits": 11
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0.03,
+        "atoms": 100,
+        "hits": 3
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.08771929824561403,
+        "atoms": 171,
+        "hits": 15
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.0481283422459893,
+        "atoms": 187,
+        "hits": 9
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0.1568627450980392,
+        "atoms": 102,
+        "hits": 16
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.10714285714285714,
+        "atoms": 56,
+        "hits": 6
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.18518518518518517,
+        "atoms": 54,
+        "hits": 10
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.034482758620689655,
+        "atoms": 58,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.0967741935483871,
+        "atoms": 62,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.10714285714285714,
+        "atoms": 84,
+        "hits": 9
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.26666666666666666,
+        "atoms": 15,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.10526315789473684,
+        "atoms": 38,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.16901408450704225,
+        "atoms": 71,
+        "hits": 12
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.07142857142857142,
+        "atoms": 28,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.75,
+        "atoms": 8,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.20588235294117646,
+        "atoms": 34,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.1111111111111111,
+        "atoms": 36,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.19444444444444445,
+        "atoms": 36,
+        "hits": 7
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0.375,
+        "atoms": 8,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.10526315789473684,
+        "atoms": 38,
+        "hits": 4
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.1,
+        "atoms": 50,
+        "hits": 5
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.030927835051546393,
+        "atoms": 97,
+        "hits": 3
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0.14285714285714285,
+        "atoms": 7,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ],
+    "codex/context": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "client": "claude-code",
+        "recall": 0.06976744186046512,
+        "atoms": 129,
+        "hits": 9
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "client": "claude-code",
+        "recall": 0.05555555555555555,
+        "atoms": 108,
+        "hits": 6
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "client": "claude-code",
+        "recall": 0.01904761904761905,
+        "atoms": 105,
+        "hits": 2
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "client": "claude-code",
+        "recall": 0.04411764705882353,
+        "atoms": 68,
+        "hits": 3
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 100,
+        "hits": 0
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "client": "claude-code",
+        "recall": 0.023391812865497075,
+        "atoms": 171,
+        "hits": 4
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "client": "claude-code",
+        "recall": 0.0053475935828877,
+        "atoms": 187,
+        "hits": 1
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 37,
+        "hits": 0
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "client": "claude-code",
+        "recall": 0,
+        "atoms": 102,
+        "hits": 0
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "client": "claude-code",
+        "recall": 0.07142857142857142,
+        "atoms": 56,
+        "hits": 4
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "client": "fake-kimi-cli",
+        "recall": 0.037037037037037035,
+        "atoms": 54,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "client": "kimi-code-cli",
+        "recall": 0.034482758620689655,
+        "atoms": 58,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "client": "kimi-code-cli",
+        "recall": 0.47058823529411764,
+        "atoms": 17,
+        "hits": 8
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "client": "kimi-code-cli",
+        "recall": 0.08064516129032258,
+        "atoms": 62,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "client": "kimi-code-cli",
+        "recall": 0.047619047619047616,
+        "atoms": 84,
+        "hits": 4
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "client": "kimi-code-cli",
+        "recall": 0.2,
+        "atoms": 15,
+        "hits": 3
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "client": "kimi-code-cli",
+        "recall": 0.02631578947368421,
+        "atoms": 38,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "client": "kimi-code-cli",
+        "recall": 0.07042253521126761,
+        "atoms": 71,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "client": "kimi-code-cli",
+        "recall": 0.03571428571428571,
+        "atoms": 28,
+        "hits": 1
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "client": "kimi-code-cli",
+        "recall": 0.029850746268656716,
+        "atoms": 67,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "client": "kimi-code-cli",
+        "recall": 0.25,
+        "atoms": 8,
+        "hits": 2
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "client": "kimi-code-cli",
+        "recall": 0.14705882352941177,
+        "atoms": 34,
+        "hits": 5
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "client": "kimi-code-cli",
+        "recall": 0.2777777777777778,
+        "atoms": 36,
+        "hits": 10
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "client": "kimi-code-cli",
+        "recall": 0.16666666666666666,
+        "atoms": 36,
+        "hits": 6
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "client": "kimi-code-cli",
+        "recall": 0,
+        "atoms": 8,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "client": "kimi-code-cli",
+        "recall": 0.15789473684210525,
+        "atoms": 38,
+        "hits": 6
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "client": "opencode",
+        "recall": 0.04,
+        "atoms": 50,
+        "hits": 2
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "client": "opencode",
+        "recall": 0.020618556701030927,
+        "atoms": 97,
+        "hits": 2
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "client": "opencode",
+        "recall": 0,
+        "atoms": 7,
+        "hits": 0
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "client": "other",
+        "recall": 0,
+        "atoms": 17,
+        "hits": 0
+      }
+    ]
+  },
+  "arms": {
+    "memory-off": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      }
+    ],
+    "OM-before": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 128,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 92947,
+          "outputTokens": 11134
+        }
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 391,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 20205,
+          "outputTokens": 7197
+        }
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 239,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 284795,
+          "outputTokens": 17235
+        }
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 93,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 89532,
+          "outputTokens": 7826
+        }
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 481,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 12349,
+          "outputTokens": 3404
+        }
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 75,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 238971,
+          "outputTokens": 14150
+        }
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 162,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 12960,
+          "outputTokens": 4131
+        }
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 217,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 198195,
+          "outputTokens": 19662
+        }
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 195,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 290744,
+          "outputTokens": 22549
+        }
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 229,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 77636,
+          "outputTokens": 9209
+        }
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 168,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 92593,
+          "outputTokens": 7998
+        }
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 60,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 57644,
+          "outputTokens": 9361
+        }
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 11,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 25564,
+          "outputTokens": 8743
+        }
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 59,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 70957,
+          "outputTokens": 8953
+        }
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 27,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 135600,
+          "outputTokens": 16825
+        }
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 171,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 139611,
+          "outputTokens": 8006
+        }
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 50,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 40338,
+          "outputTokens": 5656
+        }
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 253,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 177340,
+          "outputTokens": 9559
+        }
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 20,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 52752,
+          "outputTokens": 9824
+        }
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 91,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 10866,
+          "outputTokens": 5304
+        }
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 32,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 174450,
+          "outputTokens": 18656
+        }
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 97,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 149676,
+          "outputTokens": 8638
+        }
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 51,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 54228,
+          "outputTokens": 7778
+        }
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 68,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 56492,
+          "outputTokens": 11149
+        }
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 49,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 61247,
+          "outputTokens": 7977
+        }
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 328,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 172513,
+          "outputTokens": 14130
+        }
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 136,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 18608,
+          "outputTokens": 6655
+        }
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 204,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 279216,
+          "outputTokens": 15374
+        }
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 209,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 303805,
+          "outputTokens": 19611
+        }
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "engaged": false,
+        "wmPasses": 0,
+        "stmEvents": 0,
+        "keptMessages": 24,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 659717,
+          "outputTokens": 20327
+        }
+      }
+    ],
+    "STM-only": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 14,
+        "keptMessages": 4,
+        "chunks": 2,
+        "worker": {
+          "inputTokens": 73539,
+          "outputTokens": 35546
+        }
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 70,
+        "keptMessages": 4,
+        "chunks": 11,
+        "worker": {
+          "inputTokens": 256276,
+          "outputTokens": 103622
+        }
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 23,
+        "keptMessages": 4,
+        "chunks": 5,
+        "worker": {
+          "inputTokens": 110376,
+          "outputTokens": 46184
+        }
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 30,
+        "keptMessages": 4,
+        "chunks": 3,
+        "worker": {
+          "inputTokens": 102296,
+          "outputTokens": 44748
+        }
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "engaged": true,
+        "wmPasses": 3,
+        "stmEvents": 82,
+        "keptMessages": 4,
+        "chunks": 13,
+        "worker": {
+          "inputTokens": 240511,
+          "outputTokens": 105404
+        }
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 23,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 80918,
+          "outputTokens": 30582
+        }
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "engaged": true,
+        "wmPasses": 3,
+        "stmEvents": 56,
+        "keptMessages": 4,
+        "chunks": 13,
+        "worker": {
+          "inputTokens": 234279,
+          "outputTokens": 84155
+        }
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 61,
+        "keptMessages": 4,
+        "chunks": 14,
+        "worker": {
+          "inputTokens": 200119,
+          "outputTokens": 72750
+        }
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 33,
+        "keptMessages": 4,
+        "chunks": 7,
+        "worker": {
+          "inputTokens": 133229,
+          "outputTokens": 49304
+        }
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 23,
+        "keptMessages": 4,
+        "chunks": 8,
+        "worker": {
+          "inputTokens": 90655,
+          "outputTokens": 40314
+        }
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 16,
+        "keptMessages": 4,
+        "chunks": 2,
+        "worker": {
+          "inputTokens": 107750,
+          "outputTokens": 38846
+        }
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 8,
+        "keptMessages": 4,
+        "chunks": 2,
+        "worker": {
+          "inputTokens": 49872,
+          "outputTokens": 22899
+        }
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 2,
+        "keptMessages": 4,
+        "chunks": 1,
+        "worker": {
+          "inputTokens": 10099,
+          "outputTokens": 3526
+        }
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 24,
+        "keptMessages": 4,
+        "chunks": 2,
+        "worker": {
+          "inputTokens": 93531,
+          "outputTokens": 24509
+        }
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 17,
+        "keptMessages": 4,
+        "chunks": 4,
+        "worker": {
+          "inputTokens": 61705,
+          "outputTokens": 24981
+        }
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 34,
+        "keptMessages": 4,
+        "chunks": 6,
+        "worker": {
+          "inputTokens": 157531,
+          "outputTokens": 47991
+        }
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 9,
+        "keptMessages": 4,
+        "chunks": 7,
+        "worker": {
+          "inputTokens": 50530,
+          "outputTokens": 14444
+        }
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "engaged": true,
+        "wmPasses": 3,
+        "stmEvents": 66,
+        "keptMessages": 4,
+        "chunks": 22,
+        "worker": {
+          "inputTokens": 222403,
+          "outputTokens": 95286
+        }
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 6,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 26122,
+          "outputTokens": 8918
+        }
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 53,
+        "keptMessages": 4,
+        "chunks": 3,
+        "worker": {
+          "inputTokens": 272083,
+          "outputTokens": 61567
+        }
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 8,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 32415,
+          "outputTokens": 11702
+        }
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 45,
+        "keptMessages": 4,
+        "chunks": 5,
+        "worker": {
+          "inputTokens": 192777,
+          "outputTokens": 57556
+        }
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 14,
+        "keptMessages": 4,
+        "chunks": 1,
+        "worker": {
+          "inputTokens": 57121,
+          "outputTokens": 16530
+        }
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 20,
+        "keptMessages": 4,
+        "chunks": 3,
+        "worker": {
+          "inputTokens": 60526,
+          "outputTokens": 31025
+        }
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 10,
+        "keptMessages": 4,
+        "chunks": 1,
+        "worker": {
+          "inputTokens": 64063,
+          "outputTokens": 22829
+        }
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 57,
+        "keptMessages": 4,
+        "chunks": 18,
+        "worker": {
+          "inputTokens": 198984,
+          "outputTokens": 85667
+        }
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 25,
+        "keptMessages": 4,
+        "chunks": 7,
+        "worker": {
+          "inputTokens": 166163,
+          "outputTokens": 46006
+        }
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "engaged": true,
+        "wmPasses": 3,
+        "stmEvents": 41,
+        "keptMessages": 4,
+        "chunks": 11,
+        "worker": {
+          "inputTokens": 255932,
+          "outputTokens": 80260
+        }
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 70,
+        "keptMessages": 4,
+        "chunks": 13,
+        "worker": {
+          "inputTokens": 268509,
+          "outputTokens": 92041
+        }
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 8,
+        "keptMessages": 4,
+        "chunks": 3,
+        "worker": {
+          "inputTokens": 50618,
+          "outputTokens": 25028
+        }
+      }
+    ],
+    "WM": [
+      {
+        "id": "yi-4f286447b13821-11",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 19,
+        "keptMessages": 4,
+        "chunks": 6,
+        "worker": {
+          "inputTokens": 81945,
+          "outputTokens": 38063
+        }
+      },
+      {
+        "id": "yi-bc03e7147140af-18",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 56,
+        "keptMessages": 4,
+        "chunks": 5,
+        "worker": {
+          "inputTokens": 277129,
+          "outputTokens": 133725
+        }
+      },
+      {
+        "id": "yi-f0e51db5adad49-13",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 37,
+        "keptMessages": 4,
+        "chunks": 11,
+        "worker": {
+          "inputTokens": 115360,
+          "outputTokens": 58910
+        }
+      },
+      {
+        "id": "yi-10250d80aaa2e3-6",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 25,
+        "keptMessages": 4,
+        "chunks": 10,
+        "worker": {
+          "inputTokens": 104211,
+          "outputTokens": 39893
+        }
+      },
+      {
+        "id": "yi-176b7280c584a8-7",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 50,
+        "keptMessages": 4,
+        "chunks": 13,
+        "worker": {
+          "inputTokens": 264905,
+          "outputTokens": 104998
+        }
+      },
+      {
+        "id": "yi-acf07db34e5b44-5",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 16,
+        "keptMessages": 4,
+        "chunks": 1,
+        "worker": {
+          "inputTokens": 95027,
+          "outputTokens": 36363
+        }
+      },
+      {
+        "id": "yi-45d5c4044c5c34-7",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 47,
+        "keptMessages": 4,
+        "chunks": 17,
+        "worker": {
+          "inputTokens": 252861,
+          "outputTokens": 96591
+        }
+      },
+      {
+        "id": "yi-f741e73e4952fa-20",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 43,
+        "keptMessages": 4,
+        "chunks": 15,
+        "worker": {
+          "inputTokens": 171431,
+          "outputTokens": 70524
+        }
+      },
+      {
+        "id": "yi-3c0a51fbf8f153-13",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 23,
+        "keptMessages": 4,
+        "chunks": 4,
+        "worker": {
+          "inputTokens": 140353,
+          "outputTokens": 56326
+        }
+      },
+      {
+        "id": "yi-fdfd5d7cfea54e-19",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 31,
+        "keptMessages": 4,
+        "chunks": 7,
+        "worker": {
+          "inputTokens": 100368,
+          "outputTokens": 47401
+        }
+      },
+      {
+        "id": "yi-815a09e57702b9-8",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 30,
+        "keptMessages": 4,
+        "chunks": 11,
+        "worker": {
+          "inputTokens": 109424,
+          "outputTokens": 49436
+        }
+      },
+      {
+        "id": "yi-cid:831105efd0-6",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 12,
+        "keptMessages": 4,
+        "chunks": 7,
+        "worker": {
+          "inputTokens": 53413,
+          "outputTokens": 25166
+        }
+      },
+      {
+        "id": "yi-cid:fc9b273351-5",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 4,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 14724,
+          "outputTokens": 11459
+        }
+      },
+      {
+        "id": "yi-cid:5420afe3fb-6",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 19,
+        "keptMessages": 4,
+        "chunks": 9,
+        "worker": {
+          "inputTokens": 84891,
+          "outputTokens": 29288
+        }
+      },
+      {
+        "id": "yi-cid:0e8d7b584e-7",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 8,
+        "keptMessages": 4,
+        "chunks": 4,
+        "worker": {
+          "inputTokens": 77878,
+          "outputTokens": 29206
+        }
+      },
+      {
+        "id": "yi-cid:d9d427365c-5",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 43,
+        "keptMessages": 4,
+        "chunks": 9,
+        "worker": {
+          "inputTokens": 206840,
+          "outputTokens": 68628
+        }
+      },
+      {
+        "id": "yi-cid:60e15a99f3-5",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 12,
+        "keptMessages": 4,
+        "chunks": 1,
+        "worker": {
+          "inputTokens": 51534,
+          "outputTokens": 24232
+        }
+      },
+      {
+        "id": "yi-cid:7d26dba332-11",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 54,
+        "keptMessages": 4,
+        "chunks": 7,
+        "worker": {
+          "inputTokens": 249818,
+          "outputTokens": 97217
+        }
+      },
+      {
+        "id": "yi-cid:b68de122a3-9",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 6,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 34734,
+          "outputTokens": 11069
+        }
+      },
+      {
+        "id": "yi-cid:2a1631d3c3-11",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 44,
+        "keptMessages": 4,
+        "chunks": 18,
+        "worker": {
+          "inputTokens": 217139,
+          "outputTokens": 59577
+        }
+      },
+      {
+        "id": "yi-cid:f20620b306-8",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 9,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 35543,
+          "outputTokens": 15723
+        }
+      },
+      {
+        "id": "yi-cid:037648d488-15",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 41,
+        "keptMessages": 4,
+        "chunks": 2,
+        "worker": {
+          "inputTokens": 195925,
+          "outputTokens": 65289
+        }
+      },
+      {
+        "id": "yi-cid:8313307ede-14",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 9,
+        "keptMessages": 4,
+        "chunks": 0,
+        "worker": {
+          "inputTokens": 61279,
+          "outputTokens": 21260
+        }
+      },
+      {
+        "id": "yi-cid:bc7e2ed07c-7",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 21,
+        "keptMessages": 4,
+        "chunks": 4,
+        "worker": {
+          "inputTokens": 63156,
+          "outputTokens": 29262
+        }
+      },
+      {
+        "id": "yi-cid:e8983a72b3-6",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 10,
+        "keptMessages": 4,
+        "chunks": 2,
+        "worker": {
+          "inputTokens": 66532,
+          "outputTokens": 17761
+        }
+      },
+      {
+        "id": "yi-cid:8268853942-8",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 48,
+        "keptMessages": 4,
+        "chunks": 6,
+        "worker": {
+          "inputTokens": 207247,
+          "outputTokens": 96594
+        }
+      },
+      {
+        "id": "yi-37aed568ac6123-9",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 20,
+        "keptMessages": 4,
+        "chunks": 5,
+        "worker": {
+          "inputTokens": 136820,
+          "outputTokens": 42013
+        }
+      },
+      {
+        "id": "yi-648218f10633b9-20",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 43,
+        "keptMessages": 4,
+        "chunks": 8,
+        "worker": {
+          "inputTokens": 259900,
+          "outputTokens": 86902
+        }
+      },
+      {
+        "id": "yi-f1917d616839a5-5",
+        "engaged": true,
+        "wmPasses": 2,
+        "stmEvents": 60,
+        "keptMessages": 4,
+        "chunks": 14,
+        "worker": {
+          "inputTokens": 274210,
+          "outputTokens": 92293
+        }
+      },
+      {
+        "id": "yi-cid:3ea34cbc33-21",
+        "engaged": true,
+        "wmPasses": 1,
+        "stmEvents": 13,
+        "keptMessages": 4,
+        "chunks": 4,
+        "worker": {
+          "inputTokens": 71674,
+          "outputTokens": 34182
+        }
+      }
+    ]
+  },
+  "references": {
+    "claude-code": {
+      "sessions": 30,
+      "errors": 0
+    },
+    "codex": {
+      "sessions": 30,
+      "errors": 0
+    },
+    "anchor_index": {
+      "sessions": 30,
+      "errors": 0
+    }
+  }
+}

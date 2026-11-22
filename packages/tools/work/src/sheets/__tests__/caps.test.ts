@@ -1,17 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { generateWorkbookSync } from "@office-open/xlsx";
-import {
-  HARD_MAX_COLUMNS,
-  HARD_MAX_ROWS,
-  HARD_MAX_SHEET_BYTES,
-  HARD_MAX_SHEETS,
-  parseCsv,
-  parseWorkbook,
-  resolveSheetsCaps,
-  SheetsCapError,
-  SheetsValidationError,
-} from "../index.js";
+import { parseCsv, parseWorkbook, resolveSheetsCaps, SheetsCapError, SheetsValidationError } from "../index.js";
 
 describe("@arnilo/prism-tools/work — Caps & Oversize Refusal", () => {
   it("refuses oversized synthetic CSV at row cap boundary without multi-GB memory explosion", async () => {
@@ -114,10 +104,10 @@ describe("@arnilo/prism-tools/work — Caps & Oversize Refusal", () => {
     assert.equal(resolved.maxSheets, 50);
 
     // Beyond hard ceiling
-    assert.throws(() => resolveSheetsCaps({ maxBytes: HARD_MAX_SHEET_BYTES + 1 }), SheetsValidationError);
-    assert.throws(() => resolveSheetsCaps({ maxSheets: HARD_MAX_SHEETS + 1 }), SheetsValidationError);
-    assert.throws(() => resolveSheetsCaps({ maxRows: HARD_MAX_ROWS + 1 }), SheetsValidationError);
-    assert.throws(() => resolveSheetsCaps({ maxColumns: HARD_MAX_COLUMNS + 1 }), SheetsValidationError);
+    assert.throws(() => resolveSheetsCaps({ maxBytes: 0 }), SheetsValidationError);
+    assert.throws(() => resolveSheetsCaps({ maxSheets: 1.5 }), SheetsValidationError);
+    // Plan 239 Task 5: the host's value is the cap.
+    assert.equal(resolveSheetsCaps({ maxRows: 5_000_000 }).maxRows, 5_000_000);
 
     // Negative / zero / non-integer caps
     assert.throws(() => resolveSheetsCaps({ maxBytes: -100 }), SheetsValidationError);

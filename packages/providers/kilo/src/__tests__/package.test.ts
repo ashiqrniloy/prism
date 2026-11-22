@@ -190,6 +190,16 @@ describe("Kilo package", () => {
     }
   });
 
+  it("kilo_messages_route_does_not_declare_structured_output", () => {
+    const entry = { supported_parameters: ["tools", "structured_outputs", "response_format"] };
+    const messages = mapKiloModel({ id: "anthropic/x", ...entry, opencode: { ai_sdk_provider: "anthropic" } });
+    const chat = mapKiloModel({ id: "z/x", ...entry, opencode: { ai_sdk_provider: "openrouter" } });
+    assert.equal(messages.compat?.route, "messages");
+    assert.equal(messages.capabilities?.structuredOutput, false);
+    assert.equal(chat.compat?.route, "chat");
+    assert.equal(chat.capabilities?.structuredOutput, "json_schema");
+  });
+
   it("list_kilo_models_maps_catalog", async () => {
     const original = mapKiloModel({
       id: "anthropic/claude-haiku-5.5",
@@ -208,7 +218,7 @@ describe("Kilo package", () => {
     assert.deepEqual(original.capabilities?.input, ["text", "image"]);
     assert.equal(original.capabilities?.tools, true);
     assert.equal(original.capabilities?.reasoning, true);
-    assert.equal(original.capabilities?.structuredOutput, "json_schema");
+    assert.equal(original.capabilities?.structuredOutput, false, "the Messages route does not declare structured output");
     assert.ok(Math.abs((original.cost?.input ?? 0) - 0.1) < 1e-9);
     assert.equal(original.cost?.output, 0.5);
     assert.equal(original.cost?.cacheRead, 0.01);

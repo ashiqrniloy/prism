@@ -258,7 +258,9 @@ describe("delegate subagent files", () => {
     const notes = agent.inspect().statusNotes;
     assert.equal(result.status, "completed");
     assert.deepEqual(seen.find((turn) => !turn.tools.includes("delegate"))?.tools, ["read"]);
-    assert.ok(notes.some((note) => note.level === "info" && /does not register and they were dropped: grep/.test(note.message)));
+    assert.ok(
+      notes.some((note) => note.level === "info" && /inherited packages do not register and they were dropped: grep/.test(note.message)),
+    );
     await agent.dispose();
   });
 });

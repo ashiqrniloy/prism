@@ -112,7 +112,7 @@ test("router_rejects_bad_config", () => {
   expect(() => routeHostUi([{ name: "bad", ui: ui({ status: "unavailable" }), kinds: ["bogus"] as never }])).toThrow("unknown_kind");
   for (const timeoutMs of [0, -1, 600001, NaN, Infinity, 1.5])
     expect(() => routeHostUi([{ ...policyDefault(), timeoutMs }])).toThrow("invalid_timeout");
-  for (const maxAnswers of [0, 100001, NaN, 1.5])
+  for (const maxAnswers of [0, -1, NaN, 1.5])
     expect(() => routeHostUi([policyDefault()], { limits: { maxAnswers } })).toThrow("invalid_limit");
 });
 

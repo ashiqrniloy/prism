@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { createDocumentExtractor, DocumentExtractionError, HARD_MAX_EXTRACTION_BYTES, NeedsOcrError } from "../index.js";
+import { createDocumentExtractor, DocumentExtractionError, NeedsOcrError } from "../index.js";
 
 const read = (url: URL) => readFile(url);
 const fixture = (name: string) => new URL(`../../../src/document-extraction/__tests__/fixtures/${name}`, import.meta.url);
@@ -35,7 +35,7 @@ const PEER_OK = await (async () => {
 
 test("caps fail closed at creation", async () => {
   await assert.rejects(createDocumentExtractor({ maxBytes: 0 }), RangeError);
-  await assert.rejects(createDocumentExtractor({ maxBytes: HARD_MAX_EXTRACTION_BYTES + 1 }), RangeError);
+  await assert.rejects(createDocumentExtractor({ maxBytes: 0 }), RangeError);
   await assert.rejects(createDocumentExtractor({ maxTextBytes: 1.5 }), RangeError);
 });
 

@@ -731,6 +731,50 @@ describe("jsonl session store", () => {
     );
     assert.ok(opens >= 1);
   });
+
+  it("jsonl_store_honors_host_query_limits", async () => {
+    // Plan 239 Task 5: a host-raised list and search ceiling, through the shared conformance leg.
+    const dir = await tempDir();
+    const queryLimits = { maxListLimit: 1_000, maxSearchLimit: 250, searchSnippetBytes: 64, ftsCandidates: 50 };
+    await storeConformance(() => createJsonlSessionStore({ dir, queryLimits }), { queryLimits });
+  });
+
+  it("jsonl_tip_check_within_one_process", async () => {
+    // Plan 230 Task 2: the linear marker is a store-private line field that survives a reopen and never reaches an entry.
+    const dir = await tempDir();
+    const store = createJsonlSessionStore({ dir });
+    assert.equal(store.tipCheck, true);
+    const at = (id: string, parentId?: string): SessionEntry => ({
+      id,
+      parentId,
+      sessionId: "tip",
+      timestamp: new Date().toISOString(),
+      kind: "label",
+      label: id,
+    });
+    await store.append(at("root"));
+    await store.append(at("a", "root"), { expectedParentId: "root", tip: true });
+    await store.append(at("side", "root"), { expectedParentId: "root" });
+    await assert.rejects(
+      () => store.append(at("b", "root"), { expectedParentId: "root", tip: true }),
+      (error: unknown) =>
+        isSessionAppendConflict(error) && error.conflict.expectedParentId === "root" && error.conflict.currentLeafId === "side",
+    );
+    const text = await readFile(join(dir, "tip.jsonl"), "utf8");
+    assert.equal(text.split("\n").filter((line) => line.includes('"_prismLinear":true')).length, 1, "only the tip append is marked");
+    assert.ok(
+      (await store.list("tip")).every((entry) => !("_prismLinear" in entry)),
+      "the marker is not part of SessionEntry",
+    );
+    const reopened = createJsonlSessionStore({ dir });
+    assert.ok((await reopened.list("tip")).every((entry) => !("_prismLinear" in entry)));
+    await assert.rejects(
+      () => reopened.append(at("c", "root"), { expectedParentId: "root", tip: true }),
+      (error: unknown) => isSessionAppendConflict(error),
+      "a new instance reads the marker from the file",
+    );
+    await reopened.append(at("a2", "a"), { expectedParentId: "a", tip: true });
+  });
 });
 
 async function readdirNames(dir: string): Promise<string[]> {

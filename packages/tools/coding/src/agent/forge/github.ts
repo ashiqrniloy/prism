@@ -3,7 +3,6 @@ import type { ToolEffectKey, ToolEffectStore, ToolEffectTransition } from "@arni
 import { sha256Hex } from "../artifacts.js";
 import type { BoundGitRunner } from "../git-exec.js";
 import { createBoundGitRunner } from "../git-exec.js";
-import { HARD_MAX_GIT_REF_BYTES } from "../limits.js";
 import type {
   CreateGitHubForgeOptions,
   ForgeCheck,
@@ -19,6 +18,9 @@ import { type AgentIdentity, assertIdentityMatchesOwnership } from "../identity.
 const API_BASE = "https://api.github.com";
 const MUTATION_TTL_MS = 5 * 60_000;
 const MAX_PAGE_SIZE = 100;
+
+/** A ref or branch name sent to the forge API (an identifier, not a work limit). */
+const MAX_FORGE_REF_BYTES = 4096;
 
 function canonical(value: unknown): unknown {
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
@@ -41,8 +43,8 @@ function validateRef(ref: string, label: string): string {
   if (ref.includes("\0") || ref.includes("\n") || ref.includes("\r") || ref.startsWith("-")) {
     throw new ForgeError("ERR_PRISM_FORGE_LIMIT", `${label} must not start with '-' or contain NUL/newlines`);
   }
-  if (Buffer.byteLength(ref, "utf8") > HARD_MAX_GIT_REF_BYTES) {
-    throw new ForgeError("ERR_PRISM_FORGE_LIMIT", `${label} exceeds ${HARD_MAX_GIT_REF_BYTES} byte limit`);
+  if (Buffer.byteLength(ref, "utf8") > MAX_FORGE_REF_BYTES) {
+    throw new ForgeError("ERR_PRISM_FORGE_LIMIT", `${label} exceeds ${MAX_FORGE_REF_BYTES} byte limit`);
   }
   return ref;
 }

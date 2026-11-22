@@ -163,7 +163,7 @@ function needlesOverlap(left: string, right: string): boolean {
 
 export function errorToErrorInfo(error: unknown, secrets: readonly (string | undefined)[] = []): ErrorInfo {
   const code = readErrorCode(error);
-  const retry = readRetryAfterMs(error);
+  const retry = readErrorRetryAfterMs(error);
   const retryAfter = retry !== undefined ? { retryAfterMs: retry } : {};
   const failureClass = readProviderFailureClass(error);
   const failure = failureClass === undefined ? {} : { failureClass };
@@ -188,13 +188,18 @@ export function errorToErrorInfo(error: unknown, secrets: readonly (string | und
   return { message: redactSecrets(String(error), secrets), code, ...failure, ...retryAfter };
 }
 
+const SAFE_ERROR_CODE = /^[A-Za-z0-9_.:-]{1,64}$/;
+
 function readErrorCode(error: unknown): string | number | undefined {
   if (!error || typeof error !== "object" || !("code" in error)) return undefined;
   const code = (error as { code?: unknown }).code;
-  return typeof code === "string" || typeof code === "number" ? code : undefined;
+  if (typeof code === "number") return Number.isFinite(code) ? code : undefined;
+  // A wire code is provider-controlled text that reaches events unredacted, so only a short token
+  // survives; anything else (a sentence, an echoed secret) is dropped and `failureClass` carries the meaning.
+  return typeof code === "string" && SAFE_ERROR_CODE.test(code) ? code : undefined;
 }
 
-function readRetryAfterMs(error: unknown): number | undefined {
+function readErrorRetryAfterMs(error: unknown): number | undefined {
   if (!error || typeof error !== "object" || !("retryAfterMs" in error)) return undefined;
   const value = (error as { retryAfterMs?: unknown }).retryAfterMs;
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;

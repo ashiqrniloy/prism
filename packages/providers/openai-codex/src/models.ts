@@ -22,6 +22,8 @@ export interface OpenAICodexModelConfig extends Omit<ModelConfig, "provider" | "
 export const OPENAI_CODEX_MODELS_MAX_BODY_BYTES = 2_000_000;
 
 export interface ListOpenAICodexModelsOptions {
+  /** Catalog body ceiling (`transport.maxCatalogBytes`); default OPENAI_CODEX_MODELS_MAX_BODY_BYTES. */
+  readonly maxBodyBytes?: number;
   readonly apiKey?: SecretSource;
   /** A writable `keyring:` ref holding the grant; used with {@link credentialSource} when no `apiKey` is given. */
   readonly credential?: string;
@@ -195,7 +197,7 @@ export async function listOpenAICodexModels(options: ListOpenAICodexModelsOption
   // transport's 64 KiB default. The cap stays explicit so a runaway response still fails.
   const payload = await readBoundedResponseJson<OpenAICodexModelsResponse | undefined>(response, {
     secrets,
-    maxResponseBodyBytes: OPENAI_CODEX_MODELS_MAX_BODY_BYTES,
+    maxResponseBodyBytes: options.maxBodyBytes ?? OPENAI_CODEX_MODELS_MAX_BODY_BYTES,
   });
   const entries = payload?.models ?? payload?.data ?? [];
   const provider = options.provider ?? "openai-codex";

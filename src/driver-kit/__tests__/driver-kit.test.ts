@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAgent, definePackage, type ToolDefinition } from "../../index.js";
+import { createAgent, definePackage, type JsonValue, type RunController, type ToolDefinition } from "../../index.js";
 import {
   createDriverLoop,
   createProfiles,
@@ -126,15 +126,25 @@ describe("driver kit", () => {
     await session.close();
   });
 
-  it("revision_major_mismatch_on_resume", () => {
+  it("revision_major_mismatch_on_resume", async () => {
     const driver = make("2.0.0");
+    // The binary major travels in the run's loop state (`state: "run"`), so one loop serves concurrent runs.
+    const controller = (restored?: JsonValue) => {
+      const recorded: JsonValue[] = [];
+      return { recorded, run: { restored, checkpoint: (value: JsonValue) => recorded.push(value) } as unknown as RunController };
+    };
     const loop = createDriverLoop(driver, { name: "a", profile: "me" }, { path: "p", version: "2.4.1" }, undefined, runtime);
-    const snapshot = loop.snapshot!();
-    loop.restore!(snapshot);
+    assert.equal(loop.state, "run");
+    assert.equal(loop.snapshot, undefined);
+    const first = controller();
+    await loop.run(first.run);
+    assert.deepEqual(first.recorded, [{ binaryMajor: "2" }]);
+    const snapshot = first.recorded[0];
+    await loop.run(controller(snapshot).run);
     const upgraded = createDriverLoop(driver, { name: "a", profile: "me" }, { path: "p", version: "3.0.0" }, undefined, runtime);
-    assert.throws(() => upgraded.restore!(snapshot), /driver_revision_mismatch/);
+    await assert.rejects(upgraded.run(controller(snapshot).run), /driver_revision_mismatch/);
     const gone = createDriverLoop(driver, { name: "a", profile: "me" }, undefined, undefined, runtime);
-    assert.throws(() => gone.restore!(snapshot), /driver_revision_mismatch/);
+    await assert.rejects(gone.run(controller(snapshot).run), /driver_revision_mismatch/);
   });
 
   it("requires_miss_fails_create_agent", async () => {

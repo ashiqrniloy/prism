@@ -89,7 +89,7 @@ const agent = await createAgent({
 ```
 
 The 0.12 factory names stay exported: `createOpenApiTools`, `resolveOpenApiLimits`,
-`DEFAULT_OPENAPI_LIMITS`, `HARD_OPENAPI_LIMITS`, `OpenApiToolError`, and the spec helpers
+`DEFAULT_OPENAPI_LIMITS` (the host's `limits` are the caps), `OpenApiToolError`, and the spec helpers
 (`loadSpecDocument`, `firstServerUrl`, `listOperationIds`, `selectOperations`).
 
 ## License

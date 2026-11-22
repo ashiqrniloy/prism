@@ -129,6 +129,6 @@ test("total output cap retains only the cap and cleanup removes secure spill", a
 test("accumulator rejects invalid limits and unsafe temp prefixes", () => {
   assert.throws(() => new OutputAccumulator({ maxBytes: 10, maxTotalOutputBytes: 9 }), /at least maxBytes/);
   assert.throws(() => new OutputAccumulator({ maxLines: Infinity }), /positive safe integer/);
-  assert.throws(() => new OutputAccumulator({ maxTotalOutputBytes: 1024 * 1024 * 1024 + 1 }), /positive safe integer/);
+  assert.throws(() => new OutputAccumulator({ maxTotalOutputBytes: 0 }), /positive safe integer/);
   assert.throws(() => new OutputAccumulator({ tempFilePrefix: "../escape" }), /tempFilePrefix/);
 });

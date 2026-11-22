@@ -15,7 +15,7 @@ import {
 import type { Pool } from "pg";
 import { qualifyTable } from "./identifiers.js";
 
-export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): PersistenceLifecycleStore {
+export function createPostgresPersistenceLifecycle(pool: Pool, schema: string, maxPageSize?: number): PersistenceLifecycleStore {
   const holds = qualifyTable(schema, "prism_legal_holds");
   const quotas = qualifyTable(schema, "prism_tenant_quotas");
   const sessions = qualifyTable(schema, "prism_sessions");
@@ -83,7 +83,7 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
 
     async listLegalHolds(query) {
       assertOwnership(query);
-      const limit = pageLimit(query.limit);
+      const limit = pageLimit(query.limit, maxPageSize);
       const result = await pool.query(
         `SELECT * FROM ${holds}
          WHERE COALESCE(tenant_id,'') = COALESCE($1,'')
@@ -111,7 +111,7 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
 
     async applyRetention(input) {
       assertOwnership(input);
-      const limit = pageLimit(input.limit);
+      const limit = pageLimit(input.limit, maxPageSize);
       const heldResult = await pool.query(
         `SELECT resource_id FROM ${holds}
          WHERE resource_kind = 'session'

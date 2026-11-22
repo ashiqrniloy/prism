@@ -6,8 +6,8 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSecretRedactor, type SessionEntry } from "@arnilo/prism";
-import { assertPersistenceSearchQueryParity, storeConformance } from "@arnilo/prism/testing";
+import { createAgent, createSecretRedactor, rebuildSessionContext, type SessionEntry } from "@arnilo/prism";
+import { assertPersistenceSearchQueryParity, mockProvider, storeConformance } from "@arnilo/prism/testing";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import {
   assertPersistenceBranchQueryConforms,
@@ -48,6 +48,57 @@ describe("createSqlitePersistence", () => {
       reopen: () => createSqlitePersistence({ filename }),
       exerciseConcurrentParentAppend: true,
     });
+  });
+
+  it("honors host query limits (plan 239 Task 5)", async () => {
+    const filename = tempDbPath("query-limits");
+    const queryLimits = { maxListLimit: 1_000, maxSearchLimit: 250, searchSnippetBytes: 64, ftsCandidates: 50 };
+    await storeConformance(() => createSqlitePersistence({ filename, queryLimits }), { queryLimits });
+  });
+
+  it("tail read stops at the newest compaction and the session snapshot matches the whole branch", async () => {
+    // Plan 230 Task 3: 300 entries, a compaction at 250 (throughEntryId e229, keeps e230..e249, pins e5).
+    const persistence = createSqlitePersistence({ filename: tempDbPath("tail") });
+    const sessionId = "tail";
+    const ids: string[] = [];
+    let parentId: string | undefined;
+    for (let index = 0; index < 300; index += 1) {
+      const id = `e${index}`;
+      const at = new Date(Date.UTC(2026, 0, 1, 0, 0, 0, index)).toISOString();
+      const entry: SessionEntry =
+        index === 250
+          ? {
+              id,
+              sessionId,
+              parentId,
+              timestamp: at,
+              kind: "compaction",
+              summary: "summary",
+              data: {
+                throughEntryId: "e229",
+                keepEntryIds: ["e5", ...Array.from({ length: 20 }, (_, k) => `e${230 + k}`)],
+                checkpoint: { version: 1, branchLength: 250, packageState: [], externalState: [], pinnedEntryIds: ["e5"] },
+              },
+            }
+          : { id, sessionId, parentId, timestamp: at, kind: "message", message: { role: "user", content: [{ type: "text", text: id }] } };
+      await persistence.append(entry, parentId === undefined ? undefined : { expectedParentId: parentId });
+      ids.push(id);
+      parentId = id;
+    }
+    const read = persistence.readBranchPath;
+    if (!read) throw new Error("the SQLite store reads branches");
+    const tail = await read({ sessionId, leafId: "e299", from: "compaction" });
+    assert.deepEqual(
+      tail.items.map((entry) => entry.id),
+      ["e5", ...ids.slice(229)],
+    );
+    const paged = await read({ sessionId, from: "compaction", limit: 50 });
+    assert.equal(paged.items.length, 50);
+    assert.equal(paged.nextCursor !== undefined, true);
+    const agent = await createAgent({ model: { provider: "mock", model: "m" }, packages: [mockProvider()], slots: { store: persistence } });
+    const session = await agent.session({ id: sessionId });
+    assert.deepEqual(await session.messages(), rebuildSessionContext(await persistence.list(sessionId)).messages);
+    assert.equal((await session.messages()).length, 1 + 20 + 49);
   });
 
   it("passes run-ledger conformance with reopen and tenant isolation", async () => {
@@ -262,6 +313,8 @@ describe("createSqlitePersistence", () => {
       "009_run_prompt_version",
       "010_session_links",
       "011_evaluations",
+      "012_session_entry_linear",
+      "013_session_entry_seq",
     ]);
     first.close();
 
@@ -327,6 +380,7 @@ describe("createSqlitePersistence", () => {
     const db = new Database(filename);
     applySqliteMigrations(db);
     // Rewind to the schema before migration 010, with one session written the old way.
+    db.exec("DROP INDEX prism_session_entries_linear_parent_unique; ALTER TABLE prism_session_entries DROP COLUMN linear");
     for (const index of ["parent", "agent", "workflow", "delegation", "actor"]) db.exec(`DROP INDEX prism_sessions_link_${index}_idx`);
     for (const column of ["agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"]) {
       db.exec(`ALTER TABLE prism_sessions DROP COLUMN ${column}`);
@@ -366,6 +420,53 @@ describe("createSqlitePersistence", () => {
     db.close();
   });
 
+  it("migration_adds_marker_without_rewriting_entries: a schema-11 database with sibling branches upgrades and reads back identically", async () => {
+    // Plan 230 Task 2: migration 012 adds `linear` with a constant default and the partial unique index.
+    const filename = tempDbPath("linear-migration");
+    const db = new Database(filename);
+    applySqliteMigrations(db);
+    db.exec("DROP INDEX prism_session_entries_linear_parent_unique; ALTER TABLE prism_session_entries DROP COLUMN linear");
+    db.prepare("DELETE FROM prism_migrations WHERE name IN ('012_session_entry_linear', '013_session_entry_seq')").run();
+    const now = new Date().toISOString();
+    db.prepare("INSERT INTO prism_sessions (id, created_at, updated_at, version) VALUES ('legacy', ?, ?, 1)").run(now, now);
+    const insert = db.prepare(
+      "INSERT INTO prism_session_entries (id, session_id, parent_id, timestamp, kind, label) VALUES (?, 'legacy', ?, ?, 'label', ?)",
+    );
+    // Two legacy children of one parent: a sibling branch the partial index must not reject.
+    for (const [id, parent] of [
+      ["root", null],
+      ["left", "root"],
+      ["right", "root"],
+    ] as const)
+      insert.run(id, parent, now, id);
+    const before = db.prepare("SELECT * FROM prism_session_entries ORDER BY rowid").all();
+
+    const persistence = createSqlitePersistence({ filename, database: db });
+    assert.ok((await persistence.queryMigrations({})).items.some((row) => row.name === "012_session_entry_linear"));
+    const after = db.prepare("SELECT * FROM prism_session_entries ORDER BY rowid").all() as Record<string, unknown>[];
+    assert.deepEqual(
+      after.map(({ linear: _linear, ...row }) => row),
+      before,
+      "existing rows are unchanged",
+    );
+    assert.ok(
+      after.every((row) => row.linear === 0),
+      "existing rows default to not linear",
+    );
+    assert.deepEqual(
+      (await persistence.list("legacy")).map((entry) => entry.id),
+      ["root", "left", "right"],
+    );
+    // Legacy siblings are not linear, so the first tip append at their parent is accepted, and the next one conflicts.
+    const at = (id: string): SessionEntry => ({ id, parentId: "root", sessionId: "legacy", timestamp: now, kind: "label", label: id });
+    await persistence.append(at("tip-1"), { expectedParentId: "root", tip: true });
+    await assert.rejects(
+      () => persistence.append(at("tip-2"), { expectedParentId: "root", tip: true }),
+      (error: unknown) => (error as { code?: unknown }).code === "session_append_conflict",
+    );
+    db.close();
+  });
+
   it("backfills only complete legacy checksum history after shape verification", async () => {
     const filename = tempDbPath("legacy-checksum");
     const db = new Database(filename);
@@ -390,7 +491,7 @@ describe("createSqlitePersistence", () => {
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
     assert.equal(
       (db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count,
-      11,
+      13,
     );
     db.close();
   });

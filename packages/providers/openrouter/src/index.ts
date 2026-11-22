@@ -4,14 +4,18 @@ import {
   defineProviderPackage,
   modelsProperty,
   providerPackageInstance,
+  type ProviderTransportConfig,
   refSource,
   secretRefProperty,
+  transportProperty,
 } from "@arnilo/prism/provider-kit";
 import { createOpenRouterProvider, type OpenRouterRouting } from "./provider.js";
 import { listOpenRouterModels } from "./models.js";
 
 export const OPENROUTER_DEFAULT_API_KEY_REF = "env:OPENROUTER_API_KEY";
 export interface OpenRouterProviderConfig {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); each defaults to the transport's. */
+  readonly transport?: ProviderTransportConfig;
   readonly apiKey?: string;
   readonly baseUrl?: string;
   readonly models?: readonly ModelConfig[];
@@ -31,6 +35,7 @@ const configSchema: JsonSchema = {
   properties: {
     apiKey: secretRefProperty(OPENROUTER_DEFAULT_API_KEY_REF),
     baseUrl: baseUrlProperty("OpenRouter API base; defaults to https://openrouter.ai/api/v1."),
+    transport: transportProperty(),
     models: modelsProperty("Static catalog; otherwise each models() call fetches /models."),
     appUrl: { type: "string", pattern: "^https://[^/\\s]+", description: "HTTPS application URL sent as HTTP-Referer." },
     appTitle: { type: "string", maxLength: 100, pattern: "^[^\\r\\n]*$" },
@@ -76,7 +81,16 @@ function definitionFor(options: OpenRouterProviderPackageOptions) {
       prism.providers.register({
         ...provider,
         async models() {
-          return prism.config.models ?? listOpenRouterModels({ provider: id, baseUrl: prism.config.baseUrl, apiKey, fetch: options.fetch });
+          return (
+            prism.config.models ??
+            listOpenRouterModels({
+              ...(prism.config.transport?.maxCatalogBytes === undefined ? {} : { maxBodyBytes: prism.config.transport.maxCatalogBytes }),
+              provider: id,
+              baseUrl: prism.config.baseUrl,
+              apiKey,
+              fetch: options.fetch,
+            })
+          );
         },
       });
     },

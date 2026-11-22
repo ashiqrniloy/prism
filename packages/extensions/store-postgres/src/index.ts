@@ -1,3 +1,4 @@
+import type { SessionQueryLimits } from "@arnilo/prism";
 /**
  * `@arnilo/prism-extensions/store-postgres` — the PostgreSQL session store (with its leases, lifecycle, run
  * ledger, event source, and schema migrations) as the `store` slot, over `pg`.
@@ -62,6 +63,10 @@ export interface PostgresStoreConfig {
   readonly url?: string;
   readonly schema?: string;
   readonly pool?: PostgresStorePoolConfig;
+  /** Store query limits (plan 239 Task 5); each defaults to the kernel's value. */
+  readonly queryLimits?: SessionQueryLimits;
+  /** Largest checkpoint, lifecycle or feedback page. Default 500. */
+  readonly maxPageSize?: number;
 }
 
 /** Code-only factory options, for hosts that own a pool or want the store without a config ref. */
@@ -90,6 +95,17 @@ const configSchema: JsonSchema = {
       },
       additionalProperties: false,
     },
+    queryLimits: {
+      type: "object",
+      description: "Store query limits: largest list and search page, search text, cursor and snippet bytes, full-text candidates.",
+      properties: Object.fromEntries(
+        ["maxListLimit", "maxSearchLimit", "maxSearchQueryBytes", "maxSearchCursorBytes", "searchSnippetBytes", "ftsCandidates"].map(
+          (key) => [key, { type: "integer", minimum: 1 }],
+        ),
+      ),
+      additionalProperties: false,
+    },
+    maxPageSize: { type: "integer", minimum: 1 },
   },
   // `url` is checked in setup rather than declared required: a config schema whose required fields
   // cannot validate would fail package conformance, and the setup error names the field (plan 152).
@@ -131,6 +147,8 @@ function definitionFor(options: PostgresStoreOptions) {
         ...(connectionString === undefined ? {} : { connectionString }),
         schema: config.schema,
         poolMax: config.pool?.max,
+        ...(config.queryLimits === undefined ? {} : { queryLimits: config.queryLimits }),
+        ...(config.maxPageSize === undefined ? {} : { maxPageSize: config.maxPageSize }),
         poolConfig: {
           ...options.poolConfig,
           ...(config.pool?.connectionTimeoutMillis === undefined ? {} : { connectionTimeoutMillis: config.pool.connectionTimeoutMillis }),

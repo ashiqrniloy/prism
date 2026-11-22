@@ -46,6 +46,10 @@ export interface KiloAuthConfig {
   readonly sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Cancels open-url, polling, and the profile call; nothing is stored. */
   readonly signal?: AbortSignal;
+  /** Delay between approval polls. Default {@link KILO_AUTH_POLL_INTERVAL_MS}. */
+  readonly pollIntervalMs?: number;
+  /** Ceiling on one sign-in service response body; the service's answer is not the host's. Default 64 KiB. */
+  readonly maxBodyBytes?: number;
 }
 
 export type KiloAuthMethod = Extract<AuthMethod, { kind: "oauth" }>;
@@ -113,10 +117,10 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-async function readJson(response: Response, signal: AbortSignal | undefined): Promise<unknown> {
+async function readJson(response: Response, signal: AbortSignal | undefined, maxBodyBytes = MAX_AUTH_BODY_BYTES): Promise<unknown> {
   try {
     return await readBoundedResponseJson<unknown>(response, {
-      maxResponseBodyBytes: MAX_AUTH_BODY_BYTES,
+      maxResponseBodyBytes: maxBodyBytes,
       signal,
     });
   } catch (_error) {
@@ -246,7 +250,7 @@ async function login(config: KiloAuthConfig, ctx: AuthContext): Promise<void> {
   });
   if (initResponse.status === 429) throw authError("ERR_KILO_AUTH_BUSY", "kilo: too many pending sign-ins; try again later");
   if (!initResponse.ok) throw authError("ERR_KILO_AUTH_FAILED", `kilo: the sign-in service refused to start (${initResponse.status})`);
-  const started = initiateBody(await readJson(initResponse, signal));
+  const started = initiateBody(await readJson(initResponse, signal, config.maxBodyBytes));
   const verificationUrl = assertVerificationUrl(started.verificationUrl, authBase);
   const opened = await ui.request({
     kind: "open-url",
@@ -260,7 +264,7 @@ async function login(config: KiloAuthConfig, ctx: AuthContext): Promise<void> {
   while (approval === undefined) {
     throwIfAborted(signal);
     if (now() >= deadline) throw authError("ERR_KILO_AUTH_EXPIRED", "kilo: the sign-in code expired; start again");
-    await sleep(KILO_AUTH_POLL_INTERVAL_MS, signal);
+    await sleep(config.pollIntervalMs ?? KILO_AUTH_POLL_INTERVAL_MS, signal);
     throwIfAborted(signal);
     const response = await doFetch(`${authBase}/api/device-auth/codes/${encodeURIComponent(started.code)}`, {
       headers: { accept: "application/json" },
@@ -270,7 +274,7 @@ async function login(config: KiloAuthConfig, ctx: AuthContext): Promise<void> {
     if (response.status === 403) throw authError("ERR_KILO_AUTH_DENIED", "kilo: the sign-in was denied");
     if (response.status === 410) throw authError("ERR_KILO_AUTH_EXPIRED", "kilo: the sign-in code expired; start again");
     if (!response.ok) continue;
-    const body = await readJson(response, signal);
+    const body = await readJson(response, signal, config.maxBodyBytes);
     if (!isRecord(body)) throw authError("ERR_KILO_AUTH_RESPONSE", "kilo: the sign-in service returned an unreadable approval");
     const status = text(body.status);
     const token = text(body.token);
@@ -288,7 +292,7 @@ async function login(config: KiloAuthConfig, ctx: AuthContext): Promise<void> {
     ...(signal ? { signal } : {}),
   });
   if (!profileResponse.ok) throw authError("ERR_KILO_AUTH_PROFILE", `kilo: the profile request failed (${profileResponse.status})`);
-  const body = await readJson(profileResponse, signal);
+  const body = await readJson(profileResponse, signal, config.maxBodyBytes);
   if (!isRecord(body)) throw authError("ERR_KILO_AUTH_PROFILE", "kilo: the profile response was unreadable");
   const profile = body as DeviceProfile;
   const organizationId = await chooseOrganization(profile, ctx);

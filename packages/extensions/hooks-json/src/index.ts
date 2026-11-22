@@ -116,6 +116,7 @@ const events: JsonSchema = { type: "object", properties: eventProps, additionalP
 
 const shared: JsonSchema["properties"] = {
   additionalContextLimit: { type: "integer", minimum: 0, default: 2500 },
+  maxOutputChars: { type: "integer", minimum: 1, default: 1_048_576 },
   allowCommands: {
     additionalProperties: true,
     oneOf: [{ const: "all" }, { type: "object", additionalProperties: { type: "string", pattern: "^[a-z0-9]+-[a-f0-9]+$" } }],

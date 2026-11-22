@@ -155,7 +155,7 @@ async function buildRuntime(store: SessionStore) {
         // This demo records session events only; WM and rehearsal need no work here.
         wm: false,
         rehearsal: false,
-        context: { recentMessages: 4, compactAt: { maxTokens: 999_999 } },
+        context: { compactAfterRun: { maxTokens: 999_999 } },
         worker: { maxTurns: 1 },
       }),
     ],

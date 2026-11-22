@@ -23,6 +23,7 @@ prism add @arnilo/prism-ai/openrouter
 | --- | --- | --- | --- |
 | `apiKey` | ref only (`env:`/`keyring:`) | `env:OPENROUTER_API_KEY` | Resolved through credentials per request; never a literal key. |
 | `baseUrl` | string | `https://openrouter.ai/api/v1` | OpenRouter API base. |
+| `transport` | object | transport defaults | Wire ceilings the host sets; a provider response never raises them. `maxEventBytes` (SSE event, default 256 KiB), `maxBufferBytes` (SSE buffer, default 512 KiB), `maxResponseBodyBytes` (an error body, default 64 KiB). `maxCatalogBytes` bounds the `/models` catalog body (default 4 MiB). |
 | `models` | ModelConfig[] | discovery | Static catalog; suppresses discovery when supplied, including `[]`. |
 | `appUrl` | HTTPS URL | unset | `HTTP-Referer` attribution header. |
 | `appTitle` | string, ≤100 characters | unset | `X-OpenRouter-Title` attribution header; no newlines. |

@@ -16,7 +16,7 @@ Use decisions when a host needs a calibrated `yes`/`no`, a classification with c
 
 `prism.models.decisions(ref?)` returns a client bound to one model. `ref` defaults to `AgentConfig.model`. It needs the package `models` capability.
 
-`decide(request)` accepts:
+`decide(request, options?)` accepts:
 
 | Field | Meaning |
 | --- | --- |
@@ -30,6 +30,8 @@ Each question carries `instructions` (a non-empty string, object, or array) and:
 - `noul`: optional `criteria` with `true`/`false` descriptions.
 - `choice`: required `criteria` object of `2`–`255` option → description (or `null`).
 - `score`: required `criteria` array of `2`–`10` ordered level descriptions.
+
+`options.session` is the `SessionContext` a hook, tool, or command handler received. While that session has an active run, the call's usage is charged to the run's token and cost limits, usage, and ledger (a `package_call` row), as a `models.client(...).generate(..., { session })` call is. A provider that reports no usage is charged the run's estimate of the state and instructions. A decision call runs no `model.request` or `model.call` hook, because those carry a `ProviderRequest` and a stream. Without `session` nothing is charged to a run.
 
 Bounds are validated by `assertDecisionRequest` before any adapter runs. State and image ceilings throw `DecisionsError` with code `state_too_large`; every other violation throws `invalid_request` naming the question or field. `unsupported_model` means the model does not declare `capabilities.decisions` or the provider registers no adapter.
 

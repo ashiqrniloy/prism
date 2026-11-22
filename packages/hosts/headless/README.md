@@ -97,9 +97,28 @@ With no pending suspension the result is `{ status: "already_resolved" }`. Once 
 
 After restart, recreate the agent, authority, and router over the same durable store and call the same method. The authority keeps only an in-process guard, adds no model calls or durable writes, and reads the session index/branch before resume; optional answer logging retains its per-attempt checkpoint-write cost. Use one authority per agent across every resume entry point. Direct `session.resume`, independent authorities, and separate processes bypass that guard and are not coordinated. Channel bindings and scheduling are separate capabilities.
 
+## Recovering interrupted runs
+
+A run whose process died leaves its run-ledger record at `status: "running"` with no `finishedAt`. At startup, list those runs and continue them:
+
+```ts
+import { continueInterrupted, findInterruptedRuns } from "@arnilo/prism-hosts/headless";
+import { createSqlitePersistence } from "@arnilo/prism-extensions/store-sqlite";
+
+const persistence = createSqlitePersistence({ filename }); // also the agent's `runLedger`
+const runs = await findInterruptedRuns(persistence, { ownership: agent.config.ownership ?? {}, olderThanMs: 60_000 });
+const outcomes = await continueInterrupted(agent, runs, { concurrency: 2 });
+```
+
+`findInterruptedRuns` takes anything with `queryRuns` (a `ProductionPersistenceStore`); a `RunLedger` alone is write-only and fails with `ledger_query_unsupported`. It pages `queryRuns({ status: "running", ...ownership })`, then checks every row again: a row outside the exact ownership scope, a finished row, or one that started less than `olderThanMs` ago (default 60 000) is dropped. Age is measured from `startedAt`, because `RunRecord` has no last-activity field and not every store applies `toStartedAt`. Pick an `olderThanMs` longer than your longest run when another process might still be driving it: the ledger holds no lease. One entry is returned per session, its newest run.
+
+`continueInterrupted` opens each session on the agent and calls `session.continue()`, at most `concurrency` at once. Each outcome is `continued` (with the `RunResult`), `skipped` (`nothing_to_continue` when the session no longer owes a model turn, `session_not_found` when this agent cannot open it), or `failed` (with the error). It never throws for one run. A continuation without a turn checkpoint runs under a new run id, so the old `running` row stays and the next sweep skips that session as `nothing_to_continue`. With `durability: "turn"` it reuses the run id and the row is finished.
+
+The sweep costs one paged ledger read plus each continuation's own work. Nothing runs unless the host calls it.
+
 ## Failures and security
 
-Construction rejects empty routes (`no_routes`), duplicate labels (`duplicate_route`), unknown kinds (`unknown_kind`), invalid timeouts (`invalid_timeout`), invalid limits (`invalid_limit`), and malformed routes (`invalid_route`). Missing resume authority rejects with `resume_authority_required`; a foreign id or mismatched ownership rejects with `session_not_found` before any offer; stale supplied ids reject with `stale_decisions`. Route errors are treated as unavailable without logging their messages. Configure finite timeouts for routes that might never settle. The library opens no network connection and adds no kernel contract.
+Construction rejects empty routes (`no_routes`), duplicate labels (`duplicate_route`), unknown kinds (`unknown_kind`), invalid timeouts (`invalid_timeout`), invalid limits (`invalid_limit`), and malformed routes (`invalid_route`). The recovery sweep rejects a store without `queryRuns` (`ledger_query_unsupported`), a missing ownership scope (`invalid_ownership`), and a bad `olderThanMs`, `pageSize` or `concurrency` (`invalid_limit`). Missing resume authority rejects with `resume_authority_required`; a foreign id or mismatched ownership rejects with `session_not_found` before any offer; stale supplied ids reject with `stale_decisions`. Route errors are treated as unavailable without logging their messages. Configure finite timeouts for routes that might never settle. The library opens no network connection and adds no kernel contract.
 
 ## Scheduling
 

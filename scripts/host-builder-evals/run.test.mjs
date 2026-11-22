@@ -280,7 +280,7 @@ test("host_builder_eval_builder_shell_never_sees_live_keys", async () => {
       model: { provider: "probe", model: "x" },
       ownership: { tenantId: "t" },
       principal: { kind: "user", id: "u" },
-      packages: [providerPackage("probe", [provider]), toolsCoding({ root: workspace.dir })],
+      packages: [providerPackage("probe", [provider]), toolsCoding({ root: workspace.dir, guard: "off" })],
     });
     try {
       const session = await agent.session();

@@ -566,13 +566,13 @@ describe("@arnilo/prism-tools/web package", () => {
     }
   });
 
-  it("obscura_limits_out_of_range_fails_setup_naming_key", async () => {
+  it("obscura_limits_invalid_fails_setup_naming_key", async () => {
     await assert.rejects(
       createAgent({
         model: { provider: "mock", model: "m" },
-        packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), limits: { timeoutMs: 10_000_000 } } })],
+        packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), limits: { timeoutMs: 0.5 } } })],
       }),
-      (error: unknown) => /invalid limits config/u.test(String(error)) && /timeoutMs/u.test(String(error)),
+      (error: unknown) => /timeoutMs/u.test(String(error)),
     );
   });
 

@@ -298,6 +298,8 @@ describe("path cues (plan 188.5 Task 2)", () => {
     assert.equal(h.scans(), 0);
     assert.equal(resolveFabricCuesOptions(false, true), false);
     assert.throws(() => resolveFabricCuesOptions({ budgetTokens: 0 }, true), /cues\.budgetTokens/);
-    assert.throws(() => resolveFabricCuesOptions({ maxPerTurn: 99 }, true), /cues\.maxPerTurn/);
+    assert.throws(() => resolveFabricCuesOptions({ maxPerTurn: 1.5 }, true), /cues\.maxPerTurn/);
+    // Plan 239: the host's value is the cap.
+    assert.deepEqual(resolveFabricCuesOptions({ maxPerTurn: 99 }, true), { budgetTokens: 300, maxPerTurn: 99 });
   });
 });

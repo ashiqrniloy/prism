@@ -6,13 +6,7 @@
  */
 
 import { isAbsolute, relative, resolve } from "node:path";
-import {
-  DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES,
-  DEFAULT_MAX_REVIEW_DIAGNOSTICS,
-  HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES,
-  HARD_MAX_REVIEW_DIAGNOSTICS,
-  validateCodingLimit,
-} from "./limits.js";
+import { DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES, DEFAULT_MAX_REVIEW_DIAGNOSTICS, validateCodingLimit } from "./limits.js";
 
 export interface ResolvedDiagnosticsLimits {
   readonly maxDiagnosticsPerFile: number;
@@ -24,16 +18,8 @@ export function resolveDiagnosticsLimits(options?: {
   readonly maxMessageBytes?: number;
 }): ResolvedDiagnosticsLimits {
   return {
-    maxDiagnosticsPerFile: validateCodingLimit(
-      "maxDiagnosticsPerFile",
-      options?.maxDiagnosticsPerFile ?? DEFAULT_MAX_REVIEW_DIAGNOSTICS,
-      HARD_MAX_REVIEW_DIAGNOSTICS,
-    ),
-    maxMessageBytes: validateCodingLimit(
-      "maxMessageBytes",
-      options?.maxMessageBytes ?? DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES,
-      HARD_MAX_DIAGNOSTIC_MESSAGE_BYTES,
-    ),
+    maxDiagnosticsPerFile: validateCodingLimit("maxDiagnosticsPerFile", options?.maxDiagnosticsPerFile ?? DEFAULT_MAX_REVIEW_DIAGNOSTICS),
+    maxMessageBytes: validateCodingLimit("maxMessageBytes", options?.maxMessageBytes ?? DEFAULT_MAX_DIAGNOSTIC_MESSAGE_BYTES),
   };
 }
 

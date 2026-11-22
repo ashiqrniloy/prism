@@ -216,7 +216,19 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   assert.ok(Number.isSafeInteger(turns) && turns >= 2, "prefix stability conformance turns must be a safe integer of at least 2");
   const registry = createSkillRegistry([...skills]);
   const hostTools: readonly ToolDefinition[] = host.tools?.add ?? [];
-  const fixture = fixtureProvider(requests, [first.name, second.name], options.reasoningFixture === true, foldableBytes !== undefined);
+  // The session clears its tail map when a run ends (plan 239 Task 7), so each request's tail segments are copied as the
+  // request is sent: every tail message any request carried, keyed per request so a later run cannot overwrite one.
+  const tailSeen = new Map<string, Message>();
+  let tailOf: (() => ReadonlyMap<string, Message>) | undefined;
+  const fixture = fixtureProvider(
+    requests,
+    [first.name, second.name],
+    options.reasoningFixture === true,
+    foldableBytes !== undefined,
+    () => {
+      for (const [key, message] of tailOf?.() ?? []) tailSeen.set(`${requests.length}:${key}`, message);
+    },
+  );
   const agent = await createAgent({
     ...host,
     skills: { add: registry.list(), disclosure: options.skillsDisclosure },
@@ -231,6 +243,7 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
     packages: [...(host.packages ?? []), providerPackage("prefix-stability-fixture", [fixture])],
   });
   const session = (await agent.session()) as Session & { readonly tailSegments: ReadonlyMap<string, Message> };
+  tailOf = () => session.tailSegments;
   const [firstInput, secondInput] = options.inputs ?? ["Prefix stability turn one", "Prefix stability turn two"];
   const runOptions = { limits: { maxToolRounds: 1 } } as const;
   // A failed run resolves (it does not throw) and captures nothing, so an unchecked run would surface
@@ -246,12 +259,12 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
     turns * 2,
     `prefix stability conformance expected ${turns * 2} provider requests (2 per turn), captured ${requests.length}`,
   );
-  // The session's own map holds the exact `Message` objects `appendTailSegment` allocated, so the
+  // The copies hold the exact `Message` objects `appendTailSegment` allocated, so the
   // classification is exact rather than a heuristic over host-authored content. (`tailSegments` is
   // runtime-session state, not part of the public `Session` contract, hence the narrow above.)
   const assertOn = options.assertOn ?? "providerPrefix";
   // One measurement. The assertion below reads the sample; it does not serialize again.
-  const sample = scorePrefixStability(requests, { tailSegments: session.tailSegments, minContinuity, assertOn });
+  const sample = scorePrefixStability(requests, { tailSegments: tailSeen, minContinuity, assertOn });
   // Guard against a vacuous pass: both bodies must have been disclosed by the end.
   const last = (requests.at(-1)?.messages ?? []).map((message) => JSON.stringify(message)).join("\n");
   for (const [index, skill] of skills.entries()) {
@@ -274,7 +287,7 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   }
   if ((options.skillsDisclosure ?? "progressive") === "progressive") {
     assert.deepEqual(
-      [...session.tailSegments.keys()].filter((key) => key.startsWith("skill:")),
+      [...tailSeen.keys()].map((key) => key.slice(key.indexOf(":") + 1)).filter((key) => key.startsWith("skill:")),
       [],
       "prefix stability conformance: a progressive loaded body was re-appended as a tail segment",
     );
@@ -483,12 +496,19 @@ function createPingTool(): ToolDefinition {
  * that strips aged reasoning has real content to fold. With `bulk` the same round also calls the
  * runner-owned bulk tool, so a tool-result stage has a foldable row.
  */
-function fixtureProvider(requests: ProviderRequest[], skillNames: readonly string[], reasoning: boolean, bulk: boolean): ModelProvider {
+function fixtureProvider(
+  requests: ProviderRequest[],
+  skillNames: readonly string[],
+  reasoning: boolean,
+  bulk: boolean,
+  onRequest?: () => void,
+): ModelProvider {
   let call = 0;
   return {
     id: "prefix-stability-fixture",
     async *generate(request) {
       requests.push(request);
+      onRequest?.();
       const index = call;
       call += 1;
       const skillName = skillNames[index >> 1];

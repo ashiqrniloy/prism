@@ -1,5 +1,4 @@
 import { EvalError } from "./errors.js";
-import { HARD_STATS_RESAMPLES } from "./limits.js";
 import { benjaminiHochberg, bootstrapInterval, mcnemarExact, pairedPermutationTest } from "./stats.js";
 import type { CompareExperimentsOptions, ExperimentComparison, ExperimentReport } from "./types.js";
 
@@ -57,7 +56,7 @@ export function compareExperiments(
     alpha <= 0 ||
     alpha >= 1 ||
     !Number.isSafeInteger(seed) ||
-    (resamples !== undefined && (!Number.isSafeInteger(resamples) || resamples < 1 || resamples > HARD_STATS_RESAMPLES))
+    (resamples !== undefined && (!Number.isSafeInteger(resamples) || resamples < 1))
   ) {
     throw new EvalError("Comparison requires alpha in (0, 1), an integer seed, and valid resamples", "ERR_PRISM_EVAL_STATS");
   }

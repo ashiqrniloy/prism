@@ -11,6 +11,9 @@ import {
 } from "@arnilo/prism-extensions/store-codecs";
 import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism-extensions/workflows";
 
+const DEFAULT_QUERY_LIMIT = 100;
+const MAX_QUERY_LIMIT = 500;
+
 interface Row {
   namespace: string;
   key: string;
@@ -26,7 +29,7 @@ interface Row {
   updated_at: string;
 }
 
-export function createSqliteCheckpointStore(database: Database): CheckpointStore {
+export function createSqliteCheckpointStore(database: Database, maxQueryLimit: number = MAX_QUERY_LIMIT): CheckpointStore {
   database.exec(`
 CREATE TABLE IF NOT EXISTS prism_checkpoints (
   namespace TEXT NOT NULL,
@@ -144,7 +147,7 @@ WHERE prism_checkpoints.version < excluded.version
         params.push(...categories);
       }
       const offset = decodeCheckpointCursor(query.cursor);
-      const limit = Math.min(Math.max(1, query.limit ?? 100), 500);
+      const limit = Math.min(Math.max(1, query.limit ?? DEFAULT_QUERY_LIMIT), maxQueryLimit);
       const rows = database
         .prepare(
           `SELECT * FROM prism_checkpoints ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""} ORDER BY updated_at DESC, key ASC LIMIT ? OFFSET ?`,

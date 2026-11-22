@@ -11,6 +11,7 @@ import type {
   RunLimitBreach,
   RunLimitName,
   SecretRedactor,
+  SessionLimitName,
   ToolCallRecord,
   ToolCallSummary,
   TurnBudgets,
@@ -41,9 +42,7 @@ import type {
 // ─── Limits ───────────────────────────────────────────────────────────────────
 
 const DEFAULT_MAX_STEPS = 1_000;
-const HARD_MAX_STEPS = 10_000;
 const DEFAULT_MAX_STEP_IO_BYTES = 16 * 1024;
-const HARD_MAX_STEP_IO_BYTES = 256 * 1024;
 
 export class TimelineError extends Error {
   readonly code: string;
@@ -55,16 +54,16 @@ export class TimelineError extends Error {
 
 function resolveMaxSteps(value: number | undefined): number {
   const v = value ?? DEFAULT_MAX_STEPS;
-  if (!Number.isSafeInteger(v) || v < 1 || v > HARD_MAX_STEPS) {
-    throw new TimelineError(`maxSteps must be an integer in [1, ${HARD_MAX_STEPS}]`, "ERR_PRISM_TIMELINE_BOUNDS");
+  if (!Number.isSafeInteger(v) || v < 1) {
+    throw new TimelineError("maxSteps must be a positive integer", "ERR_PRISM_TIMELINE_BOUNDS");
   }
   return v;
 }
 
 function resolveMaxIoBytes(value: number | undefined): number {
   const v = value ?? DEFAULT_MAX_STEP_IO_BYTES;
-  if (!Number.isSafeInteger(v) || v < 1 || v > HARD_MAX_STEP_IO_BYTES) {
-    throw new TimelineError(`maxStepIoBytes must be an integer in [1, ${HARD_MAX_STEP_IO_BYTES}]`, "ERR_PRISM_TIMELINE_BOUNDS");
+  if (!Number.isSafeInteger(v) || v < 1) {
+    throw new TimelineError("maxStepIoBytes must be a positive integer", "ERR_PRISM_TIMELINE_BOUNDS");
   }
   return v;
 }
@@ -194,7 +193,7 @@ interface FoldState {
   // Terminal limit breach (`run_limit_exceeded`) and attribution payload (`budget_exhausted`).
   breach?: RunLimitBreach;
   attribution?: {
-    limit: RunLimitName;
+    limit: RunLimitName | SessionLimitName;
     consumed: BudgetConsumedCounters;
     closestOtherAxes: readonly BudgetAxisUsage[];
     recentToolCalls: readonly ToolCallSummary[];

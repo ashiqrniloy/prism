@@ -552,7 +552,11 @@ describe("session lifecycle events", () => {
         "background.failed",
         "package.status",
       ] as const) {
-        hooks.on(name, (event: AgentEvent) => void events.push(`${event.type}${"restored" in event ? `:${event.restored}` : ""}`));
+        hooks.on(name, (event: AgentEvent) => {
+          // The kernel's "no automatic compaction" note (plan 229 Task 4) is not a lifecycle event.
+          if (event.type === "package.status" && event.package === "kernel") return;
+          events.push(`${event.type}${"restored" in event ? `:${event.restored}` : ""}`);
+        });
       }
     });
 
@@ -719,11 +723,102 @@ describe("background tasks", () => {
     const startedAt = performance.now();
     await busy.close();
     assert.ok(performance.now() - startedAt < 200);
-    const bad = await createAgent({
-      model: MODEL,
-      packages: [providerPackage("test-provider", [provider])],
-      limits: { backgroundSettleMs: -1 },
+    // Plan 229 Task 3: a bad `backgroundSettleMs` now fails `createAgent`, not the first close.
+    await assert.rejects(
+      createAgent({
+        model: MODEL,
+        packages: [providerPackage("test-provider", [provider])],
+        limits: { backgroundSettleMs: -1 },
+      }),
+      /AgentConfig\.limits: backgroundSettleMs/,
+    );
+  });
+});
+
+describe("session state read-your-writes (plan 226 Task 4)", () => {
+  it("a write is visible before its append resolves, and a failed append restores the previous value", async () => {
+    const { SessionStateStore } = await import("../session/state.js");
+    let release: () => void = () => {};
+    let fail = false;
+    const store = new SessionStateStore({
+      ready: async () => {},
+      redact: (value) => value,
+      append: async () => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        if (fail) throw new Error("store down");
+      },
     });
-    await assert.rejects((await bad.session({ id: "x", create: true })).close(), /backgroundSettleMs/);
+    store.hydrate([]);
+    const first = store.write("pkg", "k", { n: 1 });
+    assert.deepEqual(store.read("pkg", "k"), { n: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await first;
+    fail = true;
+    const second = store.write("pkg", "k", { n: 2 });
+    assert.deepEqual(store.read("pkg", "k"), { n: 2 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await assert.rejects(second, /store down/);
+    assert.deepEqual(store.read("pkg", "k"), { n: 1 });
+  });
+
+  it("package_state_log_cap_and_rotation_bound_compaction_checkpoints", async () => {
+    const store = createMemorySessionStore();
+    let activeLog: SessionLog<JsonValue> | undefined;
+    let activeCtx: SessionContext | undefined;
+    const pkgPlugin = pkg(
+      "@acme/bounded-log",
+      ({ state, commands }) => {
+        activeLog = state.log<JsonValue>("events");
+        commands.register({
+          name: "grab",
+          description: "capture context",
+          run: (_args, ctx) => {
+            activeCtx = ctx.session;
+          },
+        });
+      },
+      { capabilities: ["session-state"] },
+    );
+    const agent = await createAgent({
+      model: MODEL,
+      ceilings: { stateLogEntries: 3 },
+      packages: [pkgPlugin, providerPackage("test-provider", [provider])],
+      slots: { store },
+    });
+    const session = await agent.session({ id: "s-log-cap", create: true });
+    await agent.commands.run("grab", {}, { session });
+    assert.ok(activeLog && activeCtx);
+
+    await activeLog.append(activeCtx, { step: 1 });
+    await activeLog.append(activeCtx, { step: 2 });
+    await activeLog.append(activeCtx, { step: 3 });
+    await rejects(activeLog.append(activeCtx, { step: 4 }), "state_log_limit");
+
+    // Rotating the log keeps only the latest snapshot across subsequent compactions.
+    await activeLog.replace?.(activeCtx, [{ step: 3 }]);
+    await activeLog.append(activeCtx, { step: 4 });
+    assert.deepEqual(activeLog.entries(activeCtx), [{ step: 3 }, { step: 4 }]);
+
+    await session.run("hello");
+    await session.compact();
+    const compactionEntry = [...(await store.list("s-log-cap"))].reverse().find((entry) => entry.kind === "compaction");
+    const checkpointState =
+      (compactionEntry?.data as { checkpoint?: { packageState?: readonly unknown[] } })?.checkpoint?.packageState ?? [];
+    assert.equal(checkpointState.length, 2, "only the replacement record and post-replacement append stay in the checkpoint");
+
+    // Reopening from the store preserves only the rotated log entries.
+    const reopenedAgent = await createAgent({
+      model: MODEL,
+      ceilings: { stateLogEntries: 3 },
+      packages: [pkgPlugin, providerPackage("test-provider", [provider])],
+      slots: { store },
+    });
+    const reopened = await reopenedAgent.session({ id: "s-log-cap" });
+    await reopenedAgent.commands.run("grab", {}, { session: reopened });
+    assert.deepEqual(activeLog.entries(activeCtx), [{ step: 3 }, { step: 4 }]);
   });
 });

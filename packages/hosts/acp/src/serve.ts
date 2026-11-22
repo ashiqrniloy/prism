@@ -14,7 +14,7 @@ import type { Agent, AgentEvent, AgentFinishReason, Decision, JsonObject, Pendin
 import { isSessionNotFound } from "@arnilo/prism";
 import manifest from "../../package.json" with { type: "json" };
 import { AcpError } from "./errors.js";
-import { resolveAcpLimits } from "./limits.js";
+import { type AcpLimitOptions, type ResolvedAcpLimits, resolveAcpLimits } from "./limits.js";
 import { createAcpEventMapper } from "./mapper.js";
 import { decisionForPermission, elicitationRequest, PERMISSION_OPTIONS } from "./permission.js";
 import { projectAcpPrompt } from "./prompt.js";
@@ -27,6 +27,8 @@ export interface ServeAcpOptions {
   readonly stream?: Stream;
   /** Per-connection allow/deny. Absent allows the peer. `false` is a JSON-RPC error and creates no session. */
   readonly authorize?: (input: { readonly peer: "stdio" | "stream" }) => boolean | Promise<boolean>;
+  /** Event, text, replay, stream, diff and image bounds. Each defaults to `ACP_LIMITS`; the host's value is the cap. */
+  readonly limits?: AcpLimitOptions;
 }
 
 export interface ServeAcpHandle {
@@ -52,7 +54,7 @@ export function serveAcp(prism: Agent, options: ServeAcpOptions): ServeAcpHandle
   if (options.stdio !== true && !options.stream)
     throw new AcpError("ERR_PRISM_ACP_INPUT", "serveAcp requires { stdio: true } or { stream }");
   const stream = options.stream ?? stdioStream();
-  const limits = resolveAcpLimits();
+  const limits = resolveAcpLimits(options.limits);
   const host = isAcpHost(prism.config.host) ? prism.config.host : undefined;
   const sessions = new Map<string, Session>();
   const cancelled = new Set<string>();
@@ -96,7 +98,7 @@ export function serveAcp(prism: Agent, options: ServeAcpOptions): ServeAcpHandle
     const session = sessions.get(ctx.params.sessionId);
     if (!session) throw RequestError.invalidParams(undefined, "unknown session");
     cancelled.delete(session.id);
-    const text = await promptText(ctx.params.prompt);
+    const text = await promptText(ctx.params.prompt, limits);
     const command = commandOf(text, prism);
     if (command) {
       await prism.commands.run(command.name, command.args, { session });
@@ -322,8 +324,7 @@ async function openStored(prism: Agent, id: string): Promise<Session> {
   }
 }
 
-async function promptText(prompt: readonly { readonly type: string }[]): Promise<string> {
-  const limits = resolveAcpLimits();
+async function promptText(prompt: readonly { readonly type: string }[], limits: ResolvedAcpLimits): Promise<string> {
   const projected = await projectAcpPrompt(prompt, {
     maxBlocks: 32,
     maxTextBytes: limits.maxTextBytes,

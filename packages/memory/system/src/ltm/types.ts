@@ -419,6 +419,8 @@ export interface MemoryFabricScopeBinding {
 export interface CreateMemoryFabricOptions {
   /** `recall.expansion` (plan 210 Task 3.1): expand the lexical query with informal and formal forms. Default off. */
   readonly queryExpansion?: boolean;
+  /** `recall.window`: hits one recall ranks at most. Default 32. */
+  readonly recallWindow?: number;
   /** `recall.gather` (plan 210 Task 3.1): add `gather` to the `memory.recall` tool. Default off. */
   readonly gather?: boolean;
   /** Optional private diagnostic observer; never changes ranking or model-visible content. */
@@ -539,8 +541,10 @@ export interface MemoryFabricForgetResult {
 export interface MemoryFabricToolsOptions {
   /** Directory file tools are jailed to. Without it, path-taking tools fail closed. */
   readonly root?: string;
-  /** Per-file read/append ceiling; default 50 KiB, hard cap 1 MiB. */
+  /** Per-file read/append ceiling; default 50 KiB. */
   readonly maxFileBytes?: number;
+  /** Entries one `memory.view` lists; default 200. */
+  readonly maxViewEntries?: number;
 }
 
 /** The part of a kernel `SessionContext` a consolidation pass reads. */

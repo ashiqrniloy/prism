@@ -11,21 +11,22 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
- * Network-free Phase 8 demo: durable custom loop snapshot + parallel batch approvals.
+ * Network-free Phase 8 demo: a durable custom loop with per-run state + parallel batch approvals.
+ * The loop declares `state: "run"`, records its state with `run.checkpoint`, and reads it back from
+ * `run.restored` on resume, so one strategy object can serve any number of concurrent runs.
  * Run: npm run build:core && node examples/durable-loops-and-approvals.ts
  */
 export async function demo(): Promise<Record<string, unknown>> {
-  const loopState = { turns: 0, restored: false };
+  const observed: { restored?: JsonValue; turns: number } = { turns: 0 };
   const loop: LoopStrategy = {
     name: "demo-loop",
     revision: "1",
-    snapshot: () => ({ turns: loopState.turns }) as JsonValue,
-    restore: (snapshot) => {
-      loopState.turns = (snapshot as { turns: number }).turns;
-      loopState.restored = true;
-    },
+    state: "run",
     async run(run) {
-      loopState.turns += 1;
+      if (run.restored !== undefined) observed.restored = run.restored;
+      const turns = ((run.restored as { turns?: number } | undefined)?.turns ?? 0) + 1;
+      run.checkpoint({ turns });
+      observed.turns = turns;
       const turn = await run.turn();
       // Round-gate collects all gated calls into one suspension (Task 2).
       if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
@@ -85,8 +86,8 @@ export async function demo(): Promise<Record<string, unknown>> {
   return {
     status: last === "run.completed" ? "completed" : last,
     executed,
-    loopRestored: loopState.restored,
-    loopTurns: loopState.turns,
+    loopRestored: observed.restored !== undefined,
+    loopTurns: observed.turns,
     pendingCount: pending.length,
   };
 }

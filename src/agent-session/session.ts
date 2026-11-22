@@ -3,15 +3,16 @@
 import { ActiveDurableRun, pendingDecisionsOf, resolveRunDecisions } from "../agent-approval.js";
 import { restoreRunSessionState } from "../agent-run-restore.js";
 import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
-import { agentFingerprint, saveAgentRunState } from "../agent-run-state.js";
+import { agentFingerprint, runStateBounds, saveAgentRunState } from "../agent-run-state.js";
 import { createMemoryRunStateCell, type DurableRunStateOptions } from "../run-state-cell.js";
-import { isCompactionEntryData } from "../compaction.js";
+import { isCompactionEntryData, resolveKeptStartIndex } from "../compaction.js";
 import type {
   Agent,
   AgentEvent,
   AgentEventRecord,
   AgentRunState,
   AgentRunStatus,
+  CompactionEntryData,
   CompactionOptions,
   CompactionReason,
   CompactionResult,
@@ -20,19 +21,26 @@ import type {
   ErrorInfo,
   JsonValue,
   Message,
+  ModelConfig,
   ModelProvider,
+  ModelSpec,
   OwnershipScope,
+  NestedRunRef,
   PendingDecision,
   PromptVersionRef,
   ProviderRequest,
   ResolvedRunOptions,
+  ResolvedSessionLimits,
   RunLedger,
   RunOptions,
   RunResult,
   Session,
   SessionBranchRead,
   SessionEntry,
+  SessionLimitsEntryData,
+  SessionLimitsStatus,
   SessionLinks,
+  SessionSeedEntry,
   SessionForkOptions,
   SessionOptions,
   SessionStore,
@@ -48,12 +56,14 @@ import {
   AgentDecisionError,
   AgentRunStateError,
   assertSessionLinks,
-  DEFAULT_MAX_PENDING_STEER_BYTES,
-  DEFAULT_MAX_PENDING_STEERS,
+  DEFAULT_COMPACTION_TRIGGER,
   DEFAULT_SNAPSHOT_CACHE_TTL_MS,
-  HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
+  isSessionAppendConflict,
+  MAX_SESSION_LINK_DEPTH,
   resolveShouldCompact,
   SESSION_LINKS_DATA_KEY,
+  SessionContinueError,
+  SessionLimitsUnreadableError,
   SessionNotFoundError,
   toRunResultStatus,
 } from "../contracts.js";
@@ -63,6 +73,8 @@ import type { AgentInput } from "../input.js";
 import type { LoopStrategy } from "../loop/index.js";
 import { estimateAssemblyTokens, estimateMessageTokens, estimateTextTokens, resolveInputCap } from "../models/estimate.js";
 import { resolveRunOptions } from "../models/ref.js";
+import { parseStructuredOutput } from "../provider-kit/structured-output.js";
+import { assertRunOptionsShape } from "./config-shape.js";
 import { type Capability, requireCapability } from "../packages/capabilities.js";
 import {
   errorToErrorInfo,
@@ -73,10 +85,19 @@ import {
   redactSessionEntry,
   type SecretRedactor,
 } from "../redaction.js";
-import { type RunLimitTracker, resolveBackgroundSettleMs } from "../run-limits.js";
+import {
+  ceilingsOf,
+  hasConfiguredSessionLimits,
+  resolveBackgroundSettleMs,
+  resolveSessionLimits,
+  restoreSessionLimitsFromEntries,
+  type RunLimitTracker,
+  SessionLimitTracker,
+} from "../run-limits.js";
 import { type BackgroundTracker, createBackgroundTracker } from "../session/background.js";
-import { createExternalState, type ExternalStateHandle } from "../session/external-state.js";
-import { bindSessionState, type PackageStateData, SessionStateStore } from "../session/state.js";
+import { createExternalState, type ExternalStateHandle, foldExternalState } from "../session/external-state.js";
+import { forkedEntryMetadata } from "../session/fork-lineage.js";
+import { bindSessionState, foldPackageState, type PackageStateData, SessionStateStore } from "../session/state.js";
 import { PACKAGE_CALL_SEAM, type PackageCallSeam } from "../package-call-seam.js";
 import type { SessionContext } from "../session-context.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
@@ -87,7 +108,11 @@ import {
   extendSnapshot,
   getSessionBranchEntries,
   OWNERSHIP_SCOPE_KEYS,
+  readSessionSnapshot,
   rebuildSessionContext,
+  sessionLinksOf,
+  sessionLinksOfEntry,
+  snapshotTail,
 } from "../session-stores.js";
 import { createLoadedSkillSet } from "../skill-disclosure.js";
 import type { LoadedSkillBodiesEntry } from "../skill-load.js";
@@ -109,9 +134,14 @@ import {
   withoutTrailingInput,
 } from "./helpers.js";
 import { agentSkillSource } from "./runtime-registry.js";
+import { continuationCheckpoint, owesModelTurn } from "./continue.js";
 import { repairUnansweredToolCalls } from "./history-repair.js";
 import { executeRun } from "./session/assemble.js";
+import { withCatalogCost } from "./session/provider-round.js";
 import { asSessionHost } from "./session/types.js";
+
+/** Agents already told their model has no cap for the default compaction trigger: one note per agent. */
+const agentsNotedWithoutCap = new WeakSet<Agent>();
 
 export class RuntimeAgentSession implements Session {
   readonly id: string;
@@ -153,9 +183,12 @@ export class RuntimeAgentSession implements Session {
   activeLimitOutputBuffer = false;
   activeDurable?: ActiveDurableRun;
   activeLoop?: LoopStrategy;
+  activeLoopCheckpoint?: { readonly value: JsonValue };
   activeLoopHistory?: Message[];
   /** Gated calls of the current tool round awaiting one collected suspension. */
   activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
+  /** Nested (child-run) suspensions of the current tool round, staged with the gated calls. */
+  activeNestedRound?: Map<string, { entry: NestedRunRef; decisions: readonly PendingDecision[] }>;
   activeLoopTurn = 1;
   private readonly loadedSkills = createLoadedSkillSet();
   /** Run-owned only: loaded bodies and URI resources retain first insertion order within one provider loop. */
@@ -178,7 +211,8 @@ export class RuntimeAgentSession implements Session {
 
   /** Plan 018 Task 6: restore persisted loaded-skill bodies (already validated fail-closed at load). */
   restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[], runId?: string): void {
-    validateLoadedSkillBodies(bodies);
+    const { stateBytes, skillBodyBytes } = runStateBounds(ceilingsOf(this.agent));
+    validateLoadedSkillBodies(bodies, { bodyBytes: skillBodyBytes, totalBytes: stateBytes });
     this.restoredSkillBodies = bodies;
     for (const entry of bodies) this.loadedSkills.add(entry.name, runId);
   }
@@ -224,22 +258,44 @@ export class RuntimeAgentSession implements Session {
     append: (data) => this.appendPackageState(data),
     ready: () => this.ready(),
     redact: (value) => this.redactBetweenRuns(value),
+    maxValueBytes: () => ceilingsOf(this.agent).stateValueBytes,
+    maxLogEntries: () => ceilingsOf(this.agent).stateLogEntries,
   });
   private readyPromise?: Promise<void>;
   private closing?: Promise<void>;
   /** Serializes appends, so a state `set` racing a run's own append cannot orphan either entry. */
   private appendTail: Promise<unknown> = Promise.resolve();
+  /**
+   * Set by `checkout(leafId)`: the next append is a deliberate branch, so it is not tip-checked
+   * (plan 230 Task 2). Cleared by the first append that lands.
+   */
+  private branchPending = false;
+  /**
+   * Another writer moved the tip (plan 230 Task 2). The run that hit the conflict writes nothing more;
+   * once it is over, the session moves to the store's current leaf so the next run reads the real tip.
+   */
+  private tipConflict?: { readonly error: unknown; readonly leafId?: string; readonly run?: AbortController };
   /** Slot registry (roadmap §2.5); direct assignments come from `AgentConfig.slots`. `reload()` swaps it. */
   private slotRegistry: SlotRegistry;
   /** Re-entry guard for observe dispatch: an observer that throws on `hook.error` must not loop. */
   private observingHookError = false;
   /** Pending suspended run entry found on session resume (plan 149 Task 2 / Task 4). */
   pendingSuspendedRun?: SuspendedRunEntryData;
+  readonly resolvedSessionLimits: Readonly<ResolvedSessionLimits>;
+  readonly sessionLimitsTracker: SessionLimitTracker;
+  private sessionLimitsError?: SessionLimitsUnreadableError;
 
-  /** `SessionOptions.parent` and `actor`, written once when a new session opens. */
-  private readonly links: SessionLinks | undefined;
+  /**
+   * `SessionOptions.parent` and `actor`: written once when a new session opens, read back from the branch when it
+   * resumes (plan 232 Task 2), so `depth` and `parentSessionId` hold for a resumed child too.
+   */
+  private links: SessionLinks | undefined;
+  /** Entries a child opened by `PackageAPI.sessions.open` starts with; appended once, after the links entry. */
+  private readonly seed: readonly SessionSeedEntry[] | undefined;
+  /** Children `PackageAPI.sessions.open` opened under this session and that are still open; closed with it. */
+  readonly children = new Set<RuntimeAgentSession>();
 
-  constructor(config: SessionOptions & { readonly agent: Agent; readonly store: SessionStore }) {
+  constructor(config: SessionOptions & RuntimeSessionInternals & { readonly agent: Agent; readonly store: SessionStore }) {
     this.id = config.id ?? randomId("session");
     this.agent = config.agent;
     this.background = createBackgroundTracker({
@@ -259,9 +315,12 @@ export class RuntimeAgentSession implements Session {
     this.metadata = config.metadata;
     this.scope = config.ownership;
     this.links = sessionLinksOption(config);
+    this.seed = config.seed;
     this.store = config.store;
     this.currentLeafId = config.leafId;
-    this.snapshotCacheTtlMs = resolveSnapshotCacheTtlMs(config.snapshotCacheTtlMs);
+    this.snapshotCacheTtlMs = resolveSnapshotCacheTtlMs(config.snapshotCacheTtlMs, ceilingsOf(config.agent).snapshotCacheTtlMs);
+    this.resolvedSessionLimits = resolveSessionLimits(config.agent.config.sessionLimits, config.limits);
+    this.sessionLimitsTracker = new SessionLimitTracker(this.resolvedSessionLimits);
     const usageEstimation = config.agent.config.usageEstimation;
     if (usageEstimation !== undefined && usageEstimation !== "fallback" && usageEstimation !== "off" && usageEstimation !== "strict") {
       throw new TypeError('usageEstimation must be "fallback", "off", or "strict"');
@@ -270,6 +329,15 @@ export class RuntimeAgentSession implements Session {
 
   get leafId(): string | undefined {
     return this.currentLeafId;
+  }
+
+  /** Parent links between this session and its root (0 for a root). Links written before `depth` existed read as 1. */
+  get depth(): number {
+    return this.links?.depth ?? (this.links?.sessionId !== undefined ? 1 : 0);
+  }
+
+  get parentSessionId(): string | undefined {
+    return this.links?.sessionId;
   }
 
   /** Agent-internal: whether a run holds this session, so `agent.reload()` can refuse to swap mid-run. */
@@ -302,6 +370,12 @@ export class RuntimeAgentSession implements Session {
         },
         metadata: this.metadata,
         model: this.agent.config.model,
+        get depth() {
+          return session.depth;
+        },
+        get parentSessionId() {
+          return session.parentSessionId;
+        },
         entries() {
           const declared = session.packageCapabilities.get(owner);
           if (declared) requireCapability(owner, declared, "session-state", "SessionContext.entries");
@@ -329,9 +403,11 @@ export class RuntimeAgentSession implements Session {
           get recordUsage() {
             return session.activePackageUsage;
           },
+          recordSessionUsage: (model: ModelConfig, usage: Usage | undefined) => session.recordSessionUsage(model, usage),
         } satisfies PackageCallSeam,
       });
       this.sessionViews.set(owner, view);
+      viewSessions.set(view, this);
     }
     return view;
   }
@@ -366,6 +442,12 @@ export class RuntimeAgentSession implements Session {
         data: { [SESSION_LINKS_DATA_KEY]: this.links },
       });
     }
+    // Plan 232 Task 2: a child's seed, after the links entry, stamped and chained like any other append.
+    for (const seed of this.seed ?? []) {
+      const fields =
+        seed.kind === "message" ? { kind: "message" as const, message: seed.message } : { kind: "summary" as const, summary: seed.summary };
+      await this.appendEntry(this.redactBetweenRuns(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, ...fields })));
+    }
     this.observeOnly({ type: "session.opened", sessionId: this.id, runId: "", restored: false });
   }
 
@@ -373,12 +455,30 @@ export class RuntimeAgentSession implements Session {
    * Called eagerly when `agent.session({ id, create: true })` resumes an existing session.
    * Hydrates package state from branch, finds pending suspended run, and fires eager `session.opened`.
    */
-  async openResumedSession(branch: readonly SessionEntry[]): Promise<void> {
+  async openResumedSession(snapshot: SessionContextSnapshot): Promise<void> {
     this.readyPromise = Promise.resolve();
-    this.currentLeafId = this.currentLeafId ?? branch.at(-1)?.id;
-    this.stateStore.hydrate(branch);
-    this.pendingSuspendedRun = pendingSuspensionOf(branch);
+    this.currentLeafId = this.currentLeafId ?? snapshot.leafId;
+    // The open read is the first run's snapshot too (plan 230 Task 3): no second branch read.
+    if (snapshot.leafId === this.currentLeafId) {
+      this.snapshotCache = {
+        leafId: this.currentLeafId,
+        generation: this.snapshotGeneration,
+        expiresAt: performance.now() + this.snapshotCacheTtlMs,
+        value: snapshot,
+      };
+    }
+    this.hydrateState(snapshot);
+    this.hydrateSessionLimits(snapshot.entries);
+    // The branch's links, not the open's options: `parent` and `actor` are ignored for a session that exists.
+    this.links = sessionLinksOf(snapshot.entries);
+    this.pendingSuspendedRun = pendingSuspensionOf(snapshot.entries, runStateBounds(ceilingsOf(this.agent)));
     this.observeOnly({ type: "session.opened", sessionId: this.id, runId: "", restored: true });
+  }
+
+  /** Package state from a snapshot: a tail snapshot's checkpoint, then the entries after its compaction. */
+  private hydrateState(snapshot: SessionContextSnapshot): void {
+    const source = snapshotTail(snapshot);
+    this.stateStore.hydrate(source.entries, source.packageState);
   }
 
   /** Whether anything needs the branch read: package state, or a `session.opened` hook. */
@@ -388,17 +488,82 @@ export class RuntimeAgentSession implements Session {
 
   private async openSession(): Promise<void> {
     if (!this.needsOpening()) return;
-    const branch = await this.entries();
-    this.stateStore.hydrate(branch);
-    this.pendingSuspendedRun = pendingSuspensionOf(branch);
-    this.observeOnly({ type: "session.opened", sessionId: this.id, runId: "", restored: branch.length > 0 });
+    const snapshot = await this.snapshot();
+    this.hydrateState(snapshot);
+    this.hydrateSessionLimits(snapshot.entries);
+    this.pendingSuspendedRun = pendingSuspensionOf(snapshot.entries, runStateBounds(ceilingsOf(this.agent)));
+    this.observeOnly({ type: "session.opened", sessionId: this.id, runId: "", restored: snapshot.entries.length > 0 });
+  }
+
+  private hydrateSessionLimits(entries: readonly SessionEntry[]): void {
+    this.sessionLimitsError = undefined;
+    try {
+      const restored = restoreSessionLimitsFromEntries(entries);
+      this.sessionLimitsTracker.restore(restored);
+    } catch (error) {
+      if (error instanceof SessionLimitsUnreadableError) this.sessionLimitsError = error;
+      else throw error;
+    }
+  }
+
+  async limits(): Promise<SessionLimitsStatus> {
+    await this.ready();
+    if (this.sessionLimitsError) throw this.sessionLimitsError;
+    return this.sessionLimitsTracker.status();
+  }
+
+  hasSessionLimits(): boolean {
+    return hasConfiguredSessionLimits(this.resolvedSessionLimits);
+  }
+
+  sessionLimitsSnapshot(): SessionLimitsEntryData | undefined {
+    return this.hasSessionLimits() ? this.sessionLimitsTracker.toEntryData() : undefined;
+  }
+
+  checkSessionLimitsForStart(): void {
+    if (this.sessionLimitsError) throw this.sessionLimitsError;
+    this.sessionLimitsTracker.checkBeforeRun();
+  }
+
+  recordSessionRunCompleted(): void {
+    this.sessionLimitsTracker.recordRunCompleted();
+  }
+
+  async appendSessionLimits(runId?: string): Promise<void> {
+    if (!this.hasSessionLimits()) return;
+    const data = this.sessionLimitsTracker.toEntryData();
+    await this.serialAppend(() =>
+      this.appendNow(
+        createSessionEntry({
+          sessionId: this.id,
+          parentId: this.currentLeafId,
+          ...(runId ? { runId } : {}),
+          kind: "session_limits",
+          data,
+        }),
+      ),
+    );
+  }
+
+  async recordSessionUsage(model: ModelConfig, usage: Usage | undefined): Promise<void> {
+    const effective = usage && usage.estimated !== true ? await withCatalogCost(this.agent.config.costCatalog, model, usage) : usage;
+    let breachError: unknown;
+    try {
+      this.sessionLimitsTracker.recordUsage(effective);
+    } catch (error) {
+      breachError = error;
+    }
+    if (this.hasSessionLimits()) {
+      await this.appendSessionLimits();
+    }
+    if (breachError !== undefined) throw breachError;
   }
 
   /** Re-reads package state for a new leaf. `session.opened` already fired for this session. */
   private async rehydrateState(): Promise<void> {
     // An opened session is always ready, so only a package that holds session state pays the branch read.
     if (this.stateStore.isReady && tryAgentRuntime(this.agent)?.packages.usesSessionState === true)
-      this.stateStore.hydrate(await this.entries());
+      this.hydrateState(await this.snapshot());
   }
 
   private async appendPackageState(data: PackageStateData): Promise<void> {
@@ -417,13 +582,24 @@ export class RuntimeAgentSession implements Session {
 
   /** `run.state(key)` for the loop `vendor` (roadmap §2.12.9 K5): an `external_state` log on this branch. */
   externalState(vendor: string, key: string): ExternalStateHandle {
+    const ceilings = ceilingsOf(this.agent);
     return createExternalState(
       {
+        limits: {
+          entryBytes: ceilings.stateValueBytes,
+          entries: ceilings.externalStateEntries,
+          bytes: ceilings.externalStateBytes,
+        },
         branch: () => this.entries(),
         write: async (build) => {
           await this.ready();
           await this.serialAppend(async () => {
-            const data = build(await this.entries());
+            // Totals from the cached snapshot and its checkpoint (plan 230 Task 3), not a branch read per write.
+            const source = snapshotTail(await this.snapshot());
+            const totals = foldExternalState(source.entries, source.externalState).find(
+              (item) => item.vendor === vendor && item.key === key,
+            );
+            const data = build(totals ?? { vendor, key, count: 0, bytes: 0, seq: 0 });
             await this.appendNow(
               createSessionEntry({
                 sessionId: this.id,
@@ -527,6 +703,7 @@ export class RuntimeAgentSession implements Session {
   }
 
   async run(input: AgentInput, options: RunOptions = {}): Promise<RunResult> {
+    assertRunOptionsShape(options);
     return this.runInternal(input, resolveRunOptions(options), randomId("run"));
   }
 
@@ -536,11 +713,12 @@ export class RuntimeAgentSession implements Session {
     if (messages.length === 0) throw new Error("steer requires non-empty input");
     let addBytes = 0;
     for (const message of messages) addBytes += messageTextBytes(message);
-    if (this.pendingSteers.length + messages.length > DEFAULT_MAX_PENDING_STEERS) {
-      throw new Error(`steer queue exceeds max pending messages (${DEFAULT_MAX_PENDING_STEERS})`);
+    const ceilings = ceilingsOf(this.agent);
+    if (this.pendingSteers.length + messages.length > ceilings.pendingSteers) {
+      throw new Error(`steer queue exceeds ceilings.pendingSteers (${ceilings.pendingSteers})`);
     }
-    if (this.pendingSteerBytes + addBytes > DEFAULT_MAX_PENDING_STEER_BYTES) {
-      throw new Error(`steer queue exceeds max pending bytes (${DEFAULT_MAX_PENDING_STEER_BYTES})`);
+    if (this.pendingSteerBytes + addBytes > ceilings.pendingSteerBytes) {
+      throw new Error(`steer queue exceeds ceilings.pendingSteerBytes (${ceilings.pendingSteerBytes})`);
     }
     this.pendingSteers.push(...messages);
     this.pendingSteerBytes += addBytes;
@@ -589,7 +767,9 @@ export class RuntimeAgentSession implements Session {
   }
 
   async *resume(decisions: readonly Decision[], options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
-    const { maxQueuedEvents, overflow, ...rawRunOptions } = options;
+    assertRunOptionsShape(options, true);
+    // `acrossRuns` has no effect here: this subscriber is the resume's own.
+    const { maxQueuedEvents, overflow, acrossRuns: _acrossRuns, ...rawRunOptions } = options;
     // An already-aborted caller never claims: fail closed before the first read or write.
     throwIfAbortedSignal(rawRunOptions.signal);
     const runOptions = resolveRunOptions(rawRunOptions);
@@ -618,7 +798,11 @@ export class RuntimeAgentSession implements Session {
       await runPromise;
     } finally {
       subscriber.close();
-      if (!settled) {
+      if (subscriber.overflowed) {
+        // Plan 228 Task 3: an overflow is the consumer falling behind, not stopping. The iterator throws
+        // `SubscriberOverflowError` and the run settles on its own (its messages and ledger are stored).
+        void runPromise.catch(() => undefined);
+      } else if (!settled) {
         this.abort(new Error("resume stream consumer closed"));
         await runPromise.catch(() => undefined);
       }
@@ -640,11 +824,12 @@ export class RuntimeAgentSession implements Session {
     readonly pending: readonly PendingDecision[];
   }> {
     await this.ready();
+    this.checkSessionLimitsForStart();
     const branch = await this.entries();
     // Plan 177 Task 4: fail closed before `decision.resolved` when the branch is outside the run's scope.
     const scope = narrowScope(this.scope, runOptions.ownership, "Run");
     if (scope && !entriesInScope(branch, scope)) throw new SessionNotFoundError(this.id);
-    const suspension = pendingSuspensionOf(branch);
+    const suspension = pendingSuspensionOf(branch, runStateBounds(ceilingsOf(this.agent)));
     if (!suspension) throw new AgentDecisionError("ERR_PRISM_DECISION_STALE", "Session has no suspended run to resume");
     if (this.activeRun) throw new Error("Agent session already has an active run");
     const stored = suspension.state;
@@ -678,7 +863,49 @@ export class RuntimeAgentSession implements Session {
     return { state: claimed.state, runState, decisions: resolved.decisionsById, pending: pendingDecisionsOf(stored) ?? [] };
   }
 
-  private async runInternal(input: AgentInput, options: ResolvedRunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult> {
+  /**
+   * Plan 231 Task 2: a run with no new input on a branch that stopped partway. The precondition reads the
+   * branch tail after the scope check; the tip's unanswered calls are settled inside the run.
+   */
+  async continue(options: RunOptions = {}): Promise<RunResult> {
+    assertRunOptionsShape(options);
+    const resolved = resolveRunOptions(options);
+    await this.ready();
+    this.checkSessionLimitsForStart();
+    const scope = narrowScope(this.scope, resolved.ownership, "Run");
+    const snapshot = await this.snapshot();
+    if (scope && !entriesInScope(snapshot.entries, scope)) throw new SessionNotFoundError(this.id);
+    if (pendingSuspensionOf(snapshot.entries, runStateBounds(ceilingsOf(this.agent)))) {
+      throw new AgentDecisionError("ERR_PRISM_DECISION_STALE", "Session has a pending suspension; use resume with decisions");
+    }
+    if (!owesModelTurn(snapshot.messages)) throw new SessionContinueError(this.id);
+    // Plan 231 Task 3: with turn checkpoints, the interrupted run continues under its own id, counters and deadline.
+    const checkpoint =
+      this.agent.config.durability === "turn"
+        ? continuationCheckpoint(snapshot.entries, this.id, runStateBounds(ceilingsOf(this.agent)))
+        : undefined;
+    if (!checkpoint) return this.runInternal([], resolved, randomId("run"), undefined, true);
+    if (checkpoint.fingerprint !== agentFingerprint(this.agent, checkpoint.definitionRevision)) {
+      throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on continue");
+    }
+    const runState: DurableRunStateOptions = { cell: createMemoryRunStateCell(), definitionRevision: checkpoint.definitionRevision };
+    const { version: _version, ...unversioned } = checkpoint;
+    const claimed = await saveAgentRunState({ cell: runState.cell, state: unversioned });
+    return this.runInternal([], resolved, checkpoint.runId, { options: runState, state: claimed.state }, true);
+  }
+
+  async *continueStream(options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
+    assertRunOptionsShape(options, true);
+    yield* this.ownedStream(options, (runOptions) => this.continue(runOptions));
+  }
+
+  private async runInternal(
+    input: AgentInput,
+    options: ResolvedRunOptions,
+    runId: string,
+    resumed?: ActiveDurableRun,
+    continued = false,
+  ): Promise<RunResult> {
     // A reload swaps the package runtime; a run that starts mid-swap would see half of each generation.
     if (tryAgentRuntime(this.agent)?.reloading) throw new Error("Agent is reloading; retry the run");
     // Only a session that needs its branch read waits: the rest start the run in the same tick, as before.
@@ -686,7 +913,14 @@ export class RuntimeAgentSession implements Session {
     // Plan 177 Task 4: narrow before any event, then fail closed when the branch is outside the scope.
     const scope = narrowScope(this.scope, options.ownership, "Run");
     if (scope && !entriesInScope((await this.snapshot()).entries, scope)) throw new SessionNotFoundError(this.id);
-    return executeRun(asSessionHost(this), input, { ...options, ownership: scope }, runId, resumed);
+    if (options.chargeTo !== undefined) this.assertChargeTarget(options.chargeTo);
+    if (options.skills !== undefined && options.skills !== false) this.assertRunSkills(options.skills.only);
+    return executeRun(asSessionHost(this), input, { ...options, ownership: scope }, runId, resumed, continued);
+  }
+
+  /** Whether `close()` has started. */
+  isClosing(): boolean {
+    return this.closing !== undefined;
   }
 
   /** Session teardown: closes every subscriber, run-scoped and `acrossRuns` alike (idempotent). */
@@ -700,6 +934,8 @@ export class RuntimeAgentSession implements Session {
    * pack hooks from the shared bus, tells hooks the session closed, then closes every subscriber.
    */
   private async closeSession(): Promise<void> {
+    // Plan 232 Task 2: children close first, so none outlives the session it charges and reports to.
+    await Promise.allSettled([...this.children].map((child) => child.close()));
     try {
       // `session.opened` precedes `session.closed`. A failing store must not keep the session from closing.
       await this.ready().catch(() => undefined);
@@ -709,18 +945,29 @@ export class RuntimeAgentSession implements Session {
       this.closeSubscribers();
       // Plan 177 Task 5: the agent's open-session registry drops this session as soon as it closes.
       tryAgentRuntime(this.agent)?.openSessions.delete(this);
+      this.openParent?.children.delete(this);
     }
   }
 
   async *stream(input: AgentInput, options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
-    const { maxQueuedEvents, overflow, ...runOptions } = options;
+    assertRunOptionsShape(options, true);
+    yield* this.ownedStream(options, (runOptions) => this.run(input, runOptions));
+  }
+
+  /** `stream` and `continueStream`: subscribe first, start one run, and yield only that run's events. */
+  private async *ownedStream(
+    options: RunOptions & SubscribeOptions,
+    start: (runOptions: RunOptions) => Promise<RunResult>,
+  ): AsyncGenerator<AgentEvent> {
+    // `acrossRuns` has no effect here: this subscriber is the stream's own.
+    const { maxQueuedEvents, overflow, acrossRuns: _acrossRuns, ...runOptions } = options;
     const subscriber = this.createSubscriber({ maxQueuedEvents, overflow });
     let runOwnedId: string | undefined;
     let settled = false;
     // This subscription is stream()'s own, so it does not depend on the run-end close: settling the
     // run closes it too, which also unblocks the consumer loop when the run fails before it ever
     // emits (a pre-flight validation rejection returns before run-end cleanup).
-    const runPromise = this.run(input, runOptions).finally(() => {
+    const runPromise = start(runOptions).finally(() => {
       settled = true;
       subscriber.close();
     });
@@ -735,7 +982,11 @@ export class RuntimeAgentSession implements Session {
       await runPromise;
     } finally {
       subscriber.close();
-      if (!settled) {
+      if (subscriber.overflowed) {
+        // Plan 228 Task 3: an overflow is the consumer falling behind, not stopping. The iterator throws
+        // `SubscriberOverflowError` and the run settles on its own (its messages and ledger are stored).
+        void runPromise.catch(() => undefined);
+      } else if (!settled) {
         this.abort(new Error("stream consumer closed"));
         await runPromise.catch(() => undefined);
       }
@@ -755,8 +1006,12 @@ export class RuntimeAgentSession implements Session {
     readonly stopDetail?: string;
     readonly runState?: AgentRunState;
     readonly interruption?: import("../contracts.js").AgentRunInterruption;
+    /** Succeeded runs only: parse and validate the final reply against this schema (plan 235 Task 2). */
+    readonly structuredOutput?: import("../contracts.js").StructuredOutputOptions;
   }): RunResult {
     const final = finalAssistantMessage(this.history);
+    // `final.text` comes from the stored (redacted) history, so `output` is redacted like `text`.
+    const structured = input.structuredOutput ? parseStructuredOutput(final.text, input.structuredOutput) : undefined;
     return {
       sessionId: this.id,
       runId: input.runId,
@@ -775,6 +1030,7 @@ export class RuntimeAgentSession implements Session {
       stopDetail: input.stopDetail,
       pending: input.interruption?.pendingDecisions,
       runState: input.runState,
+      ...structured,
     };
   }
 
@@ -782,7 +1038,7 @@ export class RuntimeAgentSession implements Session {
     if (this.activeRun) throw new Error("Agent session already has an active run");
     // Same agent/run merge the auto trigger uses, so agent-level sizing and secrets apply here too.
     const merged = { ...(this.agent.config.compaction || {}), ...options };
-    const result = await this.compactBranch(merged, undefined, merged.signal, "manual");
+    const result = await this.compactBranch(merged, undefined, merged.signal, "manual", this.agent.config.model);
     // Plan 091 T2: history changed, so a pre-compaction meter reading would overstate the context.
     this.activeInputMeter = undefined;
     return result;
@@ -795,14 +1051,17 @@ export class RuntimeAgentSession implements Session {
   async entries(): Promise<readonly SessionEntry[]> {
     const reader = this.branchReader();
     return reader
-      ? getSessionBranchEntries(reader, { sessionId: this.id, leafId: this.currentLeafId })
+      ? getSessionBranchEntries(reader, { sessionId: this.id, leafId: this.currentLeafId }, this.branchReadOptions())
       : getSessionBranchEntries(await this.store.list(this.id), { leafId: this.currentLeafId });
   }
 
   async checkout(leafId?: string): Promise<void> {
+    this.tipConflict = undefined;
     this.currentLeafId = leafId;
+    this.branchPending = leafId !== undefined;
     this.invalidateSnapshot();
     await this.rebuildHistory();
+    this.hydrateSessionLimits((await this.snapshot()).entries);
     await this.rehydrateState();
   }
 
@@ -815,7 +1074,7 @@ export class RuntimeAgentSession implements Session {
     const leafId = options.at ?? this.currentLeafId;
     const reader = this.branchReader();
     const branch = reader
-      ? await getSessionBranchEntries(reader, { sessionId: this.id, leafId })
+      ? await getSessionBranchEntries(reader, { sessionId: this.id, leafId }, this.branchReadOptions())
       : getSessionBranchEntries(await this.store.list(this.id), { leafId });
     const id = randomId("session");
     const remap = new Map<string, string>();
@@ -830,10 +1089,16 @@ export class RuntimeAgentSession implements Session {
       const nextId = randomId("entry");
       remap.set(entry.id, nextId);
       const { id: _oldId, parentId: _oldParentId, sessionId: _oldSessionId, ...rest } = entry;
-      const next = { ...rest, id: nextId, parentId, sessionId: id } as SessionEntry;
-      await this.store.append(next);
+      const data = entry.kind === "compaction" ? forkCompactionData(entry.data, remap, copied.length) : rest.data;
+      // Plan 218.3 Task 4: each copy names the ids it had before (`sessionEntryForkedFrom`), so a package that cited
+      // parent ids resolves them to the fork's copies.
+      const metadata = forkedEntryMetadata(entry);
+      const next = { ...rest, ...(data !== undefined ? { data } : {}), metadata, id: nextId, parentId, sessionId: id } as SessionEntry;
       copied.push(next);
     }
+    // Plan 230 Task 5: one atomic batch when the store has it; otherwise one append at a time, removing the partial copy on failure.
+    if (this.store.appendMany) await this.store.appendMany(copied);
+    else await appendForkEntries(this.store, id, copied);
     const forked = new RuntimeAgentSession({
       agent: this.agent,
       id,
@@ -847,12 +1112,17 @@ export class RuntimeAgentSession implements Session {
     const registry = tryAgentRuntime(this.agent)?.openSessions;
     registry?.add(forked);
     try {
-      await forked.openResumedSession(copied);
+      await forked.openResumedSession(rebuildSessionContext(copied, { leafId: copied.at(-1)?.id }));
     } catch (error) {
       registry?.delete(forked);
       throw error;
     }
     return forked;
+  }
+
+  /** Paged branch reads follow at most `ceilings.branchReadPages` pages (plan 239 Task 4). */
+  private branchReadOptions(): { readonly maxPages: number } {
+    return { maxPages: ceilingsOf(this.agent).branchReadPages };
   }
 
   private branchReader() {
@@ -880,9 +1150,52 @@ export class RuntimeAgentSession implements Session {
     this.activeProvider = provider;
   }
 
-  resolveRunSkills(tools: readonly ToolDefinition[]): readonly Skill[] {
-    return resolveAllActiveSkills(agentSkillSource(this.agent), tools);
+  resolveRunSkills(tools: readonly ToolDefinition[], narrow?: RunOptions["skills"]): readonly Skill[] {
+    const all = agentSkillSource(this.agent);
+    if (narrow === undefined) return resolveAllActiveSkills(all, tools);
+    if (narrow === false) return [];
+    // Plan 232 Task 2: a subset of the agent's skills; a name the agent does not have fails closed.
+    this.assertRunSkills(narrow.only);
+    const only = new Set(narrow.only);
+    return resolveAllActiveSkills(
+      all.filter((skill) => only.has(skill.name)),
+      tools,
+    );
   }
+
+  /** `RunOptions.skills.only` names skills the agent has; checked before the run starts, and again at assembly. */
+  private assertRunSkills(only: readonly string[]): void {
+    const known = new Set(agentSkillSource(this.agent).map((skill) => skill.name));
+    const unknown = only.filter((name) => !known.has(name));
+    if (unknown.length > 0) throw new TypeError(`RunOptions.skills.only names unknown skills: ${unknown.slice(0, 8).join(", ")}`);
+  }
+
+  /**
+   * `RunOptions.chargeTo` must be a kernel view of an open session of this agent that is an ancestor of this one by
+   * links (plan 232 Task 2). The walk follows open sessions only, bounded by `MAX_SESSION_LINK_DEPTH`.
+   */
+  private assertChargeTarget(view: SessionContext): void {
+    const target = viewSessions.get(view);
+    const refuse = (reason: string): never => {
+      throw new TypeError(`RunOptions.chargeTo must be a session view of an ancestor of this session on the same agent: ${reason}`);
+    };
+    if (!target) refuse("not a kernel session view");
+    if (target!.agent !== this.agent) refuse("another agent's session");
+    const open = tryAgentRuntime(this.agent)?.openSessions;
+    let parentId = this.parentSessionId;
+    let current: RuntimeAgentSession = this;
+    for (let hop = 0; parentId !== undefined && hop < MAX_SESSION_LINK_DEPTH; hop += 1) {
+      if (parentId === target!.id) return;
+      const parent: RuntimeAgentSession | undefined = current.openParent ?? findOpenSession(open, parentId);
+      if (!parent) break;
+      current = parent;
+      parentId = parent.parentSessionId;
+    }
+    refuse("not an ancestor");
+  }
+
+  /** The open session `PackageAPI.sessions.open` opened this child under, when it did. */
+  openParent?: RuntimeAgentSession;
 
   emit(event: AgentEvent): void {
     this.dispatchEvent(event, this.activeRedactor);
@@ -1037,7 +1350,7 @@ export class RuntimeAgentSession implements Session {
   async autoCompact(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
     const resolved = await this.resolveAutoCompact(runId, options, signal, undefined);
     if (!resolved) return;
-    await this.compactBranchResilient(resolved, runId, signal, "auto");
+    await this.compactBranchResilient(resolved, runId, signal, "auto", options.model ?? this.agent.config.model);
     const compacted = await this.snapshot();
     this.replaceHistory(withoutTrailingInput(compacted.messages, inputMessages));
   }
@@ -1045,7 +1358,7 @@ export class RuntimeAgentSession implements Session {
   async autoCompactTurn(runId: string, options: ResolvedRunOptions, signal: AbortSignal, turn: number): Promise<void> {
     const resolved = await this.resolveAutoCompact(runId, options, signal, turn);
     if (!resolved) return;
-    await this.compactBranchResilient(resolved, runId, signal, "auto");
+    await this.compactBranchResilient(resolved, runId, signal, "auto", options.model ?? this.agent.config.model);
   }
 
   /**
@@ -1055,16 +1368,17 @@ export class RuntimeAgentSession implements Session {
    */
   async compactOverflow(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
     const compaction = mergeCompaction(this.agent.config.compaction, options.compaction) ?? {};
-    await this.compactBranch(compaction, runId, signal, "overflow");
+    await this.compactBranch(compaction, runId, signal, "overflow", options.model ?? this.agent.config.model);
     const compacted = await this.snapshot();
     this.replaceHistory(withoutTrailingInput(compacted.messages, inputMessages));
   }
 
   /**
    * Resolve the auto-compaction decision, or `undefined` when there is nothing to do. A
-   * `compaction.when` handler votes `true`/`false` or abstains; the configured
-   * `trigger`/`thresholdEntries` is the fallback used only when every registered handler abstains
-   * (or none is registered).
+   * `compaction.when` handler votes `true`/`false` or abstains; the kernel trigger is the fallback
+   * used only when every registered handler abstains (or none is registered). That trigger is
+   * `compaction.trigger`, else `thresholdEntries`, else {@link DEFAULT_COMPACTION_TRIGGER} (plan 229
+   * Task 4); `compaction: false` turns the kernel trigger off.
    */
   private async resolveAutoCompact(
     runId: string,
@@ -1072,15 +1386,19 @@ export class RuntimeAgentSession implements Session {
     signal: AbortSignal,
     turn: number | undefined,
   ): Promise<CompactionOptions | undefined> {
-    const compaction = mergeCompaction(this.agent.config.compaction, options.compaction);
-    const configured = compaction?.thresholdEntries !== undefined;
+    const agentCompaction = this.agent.config.compaction;
+    const disabled = options.compaction === false || (options.compaction === undefined && agentCompaction === false);
+    const compaction = mergeCompaction(agentCompaction, options.compaction);
+    const usesDefault = !disabled && compaction?.trigger === undefined && compaction?.thresholdEntries === undefined;
     const hasWhen = this.hooks().has("compaction.when");
-    if (!configured && !hasWhen) return undefined;
+    if (disabled && !hasWhen) return undefined;
     const snapshot = await this.snapshot();
     // A branch that just compacted keeps its fresh summary: no second pass over the same entries.
     if (snapshot.entries.at(-1)?.kind === "compaction") return undefined;
+    let estimated: number | undefined;
     const estimateInputTokens = () =>
-      estimateAssemblyTokens(snapshot.messages) + snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0);
+      (estimated ??=
+        estimateAssemblyTokens(snapshot.messages) + snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0));
     if (hasWhen) {
       // Tri-state: `true` compacts, `false` vetoes, and an abstention (`undefined`) falls through to
       // the configured trigger, so a handler with nothing to say cannot disable the host's gate.
@@ -1088,28 +1406,66 @@ export class RuntimeAgentSession implements Session {
         sessionId: this.id,
         runId,
         messages: snapshot.messages,
-        entryCount: snapshot.entries.length,
+        entryCount: snapshotTail(snapshot).branchLength,
         ...(turn === undefined ? {} : { turn }),
         estimatedTokens: estimateInputTokens(),
       });
       if (decision !== undefined) return decision.compact ? (compaction ?? {}) : undefined;
     }
-    if (!compaction) return undefined;
-    const compact = await resolveShouldCompact(
-      { thresholdEntries: compaction.thresholdEntries },
-      {
-        sessionId: this.id,
-        entryCount: snapshot.entries.length,
-        ...(turn === undefined ? {} : { turn }),
-        // Estimates of the branch the run is about to send: messages plus carried summaries.
-        estimateInputTokens,
-        // The model-derived per-request cap (`contextWindow - maxOutputTokens - reserve`).
-        resolveInputCapTokens: () => resolveInputCap({}, options.model ?? this.agent.config.model),
-        metadata: compaction.metadata,
-        signal,
-      },
+    if (disabled) return undefined;
+    const settings = compaction ?? {};
+    const trigger = usesDefault ? DEFAULT_COMPACTION_TRIGGER : settings.trigger;
+    // The host's spec carries `limits` only when the host wrote them; a `provider/model` ref is filled
+    // from the provider catalog, read lazily here and never in `createAgent` (it can be a network call).
+    const reads = trigger?.type === "input_ratio" || trigger?.type === "custom";
+    const spec = reads ? await this.describeModelForCap(options.model ?? this.agent.config.model) : undefined;
+    if (usesDefault) {
+      try {
+        resolveInputCap({}, spec);
+      } catch {
+        // No resolvable cap: no default trigger, and one note per agent. A configured trigger keeps failing loudly.
+        this.noteNoDefaultTrigger(spec);
+        return undefined;
+      }
+    }
+    const compact = await resolveShouldCompact(trigger === undefined ? { thresholdEntries: settings.thresholdEntries } : { trigger }, {
+      sessionId: this.id,
+      entryCount: snapshotTail(snapshot).branchLength,
+      ...(turn === undefined ? {} : { turn }),
+      // Estimates of the branch the run is about to send: messages plus carried summaries.
+      estimateInputTokens,
+      // The model-derived per-request cap (`contextWindow - maxOutputTokens - reserve`).
+      resolveInputCapTokens: () => resolveInputCap({}, spec),
+      metadata: settings.metadata,
+      signal,
+    });
+    return compact ? settings : undefined;
+  }
+
+  /** `spec` with the provider catalog's `limits` filled in when the host wrote none (plan 229 Task 4). */
+  private async describeModelForCap(spec: ModelSpec | undefined): Promise<ModelSpec | undefined> {
+    if (!spec || spec.limits?.contextWindow !== undefined) return spec;
+    const packages = tryAgentRuntime(this.agent)?.packages;
+    return packages ? packages.describeModel(spec) : spec;
+  }
+
+  /** The model's input cap for sizing a compaction, or `undefined` when none resolves (plan 229 Task 5). */
+  private async inputCapFor(model: ModelSpec | undefined): Promise<number | undefined> {
+    try {
+      return resolveInputCap({}, await this.describeModelForCap(model));
+    } catch {
+      return undefined;
+    }
+  }
+
+  private noteNoDefaultTrigger(spec: ModelSpec | undefined): void {
+    if (agentsNotedWithoutCap.has(this.agent)) return;
+    agentsNotedWithoutCap.add(this.agent);
+    const name = spec ? `${spec.provider}/${spec.model}` : "the agent's model";
+    tryAgentRuntime(this.agent)?.packages.kernelNote(
+      "info",
+      `No automatic compaction: ${name} declares no context window. Set model limits or compaction.trigger.`,
     );
-    return compact ? compaction : undefined;
   }
 
   /**
@@ -1122,9 +1478,10 @@ export class RuntimeAgentSession implements Session {
     runId: string | undefined,
     signal: AbortSignal | undefined,
     trigger: CompactionReason,
+    model: ModelSpec | undefined,
   ): Promise<void> {
     try {
-      await this.compactBranch(options, runId, signal, trigger);
+      await this.compactBranch(options, runId, signal, trigger, model);
     } catch (error) {
       this.emit({ type: "compaction.completed", sessionId: this.id, runId, trigger, error: errorToErrorInfo(error) });
     }
@@ -1135,9 +1492,13 @@ export class RuntimeAgentSession implements Session {
     runId: string | undefined,
     signal: AbortSignal | undefined,
     trigger: CompactionReason,
+    model: ModelSpec | undefined,
   ): Promise<CompactionResult> {
     throwIfAbortedSignal(signal);
-    const entries = await this.entries();
+    const snapshot = await this.snapshot();
+    const entries = snapshot.entries;
+    const tail = snapshotTail(snapshot);
+    const inputCapTokens = await this.inputCapFor(model);
     const secrets = options.secrets ?? [];
     // The `compaction` slot owns the implementation (roadmap §2.5); `CompactionOptions` only sizes it.
     const compactor = this.slots().resolve("compaction", this.agent.config.slots?.compaction);
@@ -1146,6 +1507,8 @@ export class RuntimeAgentSession implements Session {
       sessionId: this.id,
       entries,
       keepRecentEntries: options.keepRecentEntries,
+      ...(inputCapTokens === undefined ? {} : { inputCapTokens }),
+      ...(options.maxSummaryChars === undefined ? {} : { maxSummaryChars: options.maxSummaryChars }),
       trigger,
       secrets,
       metadata: options.metadata,
@@ -1157,19 +1520,31 @@ export class RuntimeAgentSession implements Session {
     let result = await compactor.compact(context);
     result = { ...result, summary: redactSecrets(result.summary, secrets) };
     const source = result.entries?.find((entry) => entry.kind === "compaction");
-    const data = isCompactionEntryData(source?.data) ? source.data : undefined;
-    const entry = createSessionEntry({
-      sessionId: this.id,
-      parentId: this.currentLeafId,
-      runId,
-      kind: "compaction",
-      summary: result.summary,
-      data,
+    const data = isCompactionEntryData(source?.data)
+      ? keepNewestSessionLimits(entries, keepLinksEntry(entries, keepNewestRunCheckpoint(entries, source.data)))
+      : undefined;
+    const readLeafId = snapshot.leafId;
+    const entry = await this.serialAppend(async () => {
+      // Plan 230 Task 3: the checkpoint folds the branch the compactor read, so it is written only when the
+      // entry lands on that branch's tip. Rebased onto a tip that moved meanwhile, it goes without one.
+      const checkpoint = data && this.currentLeafId === readLeafId ? compactionCheckpoint(entries, data, tail) : undefined;
+      const built = createSessionEntry({
+        sessionId: this.id,
+        parentId: this.currentLeafId,
+        runId,
+        kind: "compaction",
+        summary: result.summary,
+        data: checkpoint ? { ...data, checkpoint } : data,
+      });
+      await this.appendNow(built);
+      return built;
     });
-    await this.appendEntry(entry);
     const finalResult = { ...result, entries: [entry] };
     const throughIndex = data?.throughEntryId ? entries.findIndex((e) => e.id === data.throughEntryId) : -1;
-    const entriesCompacted = throughIndex >= 0 ? throughIndex + 1 : Math.max(0, entries.length - (options.keepRecentEntries ?? 8));
+    const entriesCompacted =
+      throughIndex >= 0
+        ? throughIndex + 1
+        : resolveKeptStartIndex(entries, { keepRecentEntries: options.keepRecentEntries, inputCapTokens });
     this.emit({ type: "compaction.completed", sessionId: this.id, runId, summary: finalResult.summary, entriesCompacted, trigger });
     await this.rebuildHistory();
     return finalResult;
@@ -1188,9 +1563,26 @@ export class RuntimeAgentSession implements Session {
   }
 
   private serialAppend<T>(job: () => Promise<T>): Promise<T> {
-    const run = this.appendTail.then(job);
+    const run = this.appendTail.then(() => {
+      // Before the job builds its entry, so the entry is made for the tip it lands on.
+      this.settleTipConflict();
+      return job();
+    });
     this.appendTail = run.catch(() => undefined);
     return run;
+  }
+
+  /**
+   * After a tip conflict, the conflicting run writes nothing more: every later append in it rethrows the
+   * conflict. Outside that run, the session adopts the store's current leaf the conflict reported.
+   */
+  private settleTipConflict(): void {
+    const conflict = this.tipConflict;
+    if (!conflict) return;
+    if (conflict.run !== undefined && conflict.run === this.activeRun) throw conflict.error;
+    this.tipConflict = undefined;
+    if (conflict.leafId !== undefined) this.currentLeafId = conflict.leafId;
+    this.invalidateSnapshot();
   }
 
   private async appendNow(entry: SessionEntry): Promise<void> {
@@ -1204,15 +1596,22 @@ export class RuntimeAgentSession implements Session {
     const redacted = redactSessionEntry(owned, this.activeRedactor);
     const previousLeafId = this.currentLeafId;
     const cached = this.snapshotCache;
+    // Plan 230 Task 2: an append at this session's own tip is linear; the first one after `checkout(leafId)` is a branch.
+    const tip = previousLeafId !== undefined && !this.branchPending;
     try {
       await this.store.append(redacted, {
         expectedParentId: previousLeafId,
         idempotencyKey: this.activeIdempotencyKey,
+        ...(tip ? { tip: true } : {}),
       });
     } catch (error) {
       this.invalidateSnapshot();
+      if (tip && isSessionAppendConflict(error) && error.conflict.idempotencyDuplicate !== true) {
+        this.tipConflict = { error, leafId: error.conflict.currentLeafId, run: this.activeRun };
+      }
       throw error;
     }
+    this.branchPending = false;
     this.currentLeafId = redacted.id;
     if (redacted.kind === "message" && redacted.message && this.activeRunId !== undefined) this.activeRunMessages.push(redacted.message);
     // Plan 210 Task 0.3: an append the store accepted on the cached tip extends the cache with one
@@ -1272,8 +1671,9 @@ export class RuntimeAgentSession implements Session {
   private callsOwnedBySuspension(): ReadonlySet<string> | undefined {
     const state = this.activeDurable?.state;
     const gated = this.activeGatedRound;
-    if (!state && !gated?.size) return undefined;
-    const owned = new Set<string>(gated?.keys());
+    const nested = this.activeNestedRound;
+    if (!state && !gated?.size && !nested?.size) return undefined;
+    const owned = new Set<string>([...(gated?.keys() ?? []), ...(nested?.keys() ?? [])]);
     for (const entry of state?.pendingCalls ?? []) owned.add(entry.call.id);
     if (state?.pending) owned.add(state.pending.call.id);
     for (const nested of state?.nestedRuns ?? []) owned.add(nested.toolCallId);
@@ -1281,6 +1681,8 @@ export class RuntimeAgentSession implements Session {
   }
 
   async snapshot(): Promise<SessionContextSnapshot> {
+    // Outside the run that hit a tip conflict, read from the leaf the other writer left (plan 230 Task 2).
+    if (this.tipConflict && (this.tipConflict.run === undefined || this.tipConflict.run !== this.activeRun)) this.settleTipConflict();
     const now = performance.now();
     const cached = this.snapshotCache;
     if (cached && cached.leafId === this.currentLeafId && cached.generation === this.snapshotGeneration) {
@@ -1291,16 +1693,14 @@ export class RuntimeAgentSession implements Session {
         return cached.value;
       }
     }
-    const reader = this.branchReader();
-    const value = reader
-      ? await rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
-      : rebuildSessionContext(await this.store.list(this.id), { leafId: this.currentLeafId });
-    this.snapshotCache = {
-      leafId: this.currentLeafId,
-      generation: this.snapshotGeneration,
-      expiresAt: now + this.snapshotCacheTtlMs,
-      value,
-    };
+    // Plan 230 Task 3: from the newest compaction on; its checkpoint stands for the branch before it.
+    // The leaf and generation are read before the await: a concurrent append (a memory worker's record) may move
+    // the tip while the branch is read, and the snapshot is then of the leaf asked for, cached under that leaf.
+    const leafId = this.currentLeafId;
+    const generation = this.snapshotGeneration;
+    const value = await readSessionSnapshot(this.store, { sessionId: this.id, leafId }, this.branchReadOptions());
+    if (leafId !== undefined && value.leafId !== leafId) throw new Error(`Unknown session leaf: ${leafId}`);
+    this.snapshotCache = { leafId, generation, expiresAt: now + this.snapshotCacheTtlMs, value };
     return value;
   }
 
@@ -1326,20 +1726,166 @@ export class RuntimeAgentSession implements Session {
 }
 
 /**
+ * Plan 230 Task 3: the state a compaction entry carries for the branch before it, so a run reads the branch from
+ * the compaction on. `entries` is the whole branch the compaction lands on.
+ */
+function compactionCheckpoint(
+  entries: readonly SessionEntry[],
+  data: CompactionEntryData,
+  tail: ReturnType<typeof snapshotTail>,
+): NonNullable<CompactionEntryData["checkpoint"]> {
+  const keep = new Set(data.keepEntryIds ?? []);
+  const throughIndex = data.throughEntryId === undefined ? -1 : entries.findIndex((entry) => entry.id === data.throughEntryId);
+  const pinnedEntryIds = entries
+    .slice(0, Math.max(0, throughIndex))
+    .filter(
+      (entry) =>
+        keep.has(entry.id) &&
+        ((entry.kind === "message" && entry.message) ||
+          entry.kind === "run_checkpoint" ||
+          entry.kind === "session_limits" ||
+          sessionLinksOfEntry(entry) !== undefined),
+    )
+    .map((entry) => entry.id);
+  return {
+    version: 1,
+    branchLength: tail.branchLength,
+    packageState: foldPackageState(tail.entries, tail.packageState),
+    externalState: foldExternalState(tail.entries, tail.externalState),
+    pinnedEntryIds,
+  };
+}
+
+/**
+ * Plan 231 Task 3: the newest `run_checkpoint` before `throughEntryId` joins `keepEntryIds`, so a tail read still
+ * returns it (the store pins kept entries) and the compaction checkpoint pins it. Only messages among kept entries
+ * reach provider input, so the checkpoint never does.
+ */
+function keepNewestRunCheckpoint(entries: readonly SessionEntry[], data: CompactionEntryData): CompactionEntryData {
+  const throughIndex = data.throughEntryId === undefined ? -1 : entries.findIndex((entry) => entry.id === data.throughEntryId);
+  let newest: SessionEntry | undefined;
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    if (entries[index]!.kind === "run_checkpoint") {
+      newest = entries[index];
+      if (index >= throughIndex) return data;
+      break;
+    }
+  }
+  if (!newest || data.keepEntryIds?.includes(newest.id)) return data;
+  return { ...data, keepEntryIds: [...(data.keepEntryIds ?? []), newest.id] };
+}
+
+/**
+ * Plan 239 Task 8: the newest `session_limits` before `throughEntryId` joins `keepEntryIds`, so a tail read
+ * still returns it and a reopened session recovers its counters across compaction.
+ */
+function keepNewestSessionLimits(entries: readonly SessionEntry[], data: CompactionEntryData): CompactionEntryData {
+  const throughIndex = data.throughEntryId === undefined ? -1 : entries.findIndex((entry) => entry.id === data.throughEntryId);
+  let newest: SessionEntry | undefined;
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    if (entries[index]!.kind === "session_limits") {
+      newest = entries[index];
+      if (index >= throughIndex) return data;
+      break;
+    }
+  }
+  if (!newest || data.keepEntryIds?.includes(newest.id)) return data;
+  return { ...data, keepEntryIds: [...(data.keepEntryIds ?? []), newest.id] };
+}
+
+/**
+ * Plan 232 Task 2: the session's links entry before `throughEntryId` joins `keepEntryIds`, so a tail read still returns
+ * it (the checkpoint pins it) and a resumed child keeps its `depth` and parent. It is metadata, so it never reaches
+ * provider input.
+ */
+function keepLinksEntry(entries: readonly SessionEntry[], data: CompactionEntryData): CompactionEntryData {
+  const throughIndex = data.throughEntryId === undefined ? -1 : entries.findIndex((entry) => entry.id === data.throughEntryId);
+  const links = entries.slice(0, Math.max(0, throughIndex)).find((entry) => sessionLinksOfEntry(entry) !== undefined);
+  if (!links || data.keepEntryIds?.includes(links.id)) return data;
+  return { ...data, keepEntryIds: [links.id, ...(data.keepEntryIds ?? [])] };
+}
+
+/**
+ * A copied compaction's `data`, with its entry ids pointing at the fork's copies (plan 230 Task 5): `throughEntryId`,
+ * `keepEntryIds`, the checkpoint's `pinnedEntryIds` and `branchLength` (the fork drops suspended runs), and the
+ * compaction package's `firstKeptEntryId`. An id the fork did not copy is left as is; it names no entry of the fork.
+ */
+function forkCompactionData(data: unknown, remap: ReadonlyMap<string, string>, branchLength: number): unknown {
+  if (!isCompactionEntryData(data)) return data;
+  const id = (value: string) => remap.get(value) ?? value;
+  const record = data as CompactionEntryData & { readonly firstKeptEntryId?: unknown };
+  return {
+    ...record,
+    ...(record.throughEntryId !== undefined ? { throughEntryId: id(record.throughEntryId) } : {}),
+    ...(record.keepEntryIds !== undefined ? { keepEntryIds: record.keepEntryIds.map(id) } : {}),
+    ...(typeof record.firstKeptEntryId === "string" ? { firstKeptEntryId: id(record.firstKeptEntryId) } : {}),
+    ...(record.checkpoint !== undefined
+      ? { checkpoint: { ...record.checkpoint, branchLength, pinnedEntryIds: record.checkpoint.pinnedEntryIds.map(id) } }
+      : {}),
+  };
+}
+
+/**
+ * Fork's fallback for a store without `appendMany`: one append at a time. On failure it removes what it wrote
+ * through `deleteSession` and rethrows; when it cannot, the error names the partial session.
+ */
+async function appendForkEntries(store: SessionStore, sessionId: string, entries: readonly SessionEntry[]): Promise<void> {
+  let written = 0;
+  try {
+    for (const entry of entries) {
+      await store.append(entry);
+      written += 1;
+    }
+  } catch (error) {
+    if (written === 0) throw error;
+    const removed = store.deleteSession ? await store.deleteSession(sessionId).catch(() => false) : false;
+    if (removed) throw error;
+    throw new Error(
+      `session fork failed after ${written} of ${entries.length} entries; partial session ${sessionId} was left in the store`,
+      {
+        cause: error,
+      },
+    );
+  }
+}
+
+/**
  * `snapshotCacheTtlMs` resolution: `0` disables the branch cache (a host that needs a
  * fresh store read per snapshot), otherwise a safe integer up to the hard cap.
  */
-function resolveSnapshotCacheTtlMs(value: number | undefined): number {
-  const ttl = value ?? DEFAULT_SNAPSHOT_CACHE_TTL_MS;
-  if (!Number.isSafeInteger(ttl) || ttl < 0 || ttl > HARD_MAX_SNAPSHOT_CACHE_TTL_MS) {
-    throw new TypeError(`AgentSessionConfig.snapshotCacheTtlMs must be a safe integer from 0 to ${HARD_MAX_SNAPSHOT_CACHE_TTL_MS}`);
+function resolveSnapshotCacheTtlMs(value: number | undefined, max: number): number {
+  const ttl = value ?? Math.min(DEFAULT_SNAPSHOT_CACHE_TTL_MS, max);
+  if (!Number.isSafeInteger(ttl) || ttl < 0 || ttl > max) {
+    throw new TypeError(`AgentSessionConfig.snapshotCacheTtlMs must be a safe integer from 0 to ceilings.snapshotCacheTtlMs (${max})`);
   }
   return ttl;
 }
 
-function sessionLinksOption(config: SessionOptions): SessionLinks | undefined {
+function sessionLinksOption(config: SessionOptions & RuntimeSessionInternals): SessionLinks | undefined {
   if (config.parent === undefined && config.actor === undefined) return undefined;
-  const links: SessionLinks = { ...config.parent, ...(config.actor !== undefined ? { actor: config.actor } : {}) };
+  // `depth` is the kernel's to stamp: a caller's value is dropped, and a link to a parent session counts one level.
+  const { depth: _callerDepth, ...parent } = (config.parent ?? {}) as SessionLinks;
+  const depth = parent.sessionId === undefined ? undefined : (config.depth ?? 1);
+  const links: SessionLinks = {
+    ...parent,
+    ...(config.actor !== undefined ? { actor: config.actor } : {}),
+    ...(depth !== undefined ? { depth } : {}),
+  };
   assertSessionLinks(links);
   return links;
+}
+
+/** Kernel-internal options of a session `PackageAPI.sessions.open` or `agent.session` builds (plan 232 Task 2). */
+export interface RuntimeSessionInternals {
+  /** The link depth to stamp: the open parent's depth plus one. */
+  readonly depth?: number;
+  readonly seed?: readonly SessionSeedEntry[];
+}
+
+/** Each kernel `SessionContext` view and the session behind it, so `RunOptions.chargeTo` resolves to a session. */
+const viewSessions = new WeakMap<SessionContext, RuntimeAgentSession>();
+
+function findOpenSession(open: Iterable<unknown> | undefined, id: string): RuntimeAgentSession | undefined {
+  for (const session of open ?? []) if (session instanceof RuntimeAgentSession && session.id === id) return session;
+  return undefined;
 }

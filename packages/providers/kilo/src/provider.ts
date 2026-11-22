@@ -7,10 +7,11 @@ import {
   createRoutedProvider,
   mapOpenAIChatUsage,
   normalizeUsage,
+  parseRetryAfterMs,
   providerHttpError,
-  type RoutedProviderRoute,
-  readRetryAfterMs,
+  type ProviderTransportConfig,
   resolveReasoningObject,
+  type RoutedProviderRoute,
   sanitizeCacheKey,
   type SecretSource,
 } from "@arnilo/prism/provider-kit";
@@ -140,7 +141,7 @@ export function kiloHttpError(response: Response, bodyText: string, secrets: rea
       : bodyText;
   const error = providerHttpError(
     "Kilo",
-    { status: response.status, code: response.status, retryAfterMs: readRetryAfterMs(response.headers) },
+    { status: response.status, code: response.status, retryAfterMs: parseRetryAfterMs(response.headers) },
     hint + body,
     secrets,
   );
@@ -152,6 +153,8 @@ export function kiloHttpError(response: Response, bodyText: string, secrets: rea
 }
 
 export interface KiloProviderOptions {
+  /** Wire ceilings (SSE event/buffer bytes, non-streamed body bytes); the host sets them. */
+  readonly transport?: ProviderTransportConfig;
   readonly id?: string;
   readonly baseUrl?: string;
   readonly apiKey?: SecretSource;
@@ -205,6 +208,7 @@ export const KILO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages"> = {
 
 export function createKiloProvider(options: KiloProviderOptions = {}): ModelProvider {
   const provider = createRoutedProvider({
+    ...(options.transport === undefined ? {} : { streamLimits: options.transport }),
     id: options.id ?? "kilo",
     baseUrl: options.baseUrl ?? KILO_DEFAULT_BASE_URL,
     ...(options.apiKey !== undefined ? { apiKey: options.apiKey } : {}),

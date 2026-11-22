@@ -4,6 +4,7 @@ import { createProfiles } from "@arnilo/prism/driver-kit";
 import { adapterDriver, processDriver } from "@arnilo/prism-hosts/driver-process";
 import { hostStreamCli } from "../adapters/stream-cli.js";
 import type { HostConfig, HostDeps } from "./config.js";
+import { sessionLimitsConfig } from "./config.js";
 import { sqlitePackage } from "./store.js";
 
 const PRINCIPAL = "prism-agent";
@@ -26,6 +27,7 @@ export async function createExternalWorker(config: HostConfig, deps: HostDeps = 
     name: "external",
     ...(deps.host === undefined ? {} : { host: deps.host }),
     ...(deps.hooks === undefined ? {} : { hooks: deps.hooks }),
+    ...sessionLimitsConfig(config),
     packages: [sqlitePackage(config.storePath), ...(deps.packages ?? []), processDriver(hostStreamCli)],
     packageConfig: {
       [hostStreamCli.name]: {

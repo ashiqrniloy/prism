@@ -15,8 +15,6 @@ import {
   DockerSandboxError,
   decodeDockerProcessRef,
   encodeDockerProcessRef,
-  HARD_CPUS,
-  HARD_MAX_COMMANDS,
   resolveDockerSandboxLimits,
   summarizeTarStream,
 } from "../index.js";
@@ -66,8 +64,10 @@ test("resolveDockerSandboxLimits applies defaults and rejects hard-cap overflows
   const defaults = resolveDockerSandboxLimits();
   assert.equal(defaults.cpus, 2);
   assert.equal(defaults.maxCommands, 100);
-  assert.throws(() => resolveDockerSandboxLimits({ maxCommands: HARD_MAX_COMMANDS + 1 }), RangeError);
-  assert.throws(() => resolveDockerSandboxLimits({ cpus: HARD_CPUS + 1 }), RangeError);
+  assert.throws(() => resolveDockerSandboxLimits({ maxCommands: 0 }), RangeError);
+  assert.throws(() => resolveDockerSandboxLimits({ cpus: 0 }), RangeError);
+  // Plan 239 Task 5: the host's value is the cap.
+  assert.equal(resolveDockerSandboxLimits({ maxCommands: 10_000, cpus: 64 }).maxCommands, 10_000);
 });
 
 test("buildDockerCreateArgsForTest pins pull=never, read-only, network none, and resource caps", async () => {
