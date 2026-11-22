@@ -113,7 +113,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
           memorySystem({
             enabled: true,
             stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
-            wm: { model: "worker/w", triggerTokens: 1 },
+            wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
             scope: { text: "Keep prefix stable across turns." },
           }),
         ],
@@ -142,7 +142,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
         memorySystem({
           enabled: true,
           stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
-          wm: { model: "worker/w", triggerTokens: 1 },
+          wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
           scope: { text: "Keep prefix stable across turns." },
         }),
       ],
@@ -199,7 +199,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
         memorySystem({
           enabled: true,
           stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
-          wm: { model: "worker/w", triggerTokens: 1 },
+          wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
           scope: { text: "Keep prefix stable across turns." },
           context: { compaction: false },
         }),
@@ -251,7 +251,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
           memorySystem({
             enabled: true,
             stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
-            wm: { model: "worker/w", triggerTokens: 1 },
+            wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
             scope: { text: "Keep prefix stable across turns." },
             context: { compactAfterRun: { maxTokens: 700 } },
           }),
@@ -330,7 +330,7 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
           memorySystem({
             enabled: true,
             stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
-            wm: { model: "worker/w", triggerTokens: 1 },
+            wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
             scope: { text: "Keep prefix stable across turns." },
             context: { compaction: false },
           }),

@@ -1,9 +1,10 @@
 # @arnilo/prism-memory-system
 
-> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-system@experimental`. Outside the
-> [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
-> config, preset contents and defaults may change or be removed in any release until it graduates.
-> Graduation is the memory track's final step, which sets the first stable version.
+> **Stable session memory, experimental tiers.** The session tier (STM, session compaction, `recall`, the `memory:*`
+> commands, the ledger) is under the [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md).
+> Working memory (`wm`), Rehearsal, long-term memory (`ltm`), Sleep and the episode scope are **experimental**. Their config
+> paths are marked `experimental` in [Config stability](#config-stability), and they may change or be removed in any release.
+> Working memory is **off unless configured**; whether it stays is being measured.
 
 **Prism's memory system**, modelled on human memory: short-term memory (STM) → working memory (WM) →
 rehearsal → long-term memory (LTM), plus sleep. A host can use it partly or whole. The package holds
@@ -49,12 +50,18 @@ Each component is an object (on, with its fields) or `false` (off). Omitted (or 
 | Component | Omitted | Needs |
 | --- | --- | --- |
 | `stm` | on | — |
-| `wm` | follows `stm` | `stm` |
+| `wm` | off (experimental; `wm: {}` turns it on) | `stm` |
 | `rehearsal` | on only when `wm` and `ltm` are both on | `wm` and `ltm` |
 | `ltm` | off | — |
 | `sleep` | off (no fields until plan 221) | `ltm` |
 
-`stm`, `wm` and `rehearsal` are still gated per session by `memory:session`. The fields of `stm`, `wm`, `rehearsal`,
+`stm`, `wm` and `rehearsal` are still gated per session by `memory:session`, and **every session starts off**
+(`enabled: false`): installing the package compacts nothing until the host sets `enabled: true` (every session on) or
+a session runs `memory:session`. To make session memory the agent's compaction system:
+
+```ts
+memorySystem({ enabled: true }); // STM records and compacts every session; no WM, no Rehearsal, no LTM
+``` The fields of `stm`, `wm`, `rehearsal`,
 `context`, `worker`, `recall` and `enabled` are in [Session memory → Configuration](#configuration-1); `ltm`'s are in
 [Long-term memory → Config](#config).
 
@@ -82,8 +89,8 @@ Profiles are recipes, not a config field. Each is tested end to end, and [`examp
 | Profile | Config | Use |
 | --- | --- | --- |
 | `ltm` | `{ stm: false, ltm: { … } }` | Notes, recall and standing rules across sessions; no session tiers and no compaction slot |
-| `session` | `{ stm: {}, wm: {} }` (the defaults) | Long single sessions with no cross-session store |
-| `stm` | `{ stm: {}, wm: false }` | An event log with verbatim recall |
+| `stm` | `{ enabled: true }` (the defaults, turned on) | Session memory: STM records and compacts every session, `recall` returns originals |
+| `session` | `{ enabled: true, wm: {}, scope: { text } }` | Experimental: STM plus working memory under a host scope |
 | `full` | `{ stm: {}, wm: {}, rehearsal: {}, ltm: { … }, sleep: {} }` | The whole memory system |
 
 ```ts
@@ -95,7 +102,10 @@ memorySystem({ stm: {}, wm: false, rehearsal: false, ltm: false }); // event log
 Both components are opt-in and state their model calls. The session tiers are off by default: with the
 `memory:session` toggle off they make no model call, no store write and no branch read; with it on, each STM, WM and
 rehearsal pass makes its own model call ([Session cost, security, and failure
-behavior](#session-cost-security-and-failure-behavior)). Long-term memory is set up only when `ltm` is configured;
+behavior](#session-cost-security-and-failure-behavior)). Measured on Session-Bench (W = 32K, 36 sessions of 8–14 tasks,
+plan 218.5 Task 1), STM on with WM off made about 34 worker calls and used about 1.9M total tokens per session, against
+2.5M for Prism's LLM compaction. It passed 361 of 384 tasks against 281. Working memory added 1.27× cost on the screen
+with no measured gain, which is why it is off unless configured. Long-term memory is set up only when `ltm` is configured;
 its retrieval is lexical and makes no model call and no embedding call by default; the passes that do call a model are
 listed in [Long-term memory cost, security, and failure
 behavior](#long-term-memory-cost-security-and-failure-behavior). Session-tier workers get secrets only from the
@@ -315,7 +325,7 @@ defaults below.
 | `wm.rejudgeTokens` | `8000` | Tokens of discarded records the first WM pass after a scope change is also sent to keep back; `0` turns re-judgment off ([Working memory](#working-memory)) |
 | `wm.lookAheadRecords` | `12` | Earlier records (discarded or dropped) matching the scope's remaining steps one WM pass is offered to keep; `0` turns look-ahead off ([Working memory](#working-memory)) |
 | `wm.lookAheadTokens` | `3000` | Tokens of those look-ahead records one WM pass is offered |
-| `wm.policy` | `"model"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, outcomes and salient records and discards the lowest-relevance oldest to the target, with no model call |
+| `wm.policy` | `"deterministic"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, outcomes and salient records and discards the lowest-relevance oldest to the target, with no model call |
 | `rehearsal.model` | the session's model | Rehearsal worker model (today's dropper) |
 | `rehearsal.targetTokens` | `20000` | Active-observation token budget rehearsal approaches |
 | `rehearsal.policy` | `"model"` | `"model"` asks the rehearsal model; `"lowest-relevance"` drops deterministically |
@@ -2521,24 +2531,24 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `stm.boundaries` | contract |
 | `stm.boundaryGapMinutes` | tuning |
 | `stm.verbatimUserChars` | tuning |
-| `wm` | contract |
-| `wm.model` | contract |
-| `wm.instruction` | contract |
-| `wm.thinkingLevel` | tuning |
-| `wm.triggerTokens` | tuning |
-| `wm.batchTokens` | tuning |
-| `wm.targetRatio` | tuning |
-| `wm.rejudgeTokens` | tuning |
-| `wm.lookAheadRecords` | tuning |
-| `wm.lookAheadTokens` | tuning |
-| `wm.protectRequestPasses` | tuning |
-| `wm.policy` | contract |
-| `rehearsal` | contract |
-| `rehearsal.model` | contract |
-| `rehearsal.instruction` | contract |
-| `rehearsal.thinkingLevel` | tuning |
-| `rehearsal.targetTokens` | tuning |
-| `rehearsal.policy` | contract |
+| `wm` | experimental |
+| `wm.model` | experimental |
+| `wm.instruction` | experimental |
+| `wm.thinkingLevel` | experimental |
+| `wm.triggerTokens` | experimental |
+| `wm.batchTokens` | experimental |
+| `wm.targetRatio` | experimental |
+| `wm.rejudgeTokens` | experimental |
+| `wm.lookAheadRecords` | experimental |
+| `wm.lookAheadTokens` | experimental |
+| `wm.protectRequestPasses` | experimental |
+| `wm.policy` | experimental |
+| `rehearsal` | experimental |
+| `rehearsal.model` | experimental |
+| `rehearsal.instruction` | experimental |
+| `rehearsal.thinkingLevel` | experimental |
+| `rehearsal.targetTokens` | experimental |
+| `rehearsal.policy` | experimental |
 | `context` | contract |
 | `context.compaction` | contract |
 | `context.compactAt` | contract |
@@ -2561,139 +2571,139 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `recallLimits.maxPageLimit` | tuning |
 | `recallLimits.pageBytes` | tuning |
 | `recallLimits.pageLimit` | tuning |
-| `scope` | contract |
-| `scope.text` | contract |
-| `scope.maxBytes` | tuning |
-| `sleep` | contract |
-| `ltm` | contract |
-| `ltm.preset` | contract |
-| `ltm.enabled` | contract |
-| `ltm.inject` | contract |
-| `ltm.inject.minSimilarity` | tuning |
-| `ltm.inject.minScore` | tuning |
-| `ltm.inject.fullTextScore` | tuning |
-| `ltm.inject.cardExcerpt` | tuning |
-| `ltm.inject.topK` | tuning |
-| `ltm.inject.budgetTokens` | tuning |
-| `ltm.inject.query` | contract |
-| `ltm.inject.kinds` | contract |
-| `ltm.semantic` | contract |
+| `scope` | experimental |
+| `scope.text` | experimental |
+| `scope.maxBytes` | experimental |
+| `sleep` | experimental |
+| `ltm` | experimental |
+| `ltm.preset` | experimental |
+| `ltm.enabled` | experimental |
+| `ltm.inject` | experimental |
+| `ltm.inject.minSimilarity` | experimental |
+| `ltm.inject.minScore` | experimental |
+| `ltm.inject.fullTextScore` | experimental |
+| `ltm.inject.cardExcerpt` | experimental |
+| `ltm.inject.topK` | experimental |
+| `ltm.inject.budgetTokens` | experimental |
+| `ltm.inject.query` | experimental |
+| `ltm.inject.kinds` | experimental |
+| `ltm.semantic` | experimental |
 | `ltm.directory` | experimental |
 | `ltm.directory.maxTopics` | experimental |
 | `ltm.directory.maxFiles` | experimental |
 | `ltm.directory.maxTokens` | experimental |
 | `ltm.directory.stopWords` | experimental |
-| `ltm.recall` | contract |
-| `ltm.recall.expansion` | tuning |
-| `ltm.recall.gather` | tuning |
-| `ltm.recall.window` | tuning |
-| `ltm.rules` | contract |
-| `ltm.rules.capture` | contract |
-| `ltm.rules.maxTokens` | tuning |
-| `ltm.rules.scopes` | contract |
-| `ltm.rules.kinds` | contract |
-| `ltm.cues` | contract |
-| `ltm.cues.budgetTokens` | tuning |
-| `ltm.cues.maxPerTurn` | tuning |
-| `ltm.team` | contract |
-| `ltm.team.dir` | contract |
-| `ltm.team.write` | contract |
-| `ltm.scopes` | contract |
-| `ltm.scopes.tenantId` | contract |
-| `ltm.scopes.priors` | tuning |
-| `ltm.scopes.priors.path` | tuning |
-| `ltm.scopes.priors.project` | tuning |
-| `ltm.scopes.priors.team` | tuning |
-| `ltm.scopes.priors.agent` | tuning |
-| `ltm.scopes.priors.user` | tuning |
-| `ltm.scopes.user` | contract |
-| `ltm.scopes.agent` | contract |
-| `ltm.scopes.project` | contract |
-| `ltm.scopes.project.root` | contract |
-| `ltm.scopes.project.id` | contract |
-| `ltm.store` | contract |
-| `ltm.store.markdown` | contract |
-| `ltm.store.markdown.dir` | contract |
-| `ltm.store.sqlite` | contract |
-| `ltm.store.sqlite.path` | contract |
-| `ltm.store.postgres` | contract |
-| `ltm.store.postgres.connection` | contract |
-| `ltm.store.postgres.schema` | contract |
-| `ltm.store.postgres.table` | contract |
-| `ltm.tools` | contract |
-| `ltm.tools.root` | contract |
-| `ltm.tools.maxFileBytes` | tuning |
-| `ltm.tools.maxViewEntries` | tuning |
-| `ltm.limits` | contract |
-| `ltm.limits.maxEntryTextChars` | tuning |
-| `ltm.limits.rebuildBatchSize` | tuning |
-| `ltm.limits.rebuildMs` | tuning |
-| `ltm.consolidate` | contract |
-| `ltm.consolidate.threshold` | tuning |
-| `ltm.exchanges` | contract |
-| `ltm.exchanges.enabled` | contract |
-| `ltm.exchanges.steps` | contract |
-| `ltm.exchanges.maxSteps` | tuning |
-| `ltm.lessons` | contract |
-| `ltm.lessons.nudge` | contract |
-| `ltm.lessons.minTurnsBetweenNudges` | tuning |
-| `ltm.lessons.archiveAfterSessions` | tuning |
-| `ltm.lifecycle` | contract |
-| `ltm.lifecycle.verifyAfterSessions` | tuning |
-| `ltm.lifecycle.decay` | contract |
-| `ltm.lifecycle.decay.episode` | tuning |
-| `ltm.lifecycle.decay.fact` | tuning |
-| `ltm.lifecycle.decay.preference` | tuning |
-| `ltm.lifecycle.decay.procedure` | tuning |
-| `ltm.lifecycle.decay.exchange` | tuning |
-| `ltm.lifecycle.storageWeights` | contract |
-| `ltm.lifecycle.storageWeights.explicit` | tuning |
-| `ltm.lifecycle.storageWeights.sessions` | tuning |
-| `ltm.lifecycle.storageWeights.helpful` | tuning |
-| `ltm.lifecycle.storageWeights.harmful` | tuning |
-| `ltm.lifecycle.storageWeights.outcome` | tuning |
-| `ltm.lifecycle.recall` | contract |
-| `ltm.lifecycle.recall.retrieval` | tuning |
-| `ltm.lifecycle.recall.storage` | tuning |
-| `ltm.lifecycle.archive` | contract |
-| `ltm.lifecycle.archive.retrievalBelow` | tuning |
-| `ltm.lifecycle.archive.storageBelow` | tuning |
-| `ltm.lifecycle.archive.graceSessions` | tuning |
-| `ltm.lifecycle.capacity` | contract |
-| `ltm.lifecycle.capacity.user` | contract |
-| `ltm.lifecycle.capacity.user.notes` | tuning |
-| `ltm.lifecycle.capacity.user.tokens` | tuning |
-| `ltm.lifecycle.capacity.agent` | contract |
-| `ltm.lifecycle.capacity.agent.notes` | tuning |
-| `ltm.lifecycle.capacity.agent.tokens` | tuning |
-| `ltm.lifecycle.capacity.project` | contract |
-| `ltm.lifecycle.capacity.project.notes` | tuning |
-| `ltm.lifecycle.capacity.project.tokens` | tuning |
-| `ltm.lifecycle.exchangeCapacity` | contract |
-| `ltm.lifecycle.exchangeCapacity.hotTokens` | tuning |
-| `ltm.lifecycle.merge` | contract |
-| `ltm.lifecycle.merge.duplicateDice` | tuning |
-| `ltm.promote` | contract |
-| `ltm.promote.model` | contract |
-| `ltm.promote.minScore` | tuning |
-| `ltm.promote.weights` | tuning |
-| `ltm.promote.weights.explicit` | tuning |
-| `ltm.promote.weights.correction` | tuning |
-| `ltm.promote.weights.outcome` | tuning |
-| `ltm.promote.weights.recurrence` | tuning |
-| `ltm.promote.weights.generality` | tuning |
-| `ltm.promote.weights.ephemerality` | tuning |
-| `ltm.promote.weights.derivability` | tuning |
-| `ltm.promote.weights.duplicate` | tuning |
-| `ltm.promote.maxCandidates` | tuning |
-| `ltm.promote.minTurnsBetween` | tuning |
-| `ltm.promote.derivableFrom` | contract |
-| `ltm.promote.maxOutputTokens` | tuning |
-| `ltm.promote.thinkingLevel` | contract |
-| `ltm.decisions` | contract |
-| `ltm.decisions.model` | contract |
-| `ltm.decisions.points` | contract |
-| `ltm.workerLimits` | tuning |
+| `ltm.recall` | experimental |
+| `ltm.recall.expansion` | experimental |
+| `ltm.recall.gather` | experimental |
+| `ltm.recall.window` | experimental |
+| `ltm.rules` | experimental |
+| `ltm.rules.capture` | experimental |
+| `ltm.rules.maxTokens` | experimental |
+| `ltm.rules.scopes` | experimental |
+| `ltm.rules.kinds` | experimental |
+| `ltm.cues` | experimental |
+| `ltm.cues.budgetTokens` | experimental |
+| `ltm.cues.maxPerTurn` | experimental |
+| `ltm.team` | experimental |
+| `ltm.team.dir` | experimental |
+| `ltm.team.write` | experimental |
+| `ltm.scopes` | experimental |
+| `ltm.scopes.tenantId` | experimental |
+| `ltm.scopes.priors` | experimental |
+| `ltm.scopes.priors.path` | experimental |
+| `ltm.scopes.priors.project` | experimental |
+| `ltm.scopes.priors.team` | experimental |
+| `ltm.scopes.priors.agent` | experimental |
+| `ltm.scopes.priors.user` | experimental |
+| `ltm.scopes.user` | experimental |
+| `ltm.scopes.agent` | experimental |
+| `ltm.scopes.project` | experimental |
+| `ltm.scopes.project.root` | experimental |
+| `ltm.scopes.project.id` | experimental |
+| `ltm.store` | experimental |
+| `ltm.store.markdown` | experimental |
+| `ltm.store.markdown.dir` | experimental |
+| `ltm.store.sqlite` | experimental |
+| `ltm.store.sqlite.path` | experimental |
+| `ltm.store.postgres` | experimental |
+| `ltm.store.postgres.connection` | experimental |
+| `ltm.store.postgres.schema` | experimental |
+| `ltm.store.postgres.table` | experimental |
+| `ltm.tools` | experimental |
+| `ltm.tools.root` | experimental |
+| `ltm.tools.maxFileBytes` | experimental |
+| `ltm.tools.maxViewEntries` | experimental |
+| `ltm.limits` | experimental |
+| `ltm.limits.maxEntryTextChars` | experimental |
+| `ltm.limits.rebuildBatchSize` | experimental |
+| `ltm.limits.rebuildMs` | experimental |
+| `ltm.consolidate` | experimental |
+| `ltm.consolidate.threshold` | experimental |
+| `ltm.exchanges` | experimental |
+| `ltm.exchanges.enabled` | experimental |
+| `ltm.exchanges.steps` | experimental |
+| `ltm.exchanges.maxSteps` | experimental |
+| `ltm.lessons` | experimental |
+| `ltm.lessons.nudge` | experimental |
+| `ltm.lessons.minTurnsBetweenNudges` | experimental |
+| `ltm.lessons.archiveAfterSessions` | experimental |
+| `ltm.lifecycle` | experimental |
+| `ltm.lifecycle.verifyAfterSessions` | experimental |
+| `ltm.lifecycle.decay` | experimental |
+| `ltm.lifecycle.decay.episode` | experimental |
+| `ltm.lifecycle.decay.fact` | experimental |
+| `ltm.lifecycle.decay.preference` | experimental |
+| `ltm.lifecycle.decay.procedure` | experimental |
+| `ltm.lifecycle.decay.exchange` | experimental |
+| `ltm.lifecycle.storageWeights` | experimental |
+| `ltm.lifecycle.storageWeights.explicit` | experimental |
+| `ltm.lifecycle.storageWeights.sessions` | experimental |
+| `ltm.lifecycle.storageWeights.helpful` | experimental |
+| `ltm.lifecycle.storageWeights.harmful` | experimental |
+| `ltm.lifecycle.storageWeights.outcome` | experimental |
+| `ltm.lifecycle.recall` | experimental |
+| `ltm.lifecycle.recall.retrieval` | experimental |
+| `ltm.lifecycle.recall.storage` | experimental |
+| `ltm.lifecycle.archive` | experimental |
+| `ltm.lifecycle.archive.retrievalBelow` | experimental |
+| `ltm.lifecycle.archive.storageBelow` | experimental |
+| `ltm.lifecycle.archive.graceSessions` | experimental |
+| `ltm.lifecycle.capacity` | experimental |
+| `ltm.lifecycle.capacity.user` | experimental |
+| `ltm.lifecycle.capacity.user.notes` | experimental |
+| `ltm.lifecycle.capacity.user.tokens` | experimental |
+| `ltm.lifecycle.capacity.agent` | experimental |
+| `ltm.lifecycle.capacity.agent.notes` | experimental |
+| `ltm.lifecycle.capacity.agent.tokens` | experimental |
+| `ltm.lifecycle.capacity.project` | experimental |
+| `ltm.lifecycle.capacity.project.notes` | experimental |
+| `ltm.lifecycle.capacity.project.tokens` | experimental |
+| `ltm.lifecycle.exchangeCapacity` | experimental |
+| `ltm.lifecycle.exchangeCapacity.hotTokens` | experimental |
+| `ltm.lifecycle.merge` | experimental |
+| `ltm.lifecycle.merge.duplicateDice` | experimental |
+| `ltm.promote` | experimental |
+| `ltm.promote.model` | experimental |
+| `ltm.promote.minScore` | experimental |
+| `ltm.promote.weights` | experimental |
+| `ltm.promote.weights.explicit` | experimental |
+| `ltm.promote.weights.correction` | experimental |
+| `ltm.promote.weights.outcome` | experimental |
+| `ltm.promote.weights.recurrence` | experimental |
+| `ltm.promote.weights.generality` | experimental |
+| `ltm.promote.weights.ephemerality` | experimental |
+| `ltm.promote.weights.derivability` | experimental |
+| `ltm.promote.weights.duplicate` | experimental |
+| `ltm.promote.maxCandidates` | experimental |
+| `ltm.promote.minTurnsBetween` | experimental |
+| `ltm.promote.derivableFrom` | experimental |
+| `ltm.promote.maxOutputTokens` | experimental |
+| `ltm.promote.thinkingLevel` | experimental |
+| `ltm.decisions` | experimental |
+| `ltm.decisions.model` | experimental |
+| `ltm.decisions.points` | experimental |
+| `ltm.workerLimits` | experimental |
 
 ### Stable exports
 

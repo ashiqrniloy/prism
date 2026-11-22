@@ -340,7 +340,7 @@ const memorySystemSchema: JsonSchema = {
         policy: {
           type: "string",
           enum: ["model", "deterministic"],
-          default: "model",
+          default: "deterministic",
           description:
             '"model" asks the WM model; "deterministic" keeps protected records and outcomes and discards the lowest-relevance oldest to the target, with no model call.',
         },
@@ -767,7 +767,7 @@ export function resolveMemorySystemConfig(
       lookAheadRecords: config.wm?.lookAheadRecords ?? DEFAULT_WM_LOOKAHEAD_RECORDS,
       lookAheadTokens: config.wm?.lookAheadTokens ?? DEFAULT_WM_LOOKAHEAD_TOKENS,
       protectRequestPasses: config.wm?.protectRequestPasses ?? DEFAULT_WM_PROTECT_REQUEST_PASSES,
-      policy: config.wm?.policy === "deterministic" ? "deterministic" : "model",
+      policy: config.wm?.policy === "model" ? "model" : "deterministic",
     },
     rehearsal: {
       ...workerSettings(config.rehearsal),

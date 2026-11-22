@@ -405,7 +405,7 @@ it("prefix_identical_between_compactions_across_wm_passes", async () => {
       memorySystem({
         enabled: true,
         stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
-        wm: { model: "worker/w", triggerTokens: WM_TRIGGER_TOKENS },
+        wm: { model: "worker/w", policy: "model", triggerTokens: WM_TRIGGER_TOKENS },
         scope: { text: "Track 20 turns." },
       }),
     ],

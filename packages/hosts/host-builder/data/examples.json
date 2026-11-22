@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "prismVersion": "0.13.1",
-  "contentHash": "310b70fffca0fe1a80d53a7c12a4c2130af8fb578d26376967e7796396cc1346",
+  "contentHash": "75fc16968d39788d3d4456f0868c2220580fa4537621501d37e2a473142ee766",
   "examples": [
     {"path":"examples/a2a-client.ts","title":"Bun-only demo (the examples tsconfig is Node-typed): the one Bun global this file uses.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-hosts/a2a","@arnilo/prism/provider-kit"],"requiresEnv":["DEMO_A2A_TOKEN"],"needsCredentials":true},
     {"path":"examples/a2a-server.ts","title":"A real host verifies a token here. Without `authorize`, every call is refused.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-hosts/a2a","@arnilo/prism/provider-kit"],"requiresEnv":[],"needsCredentials":false},
@@ -74,7 +74,7 @@
     {"path":"examples/mcp-trust.ts","title":"Approve the two URL servers, deny the stdio server.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/mcp","@arnilo/prism/testing"],"requiresEnv":["DOCS_MCP_TOKEN"],"needsCredentials":true},
     {"path":"examples/memory-and-wiki.ts","title":"One memory system. Session memory is inert until a session turns `memory:session` on; `triggerTokens: 1` makes the","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-knowledge/wiki","@arnilo/prism-memory-system"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/memory-lifecycle.ts","title":"Memory lifecycle demo: one note's whole life, from a candidate to verified, shadowed, archived and revived.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-memory-system","@arnilo/prism-memory-system/core","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
-    {"path":"examples/memory-system.ts","title":"The session tiers are gated per session: this one turns them on.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-memory-system"],"requiresEnv":[],"needsCredentials":false},
+    {"path":"examples/memory-system.ts","title":"Working memory is an experimental opt-in, off unless configured. The example uses the model policy to show the","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-memory-system"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/messaging-agent.ts","title":"Plan 079 Task 8: network-free host composition — sqlite journal, mock agent, drain/stop.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/governance","@arnilo/prism-extensions/store-sqlite","@arnilo/prism-hosts/channels","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/minimal-host-app.ts","title":"Minimal host-app embed: create an agent + session, stream events while a","gate":"executed","imports":["@arnilo/prism","@arnilo/prism/testing"],"requiresEnv":[],"needsCredentials":false},
     {"path":"examples/model-router-aggregate-budgets.ts","title":"Fixed-model aggregate budget composition across host step loops (plan 122 Task 4).","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-extensions/governance","@arnilo/prism-extensions/model-router","@arnilo/prism/provider-kit"],"requiresEnv":[],"needsCredentials":false},

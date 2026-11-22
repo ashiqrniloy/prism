@@ -48,7 +48,9 @@ const FACT = "The retry budget is capped at three attempts.";
 export type ProfileName = "ltm" | "session" | "stm" | "full";
 
 const STM = { model: "mock/observer", triggerTokens: 1 } as const;
-const WM = { model: "mock/reflector", triggerTokens: 1 } as const;
+// Working memory is an experimental opt-in, off unless configured. The example uses the model policy to show the
+// reflector; the default policy is deterministic (no model call).
+const WM = { model: "mock/reflector", policy: "model", triggerTokens: 1 } as const;
 
 /** The four profiles: documented recipes, not a config field. `root` is the long-term memory's directory. */
 function profileConfig(profile: ProfileName, root: string): MemorySystemConfig {

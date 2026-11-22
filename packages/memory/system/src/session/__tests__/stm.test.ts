@@ -230,7 +230,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
         memorySystem({
           enabled: true,
           stm: { model: "scripted/stm", triggerTokens: 1 },
-          wm: { model: "scripted/stm", triggerTokens: 1 },
+          wm: { model: "scripted/stm", policy: "model", triggerTokens: 1 },
           scope: { text: "Check status." },
           context: { compactAfterRun: { maxTokens: 999_999 } },
           worker: { maxTurns: 2 },

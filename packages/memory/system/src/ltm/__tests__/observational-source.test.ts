@@ -66,7 +66,7 @@ describe("memory fabric observational source", () => {
         providerPackage("worker-provider", [workerProvider()]),
         memorySystem({
           stm: { model: "worker/om-model", triggerTokens: 1, verbatimUserChars: 0 },
-          wm: { model: "worker/om-model", triggerTokens: 1 },
+          wm: { model: "worker/om-model", policy: "model", triggerTokens: 1 },
           scope: { text: "Keep retry budget small." },
           context: { compactAfterRun: { maxTokens: 999_999 } },
           worker: { maxTurns: 1 },

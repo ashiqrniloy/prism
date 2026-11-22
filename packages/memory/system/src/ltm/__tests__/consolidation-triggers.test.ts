@@ -119,7 +119,7 @@ async function waitFor(check: () => Promise<boolean>, attempts = 200): Promise<v
 /** The session-tier half of the one `memorySystem` entry (the tiers and LTM are one package since plan 216 Task 5). */
 const SESSION_TIERS = {
   stm: { model: "scripted/om", triggerTokens: 1 },
-  wm: { model: "scripted/om", triggerTokens: 1 },
+  wm: { model: "scripted/om", policy: "model", triggerTokens: 1 },
   scope: { text: "Consolidate session." },
   context: { compactAfterRun: { maxTokens: 999_999 } },
   worker: { maxTurns: 1 },

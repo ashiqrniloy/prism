@@ -183,7 +183,7 @@ describe("memory-system session tiers", () => {
       provider,
       {
         stm: { triggerTokens: 1, instruction: "STM-RULE", thinkingLevel: "low" },
-        wm: { triggerTokens: 1, instruction: "WM-RULE", thinkingLevel: "high" },
+        wm: { policy: "model", triggerTokens: 1, instruction: "WM-RULE", thinkingLevel: "high" },
         rehearsal: { targetTokens: 1, instruction: "REHEARSAL-RULE", thinkingLevel: "minimal" },
         scope: { text: "Deploy the service." },
       },

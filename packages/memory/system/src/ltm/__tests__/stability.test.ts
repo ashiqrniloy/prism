@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type JsonSchema, validateJsonSchema } from "@arnilo/prism";
-import { memorySystemConfigSchema } from "../../config.js";
+import { MEMORY_SYSTEM_EXPERIMENTAL_SECTIONS, memorySystemConfigSchema } from "../../config.js";
 import { EXPERIMENTAL_CONFIG_FIELDS, memoryFabricConfigSchema } from "../config.js";
 
 type Tier = "contract" | "tuning";
@@ -41,8 +41,10 @@ function readmeTiers(readme: string): Map<string, DocumentedTier> {
 
 /** The package README (one table for the session fields and `ltm.*`, plan 216 Task 5). */
 const readme = () => readFileSync(join(import.meta.dirname, "..", "..", "..", "README.md"), "utf8");
-/** `EXPERIMENTAL_CONFIG_FIELDS` are paths inside the `ltm` section. */
-const EXPERIMENTAL_PATHS = new Set([...EXPERIMENTAL_CONFIG_FIELDS].map((field) => `ltm.${field}`));
+/** `EXPERIMENTAL_CONFIG_FIELDS` are paths inside the `ltm` section; plan 240 Task 4 makes whole sections experimental. */
+const EXPERIMENTAL_FIELDS = new Set([...EXPERIMENTAL_CONFIG_FIELDS].map((field) => `ltm.${field}`));
+const isExperimentalPath = (path: string) =>
+  EXPERIMENTAL_FIELDS.has(path) || MEMORY_SYSTEM_EXPERIMENTAL_SECTIONS.has(path.split(".")[0] as string);
 
 /** Drop the documentation keyword at every level, to prove it does not reach validation. */
 function withoutStability(schema: JsonSchema): JsonSchema {
@@ -66,7 +68,7 @@ describe("config stability tiers", () => {
 
   it("ltm_config_stability_table_matches_schema", () => {
     const schemaTiers = new Map<string, DocumentedTier | undefined>(
-      fields(memorySystemConfigSchema).map(([path, node]) => [path, EXPERIMENTAL_PATHS.has(path) ? "experimental" : tierOf(node)]),
+      fields(memorySystemConfigSchema).map(([path, node]) => [path, isExperimentalPath(path) ? "experimental" : tierOf(node)]),
     );
     assert.ok(
       [...schemaTiers.keys()].some((path) => path.startsWith("ltm.")),
@@ -100,13 +102,16 @@ describe("config stability tiers", () => {
       "directory.maxTopics",
       "directory.stopWords",
     ]);
-    for (const field of EXPERIMENTAL_PATHS) {
+    for (const field of EXPERIMENTAL_FIELDS) {
       assert.equal(tiers.get(field), "tuning", `${field} is tuning in the schema`);
       assert.equal(documented.get(field), "experimental", `${field} is experimental in the README table`);
     }
-    // No other documented field is experimental: a hold without a config field adds none.
+    // Plan 240 Task 4: every path under an experimental section, and only those (plus the held fields), is documented
+    // experimental; the session tier stays contract or tuning.
     const experimental = [...documented].filter(([, tier]) => tier === "experimental").map(([path]) => path);
-    assert.deepEqual(experimental.sort(), [...EXPERIMENTAL_PATHS].sort());
+    const expected = [...tiers.keys()].filter(isExperimentalPath);
+    assert.deepEqual(experimental.sort(), expected.sort());
+    assert.ok(expected.some((path) => path.startsWith("wm")) && !expected.some((path) => path.startsWith("stm")));
     // Each held feature's own README section carries the marker.
     assert.equal((text.match(/^> \*\*Experimental\.\*\*/gm) ?? []).length, experimentalFeatures.length);
   });

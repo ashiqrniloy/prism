@@ -103,7 +103,7 @@ function harness(records: unknown[], client: ModelClient, config: Parameters<typ
     flush: createObservationalFlush({
       log,
       config: resolveMemorySystemConfig({
-        wm: { triggerTokens: 1 },
+        wm: { policy: "model", triggerTokens: 1 },
         rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
         ...config,
       }),
@@ -258,7 +258,7 @@ it("wm_judge_reports_named_rejections", async () => {
 
 it("wm_input_is_batched_to_wm_batch_tokens", async () => {
   const requests: ProviderRequest[] = [];
-  const h = harness([recorded(D, C, B, A)], scripted([], requests), { wm: { triggerTokens: 1, batchTokens: 20 } });
+  const h = harness([recorded(D, C, B, A)], scripted([], requests), { wm: { policy: "model", triggerTokens: 1, batchTokens: 20 } });
   await h.flush.flush(h.session);
   const prompt = promptText(requests[0]!);
   // The oldest two records by time (D at :00, A at :07) fit 20 tokens; B and C wait and stay rendered.
@@ -311,7 +311,7 @@ it("a_new_boundary_triggers_wm_below_the_token_trigger", async () => {
   };
   const boundary = (entryId: string) => ({ type: BOUNDARY_RECORDED, reason: "outcome", entryId, recordId: A.id, at: A.timestamp });
   const h = harness([recorded(A)], client, {
-    wm: { triggerTokens: 1_000 },
+    wm: { policy: "model", triggerTokens: 1_000 },
     rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
   });
   await h.flush.flush(h.session);
@@ -326,7 +326,7 @@ it("a_new_boundary_triggers_wm_below_the_token_trigger", async () => {
 it("rehearse_only_wm_runs_a_pass_below_the_trigger", async () => {
   const { createMemorySystemService } = await import("../../service.js");
   const h = harness([recorded(A)], judgeClient([A], { keep: [{ id: A.id, reason: "needed" }] }), {
-    wm: { triggerTokens: 1_000 },
+    wm: { policy: "model", triggerTokens: 1_000 },
     rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
   });
   const service = createMemorySystemService({ stm: true, wm: true, rehearsal: false, ltm: false, sleep: false }, () => ({
@@ -435,7 +435,7 @@ it("wm_waits_for_new_records_after_an_empty_or_failed_attempt", async () => {
     },
   };
   const h = harness([recorded({ ...A, tokenCount: 5 })], client, {
-    wm: { triggerTokens: 5 },
+    wm: { policy: "model", triggerTokens: 5 },
     rehearsal: { targetTokens: 1_000, policy: "lowest-relevance" },
   });
   await h.flush.flush(h.session);
@@ -464,7 +464,10 @@ it("scope_change_rejudges_discarded_records", async () => {
   const h = harness([recorded(A, D, plain)], client);
   const flush = createObservationalFlush({
     ...h.deps,
-    config: resolveMemorySystemConfig({ wm: { triggerTokens: 1 }, rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" } }),
+    config: resolveMemorySystemConfig({
+      wm: { policy: "model", triggerTokens: 1 },
+      rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
+    }),
   });
   await flush.flush(h.session);
   assert.deepEqual(activeObservations(h.ledger()), [], "all three discarded");

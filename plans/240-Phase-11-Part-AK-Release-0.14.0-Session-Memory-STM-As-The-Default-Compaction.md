@@ -230,7 +230,7 @@
     - **Plan 218.3's plan end:** Compromises filled, Further Actions prioritised, and 7 entries handed to `plans/backlog.md` (P1: LLM compaction recovery, carried by Task 5).
     - `docs.test.ts`: 69 pass.
 
-- [ ] Task 4: The memory bundle's shipped defaults: STM compacts, WM off
+- [x] Task 4: The memory bundle's shipped defaults: STM compacts, WM off
   - Acceptance Criteria:
     - Functional:
       - Per D2 and D3: `memorySystem({})` resolves `stm` on, `context.compaction` on, `enabled: false` (unchanged; the host turns it on), and `wm` **off**.
@@ -274,6 +274,25 @@
     - Docs pages to create/edit: the memory README (defaults, profiles, cost), `packages/memory/CHANGELOG.md`, root `CHANGELOG.md` `## [Unreleased]`.
     - `docs/index.md` update: yes, if the memory entry's scope sentence changes ("STM, WM, rehearsal" → "STM session memory; WM, Rehearsal and LTM opt-in").
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22):
+    - **Defaults:** `resolveMemorySystemComponents` now resolves an omitted `wm` to off (`components.ts`: `wm = isOn(config.wm)`). `rehearsal` still needs `wm` and `ltm`, so it is off too. `wm.policy` defaults to `"deterministic"` in both the schema and `resolveMemorySystemConfig` (`session/config.ts`). `enabled` stays `false` (D2).
+    - **Experimental sections:** `MEMORY_SYSTEM_EXPERIMENTAL_SECTIONS` (`wm`, `rehearsal`, `scope`, `ltm`, `sleep`) lives in `src/config.ts`. It is internal, not in the root barrel. `ltm/__tests__/stability.test.ts` now requires every path under those sections, and only those plus the held LTM fields, to read `experimental` in the README table, and the README rows were rewritten to match.
+    - **README:**
+      - the banner now says "stable session memory, experimental tiers";
+      - the component table shows `wm` off;
+      - the Configuration section shows `memorySystem({ enabled: true })` as the way to make STM the compaction;
+      - the profiles are re-cut: `stm` is the default recipe and `session` is experimental STM + WM;
+      - `wm.policy` defaults to `deterministic`;
+      - the Cost section has the measured costs: about 34 worker calls and 1.9M tokens per 8–14-task session at W = 32K, against 2.5M for LLM compaction, with 361/384 tasks against 281.
+    - **CHANGELOGs:** root and memory entries.
+    - **Tests:**
+      - New `session/__tests__/release-defaults.test.ts`: `memory_system_installs_off_and_enabled_compacts_with_stm_without_wm`, `wm_runs_only_when_configured`, `wm_policy_defaults_to_deterministic`. The experimental-paths case is in `stability.test.ts`.
+      - WM suites that script model verdicts now set `wm: { policy: "model", … }`: `wm`, `protections`, `wm-lookahead`, `wm-scope-steps`, `scope`, `stm`, `memory-system`, and the session and ltm `prefix-stability` suites. `components.test.ts` expects the new defaults, and its service and dependency cases configure `wm: {}`.
+      - `examples/memory-system.ts` sets the model policy on its WM profile and comments that the default is deterministic; the host-builder index is regenerated.
+    - **Results:** memory 881 pass, docs 69, prism-agent 74, the memory-bench and Session-Bench suites 176, and lint and format clean.
+    - **Compat:** no public type changed (the new constant is internal), so there is no baseline diff. Task 8 regenerates the baselines anyway.
+    - **Left to Task 7:** the `docs/index.md` memory sentence and the other experimental markers.
 
 - [ ] Task 5: LLM compaction is a credible opt-in replacement
   - Acceptance Criteria:

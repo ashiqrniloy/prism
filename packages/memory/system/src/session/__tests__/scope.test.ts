@@ -111,7 +111,10 @@ async function runFlush(scope: EpisodeScope | undefined, components: { wm: boole
   const session = { id: "s", entries: async () => entries } as unknown as SessionContext;
   const flush = createObservationalFlush({
     log: fakeLog(data),
-    config: resolveMemorySystemConfig({ stm: { triggerTokens: 1 }, wm: { triggerTokens: 1 }, rehearsal: { targetTokens: 1 } }, components),
+    config: resolveMemorySystemConfig(
+      { stm: { triggerTokens: 1 }, wm: { policy: "model", triggerTokens: 1 }, rehearsal: { targetTokens: 1 } },
+      components,
+    ),
     readState: () => ({ enabled: true }),
     scopeFor: () => scope,
     onStatus: () => {},

@@ -18,7 +18,7 @@ export type MemorySleepConfig = Readonly<Record<string, never>>;
 export interface MemorySystemConfig extends Omit<MemorySessionConfig, "stm" | "wm" | "rehearsal"> {
   /** Short-term memory: the observer, ledger, `recall` tool, context block and compaction slot. Omitted, it is on. */
   readonly stm?: MemorySystemComponentConfig<NonNullable<MemorySessionConfig["stm"]>>;
-  /** Working memory: the reflector. Needs `stm`. Omitted, it follows `stm`. */
+  /** Working memory (experimental): the reflector. Needs `stm`. Off unless an object is given (`wm: {}`). */
   readonly wm?: MemorySystemComponentConfig<NonNullable<MemorySessionConfig["wm"]>>;
   /** Rehearsal: today's dropper. Needs `wm` and `ltm`. Omitted, it is on only when both are. */
   readonly rehearsal?: MemorySystemComponentConfig<NonNullable<MemorySessionConfig["rehearsal"]>>;
@@ -43,6 +43,13 @@ function componentNode(node: JsonSchema, description: string): JsonSchema {
 
 const session = memorySessionConfigSchema.properties ?? {};
 
+/**
+ * Config sections outside the stability promise (plan 240 Task 4): every path under them is documented
+ * `experimental` in the README's config stability table and may change or be removed in any release. The session
+ * tier (`enabled`, `stm`, `context`, `worker`, `recall`, `recallLimits`) is under the promise.
+ */
+export const MEMORY_SYSTEM_EXPERIMENTAL_SECTIONS: ReadonlySet<string> = new Set(["wm", "rehearsal", "scope", "ltm", "sleep"]);
+
 export const memorySystemConfigSchema: JsonSchema = {
   ...memorySessionConfigSchema,
   properties: {
@@ -53,7 +60,7 @@ export const memorySystemConfigSchema: JsonSchema = {
     ),
     wm: componentNode(
       session.wm as JsonSchema,
-      "Working memory (today's reflector). Needs stm. Omitted, it follows stm; false turns it off.",
+      "Working memory (experimental; today's reflector). Needs stm. Off unless an object is given; {} turns it on.",
     ),
     rehearsal: componentNode(
       session.rehearsal as JsonSchema,

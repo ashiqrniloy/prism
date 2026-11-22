@@ -106,7 +106,7 @@ function harness(
     },
   } as unknown as SessionLog<JsonValue>;
   const config = resolveMemorySystemConfig({
-    wm: { triggerTokens: 1, ...wm },
+    wm: { policy: "model", triggerTokens: 1, ...wm },
     rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
   });
   const flush = createObservationalFlush({
@@ -314,7 +314,7 @@ it("wm_target_ratio_is_bounded", () => {
   assert.throws(() => resolveMemorySystemConfig({ wm: { targetRatio: 0 } }), /wm.targetRatio must be a number from 0.01 to 1/);
   assert.throws(() => resolveMemorySystemConfig({ wm: { targetRatio: 1.5 } }), /wm.targetRatio/);
   assert.equal(resolveMemorySystemConfig({}).wm.targetRatio, 0.2);
-  assert.equal(resolveMemorySystemConfig({}).wm.policy, "model");
+  assert.equal(resolveMemorySystemConfig({}).wm.policy, "deterministic"); // plan 240 Task 4: the screen verdict (plan 218.3 Task 12)
 });
 
 it("salience_reads_fields_and_passed_outcome_with_failing_in_text_is_not_a_failure", () => {

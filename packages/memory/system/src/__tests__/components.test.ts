@@ -55,7 +55,9 @@ describe("memory-system components", () => {
     const cases: readonly [MemorySystemConfig, string, string][] = [
       [{ stm: false, wm: {} }, "wm", "stm"],
       [{ wm: false, rehearsal: {}, ltm: {} }, "rehearsal", "wm"],
-      [{ rehearsal: {} }, "rehearsal", "ltm"],
+      [{ wm: {}, rehearsal: {} }, "rehearsal", "ltm"],
+      // Plan 240 Task 4: WM is off unless configured, so a bare rehearsal names wm first.
+      [{ rehearsal: {} }, "rehearsal", "wm"],
       [{ sleep: {} }, "sleep", "ltm"],
     ];
     for (const [config, component, needs] of cases) {
@@ -69,10 +71,13 @@ describe("memory-system components", () => {
         (thrown: unknown) => thrown instanceof MemorySystemError && thrown.code === "memory_system_component_missing",
       );
     }
-    // Omitted components resolve instead of failing: rehearsal waits for wm and ltm, wm follows stm.
-    assert.deepEqual(resolveMemorySystemComponents({}), { stm: true, wm: true, rehearsal: false, ltm: false, sleep: false });
+    // Omitted components resolve instead of failing: rehearsal waits for wm and ltm. Plan 240 Task 4: wm is off unless
+    // configured (an experimental opt-in, its code kept), so the default is STM only.
+    assert.deepEqual(resolveMemorySystemComponents({}), { stm: true, wm: false, rehearsal: false, ltm: false, sleep: false });
+    assert.deepEqual(resolveMemorySystemComponents({ wm: {} }), { stm: true, wm: true, rehearsal: false, ltm: false, sleep: false });
     assert.deepEqual(resolveMemorySystemComponents({ stm: false }), { stm: false, wm: false, rehearsal: false, ltm: false, sleep: false });
-    assert.deepEqual(resolveMemorySystemComponents({ ltm: {} }), { stm: true, wm: true, rehearsal: true, ltm: true, sleep: false });
+    assert.deepEqual(resolveMemorySystemComponents({ ltm: {} }), { stm: true, wm: false, rehearsal: false, ltm: true, sleep: false });
+    assert.deepEqual(resolveMemorySystemComponents({ wm: {}, ltm: {} }), { stm: true, wm: true, rehearsal: true, ltm: true, sleep: false });
     assert.deepEqual(resolveMemorySystemComponents({ ltm: {}, wm: false }), {
       stm: true,
       wm: false,
@@ -166,7 +171,7 @@ describe("memory-system components", () => {
 
   it("service_methods_not_yet_available_answer_named_error", async () => {
     const { probe, seen } = serviceProbe();
-    const agent = await createAgent({ model: MODEL, packages: [memorySystem({ ltm: {} }), probe] });
+    const agent = await createAgent({ model: MODEL, packages: [memorySystem({ wm: {}, ltm: {} }), probe] });
     try {
       await agent.session({ id: "s", create: true });
       const service = seen.system;

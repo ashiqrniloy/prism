@@ -115,7 +115,7 @@ describe("WM host scope and step progress (plan 218.3 Task 7)", () => {
         memorySystem({
           enabled: true,
           stm: { model: "worker/w", triggerTokens: 1 },
-          wm: { model: "worker/w", triggerTokens: 1 },
+          wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
         }),
       ],
       slots: { store },
@@ -334,7 +334,7 @@ describe("WM host scope and step progress (plan 218.3 Task 7)", () => {
 
     const flush = createObservationalFlush({
       log,
-      config: resolveMemorySystemConfig({ wm: { triggerTokens: 1 }, rehearsal: { targetTokens: 1_000_000 } }),
+      config: resolveMemorySystemConfig({ wm: { policy: "model", triggerTokens: 1 }, rehearsal: { targetTokens: 1_000_000 } }),
       readState: () => ({ enabled: true }),
       scopeFor: () => prepared.scope,
       clientFor: () => client,

@@ -39,13 +39,14 @@ const isOn = (value: unknown): boolean => typeof value === "object" && value !==
 
 /**
  * Resolves the enabled components and fails closed on a missing dependency. Omitted (`undefined` or `null`):
- * `stm` is on; `wm` follows `stm`; `rehearsal` is on only when `wm` and `ltm` are; `ltm` and `sleep` are off.
+ * `stm` is on; `wm`, `ltm` and `sleep` are off (an object turns one on; plan 240 Task 4 turned `wm` off by default, its code
+ * kept, until plan 218.5 decides it); `rehearsal` is on only when `wm` and `ltm` are.
  */
 export function resolveMemorySystemComponents(config: MemorySystemConfig = {}): MemorySystemComponents {
   const omitted = (value: unknown) => value === undefined || value === null;
   const stm = config.stm !== false;
   const ltm = isOn(config.ltm);
-  const wm = omitted(config.wm) ? stm : config.wm !== false;
+  const wm = isOn(config.wm);
   if (wm && !stm) missing("wm", "stm");
   const rehearsal = omitted(config.rehearsal) ? wm && ltm : config.rehearsal !== false;
   if (rehearsal && !wm) missing("rehearsal", "wm");

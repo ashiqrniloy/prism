@@ -102,7 +102,7 @@ function harness(
     config: resolveMemorySystemConfig({
       rehearsal: { targetTokens: 1_000_000 },
       ...options.config,
-      wm: { triggerTokens: 1, rejudgeTokens: 0, ...options.config?.wm },
+      wm: { policy: "model", triggerTokens: 1, rejudgeTokens: 0, ...options.config?.wm },
     }),
     readState: () => ({ enabled: true }),
     scopeFor: () => ("scope" in options ? options.scope : SCOPE),
@@ -254,7 +254,7 @@ describe("WM look-ahead (plan 218.3 Task 8)", () => {
     // Through a pass: the request carries at most the bound, recorded on the pass.
     const log: JsonValue[] = [...discarded(...many), { type: OBSERVATIONS_RECORDED, observations: [NEW] } as unknown as JsonValue];
     const wm = wmClient(() => ({ keep: [{ r: 1, reason: "current step" }] }));
-    const h = harness(log, wm.client, { config: { wm: { triggerTokens: 1, lookAheadRecords: 3 } } });
+    const h = harness(log, wm.client, { config: { wm: { policy: "model", triggerTokens: 1, lookAheadRecords: 3 } } });
     await h.flush.flush(h.session);
     expect([...section(wm.prompts[0]!)!.matchAll(/^- \[a[0-9]+\]/gm)]).toHaveLength(3);
     const record = log.find((entry) => (entry as { type?: string }).type === WM_RECORDED) as { lookAhead?: unknown };
@@ -349,7 +349,7 @@ describe("WM look-ahead (plan 218.3 Task 8)", () => {
         { type: OBSERVATIONS_RECORDED, observations: [NEW] } as unknown as JsonValue,
       ];
       const wm = wmClient(() => ({ keep: [{ r: 1, reason: "current step" }] }));
-      const h = harness(log, wm.client, { config: { wm: { triggerTokens: 1, lookAheadRecords: 0 } } });
+      const h = harness(log, wm.client, { config: { wm: { policy: "model", triggerTokens: 1, lookAheadRecords: 0 } } });
       await h.flush.flush(h.session);
       return wm.prompts;
     })();
