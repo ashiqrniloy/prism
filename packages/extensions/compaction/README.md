@@ -5,7 +5,11 @@ that claims the `compaction` slot and summarizes the history a cut drops with on
 compaction, then appends a standard `compaction` entry. Raw history stays in the session store.
 
 **Installing the package is the opt-in.** Without it the kernel's deterministic compactor makes no
-model call at all. With it, the cost is one summary call per compaction (two when a single oversized
+model call at all. Prism ships two compaction systems, and an agent runs one. **Session memory**
+(`@arnilo/prism-memory-system` with `enabled: true`) is the recommended one: it records the session as it happens,
+removes only what it has recorded, and `recall` returns the originals. **This package** is the alternative: it replaces
+session memory with one summary of what the cut drops. Listing both fails `createAgent`. To keep this package beside the
+memory system's long-term memory, set the memory system's `context.compaction: false`. With it, the cost is one summary call per compaction (two when a single oversized
 turn has to be split), never one per turn, and nothing is called or resolved during `setup`.
 
 ## Install
@@ -36,7 +40,8 @@ const agent = await createAgent({ model: "mock/main", packages: [memoryCompactio
 | --- | --- | --- | --- |
 | `model` | `"provider/model"` \| model object | the session's model | Summary model. A model object is a `ModelRef`, not a credential: the provider's key comes from the credentials slot like any run. |
 | `profile` | `"default"` \| `"coding"` | `"default"` | `"coding"` adds read/modified file reporting to the summary and keeps the latest plan turn (`todo_write` result) out of the cut, so a long run's plan survives compaction. |
-| `keepRecentTokens` | `integer` ≥ 0 | `20000` | Tokens of recent history the cut keeps verbatim. |
+| `keepRecentTokens` | `integer` ≥ 0 | 20% of the model's input cap, at most `20000` (`20000` when no cap resolves) | Tokens of recent history the cut keeps verbatim. |
+| `maxKeptShare` | `number` 0.01–1 | `0.4` | Largest share of the model's input cap the kept tail may take. Past it the oldest kept entries are summarized instead, so a compacted request fits after a turn with one very large tool output. `1` lets the tail take the whole cap. |
 | `maxSummaryTokens` | `integer` ≥ 1 | `16384` | Summary cap in tokens, and the per-call provider output budget. |
 | `trigger` | `CompactionTrigger` | none: the kernel's trigger decides (80% of the input cap unless `AgentConfig.compaction` sets one) | The package's own `compaction.when` gate. |
 | `summaryPrompt` | `string` | the package's summarization prompt | Replaces the summarization system prompt. The split-turn prompt stays the package's own. |

@@ -1,7 +1,7 @@
 import { assertCompactionTrigger, type CompactionTrigger, type JsonSchema, type ModelRef } from "@arnilo/prism";
 
+import { MAX_KEPT_SHARE } from "./prepare.js";
 import { DEFAULT_MAX_CHUNKS, DEFAULT_MAX_SUMMARY_ERROR_BYTES, DEFAULT_MAX_SUMMARY_TOKENS, DEFAULT_RESERVE_TOKENS } from "./limits.js";
-import { DEFAULT_KEEP_RECENT_TOKENS } from "./prepare.js";
 import { DEFAULT_MAX_TEXT_BLOCK_CHARS, DEFAULT_MAX_TOOL_RESULT_CHARS } from "./serialize.js";
 
 /** `"coding"` tracks and reports read/modified files and focuses the summary on coding handoff. */
@@ -21,7 +21,7 @@ export interface MemoryCompactionConfig {
   readonly model?: ModelRef;
   /** Summary focus. Default `"default"`. */
   readonly profile?: MemoryCompactionProfile;
-  /** Tokens of recent history the cut keeps verbatim. Default {@link DEFAULT_KEEP_RECENT_TOKENS}. */
+  /** Tokens of recent history the cut keeps verbatim. Default: 20% of the model input cap, at most 20,000; the tail never exceeds 40% of it. */
   readonly keepRecentTokens?: number;
   /** Summary cap in tokens, and the per-call provider output budget. Default {@link DEFAULT_MAX_SUMMARY_TOKENS}. */
   readonly maxSummaryTokens?: number;
@@ -40,6 +40,11 @@ export interface MemoryCompactionConfig {
    * summary over bounded chunks. Default {@link DEFAULT_MAX_CHUNKS}.
    */
   readonly maxChunks?: number;
+  /**
+   * The largest share of the model's input cap the kept tail may take, so a compacted request fits (plan 240 Task 5).
+   * Past it the oldest kept entries are summarized instead. `1` lets the tail take the whole cap. Default 0.4.
+   */
+  readonly maxKeptShare?: number;
   /**
    * Auto-compaction gate, the JSON-safe kinds of `CompactionTrigger` (`custom` is a function, so it
    * is not a config value: a host that needs one registers its own handler). Omitted: no handler is
@@ -72,8 +77,8 @@ export const memoryCompactionConfigSchema: JsonSchema = {
     keepRecentTokens: {
       type: "integer",
       minimum: 0,
-      default: DEFAULT_KEEP_RECENT_TOKENS,
-      description: "Tokens of recent history the compaction cut keeps verbatim.",
+      description:
+        "Tokens of recent history the compaction cut keeps verbatim. Default: 20% of the model's input cap, at most 20,000. The kept tail never exceeds 40% of the input cap.",
     },
     maxSummaryTokens: {
       type: "integer",
@@ -110,6 +115,13 @@ export const memoryCompactionConfigSchema: JsonSchema = {
       minimum: 1,
       default: DEFAULT_MAX_CHUNKS,
       description: "Summary calls per compaction when the history does not fit the summary model's input cap.",
+    },
+    maxKeptShare: {
+      type: "number",
+      minimum: 0.01,
+      maximum: 1,
+      default: MAX_KEPT_SHARE,
+      description: "Largest share of the model's input cap the kept tail may take; past it the oldest kept entries are summarized. 1 lets it take the whole cap.",
     },
     trigger: {
       description: 'Auto-compaction gate, e.g. { "type": "input_ratio", "ratio": 0.8 }. Omitted: the kernel threshold applies.',
@@ -149,10 +161,12 @@ export const memoryCompactionConfigSchema: JsonSchema = {
 export interface ResolvedMemoryCompactionConfig {
   readonly model?: ModelRef;
   readonly profile: MemoryCompactionProfile;
-  readonly keepRecentTokens: number;
+  /** Absent: the cut keeps 20% of the model's input cap, at most 20,000 tokens (plan 240 Task 5). */
+  readonly keepRecentTokens?: number;
   readonly maxSummaryTokens: number;
   readonly summaryPrompt?: string;
   readonly maxChunks: number;
+  readonly maxKeptShare: number;
   readonly reserveTokens?: number;
   readonly maxErrorBytes?: number;
   readonly maxToolResultChars?: number;
@@ -164,10 +178,11 @@ export function resolveMemoryCompactionConfig(config: MemoryCompactionConfig = {
   return {
     ...(config.model === undefined ? {} : { model: config.model }),
     profile: config.profile ?? "default",
-    keepRecentTokens: config.keepRecentTokens ?? DEFAULT_KEEP_RECENT_TOKENS,
+    ...(config.keepRecentTokens === undefined ? {} : { keepRecentTokens: config.keepRecentTokens }),
     maxSummaryTokens: config.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
     ...(config.summaryPrompt === undefined ? {} : { summaryPrompt: config.summaryPrompt }),
     maxChunks: config.maxChunks ?? DEFAULT_MAX_CHUNKS,
+    maxKeptShare: config.maxKeptShare ?? MAX_KEPT_SHARE,
     ...(config.reserveTokens === undefined ? {} : { reserveTokens: config.reserveTokens }),
     ...(config.maxErrorBytes === undefined ? {} : { maxErrorBytes: config.maxErrorBytes }),
     ...(config.maxToolResultChars === undefined ? {} : { maxToolResultChars: config.maxToolResultChars }),

@@ -135,6 +135,13 @@
       "config": "packageConfig[\"@arnilo/prism-extensions/compaction\"].keepRecentTokens"
     },
     {
+      "name": "MAX_KEPT_SHARE",
+      "file": "packages/extensions/compaction/src/prepare.ts",
+      "class": "policy",
+      "default": 0.4,
+      "config": "packageConfig[\"@arnilo/prism-extensions/compaction\"].maxKeptShare"
+    },
+    {
       "name": "DEFAULT_MAX_TEXT_BLOCK_CHARS",
       "file": "packages/extensions/compaction/src/serialize.ts",
       "class": "policy",

@@ -45,6 +45,7 @@ const definition = definePackage<MemoryCompactionConfig>({
       keepRecentTokens: config.keepRecentTokens,
       maxSummaryTokens: config.maxSummaryTokens,
       maxChunks: config.maxChunks,
+      maxKeptShare: config.maxKeptShare,
       ...(config.reserveTokens === undefined ? {} : { reserveTokens: config.reserveTokens }),
       ...(config.maxErrorBytes === undefined ? {} : { maxErrorBytes: config.maxErrorBytes }),
       ...(config.maxToolResultChars === undefined ? {} : { maxToolResultChars: config.maxToolResultChars }),

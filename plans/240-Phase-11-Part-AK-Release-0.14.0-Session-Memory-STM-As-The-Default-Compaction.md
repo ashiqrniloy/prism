@@ -294,7 +294,7 @@
     - **Compat:** no public type changed (the new constant is internal), so there is no baseline diff. Task 8 regenerates the baselines anyway.
     - **Left to Task 7:** the `docs/index.md` memory sentence and the other experimental markers.
 
-- [ ] Task 5: LLM compaction is a credible opt-in replacement
+- [x] Task 5: LLM compaction is a credible opt-in replacement
   - Acceptance Criteria:
     - Functional:
       - **Over-window recovery** (plan 218.3 Further Action, high): after one turn whose input exceeds the window, LLM compaction compacts on the next run instead of returning `context_overflow` on every later run. A test reproduces the old failure.
@@ -323,6 +323,34 @@
     - Docs pages to create/edit: `docs/slots.md`, `docs/agent.md`, `packages/extensions/compaction/README.md`.
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22):
+    - **Root cause:**
+      - `findLlmCompactionCutPoint` kept *at least* `keepRecentTokens` (an absolute 20,000) of the newest entries, with no upper bound.
+      - After one turn whose newest entry, such as a large tool output, made the request exceed the window, every compaction kept that same entry.
+      - So the kernel's one overflow retry was rejected again, and every later run of the session failed `context_overflow`.
+    - **Fix** (`packages/extensions/compaction/src/prepare.ts`):
+      - The cut never lets the kept tail exceed `maxKeptShare` of the context's `inputCapTokens`; this is a new config field, default 0.4. Past it, the oldest kept entries are summarized.
+      - A leading tool result reaches back to its call only while the tail still fits; otherwise the orphaned results are summarized with it.
+      - With no `keepRecentTokens`, the default is 20% of the input cap, at most 20,000. This is session memory's rule, and the related 218.3 Further Action (P2). The schema no longer declares a fixed `default`, so the window-relative default applies.
+      - With no resolvable cap, behaviour is unchanged.
+      - `maxKeptShare` is a host value (`1` lets the tail take the whole cap), so the README's "no hidden ceiling above a configured value" stays true. The limits inventory classifies it `policy`.
+    - **Tests:** new `window-fit.test.ts`:
+      - `kept_tail_never_exceeds_its_share_of_the_input_cap`
+      - `host_max_kept_share_overrides_the_fit`
+      - `default_kept_tail_is_a_share_of_the_input_cap`
+      - `a_leading_tool_result_reaches_back_to_its_call_only_while_it_fits`
+      - `llm_compaction_recovers_after_an_over_window_turn`: an agent on an 8K-window mock provider that overflows like a real one, plus a tool returning about 6,500 tokens.
+
+      On the old `prepare.ts`/`config.ts`, all four fit tests fail and the agent run fails with `context_overflow … the retry was rejected after compaction`, on that run and the next. That is the Session-Bench failure. With the fix, both runs complete.
+    - `one_compaction_system_error_names_the_switch` (in `one-system.test.ts`): both refusals name `context.compaction: false`.
+    - **Docs:**
+      - the compaction README presents the two compaction systems (session memory recommended, this package the replacement), with the `keepRecentTokens` and `maxKeptShare` rows;
+      - `docs/slots.md` lists the two systems and the one-per-agent rule;
+      - the `docs/agent.md` compaction row says how to replace the deterministic compactor;
+      - the extensions and root CHANGELOGs have entries.
+    - **Results:** compaction 61 pass; extensions 1,210 pass. The 1 failure is `field-policy` microbenchmark, which timed out at bun's 5 s on a loaded machine (load average 10); its measured overheads are all within bounds (≤ 91.1% < 110%). It is unrelated and rechecked in Task 11. `docs.test.ts` 69 pass; lint and format clean.
+    - **Effect on Session-Bench:** the `memory-off-llm` arm sets `keepRecentTokens` explicitly, so only the new tail fit can change it. Plan 218.5 runs on the 0.14.0 product anyway.
 
 - [ ] Task 6: The reference host and the host-builder kit default to session memory
   - Acceptance Criteria:

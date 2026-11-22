@@ -217,8 +217,14 @@ context can sit far below 80% of its declared window: the reference host measure
 trigger. Measure, then set a trigger. Packages that vote below their own gate
 (`@arnilo/prism-extensions/compaction` with a `trigger`, context-engineering attention below its
 `compactRatio`, the memory-system session tiers below their two triggers) are not overridden by the default.
-Session memory answers every check of a session that has it on, so the kernel trigger never decides there; it is a
-compaction system of its own, and listing LLM compaction or context-engineering's `fold` or `attention` beside it fails
+Prism ships two compaction systems, and an agent runs one:
+- session memory (`@arnilo/prism-memory-system` with `enabled: true`) records the session and removes only what it has
+  recorded;
+- LLM compaction (`@arnilo/prism-extensions/compaction`) summarizes what the cut drops, with one model call per
+  compaction.
+
+Without either, the kernel's deterministic compactor runs. Session memory answers every check of a session that has it
+on, so the kernel trigger never decides there; it is a compaction system of its own, and listing LLM compaction or context-engineering's `fold` or `attention` beside it fails
 `createAgent` unless the host sets the memory system's `context.compaction: false`
 (`packages/memory/system/README.md`, Compaction).
 
