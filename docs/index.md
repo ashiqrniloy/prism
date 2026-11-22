@@ -60,10 +60,10 @@ Each native package documents itself in its README; the kernel pages above cover
 ### Memory and context
 
 - [`@arnilo/prism-extensions/compaction`](../packages/extensions/compaction/README.md): LLM summarization compaction for Prism.
-- [Memory bundle](../packages/memory/README.md) and [knowledge bundle](../packages/knowledge/README.md): experimental entrypoints and installation.
-- [`@arnilo/prism-memory-system/core`](../packages/memory/core/README.md) (experimental): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
-- [`@arnilo/prism-memory-system`](../packages/memory/system/README.md) (experimental): the memory system (STM → WM → rehearsal → LTM, plus sleep): session tiers that observe the session, keep a source-backed ledger, and compact from it, and long-term memory (`ltm`), the store of record behind the `memory.*` tools.
-- [`@arnilo/prism-knowledge`](../packages/knowledge/README.md) (experimental): Wiki and RAG subpaths, with an exact memory-system dependency.
+- [Memory bundle](../packages/memory/README.md) and [knowledge bundle](../packages/knowledge/README.md) (experimental): entrypoints and installation.
+- [`@arnilo/prism-memory-system/core`](../packages/memory/core/README.md): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
+- [`@arnilo/prism-memory-system`](../packages/memory/system/README.md): session memory, the recommended compaction system (STM observes the session, keeps a source-backed ledger, and compacts from it), plus experimental working memory, rehearsal, sleep and long-term memory (`ltm`), the store of record behind the `memory.*` tools.
+- [`@arnilo/prism-knowledge`](../packages/knowledge/README.md) (experimental): Wiki and RAG subpaths, with a memory-system range dependency.
 - [`@arnilo/prism-knowledge/rag`](../packages/knowledge/rag/README.md) (experimental): Retrieval-augmented generation for Prism agents.
 - [`@arnilo/prism-knowledge/wiki`](../packages/knowledge/wiki/README.md) (experimental): The wiki, knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence, reading memory read-only.
 - [`@arnilo/prism-extensions/context-engineering`](../packages/extensions/context-engineering/README.md): Context engineering for Prism agents.
@@ -167,8 +167,8 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | `@arnilo/prism-ai` | 0.13.0 | capability |
 | `@arnilo/prism-extensions` | 0.13.2 | capability |
 | `@arnilo/prism-hosts` | 0.13.1 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
-| `@arnilo/prism-knowledge` | 0.13.0-experimental.1 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
-| `@arnilo/prism-memory-system` | 0.13.0-experimental.1 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
+| `@arnilo/prism-knowledge` | 0.14.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range |
+| `@arnilo/prism-memory-system` | 0.14.0 | capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools |
 | `@arnilo/prism-tools` | 0.13.2 | capability |
 <!-- generated:package-truth:inventory end -->
 

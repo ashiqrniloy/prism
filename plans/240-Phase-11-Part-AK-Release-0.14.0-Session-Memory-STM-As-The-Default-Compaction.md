@@ -406,7 +406,7 @@
       - package truth is regenerated.
     - **Full gate:** `bun run test` 9/9 stages, lint and format clean.
 
-- [ ] Task 7: The memory bundle leaves the experimental line (per D1)
+- [x] Task 7: The memory bundle leaves the experimental line (per D1)
   - Acceptance Criteria:
     - Functional:
       - `scripts/independent-packages.json` moves `@arnilo/prism-memory-system` from `experimental` to `packages`.
@@ -438,6 +438,27 @@
     - Docs pages to create/edit: listed above.
     - `docs/index.md` update: yes (the experimental section).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+  - Notes (executed 2026-11-22):
+    - **Version line:** `scripts/independent-packages.json` moves `@arnilo/prism-memory-system` to `packages`, and `experimental` is now `["@arnilo/prism-knowledge"]`.
+      - `release.mjs` refuses a stable-listed package with a prerelease version (`stable_version_prerelease`), so the versions move with the list in this task (D5): memory `0.13.0-experimental.1` → **0.14.0**, knowledge → **`0.14.0-experimental.0`**.
+      - Knowledge's dependency on memory becomes `^0.14.0`, the app's pin on knowledge `0.14.0-experimental.0`, and `bun.lock` is refreshed.
+      - The kernel, hosts, ai, extensions and tools still bump in Task 12.
+    - **Markers:**
+      - the memory bundle and `/core` READMEs carry the stable notice; the knowledge README keeps the experimental notice template, now "**Experimental.**";
+      - `PRODUCT.md` (catalog row, bundle sentence, the Memory paragraph), `README.md`, the `docs/index.md` entries, `docs/compatibility.md` ("config a stable package's README marks `experimental`" is not covered), the `docs/release.md` "Experimental packages" section, `docs/peer-dependencies.md` and the wiki install line;
+      - the package-truth descriptions, regenerated (the version tables in `README.md`, `docs/index.md` and `docs/release.md`);
+      - plan 223 Task 4 is amended: its remaining scope is the experimental config paths and the knowledge bundle.
+    - **Tests:**
+      - `experimental-bundles.test.mjs`: `experimental_bundles_are_exactly_knowledge`, `memory_system_is_on_the_stable_line`, `knowledge_depends_on_a_memory_range`. The packed test reads versions from the manifests; it was pinned to `0.13.0-experimental.0` while the tree was `.1`.
+      - `release-gate.test.mjs`: the independent lists.
+      - `release.test.ts`: the real-graph experimental set.
+      - `version-literal-gate.test.mjs`: knowledge is the experimental control, and a prerelease on the graduated memory bundle is reported.
+      - The wiki `package.test.ts` expects the range dependency. `post-publish-smoke.test.mjs` expects the memory bundle at its own version.
+      - The `docs.test.ts` notice template check.
+    - **Regenerated:** the host-builder index and the evals' criteria lock. `budgets.json` kernel packed 1,452,777 → 1,452,869 and unpacked 4,801,103 → 4,801,317, each with a reason.
+    - **Gate:** lint and format are clean. The last full `bun run test` failed only on the kernel bytes (rebaselined above), the stale criteria lock (re-registered), and two timing tests under a load average of about 30: `lifecycle_suite_cli…` (SIGTERM, exit 143) and `long_session_turn_overhead_stays_flat` (sqlite ratio 1.9 against 1.5). Task 11 re-runs both on a quiet machine. The budget-gate and evals suites pass (38).
+    - **Left to Task 9:** the roadmap's version rows (`roadmap.md:1607-1609,2462`).
 
 - [ ] Task 8: Public surface against 0.13.1, baselines, budgets and generated truth
   - Acceptance Criteria:

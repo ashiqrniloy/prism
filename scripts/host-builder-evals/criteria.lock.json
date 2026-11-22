@@ -5,8 +5,8 @@
     "hidden": "sha256:f41d3bd44cdaa34b6f63bf885cce5544a2e9e20b88f60df460491215d396f171",
     "solutions": "sha256:b6aed396ab9ec832231bacc54d4525edd02383d8e378866234deface5fd8b7eb",
     "skill": "sha256:9d480cd867272efb3b841ccb53e320b1326321d85f51ae2e683d7607b7f65bd5",
-    "indexes": "sha256:81dbfd430fd66972ace616a0a9f84aeae22bf12cd91ca5f5c1cddff3e973e267"
+    "indexes": "sha256:9363cfa0a1bbc49c2a1d800176fde3f07b04f095742e727cd654b7db3e5c4068"
   },
-  "registeredAt": "2026-11-22T13:23:15.892Z",
-  "gitHead": "218d19de6ccf03bcfe57dd83e2f91e6a8e2ba25f"
+  "registeredAt": "2026-11-22T13:48:07.098Z",
+  "gitHead": "3be2793cad5781ada85c61efdcc57debbc4b30c2"
 }

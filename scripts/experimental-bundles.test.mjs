@@ -9,27 +9,32 @@ import { createPackedConsumer } from "./fixtures/packed-consumer.mjs";
 const memory = "@arnilo/prism-memory-system";
 const knowledge = "@arnilo/prism-knowledge";
 
-test("experimental_bundles_are_exactly_memory_system_and_knowledge", () => {
+test("experimental_bundles_are_exactly_knowledge", () => {
+  // Plan 240 Task 7 (owner D1): the memory-system bundle left the experimental line at 0.14.0.
   const release = loadRelease();
   assert.deepEqual(
-    release.packages
-      .filter((pkg) => pkg.experimental)
-      .map((pkg) => pkg.manifest.name)
-      .sort(),
-    [knowledge, memory],
+    release.packages.filter((pkg) => pkg.experimental).map((pkg) => pkg.manifest.name),
+    [knowledge],
   );
-  for (const name of [memory, knowledge]) {
-    const pkg = release.byName.get(name);
-    assert.equal(pkg.manifest.version, "0.13.0-experimental.0");
-    const args = publishArgs(pkg, pkg.manifest.version);
-    assert.equal(args[args.indexOf("--tag") + 1], "experimental");
-  }
+  const pkg = release.byName.get(knowledge);
+  assert.match(pkg.manifest.version, /^\d+\.\d+\.\d+-experimental\.\d+$/);
+  const args = publishArgs(pkg, pkg.manifest.version);
+  assert.equal(args[args.indexOf("--tag") + 1], "experimental");
 });
 
-test("knowledge_pins_memory_system_exactly", () => {
+test("memory_system_is_on_the_stable_line", () => {
+  const release = loadRelease();
+  const pkg = release.byName.get(memory);
+  assert.equal(pkg.experimental, false);
+  assert.match(pkg.manifest.version, /^\d+\.\d+\.\d+$/);
+  const args = publishArgs(pkg, pkg.manifest.version);
+  assert.equal(args[args.indexOf("--tag") + 1], "latest");
+});
+
+test("knowledge_depends_on_a_memory_range", () => {
   const release = loadRelease();
   const manifest = release.byName.get(knowledge)?.manifest;
-  assert.equal(manifest?.dependencies[memory], release.byName.get(memory).manifest.version);
+  assert.equal(manifest?.dependencies[memory], `^${release.byName.get(memory).manifest.version}`);
   assert.equal(manifest?.peerDependenciesMeta["@arnilo/prism-tools"].optional, true);
   assert.equal(release.byName.get(memory).manifest.dependencies?.[knowledge], undefined);
 });
@@ -54,9 +59,10 @@ test("packed_experimental_bundles_resolve_and_wiki_loads_no_web_ingestion", () =
     );
     const probe = spawnSync("bun", ["probe.ts"], { cwd: fixture.consumer, encoding: "utf8", timeout: 30_000 });
     assert.equal(probe.status, 0, probe.stderr);
+    const release = loadRelease();
     for (const name of [memory, knowledge]) {
       const manifest = JSON.parse(readFileSync(join(fixture.consumer, "node_modules", name, "package.json"), "utf8"));
-      assert.equal(manifest.version, "0.13.0-experimental.0");
+      assert.equal(manifest.version, release.byName.get(name).manifest.version);
     }
   } finally {
     fixture.cleanup();

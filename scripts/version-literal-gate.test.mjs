@@ -386,9 +386,10 @@ test("positive control: the experimental line is accepted for exactly the experi
   const files = claimFiles(ROOT);
   const current = currentVersion(ROOT);
   assert.ok(EXPERIMENTAL_LINES.size > 0, "the experimental list is not empty");
-  const memory = "packages/memory/package.json";
+  // Plan 240 Task 7: the memory bundle graduated; knowledge is the experimental control.
+  const experimental = "packages/knowledge/package.json";
   const tools = "packages/tools/package.json";
-  const manifest = JSON.parse(files.get(memory));
+  const manifest = JSON.parse(files.get(experimental));
   assert.match(manifest.version, EXPERIMENTAL_VERSION, "an experimental package carries the prerelease");
   const mutate = (path, change) => {
     const next = new Map(files);
@@ -398,7 +399,7 @@ test("positive control: the experimental line is accepted for exactly the experi
     return claimViolations(next, current);
   };
   assert.ok(
-    mutate(memory, (m) => {
+    mutate(experimental, (m) => {
       m.version = current;
     }).some((problem) => problem.includes("is not x.y.z-experimental.N")),
     "an experimental package at the plain release version is reported",
@@ -410,10 +411,10 @@ test("positive control: the experimental line is accepted for exactly the experi
     "the prerelease anywhere else is reported",
   );
   assert.ok(
-    mutate("packages/knowledge/package.json", (m) => {
-      m.dependencies["@arnilo/prism-memory-system"] = `^${current}`;
-    }).some((problem) => problem.includes("expected 0.13.0-experimental")),
-    "a caret pin into the experimental line is reported",
+    mutate("packages/memory/package.json", (m) => {
+      m.version = `${current}-experimental.0`;
+    }).some((problem) => problem.includes("is not experimental")),
+    "the graduated memory bundle on a prerelease is reported",
   );
 });
 

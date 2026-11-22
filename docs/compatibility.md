@@ -30,7 +30,7 @@ kernel does not support fails to load with `kernel_api`.
 | Every export of a stable native package or host library | that package's `README.md` |
 
 Not covered: packages on the experimental line (`x.y.z-experimental.N`, npm dist-tag `experimental`; see
-[release.md](release.md) "Experimental packages"), the private reference host `apps/prism-agent`, anything
+[release.md](release.md) "Experimental packages"), config a stable package's README marks `experimental`, the private reference host `apps/prism-agent`, anything
 reachable only through a deep import that `exports` does not list, and the text of error messages.
 
 ## When to use it

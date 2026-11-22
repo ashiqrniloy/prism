@@ -19,7 +19,7 @@ memory track's acceptance run decides. The ontology moved here from the fabric (
 ## Install
 
 ```bash
-prism add @arnilo/prism-knowledge/wiki --version 0.13.0-experimental.0
+prism add @arnilo/prism-knowledge/wiki --version 0.14.0-experimental.0
 ```
 
 ```jsonc

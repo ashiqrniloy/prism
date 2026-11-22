@@ -21,7 +21,7 @@
     "@arnilo/prism-extensions": "workspace:*",
     "@arnilo/prism-tools": "workspace:*",
     "@arnilo/prism-hosts": "^0.13.0",
-    "@arnilo/prism-knowledge": "0.13.0-experimental.0"
+    "@arnilo/prism-knowledge": "0.14.0-experimental.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

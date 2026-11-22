@@ -70,7 +70,7 @@ Test-only uses do not add another peer declaration: the tools bundle declares `p
 bun add @arnilo/prism-tools playwright-core@1.63.0
 
 # PostgreSQL session store: pool driver only
-bun add @arnilo/prism-memory-system@experimental pg
+bun add @arnilo/prism-memory-system pg
 
 # Document reader: pick the parser you need (both are independent)
 bun add @arnilo/prism-tools pdf-parse mammoth

@@ -63,13 +63,13 @@ with an OIDC authorization error rather than falling back to a secret.
 A package can ship on an experimental prerelease line: the same npm name, a version of the form
 `x.y.z-experimental.N`, and the npm dist-tag `experimental`. The line sits outside
 the stability promise of the stable packages, so a host can try the package now while its API, config
-and defaults can still change or be removed in any release. A `^0.13.0` range never
+and defaults can still change or be removed in any release. A caret range never
 matches a prerelease, so a host reaches the line with `@experimental` or an exact version
-(`bun add @arnilo/prism-memory-system@experimental`).
+(`bun add @arnilo/prism-knowledge@experimental`).
 
-The set is one list: `experimental` in `scripts/independent-packages.json`. Today it names exactly two
-bundles: `@arnilo/prism-memory-system` and `@arnilo/prism-knowledge`, at
-`0.13.0-experimental.0`. Nothing else carries the version or the tag. The release tooling enforces it:
+The set is one list: `experimental` in `scripts/independent-packages.json`. Today it names one
+bundle, `@arnilo/prism-knowledge`. `@arnilo/prism-memory-system` graduated at 0.14.0 and is an independent stable
+line; its experimental config is marked in its README. Nothing else carries the version or the tag. The release tooling enforces it:
 
 - **Tag.** `publishArgs` derives `--tag` from the list. An experimental package publishes under
   `experimental`, never `latest`. A listed package whose version has no prerelease identifier fails with
@@ -102,7 +102,7 @@ to this template word for word, ignoring line breaks, and fails when a package j
 stable README carries it.
 
 ```markdown
-> **Experimental in 0.13.0.** Install with `bun add <name>@experimental`. Outside the
+> **Experimental.** Install with `bun add <name>@experimental`. Outside the
 > [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
 > config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
@@ -268,8 +268,8 @@ The inventory and the provider adapters below are generated from the workspace m
 | `@arnilo/prism-ai` | 0.13.0 | capability |
 | `@arnilo/prism-extensions` | 0.13.2 | capability |
 | `@arnilo/prism-hosts` | 0.13.1 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
-| `@arnilo/prism-knowledge` | 0.13.0-experimental.1 | capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin |
-| `@arnilo/prism-memory-system` | 0.13.0-experimental.1 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
+| `@arnilo/prism-knowledge` | 0.14.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range |
+| `@arnilo/prism-memory-system` | 0.14.0 | capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools |
 | `@arnilo/prism-tools` | 0.13.2 | capability |
 <!-- generated:package-truth:inventory end -->
 

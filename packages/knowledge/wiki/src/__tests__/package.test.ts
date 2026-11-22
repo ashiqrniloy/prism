@@ -64,7 +64,10 @@ describe("wiki package: knowledge outside memory", () => {
     assert.equal(pkg.peerDependencies["@arnilo/prism"], ">=0.13.0 <1.0.0");
     // Installing the bundle does not activate the memory package; core is its shared library.
     assert.equal(pkg.peerDependencies["@arnilo/prism-memory-system"], undefined);
-    assert.deepEqual(pkg.dependencies, { "@arnilo/prism-memory-system": pkg.version });
+    // Plan 240 Task 7: the memory bundle is stable, so knowledge depends on its range.
+    assert.deepEqual(pkg.dependencies, {
+      "@arnilo/prism-memory-system": `^${JSON.parse(readFileSync(join(import.meta.dirname, "../../../../memory/package.json"), "utf8")).version}`,
+    });
     assert.equal(pkg.publishConfig?.access, "public");
     assert.equal(wikiDefault.name, "@arnilo/prism-knowledge/wiki");
   });

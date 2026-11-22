@@ -823,7 +823,14 @@ describe("per-bundle versioning after 0.13", () => {
     const published = new Set(loadRelease().packages.map((pkg) => pkg.manifest.name));
     const independent = new Set(data.packages);
     const experimental = new Set(data.experimental ?? []);
-    assert.deepEqual([...independent].sort(), ["@arnilo/prism-ai", "@arnilo/prism-extensions", "@arnilo/prism-tools"]);
+    // Plan 240 Task 7 (owner D1): the memory-system bundle joins the independent stable lines at 0.14.0.
+    assert.deepEqual([...independent].sort(), [
+      "@arnilo/prism-ai",
+      "@arnilo/prism-extensions",
+      "@arnilo/prism-memory-system",
+      "@arnilo/prism-tools",
+    ]);
+    assert.deepEqual([...experimental], ["@arnilo/prism-knowledge"]);
     assert.ok(!independent.has(hosts), "hosts stays on the kernel line");
     assert.ok(!independent.has(kernel), "the kernel is the lockstep line");
     for (const name of experimental) assert.ok(published.has(name) && !independent.has(name), `${name} is an experimental bundle`);

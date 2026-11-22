@@ -258,13 +258,13 @@ export const PACKAGE_NOTES = {
     "capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler",
   "@arnilo/prism-memory-system/core":
     "library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability",
-  "@arnilo/prism-knowledge": "capability — experimental knowledge bundle: wiki and RAG subpaths; exact memory-system pin",
+  "@arnilo/prism-knowledge": "capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range",
   "@arnilo/prism-knowledge/rag":
     "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
   "@arnilo/prism-knowledge/wiki":
     "capability — knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence; reads memory read-only",
   "@arnilo/prism-memory-system":
-    "capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools",
+    "capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools",
   "@arnilo/prism-tools/work":
     "capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths",
   "@arnilo/prism-tools/browser":

@@ -230,6 +230,7 @@ This implements the acceptance and graduation step of roadmap Phase 11 "Memory m
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 4: Graduation from the experimental line (from plan 210 Task 10, re-pointed)
+  - Amended 2026-11-22 (plan 240 Task 7, owner D1): `@arnilo/prism-memory-system` (with `/core`) graduated at 0.14.0 for its session tier, and its `wm`, `rehearsal`, `scope`, `ltm` and `sleep` config are experimental paths. This task's remaining scope is those paths (LTM first) and `@arnilo/prism-knowledge` (`wiki`, `rag`). The pre-bundle names below read as those subpaths.
   - Acceptance Criteria:
     - Functional: **The packages leave the `experimental` list.** `@arnilo/prism-memory-system`, `@arnilo/prism-memory-core`, `@arnilo/prism-rag` and `@arnilo/prism-wiki` leave it in `scripts/independent-packages.json` and take their first stable versions on their independent lines. The version is decided here and sorts above `0.13.0-experimental.N`; the dist-tag is `latest`.
     - Functional: **The retired names.** `@arnilo/prism-memory-observational`, `@arnilo/prism-memory-fabric` and `@arnilo/prism-memory-wiki` are recorded for `npm deprecate` with their replacement, as owner actions in the release notes, if they were published on the experimental line.

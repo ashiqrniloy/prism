@@ -462,10 +462,8 @@ test("experimental_list_rejects_unknown_workspace", () => {
 test("release_tag_is_never_latest_for_an_experimental_package_in_the_real_graph", () => {
   const release = loadRelease(process.cwd());
   const experimental = release.packages.filter((pkg: { experimental: boolean }) => pkg.experimental);
-  assert.deepEqual(experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(), [
-    "@arnilo/prism-knowledge",
-    "@arnilo/prism-memory-system",
-  ]);
+  // Plan 240 Task 7: the memory bundle graduated at 0.14.0.
+  assert.deepEqual(experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(), ["@arnilo/prism-knowledge"]);
   for (const pkg of experimental) {
     const args = publishArgs(pkg, pkg.manifest.version);
     assert.equal(args[args.indexOf("--tag") + 1], "experimental");

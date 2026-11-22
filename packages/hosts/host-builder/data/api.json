@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "prismVersion": "0.13.1",
-  "contentHash": "8c7fc16c6e7f6e3196f4ed344a37e0621bcbffac62e01346e500892d5a7d2c06",
+  "contentHash": "5e5f5e8295dc03ffec6284c862f1494e68ce09ee394dfaf4de845614196aefa3",
   "packages": [
     {
       "name": "@arnilo/prism",
@@ -3942,7 +3942,7 @@
     },
     {
       "name": "@arnilo/prism-knowledge",
-      "version": "0.13.0-experimental.1",
+      "version": "0.14.0-experimental.0",
       "path": "packages/knowledge",
       "experimental": true,
       "entries": [
@@ -4159,9 +4159,9 @@
     },
     {
       "name": "@arnilo/prism-memory-system",
-      "version": "0.13.0-experimental.1",
+      "version": "0.14.0",
       "path": "packages/memory",
-      "experimental": true,
+      "experimental": false,
       "entries": [
         {
           "subpath": "./core",

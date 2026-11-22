@@ -2348,7 +2348,7 @@ describe("plan 215 Task 4: experimental status in the docs", () => {
     const release = readFileSync("docs/release.md", "utf8");
     const block = /### Notice template[\s\S]*?```markdown\n([\s\S]*?)```/.exec(release)?.[1];
     assert.ok(block, "docs/release.md must hold the experimental notice template");
-    assert.ok(flat(block).startsWith("**Experimental in 0.13.0.**"));
+    assert.ok(flat(block).startsWith("**Experimental.**"));
     return flat(block);
   };
   /** The first paragraph after the README's title. */

@@ -93,7 +93,9 @@ test("post_publish_smoke_specs_follow_bundle_map and registry_consumer_runs_pack
     assert.equal(status, 0, stdout + stderr);
     const kernel = release.byName.get("@arnilo/prism").manifest.version.replaceAll(".", "\\.");
     assert.match(stdout, new RegExp(`post-publish smoke: PASS \\(registry @${kernel}\\)`));
-    assert.match(stdout, /@arnilo\/prism-memory-system@experimental/);
+    // Plan 240 Task 7: the memory bundle is an independent stable line; it installs its own manifest version.
+    const memoryVersion = release.byName.get("@arnilo/prism-memory-system").manifest.version.replaceAll(".", "\\.");
+    assert.match(stdout, new RegExp(`@arnilo/prism-memory-system@${memoryVersion}`));
     assert.match(stdout, /@arnilo\/prism-knowledge@experimental/);
     for (const name of [
       "@arnilo/prism",
