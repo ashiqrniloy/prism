@@ -11,8 +11,6 @@ import {
 } from "./consolidation/score.js";
 
 export const DEFAULT_PROMOTE_MIN_TURNS_BETWEEN = 8;
-/** The hard cap keeps a misconfigured threshold from making a candidate immortal. */
-export const HARD_PROMOTE_MIN_TURNS_BETWEEN = 1_000;
 /**
  * Session consolidation, off by default: `promote: false` (or absent) makes no extractor call.
  * The candidate lifecycle itself lives in `lifecycle` (verification by use is `verifyAfterSessions`).
@@ -53,8 +51,7 @@ export interface ResolvedPromoteConfig {
 
 const promotionWeightSchema: JsonSchema = { type: "number", minimum: -8, maximum: 8 };
 
-/** The extractor budget bounds: below 256 an answer cannot hold one note; 32,768 is the largest asked of any model. */
-export const HARD_PROMOTE_MAX_OUTPUT_TOKENS = 32_768;
+/** The extractor budget floor: below 256 an answer cannot hold one note. Above it, the host's value is the cap. */
 export const MIN_PROMOTE_MAX_OUTPUT_TOKENS = 256;
 
 export const memoryFabricPromoteSchema = {
@@ -71,14 +68,10 @@ export const memoryFabricPromoteSchema = {
           additionalProperties: false,
           properties: Object.fromEntries(Object.keys(DEFAULT_PROMOTION_WEIGHTS).map((name) => [name, promotionWeightSchema])),
         },
-        maxCandidates: { type: "integer", minimum: 1, maximum: 256 },
-        minTurnsBetween: { type: "integer", minimum: 1, maximum: HARD_PROMOTE_MIN_TURNS_BETWEEN },
+        maxCandidates: { type: "integer", minimum: 1 },
+        minTurnsBetween: { type: "integer", minimum: 1 },
         derivableFrom: { type: "array", maxItems: 16, items: { type: "string", minLength: 1, maxLength: 200 } },
-        maxOutputTokens: {
-          type: "integer",
-          minimum: MIN_PROMOTE_MAX_OUTPUT_TOKENS,
-          maximum: HARD_PROMOTE_MAX_OUTPUT_TOKENS,
-        },
+        maxOutputTokens: { type: "integer", minimum: MIN_PROMOTE_MAX_OUTPUT_TOKENS },
         // The closed provider-kit set: an unknown level is a config error, never a silent no-op.
         thinkingLevel: { type: "string", enum: [...THINKING_LEVELS] },
       },
@@ -87,10 +80,10 @@ export const memoryFabricPromoteSchema = {
 } as const;
 
 export function resolvePromoteConfig(value: false | MemoryFabricPromoteConfig | undefined): ResolvedPromoteConfig {
-  const bounded = (name: string, raw: number | undefined, fallback: number, max: number): number => {
+  // The host's value is the cap (plan 239).
+  const bounded = (name: string, raw: number | undefined, fallback: number): number => {
     if (raw === undefined) return fallback;
-    if (!Number.isSafeInteger(raw) || raw < 1 || raw > max)
-      throw new MemoryValidationError(`promote.${name} must be an integer in [1,${max}]`);
+    if (!Number.isSafeInteger(raw) || raw < 1) throw new MemoryValidationError(`promote.${name} must be a positive integer`);
     return raw;
   };
   const enabled = value !== undefined && value !== false;
@@ -98,15 +91,8 @@ export function resolvePromoteConfig(value: false | MemoryFabricPromoteConfig | 
   const minScore = config?.minScore ?? DEFAULT_PROMOTION_MIN_SCORE;
   if (!Number.isFinite(minScore) || minScore < 0) throw new MemoryValidationError("promote.minScore must be a finite non-negative number");
   const maxOutputTokens = config?.maxOutputTokens;
-  if (
-    maxOutputTokens !== undefined &&
-    (!Number.isSafeInteger(maxOutputTokens) ||
-      maxOutputTokens < MIN_PROMOTE_MAX_OUTPUT_TOKENS ||
-      maxOutputTokens > HARD_PROMOTE_MAX_OUTPUT_TOKENS)
-  )
-    throw new MemoryValidationError(
-      `promote.maxOutputTokens must be an integer in [${MIN_PROMOTE_MAX_OUTPUT_TOKENS},${HARD_PROMOTE_MAX_OUTPUT_TOKENS}]`,
-    );
+  if (maxOutputTokens !== undefined && (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < MIN_PROMOTE_MAX_OUTPUT_TOKENS))
+    throw new MemoryValidationError(`promote.maxOutputTokens must be an integer >= ${MIN_PROMOTE_MAX_OUTPUT_TOKENS}`);
   if (config?.thinkingLevel !== undefined && !isThinkingLevel(config.thinkingLevel))
     throw new MemoryValidationError(`promote.thinkingLevel must be one of ${THINKING_LEVELS.join(", ")}`);
   return {
@@ -116,8 +102,8 @@ export function resolvePromoteConfig(value: false | MemoryFabricPromoteConfig | 
     ...(config?.thinkingLevel === undefined ? {} : { thinkingLevel: config.thinkingLevel }),
     minScore,
     ...(config?.weights === undefined ? {} : { weights: config.weights }),
-    maxCandidates: bounded("maxCandidates", config?.maxCandidates, DEFAULT_MAX_CONSOLIDATION_CANDIDATES, 256),
-    minTurnsBetween: bounded("minTurnsBetween", config?.minTurnsBetween, DEFAULT_PROMOTE_MIN_TURNS_BETWEEN, HARD_PROMOTE_MIN_TURNS_BETWEEN),
+    maxCandidates: bounded("maxCandidates", config?.maxCandidates, DEFAULT_MAX_CONSOLIDATION_CANDIDATES),
+    minTurnsBetween: bounded("minTurnsBetween", config?.minTurnsBetween, DEFAULT_PROMOTE_MIN_TURNS_BETWEEN),
     derivableFrom: config?.derivableFrom ?? DEFAULT_DERIVABLE_FROM,
   };
 }

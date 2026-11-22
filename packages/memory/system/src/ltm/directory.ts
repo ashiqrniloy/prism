@@ -13,11 +13,11 @@ import type { MemoryNoteKind } from "./types.js";
  * `memory.read` fetch content. It makes no model or embedding call.
  */
 export interface MemoryFabricDirectoryConfig {
-  /** Topics (tags/keywords) named in the prefix block. Default 8, at most {@link HARD_DIRECTORY_TOPICS}. */
+  /** Topics (tags/keywords) named in the prefix block. Default 8. */
   readonly maxTopics?: number;
-  /** Recent files named in the prefix block. Default 10, at most {@link HARD_DIRECTORY_FILES}. */
+  /** Recent files named in the prefix block. Default 10. */
   readonly maxFiles?: number;
-  /** Ceiling on the rendered block. Default 200, at most {@link HARD_DIRECTORY_TOKENS}. */
+  /** Ceiling on the rendered block. Default 200. */
   readonly maxTokens?: number;
   /**
    * Drop topics made only of stop words ("i", "it", "we") from the topic list, so the block names content words.
@@ -39,9 +39,6 @@ export const DEFAULT_DIRECTORY_OPTIONS: ResolvedFabricDirectoryOptions = Object.
   maxTokens: 200,
   stopWords: false,
 });
-export const HARD_DIRECTORY_TOPICS = 50;
-export const HARD_DIRECTORY_FILES = 100;
-export const HARD_DIRECTORY_TOKENS = 500;
 /** Files one recompute walks, and tags it asks the store for; the paged `memory.view` lists stop here. */
 const MAX_SCANNED_FILES = 1_000;
 const MAX_WALK_DEPTH = 6;
@@ -55,19 +52,18 @@ export function resolveFabricDirectoryOptions(
 ): false | ResolvedFabricDirectoryOptions {
   if (input === false || (input === undefined && !defaultOn)) return false;
   const config = input === true || input === undefined ? {} : input;
-  const pick = (key: "maxTopics" | "maxFiles" | "maxTokens", hard: number): number => {
+  // The host's value is the cap (plan 239).
+  const pick = (key: "maxTopics" | "maxFiles" | "maxTokens"): number => {
     const value = config[key] ?? DEFAULT_DIRECTORY_OPTIONS[key];
-    if (!Number.isInteger(value) || value < 1 || value > hard) {
-      throw new MemoryValidationError(`directory.${key} must be an integer in [1,${hard}]`);
-    }
+    if (!Number.isSafeInteger(value) || value < 1) throw new MemoryValidationError(`directory.${key} must be a positive integer`);
     return value;
   };
   if (config.stopWords !== undefined && typeof config.stopWords !== "boolean")
     throw new MemoryValidationError("directory.stopWords must be a boolean");
   return {
-    maxTopics: pick("maxTopics", HARD_DIRECTORY_TOPICS),
-    maxFiles: pick("maxFiles", HARD_DIRECTORY_FILES),
-    maxTokens: pick("maxTokens", HARD_DIRECTORY_TOKENS),
+    maxTopics: pick("maxTopics"),
+    maxFiles: pick("maxFiles"),
+    maxTokens: pick("maxTokens"),
     stopWords: config.stopWords ?? DEFAULT_DIRECTORY_OPTIONS.stopWords,
   };
 }

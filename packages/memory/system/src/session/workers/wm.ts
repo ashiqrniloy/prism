@@ -3,7 +3,7 @@
  *
  * Records the code already protects for the episode (`SETTLED_PROTECTIONS`) are kept as WM events first, with no model
  * call for them (plan 218.2 Task 5). The model then gives every other verdict in one `judge` call over short ordinals
- * (`r1…rN` records, `w1…wM` current items, `j1…jK` re-judged records): `keep` (the record becomes a WM `event`),
+ * (`r1…rN` records, `w1…wM` current items, `j1…jK` re-judged records, `a1…aL` earlier records for coming scope steps): `keep` (the record becomes a WM `event`),
  * `summaries` (several records become one WM `summary`), `discard` (finished, out of scope, superseded or a duplicate),
  * and `facts` (an episode-scoped WM `fact` records or items support; it gives no verdict). Each entry is checked on its
  * own. A record left without a verdict stays on the STM surface for the next pass. Summaries and facts supersede only
@@ -24,14 +24,21 @@ import { activeObservations, activeWmItems, type ObservationalMemoryLedger } fro
 import { normalizeEventText } from "../normalize.js";
 import { type ProtectionReason, protectedTokenCount } from "../protections.js";
 import type { SalienceSignal } from "../salience.js";
-import { type EpisodeScope, renderScopeBlock, SCOPE_SYSTEM_RULE } from "../scope.js";
+import {
+  type EpisodeScope,
+  isReleasableWmItem,
+  parseNeededLaterSteps,
+  renderScopeBlock,
+  resolveScopeProgress,
+  SCOPE_SYSTEM_RULE,
+  type ScopeProgress,
+} from "../scope.js";
 import { estimateTextTokens } from "../tokens.js";
 import {
   isMemoryId,
   isMemoryWmItem,
   MAX_TOMBSTONE_REASON_LENGTH,
   type MemoryAttribution,
-  type MemoryChunkRef,
   type MemoryObservation,
   type MemoryRelevance,
   type MemoryTaskState,
@@ -51,7 +58,8 @@ export const DEFAULT_WM_INSTRUCTION = [
   "Add a fact for an episode fact several records or items support. Each summary or fact covers one subject in a few sentences; write a changed value as old → new with its dates.",
   "supersedes names the existing WM items (w1…wM) a new summary or fact replaces; other items stay. A record you give no verdict waits for the next pass. Records under Already kept are settled: give them no verdict.",
   "Relevance comes first; then aim at the token target as pressure: summarize or discard what later work does not need, but never drop needed material to meet it. Protected records cannot be discarded.",
-  "Set neededLater to the scope step that needs an item when a later planned step depends on it.",
+  'Set neededLater to the scope step that needs an item when a later planned step depends on it. Mark a remaining scope step finished via finishedSteps only when citing STM outcome records with status "passed". Release items listed under Items for finished steps via discard.finished when no longer needed.',
+  "Earlier records for coming steps (a1…aL) are past records code matched to a remaining scope step: keep one (keep with a) only when that step will need it; it returns as an event for that step. Leave the rest; no other verdict applies to them.",
   "A record marked assistant proposal is what the assistant suggested, not what the user did; a summary merging user and assistant content says which side said what.",
 ].join(" ");
 
@@ -64,7 +72,9 @@ export type WmRejection =
   | "empty_text"
   | "citation_outside_active_set"
   | "invalid_arguments"
-  | "protected";
+  | "protected"
+  | "unsupported_step_finish"
+  | "unknown_step";
 
 /** The salience order the prompt asks WM to keep first (plan 218 Task 3). */
 export const SALIENCE_PRIORITY: readonly SalienceSignal[] = ["correction", "denial", "error", "failed_verification"];
@@ -76,11 +86,19 @@ export interface WmRecordVerdict {
   readonly reason?: string;
 }
 
+/** One scope step WM marked finished in this pass with cited passed-outcome ids. */
+export interface WmFinishedStep {
+  readonly step: number;
+  readonly evidenceIds: readonly string[];
+}
+
 export interface WmPassOutput {
   readonly items: readonly MemoryWmItem[];
   /** Verdicts by STM record id, in the order they were given. */
   readonly verdicts: ReadonlyMap<string, WmRecordVerdict>;
   readonly supersededItemIds: readonly string[];
+  /** Scope steps marked finished in this pass and verified against cited passed outcomes. */
+  readonly finishedSteps?: readonly WmFinishedStep[];
   /** The model's last turn stopped on its output limit with no call (plan 218 Task 6); absent for the deterministic policy. */
   readonly endedAtOutputCap?: boolean;
 }
@@ -100,6 +118,11 @@ export interface RunWmOptions extends MemoryWorkerLimitOptions {
    * one back into WM as an event; no other verdict applies, and a record left alone stays tombstoned.
    */
   readonly rejudge?: readonly MemoryObservation[];
+  /**
+   * Look-ahead (plan 218.3 Task 8): earlier records code matched to a remaining scope step (`selectLookAheadRecords`).
+   * `keep` may bring one into WM as an event whose `neededLater` is that step; no other verdict applies.
+   */
+  readonly lookAhead?: readonly { readonly record: MemoryObservation; readonly step: number }[];
   /** The episode scope, rendered as a delimited data block (I11). Absent, the block says the episode is the current work. */
   readonly scope?: EpisodeScope;
   readonly taskState?: MemoryTaskState;
@@ -133,6 +156,11 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   const secrets = options.secrets ?? [];
   const batch = new Map(options.records.map((record) => [record.id, record]));
   const rejudge = new Map((options.rejudge ?? []).map((record) => [record.id, record]));
+  const lookAhead = new Map(
+    (options.lookAhead ?? [])
+      .filter(({ record }) => !batch.has(record.id) && !rejudge.has(record.id))
+      .map((entry) => [entry.record.id, entry]),
+  );
   const ledger = options.ledger;
   const tombstoned = ledger.tombstones ?? {};
   const knownRecords = new Map(ledger.observations.map((record) => [record.id, record]));
@@ -143,11 +171,16 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   const madeItems = new Map<string, MemoryWmItem>();
   const verdicts = new Map<string, WmRecordVerdict>();
   const superseded = new Set<string>();
+  const progress = options.scope ? resolveScopeProgress(options.scope, ledger.scopeSteps) : undefined;
+  const stepOrdinals = new Set(progress?.steps.map((step) => step.step) ?? []);
+  const finishedStepSet = new Set(progress?.finished.map((step) => step.step) ?? []);
+  const acceptedFinishedSteps = new Map<number, readonly string[]>();
+  const releasable = progress ? [...inputItems.values()].filter((item) => isReleasableWmItem(item.neededLater, finishedStepSet)) : [];
 
-  /** A record id that may take a verdict now. `keep` also takes a record sent for re-judgment. */
+  /** A record id that may take a verdict now. `keep` also takes a record sent for re-judgment or look-ahead. */
   const verdictId = (id: unknown, rejudged = false): WmRejection | undefined => {
     if (!isMemoryId(id)) return "unknown_id";
-    if (rejudged && rejudge.has(id) && !verdicts.has(id)) return undefined;
+    if (rejudged && (rejudge.has(id) || lookAhead.has(id))) return verdicts.has(id) ? "already_processed" : undefined;
     if (verdicts.has(id) || Object.hasOwn(tombstoned, id)) return "already_processed";
     if (batch.has(id)) return undefined;
     return knownRecords.has(id) || knownItems.has(id) ? "citation_outside_active_set" : "unknown_id";
@@ -188,7 +221,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     }
     return item;
   };
-  /** Records and items a new item rests on: their chunks and time span carry over. */
+  /** Records and items a new item rests on: their time span and speaker side carry over. */
   const sources = (ids: readonly string[]) => ({
     records: ids.flatMap((id) => batch.get(id) ?? activeRecords.get(id) ?? []),
     items: ids.flatMap((id) => inputItems.get(id) ?? madeItems.get(id) ?? []),
@@ -208,9 +241,11 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   const applyKeep = (id: unknown, reasonText: unknown, later: unknown): Applied => {
     const rejection = firstRejection([id], (value) => verdictId(value, true));
     if (rejection) return refusal(rejection);
-    const record = batch.get(id as string) ?? rejudge.get(id as string)!;
+    const ahead = lookAhead.get(id as string);
+    const record = batch.get(id as string) ?? rejudge.get(id as string) ?? ahead!.record;
     const reason = text(reasonText).slice(0, MAX_TOMBSTONE_REASON_LENGTH);
-    const item = add({ ...eventItem(record, reason), ...neededLater(later) });
+    // A look-ahead keep is for the step code matched it to: its neededLater names that step, whatever the model wrote.
+    const item = add({ ...eventItem(record, reason), ...(ahead ? { neededLater: `step ${ahead.step}` } : neededLater(later)) });
     if (!item) return refusal({ reason: "invalid_arguments" });
     verdicts.set(record.id, { verdict: "keep", itemId: item.id, ...(reason ? { reason } : {}) });
     return { ok: true, itemId: item.id };
@@ -280,12 +315,43 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     return { ok: true };
   };
 
+  const applyReleaseItem = (id: string): Applied => {
+    const item = inputItems.get(id);
+    if (!item) return refusal({ reason: "unknown_id" });
+    if (superseded.has(id)) return { ok: false, reason: "already_processed", id };
+    const steps = parseNeededLaterSteps(item.neededLater);
+    if (steps.length === 0) return { ok: false, reason: "invalid_arguments", id };
+    const allFinished = steps.every((step) => finishedStepSet.has(step) || acceptedFinishedSteps.has(step));
+    if (!allFinished) return { ok: false, reason: "protected", id, protection: "needed_later" };
+    superseded.add(id);
+    return { ok: true, itemId: id };
+  };
+
+  const applyFinishedStep = (stepValue: unknown, evidenceValues: readonly unknown[]): Applied => {
+    if (!progress) return refusal({ reason: "unknown_step" });
+    if (typeof stepValue !== "number" || !Number.isSafeInteger(stepValue) || stepValue < 1) return refusal({ reason: "invalid_arguments" });
+    if (!stepOrdinals.has(stepValue)) return refusal({ reason: "unknown_step" });
+    if (finishedStepSet.has(stepValue) || acceptedFinishedSteps.has(stepValue)) return refusal({ reason: "already_processed" });
+    if (!evidenceValues.length) return refusal({ reason: "unsupported_step_finish" });
+    const evidenceIds: string[] = [];
+    for (const raw of [...new Set(evidenceValues)]) {
+      const id = resolve(raw, "r");
+      if (!id) return refusal({ reason: "unknown_id" });
+      const record = batch.get(id) ?? activeRecords.get(id) ?? knownRecords.get(id);
+      if (!record) return refusal({ reason: "unknown_id" });
+      if (record.kind !== "outcome" || record.status !== "passed") return { ok: false, reason: "unsupported_step_finish", id: record.id };
+      evidenceIds.push(record.id);
+    }
+    acceptedFinishedSteps.set(stepValue, evidenceIds);
+    return { ok: true };
+  };
+
   // Settled first (plan 218.2 Task 5): a record protected for the episode or until a link resolves it is kept as an event
   // by code, with its protection as the reason. The model is not asked for a verdict on it.
   const settled = options.records.filter((record) => SETTLED_PROTECTIONS.has(options.protections?.get(record.id)));
   for (const record of settled) applyKeep(record.id, `protected: ${options.protections!.get(record.id)}`, undefined);
   const offered = options.records.filter((record) => !verdicts.has(record.id));
-  if (!offered.length && !rejudge.size) return { items, verdicts, supersededItemIds: [] };
+  if (!offered.length && !rejudge.size && !releasable.length) return { items, verdicts, supersededItemIds: [] };
 
   // Ordinals (plan 218.2 Task 5): `r1…rN` name the batch's records in order, `w1…wM` the current WM items, `j1…jK` the
   // records sent for re-judgment. They exist only inside this request; items, tombstones and recall keep the ids.
@@ -293,30 +359,51 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   for (const [index, record] of options.records.entries()) labels.set(record.id, `r${index + 1}`);
   for (const [index, id] of [...inputItems.keys()].entries()) labels.set(id, `w${index + 1}`);
   for (const [index, id] of [...rejudge.keys()].entries()) labels.set(id, `j${index + 1}`);
+  for (const [index, id] of [...lookAhead.keys()].entries()) labels.set(id, `a${index + 1}`);
   const byLabel = new Map([...labels].map(([id, label]) => [label, id]));
-  /** An ordinal to its id: an integer names an `r` (or `j` for re-judged keeps); a string names `r4`, `w1` or `j2`. Anything else is unknown. */
-  const resolve = (value: unknown, prefix: "r" | "w" | "j", allowed: readonly ("r" | "w" | "j")[] = [prefix]): string | undefined => {
+  type Prefix = "r" | "w" | "j" | "a";
+  /** An ordinal to its id: an integer names an `r` (or `j`/`a` for re-judged and look-ahead keeps); a string names `r4`, `w1`, `j2` or `a1`. Anything else is unknown. */
+  const resolve = (value: unknown, prefix: Prefix, allowed: readonly Prefix[] = [prefix]): string | undefined => {
     const label =
       typeof value === "number" && Number.isSafeInteger(value) && value > 0
         ? `${prefix}${value}`
-        : typeof value === "string" && /^[rwj][1-9][0-9]{0,5}$/.test(value)
+        : typeof value === "string" && /^[rwja][1-9][0-9]{0,5}$/.test(value)
           ? value
           : undefined;
-    return label && allowed.includes(label[0] as "r" | "w" | "j") ? byLabel.get(label) : undefined;
+    return label && allowed.includes(label[0] as Prefix) ? byLabel.get(label) : undefined;
   };
   /** An unresolvable ordinal stays unknown: it can never name a record outside the batch. */
-  const mapped = (values: readonly unknown[], prefix: "r" | "w" | "j", allowed?: readonly ("r" | "w" | "j")[]) =>
+  const mapped = (values: readonly unknown[], prefix: Prefix, allowed?: readonly Prefix[]) =>
     values.map((value) => resolve(value, prefix, allowed) ?? `unknown:${String(value).slice(0, 16)}`);
   const list = (value: unknown): readonly unknown[] => (Array.isArray(value) ? value : []);
   const entries = (value: unknown): readonly Record<string, unknown>[] =>
     list(value).map((entry) => (entry && typeof entry === "object" && !Array.isArray(entry) ? (entry as Record<string, unknown>) : {}));
 
   const ORDINALS: JsonObject = { type: "array", items: { type: "integer", minimum: 1 } };
+  const FINISH_DISCARD_ORDINALS: JsonObject = {
+    type: "array",
+    items: {
+      anyOf: [
+        { type: "integer", minimum: 1 },
+        { type: "string", pattern: "^[rw][1-9][0-9]*$" },
+      ],
+    },
+  };
   const ITEM_ORDINALS: JsonObject = { type: "array", items: { type: "string", pattern: "^w[1-9][0-9]*$" } };
+  const EVIDENCE_ORDINALS: JsonObject = {
+    type: "array",
+    minItems: 1,
+    items: {
+      anyOf: [
+        { type: "string", pattern: "^r[1-9][0-9]*$" },
+        { type: "integer", minimum: 1 },
+      ],
+    },
+  };
   const judge: ToolDefinition = {
     name: "judge",
     description:
-      'Give every verdict for this batch in one call. Records are r1…rN, current working-memory items w1…wM, re-judged records j1…jK. keep: records that stay as events (r, or j for a re-judged record). discard: records by reason. summaries: several records folded into one summary of one subject. facts: episode facts that records or items support (support lists "r4" or "w1"); a fact gives no verdict. supersedes lists the w items a summary or fact replaces. A protected record cannot be discarded. Each entry is checked on its own; refused entries are listed so you can fix them.',
+      'Give every verdict for this batch in one call. Records are r1…rN, current working-memory items w1…wM, re-judged records j1…jK, earlier records for coming steps a1…aL. keep: records that stay as events (r, j for a re-judged record, or a for an earlier record a coming step needs). discard: records by reason (finished also accepts w items offered under Items for finished steps). summaries: several records folded into one summary of one subject. facts: episode facts that records or items support (support lists "r4" or "w1"); a fact gives no verdict. finishedSteps: remaining scope steps proven done by cited STM passed-outcome records. supersedes lists the w items a summary or fact replaces. A protected record cannot be discarded. Each entry is checked on its own; refused entries are listed so you can fix them.',
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -329,6 +416,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
             properties: {
               r: { type: "integer", minimum: 1 },
               j: { type: "integer", minimum: 1 },
+              a: { type: "integer", minimum: 1 },
               reason: { type: "string", minLength: 1 },
               neededLater: NEEDED_LATER,
             },
@@ -338,7 +426,9 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
         discard: {
           type: "object",
           additionalProperties: false,
-          properties: Object.fromEntries(wmDiscardReasonValues.map((reason) => [reason, ORDINALS])),
+          properties: Object.fromEntries(
+            wmDiscardReasonValues.map((reason) => [reason, reason === "finished" ? FINISH_DISCARD_ORDINALS : ORDINALS]),
+          ),
         },
         summaries: {
           type: "array",
@@ -370,6 +460,18 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
             required: ["text", "support", "relevance"],
           },
         },
+        finishedSteps: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              step: { type: "integer", minimum: 1, description: "The 1-based ordinal of the finished scope step." },
+              evidence: EVIDENCE_ORDINALS,
+            },
+            required: ["step", "evidence"],
+          },
+        },
       },
     },
     execute(args, context) {
@@ -393,13 +495,17 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
           ...(outcome.protection ? { protection: outcome.protection } : {}),
         });
       };
+      entries(args.finishedSteps).forEach((entry, index) => {
+        note(`finishedSteps[${index}]`, applyFinishedStep(entry.step, list(entry.evidence)), entry.step);
+      });
       entries(args.keep).forEach((entry, index) => {
-        const both = entry.r !== undefined && entry.j !== undefined;
-        const id = both ? undefined : entry.j !== undefined ? resolve(entry.j, "j") : resolve(entry.r, "r");
+        const named = (["r", "j", "a"] as const).filter((prefix) => entry[prefix] !== undefined);
+        const several = named.length > 1;
+        const id = several || !named.length ? undefined : resolve(entry[named[0]!], named[0]!);
         note(
           `keep[${index}]`,
-          id ? applyKeep(id, entry.reason, entry.neededLater) : refusal({ reason: both ? "invalid_arguments" : "unknown_id" }),
-          entry.j ?? entry.r,
+          id ? applyKeep(id, entry.reason, entry.neededLater) : refusal({ reason: several ? "invalid_arguments" : "unknown_id" }),
+          entry.a ?? entry.j ?? entry.r,
         );
       });
       entries(args.summaries).forEach((entry, index) => {
@@ -413,14 +519,16 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
         args.discard && typeof args.discard === "object" && !Array.isArray(args.discard) ? (args.discard as Record<string, unknown>) : {};
       for (const [reason, ordinals] of Object.entries(discards))
         list(ordinals).forEach((value, index) => {
-          const id = resolve(value, "r");
+          const validReason = (wmDiscardReasonValues as readonly string[]).includes(reason);
+          if (!validReason) {
+            note(`discard.${reason.slice(0, 32)}[${index}]`, refusal({ reason: "invalid_arguments" }), value);
+            return;
+          }
+          const rId = resolve(value, "r");
+          const wId = !rId && reason === "finished" ? resolve(value, "w") : undefined;
           note(
             `discard.${reason.slice(0, 32)}[${index}]`,
-            !(wmDiscardReasonValues as readonly string[]).includes(reason)
-              ? refusal({ reason: "invalid_arguments" })
-              : id
-                ? applyDiscard(id, reason)
-                : refusal({ reason: "unknown_id" }),
+            rId ? applyDiscard(rId, reason) : wId ? applyReleaseItem(wId) : refusal({ reason: "unknown_id" }),
             value,
           );
         });
@@ -443,7 +551,9 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
 
   const limits = resolveMemoryWorkerLimits(options);
   const prompt = joinWorkerText(
-    wmPromptLines(options, [...inputItems.values()], offered, settled, (id) => labels.get(id)),
+    wmPromptLines(options, [...inputItems.values()], offered, settled, (id) => labels.get(id), progress, releasable, [
+      ...lookAhead.values(),
+    ]),
     limits.maxMessageBytes,
     "Working memory prompt",
   );
@@ -459,20 +569,29 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     // pass and losing its verdicts (gate M-1 sittings 3-4).
     onToolCallLimit: "refuse",
   });
-  return { items, verdicts, supersededItemIds: [...superseded], ...(loop.endedAtOutputCap ? { endedAtOutputCap: true } : {}) };
+  const finishedSteps = [...acceptedFinishedSteps].map(([step, evidenceIds]) => ({ step, evidenceIds }));
+  return {
+    items,
+    verdicts,
+    supersededItemIds: [...superseded],
+    ...(finishedSteps.length ? { finishedSteps } : {}),
+    ...(loop.endedAtOutputCap ? { endedAtOutputCap: true } : {}),
+  };
 }
 
-/** The WM prompt: the scope block, the task state, the current WM items, the target, then the batch with its salience and protections. */
+/** The WM prompt: the scope block, the task state, the current WM items, releasable items, the target, then the batch with its salience and protections. */
 function* wmPromptLines(
   options: RunWmOptions,
   items: readonly MemoryWmItem[],
   offered: readonly MemoryObservation[],
   settled: readonly MemoryObservation[],
   label: (id: string) => string | undefined,
+  progress?: ScopeProgress,
+  releasable: readonly MemoryWmItem[] = [],
+  lookAhead: readonly { readonly record: MemoryObservation; readonly step: number }[] = [],
 ): Generator<string> {
-  yield renderScopeBlock(options.scope, options.taskState);
-  // The task state renders in the WM request whether or not a scope is set: protections and later steps read it.
-  if (options.scope && options.taskState) yield `## Current task\n${JSON.stringify(options.taskState)}`;
+  if (options.scope) yield renderScopeBlock(options.scope, progress);
+  if (options.taskState) yield `## Current task\n${JSON.stringify(options.taskState)}`;
   yield "## Working memory items";
   if (!items.length) yield "- none";
   // An item's citations outside this batch have no ordinal: they are counted, never shown as ids.
@@ -482,6 +601,11 @@ function* wmPromptLines(
     const cites = [...cited, ...(older ? [`${older} earlier record${older > 1 ? "s" : ""}`] : [])].join(", ");
     yield `- [${label(item.id)}] ${item.kind} (${item.relevance}) cites ${cites}: ${item.text}`;
   }
+  if (releasable.length) {
+    yield `## Items for finished steps (${releasable.length}; their neededLater steps are finished — discard with discard.finished: ["w1", ...] if no longer needed)`;
+    for (const item of releasable)
+      yield `- [${label(item.id)}] ${item.kind} (${item.relevance}) neededLater=${item.neededLater}: ${item.text}`;
+  }
   const batchTokens = options.records.reduce((sum, record) => sum + record.tokenCount, 0);
   if (options.targetRatio !== undefined) {
     const target = wmTargetTokens(batchTokens, options.targetRatio);
@@ -490,12 +614,9 @@ function* wmPromptLines(
   }
   const line = (record: MemoryObservation) => {
     const count = (record.count ?? 1) > 1 ? ` ×${record.count}` : "";
-    const chunks = record.chunkRefs?.length
-      ? ` [chunks: ${record.chunkRefs.length}, ${record.chunkRefs.reduce((sum, ref) => sum + ref.bytes, 0)} bytes]`
-      : "";
     const salience = options.salience?.get(record.id);
     const protection = options.protections?.get(record.id);
-    return `- [${label(record.id)}] ${record.observedAt ?? record.timestamp} ${attributionLabel(record.kind, record.attribution, isAssistantProposal(record))}${count} (${record.relevance})${chunks}${salience?.length ? ` salient: ${salience.join(", ")}` : ""}${protection ? ` protected: ${protection}` : ""}: ${record.description}`;
+    return `- [${label(record.id)}] ${record.observedAt ?? record.timestamp} ${attributionLabel(record.kind, record.attribution, isAssistantProposal(record))}${count} (${record.relevance})${salience?.length ? ` salient: ${salience.join(", ")}` : ""}${protection ? ` protected: ${protection}` : ""}: ${record.description}`;
   };
   if (settled.length) {
     yield `## Already kept (${settled.length}; protected, kept by code: give them no verdict)`;
@@ -508,7 +629,12 @@ function* wmPromptLines(
   if (options.rejudge?.length) {
     yield `## Earlier discarded records (${options.rejudge.length}; the episode scope changed)\nKeep any record the new scope's remaining work needs; leave the rest, which stay discarded. Only keep applies to these.`;
     for (const record of options.rejudge)
-      yield `- [${label(record.id)}] ${record.observedAt ?? record.timestamp} ${record.kind} (${record.relevance})${record.chunkRefs?.length ? ` [chunks: ${record.chunkRefs.length}]` : ""}: ${record.description}`;
+      yield `- [${label(record.id)}] ${record.observedAt ?? record.timestamp} ${record.kind} (${record.relevance}): ${record.description}`;
+  }
+  if (lookAhead.length) {
+    yield `## Earlier records for coming steps (${lookAhead.length}; matched to a remaining scope step)\nKeep (keep with a) any record its step will need; it returns as an event for that step. Leave the rest. Only keep applies to these.`;
+    for (const { record, step } of lookAhead)
+      yield `- [${label(record.id)}] step ${step}: ${record.observedAt ?? record.timestamp} ${record.kind} (${record.relevance}): ${record.description}`;
   }
 }
 
@@ -575,7 +701,7 @@ export function deterministicWm(options: DeterministicWmOptions): WmPassOutput {
   return { items, verdicts, supersededItemIds: [] };
 }
 
-/** A record kept as a WM event: its description, chunks, span and side carry over. */
+/** A record kept as a WM event: its description, span and side carry over. */
 function eventItem(record: MemoryObservation, reason: string): MemoryWmItem {
   return {
     id: createMemoryId("wm:event", record.id),
@@ -583,7 +709,6 @@ function eventItem(record: MemoryObservation, reason: string): MemoryWmItem {
     text: record.description,
     relevance: record.relevance,
     citedIds: [record.id],
-    ...chunksOf([record], []),
     ...(reason ? { reason } : {}),
     ...spanOf([record], []),
     ...attributionOf([record], []),
@@ -606,7 +731,6 @@ function newItem(
     text,
     relevance,
     citedIds,
-    ...chunksOf(records, items),
     ...(supersedes.length ? { supersedes } : {}),
     ...spanOf(records, items),
     ...attributionOf(records, items),
@@ -618,14 +742,6 @@ function newItem(
 function attributionOf(records: readonly MemoryObservation[], items: readonly MemoryWmItem[]): { attribution?: MemoryAttribution } {
   const attribution = attributionOfSources(records, items);
   return attribution ? { attribution } : {};
-}
-
-/** The chunks an item inherits from the records and items it rests on, one ref per chunk id. */
-function chunksOf(records: readonly MemoryObservation[], items: readonly MemoryWmItem[]): { chunkRefs?: readonly MemoryChunkRef[] } {
-  const refs = new Map<string, MemoryChunkRef>();
-  for (const ref of [...records.flatMap((record) => record.chunkRefs ?? []), ...items.flatMap((item) => item.chunkRefs ?? [])])
-    if (!refs.has(ref.id)) refs.set(ref.id, ref);
-  return refs.size ? { chunkRefs: [...refs.values()] } : {};
 }
 
 function spanOf(records: readonly MemoryObservation[], items: readonly MemoryWmItem[]): { observedFrom?: string; observedTo?: string } {

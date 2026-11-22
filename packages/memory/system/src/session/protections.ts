@@ -6,6 +6,7 @@
 import { DEFAULT_WM_PROTECT_REQUEST_PASSES } from "./config.js";
 import { activeWmItems, type ObservationalMemoryLedger } from "./ledger.js";
 import type { SalienceSignal } from "./salience.js";
+import { isReleasableWmItem } from "./scope.js";
 import type { MemoryObservation, MemoryWmItem } from "./types.js";
 
 /**
@@ -32,6 +33,8 @@ export interface ProtectionOptions {
   readonly salience?: ReadonlyMap<string, readonly SalienceSignal[]>;
   /** `wm.protectRequestPasses` (default 8). */
   readonly protectRequestPasses?: number;
+  /** Finished scope steps: a WM item whose `neededLater` steps are all finished stops protecting its cited records. */
+  readonly finishedSteps?: ReadonlySet<number>;
   /** Called with each record whose link protection lapsed, so the pass records `protection_lapsed`. */
   readonly onLapse?: (id: string) => void;
 }
@@ -43,8 +46,11 @@ export function protectedRecords(
   options: ProtectionOptions = {},
 ): ReadonlyMap<string, ProtectionReason> {
   const items = activeWmItems(ledger);
+  const finished = options.finishedSteps ?? new Set<number>();
   const factCited = new Set(items.filter((item) => item.kind === "fact").flatMap((item) => item.citedIds));
-  const neededLater = new Set(items.filter((item) => item.neededLater).flatMap((item) => item.citedIds));
+  const neededLater = new Set(
+    items.filter((item) => item.neededLater && !isReleasableWmItem(item.neededLater, finished)).flatMap((item) => item.citedIds),
+  );
   const taskEntries = new Set(ledger.taskState?.sourceEntryIds ?? []);
   const openQuestions = (ledger.taskState?.openQuestions?.length ?? 0) > 0;
   const superseded = supersededIds(ledger);
@@ -97,8 +103,9 @@ export function protectedRecords(
  * A WM item Rehearsal must keep: a `fact` (episode facts are what later steps read), one marked `neededLater`, or (with
  * the ledger) an `event` kept from a user constraint (plan 218.2 Task 3).
  */
-export function isProtectedWmItem(item: MemoryWmItem, ledger?: ObservationalMemoryLedger): boolean {
-  if (item.kind === "fact" || item.neededLater !== undefined) return true;
+export function isProtectedWmItem(item: MemoryWmItem, ledger?: ObservationalMemoryLedger, finishedSteps?: ReadonlySet<number>): boolean {
+  if (item.kind === "fact") return true;
+  if (item.neededLater !== undefined && (!finishedSteps || !isReleasableWmItem(item.neededLater, finishedSteps))) return true;
   if (item.kind !== "event" || !ledger) return false;
   const superseded = supersededIds(ledger);
   return ledger.observations.some(

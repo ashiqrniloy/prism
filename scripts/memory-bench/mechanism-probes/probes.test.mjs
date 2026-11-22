@@ -143,7 +143,7 @@ const STM_PROBE_IDS = [
   "stm.habituation",
   "stm.boundaries",
   "stm.oversized-tail",
-  "stm.referrer-delete",
+  "stm.no-session-copy",
   "stm.cost",
 ];
 
@@ -243,7 +243,7 @@ test("stm_long_session_probe_covers_probes_1_to_7", async () => {
   // The cost row compares against the pinned pre-redesign observer when its worktree is present.
   const cost = rows.find((row) => row.id === "stm.cost");
   assert.equal(typeof cost.counts.stm.outputPer10k, "number");
-  assert.ok(cost.counts.stm.chunkShareOfCovered < 0.25);
+  assert.ok(cost.counts.stm.records > 0);
 }, 600_000);
 
 /** Plan 218 Task 5: the WM probes (1-8 of the plan, plus attribution and the knowledge update). */
@@ -255,7 +255,7 @@ const WM_PROBE_IDS = [
   "wm.prefix-stable",
   "wm.rejudge",
   "wm.incremental",
-  "wm.referrer-delete",
+  "wm.evidence-readable",
   "wm.attribution",
   "wm.knowledge-update",
   "wm.discard-query",
@@ -325,25 +325,27 @@ test("wm_prompt_parser_reads_what_the_package_renders", async () => {
   assert.deepEqual([...remainingSteps(parsed.scope, "step 9")], [9]);
 });
 
-test("fixture_seeded_secret_redacted_in_chunks", async () => {
+test("fixture_seeded_secret_redacted_in_recall", async () => {
+  // Plan 218.3 Task 4: no chunk is written; recall reads the cited entry from the session store and redacts it.
   const { replayLongSession } = await import("./stm.mjs");
-  const memory = await import("@arnilo/prism-memory-system");
   await withProbeEnv(async () => {
-    const store = await memory.createSqliteChunkStore({ path: ":memory:" });
-    const h = await replayLongSession({ chunkStore: store, turns: ["t0", "t3"] });
+    const h = await replayLongSession({ turns: ["t0", "t3"] });
     try {
       const record = await h.recordOf(h.fx.expected.secretEvent);
-      assert.equal(record?.chunkRefs?.length, 1, "the .env.local result keeps its chunk");
-      const chunk = await store.get(record.chunkRefs[0].id, h.session.id);
-      assert.ok(chunk.text.startsWith("LEDGER_API_KEY="), "the chunk is the cited line");
-      assert.ok(!chunk.text.includes(h.fx.secret), "the seeded secret is redacted before the chunk is written");
+      assert.ok(record, "the .env.local result is recorded");
+      assert.equal(record.chunkRefs, undefined, "no chunk is kept");
+      const out = await h.recallCalls([{ id: record.id, detail: "full" }]);
+      const recalled = out.results
+        .filter((row) => row.name === "recall")
+        .map((row) => row.text)
+        .join("\n");
+      assert.ok(recalled.includes("LEDGER_API_KEY="), "recall returns the cited line from the session store");
+      assert.ok(!recalled.includes(h.fx.secret), "the seeded secret is redacted on the way out");
       const afterSecret = h.stmRequests().filter((request) => request.text.includes("LEDGER_API_KEY"));
       assert.ok(afterSecret.length > 0);
       for (const request of afterSecret) assert.ok(!request.text.includes(h.fx.secret), "the STM batch is redacted too");
-      assert.ok(!JSON.stringify(await h.session.entries()).includes(`"chunks":[{"sourceEntryId"`), "chunk text never lands on the branch");
     } finally {
       await h.close();
-      store.close();
     }
   });
 }, 120_000);

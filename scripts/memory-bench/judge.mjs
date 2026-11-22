@@ -121,6 +121,8 @@ export function judgeProviderOptions(labels) {
     structuredOutput: {
       name: "memory_benchmark_verdict",
       strict: true,
+      // A repair turn would change judge cost and verdicts; an invalid verdict stays invalid (plan 235 Task 3).
+      repair: 0,
       schema: {
         type: "object",
         additionalProperties: false,

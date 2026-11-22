@@ -32,9 +32,9 @@ import { globMatches } from "../scope/recall.js";
 import { type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../types.js";
 
 export interface MemoryFabricCuesConfig {
-  /** Ceiling on one turn's cue lines. Default 300, at most {@link HARD_CUE_TOKENS}. */
+  /** Ceiling on one turn's cue lines. Default 300. */
   readonly budgetTokens?: number;
-  /** Notes a single turn may add by cue. Default 2, at most {@link HARD_CUES_PER_TURN}. */
+  /** Notes a single turn may add by cue. Default 2. */
   readonly maxPerTurn?: number;
 }
 
@@ -43,8 +43,6 @@ export interface ResolvedFabricCuesOptions {
   readonly maxPerTurn: number;
 }
 
-export const HARD_CUE_TOKENS = 1_000;
-export const HARD_CUES_PER_TURN = 5;
 export const DEFAULT_CUES_OPTIONS: ResolvedFabricCuesOptions = Object.freeze({ budgetTokens: 300, maxPerTurn: 2 });
 
 /** One metadata page per scan step, bounded: a project with more path notes than this scans no further. */
@@ -62,12 +60,12 @@ export function resolveFabricCuesOptions(
   if (input === false || (input === undefined && !defaultOn)) return false;
   const config = input === true || input === undefined ? {} : input;
   const budgetTokens = config.budgetTokens ?? DEFAULT_CUES_OPTIONS.budgetTokens;
-  if (!Number.isSafeInteger(budgetTokens) || budgetTokens < 1 || budgetTokens > HARD_CUE_TOKENS) {
-    throw new MemoryValidationError(`cues.budgetTokens must be an integer in [1,${HARD_CUE_TOKENS}]`);
+  if (!Number.isSafeInteger(budgetTokens) || budgetTokens < 1) {
+    throw new MemoryValidationError("cues.budgetTokens must be a positive integer");
   }
   const maxPerTurn = config.maxPerTurn ?? DEFAULT_CUES_OPTIONS.maxPerTurn;
-  if (!Number.isSafeInteger(maxPerTurn) || maxPerTurn < 1 || maxPerTurn > HARD_CUES_PER_TURN) {
-    throw new MemoryValidationError(`cues.maxPerTurn must be an integer in [1,${HARD_CUES_PER_TURN}]`);
+  if (!Number.isSafeInteger(maxPerTurn) || maxPerTurn < 1) {
+    throw new MemoryValidationError("cues.maxPerTurn must be a positive integer");
   }
   return { budgetTokens, maxPerTurn };
 }

@@ -117,6 +117,7 @@ function failure(error) {
 
 export async function replayStm({ request, annotation, makeClient, sessionId }) {
   const { client, stats } = instrumentClient(makeClient(request, "stm"));
+  // Plan 218.3 Task 4: STM keeps no chunks, so the evidence-coverage and chunk-bytes counts are zero from here on.
   const chunks = new Map();
   const sourceText = serializeSourceEntries(request.entries, [], LIMITS.maxMessageBytes);
   let events = [];
@@ -129,11 +130,7 @@ export async function replayStm({ request, annotation, makeClient, sessionId }) 
       ...(request.taskState ? { taskState: request.taskState } : {}),
       recent: request.recent,
       contextTokens: CONFIG.stm.contextTokens,
-      maxChunksPerEvent: CONFIG.stm.maxChunksPerEvent,
-      maxChunkBytes: CONFIG.stm.maxChunkBytes,
-      autoChunkBytes: CONFIG.stm.autoChunkBytes,
       habituation: CONFIG.stm.habituation,
-      onChunks: (id, prepared) => chunks.set(id, prepared),
       ...LIMITS,
       thinkingLevel: CONFIG.stm.thinkingLevel,
       sessionId,
@@ -247,7 +244,6 @@ export function scriptedStmCalls(request, faultIndex, tools = []) {
           .slice(-3)
           .join("; ")}`.slice(0, 200),
         sourceEntryIds: [entry.id],
-        ...(failLine ? { chunks: [{ sourceEntryId: entry.id, text: failLine.trim() }] } : {}),
       });
     }
   });
@@ -534,8 +530,9 @@ export const OFFLINE_EXPECTED = Object.freeze({
     nonEnglishFailure: [18, 0],
     durable: [36, 36],
     resolves: 36,
-    evidence: [42, 30],
-    chunks: 30,
+    // Plan 218.3 Task 4: no chunks (was evidence [42, 30], chunks 30 with the automatic evidence chunk).
+    evidence: [42, 0],
+    chunks: 0,
     fieldsRead: true,
     fields: { correction: [0, 0, 0], failure: [30, 30, 18], durable: [0, 0, 0], resolves: [6, 6, 12] },
   },
@@ -583,11 +580,15 @@ export function assertReplayGate(gate, { fixture, rules = REPLAY_RULES, criteria
 
 /**
  * Plan 218.2 Task 8: the gate keeps the criteria hash it was approved under when every later amendment changes no row
- * (none is an owner decision; amendment 9 only adds the long-horizon fixture's hash). An owner decision since refuses.
+ * (amendment 9 only adds the long-horizon fixture's hash). An owner decision since refuses, unless it declares
+ * `changesThresholds: false` (plan 218.3 Task 12's amendment 11 adds rows M6 and M7 and changes no existing row's
+ * thresholds, test kinds or comparators: memory-model-criteria.test.mjs criteria_amendment_adds_session_bench_rows_only).
  */
 export function onlyFixtureAmendmentsSince(pinned, amendments = MEMORY_MODEL_CRITERIA.amendments ?? []) {
   const from = amendments.findIndex((amendment) => amendment.previousHash === pinned);
-  return from >= 0 && amendments.slice(from).every((amendment) => amendment.kind !== "owner-decision");
+  return (
+    from >= 0 && amendments.slice(from).every((amendment) => amendment.kind !== "owner-decision" || amendment.changesThresholds === false)
+  );
 }
 
 /** A rule changed after the baseline is refused: the baseline's rules hash must equal the gate's and the code's. */

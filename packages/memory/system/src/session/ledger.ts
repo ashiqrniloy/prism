@@ -10,6 +10,8 @@ import {
   isObservationsRecordedData,
   isObservationsRepeatedData,
   isObservationsTombstonedData,
+  isScopeSetData,
+  isScopeStepData,
   isTaskStateRecordedData,
   isWmRecordedData,
   type MemoryBoundary,
@@ -21,6 +23,9 @@ import {
   type ObservationsRecordedData,
   type ObservationsRepeatedData,
   type ObservationsTombstonedData,
+  type ScopeSetData,
+  type ScopeStepData,
+  type ScopeStepState,
   type TaskStateRecordedData,
   type WmBudgetUnmet,
   type WmRecordedData,
@@ -48,6 +53,15 @@ export interface ObservationalMemoryLedger {
   readonly wmPasses?: number;
   /** For each record recorded after a processing WM pass, how many such passes the ledger held then (absent: 0). */
   readonly recordedAtWmPass?: Readonly<Record<string, number>>;
+  /** Finished scope steps by ordinal string (`"1"`), reset per step on scope text changes or on clear. */
+  readonly scopeSteps?: Readonly<Record<string, ScopeStepState>>;
+  /**
+   * The current scope's steps from its latest `scope.set` (plan 218.3 Task 8): ordinal → step hash, and the ordinals the
+   * scope text itself checked. Absent before any `scope.set` (a config scope then applies), empty after a clear. With `scopeSteps` it gives the remaining steps
+   * without the scope text, so a frozen ledger snapshot orders the memory block.
+   */
+  readonly scopeStepHashes?: Readonly<Record<string, string>>;
+  readonly scopeCheckedSteps?: readonly number[];
   readonly latestObservationCoverageId?: string;
   readonly latestDropCoverageId?: string;
 }
@@ -60,7 +74,9 @@ export type ObservationalMemoryRecord =
   | WmRecordedData
   | ObservationsDroppedData
   | ObservationsTombstonedData
-  | BoundaryRecordedData;
+  | BoundaryRecordedData
+  | ScopeSetData
+  | ScopeStepData;
 
 /** The key that makes a boundary marker unique: one marker per reason and branch entry. */
 export function boundaryKey(boundary: Pick<MemoryBoundary, "reason" | "entryId">): string {
@@ -90,6 +106,9 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
   let budgetUnmet: WmBudgetUnmet | undefined;
   let wmPasses = 0;
   const recordedAtWmPass: Record<string, number> = {};
+  const scopeSteps = new Map<string, ScopeStepState>();
+  let scopeStepHashes: Readonly<Record<string, string>> | undefined;
+  let scopeCheckedSteps: readonly number[] | undefined;
 
   for (const source of sources) {
     if (isSessionEntry(source)) {
@@ -143,6 +162,24 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
     } else if (isBoundaryRecordedData(data)) {
       const { type: _type, ...boundary } = data;
       if (!boundaries.has(boundaryKey(boundary))) boundaries.set(boundaryKey(boundary), boundary);
+    } else if (isScopeSetData(data)) {
+      scopeStepHashes = data.cleared === true ? {} : (data.stepHashes ?? {});
+      scopeCheckedSteps = data.cleared === true ? undefined : data.checkedSteps;
+      if (data.cleared === true) {
+        scopeSteps.clear();
+      } else if (data.stepHashes) {
+        for (const [key, state] of scopeSteps) {
+          if (state.stepHash === undefined || data.stepHashes[key] !== state.stepHash) scopeSteps.delete(key);
+        }
+      }
+    } else if (isScopeStepData(data)) {
+      scopeSteps.set(String(data.step), {
+        step: data.step,
+        ...(data.stepHash === undefined ? {} : { stepHash: data.stepHash }),
+        ...(data.evidenceIds === undefined ? {} : { evidenceIds: data.evidenceIds }),
+        source: data.source,
+        at: data.at,
+      });
     }
   }
 
@@ -170,6 +207,9 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
     ...(budgetUnmet ? { budgetUnmet } : {}),
     ...(wmPasses ? { wmPasses } : {}),
     ...(Object.keys(recordedAtWmPass).length ? { recordedAtWmPass } : {}),
+    ...(scopeSteps.size ? { scopeSteps: Object.fromEntries(scopeSteps) } : {}),
+    ...(scopeStepHashes === undefined ? {} : { scopeStepHashes }),
+    ...(scopeCheckedSteps?.length ? { scopeCheckedSteps } : {}),
     ...(taskState ? { taskState } : {}),
     latestObservationCoverageId,
     latestDropCoverageId,

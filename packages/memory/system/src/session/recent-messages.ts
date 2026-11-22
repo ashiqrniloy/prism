@@ -4,6 +4,7 @@ import { redactSecrets } from "@arnilo/prism";
 import { truncateWorkerText } from "@arnilo/prism-memory-system/core";
 import { memoryBlocksFrom } from "./context.js";
 import { buildObservationalMemoryProjection } from "./projection.js";
+import { remainingStepOrdinals } from "./scope.js";
 import { estimateEntryTokens } from "./tokens.js";
 
 export const DEFAULT_KEEP_RECENT_ENTRIES = 8;
@@ -68,6 +69,7 @@ export function buildObservationalMemoryContextBlocks(
       secrets,
       advertiseRecall: options.advertiseRecall,
       taskState: projection.taskState,
+      remainingSteps: remainingStepOrdinals(projection.full),
     }),
   );
   const recent = renderRecentMessageWindow(recentEntries, secrets);

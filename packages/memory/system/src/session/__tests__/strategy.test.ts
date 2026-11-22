@@ -14,7 +14,13 @@ import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-confor
 import { type MemoryObservation, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "../../index.js";
 import { createObservationalMemoryCommands } from "../commands.js";
 import { createObservationalCompactor } from "../compactor.js";
-import { resolveMemorySystemConfig } from "../config.js";
+import {
+  DEFAULT_COMPACT_AT_RATIO,
+  DEFAULT_KEEP_RECENT_RATIO,
+  OBSERVATIONS_POOL_MAX_TOKENS,
+  resolveMemorySystemConfig,
+  resolveObservationsPoolTokens,
+} from "../config.js";
 import { createObservationalMemoryCompactor } from "../strategy.js";
 import { FOLDED_MEMORY, OBSERVATIONS_TOMBSTONED, TASK_STATE_RECORDED } from "../types.js";
 
@@ -127,6 +133,26 @@ describe("observational memory compaction strategy", () => {
     assert.equal(memory.observations.length < 1 || memory.observations.reduce((s: number, o: any) => s + o.tokenCount, 0) <= 4, true);
   });
 
+  it("observation_pool_scales_with_the_input_cap", async () => {
+    // Plan 218.3 Task 12: a fixed 20,000-token pool plus the 20% kept tail does not fit a 30.7K input cap under the
+    // 80% mid-loop trigger, so every compaction left the session over it and the next tool round overflowed.
+    assert.equal(resolveObservationsPoolTokens(undefined), OBSERVATIONS_POOL_MAX_TOKENS);
+    assert.equal(resolveObservationsPoolTokens(1_000_000), OBSERVATIONS_POOL_MAX_TOKENS);
+    assert.equal(resolveObservationsPoolTokens(30_720), 9_216);
+    assert.ok(resolveObservationsPoolTokens(30_720) + Math.floor(30_720 * DEFAULT_KEEP_RECENT_RATIO) < 30_720 * DEFAULT_COMPACT_AT_RATIO);
+    const seen: (number | undefined)[] = [];
+    const strategy = createObservationalMemoryCompactor({
+      keepRecentEntries: 1,
+      observationsPoolMaxTokens: (context) => {
+        seen.push(context.inputCapTokens);
+        return 4;
+      },
+    });
+    const result = await strategy.compact({ sessionId: "s1", entries: memoryEntries(), inputCapTokens: 30_720 });
+    assert.deepEqual(seen, [30_720]);
+    assert.equal((result.entries?.[0]?.data as any)!.memory.fullFold, true);
+  });
+
   it("observational_memory_strategy_handles_repeated_compactions_and_full_fold", async () => {
     const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 1, observationsPoolMaxTokens: 1 });
     const first = await strategy.compact({ sessionId: "s1", entries: memoryEntries() });
@@ -186,7 +212,6 @@ it("compaction_renders_wm_then_stm_then_task_state_without_model_call", async ()
     relevance: "medium",
     sourceEntryIds: ["m1"],
     tokenCount: 5,
-    chunkRefs: [{ id: `${id}chunkchunkch`, sourceEntryId: "m1", sha256: "0".repeat(64), bytes: 30 }],
   });
   const wmItem = (id: string, kind: MemoryWmItem["kind"], text: string): MemoryWmItem => ({
     id,
@@ -219,11 +244,14 @@ it("compaction_renders_wm_then_stm_then_task_state_without_model_call", async ()
     },
   ] as unknown as JsonValue[];
   const log = { entries: () => records, append: async (_session: unknown, value: JsonValue) => void records.push(value) };
-  const config = resolveMemorySystemConfig({ enabled: true, context: { recentMessages: 2 } });
+  const config = resolveMemorySystemConfig({ enabled: true, context: { keepRecentTokens: 1 } });
   let fallbackCalls = 0;
   const compactor = createObservationalCompactor({
     log: log as never,
     config,
+    // Coverage is already at m2 (the ledger above); the cut keeps the newest message and stops at coverage.
+    cover: async () => ({ observations: 0, wmItems: 0, processed: 0, dropped: 0 }),
+    pointFor: () => "mid-loop",
     // No model client reaches the compactor; the kernel default is the only other path and must stay unused.
     fallback: {
       name: "fallback",
@@ -247,9 +275,8 @@ it("compaction_renders_wm_then_stm_then_task_state_without_model_call", async ()
     "WM (fact, summary, event), then unprocessed STM, then the task state",
   );
   assert.doesNotMatch(result.summary, /Tombstoned record/, "a processed record is off the STM surface");
-  assert.doesNotMatch(result.summary, /chunkchunk/, "the summary never carries chunk ids or text, only the marker");
   const data = result.entries?.[0]?.data as { keepEntryIds: string[] };
-  assert.deepEqual(data.keepEntryIds, ["m3", "m4"], "context.recentMessages stay verbatim");
+  assert.deepEqual(data.keepEntryIds, ["m3", "m4"], "the recent messages stay verbatim");
   // The same rendering function serves memory:session:view.
   const view = createObservationalMemoryCommands({ log, config } as never).find((command) => command.name === "memory:session:view")!;
   const viewed = (await view.run({}, { session } as never)) as { text: string };
@@ -281,10 +308,12 @@ it("block_names_discarded_count_only_at_compaction_and_prefix_stays_stable", asy
   const compactWith = async (tombstoned: boolean, recall = true) => {
     const list = records(tombstoned);
     const log = { entries: () => list, append: async () => {} };
-    const config = resolveMemorySystemConfig({ enabled: true, recall, context: { recentMessages: 2 } });
+    const config = resolveMemorySystemConfig({ enabled: true, recall, context: { keepRecentTokens: 1 } });
     const compactor = createObservationalCompactor({
       log: log as never,
       config,
+      cover: async () => ({ observations: 0, wmItems: 0, processed: 0, dropped: 0 }),
+      pointFor: () => "mid-loop",
       fallback: { name: "fallback", compact: () => ({ summary: "", entries: [] }) },
       isEnabled: () => true,
     });

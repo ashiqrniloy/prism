@@ -1,5 +1,5 @@
 import type { SessionEntry } from "@arnilo/prism";
-import { HARD_MAX_RECALL_PAGE_LIMIT, resolveRecallPageLimit } from "../session/limits.js";
+import { resolveRecallPageLimit } from "../session/limits.js";
 import { isEligibleObservationSourceEntry } from "../session/coverage-helpers.js";
 import { recallObservationalMemoryBranchPage } from "../session/recall.js";
 import { serializeSessionEntry } from "../session/serialize.js";
@@ -19,9 +19,8 @@ export const DEFAULT_CONVERSATION_SEARCH_TOP_K = 5;
 
 function resolveSearchTopK(topK: number | undefined): number {
   if (topK === undefined) return DEFAULT_CONVERSATION_SEARCH_TOP_K;
-  if (!Number.isSafeInteger(topK) || topK < 1 || topK > HARD_MAX_RECALL_PAGE_LIMIT) {
-    throw new RangeError(`Conversation search topK must be a positive safe integer at most ${HARD_MAX_RECALL_PAGE_LIMIT}`);
-  }
+  // A host API: the host's value is the cap (plan 239).
+  if (!Number.isSafeInteger(topK) || topK < 1) throw new RangeError("Conversation search topK must be a positive safe integer");
   return topK;
 }
 
@@ -47,7 +46,7 @@ export function createFabricConversationSearch(deps: {
     if (queryTokens.size === 0) {
       throw new MemoryValidationError("conversation search query needs at least one term of two or more characters");
     }
-    const pageLimit = resolveRecallPageLimit(searchOptions.limit);
+    const pageLimit = resolveRecallPageLimit(searchOptions.limit, Number.MAX_SAFE_INTEGER);
     const topK = resolveSearchTopK(searchOptions.topK);
     const entries = await source.session.entries();
     const messages = entries.filter(isEligibleObservationSourceEntry);

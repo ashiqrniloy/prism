@@ -31,7 +31,7 @@ import {
 } from "@arnilo/prism-memory-system/core";
 import { OBSERVATIONS_RECORDED } from "@arnilo/prism-memory-system";
 import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-knowledge/rag";
-import { HARD_REPOINT_RECORDS } from "../../../../core/src/repoint.js";
+import { DEFAULT_REPOINT_RECORDS } from "../../../../core/src/repoint.js";
 import { buildObservationalMemoryProjection } from "../../session/projection.js";
 
 const thread: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
@@ -184,7 +184,7 @@ describe("grant-change re-pointing", () => {
         }),
       /getByThread/,
     );
-    assert.equal(HARD_REPOINT_RECORDS, 4_096);
+    assert.equal(DEFAULT_REPOINT_RECORDS, 4_096);
     // The failed moves left the source in place.
     const records = await store.getByThread(thread);
     assert.ok(records.some((record) => record.id.startsWith("doc:a#")));
@@ -266,7 +266,7 @@ describe("paged re-pointing", () => {
     const { store: spy, transactions } = counted(store);
 
     const first = await repointSource({ scope: thread, vectorStore: spy, from: "doc:a", to: "doc:b", authorization: alice });
-    assert.equal(first.movedChunks, HARD_REPOINT_RECORDS, "the page size is the bound, not the scope");
+    assert.equal(first.movedChunks, DEFAULT_REPOINT_RECORDS, "the page size is the bound, not the scope");
     assert.equal(first.batched, true);
     assert.equal(transactions(), 1);
     assert.ok(first.cursor);

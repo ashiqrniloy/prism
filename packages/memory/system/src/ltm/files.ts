@@ -4,10 +4,12 @@ import { MemoryValidationError } from "@arnilo/prism-memory-system/core";
 
 /** File notes live in a host-owned directory; reads are bounded the way coding-tool reads are. */
 export const DEFAULT_FABRIC_MAX_FILE_BYTES = 50 * 1024;
-export const HARD_FABRIC_MAX_FILE_BYTES = 1024 * 1024;
 
-/** One `view` call lists at most this many entries, so a wide directory cannot flood a turn. */
-export const HARD_FABRIC_VIEW_ENTRIES = 200;
+/**
+ * One `view` call lists at most this many entries by default, so a wide directory cannot flood a turn. The directory's
+ * contents are not the host's, so this stays a ceiling the host sets (`tools.maxViewEntries`).
+ */
+export const DEFAULT_FABRIC_VIEW_ENTRIES = 200;
 
 export interface FabricFileEntry {
   readonly name: string;
@@ -29,8 +31,10 @@ export interface FabricFileContent {
 }
 
 export interface CreateFabricFileJailOptions {
-  /** Read/append ceiling for one file; default 50 KiB, hard cap 1 MiB. */
+  /** Read/append ceiling for one file; default 50 KiB. */
   readonly maxFileBytes?: number;
+  /** Entries one `view` lists; default {@link DEFAULT_FABRIC_VIEW_ENTRIES}. */
+  readonly maxViewEntries?: number;
 }
 
 /**
@@ -75,10 +79,10 @@ export function createFabricFileJail(root: string, options: CreateFabricFileJail
   if (typeof root !== "string" || root.trim().length === 0) throw new MemoryValidationError("root must be a non-empty directory path");
   const requestedMax = options.maxFileBytes ?? DEFAULT_FABRIC_MAX_FILE_BYTES;
   if (!Number.isInteger(requestedMax) || requestedMax <= 0) throw new MemoryValidationError("maxFileBytes must be a positive integer");
-  if (requestedMax > HARD_FABRIC_MAX_FILE_BYTES) {
-    throw new MemoryValidationError(`maxFileBytes exceeds hard cap ${HARD_FABRIC_MAX_FILE_BYTES}`);
-  }
   const maxFileBytes = requestedMax;
+  const maxViewEntries = options.maxViewEntries ?? DEFAULT_FABRIC_VIEW_ENTRIES;
+  if (!Number.isSafeInteger(maxViewEntries) || maxViewEntries <= 0)
+    throw new MemoryValidationError("maxViewEntries must be a positive integer");
   const rootAbs = resolve(root);
   let rootReal: Promise<string> | undefined;
   const resolveRoot = (): Promise<string> => (rootReal ??= realPathNearest(rootAbs));
@@ -104,7 +108,7 @@ export function createFabricFileJail(root: string, options: CreateFabricFileJail
       const dirents = await opendir(absolute);
       const entries: FabricFileEntry[] = [];
       for await (const dirent of dirents) {
-        if (entries.length > HARD_FABRIC_VIEW_ENTRIES) break;
+        if (entries.length > maxViewEntries) break;
         if (dirent.isDirectory()) entries.push({ name: dirent.name, kind: "directory" });
         else if (dirent.isFile()) {
           const handle = await open(join(absolute, dirent.name), "r");
@@ -116,7 +120,7 @@ export function createFabricFileJail(root: string, options: CreateFabricFileJail
         }
       }
       entries.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
-      return { path: requested, entries: entries.slice(0, HARD_FABRIC_VIEW_ENTRIES), truncated: entries.length > HARD_FABRIC_VIEW_ENTRIES };
+      return { path: requested, entries: entries.slice(0, maxViewEntries), truncated: entries.length > maxViewEntries };
     },
     async read(requested) {
       const absolute = await resolveInside(requested);

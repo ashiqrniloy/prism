@@ -24,7 +24,7 @@ import type { MemoryScope, MemoryVectorRecord, RagAccessConstraint, VectorStore 
 import { assertNotAborted, requireNonEmptyString, requireScope } from "./util.js";
 
 /** Default page size: the most records one `repointSource` call considers. Over it the call returns a cursor. */
-export const HARD_REPOINT_RECORDS = 4_096;
+export const DEFAULT_REPOINT_RECORDS = 4_096;
 
 const ID_MAX = 256;
 const CURSOR_VERSION = 1;
@@ -62,8 +62,8 @@ export interface RepointSourceOptions {
   readonly handlers?: readonly RepointHandler[];
   readonly signal?: AbortSignal;
   /**
-   * Records considered per page; defaults to and is bounded by `HARD_REPOINT_RECORDS` only as a page
-   * size. A scope larger than one page no longer rejects — the call returns a `cursor` for the rest.
+   * Records considered per page; defaults to `DEFAULT_REPOINT_RECORDS`, and the caller's value is the cap. A scope
+   * larger than one page no longer rejects — the call returns a `cursor` for the rest.
    */
   readonly pageSize?: number;
   /** Resume a paged move from the previous page's `cursor`. Another scope or source pair is rejected. */
@@ -214,7 +214,7 @@ export async function repointSource(options: RepointSourceOptions): Promise<Repo
   if (maxRecords !== undefined && (!Number.isInteger(maxRecords) || maxRecords < 1)) {
     throw new MemoryValidationError("maxRecords must be a positive integer");
   }
-  const pageSize = options.pageSize ?? HARD_REPOINT_RECORDS;
+  const pageSize = options.pageSize ?? DEFAULT_REPOINT_RECORDS;
   if (!Number.isInteger(pageSize) || pageSize < 1) throw new MemoryValidationError("pageSize must be a positive integer");
   const resumeFrom = options.cursor === undefined ? undefined : decodeCursor(requireCursorToken(options.cursor), scope, from, to);
   const store = options.vectorStore;

@@ -177,10 +177,11 @@ test("m2_verdicts_computed_from_memory_model_criteria_only", () => {
   const jobs = m2Jobs();
   const manifest = { jobs, baselines: { omBefore: {} } };
   const pin = buildM2Evidence({ reports: new Map(), manifest, probes, iterations: 10 });
-  // No run reports: M1 and M5 are missing, never a pass; M2-M4 come from the probes.
+  // No run reports: M1 and M5 are missing, never a pass; M2-M4 come from the probes; M6 and M7 (Session-Bench, plan
+  // 218.3 Task 12) read the screen's evidence, which this gate evidence does not carry.
   const pending = memoryModelGateVerdict("M-2", { ...pin, ...pinOf() });
   const status = Object.fromEntries(pending.rows.map((row) => [row.row, row.status]));
-  assert.deepEqual(status, { M1: "missing", M2: "pass", M3: "pass", M4: "pass", M5: "missing" });
+  assert.deepEqual(status, { M1: "missing", M2: "pass", M3: "pass", M4: "pass", M5: "missing", M6: "missing", M7: "missing" });
   // WM wins every re-plan task and, on the screen, ties STM-only: M1 passes, M5 is non-inferior.
   const screen = (estimate, ciLow, ciHigh) => ({
     branch: "A",

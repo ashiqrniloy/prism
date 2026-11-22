@@ -14,8 +14,8 @@
  * 4. S is what the model sees after that compaction, captured from the next provider request: the context blocks and
  *    summary messages (the memory block, uncapped) and then the kept messages in upstream's transcript format.
  *
- * Reported beside S: the memory-block-only S, and the text of the STM chunks the session holds (details reachable
- * through `recall`, scored separately and never added to retention).
+ * Reported beside S: the memory-block-only S. (Until plan 218.3 Task 4 the text of the STM chunks was reported too; STM
+ * now keeps no copy, and `recall` reads the original entries from the session store.)
  *
  * The `seam.py` shim hands S to upstream's own scoring (retention) or task runner (outcome), so PRE, the tests and the
  * scores stay upstream's.
@@ -25,15 +25,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  createAgent,
-  createMemorySessionStore,
-  definePackage,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  toolCallContent,
-} from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { armMemory, longSessionWmStats } from "../../work-outcome/long-session.mjs";
 
@@ -41,7 +33,7 @@ import { armMemory, longSessionWmStats } from "../../work-outcome/long-session.m
 export const COMPACT_BENCH_ARMS = Object.freeze(["memory-off", "OM-before", "STM-only", "WM"]);
 /** Upstream's tail cap (`cb_common.H_CAP`). */
 export const UPSTREAM_H_CAP = 250_000;
-/** Kept messages after the final compaction: the session profile's `recentMessages` (gate M-2's arms). */
+/** Kept messages after the final compaction (gate M-2's arms), set as the kernel's `compaction.keepRecentEntries`. */
 export const COMPACT_BENCH_RECENT_MESSAGES = 4;
 /** Never reached by a capped transcript, so the only compaction is the final one. */
 const NO_AUTO_COMPACTION_TOKENS = 100_000_000;
@@ -248,32 +240,6 @@ export function scriptedMain() {
   };
 }
 
-/** A chunk store the adapter can read back at the end (STM-only and WM keep verbatim chunks). */
-async function chunkReader() {
-  const { createSqliteChunkStore, MEMORY_CHUNK_STORE_SERVICE } = await import("@arnilo/prism-memory-system");
-  const store = await createSqliteChunkStore({ path: ":memory:" });
-  return {
-    store,
-    package: definePackage({
-      name: "compact-bench-chunks",
-      version: "0.13.0",
-      requires: { api: 1 },
-      setup(prism) {
-        prism.services.provide(MEMORY_CHUNK_STORE_SERVICE, store);
-      },
-    })(),
-    async text(sessionId) {
-      const listed = await store.list(sessionId);
-      const texts = [];
-      for (const { id } of listed) {
-        const chunk = await store.get(id, sessionId);
-        if (chunk?.text) texts.push(chunk.text);
-      }
-      return texts;
-    },
-  };
-}
-
 async function settle(agent, session, arm, deadlineMs) {
   if (arm === "memory-off") return;
   const status = arm === "OM-before" ? "om:status" : "memory:session:status";
@@ -304,7 +270,7 @@ export const wmEngaged = (wm) => (wm?.items ?? []).some((count) => count > 0);
 
 /**
  * Summarize one history as `arm`. `workerProviders` serve `workerModel` (the arm's STM/WM/observer worker); offline they
- * are mocks. Returns S, the block-only S, the chunk texts and counts; the caller keeps the text out of evidence.
+ * are mocks. Returns S, the block-only S and counts; the caller keeps the text out of evidence.
  */
 export async function summarizeHistory({ H, track, arm, workerProviders = [], workerModel, id = "h", settleMs = 600_000 }) {
   if (!COMPACT_BENCH_ARMS.includes(arm)) throw new Error(`CompactBenchAdapter: unknown arm ${arm}`);
@@ -312,24 +278,23 @@ export async function summarizeHistory({ H, track, arm, workerProviders = [], wo
   const view = transcriptView(H, track);
   const turns = replayTurns(view);
   const main = scriptedMain();
-  const chunks = arm === "STM-only" || arm === "WM" ? await chunkReader() : null;
   const memory =
     arm === "memory-off"
       ? []
       : await armMemory(arm, {
           workerModel,
-          context: { compactAt: { maxTokens: NO_AUTO_COMPACTION_TOKENS }, recentMessages: COMPACT_BENCH_RECENT_MESSAGES },
+          context: { compactAfterRun: { maxTokens: NO_AUTO_COMPACTION_TOKENS } },
         });
   const agent = await createAgent({
     model: MAIN_MODEL,
     packages: [
       providerPackage("compact-bench-main", [main.provider]),
       ...(workerProviders.length ? [providerPackage("compact-bench-worker", workerProviders)] : []),
-      ...(chunks ? [chunks.package] : []),
       ...memory,
     ],
     slots: { store: createMemorySessionStore() },
-    // memory-off: the kernel's default compactor, sized like the memory arms.
+    // memory-off: the kernel's default compactor keeps this many messages. Session memory's cut ignores it (plan 218.3
+    // Task 3): a compaction between runs keeps only new input, so the memory arms keep none.
     compaction: { keepRecentEntries: COMPACT_BENCH_RECENT_MESSAGES },
     // Token limits count the scripted replay's own requests (the whole capped transcript each turn, never billed);
     // the byte hard caps keep their defaults.
@@ -362,7 +327,6 @@ export async function summarizeHistory({ H, track, arm, workerProviders = [], wo
       stm = stmStats(entries);
     }
     const seen = renderSeen(main.state.probe, replyLines);
-    const chunkTexts = chunks ? await chunks.text(sessionId) : [];
     await session.close();
     return {
       id,
@@ -370,7 +334,6 @@ export async function summarizeHistory({ H, track, arm, workerProviders = [], wo
       track,
       S: seen.S,
       block: seen.block,
-      chunks: chunkTexts,
       counts: {
         viewLines: view.length,
         viewChars: cp(renderView(view)).length,
@@ -380,14 +343,12 @@ export async function summarizeHistory({ H, track, arm, workerProviders = [], wo
         keptMessages: seen.kept,
         sChars: cp(seen.S).length,
         blockChars: cp(seen.block).length,
-        chunks: chunkTexts.length,
         ...(wm ? { wm, wmEngaged: wmEngaged(wm) } : {}),
         ...(stm ? { stm } : {}),
       },
     };
   } finally {
     await agent.dispose();
-    await chunks?.store.close?.();
   }
 }
 
@@ -441,7 +402,6 @@ export function compactBenchWorkerMock(id = "cb-worker") {
                 description: text,
                 sourceEntryIds: [match[1]],
                 relevance: "high",
-                chunks: [{ sourceEntryId: match[1], text: textOf(message.content).slice(0, 1_000) }],
               }
             : { content: text, sourceEntryIds: [match[1]], relevance: "high" };
         yield providerToolCall(toolCallContent(`w${++n}`, shape === "event" ? "record_event" : "record_observation", args));
@@ -520,13 +480,12 @@ if (import.meta.main) {
       });
       records.push({ sample_id: id, arm, view: "context", S: result.S });
       records.push({ sample_id: id, arm, view: "block", S: result.block });
-      if (result.chunks.length) records.push({ sample_id: id, arm, view: "chunks", S: result.chunks.join("\n") });
       counts.push({ id, arm, ...result.counts });
     }
   const scored = scoreRetention({ records, codeDir: paths.code, dataDir: paths.data, workDir });
   const summary = {};
   for (const arm of arms)
-    for (const view of ["context", "block", "chunks"]) {
+    for (const view of ["context", "block"]) {
       const rows = scored.filter((row) => row.arm === arm && row.view === view);
       if (rows.length) summary[`${arm}/${view}`] = { n: rows.length, meanRecall: mean(rows.map((row) => row.recall)) };
     }

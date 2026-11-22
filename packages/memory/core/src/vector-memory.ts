@@ -42,6 +42,8 @@ import {
   requireScope,
 } from "./util.js";
 
+const DEFAULT_MAX_ENTRY_TEXT_CHARS = 64_384;
+
 export interface MemoryVectorStoreOptions {
   readonly maxEntryTextChars?: number;
 }
@@ -81,7 +83,7 @@ type SourceStore = VectorStore & {
 export function createMemoryVectorStore(options: MemoryVectorStoreOptions = {}): SourceStore & {
   transaction<T>(operation: (store: SourceStore) => Promise<T>, transactionOptions?: { readonly signal?: AbortSignal }): Promise<T>;
 } {
-  const maxEntryTextChars = options.maxEntryTextChars ?? 64_384;
+  const maxEntryTextChars = options.maxEntryTextChars ?? DEFAULT_MAX_ENTRY_TEXT_CHARS;
   const records = new Map<string, MemoryVectorRecord>();
   // Explicit generation pointer per exact scope; set by setCurrentGeneration (rollback/swap).
   const generationPointers = new Map<string, bigint | number>();

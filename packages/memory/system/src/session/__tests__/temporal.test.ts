@@ -32,6 +32,7 @@ async function observe(calls: { name: string; args: JsonObject }[], extra = {}) 
   const requests: ProviderRequest[] = [];
   let turn = 0;
   const observations = await runStm({
+    verbatimUserChars: 0,
     entries: [last, first],
     recent: [old],
     maxTurns: 2,
@@ -188,7 +189,10 @@ it("flush_persists_supersession_and_latest_task_state_without_extra_model_call",
       },
     } as unknown as import("@arnilo/prism").SessionLog<import("@arnilo/prism").JsonValue>,
     // STM only: the task-state boundary this pass records would otherwise run WM (plan 218 Task 2).
-    config: resolveMemorySystemConfig({ stm: { triggerTokens: 1 }, worker: { maxTurns: 1 } }, { wm: false, rehearsal: false }),
+    config: resolveMemorySystemConfig(
+      { stm: { triggerTokens: 1, verbatimUserChars: 0 }, worker: { maxTurns: 1 } },
+      { wm: false, rehearsal: false },
+    ),
     readState: () => ({ enabled: true }),
     onStatus: () => {},
     clientFor: () =>

@@ -7,10 +7,6 @@
       "stm": {
         "triggerTokens": 10000,
         "contextTokens": 4000,
-        "maxChunksPerEvent": 2,
-        "maxChunkBytes": 4096,
-        "autoChunkBytes": 1024,
-        "chunkStore": "memory",
         "habituation": {
           "windowEvents": 50
         },
@@ -23,6 +19,8 @@
         "batchTokens": 3000,
         "targetRatio": 0.2,
         "rejudgeTokens": 8000,
+        "lookAheadRecords": 12,
+        "lookAheadTokens": 3000,
         "protectRequestPasses": 8,
         "policy": "model"
       },
@@ -32,9 +30,12 @@
         "policy": "model"
       },
       "context": {
-        "recentMessages": 8,
+        "compaction": true,
         "compactAt": {
-          "ratio": 0.6
+          "ratio": 0.8
+        },
+        "compactAfterRun": {
+          "maxTokens": 80000
         }
       },
       "worker": {},

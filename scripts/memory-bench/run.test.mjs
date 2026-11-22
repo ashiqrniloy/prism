@@ -376,7 +376,10 @@ test("retry_does_not_duplicate_om_workers_or_promotions", async () => {
       else sourcesBeforeRetry = sourceObservations;
     },
     (request) => {
-      if (JSON.stringify(request.messages).includes("The project color is cobalt.")) sourceObservations++;
+      // The recent-record index lists STM's word-for-word copy of the user message (plan 218.5 Task 1); only the
+      // source entries themselves count as an observation of the history.
+      const sent = JSON.stringify(request.messages).replaceAll("User said: The project color is cobalt.", "");
+      if (sent.includes("The project color is cobalt.")) sourceObservations++;
     },
   );
   const result = await replay(
@@ -481,7 +484,9 @@ test("run_limit_answer_is_scored_wrong_and_arm_continues", async () => {
     assert.equal(row.stage, "run_limit");
     assert.equal(row.correct, false);
     assert.equal(row.answerRetries, 0);
-    assert.equal(requests, 8, "run_limit_is_not_retried: exactly the standard turn allowance");
+    // The same recall call every turn: the stall axis (plan 239 Task 9, `maxRepeatedToolRounds` 5) stops the run after
+    // the first round and five repeats, before the turn allowance.
+    assert.equal(requests, 6, "run_limit_is_not_retried: one round and five repeats, then the stall axis");
     assert.ok(row.turnTrace.length > 0 && row.turnTrace.length <= 64);
     assert.ok(row.turnTrace.every((name) => name === "memory.recall"));
     assert.equal(report.abilities[row.ability].runLimitRate, 1 / report.abilities[row.ability].n);
@@ -838,6 +843,7 @@ test("judge_json_protocol_preserves_strict_enum_validation", async () => {
   for (const text of ['"used"', '{"verdict":"maybe"}', '{"verdict":"used","extra":true}', "used because relevant"])
     assert.throws(() => judgeOutput(text, ["used", "irrelevant"]), /JudgeError/);
   assert.deepEqual(judgeProviderOptions(["yes", "no"]).structuredOutput.schema.properties.verdict.enum, ["yes", "no"]);
+  assert.equal(judgeProviderOptions(["yes", "no"]).structuredOutput.repair, 0, "judges never take a repair turn");
 });
 test("plain_text_judges_accept_one_label_and_extract_wrapped_verdicts", async () => {
   const { judgeTextOutput } = await import("./judge.mjs");

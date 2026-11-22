@@ -1,43 +1,30 @@
-/** Default and hard caps for memory operations. */
+/** Defaults for memory operations. The host's value is the cap (plan 239): a limit is validated, never clamped. */
 
 import { MemoryLimitError } from "./errors.js";
 
 export const DEFAULT_TOP_K = 5;
-export const HARD_TOP_K_CAP = 32;
 
 export const DEFAULT_MESSAGE_RANGE = 0;
-export const HARD_MESSAGE_RANGE_CAP = 4;
 
 export const DEFAULT_EMBED_BATCH_SIZE = 32;
-export const HARD_EMBED_BATCH_CAP = 128;
 
 export const DEFAULT_MAX_PAYLOAD_BYTES = 64 * 1024;
-export const HARD_MAX_PAYLOAD_BYTES_CAP = 512 * 1024;
 
 export const DEFAULT_MAX_INJECTED_TOKENS = 2_000;
-export const HARD_MAX_INJECTED_TOKENS_CAP = 8_000;
 
 export const DEFAULT_MAX_VECTOR_DIMENSIONS = 4_096;
-export const HARD_MAX_VECTOR_DIMENSIONS_CAP = 4_096;
 
 export const DEFAULT_MAX_ENTRY_TEXT_CHARS = 16_384;
-export const HARD_MAX_ENTRY_TEXT_CHARS_CAP = 64_384;
 
 /** Retention sweeps delete in bounded batches (no full-corpus scan per run). */
 export const DEFAULT_MEMORY_RETENTION_BATCH = 500;
-export const HARD_MEMORY_RETENTION_BATCH_CAP = 5_000;
 
 export const DEFAULT_MEMORY_EXPORT_PAGE_SIZE = 100;
-export const HARD_MEMORY_EXPORT_PAGE_SIZE_CAP = 200;
 export const DEFAULT_MAX_MEMORY_EXPORT_BYTES = 4 * 1024 * 1024;
-export const HARD_MAX_MEMORY_EXPORT_BYTES_CAP = 32 * 1024 * 1024;
 export const DEFAULT_MEMORY_EXPORT_MS = 10_000;
-export const HARD_MEMORY_EXPORT_MS_CAP = 60_000;
 
 export const DEFAULT_MEMORY_REBUILD_BATCH = 32;
-export const HARD_MEMORY_REBUILD_BATCH_CAP = 128;
 export const DEFAULT_MEMORY_REBUILD_MS = 10_000;
-export const HARD_MEMORY_REBUILD_MS_CAP = 60_000;
 
 export interface MemoryLimits {
   readonly topK: number;
@@ -69,61 +56,28 @@ export interface MemoryLimitsInput {
   readonly rebuildMs?: number;
 }
 
-function clampPositiveInt(value: number | undefined, fallback: number, hardCap: number, label: string): number {
+function nonNegativeInt(value: number | undefined, fallback: number, label: string): number {
   const resolved = value === undefined ? fallback : value;
-  if (!Number.isInteger(resolved) || resolved < 0) {
+  if (!Number.isSafeInteger(resolved) || resolved < 0) {
     throw new MemoryLimitError(`${label} must be a non-negative integer`);
-  }
-  if (resolved > hardCap) {
-    throw new MemoryLimitError(`${label} exceeds hard cap ${hardCap}`);
   }
   return resolved;
 }
 
 export function resolveMemoryLimits(input: MemoryLimitsInput = {}): MemoryLimits {
   return {
-    topK: clampPositiveInt(input.topK, DEFAULT_TOP_K, HARD_TOP_K_CAP, "topK"),
-    messageRange: clampPositiveInt(input.messageRange, DEFAULT_MESSAGE_RANGE, HARD_MESSAGE_RANGE_CAP, "messageRange"),
-    embedBatchSize: clampPositiveInt(input.embedBatchSize, DEFAULT_EMBED_BATCH_SIZE, HARD_EMBED_BATCH_CAP, "embedBatchSize"),
-    maxPayloadBytes: clampPositiveInt(input.maxPayloadBytes, DEFAULT_MAX_PAYLOAD_BYTES, HARD_MAX_PAYLOAD_BYTES_CAP, "maxPayloadBytes"),
-    maxInjectedTokens: clampPositiveInt(
-      input.maxInjectedTokens,
-      DEFAULT_MAX_INJECTED_TOKENS,
-      HARD_MAX_INJECTED_TOKENS_CAP,
-      "maxInjectedTokens",
-    ),
-    maxVectorDimensions: clampPositiveInt(
-      input.maxVectorDimensions,
-      DEFAULT_MAX_VECTOR_DIMENSIONS,
-      HARD_MAX_VECTOR_DIMENSIONS_CAP,
-      "maxVectorDimensions",
-    ),
-    maxEntryTextChars: clampPositiveInt(
-      input.maxEntryTextChars,
-      DEFAULT_MAX_ENTRY_TEXT_CHARS,
-      HARD_MAX_ENTRY_TEXT_CHARS_CAP,
-      "maxEntryTextChars",
-    ),
-    exportPageSize: clampPositiveInt(
-      input.exportPageSize,
-      DEFAULT_MEMORY_EXPORT_PAGE_SIZE,
-      HARD_MEMORY_EXPORT_PAGE_SIZE_CAP,
-      "exportPageSize",
-    ),
-    maxExportBytes: clampPositiveInt(
-      input.maxExportBytes,
-      DEFAULT_MAX_MEMORY_EXPORT_BYTES,
-      HARD_MAX_MEMORY_EXPORT_BYTES_CAP,
-      "maxExportBytes",
-    ),
-    exportMs: clampPositiveInt(input.exportMs, DEFAULT_MEMORY_EXPORT_MS, HARD_MEMORY_EXPORT_MS_CAP, "exportMs"),
-    rebuildBatchSize: clampPositiveInt(
-      input.rebuildBatchSize,
-      DEFAULT_MEMORY_REBUILD_BATCH,
-      HARD_MEMORY_REBUILD_BATCH_CAP,
-      "rebuildBatchSize",
-    ),
-    rebuildMs: clampPositiveInt(input.rebuildMs, DEFAULT_MEMORY_REBUILD_MS, HARD_MEMORY_REBUILD_MS_CAP, "rebuildMs"),
+    topK: nonNegativeInt(input.topK, DEFAULT_TOP_K, "topK"),
+    messageRange: nonNegativeInt(input.messageRange, DEFAULT_MESSAGE_RANGE, "messageRange"),
+    embedBatchSize: nonNegativeInt(input.embedBatchSize, DEFAULT_EMBED_BATCH_SIZE, "embedBatchSize"),
+    maxPayloadBytes: nonNegativeInt(input.maxPayloadBytes, DEFAULT_MAX_PAYLOAD_BYTES, "maxPayloadBytes"),
+    maxInjectedTokens: nonNegativeInt(input.maxInjectedTokens, DEFAULT_MAX_INJECTED_TOKENS, "maxInjectedTokens"),
+    maxVectorDimensions: nonNegativeInt(input.maxVectorDimensions, DEFAULT_MAX_VECTOR_DIMENSIONS, "maxVectorDimensions"),
+    maxEntryTextChars: nonNegativeInt(input.maxEntryTextChars, DEFAULT_MAX_ENTRY_TEXT_CHARS, "maxEntryTextChars"),
+    exportPageSize: nonNegativeInt(input.exportPageSize, DEFAULT_MEMORY_EXPORT_PAGE_SIZE, "exportPageSize"),
+    maxExportBytes: nonNegativeInt(input.maxExportBytes, DEFAULT_MAX_MEMORY_EXPORT_BYTES, "maxExportBytes"),
+    exportMs: nonNegativeInt(input.exportMs, DEFAULT_MEMORY_EXPORT_MS, "exportMs"),
+    rebuildBatchSize: nonNegativeInt(input.rebuildBatchSize, DEFAULT_MEMORY_REBUILD_BATCH, "rebuildBatchSize"),
+    rebuildMs: nonNegativeInt(input.rebuildMs, DEFAULT_MEMORY_REBUILD_MS, "rebuildMs"),
   };
 }
 

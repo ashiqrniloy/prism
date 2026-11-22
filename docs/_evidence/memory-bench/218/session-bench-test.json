@@ -1,0 +1,2731 @@
+{
+  "kind": "session-bench-report-v1",
+  "mode": "live",
+  "partition": "dev",
+  "benchmark": {
+    "version": 2,
+    "templateHash": "da493266ba03396884e4a16a4996da200c89b396e00f75a75a6315c6241cff80",
+    "idsHash": "1937178f6107526c04e10b2bf0357f20bd106874f25fe1caf1c0495ee0738bda",
+    "sessionsHash": "89cd48d9a5050392a85ea0855f26c4229e267f5edb9454d91f3e2a848bff526c"
+  },
+  "window": 32000,
+  "arms": [
+    "memory-off-llm",
+    "STM-only",
+    "STM+WM",
+    "claude-code-prompt",
+    "codex-prompt",
+    "mem0",
+    "oracle-context",
+    "amnesic"
+  ],
+  "configHashes": {
+    "memory-off-llm": "3e61b4a8037a1732e73f6f0e8a84c2840ba4c3fa6dcc2a0fcb874f20059678be",
+    "STM-only": "64ea70696bc78dfe1e058772e7a1c4a607945347c836b4b094e21780ccc228f9",
+    "STM+WM": "a29fb608834abd4704d9cd01744b8001b0972d1d33dbffd6e3796d376a195045",
+    "claude-code-prompt": "5bf9dd612c45a1c0780ab29488da500ff3b57a61eb8a9b64261d3de9499fce0b",
+    "codex-prompt": "7e601a79c00c4357e8912713adb9c32863179686f7fcd7fd744685c1d1275824",
+    "mem0": "0c683ca62cefa1c4b24e8d5e1f4bfac7d496a0a4a933e3e1dd7d92e7efb3d570",
+    "oracle-context": "ca9211be4913912cb4f39d265db8ad6e11bb2613c9183262c590216c430878b1",
+    "amnesic": "afc7423c2745b507047b6bd450ca1a5e0d71029958bc6b829fc55891fef9d74e"
+  },
+  "sharedConfigHash": "a3a13ab26b4e152230c289b51de74703ae3dce8c2be02c99e39a2c1786632dec",
+  "sessions": [
+    "sb-sc-19",
+    "sb-sc-06",
+    "sb-id-12",
+    "sb-id-02",
+    "sb-rt-01",
+    "sb-rt-12"
+  ],
+  "sessionTokens": {
+    "sb-sc-19": 220416,
+    "sb-sc-06": 184351,
+    "sb-id-12": 219900,
+    "sb-id-02": 256724,
+    "sb-rt-01": 201051,
+    "sb-rt-12": 141227
+  },
+  "scores": {
+    "memory-off-llm": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 49,
+        "classes": {
+          "C": {
+            "pass": 63,
+            "total": 80,
+            "rate": 0.7875
+          },
+          "D1": {
+            "pass": 5,
+            "total": 7,
+            "rate": 0.7142857142857143
+          },
+          "D3": {
+            "pass": 3,
+            "total": 6,
+            "rate": 0.5
+          },
+          "D2": {
+            "pass": 6,
+            "total": 7,
+            "rate": 0.8571428571428571
+          },
+          "D4": {
+            "pass": 3,
+            "total": 6,
+            "rate": 0.5
+          }
+        },
+        "rederivations": 71,
+        "toolCalls": 412,
+        "taskRate": 0.7313432835820896
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 11,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 12,
+          "toolCalls": 87
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 12,
+              "total": 12
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 9,
+          "toolCalls": 64
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 13,
+              "total": 14
+            },
+            "D2": {
+              "pass": 2,
+              "total": 2
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 20,
+          "toolCalls": 100
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 2,
+          "classes": {
+            "C": {
+              "pass": 4,
+              "total": 17
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 8,
+          "toolCalls": 44
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 8,
+          "classes": {
+            "C": {
+              "pass": 10,
+              "total": 13
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 22,
+          "toolCalls": 75
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 8,
+          "classes": {
+            "C": {
+              "pass": 9,
+              "total": 9
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 0,
+          "toolCalls": 42
+        }
+      }
+    },
+    "STM-only": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 58,
+        "classes": {
+          "C": {
+            "pass": 77,
+            "total": 80,
+            "rate": 0.9625
+          },
+          "D1": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 6,
+            "total": 6,
+            "rate": 1
+          },
+          "D2": {
+            "pass": 6,
+            "total": 7,
+            "rate": 0.8571428571428571
+          },
+          "D4": {
+            "pass": 1,
+            "total": 6,
+            "rate": 0.16666666666666666
+          }
+        },
+        "rederivations": 39,
+        "toolCalls": 454,
+        "taskRate": 0.8656716417910447
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 14,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 4,
+          "toolCalls": 96
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 8,
+          "classes": {
+            "C": {
+              "pass": 11,
+              "total": 12
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 7,
+          "toolCalls": 55
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 12,
+          "classes": {
+            "C": {
+              "pass": 14,
+              "total": 14
+            },
+            "D2": {
+              "pass": 2,
+              "total": 2
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 6,
+          "toolCalls": 66
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 12,
+          "classes": {
+            "C": {
+              "pass": 16,
+              "total": 17
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 13,
+          "toolCalls": 120
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 13,
+              "total": 13
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 4,
+          "toolCalls": 73
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 6,
+          "classes": {
+            "C": {
+              "pass": 9,
+              "total": 9
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 5,
+          "toolCalls": 44
+        }
+      }
+    },
+    "STM+WM": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 60,
+        "classes": {
+          "C": {
+            "pass": 79,
+            "total": 80,
+            "rate": 0.9875
+          },
+          "D1": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 5,
+            "total": 6,
+            "rate": 0.8333333333333334
+          },
+          "D2": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 1,
+            "total": 6,
+            "rate": 0.16666666666666666
+          }
+        },
+        "rederivations": 52,
+        "toolCalls": 535,
+        "taskRate": 0.8955223880597015
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 11,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 14,
+          "toolCalls": 117
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 9,
+          "classes": {
+            "C": {
+              "pass": 12,
+              "total": 12
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 7,
+          "toolCalls": 77
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 12,
+          "classes": {
+            "C": {
+              "pass": 14,
+              "total": 14
+            },
+            "D2": {
+              "pass": 2,
+              "total": 2
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 9,
+          "toolCalls": 80
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 11,
+          "classes": {
+            "C": {
+              "pass": 16,
+              "total": 17
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 7,
+          "toolCalls": 118
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 13,
+              "total": 13
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 10,
+          "toolCalls": 95
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 7,
+          "classes": {
+            "C": {
+              "pass": 9,
+              "total": 9
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 5,
+          "toolCalls": 48
+        }
+      }
+    },
+    "claude-code-prompt": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 46,
+        "classes": {
+          "C": {
+            "pass": 68,
+            "total": 80,
+            "rate": 0.85
+          },
+          "D1": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 2,
+            "total": 6,
+            "rate": 0.3333333333333333
+          },
+          "D2": {
+            "pass": 1,
+            "total": 7,
+            "rate": 0.14285714285714285
+          },
+          "D4": {
+            "pass": 0,
+            "total": 6,
+            "rate": 0
+          }
+        },
+        "rederivations": 175,
+        "toolCalls": 699,
+        "taskRate": 0.6865671641791045
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 17,
+          "toolCalls": 111
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 5,
+          "classes": {
+            "C": {
+              "pass": 7,
+              "total": 12
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 50,
+          "toolCalls": 170
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 8,
+          "classes": {
+            "C": {
+              "pass": 11,
+              "total": 14
+            },
+            "D2": {
+              "pass": 1,
+              "total": 2
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 17,
+          "toolCalls": 86
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 17
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 40,
+          "toolCalls": 150
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 7,
+          "classes": {
+            "C": {
+              "pass": 12,
+              "total": 13
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 35,
+          "toolCalls": 123
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 6,
+          "classes": {
+            "C": {
+              "pass": 8,
+              "total": 9
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 16,
+          "toolCalls": 59
+        }
+      }
+    },
+    "codex-prompt": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 51,
+        "classes": {
+          "C": {
+            "pass": 73,
+            "total": 80,
+            "rate": 0.9125
+          },
+          "D1": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 4,
+            "total": 6,
+            "rate": 0.6666666666666666
+          },
+          "D2": {
+            "pass": 2,
+            "total": 7,
+            "rate": 0.2857142857142857
+          },
+          "D4": {
+            "pass": 1,
+            "total": 6,
+            "rate": 0.16666666666666666
+          }
+        },
+        "rederivations": 193,
+        "toolCalls": 789,
+        "taskRate": 0.7611940298507462
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 12,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 7,
+          "toolCalls": 64
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 6,
+          "classes": {
+            "C": {
+              "pass": 11,
+              "total": 12
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 40,
+          "toolCalls": 146
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 8,
+          "classes": {
+            "C": {
+              "pass": 11,
+              "total": 14
+            },
+            "D2": {
+              "pass": 1,
+              "total": 2
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 52,
+          "toolCalls": 162
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 12,
+          "classes": {
+            "C": {
+              "pass": 17,
+              "total": 17
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 43,
+          "toolCalls": 191
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 9,
+          "classes": {
+            "C": {
+              "pass": 13,
+              "total": 13
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 18,
+          "toolCalls": 122
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 4,
+          "classes": {
+            "C": {
+              "pass": 6,
+              "total": 9
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 33,
+          "toolCalls": 104
+        }
+      }
+    },
+    "mem0": {
+      "overall": {
+        "tasks": 12,
+        "tasksPassed": 12,
+        "classes": {
+          "C": {
+            "pass": 15,
+            "total": 15,
+            "rate": 1
+          },
+          "D1": {
+            "pass": 2,
+            "total": 2,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 1,
+            "total": 1,
+            "rate": 1
+          },
+          "D2": {
+            "pass": 1,
+            "total": 1,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 1,
+            "total": 1,
+            "rate": 1
+          }
+        },
+        "rederivations": 3,
+        "toolCalls": 70,
+        "taskRate": 1
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 12,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 3,
+          "toolCalls": 70
+        }
+      }
+    },
+    "oracle-context": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 61,
+        "classes": {
+          "C": {
+            "pass": 78,
+            "total": 80,
+            "rate": 0.975
+          },
+          "D1": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 5,
+            "total": 6,
+            "rate": 0.8333333333333334
+          },
+          "D2": {
+            "pass": 7,
+            "total": 7,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 2,
+            "total": 6,
+            "rate": 0.3333333333333333
+          }
+        },
+        "rederivations": 3,
+        "toolCalls": 319,
+        "taskRate": 0.9104477611940298
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 11,
+          "classes": {
+            "C": {
+              "pass": 15,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 0,
+          "toolCalls": 46
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 12,
+              "total": 12
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 1,
+          "toolCalls": 56
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 12,
+              "total": 14
+            },
+            "D2": {
+              "pass": 2,
+              "total": 2
+            },
+            "D4": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 1,
+          "toolCalls": 72
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 13,
+          "classes": {
+            "C": {
+              "pass": 17,
+              "total": 17
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 0,
+          "toolCalls": 54
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 13,
+              "total": 13
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 1,
+          "toolCalls": 60
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 7,
+          "classes": {
+            "C": {
+              "pass": 9,
+              "total": 9
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 0,
+          "toolCalls": 31
+        }
+      }
+    },
+    "amnesic": {
+      "overall": {
+        "tasks": 67,
+        "tasksPassed": 40,
+        "classes": {
+          "C": {
+            "pass": 59,
+            "total": 80,
+            "rate": 0.7375
+          },
+          "D1": {
+            "pass": 6,
+            "total": 7,
+            "rate": 0.8571428571428571
+          },
+          "D3": {
+            "pass": 1,
+            "total": 6,
+            "rate": 0.16666666666666666
+          },
+          "D2": {
+            "pass": 0,
+            "total": 7,
+            "rate": 0
+          },
+          "D4": {
+            "pass": 0,
+            "total": 6,
+            "rate": 0
+          }
+        },
+        "rederivations": 349,
+        "toolCalls": 876,
+        "taskRate": 0.5970149253731343
+      },
+      "sessions": {
+        "sb-sc-19": {
+          "tasks": 12,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 14,
+              "total": 15
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            },
+            "D3": {
+              "pass": 1,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 35,
+          "toolCalls": 108
+        },
+        "sb-sc-06": {
+          "tasks": 10,
+          "tasksPassed": 5,
+          "classes": {
+            "C": {
+              "pass": 7,
+              "total": 12
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            }
+          },
+          "rederivations": 80,
+          "toolCalls": 170
+        },
+        "sb-id-12": {
+          "tasks": 12,
+          "tasksPassed": 6,
+          "classes": {
+            "C": {
+              "pass": 9,
+              "total": 14
+            },
+            "D2": {
+              "pass": 0,
+              "total": 2
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 73,
+          "toolCalls": 181
+        },
+        "sb-id-02": {
+          "tasks": 14,
+          "tasksPassed": 10,
+          "classes": {
+            "C": {
+              "pass": 14,
+              "total": 17
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 50,
+          "toolCalls": 155
+        },
+        "sb-rt-01": {
+          "tasks": 11,
+          "tasksPassed": 6,
+          "classes": {
+            "C": {
+              "pass": 10,
+              "total": 13
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            },
+            "D1": {
+              "pass": 1,
+              "total": 1
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 70,
+          "toolCalls": 169
+        },
+        "sb-rt-12": {
+          "tasks": 8,
+          "tasksPassed": 3,
+          "classes": {
+            "C": {
+              "pass": 5,
+              "total": 9
+            },
+            "D4": {
+              "pass": 0,
+              "total": 1
+            },
+            "D3": {
+              "pass": 0,
+              "total": 1
+            },
+            "D2": {
+              "pass": 0,
+              "total": 1
+            }
+          },
+          "rederivations": 41,
+          "toolCalls": 93
+        }
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "a": "memory-off-llm",
+      "b": "STM-only",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.13432835820895522,
+          "ci95": [
+            -0.12280701754385964,
+            0.4230769230769231
+          ],
+          "p": 0.6875
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0.2857142857142857,
+          "ci95": [
+            0,
+            0.75
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0,
+          "ci95": [
+            -0.42857142857142855,
+            0.42857142857142855
+          ],
+          "p": 1
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.5,
+          "ci95": [
+            0.16666666666666666,
+            0.8333333333333334
+          ],
+          "p": 0.25
+        },
+        "D4": {
+          "n": 6,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.6666666666666666,
+            0
+          ],
+          "p": 0.5
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.175,
+          "ci95": [
+            -0.03896103896103896,
+            0.43333333333333335
+          ],
+          "p": 0.4375
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "STM-only",
+      "b": "STM+WM",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.029850746268656716,
+          "ci95": [
+            -0.02631578947368421,
+            0.08771929824561403
+          ],
+          "p": 0.625
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.14285714285714285,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1
+        },
+        "D3": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.025,
+          "ci95": [
+            0,
+            0.0547945205479452
+          ],
+          "p": 0.5
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "memory-off-llm",
+      "b": "STM+WM",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.16417910447761194,
+          "ci95": [
+            -0.03508771929824561,
+            0.3974358974358974
+          ],
+          "p": 0.375
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0.2857142857142857,
+          "ci95": [
+            0,
+            0.75
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.14285714285714285,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            0,
+            0.6666666666666666
+          ],
+          "p": 0.5
+        },
+        "D4": {
+          "n": 6,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.6666666666666666,
+            0
+          ],
+          "p": 0.5
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.2,
+          "ci95": [
+            0.012987012987012988,
+            0.4444444444444444
+          ],
+          "p": 0.25
+        }
+      },
+      "sessions": 6
+    }
+  ],
+  "sideComparisons": [
+    {
+      "a": "claude-code-prompt",
+      "b": "memory-off-llm",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.04477611940298507,
+          "ci95": [
+            -0.2597402597402597,
+            0.3076923076923077
+          ],
+          "p": 0.84375
+        },
+        "D1": {
+          "n": 7,
+          "diff": -0.2857142857142857,
+          "ci95": [
+            -0.75,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.7142857142857143,
+          "ci95": [
+            0.42857142857142855,
+            1
+          ],
+          "p": 0.0625
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0.5,
+          "ci95": [
+            0.16666666666666666,
+            0.8333333333333334
+          ],
+          "p": 0.25
+        },
+        "C": {
+          "n": 80,
+          "diff": -0.0625,
+          "ci95": [
+            -0.35555555555555557,
+            0.21333333333333335
+          ],
+          "p": 0.875
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "codex-prompt",
+      "b": "memory-off-llm",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": -0.029850746268656716,
+          "ci95": [
+            -0.37333333333333335,
+            0.29310344827586204
+          ],
+          "p": 0.9375
+        },
+        "D1": {
+          "n": 7,
+          "diff": -0.2857142857142857,
+          "ci95": [
+            -0.75,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.5714285714285714,
+          "ci95": [
+            0.25,
+            0.8571428571428571
+          ],
+          "p": 0.125
+        },
+        "D3": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.8333333333333334,
+            0.5
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            -0.3333333333333333,
+            0.8333333333333334
+          ],
+          "p": 0.625
+        },
+        "C": {
+          "n": 80,
+          "diff": -0.125,
+          "ci95": [
+            -0.43902439024390244,
+            0.1506849315068493
+          ],
+          "p": 0.8125
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "mem0",
+      "b": "memory-off-llm",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 12,
+          "diff": -0.08333333333333333,
+          "ci95": [
+            -0.08333333333333333,
+            -0.08333333333333333
+          ],
+          "p": 1
+        },
+        "D1": {
+          "n": 2,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 1,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D3": {
+          "n": 1,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 1,
+          "diff": -1,
+          "ci95": [
+            -1,
+            -1
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 15,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        }
+      },
+      "sessions": 1
+    },
+    {
+      "a": "claude-code-prompt",
+      "b": "STM-only",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.1791044776119403,
+          "ci95": [
+            0.07246376811594203,
+            0.2753623188405797
+          ],
+          "p": 0.125
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.7142857142857143,
+          "ci95": [
+            0.42857142857142855,
+            1
+          ],
+          "p": 0.0625
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.6666666666666666,
+          "ci95": [
+            0.3333333333333333,
+            1
+          ],
+          "p": 0.125
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.1125,
+          "ci95": [
+            0.022222222222222223,
+            0.2236842105263158
+          ],
+          "p": 0.15625
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "codex-prompt",
+      "b": "STM-only",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.1044776119402985,
+          "ci95": [
+            -0.029411764705882353,
+            0.24242424242424243
+          ],
+          "p": 0.3125
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.5714285714285714,
+          "ci95": [
+            0.2857142857142857,
+            0.8571428571428571
+          ],
+          "p": 0.125
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            0,
+            0.6666666666666666
+          ],
+          "p": 0.5
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            -0.5,
+            0.5
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.05,
+          "ci95": [
+            -0.044444444444444446,
+            0.171439732142857
+          ],
+          "p": 0.5
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "mem0",
+      "b": "STM-only",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 12,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.16666666666666666,
+            -0.16666666666666666
+          ],
+          "p": 1
+        },
+        "D1": {
+          "n": 2,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 1,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D3": {
+          "n": 1,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 1,
+          "diff": -1,
+          "ci95": [
+            -1,
+            -1
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 15,
+          "diff": -0.06666666666666667,
+          "ci95": [
+            -0.06666666666666667,
+            -0.06666666666666667
+          ],
+          "p": 1
+        }
+      },
+      "sessions": 1
+    },
+    {
+      "a": "claude-code-prompt",
+      "b": "STM+WM",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.208955223880597,
+          "ci95": [
+            0.11267605633802817,
+            0.31666666666666665
+          ],
+          "p": 0.03125
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.8571428571428571,
+          "ci95": [
+            0.6666666666666666,
+            1
+          ],
+          "p": 0.03125
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.5,
+          "ci95": [
+            0.16666666666666666,
+            0.8333333333333334
+          ],
+          "p": 0.25
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.1375,
+          "ci95": [
+            0.046511627906976744,
+            0.2625
+          ],
+          "p": 0.0625
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "codex-prompt",
+      "b": "STM+WM",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 67,
+          "diff": 0.13432835820895522,
+          "ci95": [
+            0,
+            0.29508196721311475
+          ],
+          "p": 0.21875
+        },
+        "D1": {
+          "n": 7,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 7,
+          "diff": 0.7142857142857143,
+          "ci95": [
+            0.42857142857142855,
+            1
+          ],
+          "p": 0.0625
+        },
+        "D3": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            -0.5,
+            0.5
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 80,
+          "diff": 0.075,
+          "ci95": [
+            -0.011366901776384532,
+            0.19117647058823528
+          ],
+          "p": 0.375
+        }
+      },
+      "sessions": 6
+    },
+    {
+      "a": "mem0",
+      "b": "STM+WM",
+      "status": "compared",
+      "metrics": {
+        "task": {
+          "n": 12,
+          "diff": -0.08333333333333333,
+          "ci95": [
+            -0.08333333333333333,
+            -0.08333333333333333
+          ],
+          "p": 1
+        },
+        "D1": {
+          "n": 2,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D2": {
+          "n": 1,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D3": {
+          "n": 1,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        },
+        "D4": {
+          "n": 1,
+          "diff": -1,
+          "ci95": [
+            -1,
+            -1
+          ],
+          "p": 1
+        },
+        "C": {
+          "n": 15,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1
+        }
+      },
+      "sessions": 1
+    }
+  ],
+  "cost": {
+    "memory-off-llm": {
+      "main": {
+        "calls": 436,
+        "inputTokens": 9262348,
+        "cachedInputTokens": 6884864,
+        "outputTokens": 78895
+      },
+      "workers": {
+        "calls": 164,
+        "inputTokens": 465606,
+        "cachedInputTokens": 6400,
+        "outputTokens": 209703
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 27,
+      "providerErrors": 0,
+      "wholeRunTokens": 10016552,
+      "wholeRunTokensPerPassedTask": 204419,
+      "cacheShare": 0.708398086586347,
+      "simulatedPrefixShare": 0.7889179124603942
+    },
+    "STM-only": {
+      "main": {
+        "calls": 527,
+        "inputTokens": 10825811,
+        "cachedInputTokens": 8710656,
+        "outputTokens": 73632
+      },
+      "workers": {
+        "calls": 146,
+        "inputTokens": 2373449,
+        "cachedInputTokens": 327040,
+        "outputTokens": 170169
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 22,
+      "providerErrors": 1,
+      "wholeRunTokens": 13443061,
+      "wholeRunTokensPerPassedTask": 231777,
+      "cacheShare": 0.6847123247818439,
+      "simulatedPrefixShare": 0.8324716337976414
+    },
+    "STM+WM": {
+      "main": {
+        "calls": 617,
+        "inputTokens": 13240434,
+        "cachedInputTokens": 9844224,
+        "outputTokens": 108923
+      },
+      "workers": {
+        "calls": 319,
+        "inputTokens": 3937823,
+        "cachedInputTokens": 815616,
+        "outputTokens": 435894
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 43,
+      "providerErrors": 4,
+      "wholeRunTokens": 17723074,
+      "wholeRunTokensPerPassedTask": 295385,
+      "cacheShare": 0.620542584733713,
+      "simulatedPrefixShare": 0.7985273331285663
+    },
+    "claude-code-prompt": {
+      "main": {
+        "calls": 765,
+        "inputTokens": 15498819,
+        "cachedInputTokens": 12263936,
+        "outputTokens": 119907
+      },
+      "workers": {
+        "calls": 169,
+        "inputTokens": 526634,
+        "cachedInputTokens": 384,
+        "outputTokens": 256797
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "wholeRunTokens": 16402157,
+      "wholeRunTokensPerPassedTask": 356569,
+      "cacheShare": 0.7653025471417251,
+      "simulatedPrefixShare": 0.8245015392977639
+    },
+    "codex-prompt": {
+      "main": {
+        "calls": 859,
+        "inputTokens": 17879944,
+        "cachedInputTokens": 14279936,
+        "outputTokens": 144703
+      },
+      "workers": {
+        "calls": 196,
+        "inputTokens": 537541,
+        "cachedInputTokens": 0,
+        "outputTokens": 235246
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "wholeRunTokens": 18797434,
+      "wholeRunTokensPerPassedTask": 368577,
+      "cacheShare": 0.7753466882150305,
+      "simulatedPrefixShare": 0.8254050632751935
+    },
+    "mem0": {
+      "main": {
+        "calls": 83,
+        "inputTokens": 1797097,
+        "cachedInputTokens": 1270656,
+        "outputTokens": 10166
+      },
+      "workers": {
+        "calls": 33,
+        "inputTokens": 173839,
+        "cachedInputTokens": 93440,
+        "outputTokens": 34382
+      },
+      "embeddings": {
+        "calls": 61,
+        "inputTokens": 6503
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "wholeRunTokens": 2021987,
+      "wholeRunTokensPerPassedTask": 168499,
+      "cacheShare": 0.6921056797379519,
+      "simulatedPrefixShare": 0.733765125592392
+    },
+    "oracle-context": {
+      "main": {
+        "calls": 396,
+        "inputTokens": 51484280,
+        "cachedInputTokens": 49277824,
+        "outputTokens": 60573
+      },
+      "workers": {
+        "calls": 0,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "outputTokens": 0
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 5,
+      "wholeRunTokens": 51544853,
+      "wholeRunTokensPerPassedTask": 844998,
+      "cacheShare": 0.9571431124218888,
+      "simulatedPrefixShare": 0.974201963724202
+    },
+    "amnesic": {
+      "main": {
+        "calls": 974,
+        "inputTokens": 15418556,
+        "cachedInputTokens": 11676032,
+        "outputTokens": 118074
+      },
+      "workers": {
+        "calls": 0,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "outputTokens": 0
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 1,
+      "wholeRunTokens": 15536630,
+      "wholeRunTokensPerPassedTask": 388416,
+      "cacheShare": 0.7572714332003594,
+      "simulatedPrefixShare": 0.77911354506785
+    }
+  },
+  "faults": {
+    "memory-off-llm": [
+      {
+        "session": "sb-id-02",
+        "task": 3,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 4,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 5,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 6,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 7,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 8,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 9,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 10,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 11,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 12,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 13,
+        "status": "failed",
+        "code": "context_overflow"
+      },
+      {
+        "session": "sb-id-02",
+        "task": 14,
+        "status": "failed",
+        "code": "context_overflow"
+      }
+    ],
+    "STM-only": [],
+    "STM+WM": [],
+    "claude-code-prompt": [],
+    "codex-prompt": [],
+    "mem0": [],
+    "oracle-context": [],
+    "amnesic": []
+  },
+  "wallMs": 33659424,
+  "plan": "218.3 Task 11",
+  "model": "opencode-go/deepseek-v4.1-flash",
+  "ruleHash": "ed4cd202bbaec74c90c5f0e37ccbce96da86e9920658ce25ce194abf529ff0bc",
+  "complete": false,
+  "rows": 43,
+  "timing": {
+    "memory-off-llm": {
+      "wallMs": 3893053,
+      "wallMsPerSession": 648842,
+      "quotaWaitMs": 0
+    },
+    "STM-only": {
+      "wallMs": 2686668,
+      "wallMsPerSession": 447778,
+      "quotaWaitMs": 0
+    },
+    "STM+WM": {
+      "wallMs": 4964406,
+      "wallMsPerSession": 827401,
+      "quotaWaitMs": 0
+    },
+    "claude-code-prompt": {
+      "wallMs": 6784923,
+      "wallMsPerSession": 1130821,
+      "quotaWaitMs": 0
+    },
+    "codex-prompt": {
+      "wallMs": 7368547,
+      "wallMsPerSession": 1228091,
+      "quotaWaitMs": 0
+    },
+    "mem0": {
+      "wallMs": 953967,
+      "wallMsPerSession": 953967,
+      "quotaWaitMs": 0
+    },
+    "oracle-context": {
+      "wallMs": 2890934,
+      "wallMsPerSession": 481822,
+      "quotaWaitMs": 0
+    },
+    "amnesic": {
+      "wallMs": 4116926,
+      "wallMsPerSession": 686154,
+      "quotaWaitMs": 0
+    }
+  },
+  "wireUsage": {
+    "inputTokens": 203708610,
+    "outputTokens": 3172310
+  },
+  "liveGuardrails": {
+    "complete": true,
+    "pass": true,
+    "rows": [
+      {
+        "id": "oracle-solvable",
+        "taskRate": 0.9104477611940298,
+        "min": 0.6,
+        "pass": true
+      },
+      {
+        "id": "amnesic-fails-D2",
+        "failRate": 1,
+        "min": 0.7,
+        "pass": true
+      },
+      {
+        "id": "amnesic-fails-D4",
+        "failRate": 1,
+        "min": 0.7,
+        "pass": true
+      }
+    ]
+  },
+  "screen": {
+    "readings": [
+      {
+        "a": "memory-off-llm",
+        "b": "STM-only",
+        "sessions": 6,
+        "meanDiff": 0.055555555555555546,
+        "sd": 0.49617052027018416,
+        "detectableAt36": 0.23167733254206146
+      },
+      {
+        "a": "STM-only",
+        "b": "STM+WM",
+        "sessions": 6,
+        "meanDiff": 0.02222222222222221,
+        "sd": 0.17213259316477408,
+        "detectableAt36": 0.08037402142764741
+      }
+    ],
+    "sd": 0.49617052027018416,
+    "effect": 0.1,
+    "n": 194,
+    "fitsDev": false,
+    "verdict": "needs 194 sessions; dev holds 36: to the owner",
+    "arms": [
+      "memory-off-llm",
+      "STM-only",
+      "STM+WM",
+      "claude-code-prompt",
+      "codex-prompt",
+      "mem0"
+    ],
+    "inputTokensPerSessionByArm": {
+      "memory-off-llm": 1621326,
+      "STM-only": 2199877,
+      "STM+WM": 2863043,
+      "claude-code-prompt": 2670909,
+      "codex-prompt": 3069581,
+      "mem0": 1977439
+    },
+    "estimatedInputTokens": 518478300
+  },
+  "screenD1toD3": {
+    "readings": [
+      {
+        "a": "memory-off-llm",
+        "b": "STM-only",
+        "sessions": 6,
+        "meanDiff": 0.18055555555555558,
+        "sd": 0.49558233609749636,
+        "detectableAt36": 0.2314026911947731
+      },
+      {
+        "a": "STM-only",
+        "b": "STM+WM",
+        "sessions": 6,
+        "meanDiff": 0.041666666666666664,
+        "sd": 0.24579802006254375,
+        "detectableAt36": 0.11477068327477624
+      }
+    ],
+    "sd": 0.49558233609749636,
+    "effect": 0.1,
+    "n": 193,
+    "fitsDev": false,
+    "verdict": "needs 193 sessions; dev holds 36: to the owner",
+    "arms": [
+      "memory-off-llm",
+      "STM-only",
+      "STM+WM",
+      "claude-code-prompt",
+      "codex-prompt",
+      "mem0"
+    ],
+    "inputTokensPerSessionByArm": {
+      "memory-off-llm": 1621326,
+      "STM-only": 2199877,
+      "STM+WM": 2863043,
+      "claude-code-prompt": 2670909,
+      "codex-prompt": 3069581,
+      "mem0": 1977439
+    },
+    "estimatedInputTokens": 518478300,
+    "classes": [
+      "D1",
+      "D2",
+      "D3"
+    ]
+  },
+  "d4Confound": "the D4 check requires the announcement to include the new value and exclude the old one, so a correct answer that mentions the change fails; D4 rates in this report are confounded (fixed as Session-Bench v3 before Task 12)",
+  "finishedAt": "2026-11-19T05:44:19.904Z"
+}

@@ -37,7 +37,6 @@ export const DEFAULT_ARCHIVE_CONFIG: ArchiveConfig = Object.freeze({
 });
 
 export const MAX_ARCHIVE_BELOW = 1_000;
-export const MAX_GRACE_SESSIONS = 10_000;
 
 /** Without `includeArchived`, archived notes are searched only when the best active hit is weaker. */
 export const ARCHIVE_SEARCH_COVERAGE = 0.34;

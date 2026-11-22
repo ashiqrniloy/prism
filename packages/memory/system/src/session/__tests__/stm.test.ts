@@ -18,7 +18,6 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import memorySystem, { foldObservationalMemoryLedger } from "../../index.js";
 import { gatherConsolidationCandidates } from "../../ltm/consolidation/gather.js";
-import { resolveMemorySystemConfig } from "../config.js";
 import { recallObservationalMemory } from "../recall.js";
 import { renderObservationalMemory } from "../render.js";
 import { type MemoryObservation, memoryEventKindValues, OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED } from "../types.js";
@@ -73,7 +72,8 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     // events that overlap; actions only while their result is unknown; no opaque ids; task state on every new request.
     assert.match(DEFAULT_STM_INSTRUCTION, /A task finished or abandoned within the messages is one outcome event/);
     assert.match(DEFAULT_STM_INSTRUCTION, /a result only when it adds to the records, an action only while its result is unknown/);
-    assert.match(DEFAULT_STM_INSTRUCTION, /Attach chunks only when the exact text matters later and the description cannot hold it/);
+    // Plan 218.3 Task 4: no chunks; recall reads the cited entries from the session store.
+    assert.doesNotMatch(DEFAULT_STM_INSTRUCTION, /chunk/i);
     assert.match(DEFAULT_STM_INSTRUCTION, /leave out tool-call ids and hashes unless the user asked for them/);
     // Gate M-1 S1 re-run: a later task should not search again for what an earlier one found about the setup.
     assert.match(DEFAULT_STM_INSTRUCTION, /setup facts found on the way \(a missing file, how checks are run\)/);
@@ -81,7 +81,13 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     assert.ok(DEFAULT_STM_INSTRUCTION.length <= 2_100, "the instruction stays lean");
     assert.equal(DEFAULT_STM_INSTRUCTION.includes("coding"), false, "domain-neutral");
     const requests: ProviderRequest[] = [];
-    await runStm({ entries: [source], client: clientFor(scripted(requests, [])), maxTurns: 1, instruction: "Prefer finance wording." });
+    await runStm({
+      verbatimUserChars: 0,
+      entries: [source],
+      client: clientFor(scripted(requests, [])),
+      maxTurns: 1,
+      instruction: "Prefer finance wording.",
+    });
     const parameters = requests[0]!.tools?.find((tool) => tool.name === "record_event")?.parameters as {
       properties: { kind: { enum: string[] } };
       required: string[];
@@ -95,6 +101,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     assert.match(JSON.stringify(requests[0]!.messages[0]), /Prefer finance wording/);
     // A missing or unknown kind is refused with a reason the model can act on.
     const refused = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor(scripted([], [{ name: "record_event", args: { kind: "fact", description: "x", sourceEntryIds: ["m1"] } }])),
       maxTurns: 2,
@@ -110,6 +117,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     const description =
       "Campaign retries: interrupted attempts no longer count toward maxAttempts (campaign.mjs retryUncounted); 35 campaign tests pass.";
     const [outcome] = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor(
         scripted(
@@ -136,6 +144,7 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
     const requests: ProviderRequest[] = [];
     const records: unknown[] = [];
     const recorded = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       recent,
       contextTokens: 50,
@@ -222,7 +231,8 @@ describe("short-term memory encoder (plan 217 Task 1)", () => {
           enabled: true,
           stm: { model: "scripted/stm", triggerTokens: 1 },
           wm: { model: "scripted/stm", triggerTokens: 1 },
-          context: { compactAt: { maxTokens: 999_999 } },
+          scope: { text: "Check status." },
+          context: { compactAfterRun: { maxTokens: 999_999 } },
           worker: { maxTurns: 2 },
         }),
       ],
@@ -309,12 +319,13 @@ describe("structured signals on record_event (plan 218.2 Task 2)", () => {
         yield providerDone();
       },
     };
-    const events = await runStm({ entries: [source], client: clientFor(provider), maxTurns: 3 });
+    const events = await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(provider), maxTurns: 3 });
     assert.match(toolResults(requests[1]!).join(), /outcome_status_required/);
     assert.equal(events.length, 1);
     assert.equal(events[0]?.status, "passed");
     // `status` on a kind it does not describe is ignored.
     const [request] = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       client: clientFor(
         scripted(
@@ -329,6 +340,7 @@ describe("structured signals on record_event (plan 218.2 Task 2)", () => {
 
   it("durable_ignored_on_assistant_only_event", async () => {
     const events = await runStm({
+      verbatimUserChars: 0,
       entries: [source, assistant],
       client: clientFor(
         scripted(
@@ -380,6 +392,7 @@ describe("structured signals on record_event (plan 218.2 Task 2)", () => {
     ];
     const requests: ProviderRequest[] = [];
     const events = await runStm({
+      verbatimUserChars: 0,
       entries: [source],
       recent,
       client: clientFor(
@@ -414,7 +427,7 @@ describe("structured signals on record_event (plan 218.2 Task 2)", () => {
   it("stm_request_never_carries_scope_wm_or_ltm", async () => {
     // I1 extended: the new fields describe the cited messages; the schema names no scope, WM item or LTM note.
     const requests: ProviderRequest[] = [];
-    await runStm({ entries: [source], client: clientFor(scripted(requests, [])), maxTurns: 1 });
+    await runStm({ verbatimUserChars: 0, entries: [source], client: clientFor(scripted(requests, [])), maxTurns: 1 });
     const parameters = requests[0]!.tools?.find((tool) => tool.name === "record_event")?.parameters as {
       properties: Record<string, { description?: string }>;
     };
@@ -424,147 +437,5 @@ describe("structured signals on record_event (plan 218.2 Task 2)", () => {
       assert.doesNotMatch(text, /scope|working memory|long-term|\bWM\b|\bLTM\b/i);
     }
     assert.ok(DEFAULT_STM_INSTRUCTION.length <= 2_100, "the instruction keeps its cap");
-  });
-});
-
-describe("evidence kept by rule (plan 218.2 Task 4)", () => {
-  const lines = Array.from({ length: 80 }, (_, index) => `ok ${index + 1} - retry case ${index + 1} passes`);
-  const failing = [...lines, "not ok 81 - interrupted attempt counted", "Error: expected 2 retries, got 3", "1 failed, 80 passed"].join(
-    "\n",
-  );
-  const result = (id: string, text: string): SessionEntry =>
-    ({
-      id,
-      sessionId: "s",
-      kind: "message",
-      timestamp: "2026-11-09T10:02:00.000Z",
-      message: { role: "tool", content: [{ type: "tool_result", toolCallId: `t-${id}`, name: "run_tests", result: text }] },
-    }) as SessionEntry;
-  const user = (id: string, text: string): SessionEntry =>
-    ({
-      id,
-      sessionId: "s",
-      kind: "message",
-      timestamp: "2026-11-09T10:03:00.000Z",
-      message: { role: "user", content: [{ type: "text", text }] },
-    }) as SessionEntry;
-  // A batch's chunk budget is a quarter of its transcript bytes; this read gives the small batches below a real one.
-  const pad = result("p1", Array.from({ length: 200 }, (_, index) => `line ${index}: const retry = attempts.next();`).join("\n"));
-  const record = (args: Record<string, unknown>) => ({ name: "record_event", args });
-  async function run(
-    entries: readonly SessionEntry[],
-    calls: readonly { name: string; args: Record<string, unknown> }[],
-    options: Partial<Parameters<typeof runStm>[0]> = {},
-  ) {
-    const stored = new Map<string, readonly { text: string; bytes: number; sourceEntryId: string }[]>();
-    const events = await runStm({
-      entries: [...entries, pad],
-      client: clientFor(scripted([], calls)),
-      maxTurns: 2,
-      onChunks: (id, chunks) => stored.set(id, chunks),
-      autoChunkBytes: 1_024,
-      ...options,
-    });
-    return { events, stored };
-  }
-
-  it("error_without_chunk_gets_tail_excerpt_of_cited_result", async () => {
-    const { events, stored } = await run(
-      [source, result("r1", failing)],
-      [
-        record({ kind: "error", description: "Retry test fails: 3 retries counted", sourceEntryIds: ["r1"] }),
-        record({ kind: "result", status: "failed", description: "1 failed, 80 passed", sourceEntryIds: ["r1"] }),
-        record({ kind: "result", status: "passed", description: "Earlier run passed", sourceEntryIds: ["r1"] }),
-      ],
-    );
-    assert.equal(events.length, 3);
-    const [error, failedResult, passed] = events;
-    const chunk = stored.get(error!.id)?.[0];
-    assert.ok(chunk, "the error carries an automatic chunk");
-    assert.equal(chunk.sourceEntryId, "r1");
-    assert.ok(chunk.bytes <= 1_024);
-    assert.ok(chunk.text.endsWith("1 failed, 80 passed"));
-    assert.match(chunk.text, /Error: expected 2 retries, got 3/);
-    // Cut on a line boundary: the chunk starts with a whole line of the result.
-    assert.ok(failing.split("\n").includes(chunk.text.split("\n")[0]!));
-    assert.equal(error!.chunkRefs?.[0]?.id, (chunk as { id?: string }).id);
-    assert.ok(stored.get(failedResult!.id)?.length, "a failed result carries one");
-    assert.equal(stored.get(passed!.id), undefined, "a passed result carries none");
-    assert.equal(passed!.chunkRefs, undefined);
-  });
-
-  it("durable_statement_gets_its_quoted_sentence", async () => {
-    const message = "Thanks for the summary. Please use pnpm for every install, never npm. Let's continue tomorrow.";
-    const { events, stored } = await run(
-      [user("u1", message)],
-      [
-        record({
-          kind: "statement",
-          durable: "constraint",
-          description: 'User requires "pnpm" for installs, never npm',
-          sourceEntryIds: ["u1"],
-        }),
-        record({ kind: "statement", durable: "preference", description: "User prefers short replies", sourceEntryIds: ["u1"] }),
-      ],
-    );
-    assert.equal(stored.get(events[0]!.id)?.[0]?.text, "Please use pnpm for every install, never npm.");
-    // No quoted term: the head of the message, up to the byte cap.
-    assert.equal(stored.get(events[1]!.id)?.[0]?.text, message);
-  });
-
-  it("worker_chunk_is_never_replaced_and_budget_exhaustion_adds_none", async () => {
-    const worker = await run(
-      [source, result("r1", failing)],
-      [
-        record({
-          kind: "error",
-          description: "Retry test fails",
-          sourceEntryIds: ["r1"],
-          chunks: [{ sourceEntryId: "r1", text: "not ok 81 - interrupted attempt counted" }],
-        }),
-      ],
-    );
-    assert.deepEqual(
-      worker.stored.get(worker.events[0]!.id)?.map((chunk) => chunk.text),
-      ["not ok 81 - interrupted attempt counted"],
-    );
-    // A batch whose chunk budget cannot hold the automatic chunk records the event without one.
-    const spent = await run(
-      [source, result("r1", failing)],
-      [record({ kind: "error", description: "Retry test fails", sourceEntryIds: ["r1"] })],
-      { sourceText: "x".repeat(400) },
-    );
-    assert.equal(spent.events.length, 1);
-    assert.equal(spent.events[0]!.chunkRefs, undefined);
-    assert.equal(spent.stored.size, 0);
-  });
-
-  it("auto_chunk_is_redacted_before_write", async () => {
-    const secret = "sk-live-0123456789abcdef0123";
-    const { events, stored } = await run(
-      [source, result("r1", `${failing}\nError: auth failed with token ${secret}`)],
-      [record({ kind: "error", description: "Auth failed in the retry test", sourceEntryIds: ["r1"] })],
-      { secrets: [secret] },
-    );
-    const chunk = stored.get(events[0]!.id)?.[0];
-    assert.ok(chunk);
-    assert.match(chunk.text, /Error: auth failed with token/);
-    assert.ok(!chunk.text.includes(secret));
-  });
-
-  it("auto_chunk_bytes_zero_turns_rule_off", async () => {
-    const calls = [record({ kind: "error", description: "Retry test fails", sourceEntryIds: ["r1"] })];
-    const off = await run([source, result("r1", failing)], calls, { autoChunkBytes: 0 });
-    assert.equal(off.events[0]!.chunkRefs, undefined);
-    assert.equal(off.stored.size, 0);
-    // On by default at 1,024 bytes (owner, 2026-11-15).
-    const byDefault = await run([source, result("r1", failing)], calls, { autoChunkBytes: undefined });
-    assert.equal(byDefault.stored.size, 1);
-    assert.equal(resolveMemorySystemConfig({}).stm.autoChunkBytes, 1_024);
-    // Chunks off (no chunk store) turns the rule off too.
-    const noStore = await run([source, result("r1", failing)], calls, { maxChunksPerEvent: 0 });
-    assert.equal(noStore.stored.size, 0);
-    const small = await run([source, result("r1", failing)], calls, { autoChunkBytes: 64 });
-    assert.equal(small.stored.get(small.events[0]!.id)?.[0]?.text, "Error: expected 2 retries, got 3\n1 failed, 80 passed");
   });
 });

@@ -148,11 +148,12 @@ describe("capacity merging (plan 188.4 Task 5)", () => {
     assert.deepEqual(resolveLifecycleConfig({ capacity: { project: { notes: 10 } } }).capacity.project, { notes: 10, tokens: 60_000 });
     assert.deepEqual(resolved.exchangeCapacity, { hotTokens: 200_000 });
     assert.deepEqual(resolveLifecycleConfig({ exchangeCapacity: { hotTokens: 20_000 } }).exchangeCapacity, { hotTokens: 20_000 });
+    // Plan 239: the host's capacity is the cap.
+    assert.equal(resolveLifecycleConfig({ capacity: { project: { tokens: 5_000_000 } } }).capacity.project.tokens, 5_000_000);
     for (const bad of [
       { exchangeCapacity: { hotTokens: 0 } },
-      { exchangeCapacity: { hotTokens: 1_000_001 } },
       { capacity: { project: { notes: 0 } } },
-      { capacity: { project: { tokens: 1_000_001 } } },
+      { capacity: { project: { tokens: 1.5 } } },
       { merge: { duplicateDice: 0.4 } },
       { merge: { duplicateDice: 1.1 } },
     ]) {

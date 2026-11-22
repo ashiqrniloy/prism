@@ -1,11 +1,4 @@
-import {
-  assertCompactionTrigger,
-  type CompactionTrigger,
-  type JsonSchema,
-  type ModelConfig,
-  type ModelRef,
-  resolveInputCap,
-} from "@arnilo/prism";
+import { type JsonSchema, type ModelConfig, type ModelRef, resolveInputCap } from "@arnilo/prism";
 
 import {
   DEFAULT_MAX_TASK_STATE_BYTES,
@@ -16,25 +9,20 @@ import {
   DEFAULT_MAX_WORKER_TOOL_CALLS,
   DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN,
   DEFAULT_MAX_WORKER_TURNS,
-  HARD_MAX_TASK_STATE_BYTES,
-  HARD_MAX_WORKER_ARGUMENT_BYTES,
-  HARD_MAX_WORKER_ERROR_BYTES,
-  HARD_MAX_WORKER_MESSAGE_BYTES,
-  HARD_MAX_WORKER_RESULT_BYTES,
-  HARD_MAX_WORKER_TOOL_CALLS,
-  HARD_MAX_WORKER_TOOL_CALLS_PER_TURN,
-  HARD_MAX_WORKER_TURNS,
   type MemoryWorkerLimitOptions,
 } from "@arnilo/prism-memory-system/core";
-import {
-  type ChunkStoreLocation,
-  DEFAULT_AUTO_CHUNK_BYTES,
-  DEFAULT_MAX_CHUNK_BYTES,
-  DEFAULT_MAX_CHUNKS_PER_EVENT,
-  HARD_MAX_CHUNK_BYTES,
-  HARD_MAX_CHUNKS_PER_EVENT,
-} from "../chunks.js";
-import { DEFAULT_SCOPE_MAX_BYTES, type EpisodeScope, HARD_MAX_SCOPE_BYTES, prepareScope } from "./scope.js";
+import { DEFAULT_MAX_RECALL_PAGE_LIMIT, DEFAULT_RECALL_PAGE_BYTES, DEFAULT_RECALL_PAGE_LIMIT, MIN_RECALL_PAGE_BYTES } from "./limits.js";
+import { DEFAULT_SCOPE_MAX_BYTES, type EpisodeScope, prepareScope } from "./scope.js";
+
+/** `recallLimits`: the `recall` tool's host bounds. */
+export interface RecallLimitsConfig {
+  /** The page size when the call carries none. Default 20. */
+  readonly pageLimit?: number;
+  /** Bytes one answer may carry. Default 16,384, at least 1,024. */
+  readonly pageBytes?: number;
+  /** The most hits or messages one call may ask for (the model's `limit`). Default 100. */
+  readonly maxPageLimit?: number;
+}
 
 export const DEFAULT_STM_TRIGGER_TOKENS = 10_000;
 /**
@@ -45,9 +33,10 @@ export const DEFAULT_STM_TRIGGER_TOKENS = 10_000;
 export const DEFAULT_MEMORY_WORKER_THINKING_LEVEL = "low";
 /** Token budget of the recent-record index an STM request carries (plan 217 Task 1). */
 export const DEFAULT_STM_CONTEXT_TOKENS = 4_000;
+/** Characters (whitespace collapsed) up to which STM keeps a user message word for word (plan 218.5 Task 1, fix 1). */
+export const DEFAULT_STM_VERBATIM_USER_CHARS = 2_000;
 /** Active STM records habituation compares a new event against (plan 217 Task 3). */
 export const DEFAULT_STM_HABITUATION_WINDOW = 50;
-export const HARD_MAX_STM_HABITUATION_WINDOW = 1_000;
 /** Minutes of silence before a user turn that make it an event boundary (plan 217 Task 3). */
 export const DEFAULT_STM_BOUNDARY_GAP_MINUTES = 10;
 /** STM surface tokens (records WM has not given a verdict) that trigger a WM pass (plan 218 Task 2). */
@@ -62,26 +51,55 @@ export const DEFAULT_WM_BATCH_TOKENS = 3_000;
 export const DEFAULT_WM_TARGET_RATIO = 0.2;
 /** Tombstoned STM record tokens the first WM pass after a scope change is also sent for re-judgment (plan 218 Task 4). */
 export const DEFAULT_WM_REJUDGE_TOKENS = 8_000;
+/** Earlier records one WM pass is offered for the scope's remaining steps (plan 218.3 Task 1 decision 5). */
+export const DEFAULT_WM_LOOKAHEAD_RECORDS = 12;
+/** Record tokens one WM pass is offered for the scope's remaining steps (plan 218.3 Task 1 decision 5). */
+export const DEFAULT_WM_LOOKAHEAD_TOKENS = 3_000;
 /** WM passes a request or error stays protected by link without a resolving outcome (plan 218.2 Task 3). */
 export const DEFAULT_WM_PROTECT_REQUEST_PASSES = 8;
 export const DEFAULT_REHEARSAL_TARGET_TOKENS = 20_000;
-export const DEFAULT_CONTEXT_RECENT_MESSAGES = 8;
-export const DEFAULT_COMPACT_AT_RATIO = 0.6;
+/** The mid-loop trigger: the share of the model's input cap a request may reach inside an agentic loop (plan 218.3 Task 2). */
+export const DEFAULT_COMPACT_AT_RATIO = 0.8;
+/** The between-loop trigger: the request size at which a run that starts after a completed loop compacts first. */
+export const DEFAULT_COMPACT_AFTER_RUN_TOKENS = 80_000;
+/** The mid-loop cut's verbatim tail, as a share of the model's input cap, when `context.keepRecentTokens` is unset. */
+export const DEFAULT_KEEP_RECENT_RATIO = 0.2;
 
 /** Internal render bounds: the pool the folded payload keeps, and the recall page size. */
 export const OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
 export const OBSERVATIONS_POOL_TARGET_TOKENS = 10_000;
+/**
+ * The pool's share of the model's input cap (plan 218.3 Task 12): with the 20% kept tail and the prompt, the folded
+ * pool must leave a compacted request under the 80% mid-loop trigger. A fixed 20,000 at a 32K window did not, so the
+ * next tool round overflowed.
+ */
+export const OBSERVATIONS_POOL_CAP_RATIO = 0.3;
+
+/** The folded pool's token budget: {@link OBSERVATIONS_POOL_MAX_TOKENS}, or 30% of the input cap when that is smaller. */
+export function resolveObservationsPoolTokens(inputCapTokens: number | undefined): number {
+  return inputCapTokens === undefined
+    ? OBSERVATIONS_POOL_MAX_TOKENS
+    : Math.min(OBSERVATIONS_POOL_MAX_TOKENS, Math.floor(inputCapTokens * OBSERVATIONS_POOL_CAP_RATIO));
+}
 
 export type MemorySystemRehearsalPolicy = "model" | "lowest-relevance";
 /** `"model"` asks the WM model for verdicts; `"deterministic"` keeps protected records and outcomes and discards the lowest-relevance oldest to the target, with no call. */
 export type MemorySystemWmPolicy = "model" | "deterministic";
 
-/** Relative compaction gate: `ratio` of the model's input cap, capped by `maxTokens` when set. */
+/** The mid-loop trigger: compact inside an agentic loop when the request reaches `ratio` of the model's input cap. */
 export interface MemorySystemCompactAt {
-  /** Share of the model's input cap. Default `0.6`. */
+  /** Share of the model's input cap. Default `0.8`. */
   readonly ratio?: number;
-  /** Absolute cap on the resolved threshold. Required when the model declares no window. */
+}
+
+/**
+ * The between-loop trigger, checked only at the start of a run that follows a completed loop: compact when the request
+ * reaches `maxTokens`, or `ratio` of the model's input cap; the smaller wins when both are set. Default
+ * `{ maxTokens: 80_000 }`.
+ */
+export interface MemorySystemCompactAfterRun {
   readonly maxTokens?: number;
+  readonly ratio?: number;
 }
 
 export interface MemorySystemWorkerConfig {
@@ -112,24 +130,9 @@ export interface MemorySessionConfig {
     readonly triggerTokens?: number;
     /** Token budget of the recent STM record index each STM request carries. Default 4_000. */
     readonly contextTokens?: number;
-    /** Verbatim chunks one event may carry; `0` turns chunks off. Default 2, at most 8. */
-    readonly maxChunksPerEvent?: number;
-    /** Bytes one stored chunk may take, truncation marker included. Default 4_096, at most 65_536. */
-    readonly maxChunkBytes?: number;
-    /**
-     * Evidence kept by rule: an `error`, a failed `outcome`/`result` or a `durable` event recorded with no chunk gets one
-     * of at most this many bytes from its cited entry (the tail of a failing tool result, or the user's sentence), inside
-     * the batch's chunk budget. `0` turns the rule off. Default 1_024.
-     */
-    readonly autoChunkBytes?: number;
-    /**
-     * Where the default chunk store lives: `"memory"` (the default: the process lifetime) or `{ sqlite: { path } }`, a
-     * file in the host's data directory, created mode 0600. A package providing the `memory.chunks` service replaces it.
-     */
-    readonly chunkStore?: ChunkStoreLocation;
     /**
      * Habituation: an event whose kind and normalised description match one of the newest `windowEvents` active
-     * records (default 50), with byte-equal chunks or none, raises that record's count instead of adding one.
+     * records (default 50) raises that record's count instead of adding one.
      * `false` records every event.
      */
     readonly habituation?: false | { readonly windowEvents?: number };
@@ -141,6 +144,12 @@ export interface MemorySessionConfig {
     readonly boundaries?: boolean;
     /** Minutes of silence before a user turn that make it a boundary. Default 10. */
     readonly boundaryGapMinutes?: number;
+    /**
+     * A user message up to this many characters (whitespace collapsed) is kept word for word as one `request` record,
+     * written without the model; a longer one is left to the model. It costs the message's tokens on the memory
+     * surface once (no model call). 0 leaves every user message to the model. Default 2_000.
+     */
+    readonly verbatimUserChars?: number;
   };
   readonly wm?: MemorySystemWorkerConfig & {
     /** STM surface tokens (records without a WM verdict) that trigger a working-memory pass. Default 10_000. */
@@ -149,8 +158,12 @@ export interface MemorySessionConfig {
     readonly batchTokens?: number;
     /** Items' tokens over the processed records' tokens a pass aims at, as pressure (protected records are never cut). Default 0.2. */
     readonly targetRatio?: number;
-    /** Tombstoned record tokens the first WM pass after a scope change re-judges (discarded records whose chunks still live). Default 8_000. */
+    /** Tombstoned record tokens the first WM pass after a scope change re-judges (discarded records). Default 8_000. */
     readonly rejudgeTokens?: number;
+    /** Earlier STM records (discarded or dropped) matching the scope's remaining steps one WM pass is offered to keep. 0 turns look-ahead off. Default 12. */
+    readonly lookAheadRecords?: number;
+    /** Tokens of those look-ahead records one WM pass is offered. Default 3_000. */
+    readonly lookAheadTokens?: number;
     /**
      * WM passes a user request (or an error) stays protected without an outcome naming it in `resolves`; then the pass
      * records `protection_lapsed` and may discard it. Read only when the recorder writes `resolves`. Default 8.
@@ -166,23 +179,31 @@ export interface MemorySessionConfig {
     readonly policy?: MemorySystemRehearsalPolicy;
   };
   readonly context?: {
-    /** Recent messages the compaction cut keeps verbatim. Default 8. */
-    readonly recentMessages?: number;
     /**
-     * Request compaction at this share of the model's input cap, capped by `maxTokens`. Default
-     * `{ ratio: 0.6 }`. A model that declares no window uses `maxTokens` and fails without it.
+     * Session memory is the agent's compaction system. Default `true`: the package claims the `compaction` slot and
+     * answers every compaction vote of a session that has memory on. `false` leaves compaction to another system (the
+     * `@arnilo/prism-extensions/compaction` package or the kernel default); STM still records, `recall` still works and
+     * the memory block is pinned after each compaction. Two compaction systems never run together: with `true`, listing
+     * the compaction package (or `context-engineering`'s `fold` or `attention`) fails at agent creation.
      */
+    readonly compaction?: boolean;
+    /** The mid-loop trigger. Default `{ ratio: 0.8 }`. */
     readonly compactAt?: MemorySystemCompactAt;
+    /** The between-loop trigger. Default `{ maxTokens: 80_000 }`. */
+    readonly compactAfterRun?: MemorySystemCompactAfterRun;
     /**
-     * Replaces the ratio gate with a `CompactionTrigger` (the JSON-safe kinds: `custom` is a function
-     * and not a config value). Omitted, the gate stays `compactAt`.
+     * Tokens a mid-loop compaction keeps verbatim at the end of the branch, besides the newest tool round (always kept).
+     * Default: 20% of the model's input cap, else 20% of `compactAfterRun.maxTokens`. A between-loop compaction keeps only
+     * the run's new input.
      */
-    readonly trigger?: CompactionTrigger;
+    readonly keepRecentTokens?: number;
   };
   /** Worker loop ceilings. Defaults and hard caps are the package's own (`limits.ts`). */
   readonly worker?: MemoryWorkerLimitOptions;
   /** Expose the `recall` tool while the session's toggle is on. Default `true`. */
   readonly recall?: boolean;
+  /** The `recall` tool's bounds. The model picks `limit`; these are the host's. */
+  readonly recallLimits?: RecallLimitsConfig;
   /**
    * The episode scope (plan 218 Task 1): what the current body of work must achieve, read by WM and Rehearsal only.
    * `text` is every session's scope until `memory:scope` or `memory.system.setScope()` replaces or clears it.
@@ -222,47 +243,12 @@ const memorySystemSchema: JsonSchema = {
           default: DEFAULT_STM_CONTEXT_TOKENS,
           description: "Token budget of the recent STM record index each STM request carries.",
         },
-        maxChunksPerEvent: {
+        verbatimUserChars: {
           type: "integer",
           minimum: 0,
-          maximum: HARD_MAX_CHUNKS_PER_EVENT,
-          default: DEFAULT_MAX_CHUNKS_PER_EVENT,
-          description: "Verbatim chunks one STM event may carry; 0 turns chunks off.",
-        },
-        maxChunkBytes: {
-          type: "integer",
-          minimum: 256,
-          maximum: HARD_MAX_CHUNK_BYTES,
-          default: DEFAULT_MAX_CHUNK_BYTES,
-          description: "Bytes one stored chunk may take, truncation marker included.",
-        },
-        autoChunkBytes: {
-          type: "integer",
-          minimum: 0,
-          maximum: HARD_MAX_CHUNK_BYTES,
-          default: DEFAULT_AUTO_CHUNK_BYTES,
+          default: DEFAULT_STM_VERBATIM_USER_CHARS,
           description:
-            "Bytes of the evidence chunk kept by rule for an error, a failed outcome or result, or a durable statement recorded with no chunk; 0 turns the rule off.",
-        },
-        chunkStore: {
-          description: 'Where the default chunk store lives: "memory" (process lifetime) or { "sqlite": { "path": "…" } } (mode 0600).',
-          additionalProperties: true,
-          anyOf: [
-            { const: "memory" },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["sqlite"],
-              properties: {
-                sqlite: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["path"],
-                  properties: { path: { type: "string", minLength: 1, maxLength: 4096 } },
-                },
-              },
-            },
-          ],
+            "A user message up to this many characters is kept word for word, without the model; 0 leaves every user message to the model.",
         },
         habituation: {
           description: "Collapse repeated identical events into one record with a count; false records every event.",
@@ -276,7 +262,6 @@ const memorySystemSchema: JsonSchema = {
                 windowEvents: {
                   type: "integer",
                   minimum: 1,
-                  maximum: HARD_MAX_STM_HABITUATION_WINDOW,
                   default: DEFAULT_STM_HABITUATION_WINDOW,
                   description: "Newest active STM records a new event is compared against.",
                 },
@@ -330,7 +315,20 @@ const memorySystemSchema: JsonSchema = {
           minimum: 0,
           default: DEFAULT_WM_REJUDGE_TOKENS,
           description:
-            "Tokens of discarded STM records (chunks still live) the first WM pass after a scope change is also sent, so it may keep them back; 0 turns re-judgment off.",
+            "Tokens of discarded STM records the first WM pass after a scope change is also sent, so it may keep them back; 0 turns re-judgment off.",
+        },
+        lookAheadRecords: {
+          type: "integer",
+          minimum: 0,
+          default: DEFAULT_WM_LOOKAHEAD_RECORDS,
+          description:
+            "Earlier STM records (discarded or dropped) matching the scope's remaining steps one WM pass is offered to keep; 0 turns look-ahead off.",
+        },
+        lookAheadTokens: {
+          type: "integer",
+          minimum: 0,
+          default: DEFAULT_WM_LOOKAHEAD_TOKENS,
+          description: "Tokens of earlier STM records one WM pass is offered for the scope's remaining steps.",
         },
         protectRequestPasses: {
           type: "integer",
@@ -371,63 +369,51 @@ const memorySystemSchema: JsonSchema = {
     context: {
       type: "object",
       additionalProperties: false,
-      description: "Compaction sizing: what the cut keeps and when it is requested.",
+      description: "Session memory as the compaction system: whether it is on, and its two triggers.",
       properties: {
-        recentMessages: {
-          type: "integer",
-          minimum: 0,
-          default: DEFAULT_CONTEXT_RECENT_MESSAGES,
-          description: "Recent messages the compaction cut keeps verbatim.",
+        compaction: {
+          type: "boolean",
+          default: true,
+          description:
+            "Session memory is the agent's compaction system. false leaves compaction to another system; two never run together.",
         },
         compactAt: {
           type: "object",
           additionalProperties: false,
-          description: "Request compaction at ratio of the model's input cap, capped by maxTokens.",
+          description: "The mid-loop trigger: compact inside an agentic loop at ratio of the model's input cap.",
           properties: {
             ratio: {
               type: "number",
               minimum: 0,
               maximum: 1,
               default: DEFAULT_COMPACT_AT_RATIO,
-              description: "Share of the model's input cap. Default 0.6.",
-            },
-            maxTokens: {
-              type: "integer",
-              minimum: 1,
-              description: "Absolute cap on the threshold. Required when the model declares no window.",
+              description: "Share of the model's input cap. Default 0.8.",
             },
           },
         },
-        trigger: {
-          description: 'Replaces the token gate, e.g. { "type": "threshold_entries", "entries": 50 }.',
-          // The shape is the `oneOf` below: keys are validated per branch, so the outer node stays open.
-          additionalProperties: true,
-          oneOf: [
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["type", "entries"],
-              properties: { type: { const: "threshold_entries" }, entries: { type: "integer", minimum: 1 } },
+        compactAfterRun: {
+          type: "object",
+          additionalProperties: false,
+          description:
+            "The between-loop trigger, checked only when a run starts after a completed loop: maxTokens, or ratio of the input cap (the smaller wins).",
+          properties: {
+            maxTokens: {
+              type: "integer",
+              minimum: 1,
+              description: "Request tokens. Default 80000 when the section is omitted. Required when the model declares no window.",
             },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["type", "tokens"],
-              properties: { type: { const: "threshold_tokens" }, tokens: { type: "integer", minimum: 1 } },
+            ratio: {
+              type: "number",
+              minimum: 0,
+              maximum: 1,
+              description: "Share of the model's input cap.",
             },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["type", "ratio"],
-              properties: { type: { const: "input_ratio" }, ratio: { type: "number", minimum: 0, maximum: 1 } },
-            },
-            {
-              type: "object",
-              additionalProperties: false,
-              required: ["type"],
-              properties: { type: { const: "each_turn" } },
-            },
-          ],
+          },
+        },
+        keepRecentTokens: {
+          type: "integer",
+          minimum: 1,
+          description: "Tokens a mid-loop compaction keeps verbatim besides the newest tool round. Default 20% of the model's input cap.",
         },
       },
     },
@@ -439,56 +425,48 @@ const memorySystemSchema: JsonSchema = {
         maxTaskStateBytes: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_TASK_STATE_BYTES,
           default: DEFAULT_MAX_TASK_STATE_BYTES,
           description: "Text bytes in the current task state.",
         },
         maxTurns: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_TURNS,
           default: DEFAULT_MAX_WORKER_TURNS,
           description: "Provider turns one worker pass may take.",
         },
         maxToolCallsPerTurn: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_TOOL_CALLS_PER_TURN,
           default: DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN,
           description: "Tool calls one worker turn may make.",
         },
         maxToolCalls: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_TOOL_CALLS,
           default: DEFAULT_MAX_WORKER_TOOL_CALLS,
           description: "Tool calls one worker pass may make.",
         },
         maxArgumentBytes: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_ARGUMENT_BYTES,
           default: DEFAULT_MAX_WORKER_ARGUMENT_BYTES,
           description: "Bytes one worker tool call may carry.",
         },
         maxResultBytes: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_RESULT_BYTES,
           default: DEFAULT_MAX_WORKER_RESULT_BYTES,
           description: "Bytes one worker tool result may carry.",
         },
         maxMessageBytes: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_MESSAGE_BYTES,
           default: DEFAULT_MAX_WORKER_MESSAGE_BYTES,
           description: "Bytes one worker message may carry.",
         },
         maxErrorBytes: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_WORKER_ERROR_BYTES,
           default: DEFAULT_MAX_WORKER_ERROR_BYTES,
           description: "Bytes of a worker error kept for reporting.",
         },
@@ -498,6 +476,16 @@ const memorySystemSchema: JsonSchema = {
       type: "boolean",
       default: true,
       description: "Expose the recall tool while the session's toggle is on.",
+    },
+    recallLimits: {
+      type: "object",
+      additionalProperties: false,
+      description: "The recall tool's bounds: the default page size, the bytes one answer may carry, and the most a call may ask for.",
+      properties: {
+        pageLimit: { type: "integer", minimum: 1, default: DEFAULT_RECALL_PAGE_LIMIT },
+        pageBytes: { type: "integer", minimum: MIN_RECALL_PAGE_BYTES, default: DEFAULT_RECALL_PAGE_BYTES },
+        maxPageLimit: { type: "integer", minimum: 1, default: DEFAULT_MAX_RECALL_PAGE_LIMIT },
+      },
     },
     scope: {
       type: "object",
@@ -511,7 +499,6 @@ const memorySystemSchema: JsonSchema = {
         maxBytes: {
           type: "integer",
           minimum: 1,
-          maximum: HARD_MAX_SCOPE_BYTES,
           default: DEFAULT_SCOPE_MAX_BYTES,
           description: "Bytes one scope may take; longer text fails with scope_too_large and is never truncated.",
         },
@@ -550,26 +537,27 @@ function workerProperties(label: string): Record<string, JsonSchema> {
 const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "stm.triggerTokens",
   "stm.contextTokens",
-  "stm.maxChunksPerEvent",
-  "stm.maxChunkBytes",
-  "stm.autoChunkBytes",
   "stm.habituation.windowEvents",
   "stm.boundaryGapMinutes",
+  "stm.verbatimUserChars",
   "stm.thinkingLevel",
   "wm.triggerTokens",
   "wm.batchTokens",
   "wm.targetRatio",
   "wm.rejudgeTokens",
+  "wm.lookAheadRecords",
+  "wm.lookAheadTokens",
   "wm.protectRequestPasses",
   "wm.thinkingLevel",
   "rehearsal.targetTokens",
   "rehearsal.thinkingLevel",
-  "context.recentMessages",
   "context.compactAt.ratio",
-  "context.compactAt.maxTokens",
-  "context.trigger.entries",
-  "context.trigger.tokens",
-  "context.trigger.ratio",
+  "context.compactAfterRun.maxTokens",
+  "context.compactAfterRun.ratio",
+  "context.keepRecentTokens",
+  "recallLimits.pageLimit",
+  "recallLimits.pageBytes",
+  "recallLimits.maxPageLimit",
   "worker.maxTaskStateBytes",
   "worker.maxTurns",
   "worker.maxToolCallsPerTurn",
@@ -616,17 +604,15 @@ export interface ResolvedWorkerSettings {
 export interface ResolvedMemorySystemConfig {
   readonly enabled: boolean;
   readonly recall: boolean;
+  readonly recallLimits: RecallLimitsConfig;
   readonly stm: ResolvedWorkerSettings & {
     readonly triggerTokens: number;
     readonly contextTokens: number;
-    readonly maxChunksPerEvent: number;
-    readonly maxChunkBytes: number;
-    readonly autoChunkBytes: number;
-    readonly chunkStore: ChunkStoreLocation;
     /** `false` when habituation is off. */
     readonly habituation: false | { readonly windowEvents: number };
     readonly boundaries: boolean;
     readonly boundaryGapMinutes: number;
+    readonly verbatimUserChars: number;
   };
   /** `enabled` is the `wm` component: off, no WM pass runs. */
   readonly wm: ResolvedWorkerSettings & {
@@ -635,6 +621,8 @@ export interface ResolvedMemorySystemConfig {
     readonly batchTokens: number;
     readonly targetRatio: number;
     readonly rejudgeTokens: number;
+    readonly lookAheadRecords: number;
+    readonly lookAheadTokens: number;
     readonly protectRequestPasses: number;
     readonly policy: MemorySystemWmPolicy;
   };
@@ -644,7 +632,13 @@ export interface ResolvedMemorySystemConfig {
     readonly targetTokens: number;
     readonly policy: MemorySystemRehearsalPolicy;
   };
-  readonly context: { readonly recentMessages: number; readonly compactAt: ResolvedCompactAt; readonly trigger?: CompactionTrigger };
+  readonly context: {
+    readonly compaction: boolean;
+    readonly compactAt: ResolvedCompactAt;
+    readonly compactAfterRun: ResolvedCompactAfterRun;
+    /** Absent: 20% of the input cap (or of `compactAfterRun.maxTokens`), resolved at each compaction. */
+    readonly keepRecentTokens?: number;
+  };
   readonly worker: MemoryWorkerLimitOptions;
   /**
    * The episode scope settings. `text` is the validated config scope; it is redacted again with the session's secret
@@ -655,7 +649,12 @@ export interface ResolvedMemorySystemConfig {
 
 export interface ResolvedCompactAt {
   readonly ratio: number;
+}
+
+/** At least one of the two is set. */
+export interface ResolvedCompactAfterRun {
   readonly maxTokens?: number;
+  readonly ratio?: number;
 }
 
 /** {@link MemorySessionConfig} whose component sections may also be `false` or `null`. */
@@ -675,6 +674,18 @@ const RETIRED_CONFIG_KEYS: Readonly<Record<string, string>> = {
 /** Section keys plan 218 Task 2 retired, with their successors. */
 const RETIRED_SECTION_KEYS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   wm: { observationTokens: "wm.triggerTokens (STM surface tokens; default 10_000)" },
+  // Plan 218.3 Task 4: no chunk store; recall reads the original entries from the session store.
+  stm: {
+    maxChunksPerEvent: 'recall { id, detail: "full" } or recall { entry } (originals from the session store)',
+    maxChunkBytes: "recall { entry, offset } (pages inside one original entry)",
+    autoChunkBytes: 'recall { id, detail: "full" } (a record\'s cited entries, verbatim)',
+    chunkStore: "the session store (recall reads the original entries; nothing is copied)",
+  },
+  // Plan 218.3 Task 2: session memory compacts on two triggers only.
+  context: {
+    recentMessages: "context.keepRecentTokens (the mid-loop cut's verbatim tail, in tokens)",
+    trigger: "context.compactAt (mid-loop) and context.compactAfterRun (between loops)",
+  },
 };
 
 /** Fails closed on a retired key, naming its successor. */
@@ -688,6 +699,9 @@ export function assertNoRetiredMemorySystemKeys(config: object): void {
     for (const [key, successor] of Object.entries(keys))
       if (key in value) throw new TypeError(`memory-system config: "${section}.${key}" was retired; use "${successor}"`);
   }
+  const compactAt = (config as { context?: { compactAt?: unknown } }).context?.compactAt;
+  if (typeof compactAt === "object" && compactAt !== null && "maxTokens" in compactAt)
+    throw new TypeError('memory-system config: "context.compactAt.maxTokens" was retired; use "context.compactAfterRun.maxTokens"');
 }
 
 function workerSettings(value: MemorySystemWorkerConfig | undefined): ResolvedWorkerSettings {
@@ -730,20 +744,18 @@ export function resolveMemorySystemConfig(
   return {
     enabled: config.enabled === true,
     recall: config.recall !== false,
+    recallLimits: { ...config.recallLimits },
     stm: {
       ...workerSettings(config.stm),
       triggerTokens: config.stm?.triggerTokens ?? DEFAULT_STM_TRIGGER_TOKENS,
       contextTokens: config.stm?.contextTokens ?? DEFAULT_STM_CONTEXT_TOKENS,
-      maxChunksPerEvent: config.stm?.maxChunksPerEvent ?? DEFAULT_MAX_CHUNKS_PER_EVENT,
-      maxChunkBytes: config.stm?.maxChunkBytes ?? DEFAULT_MAX_CHUNK_BYTES,
-      autoChunkBytes: config.stm?.autoChunkBytes ?? DEFAULT_AUTO_CHUNK_BYTES,
-      chunkStore: config.stm?.chunkStore ?? "memory",
       habituation:
         config.stm?.habituation === false
           ? false
           : { windowEvents: config.stm?.habituation?.windowEvents ?? DEFAULT_STM_HABITUATION_WINDOW },
       boundaries: config.stm?.boundaries === true,
       boundaryGapMinutes: config.stm?.boundaryGapMinutes ?? DEFAULT_STM_BOUNDARY_GAP_MINUTES,
+      verbatimUserChars: config.stm?.verbatimUserChars ?? DEFAULT_STM_VERBATIM_USER_CHARS,
     },
     wm: {
       ...workerSettings(config.wm),
@@ -752,6 +764,8 @@ export function resolveMemorySystemConfig(
       batchTokens: config.wm?.batchTokens ?? DEFAULT_WM_BATCH_TOKENS,
       targetRatio: config.wm?.targetRatio ?? DEFAULT_WM_TARGET_RATIO,
       rejudgeTokens: config.wm?.rejudgeTokens ?? DEFAULT_WM_REJUDGE_TOKENS,
+      lookAheadRecords: config.wm?.lookAheadRecords ?? DEFAULT_WM_LOOKAHEAD_RECORDS,
+      lookAheadTokens: config.wm?.lookAheadTokens ?? DEFAULT_WM_LOOKAHEAD_TOKENS,
       protectRequestPasses: config.wm?.protectRequestPasses ?? DEFAULT_WM_PROTECT_REQUEST_PASSES,
       policy: config.wm?.policy === "deterministic" ? "deterministic" : "model",
     },
@@ -762,10 +776,10 @@ export function resolveMemorySystemConfig(
       policy: config.rehearsal?.policy === "lowest-relevance" ? "lowest-relevance" : "model",
     },
     context: {
-      recentMessages: config.context?.recentMessages ?? DEFAULT_CONTEXT_RECENT_MESSAGES,
+      compaction: config.context?.compaction !== false,
       compactAt: resolveCompactAt(config.context?.compactAt),
-      // Validated at config time: an unknown kind or a bad threshold fails the load, not the run.
-      ...(config.context?.trigger === undefined ? {} : { trigger: assertCompactionTrigger(config.context.trigger) }),
+      compactAfterRun: resolveCompactAfterRun(config.context?.compactAfterRun),
+      ...keepRecentTokensOf(config.context?.keepRecentTokens),
     },
     worker: { ...config.worker },
     scope: resolveScopeConfig(config.scope),
@@ -775,8 +789,7 @@ export function resolveMemorySystemConfig(
 /** A config scope over its cap fails the load with `scope_too_large`, like a set. */
 function resolveScopeConfig(input: MemorySessionConfig["scope"]): ResolvedMemorySystemConfig["scope"] {
   const maxBytes = input?.maxBytes ?? DEFAULT_SCOPE_MAX_BYTES;
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > HARD_MAX_SCOPE_BYTES)
-    throw new RangeError(`scope.maxBytes must be a positive integer at most ${HARD_MAX_SCOPE_BYTES}`);
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) throw new RangeError("scope.maxBytes must be a positive integer");
   if (input?.text === undefined || input.text.trim() === "") return { maxBytes };
   // The config scope's time is fixed, so the stored hash and record are the same on every load.
   const prepared = prepareScope(input.text, { maxBytes, at: "1970-01-01T00:00:00.000Z" });
@@ -786,32 +799,81 @@ function resolveScopeConfig(input: MemorySessionConfig["scope"]): ResolvedMemory
 
 function resolveCompactAt(value: MemorySystemCompactAt | undefined): ResolvedCompactAt {
   const ratio = value?.ratio ?? DEFAULT_COMPACT_AT_RATIO;
-  if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1) {
-    throw new TypeError("context.compactAt.ratio must be a number in (0, 1]");
-  }
-  if (value?.maxTokens !== undefined && (!Number.isSafeInteger(value.maxTokens) || value.maxTokens < 1)) {
-    throw new TypeError("context.compactAt.maxTokens must be a positive safe integer");
-  }
-  return { ratio, ...(value?.maxTokens === undefined ? {} : { maxTokens: value.maxTokens }) };
+  if (!isRatio(ratio)) throw new TypeError("context.compactAt.ratio must be a number in (0, 1]");
+  return { ratio };
+}
+
+function resolveCompactAfterRun(value: MemorySystemCompactAfterRun | undefined): ResolvedCompactAfterRun {
+  if (value === undefined || (value.maxTokens === undefined && value.ratio === undefined))
+    return { maxTokens: DEFAULT_COMPACT_AFTER_RUN_TOKENS };
+  if (value.maxTokens !== undefined && (!Number.isSafeInteger(value.maxTokens) || value.maxTokens < 1))
+    throw new TypeError("context.compactAfterRun.maxTokens must be a positive safe integer");
+  if (value.ratio !== undefined && !isRatio(value.ratio)) throw new TypeError("context.compactAfterRun.ratio must be a number in (0, 1]");
+  return {
+    ...(value.maxTokens === undefined ? {} : { maxTokens: value.maxTokens }),
+    ...(value.ratio === undefined ? {} : { ratio: value.ratio }),
+  };
+}
+
+function keepRecentTokensOf(value: number | undefined): { readonly keepRecentTokens?: number } {
+  if (value === undefined) return {};
+  if (!Number.isSafeInteger(value) || value < 1) throw new TypeError("context.keepRecentTokens must be a positive safe integer");
+  return { keepRecentTokens: value };
 }
 
 /**
- * The token threshold the gate compares against. A model with a window uses
- * `min(ratio × input cap, maxTokens)`; without one it uses `maxTokens` or fails at load.
+ * The tokens a mid-loop compaction keeps verbatim (plan 218.3 Task 3): `context.keepRecentTokens`, else
+ * {@link DEFAULT_KEEP_RECENT_RATIO} of the input cap, else of `compactAfterRun.maxTokens`, else 0 (only the newest tool round).
  */
-export function resolveCompactAtThreshold(compactAt: ResolvedCompactAt, model?: Pick<ModelConfig, "limits">): number {
-  let cap: number | undefined;
+export function resolveKeepRecentTokens(
+  context: Pick<ResolvedMemorySystemConfig["context"], "keepRecentTokens" | "compactAfterRun">,
+  inputCapTokens: number | undefined,
+): number {
+  if (context.keepRecentTokens !== undefined) return context.keepRecentTokens;
+  const base = inputCapTokens ?? context.compactAfterRun.maxTokens;
+  return base === undefined ? 0 : Math.floor(base * DEFAULT_KEEP_RECENT_RATIO);
+}
+
+function isRatio(value: number): boolean {
+  return Number.isFinite(value) && value > 0 && value <= 1;
+}
+
+/** Which of the two triggers a compaction check answers. */
+export type CompactionTriggerPoint = "mid-loop" | "between-loops";
+
+/**
+ * The token threshold a compaction check compares the kernel's estimate against (plan 218.3 Task 2).
+ *
+ * - `mid-loop`: `compactAt.ratio` × the model's input cap. A model that declares no window has no mid-loop trigger
+ *   (`Infinity`): only the between-loop trigger and the kernel's overflow recovery apply.
+ * - `between-loops`: the smaller of `compactAfterRun.maxTokens` and `compactAfterRun.ratio` × the cap, and never above the
+ *   mid-loop threshold (a run that starts past the window share compacts before its first turn rather than sending it).
+ *
+ * A model that declares no window and a config without `compactAfterRun.maxTokens` fails, naming both keys.
+ */
+/** The model's declared input cap, or `undefined` when `limits.contextWindow` is unset. */
+export function resolveModelInputCap(model: Pick<ModelConfig, "limits"> | undefined): number | undefined {
   try {
-    cap = resolveInputCap(undefined, model);
+    return resolveInputCap(undefined, model);
   } catch {
-    cap = undefined;
+    return undefined;
   }
-  if (cap === undefined) {
-    if (compactAt.maxTokens === undefined) {
-      throw new TypeError("context.compactAt.maxTokens is required when the model declares no context window");
-    }
-    return compactAt.maxTokens;
-  }
-  const ratioThreshold = cap * compactAt.ratio;
-  return compactAt.maxTokens === undefined ? ratioThreshold : Math.min(ratioThreshold, compactAt.maxTokens);
+}
+
+export function resolveCompactionThreshold(
+  context: Pick<ResolvedMemorySystemConfig["context"], "compactAt" | "compactAfterRun">,
+  model: Pick<ModelConfig, "limits"> | undefined,
+  point: CompactionTriggerPoint,
+): number {
+  const cap = resolveModelInputCap(model);
+  const { maxTokens, ratio } = context.compactAfterRun;
+  if (cap === undefined && maxTokens === undefined)
+    throw new TypeError("context.compactAfterRun.maxTokens is required when the model declares no context window (limits.contextWindow)");
+  const midLoop = cap === undefined ? Number.POSITIVE_INFINITY : cap * context.compactAt.ratio;
+  if (point === "mid-loop") return midLoop;
+  const afterRun = Math.min(
+    maxTokens ?? Number.POSITIVE_INFINITY,
+    cap === undefined || ratio === undefined ? Number.POSITIVE_INFINITY : cap * ratio,
+  );
+  return Math.min(afterRun, midLoop);
 }

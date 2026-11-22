@@ -90,7 +90,6 @@ export const M1_HARNESS_PATHS = Object.freeze([
   "scripts/memory-bench/replay.mjs",
   "scripts/memory-bench/run.mjs",
   "scripts/memory-bench/datasets.mjs",
-  "scripts/memory-bench/chunk-meter.mjs",
   "scripts/memory-bench/long-session.mjs",
   "scripts/memory-bench/work-outcome/long-session.mjs",
   "scripts/memory-bench/work-outcome/long-session-live.mjs",

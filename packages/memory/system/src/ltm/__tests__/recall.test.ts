@@ -232,9 +232,10 @@ describe("memory fabric conversation search", () => {
     const { memory } = makeMemory();
     const fabric = createLongTermMemory({ memory, observational: { session: { entries: async () => entries } } });
 
-    await assert.rejects(fabric.searchConversation("canary", { limit: 101 }), RangeError);
+    // Plan 239: a host API, so the host's value is the cap; only an invalid value is refused.
+    await fabric.searchConversation("canary", { limit: 101 });
     await assert.rejects(fabric.searchConversation("canary", { limit: 0 }), RangeError);
-    await assert.rejects(fabric.searchConversation("canary", { topK: 101 }), RangeError);
+    assert.equal((await fabric.searchConversation("canary", { topK: 101 })).hits.length, 2);
     await assert.rejects(fabric.searchConversation("canary", { topK: 1.5 }), RangeError);
     await assert.rejects(fabric.searchConversation("a"), MemoryValidationError);
     assert.deepEqual((await fabric.searchConversation("canary", { topK: 100 })).hits.length, 2);

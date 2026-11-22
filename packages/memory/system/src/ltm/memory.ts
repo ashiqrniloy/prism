@@ -40,7 +40,6 @@ import {
   explainRecord,
   fuseRankings,
   HARD_INVALIDATION_BATCH,
-  HARD_MEMORY_RETENTION_BATCH_CAP,
   indexInvalidations,
   MemoryAbortError,
   MemoryLimitError,
@@ -820,9 +819,6 @@ function clampRetentionBatch(value: number | undefined): number {
   const resolved = value ?? DEFAULT_MEMORY_RETENTION_BATCH;
   if (!Number.isInteger(resolved) || resolved < 1) {
     throw new MemoryValidationError("retention batchSize must be a positive integer");
-  }
-  if (resolved > HARD_MEMORY_RETENTION_BATCH_CAP) {
-    throw new MemoryLimitError(`retention batchSize exceeds hard cap ${HARD_MEMORY_RETENTION_BATCH_CAP}`);
   }
   return resolved;
 }

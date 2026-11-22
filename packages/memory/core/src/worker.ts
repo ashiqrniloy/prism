@@ -25,21 +25,13 @@ export class MemoryWorkerLimitError extends MemoryWorkerError {
 }
 
 export const DEFAULT_MAX_WORKER_TURNS = 16;
-export const HARD_MAX_WORKER_TURNS = 64;
 export const DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN = 32;
-export const HARD_MAX_WORKER_TOOL_CALLS_PER_TURN = 256;
 export const DEFAULT_MAX_WORKER_TOOL_CALLS = 128;
-export const HARD_MAX_WORKER_TOOL_CALLS = 1024;
 export const DEFAULT_MAX_WORKER_ARGUMENT_BYTES = 64 * 1024;
-export const HARD_MAX_WORKER_ARGUMENT_BYTES = 1024 * 1024;
 export const DEFAULT_MAX_WORKER_RESULT_BYTES = 64 * 1024;
-export const HARD_MAX_WORKER_RESULT_BYTES = 1024 * 1024;
 export const DEFAULT_MAX_WORKER_MESSAGE_BYTES = 1024 * 1024;
-export const HARD_MAX_WORKER_MESSAGE_BYTES = 8 * 1024 * 1024;
 export const DEFAULT_MAX_WORKER_ERROR_BYTES = 1024;
-export const HARD_MAX_WORKER_ERROR_BYTES = 8 * 1024;
 export const DEFAULT_MAX_TASK_STATE_BYTES = 2048;
-export const HARD_MAX_TASK_STATE_BYTES = 64 * 1024;
 const MAX_WORKER_JSON_DEPTH = 64;
 
 export interface MemoryWorkerLimitOptions {
@@ -65,23 +57,22 @@ export interface ResolvedMemoryWorkerLimits {
 }
 
 const SPECS = {
-  maxTaskStateBytes: [DEFAULT_MAX_TASK_STATE_BYTES, HARD_MAX_TASK_STATE_BYTES],
-  maxTurns: [DEFAULT_MAX_WORKER_TURNS, HARD_MAX_WORKER_TURNS],
-  maxToolCallsPerTurn: [DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN, HARD_MAX_WORKER_TOOL_CALLS_PER_TURN],
-  maxToolCalls: [DEFAULT_MAX_WORKER_TOOL_CALLS, HARD_MAX_WORKER_TOOL_CALLS],
-  maxArgumentBytes: [DEFAULT_MAX_WORKER_ARGUMENT_BYTES, HARD_MAX_WORKER_ARGUMENT_BYTES],
-  maxResultBytes: [DEFAULT_MAX_WORKER_RESULT_BYTES, HARD_MAX_WORKER_RESULT_BYTES],
-  maxMessageBytes: [DEFAULT_MAX_WORKER_MESSAGE_BYTES, HARD_MAX_WORKER_MESSAGE_BYTES],
-  maxErrorBytes: [DEFAULT_MAX_WORKER_ERROR_BYTES, HARD_MAX_WORKER_ERROR_BYTES],
+  maxTaskStateBytes: DEFAULT_MAX_TASK_STATE_BYTES,
+  maxTurns: DEFAULT_MAX_WORKER_TURNS,
+  maxToolCallsPerTurn: DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN,
+  maxToolCalls: DEFAULT_MAX_WORKER_TOOL_CALLS,
+  maxArgumentBytes: DEFAULT_MAX_WORKER_ARGUMENT_BYTES,
+  maxResultBytes: DEFAULT_MAX_WORKER_RESULT_BYTES,
+  maxMessageBytes: DEFAULT_MAX_WORKER_MESSAGE_BYTES,
+  maxErrorBytes: DEFAULT_MAX_WORKER_ERROR_BYTES,
 } as const;
 
 export function resolveMemoryWorkerLimits(input: MemoryWorkerLimitOptions = {}): ResolvedMemoryWorkerLimits {
   return Object.fromEntries(
-    Object.entries(SPECS).map(([name, [fallback, hardCap]]) => {
+    Object.entries(SPECS).map(([name, fallback]) => {
+      // The host's value is the cap (plan 239).
       const value = input[name as keyof MemoryWorkerLimitOptions] ?? fallback;
-      if (!Number.isSafeInteger(value) || value < 1 || value > hardCap) {
-        throw new RangeError(`${name} must be a positive safe integer at most ${hardCap}`);
-      }
+      if (!Number.isSafeInteger(value) || value < 1) throw new RangeError(`${name} must be a positive safe integer`);
       return [name, value];
     }),
   ) as unknown as ResolvedMemoryWorkerLimits;

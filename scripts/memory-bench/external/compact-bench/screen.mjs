@@ -21,7 +21,7 @@
  * `OM-before` runs from gate M-2's pre-216 worktree (`--arm OM-before` with that worktree as the working directory).
  * S text stays in the bench cache; the evidence carries ids, counts, scores and hashes only.
  */
-import { execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
@@ -228,13 +228,12 @@ export async function runScreenArm({ arm, histories, dir, workerProviders, worke
       sChars: result.counts.sChars,
       blockChars: result.counts.blockChars,
       keptMessages: result.counts.keptMessages,
-      chunks: result.counts.chunks,
       engaged: result.counts.wmEngaged ?? false,
       wmPasses: result.counts.wm?.passes ?? 0,
       stmEvents: result.counts.stm?.events ?? 0,
       worker: { inputTokens: after.inputTokens - before.inputTokens, outputTokens: after.outputTokens - before.outputTokens },
     };
-    await writeFile(file, JSON.stringify({ row, S: result.S, block: result.block, chunks: result.chunks }), { mode: 0o600 });
+    await writeFile(file, JSON.stringify({ row, S: result.S, block: result.block }), { mode: 0o600 });
     rows.push(row);
     log(`${arm} ${id}: sChars=${row.sChars} engaged=${row.engaged} in=${row.worker.inputTokens}`);
   }
@@ -255,7 +254,6 @@ export function screenEvidence({ branch, histories, armDirs, referenceRows, code
       arms[arm].push(cached.row);
       records.push({ sample_id: id, arm, view: "context", S: cached.S });
       records.push({ sample_id: id, arm, view: "block", S: cached.block });
-      if (cached.chunks?.length) records.push({ sample_id: id, arm, view: "chunks", S: cached.chunks.join("\n") });
     }
   }
   // mask-tail at the candidate's S size, per session.
@@ -322,13 +320,12 @@ export function screenEvidence({ branch, histories, armDirs, referenceRows, code
     arms: Object.fromEntries(
       Object.entries(arms).map(([arm, rows]) => [
         arm,
-        rows.map(({ id, engaged, wmPasses, stmEvents, worker, keptMessages, chunks }) => ({
+        rows.map(({ id, engaged, wmPasses, stmEvents, worker, keptMessages }) => ({
           id,
           engaged,
           wmPasses,
           stmEvents,
           keptMessages,
-          chunks,
           worker,
         })),
       ]),
@@ -345,8 +342,12 @@ export function screenEvidence({ branch, histories, armDirs, referenceRows, code
   };
 }
 
-/** Run upstream's references (`seam.py reference`) for `ids` into `out` (private: it holds S text); resumes. */
-export function runReferences({
+/**
+ * Run upstream's references (`seam.py reference`) for `ids` into `out` (private: it holds S text); resumes.
+ * Asynchronous on purpose: the live pass-through proxy serves upstream's calls from this same process, so a
+ * synchronous spawn would block its event loop and every reference call would time out (2026-11-17 screen).
+ */
+export async function runReferences({
   ids,
   references,
   out,
@@ -358,7 +359,7 @@ export function runReferences({
 }) {
   const wanted = `${out}.wanted.jsonl`;
   writeFileSync(wanted, `${ids.flatMap((id) => references.map((reference) => JSON.stringify({ sample_id: id, reference }))).join("\n")}\n`);
-  execFileSync(
+  const child = spawn(
     python,
     ["-I", SEAM, "reference", "--code", codeDir, "--summaries", wanted, "--out", out, ...(model ? ["--model", model] : [])],
     {
@@ -367,6 +368,11 @@ export function runReferences({
       timeout: 14_400_000,
     },
   );
+  const [code, signal] = await new Promise((done, fail) => {
+    child.once("error", fail);
+    child.once("close", (exitCode, exitSignal) => done([exitCode, exitSignal]));
+  });
+  if (code !== 0) throw new Error(`Screen: seam.py reference exited with ${signal ?? code}`);
   return readReferenceRows(out);
 }
 
@@ -410,7 +416,9 @@ if (import.meta.main) {
   const limit = Number(flag("--limit") ?? 0);
   const histories = loadDrawnHistories({ track: "retention", draw, dataDir: paths.data, limit });
   // The fingerprints come from the main tree: OM-before runs from the pre-216 worktree, which predates wm-gate.mjs.
-  const { m2MemoryFingerprint, m2ProductFingerprint } = await import(join(resolve(flag("--main-root") ?? "."), "scripts/memory-bench/wm-gate.mjs"));
+  const { m2MemoryFingerprint, m2ProductFingerprint } = await import(
+    join(resolve(flag("--main-root") ?? "."), "scripts/memory-bench/wm-gate.mjs")
+  );
   const offline = args.includes("--offline");
   let branch;
   let root;
@@ -456,7 +464,7 @@ if (import.meta.main) {
         usageNow: async () => ({ inputTokens: 0, outputTokens: 0 }),
         log: (line) => process.stderr.write(`${line}\n`),
       });
-    runReferences({
+    await runReferences({
       ids: histories.map((h) => h.id),
       references: ["anchor_index"],
       out: referenceFile,
@@ -504,7 +512,7 @@ if (import.meta.main) {
       usageLog: join(root, "wire", "references", "usage.jsonl"),
     });
     try {
-      runReferences({
+      await runReferences({
         ids: histories.map((h) => h.id),
         references: SCREEN_REFERENCES.filter((name) => name !== "mask-tail"),
         out: referenceFile,

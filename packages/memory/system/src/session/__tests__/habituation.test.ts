@@ -67,7 +67,10 @@ function harness(entries: () => readonly SessionEntry[], stm: Record<string, unk
   const session = { id: "s", entries: async () => entries() } as unknown as SessionContext;
   const flush = createObservationalFlush({
     log,
-    config: resolveMemorySystemConfig({ stm: { triggerTokens: 1, ...stm }, worker: { maxTurns: 1 } }, { wm: false, rehearsal: false }),
+    config: resolveMemorySystemConfig(
+      { stm: { triggerTokens: 1, verbatimUserChars: 0, ...stm }, worker: { maxTurns: 1 } },
+      { wm: false, rehearsal: false },
+    ),
     readState: () => ({ enabled: true }),
     onStatus: () => {},
     clientFor: () => clientFor(provider),
@@ -115,35 +118,27 @@ describe("habituation and event boundaries (plan 217 Task 3)", () => {
   });
 
   it("changed_result_is_a_new_event", async () => {
+    // Plan 218.3 Task 4: no chunk bytes to compare; a changed result is a new event when its description changes.
     const entries = [
       message("r1", 0, "tool", "Ran 35 tests. 0 fail"),
       message("r2", 1, "tool", "Ran 35 tests. 2 fail"),
       message("r3", 2, "tool", "Ran 35 tests. 0 fail"),
-      message("r4", 3, "tool", "Ran 35 tests"),
     ];
-    const run = (id: string, text?: string): Call => ({
+    const run = (id: string, description: string): Call => ({
       name: "record_event",
-      args: {
-        kind: "result",
-        description: "Ran the campaign test suite",
-        sourceEntryIds: [id],
-        ...(text ? { chunks: [{ sourceEntryId: id, text }] } : {}),
-      },
+      args: { kind: "result", description, sourceEntryIds: [id] },
     });
     const records: ObservationalMemoryRecord[] = [];
-    const provider = scripted([
-      [run("r1", "Ran 35 tests. 0 fail"), run("r2", "Ran 35 tests. 2 fail"), run("r3", "Ran 35 tests. 0 fail"), run("r4")],
-    ]);
+    const provider = scripted([[run("r1", "Ran 35 tests: 0 fail"), run("r2", "Ran 35 tests: 2 fail"), run("r3", "Ran 35 tests: 0 fail")]]);
     const events = await runStm({
       entries,
       client: clientFor(provider),
       maxTurns: 1,
       onRecord: (record) => records.push(record),
     });
-    assert.equal(events.length, 2, "different chunk bytes make a new event");
-    assert.notEqual(events[0]!.chunkRefs?.[0]?.sha256, events[1]!.chunkRefs?.[0]?.sha256);
-    assert.equal(events[0]!.count, 2, "byte-equal chunks habituate to the first record");
-    assert.equal(events[1]!.count, 2, "absent chunks habituate to the newest identical record");
+    assert.equal(events.length, 2, "a different description makes a new event");
+    assert.equal(events[0]!.count, 2, "the identical description habituates to the first record");
+    assert.equal(events[1]!.count ?? 1, 1);
     assert.equal(records.length, 0, "batch-local repeats need no repeat record");
   });
 
@@ -257,5 +252,41 @@ describe("habituation and event boundaries (plan 217 Task 3)", () => {
       });
     assert.equal((await run(1)).length, 1, "outside a window of 1");
     assert.equal((await run(2)).length, 0, "inside a window of 2: habituated");
+  });
+});
+
+describe("STM source batches fit the worker model (plan 218.3 Task 12)", () => {
+  it("stm_batch_fits_the_worker_input_cap", async () => {
+    // Session-Bench screen, W = 32K: one ~68K-token tool result went to the STM worker whole (the batch budget was half
+    // the 1 MB message budget), overflowed it on every pass, and coverage never moved, so compaction could never cut.
+    const sizes: number[] = [];
+    const provider: ModelProvider = {
+      id: "mock",
+      async *generate(request) {
+        sizes.push(JSON.stringify(request.messages).length);
+        yield providerDone();
+      },
+    };
+    const entries = [message("u1", 0, "user", "start"), message("t1", 1, "tool", "x".repeat(300_000))];
+    const data: JsonValue[] = [];
+    const log = {
+      entries: () => data,
+      append: async (_s: unknown, value: JsonValue) => void data.push(value),
+    } as unknown as SessionLog<JsonValue>;
+    const session = { id: "s", entries: async () => entries } as unknown as SessionContext;
+    const small = { provider: "mock", model: "small", limits: { contextWindow: 8_000, maxOutputTokens: 1_000 } };
+    const flush = createObservationalFlush({
+      log,
+      config: resolveMemorySystemConfig({ stm: { triggerTokens: 1 }, worker: { maxTurns: 1 } }, { wm: false, rehearsal: false }),
+      readState: () => ({ enabled: true }),
+      onStatus: () => {},
+      clientFor: () => clientFor(provider, small as never),
+    });
+    await flush.flush(session, { coverThrough: "t1" });
+    assert.ok(sizes.length > 0);
+    // Half of the 7,000-token input cap at 4 bytes a token, plus the prompt around it.
+    for (const size of sizes) assert.ok(size < 7_000 * 4, `an STM request of ${size} characters`);
+    const covered = data.filter((row) => (row as { type?: string }).type === OBSERVATIONS_RECORDED).at(-1) as { coversUpToId?: string };
+    assert.equal(covered?.coversUpToId, "t1");
   });
 });

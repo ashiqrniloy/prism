@@ -1,4 +1,4 @@
-import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
+import { resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
 import type { JsonObject } from "@arnilo/prism";
 import type { Pool, PoolClient, PoolConfig } from "pg";
 import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant } from "../acl.js";
@@ -35,6 +35,9 @@ import {
   requireNonEmptyString,
   requireScope,
 } from "../util.js";
+
+const DEFAULT_MAX_ENTRY_TEXT_CHARS = 64_384;
+const DEFAULT_POOL_MAX = 10;
 
 export interface PostgresMemoryStoresOptions {
   readonly pool?: Pool;
@@ -95,7 +98,7 @@ export interface PostgresVectorStoreOptions {
 
 export async function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores> {
   const schema = validateIdentifier(options.schema ?? DEFAULT_MEMORY_SCHEMA, "schema");
-  const maxEntryTextChars = options.maxEntryTextChars ?? 64_384;
+  const maxEntryTextChars = options.maxEntryTextChars ?? DEFAULT_MAX_ENTRY_TEXT_CHARS;
   const dimensions = options.dimensions;
   if (dimensions !== undefined && (!Number.isInteger(dimensions) || dimensions <= 0)) {
     throw new MemoryValidationError("dimensions must be a positive integer");
@@ -107,7 +110,7 @@ export async function createPostgresMemoryStores(options: PostgresMemoryStoresOp
     options.pool ??
     new PgPool({
       connectionString: requireNonEmptyString(options.connectionString, "connectionString"),
-      max: options.poolMax ?? 10,
+      max: options.poolMax ?? DEFAULT_POOL_MAX,
       ...(options.poolConfig ?? {}),
     });
 
@@ -547,7 +550,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
     async topTags(scope, query = {}) {
       assertNotAborted(query.signal);
       const required = requireScope(scope, true) as Required<MemoryVectorRecord>;
-      const limit = Math.min(resolveDirectoryLimit(query.limit), HARD_DIRECTORY_TAGS);
+      const limit = resolveDirectoryLimit(query.limit);
       const list = (field: string) =>
         `SELECT value AS tag FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(t.metadata->'fabric'->'${field}') = 'array' THEN t.metadata->'fabric'->'${field}' ELSE '[]'::jsonb END)`;
       const result = await q.query(
@@ -964,7 +967,7 @@ export async function createPostgresVectorStore(
 ): Promise<PostgresVectorStore & { readonly pool: Pool; readonly schema: string; close(): Promise<void> }> {
   const schema = validateIdentifier(options.schema ?? DEFAULT_MEMORY_SCHEMA, "schema");
   const table = validateIdentifier(options.table ?? DEFAULT_VECTOR_TABLE, "table");
-  const maxEntryTextChars = options.maxEntryTextChars ?? 64_384;
+  const maxEntryTextChars = options.maxEntryTextChars ?? DEFAULT_MAX_ENTRY_TEXT_CHARS;
   const dimension = options.dimension;
   if (dimension !== undefined && (!Number.isInteger(dimension) || dimension <= 0)) {
     throw new MemoryValidationError("dimension must be a positive integer");
@@ -976,7 +979,7 @@ export async function createPostgresVectorStore(
     options.pool ??
     new PgPool({
       connectionString: requireNonEmptyString(options.connectionString, "connectionString"),
-      max: options.poolMax ?? 10,
+      max: options.poolMax ?? DEFAULT_POOL_MAX,
       ...(options.poolConfig ?? {}),
     });
 

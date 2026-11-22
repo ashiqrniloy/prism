@@ -66,10 +66,6 @@ const STABLE = [
   "MEMORY_SYSTEM_SERVICE",
   "MemorySystemError",
   "resolveMemorySystemComponents",
-  // The chunk store contract and its default (plan 217 Task 2).
-  "MEMORY_CHUNK_STORE_SERVICE",
-  "SqliteChunkStore",
-  "createSqliteChunkStore",
   "MemorySessionLedgerError",
   "OBSERVATIONS_RECORDED",
   // Habituation and boundary record types (plan 217 Task 3).
@@ -77,6 +73,7 @@ const STABLE = [
   "OBSERVATIONS_TOMBSTONED",
   "BOUNDARY_RECORDED",
   "SCOPE_SET",
+  "SCOPE_STEP",
   "WM_RECORDED",
   "TASK_STATE_RECORDED",
   "activeObservations",
@@ -85,6 +82,8 @@ const STABLE = [
   "createMemoryId",
   "default",
   "foldObservationalMemoryLedger",
+  // Why an STM record was written without the model (plan 218.3 Task 12).
+  "memoryObservationFallbackValues",
   "memorySystemConfigSchema",
   "resolveMemorySystemConfig",
 ] as const;
@@ -117,7 +116,7 @@ const INTERNAL_NAMES = [
   "readObservationalMemoryState",
   "recallObservationalMemory",
   "renderObservationalMemory",
-  "resolveCompactAtThreshold",
+  "resolveCompactionThreshold",
   "resolveObservationalMemorySettings",
   "runDropper",
   "runStm",

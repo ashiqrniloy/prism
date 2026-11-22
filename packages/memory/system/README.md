@@ -64,10 +64,11 @@ Each component is an object (on, with its fields) or `false` (off). Omitted (or 
 same check without an agent and throws `MemorySystemError`.
 
 **A component that is off loads and registers nothing:** no hook, tool, command, slot claim, service or model call, and
-its code is not imported. With `stm: false` the package does not claim the `compaction` slot; with `ltm: false` it
-registers no `memory.*` tool and no `memory.ltm` service. The package's capabilities are computed from the enabled
-components (the kernel's `capabilitiesFor`): `stm` declares `models`, `session-state`, `background`,
-`slot:compaction` and `host-ui` (`memory:scope { path }` asks the host for the file's text); `ltm` declares `models`, `session-state`, `background`, `credentials` and `host-ui`.
+its code is not imported. With `stm: false` (or `context.compaction: false`) the package does not claim the `compaction`
+slot; with `ltm: false` it registers no `memory.*` tool and no `memory.ltm` service. The package's capabilities are
+computed from the enabled components (the kernel's `capabilitiesFor`): `stm` declares `models`, `session-state`,
+`background`, `host-ui` (`memory:scope { path }` asks the host for the file's text) and, unless `context.compaction` is
+`false`, `slot:compaction`; `ltm` declares `models`, `session-state`, `background`, `credentials` and `host-ui`.
 
 **The `memory.system` service** (`MEMORY_SYSTEM_SERVICE`) is provided whatever the components. `status()` returns
 `{ components }`, which components this instance runs. `setScope(session, text)` sets the episode scope
@@ -142,13 +143,13 @@ With the toggle on:
 | --- | --- | --- |
 | STM pass | after a turn, once the unscanned eligible tokens reach `stm.triggerTokens` (or, with `stm.boundaries: true`, when the tail holds a user turn after an idle gap: at most one extra STM call per boundary) | one branch read, one STM call per batch of the unread tail (one batch unless the tail exceeds about twice `stm.triggerTokens`, at least 32 KB serialized, or half of `worker.maxMessageBytes`; only the latter cuts an entry), one ledger record per recorded batch; date prefixes add about 6 tokens per message, plus gap markers; task state and supersession use the same call |
 | Habituation and boundary markers | inside the STM pass; idle-gap markers on every pass that sees a new one | a string comparison per new event against at most `stm.habituation.windowEvents` records, one ledger record per repeat or marker, no model call |
-| Chunk store write | at the end of a pass that stored a chunk or dropped a record with chunks | one store transaction, no model call; a fork or resumed session adds its referrers in one more transaction when it opens ([Chunks](#chunks)) |
-| WM pass | in the same pass, once the STM surface (records without a WM verdict) reaches `wm.triggerTokens`, or a boundary marker is new since the last WM attempt; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive (a new boundary still runs it) | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason, and one chunk-store transaction moving referrers ([Working memory](#working-memory)) |
+| WM pass | in the same pass, once the STM surface (records without a WM verdict) reaches `wm.triggerTokens`, or a boundary marker is new since the last WM attempt; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive (a new boundary still runs it) | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
 | Rehearsal pass | after the WM step (even if it records nothing), once the active pool exceeds `rehearsal.targetTokens` | one rehearsal call (or none with `policy: "lowest-relevance"`), one ledger record |
 | Context block | after foreign compaction only | pinned ledger in memory; one entry scan and log write per compaction, awaited before the next request; one reconciliation scan on reopen |
-| Compaction | first at the `compactAt`/`trigger` gate; then once per STM pass that advances coverage when this package owns the slot | the ledger already in memory, no model call |
+| Compaction (`context.compaction` on) | mid-loop when the request reaches `context.compactAt.ratio` of the input cap; when a run starts after a completed loop, at `context.compactAfterRun` ([Compaction](#compaction)) | the vote is one state read and a comparison; the compaction first runs STM over the entries it will remove that no pass has covered yet (one STM call per batch, below `stm.triggerTokens`; none when the background passes are up to date), then reads the ledger already in memory. A mid-loop compaction breaks the cached prefix inside the loop; a between-loop one breaks it where the next run's new input starts anyway |
 
-One pass runs per session at a time; a request while one is in flight is skipped, not queued.
+One pass runs per session at a time; a request while one is in flight is skipped, not queued (a compaction's coverage
+pass waits for it instead: [Compaction](#compaction)).
 
 **Large tails.** The unread tail goes to the STM worker in ordered batches that each fit half of
 `worker.maxMessageBytes` (the other half holds the prompt, task state, recent observations and the
@@ -157,6 +158,15 @@ the last recorded one and the next pass resumes there. A single entry larger tha
 cut, and ends with `[truncated: entry <id> is <n> bytes; the rest was not sent]`; the marker never
 carries the cut bytes, and observations may still cite the entry. A tail that fits is one batch, the
 same prompt as before.
+
+**Output cap and fallback records.** A worker model that spends its whole output limit before calling a tool (a
+reasoning model that ignores a low thinking level) has not read the batch. STM asks it once more with thinking off
+(`none`). If that call ends at the cap too, STM records the batch without the model: one event per message, in order
+(the user's request, the assistant's text, each tool call with its arguments and the start of its result), each line at
+most 400 characters and at most 4,000 per batch (requests kept first), prefixed `[not read by STM]`, citing its entries
+so `recall` pages the original. Such records carry `fallback: "output_cap"` (or `"worker_error"` for a failed
+compaction coverage pass), so a host can count them. A background pass whose call fails still fails and leaves
+coverage where it was; the next pass asks the model again.
 
 **Worker settings and secrets.** Each worker call carries its section's `instruction` (appended to
 the default prompt; it cannot change the worker's tools) and `thinkingLevel` (default `low`: recording and judging
@@ -177,6 +187,77 @@ reflector trigger was lowered to 1k only to force a pass; the observer ran at it
 trigger. One live question is a cost measurement, not a quality result.
 `docs/_evidence/memory-bench/202/observational/cost.{json,md}`.
 
+### Compaction
+
+Session memory is the agent's compaction system unless the host turns it off with `context.compaction: false`. Two
+compaction systems never run in one agent: with it on, listing `@arnilo/prism-extensions/compaction`, or
+`@arnilo/prism-extensions/context-engineering` with `fold` or `attention`, fails `createAgent` (`PackageLoadError`
+`setup_failed`, with a `memory_system_compaction_conflict` message when this package loads second, or the other
+package's message when it does). Each compaction system provides the `compaction.system` service (`{ name }`;
+`session-memory` here, `llm-compaction` for the compaction package), and context-engineering provides `context.fold`
+while `fold` or `attention` is on, so whichever loads second sees the first.
+
+**On (the default).** The package claims the `compaction` slot and, for a session with memory on, answers every
+`compaction.when` check `true` or `false`, so the kernel's trigger (`AgentConfig.compaction.trigger` or
+`thresholdEntries`) never decides for it. Two triggers decide:
+
+- **Mid-loop** (a check with a turn): compact when the request reaches `context.compactAt.ratio` (default `0.8`) of the
+  model's input cap. A run that resumes a suspended loop or continues an unfinished one (`run.started` carries `resumed`
+  or `continued`) is still inside that loop, so its run-start check uses this trigger too.
+- **Between loops** (the run-start check of a run that follows a completed loop): compact when the request reaches
+  `context.compactAfterRun` — `maxTokens` (default `80000`) or `ratio` of the input cap, the smaller when both are set —
+  and never above the mid-loop threshold, so a run that would start past the window share compacts before its first turn.
+
+The estimate both triggers compare is the kernel's `compaction.when` estimate: the history and carried summaries, without
+the system prompt, tools and context blocks. Set the ratios with that gap in mind. A model that declares no window has no
+mid-loop trigger (only the between-loop cap and the kernel's overflow recovery apply) and needs
+`context.compactAfterRun.maxTokens`; without it the first check fails, naming that key and `limits.contextWindow`.
+
+**What a compaction removes: only what STM has recorded.** The cut is sized in tokens and never separates a tool call
+from its result:
+
+- mid-loop (and an overflow compaction, or a manual one while a run is in flight): the newest tool round stays, plus
+  earlier messages, newest first, while they fit `context.keepRecentTokens` (default 20% of the input cap, else of
+  `compactAfterRun.maxTokens`); a cut that would land on a tool result moves back to keep its call;
+- between loops (and a manual compaction between runs): only the run's new input stays.
+
+Before it removes anything, the compaction has STM cover every entry up to the cut in its own call (waiting for a
+background pass in flight first): the entries since the last pass are recorded below `stm.triggerTokens`, with the run's
+abort signal, and no WM or Rehearsal step runs then (the background passes do that). The cut then stops at STM's
+coverage, so an entry STM has not processed stays in the window. If a coverage batch's STM call fails (a provider
+error, an invalid answer), the batch is recorded without the model (see **Output cap and fallback records** below) and
+the cut goes on; an aborted run still removes nothing. The compaction
+entry's `data` and the ledger's `memory.session.compacted` record carry `point` (`mid-loop` or `between-loops`) and
+`coverage: { entries, tokens }`, the entries and estimated tokens that pass processed (counts only). The kernel's
+`AgentConfig.compaction.keepRecentEntries` does not size this cut; it still sizes the kernel default that compacts a
+memory-off session.
+
+**One output larger than the window.** A mid-loop compaction (the window-share trigger or the kernel's overflow
+recovery) whose kept tail holds one message larger than the model's input cap on its own declines before any STM work
+(`compaction.completed` carries `oversized_entry`): no mid-loop cut can make that request fit, and the output is never
+truncated. The provider then rejects the request, the overflow compaction declines the same way, and the run ends with
+`context_overflow` ("the request was rejected and compaction could not shrink it"; counts only) with no retry. The next
+run's start is a between-loop check: it compacts, STM records the output from its bounded view (an entry above half of
+`worker.maxMessageBytes` reaches the worker cut, with a marker), the cut removes it, and the agent reads it whole with
+`recall { entry, offset }`, a page at a time. An overflow with no single message over the cap compacts and retries once,
+as the kernel does for any compactor. The check uses the same estimate as the cut, so a message just under the cap by
+that estimate is compacted around and retried.
+
+A session with memory off (its `memory:session` toggle off) is compacted by the kernel default, at the kernel's
+trigger, and keeps the kernel's overflow recovery (compact once, retry, else fail); so does an agent with
+`context.compaction: false`.
+
+**Off** (`context.compaction: false`). The package neither claims the slot nor votes; the host lists another compaction
+system (the compaction package, or none for the kernel default). STM still records, `recall` still works, and the
+memory block is pinned after each compaction ([Context and caching](#context-and-caching)).
+
+```ts
+// Session memory compacts:
+memorySystem({ enabled: true, context: { compactAt: { ratio: 0.8 }, compactAfterRun: { maxTokens: 80_000 } } });
+// LLM compaction instead:
+[memorySystem({ enabled: true, context: { compaction: false } }), memoryCompaction({ trigger })];
+```
+
 ### Context and caching
 
 `memory:session:status` reports three context modes:
@@ -186,19 +267,25 @@ trigger. One live question is a cost measurement, not a quality result.
 - `pinned`: another slot owner compacted the session. The package captures a bounded ledger snapshot synchronously on successful completion, resolves the compaction entry, and persists `memory.session.context.pinned { coversUpToId, compactionEntryId, ledger }`. The next context build awaits that write. Later observation passes do not change the block.
 
 Prefix changes coincide with compaction (I7). Between compactions, STM, WM and rehearsal passes write only the ledger:
-newer material stays in the transcript tail, so the prefix bytes the provider caches stay identical across WM passes
-(`prefix_identical_between_compactions_across_wm_passes`: 20 turns, three WM passes, one prefix). Failed and duplicate
-completion events do not repin.
+newer material stays in the transcript tail and `context.build` stays unchanged (empty in `none` and `own-compaction`,
+frozen at the compaction's pin in `pinned`), so every consecutive provider request keeps the previous request as a
+byte-identical prefix across background passes (`memory_block_changes_only_at_a_compaction`,
+`pinned_memory_block_changes_only_at_a_compaction`, `prefix_breaks_once_per_compaction`,
+`prefix_identical_between_compactions_across_wm_passes`). Failed and duplicate completion events do not repin. When a
+triggered check would keep every active-window message in the tail, `compaction.when` votes `false` without starting a
+compaction (`nothing_to_compact` noise avoided; an oversized mid-loop entry still declines once with `oversized_entry`
+before the provider rejects), and a manual compaction never resurrects messages removed by an earlier compaction.
 
 The package's compaction (plan 218 Task 4, design §5.1) makes no model call. Its summary renders, in this order, the WM
-surface (facts, then summaries, then events), the STM surface not yet processed, then the task state, and keeps
-`context.recentMessages` (and any message STM has not covered) verbatim. Tombstoned records and chunk text never enter it:
-a record or item with chunks shows only the `[chunk]` marker. One function renders the summary, the pinned block and
-`memory:session:view`. Pinned mode under a foreign compaction owner is unchanged.
+surface (items whose `neededLater` names the scope's next remaining step first, then those for later remaining steps,
+then the rest; facts, then summaries, then events within each group), the STM surface not yet processed, then the task
+state, and keeps only
+active-window messages matching the token cut (and any uncovered tail) verbatim ([Compaction](#compaction)). Tombstoned
+records never enter it. One function renders the summary, the pinned block and `memory:session:view`. Pinned mode
+under a foreign compaction owner is unchanged.
 Reopening reconciles the latest compaction once, using its persisted pin or the ledger records preceding it.
-The package records `memory.session.compacted { coversUpToId }` for its own compactions. Once that marker exists,
-new observation coverage triggers another own compaction, removing covered old messages while preserving
-recent and unobserved messages. Foreign owners retain the existing token/trigger gate.
+The package records `memory.session.compacted { coversUpToId }` for its own compactions. Advancing observation coverage
+does not trigger a compaction: only the two triggers in [Compaction](#compaction) do.
 
 The STM worker sees the most recent active observations within `rehearsal.targetTokens / 4` estimated tokens,
 plus new messages and bounded task state. Worker byte limits and redaction still apply.
@@ -214,13 +301,10 @@ defaults below.
 | `stm.model` | the session's model | STM worker model: `"provider/model"` or a model object |
 | `stm.triggerTokens` | `10000` | Unscanned eligible tokens that trigger an STM pass (was `observer.messageTokens`) |
 | `stm.contextTokens` | `4000` | Token budget of the recent STM record index (id, kind, first 120 characters) each STM request carries |
-| `stm.maxChunksPerEvent` | `2` | Verbatim chunks one STM event may carry (at most 8); `0` removes the `chunks` argument ([Chunks](#chunks)) |
-| `stm.maxChunkBytes` | `4096` | Bytes one stored chunk may take, truncation marker included (256 to 65,536) |
-| `stm.autoChunkBytes` | `1024` | Bytes of the evidence chunk kept by rule for an error, a failed check or a durable statement recorded with no chunk (0 to 65,536); `0` turns the rule off ([Chunks](#chunks)) |
-| `stm.chunkStore` | `"memory"` | Where the default chunk store lives: `"memory"` (the process lifetime) or `{ "sqlite": { "path": "…" } }`, a file in the host's data directory created mode 0600 |
-| `stm.habituation` | `{ "windowEvents": 50 }` | Collapse a repeated identical event into one record with a count, against the newest `windowEvents` active records (1 to 1,000); `false` records every event ([Short-term memory](#short-term-memory)) |
+| `stm.habituation` | `{ "windowEvents": 50 }` | Collapse a repeated identical event into one record with a count, against the newest `windowEvents` active records (at least 1); `false` records every event ([Short-term memory](#short-term-memory)) |
 | `stm.boundaries` | `false` | `true` runs an STM pass below `stm.triggerTokens` when a user turn follows an idle gap (one extra STM call per boundary); boundary markers are recorded either way |
 | `stm.boundaryGapMinutes` | `10` | Minutes of silence before a user turn that make it an event boundary (1 to 10,080) |
+| `stm.verbatimUserChars` | `2000` | A user message up to this many characters (whitespace collapsed) is kept word for word as one `request` record marked `verbatim`, written without the model, relevance `high`, never superseded; a longer one is left to the model. Cost: the message's tokens on the memory surface, no model call. `0` leaves every user message to the model ([Short-term memory](#short-term-memory)) |
 | `stm.instruction`, `wm.instruction`, `rehearsal.instruction` | none | Text appended to that worker's default prompt; it cannot change the worker's tools |
 | `stm.thinkingLevel`, `wm.thinkingLevel`, `rehearsal.thinkingLevel` | `low` | Reasoning level for that worker's model calls (`none` … `max`). A model without reasoning levels ignores it; set a level to override |
 | `wm.model` | the session's model | WM worker model |
@@ -228,18 +312,25 @@ defaults below.
 | `wm.batchTokens` | `3000` | STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass |
 | `wm.targetRatio` | `0.2` | Items' tokens over the batch's tokens a WM pass aims at (0.01 to 1), as pressure after relevance; protected records are never cut ([Working memory](#working-memory)) |
 | `wm.protectRequestPasses` | `8` | WM passes a user request or error stays protected by its `resolves` link without a resolving outcome; then the pass records `protectionLapsed` ([Working memory](#working-memory)) |
-| `wm.rejudgeTokens` | `8000` | Tokens of discarded records (chunks still live) the first WM pass after a scope change is also sent to keep back; `0` turns re-judgment off ([Working memory](#working-memory)) |
+| `wm.rejudgeTokens` | `8000` | Tokens of discarded records the first WM pass after a scope change is also sent to keep back; `0` turns re-judgment off ([Working memory](#working-memory)) |
+| `wm.lookAheadRecords` | `12` | Earlier records (discarded or dropped) matching the scope's remaining steps one WM pass is offered to keep; `0` turns look-ahead off ([Working memory](#working-memory)) |
+| `wm.lookAheadTokens` | `3000` | Tokens of those look-ahead records one WM pass is offered |
 | `wm.policy` | `"model"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, outcomes and salient records and discards the lowest-relevance oldest to the target, with no model call |
 | `rehearsal.model` | the session's model | Rehearsal worker model (today's dropper) |
 | `rehearsal.targetTokens` | `20000` | Active-observation token budget rehearsal approaches |
 | `rehearsal.policy` | `"model"` | `"model"` asks the rehearsal model; `"lowest-relevance"` drops deterministically |
-| `context.recentMessages` | `8` | Recent messages the compaction cut keeps verbatim |
-| `context.compactAt` | `{ "ratio": 0.6 }` | Requests compaction at `ratio` of the model's input cap, capped by `maxTokens`. A model with no declared window uses `maxTokens` and fails config validation without it. Ignored when `trigger` is set |
-| `worker.maxTaskStateBytes` | `2048` | Maximum UTF-8 text bytes in the replaced task state and rendered task section (hard ceiling 65536) |
+| `context.compaction` | `true` | Session memory is the agent's compaction system; `false` leaves compaction to another system ([Compaction](#compaction)) |
+| `context.compactAt` | `{ "ratio": 0.8 }` | The mid-loop trigger: compact inside an agentic loop when the request reaches `ratio` of the model's input cap |
+| `context.compactAfterRun` | `{ "maxTokens": 80000 }` | The between-loop trigger, checked when a run starts after a completed loop: `maxTokens`, or `ratio` of the input cap (the smaller when both are set). `maxTokens` is required for a model that declares no window |
+| `context.keepRecentTokens` | 20% of the input cap (else of `compactAfterRun.maxTokens`) | Tokens a mid-loop compaction keeps verbatim besides the newest tool round ([Compaction](#compaction)) |
+| `worker.maxTaskStateBytes` | `2048` | Maximum UTF-8 text bytes in the replaced task state and rendered task section; the host's value is the cap |
 | `worker.*` | see `limits.ts` | Worker loop ceilings (`maxTurns`, `maxToolCalls`, byte caps) |
 | `recall` | `true` | Expose the `recall` tool while the session's toggle is on |
+| `recallLimits.pageLimit` | `20` | The `recall` page size when the call carries none |
+| `recallLimits.pageBytes` | `16384` | Bytes one `recall` answer may carry (at least 1,024) |
+| `recallLimits.maxPageLimit` | `100` | The most hits or messages one `recall` call may ask for; the model's `limit` never raises it |
 | `scope.text` | none | Every session's starting episode scope, until `memory:scope` or `setScope` replaces or clears it ([Episode scope](#episode-scope)) |
-| `scope.maxBytes` | `32768` | Bytes one episode scope may take (at most 49,152); longer text fails with `scope_too_large` |
+| `scope.maxBytes` | `32768` | Bytes one episode scope may take; longer text fails with `scope_too_large`. The stored scope must also fit the kernel's `ceilings.stateValueBytes` |
 
 `observer`, `reflector` and `dropper` were renamed `stm`, `wm` and `rehearsal` with no alias: config
 validation rejects them, and `resolveMemorySystemConfig` names the successor. `wm.observationTokens` was retired with
@@ -256,23 +347,29 @@ package holds no credential.
 | --- | --- |
 | `memory:session` | Toggles session memory for the session and emits `memory.session.status` |
 | `memory:session:model { stm?, wm? }` | Sets the per-session worker model refs. An unknown provider fails the command and leaves state unchanged |
-| `memory:session:status` | Counts, thresholds, `contextMode`, whether a pass is in flight, the last pass error, the episode scope's hash and size (never its text), and `budgetUnmet` when the latest WM pass's protected records exceeded its target |
+| `memory:session:status` | Counts, thresholds, `contextMode`, `wmActive`, whether a pass is in flight, the last pass error, the episode scope's hash, size and step counts (`none` and WM inactive when unset, never the scope text), and `budgetUnmet` when the latest WM pass's protected records exceeded its target |
 | `memory:session:view` | Renders the session's ledger |
-| `memory:scope { text }`, `{ path }`, `{ clear: true }` | Sets or clears the session's episode scope ([Episode scope](#episode-scope)). Exactly one form; anything else answers `invalid_args` |
+| `memory:scope { text }`, `{ path }`, `{ finished }`, `{ clear: true }` | Sets, marks steps finished (`finished: [1, ...]`), or clears the session's episode scope ([Episode scope](#episode-scope)). Exactly one form; anything else answers `invalid_args` |
 
 ### Contributions
 
 - **`recall` tool**, registered with `when: on`, so a session with the toggle off neither sees nor can
-  call it. It reads its own session only: exact 12-character ids for memory (an STM record returns its verbatim
-  chunks; [Recall](#recall)), a query over the session's record descriptions (discarded records included), or
-  raw-source paging around a current-branch message id. A call gives exactly one of `id`, `query` or `cursor`.
+  call it. It reads its own session only: exact 12-character ids for memory (an STM record returns its
+  description and source ids; `detail: "full"` adds its original source entries; [Recall](#recall)), a query over the
+  session's record descriptions (discarded records included), raw-source paging around a current-branch message id, or
+  one original entry paged by byte offset. A call gives exactly one of `id`, `query`, `cursor` or `entry`.
 - **`context.build`**: awaits a pending compaction pin or one-time reopen reconciliation, then renders only the pinned ledger for foreign compactors. Steady requests do not read the branch.
 - **`turn.completed`**: starts `session.background("memory.session.observe", …)`. A failing pass fails only that
   background task (`background.failed`, error redacted), records `lastError`, and leaves the ledger
   unchanged; the run is unaffected.
-- **`compaction.when`**: while the toggle is on, votes `{ compact: true }` past its gate (`min(ratio × model input cap, maxTokens)`) and `{ compact: false }` below it, so the kernel's `thresholdEntries` fallback does not override the package; with the toggle off it abstains (`undefined`) and the host's trigger still fires.
-- **`compaction` slot**: summarizes from the ledger instead of the raw transcript. With the toggle off
-  for the session it delegates to `prism.slots.compaction.default`.
+- **`compaction.when`** (`context.compaction` on): while the toggle is on, answers every check on the two triggers
+  ([Compaction](#compaction)), so the kernel's trigger never decides; with the toggle off it abstains (`undefined`) and
+  the kernel's trigger still fires.
+- **`run.started`** (`context.compaction` on): notes whether the run resumes or continues a loop, for the next check.
+- **`compaction` slot** (`context.compaction` on): summarizes from the ledger instead of the raw transcript. With the
+  toggle off for the session it delegates to `prism.slots.compaction.default`.
+- **`compaction.system` service** (`context.compaction` on): `{ name: "session-memory" }`, so a second compaction system
+  fails at agent creation.
 - **`memory.session.status` event**: `{ enabled, contextMode, observations, wmItems, inFlight, lastError? }` on toggle,
   pass start, pass end, and pass failure.
 
@@ -306,27 +403,31 @@ package needs no configuration for it.
 
 ### Slot ownership
 
-While `stm` is on, this package claims the `compaction` slot (with `stm: false` it does not). With `@arnilo/prism-extensions/compaction` also installed, two
-packages claim it and `createAgent` fails closed until the host or manifest assigns the owner:
+While `stm` is on and `context.compaction` is not `false`, this package claims the `compaction` slot. Listing
+`@arnilo/prism-extensions/compaction` beside it fails `createAgent` whatever the slot assignment
+([Compaction](#compaction)); to keep LLM compaction, turn session memory's off:
 
 ```ts
 await createAgent({
   model,
-  packages: [memoryCompaction(), memorySystem()],
-  slots: { compaction: "@arnilo/prism-memory-system" },
+  packages: [memoryCompaction(), memorySystem({ context: { compaction: false } })],
 });
 ```
+
+A third-party package that claims the slot without providing `compaction.system` still meets the kernel's slot conflict,
+which fails closed until the host assigns an owner; a host that assigns its own compactor object turns
+`context.compaction` off.
 
 ### Example
 
 `examples/session-memory.ts` runs the whole contract on a temp SQLite store: the STM worker on its
 own model, compaction from the ledger, the per-session toggle, a second process resuming the session
-(toggle, worker model, ledger, `recall`), and the `compaction`-slot conflict failing closed.
+(toggle, worker model, ledger, `recall`), and a second compaction system failing closed.
 
 ### Capabilities
 
-`models`, `session-state`, `background`, `slot:compaction` and `host-ui` while `stm` is on; with `stm: false` none of
-them comes from the session tiers ([Configuration](#configuration)).
+`models`, `session-state`, `background` and `host-ui` while `stm` is on, plus `slot:compaction` unless
+`context.compaction` is `false`; with `stm: false` none of them comes from the session tiers ([Configuration](#configuration)).
 
 ### Requirements
 
@@ -349,8 +450,10 @@ start a new session).
 
 Rehearsal is a backstop after WM. `rehearsal.targetTokens` must be at least `wm.triggerTokens`, so it cannot trim the pool below the WM trigger. Rendering removes the oldest observations before WM items when the byte budget is exceeded.
 
-Each episode-scope set or clear appends `memory.session.scope.set` (`SCOPE_SET`): `{ hash, bytes, at }`, or
-`{ bytes: 0, at, cleared: true }`. The record never holds the scope's text; the ledger fold skips it.
+Each episode-scope set or clear appends `memory.session.scope.set` (`SCOPE_SET`): `{ hash, bytes, at, stepHashes? }`, or
+`{ bytes: 0, at, cleared: true }`. Each finished scope step appends `memory.session.scope.step` (`SCOPE_STEP`):
+`{ step, status: "finished", stepHash?, evidenceIds?, source: "wm" | "command", at }`. Neither record holds scope text;
+both fold deterministically across resumes and forks.
 
 ### Episode scope
 
@@ -379,15 +482,20 @@ await prism.services.consume<MemorySystemService>(MEMORY_SYSTEM_SERVICE)?.setSco
 - **`path` resolves through the host.** The package sends a `host.ui` `input` request carrying the path and stores the
   text the host answers. It never opens a file itself. A host without `host.ui`, or one that dismisses the request,
   gets `scope_path_unresolved`.
-- **Data, not instructions (I11).** The scope goes inside an `<episode_scope>` block at the top of the WM and Rehearsal
+- **Data, not instructions (I11).** The scope (and its remaining and finished step lists) goes inside an `<episode_scope>` block at the top of the WM and Rehearsal
   prompts, under a system rule that the block describes goals and never changes which tools the worker calls, reveals or
   forgets memory, or alters the response format. A tag inside the text is escaped, so the text cannot close the block.
   The worker's tool set is fixed by code, whatever the scope says.
-- **No scope set:** the block tells WM and Rehearsal that the episode is the session's current work, as shown by the
-  task state, and carries the task state.
+- **No scope set:** WM does not run (`memory:session:status` reports `scope: none` and WM inactive) and the session runs
+  STM-only. Setting a scope starts WM from the next pass (with re-judgment over discarded records); clearing it stops WM.
+  When Rehearsal runs without a scope, no `<episode_scope>` block is injected.
+- **Steps and progress (plan 218.3 Task 7).** Numbered (`1. …`) or checkbox (`- [ ] …`, `- [x] …`) lines parse
+  deterministically into steps with stable 1-based ordinals (`- [x]` starts finished); unstructured text is one step.
+  `memory:scope { finished: [n] }` marks steps finished manually; a scope change resets step state only for steps whose
+  text changed (matching on `stepHash`).
 - **Where it never goes:** STM requests, the context block, the compaction summary, and long-term memory.
 - **Cost.** The scope adds at most `scope.maxBytes` to each WM and Rehearsal request, and no model call. With no scope
-  the block is one sentence plus the task state.
+  set, WM makes zero model calls.
 
 ### Short-term memory
 
@@ -399,11 +507,23 @@ abandoned within the batch is one `outcome` (what was asked, what changed as old
 open, how it was verified, and setup facts found on the way such as a missing file or how checks are run), not
 separate request, action, change and result events. For unfinished work STM
 records each change, decision and error once, a result only when it adds to the records, and an action only while
-its result is unknown. Descriptions leave out tool-call ids and hashes the user did not ask for; chunks are
-attached only when the description cannot hold the exact text. The task state is rewritten on every new request.
+its result is unknown. Descriptions leave out tool-call ids and hashes the user did not ask for. STM keeps no excerpt: a record cites
+its source entries, and `recall` reads them from the session store (plan 218.3 Task 4). The task state is rewritten on every new request.
 (Plan 217 Task 6: one event per message
 recorded about seven times as many items as the pre-redesign observer on chat history and spent about 1.5× its
 worker tokens; per exchange it is about 1.04× on the same history.)
+
+**User messages word for word (2026-11-22).** Before the model reads a batch, each user message of it up to
+`stm.verbatimUserChars` characters (2,000, whitespace collapsed, known secrets redacted and credential-shaped strings such as `sk-…`, `ghp_…`, `AKIA…`, JWTs and private-key headers masked as `[credential]`) is recorded as one `request`
+record, `User said: …`, relevance `high`, marked `verbatim` (the block shows `request (verbatim):`). No model writes it,
+so a rule or a changed value the user mentions in passing is not summarised away. The prompt names those entries
+and the worker records no request for them. It still records each fact, constraint or decision the user states,
+and each change to an earlier one, as its own `statement`, never folded into an outcome. A change sets `corrects`
+and `supersedes` the earlier record. `supersedes` never removes a `verbatim` record: the call keeps its event and
+returns a warning. A batch recorded without the model (`fallback`) keeps its user messages the same way. Why: on the
+Session-Bench screen (rule a1c6df8d), every STM D2 miss and every STM D4 miss on replay was a user statement that the
+model left out or folded into a task line, while the old value stayed a constraint. Cost: the user messages' own
+tokens on the surface, once, and no model call.
 
 | `kind` | Records |
 | --- | --- |
@@ -438,7 +558,7 @@ instruction stays within its 2,100-character cap. None carries free text:
 | Field | Values | Rule |
 | --- | --- | --- |
 | `status` | `passed`, `failed`, `partial`, `unknown` | how an `outcome` or `result` was verified; **required on an `outcome`**, which is refused with `outcome_status_required` without it (the worker re-sends it); ignored on other kinds |
-| `corrects` | `true` | the user says an earlier answer or action was wrong |
+| `corrects` | `true` | the user says an earlier answer or action was wrong, or changes a value, plan or rule stated earlier |
 | `durable` | `constraint`, `preference` | a user statement or decision that binds later work, or says how the user wants things done, whatever the current task is |
 | `resolves` | record ids | on an `outcome`: the `request` or `error` records (recent index, or recorded earlier in the batch) it closes; other ids are dropped with `resolvesWarning`, like `supersedes` |
 
@@ -450,11 +570,10 @@ record without `corrects` (or an outcome without a status) keeps the English pat
 replay the fields beat the patterns on non-English turns and on precision for every model, but not on English recall,
 so the patterns stay as a union. Ledgers written before the fields read unchanged.
 
-The stored record keeps `kind`, `description`, `count` (1; habituation raises it), `lastAt`, and
-optional `chunkRefs` (id, source entry id, sha256, bytes of verbatim chunks kept outside the branch).
+The stored record keeps `kind`, `description`, `count` (1; habituation raises it), `lastAt`, and the
+`sourceEntryIds` it cites. A record written before plan 218.3 Task 4 may carry `chunkRefs`; they are ignored.
 The context block renders `- [id] HH:MM (relevance) kind: description`, with `×N` after the kind once an event
-repeated (`kind ×3: description`), and ` [chunk]` at the end when the record has chunks. The block never carries chunk
-text; `recall` reads it.
+repeated (`kind ×3: description`). The block never carries a source entry; `recall` reads it.
 
 **Speaker attribution (plan 218 Task 4.1).** Each new event stores `attribution: "user" | "assistant" | "tool" |
 "mixed"`, derived in `record_event` from the stored roles of the entries it cites; the model sets nothing, so message
@@ -475,9 +594,9 @@ answer model read the plan as a trip that happened.)
 ```
 
 **Habituation.** An event whose `kind` and normalised description match one of the newest
-`stm.habituation.windowEvents` (50) active STM records, or an event of the same batch, and whose chunks are
-byte-equal to that record's (or absent), raises the record's `count` and `lastAt` instead of adding a record. The tool
-answers `{ ok: true, habituated: <id>, count }`. A changed result (different chunk bytes) is a new event. The ledger
+`stm.habituation.windowEvents` (50) active STM records, or an event of the same batch, raises the record's `count` and
+`lastAt` instead of adding a record. The tool answers `{ ok: true, habituated: <id>, count }`. A changed result is a new
+event when its description changes (until plan 218.3 Task 4, different chunk bytes also made one). The ledger
 gains a `memory.session.observations.repeated` record (`OBSERVATIONS_REPEATED`) carrying the absolute count, so a
 fold that meets it twice cannot over-count. A repeat inside one batch needs no record: the new event is written with
 its count. `stm.habituation: false` records every event. The comparison uses the same normaliser as the stored
@@ -510,7 +629,7 @@ session's secret set redacts the request as before.
 
 WM (plan 218 Task 2, design §5.4) turns the STM surface into what the episode's remaining work needs. It reads the
 episode scope ([Episode scope](#episode-scope)), the task state, the current WM items, and a batch of new STM records
-with their kinds, counts and chunk sizes. Records carrying a salience signal are marked `salient:` in the request: an
+with their kinds and counts. Records carrying a salience signal are marked `salient:` in the request: an
 `error` event, a user correction (`corrects`, or for a record without it a correction phrase in the cited user turn), a
 denied tool call (`hook_denied` on the branch) or a failed verification (`status: "failed"`, or for an `outcome`
 without a status a failure phrase in its description). The signals come from the records the STM worker wrote and
@@ -536,15 +655,18 @@ call:
 
 | Entry | Effect |
 | --- | --- |
-| `keep` | a WM `event` item: the record's description, relevance, time and chunks, and the reason; `j` in place of `r` keeps a re-judged record |
-| `summaries` | one WM `summary` per entry, citing those records and inheriting their chunks |
+| `keep` | a WM `event` item: the record's description, relevance, time and side, and the reason; `j` in place of `r` keeps a re-judged record, `a` an earlier record for a coming step (its `neededLater` is set to that step) |
+| `summaries` | one WM `summary` per entry, citing those records and inheriting their time span and side |
 | `facts` | an episode `fact` per entry, citing records and items (`support`); it gives no verdict |
-| `discard` | no item; records by reason: `finished`, `out-of-scope`, `superseded` or `duplicate`; a protected record is refused |
+| `discard` | no item; records by reason: `finished`, `out-of-scope`, `superseded` or `duplicate`; a protected record is refused. `finished` also accepts `w` ordinals for items listed under `Items for finished steps` |
+| `finishedSteps` | marks remaining scope steps finished (`[{ step, evidence: ["r1"] }]`) when every cited record is an STM `outcome` with `status: "passed"`; otherwise refused with `unsupported_step_finish` |
 
-`neededLater` names the scope step that needs the item; a marked item is protected. Each entry is checked on its own,
-in the order keep, summaries, discard, facts, and the valid ones apply; the result lists each refused entry
+`neededLater` names the scope step ordinal(s) that need the item; while any named step is unfinished, the item and its
+cited records stay protected. Once every step an item's `neededLater` names is finished, the next pass offers that item
+under `Items for finished steps` for release (`discard.finished`); items without `neededLater` are unaffected. Each entry is checked on its own,
+in the order finishedSteps, keep, summaries, discard, facts, and the valid ones apply; the result lists each refused entry
 (`{ entry, reason, ordinal?, protection? }`, at most 64) with `unknown_id` (an ordinal outside the request, which can
-never name a record outside the batch), `already_processed` (a second verdict, a settled record, or a re-judged record
+never name a record outside the batch), `unknown_step`, `unsupported_step_finish`, `already_processed` (a second verdict, a settled record, an already-finished step, or a re-judged record
 named outside `keep`), `empty_text`, `citation_outside_active_set` (a WM item already superseded), `invalid_arguments`
 or `protected` with the protection class, plus `applied` and `unjudged` counts, so one more turn can fix them. A record
 left without a verdict stays on the STM surface and rendered, for the next pass. The instruction asks for one subject per
@@ -557,9 +679,7 @@ against `judge` on the plan 218.2 worker replay. With `judge`, every worker mode
 
 **Incremental (I6).** A pass adds items and supersedes only the WM items its summaries or facts name; it
 never replaces the WM set. Every processed record leaves the STM surface with a tombstone carrying its verdict and
-stays recallable by id. In the same chunk-store transaction, every chunk a new WM item cites gains a `wm` referrer and
-every tombstoned record's `stm` referrer is removed, so a chunk WM cites survives and an uncited one is deleted (I2–I3).
-A fork or resumed session adds its own `wm` referrers for the active items' chunks when it opens.
+stays recallable by id, with its source entries read from the session store.
 
 **When it runs.** Once the STM surface reaches `wm.triggerTokens` (10,000), or when a boundary marker is new since the
 last WM attempt; no pass runs while one is in flight for the session. A pass sends at most `wm.batchTokens` (3,000) of
@@ -572,13 +692,25 @@ one pass now, below the trigger, with `memory.system.rehearse(session, { only: "
 
 **Re-judgment after a scope change (plan 218 Task 4).** The first model WM pass after a `memory.session.scope.set` record
 whose hash differs from the one last re-judged (a set or a clear; setting the same scope again re-judges nothing) is also
-sent the records WM discarded earlier, newest tombstone first, up to `wm.rejudgeTokens` (8,000; 0 turns it off). Only
-records whose chunks still live are offered: a chunk is live while this session holds a referrer for it (a WM item, a fork
-restored into this session); a discarded record with no chunks is offered on its own line. `keep` may bring one back as a
-WM `event`, which takes a `wm` referrer for its chunks; a re-judged record has a `j` ordinal, which only `keep` takes, and a
-record left alone stays tombstoned. The pass records `rejudge { scopeHash?, offered, kept, chunkDropped }` on its
-`wm.recorded` record; `chunkDropped` names the discarded records whose chunks were all deleted, so the loss is visible.
+sent the records WM discarded earlier, newest tombstone first, up to `wm.rejudgeTokens` (8,000; 0 turns it off). Every
+discarded record is offerable: its evidence is its source entries, which stay in the session store (plan 218.3 Task 4
+removed the chunk-liveness gate). `keep` may bring one back as a WM `event`; a re-judged record has a `j` ordinal, which
+only `keep` takes, and a record left alone stays tombstoned. The pass records `rejudge { scopeHash?, offered, kept }` on
+its `wm.recorded` record (records written before Task 4 may also carry `chunkDropped`; it is ignored).
 A scope change does not trigger a pass by itself, and the deterministic policy does not re-judge.
+
+**Look-ahead: earlier material for the coming steps (plan 218.3 Task 8).** Every model WM pass under a scope with
+remaining steps is also sent, under "Earlier records for coming steps", the earlier records whose description matches a
+remaining step: records WM tombstoned (discarded, or kept into an item since superseded or released) and records
+Rehearsal dropped, never one still on the STM surface (WM's batches reach those with every verdict) or one an active
+WM item cites. Code selects them with the scorer `recall { query }` uses, each step's text as the query: a record must
+share at least two of the step's terms (all of them for a one-term step) and goes to the step it covers best; the
+next step's records come first, then higher coverage, then newer. At most `wm.lookAheadRecords` (12) records and
+`wm.lookAheadTokens` (3,000) tokens per pass. Each has an `a` ordinal and its step; only `keep` takes it, and the kept
+event's `neededLater` is that step whatever the model wrote, so it is released once the step finishes. The event cites
+the record, so `recall` on it returns the original entries. The pass records `lookAhead { offered, tokens, kept }` on
+its `wm.recorded` record. With no remaining step (all finished, or no scope), no section is sent. Look-ahead never
+triggers a pass, and the deterministic policy has none.
 
 **Compression: the ratio is pressure (plan 218 Task 3).** The request states a target: the items a pass writes aim at
 `wm.targetRatio` (0.2) × the batch's tokens, after relevance, never by dropping what later work needs. Salient records
@@ -619,105 +751,72 @@ its items are the records' own lines, so the achieved ratio is often above the t
 **Cost.** One WM call per trigger crossing or new boundary (none with `wm.policy: "deterministic"`, and none when every
 record in the batch is settled), usually one turn with one `judge` call, its input bounded
 by `wm.batchTokens` plus the active WM items, the task state and the scope (at most `scope.maxBytes`), and, only on the
-first pass after a scope change, at most `wm.rejudgeTokens` of re-judged records. The target and
+first pass after a scope change, at most `wm.rejudgeTokens` of re-judged records, and, while scope steps remain, at most
+`wm.lookAheadTokens` of look-ahead records (selected locally: no model call, no store read). The target and
 protection marks add one short section and one word per protected record. The whole-log rewrite and its "consume
 everything sent" rule are gone.
 
-### Chunks
+### Where the evidence lives
 
-An event may carry `chunks`: verbatim excerpts of the entries it cites (a command's output, an error, a code
-snippet, a quoted request), so a later tier can read the exact text without re-running anything.
+STM keeps no copy of session content (plan 218.3 Task 4; until then it wrote verbatim excerpts, "chunks", to a
+separate store). A record cites the entries it came from by id, and those entries are the evidence: the session store
+already holds every message, tool call and tool output, redacted at append, for as long as the session exists. So
+evidence survives a restart and a resume with the session itself, a compaction never deletes it (a compaction only
+changes what the next request carries), and a fork reads the entries it copied: `fork()` stamps each copy with the ids
+it had before (`sessionEntryForkedFrom`), and the package resolves a parent's ids to the fork's copies. An entry after
+the fork point is not on the fork's branch and reads as not found.
 
-```json
-{ "kind": "result", "description": "Campaign tests pass after the retry fix (35 tests, 3 files).", "sourceEntryIds": ["e47"], "chunks": [{ "sourceEntryId": "e47", "text": "Ran 35 tests across 3 files. 0 fail" }] }
-```
-
-- **Verbatim.** A chunk must cite an entry of the batch, and its text (whitespace-normalised) must be a substring of
-  that entry as the worker saw it, or of the entry's own text. Otherwise the event is refused with
-  `chunk_not_verbatim` (also `chunk_unknown_entry`, `too_many_chunks`, `empty_chunk`, `invalid_chunks`).
-- **Redacted and capped.** The text is redacted with the session's secret set, then cut to `stm.maxChunkBytes`; the
-  truncation marker names sizes only, never the cut bytes. A batch's accepted chunks may take at most 25% of its
-  serialized transcript bytes (`chunk_budget_exceeded` past that), so stored chunk bytes stay under a quarter of the
-  transcript they cover whatever the caps are.
-- **Evidence kept by rule.** When the worker records one of these with no chunk, the package attaches one from the
-  cited entry, with no model call:
-  - an `error`, or an `outcome`/`result` with `status: "failed"`, citing a tool result: the last `stm.autoChunkBytes`
-    (default 1,024) of that result, cut on a line boundary;
-  - a `durable` event citing a user message: the first sentence holding a term the description quotes, else the first
-    `stm.autoChunkBytes` of the message.
-
-  The automatic chunk takes the worker's path (verbatim check, redaction, `stm.maxChunkBytes`) and the batch's 25%
-  budget: when the budget is spent, the event records without it. A worker's own chunk is never replaced. It is off
-  with `stm.autoChunkBytes: 0`, and whenever chunks are off.
-
-  Cost: no model call, one scan of the cited entry per qualifying event. On the worker replay (60 STM requests, plan
-  218.2 Task 4) with `1024`, against the same product with the rule off:
-
-  | Worker model | Evidence spans covered (of 42), off → on | Chunk bytes per 10k source tokens, off → on |
-  | --- | --- | --- |
-  | `muse-spark-1.3-contributor` | 0 → 11 | 6 → 188 |
-  | `deepseek-v4.1-flash` | 19 → 26 | 156 → 359 |
-  | `mimo-v2.6-flash` | 13 → 21 | 461 → 529 |
-
-  The replay's fixed rule asked for off, because Muse's chunk bytes passed twice its own small first baseline (74 per
-  10k). The owner turned it on (2026-11-15): Muse's 188 bytes per 10k is below DeepSeek's baseline and far under the
-  25% batch share (`docs/_evidence/memory-bench/218.2/replay-task4.json`). Set `0` to avoid the cost.
-- **Never on the branch.** The ledger keeps only `chunkRefs` (id, source entry id, sha256, bytes). The text lives in
-  the chunk store and never enters the context block, the ledger or a shared store.
-- **The store.** The default is a SQLite store (`stm.chunkStore`: in memory for the process lifetime, or a file
-  created mode 0600, with `secure_delete` on). A package that provides the `memory.chunks` service (a `ChunkStore`:
-  `put`, `ref`, `unref`, `apply`, `get`, `list`) replaces it; `createSqliteChunkStore` is exported for that. A file
-  that holds another SQLite schema fails closed.
-- **Reference counted.** Every chunk has referrers: an STM record (later a WM item or an LTM note), each with its
-  session id. When rehearsal or `supersedes` drops an STM record, its referrer is removed; at zero referrers the chunk
-  is hard-deleted in the same transaction, and `secure_delete` zeroes the freed pages. Nothing else deletes a chunk.
-  A forked (or resumed) session adds its own referrers when it opens, so a drop in the parent cannot delete a chunk
-  the child still holds. `get` answers only for a session that holds a referrer.
-- **Cost.** No model call. One store transaction per pass (the pass's new chunks, then the referrers of the records it
-  dropped), after the pass's ledger appends: a failed write leaves a ref that reads as dropped, never an unreferenced
-  chunk. `context.build` never touches the store. On the long-session fixture (204 entries, 46,160 eligible tokens) STM
-  stored 9 chunks, 588 bytes: 127 bytes per 10k eligible tokens, 1.8% of the entries they cover and 0.32% of the
-  transcript (`docs/_evidence/memory-bench/217/stm-probes.json`).
+Retired settings (each fails config naming its successor): `stm.maxChunksPerEvent`, `stm.maxChunkBytes`,
+`stm.autoChunkBytes` and `stm.chunkStore`. The `memory.chunks` service, `createSqliteChunkStore`, `SqliteChunkStore` and
+the `ChunkStore` types are gone; long-term memory (plan 219) copies what it promotes into its own store, since it outlives
+the session.
 
 ### Recall
 
-`recall { id }` with an STM record id returns the record and its evidence without re-running anything:
+`recall { id }` with an STM record id returns the record; `detail: "full"` adds its original source entries, read from
+the session store, without re-running anything:
 
 ```text
 Observation [a1b2c3d4e5f6]: result ×2: Campaign tests pass after the retry fix (35 tests, 3 files).
 time: 2026-11-09T10:00:00.000Z; last seen 2026-11-09T10:20:00.000Z
 sources: e41, e47
 
-Chunks:
-[chunk 0f3c…] from e47, 35 bytes:
-Ran 35 tests across 3 files. 0 fail
+Source evidence:
+[2026-11-09T10:00:00.000Z] [e41] assistant (52 bytes):
+[tool call run_tests t-7] {"command":"bun test retry"}
+[2026-11-09T10:00:02.000Z] [e47] tool (bytes 0–15812 of 248113; continue with recall { entry: "e47", offset: 15812 }):
+[tool result run_tests t-7] Ran 35 tests across 3 files. 0 fail …
 ```
 
-- **What it returns.** The kind, description, time (`lastAt` once repeated), count and source ids, then every chunk
-  verbatim, read from the chunk store for the executing session. `detail: "full"` adds the raw source entries
-  (`Source evidence:`), as recall returned by default before plan 217. The tool value carries `state`
-  (`active | dropped | tombstoned`), `chunks` (each ref with `text`, or `dropped`) and, with `full`,
-  `sourceEntries`.
-- **Dropped chunks.** A chunk the session's store no longer holds reads `chunk dropped: <reason>`: `record superseded by
-  <id>`, `record dropped` (rehearsal or compaction), `record tombstoned (<reason>)`, or, for an active record, no
-  referrer in this session's store (the default in-memory store does not survive a restart).
+- **What it returns.** The kind, description, time (`lastAt` once repeated), count and source ids; with `full`, each
+  source entry's original content: message text verbatim, a tool call's arguments as JSON, a tool result's payload (a
+  string verbatim). The tool value carries `state` (`active | dropped | tombstoned`) and, with `full`,
+  `sourceEntryIds`; it never carries whole entries.
+- **Bounded, paged by offset.** Every answer stays within 16 KiB (`DEFAULT_RECALL_PAGE_BYTES`; the tool's `pageBytes`
+  option sets 1 KiB to 256 KiB), header included. An entry cut short names the offset to read on, and entries with no
+  room left are listed by id. `recall { entry, offset?, limit? }` returns one page of one user, assistant or tool
+  message entry: `{ entry, offset, bytes, totalBytes, nextOffset? }`, cut on character boundaries, so consecutive pages
+  concatenate to the original and an entry larger than any model window is readable in pieces. The secret redaction
+  runs on the whole entry before it is cut, so a secret split across pages is still redacted. `entry` accepts a
+  parent's id in a fork. A covered entry that no record cites (STM may process an entry and record nothing about it)
+  is reached with `recall { cursor }` or by its id.
 - **Tombstones.** A `memory.session.observations.tombstoned` record (`OBSERVATIONS_TOMBSTONED`: `observationIds`,
   `reason`, `at`) removes records from the surface: they leave the active set and the context block, and `recall`
-  still finds them by id with `state: "tombstoned"` and the reason. WM writes one for every record it gives a verdict,
-  in the same pass that moves the record's chunk referrers ([Working memory](#working-memory)).
+  still finds them by id with `state: "tombstoned"` and the reason. WM writes one for every record it gives a verdict
+  ([Working memory](#working-memory)).
 - **WM items.** `recall { id }` with a WM item id returns its kind, relevance, text, time span, the STM records it cites
-  (with their state), its chunks verbatim and the cited records' source entries (`kind: "wm_item"`, `superseded`).
+  (with their state) and the cited records' original source entries, within the page (`kind: "wm_item"`,
+  `superseded`).
 - **Session-bound.** An id this session's ledger does not hold answers `unknown_id`, with the same text as an id that
-  never existed, so a forged id does not reveal whether another session has it. Chunks are read with the executing
-  session's id, so a chunk only another session references reads as dropped.
-- **Cost.** One ledger fold (already in memory) and one chunk-store read per chunk; no model call. A store that cannot
-  be read lists the chunks as `(not read)` and the call still succeeds.
+  never existed, so a forged id does not reveal whether another session has it. `entry` and `cursor` read only the
+  executing session's branch.
+- **Cost.** One branch read per call (`session.entries()`) and one ledger fold; no model call and no store write.
 
 `recall { query, limit? }` finds a record whose id the agent no longer sees, such as one WM discarded (plan 218.2
 Task 7):
 
 ```text
-2 session memory record(s) match; call recall with an id for evidence and chunks.
+2 session memory record(s) match; call recall with an id for the record and its original source entries.
 - [c1d2e3f4a5b6] result 2026-11-15T10:00:00.000Z (tombstoned: wm discard finished): Retry maxAttempts set to 5 after the interrupted upload.
 - [d4e5f6a1b2c3] error 2026-11-15T09:40:00.000Z (active): Upload interrupted twice on the CI runner.
 ```
@@ -725,8 +824,8 @@ Task 7):
 - **What it searches.** The descriptions of this session's STM records and the text of its WM items, including
   tombstoned, dropped and superseded ones, with the long-term store's lexical terms (lowercase, stopwords dropped,
   light stemming). Hits are ordered by the share of query terms they hold, then newest first. Up to `limit` hits
-  (default 8, at most 100). Each line gives the id, kind, time, state (`active`, `tombstoned: <reason>`,
-  `dropped: <reason>`, `superseded`) and description; chunk text is read with `recall { id }`.
+  (default 8, at most `recallLimits.maxPageLimit`, default 100). Each line gives the id, kind, time, state (`active`, `tombstoned: <reason>`,
+  `dropped: <reason>`, `superseded`) and description; the original entries are read with `recall { id, detail: "full" }`.
 - **No match.** `found: false`, `reason: "no_match"`, and `tiers: ["stm", "wm"]`. A query with no search term
   answers `invalid_query`.
 - **Kept apart from long-term memory.** Session hits never enter `memory.recall` ranking.
@@ -762,10 +861,10 @@ for the items actually rendered, in display order. WM items appear first (facts,
 
 ```text
 # Session Memory
-Use these source-backed memories when relevant and cite the ids you rely on as [id]. To inspect evidence, call recall with an id; [chunk] marks a record whose verbatim source text recall returns. Do not guess ids.
+Use these source-backed memories when relevant and cite the ids you rely on as [id]. To inspect evidence, call recall with an id; detail full returns the original messages and tool outputs it cites. Do not guess ids.
 
 ## Working memory
-- [112233445566] (2026-10-15T09:12:00.000Z – 2026-10-17T09:12:00.000Z) (high) summary: Deploy moved Thursday → Friday (2026-10-17) [chunk]
+- [112233445566] (2026-10-15T09:12:00.000Z – 2026-10-17T09:12:00.000Z) (high) summary: Deploy moved Thursday → Friday (2026-10-17)
 
 ## Observations
 ### 2026-10-15
@@ -1092,7 +1191,7 @@ memorySystem({ ltm: {
   store: "markdown", // default when tools.root is set: the notes/ tree under the root
   // Alternatives: { markdown: { dir: "notes" } }, { sqlite: { path: ".prism-memory.sqlite" } },
   // { postgres: { connection: "env:PRISM_PG_URL" } }, or "memory"
-  tools: { root: "./memory", maxFileBytes: 50_000 },
+  tools: { root: "./memory", maxFileBytes: 50_000, maxViewEntries: 200 },
   limits: { rebuildBatchSize: 100, rebuildMs: 30_000 },
   consolidate: true | { threshold: 0.85 },
   // The exchange archive: off by default; {} archives each completed user turn verbatim.
@@ -1456,8 +1555,7 @@ assistant: Noted; I will treat Monday as the launch date.
   assistant message with **no `tool_call` block** ends a turn, so a tool round never becomes an
   exchange and tool arguments/results are never stored.
 - **Tool steps (opt-in).** `exchanges: { steps: true }` appends a `## Steps` section to the exchange:
-  one line per tool result of that turn, in order, up to `exchanges.maxSteps` (default 24, at most
-  64; further ones collapse into `- … N more step(s)`), and the whole section stays under a quarter
+  one line per tool result of that turn, in order, up to `exchanges.maxSteps` (default 24; further ones collapse into `- … N more step(s)`), and the whole section stays under a quarter
   of `limits.maxEntryTextChars`.
 
   ```markdown
@@ -1753,7 +1851,7 @@ the fabric holds nothing, or when the store cannot aggregate (`countByKind` / `t
 
 Cost: no model or embedding call; one `GROUP BY` per aggregate per recompute (a scan in the
 in-memory store), plus one bounded directory walk when `tools.root` is set. The block is at most
-`maxTokens` (default 200, hard cap 500); the topic and file lists shrink first, then the text is cut.
+`maxTokens` (default 200; the host's value is the cap); the topic and file lists shrink first, then the text is cut.
 
 ### Consolidation from sessions
 
@@ -2089,13 +2187,17 @@ unchanged, and so is recall when the field is unset.
 
 `recall: { gather: true }` (default `false`, a tuning field; plan 210 Task 3.1) adds a boolean `gather` to
 the `memory.recall` tool for list and multi-hop questions ("the names of his dogs", "every place he has
-been"). A call with `gather: true` returns the whole matching history in one call, up to the 32-hit
-recall window, oldest first, with a snippet budget of 3,000 tokens instead of 1,200; an explicit `topK`
-or `budget` still wins. It is the same tool, scope, eligibility and trust path as a normal
+been"). A call with `gather: true` returns the whole matching history in one call, up to the
+`recall.window`-hit recall window (default 32), oldest first, with a snippet budget of 3,000 tokens
+instead of 1,200; an explicit `topK` or `budget` still wins. It is the same tool, scope, eligibility and trust path as a normal
 recall (a forgotten, archived-away or other-scope note is still excluded), except that a quarantined
 (flagged) note is left out instead of being shown with its flag as a normal page shows it. Cost: a gather
 call can render up to 3,000 tokens of snippet lines instead of 1,200, and only when the agent asks for
 it. With the field unset the tool schema has no `gather` property and results are byte-identical.
+
+`recall: { window: 32 }` (a tuning field) is the most hits one recall ranks: the window `memory.recall`
+pages over with the model's `topK` and `page`, and the candidates `inject` picks from. The model's
+arguments never raise it; a larger window costs one larger store query per recall.
 
 #### Decision models
 
@@ -2232,7 +2334,7 @@ how many are shown, how many more are not, and the next page — for example
 { query: "...", page: 2 }.`, followed by each session's count and date span (`s1×2 (…)`). It is
 counts only, never note text, and is capped under 200 rendered tokens.
 
-`topK` is the page size (default 5); `page` is zero-based over the same 32-hit ranked window, so
+`topK` is the page size (default 5); `page` is zero-based over the same ranked window (`recall.window`, default 32), so
 `{ query, topK: 4, page: 1 }` returns hits 5–8. The summary counts that window, so a broad query
 can say `32` rather than the true archive total; page or narrow the query when it does. Every line
 carries the note's relative path; `memory.read <id>` returns the note whole. Without `kinds` the
@@ -2414,16 +2516,11 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `stm.thinkingLevel` | tuning |
 | `stm.triggerTokens` | tuning |
 | `stm.contextTokens` | tuning |
-| `stm.maxChunksPerEvent` | tuning |
-| `stm.maxChunkBytes` | tuning |
-| `stm.autoChunkBytes` | tuning |
-| `stm.chunkStore` | contract |
-| `stm.chunkStore.sqlite` | contract |
-| `stm.chunkStore.sqlite.path` | contract |
 | `stm.habituation` | contract |
 | `stm.habituation.windowEvents` | tuning |
 | `stm.boundaries` | contract |
 | `stm.boundaryGapMinutes` | tuning |
+| `stm.verbatimUserChars` | tuning |
 | `wm` | contract |
 | `wm.model` | contract |
 | `wm.instruction` | contract |
@@ -2432,6 +2529,8 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `wm.batchTokens` | tuning |
 | `wm.targetRatio` | tuning |
 | `wm.rejudgeTokens` | tuning |
+| `wm.lookAheadRecords` | tuning |
+| `wm.lookAheadTokens` | tuning |
 | `wm.protectRequestPasses` | tuning |
 | `wm.policy` | contract |
 | `rehearsal` | contract |
@@ -2441,15 +2540,13 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `rehearsal.targetTokens` | tuning |
 | `rehearsal.policy` | contract |
 | `context` | contract |
-| `context.recentMessages` | tuning |
+| `context.compaction` | contract |
 | `context.compactAt` | contract |
 | `context.compactAt.ratio` | tuning |
-| `context.compactAt.maxTokens` | tuning |
-| `context.trigger` | contract |
-| `context.trigger.type` | contract |
-| `context.trigger.entries` | tuning |
-| `context.trigger.tokens` | tuning |
-| `context.trigger.ratio` | tuning |
+| `context.compactAfterRun` | contract |
+| `context.compactAfterRun.maxTokens` | tuning |
+| `context.compactAfterRun.ratio` | tuning |
+| `context.keepRecentTokens` | tuning |
 | `worker` | contract |
 | `worker.maxTaskStateBytes` | tuning |
 | `worker.maxTurns` | tuning |
@@ -2460,6 +2557,10 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `worker.maxMessageBytes` | tuning |
 | `worker.maxErrorBytes` | tuning |
 | `recall` | contract |
+| `recallLimits` | contract |
+| `recallLimits.maxPageLimit` | tuning |
+| `recallLimits.pageBytes` | tuning |
+| `recallLimits.pageLimit` | tuning |
 | `scope` | contract |
 | `scope.text` | contract |
 | `scope.maxBytes` | tuning |
@@ -2485,6 +2586,7 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `ltm.recall` | contract |
 | `ltm.recall.expansion` | tuning |
 | `ltm.recall.gather` | tuning |
+| `ltm.recall.window` | tuning |
 | `ltm.rules` | contract |
 | `ltm.rules.capture` | contract |
 | `ltm.rules.maxTokens` | tuning |
@@ -2521,6 +2623,7 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `ltm.tools` | contract |
 | `ltm.tools.root` | contract |
 | `ltm.tools.maxFileBytes` | tuning |
+| `ltm.tools.maxViewEntries` | tuning |
 | `ltm.limits` | contract |
 | `ltm.limits.maxEntryTextChars` | tuning |
 | `ltm.limits.rebuildBatchSize` | tuning |
@@ -2599,9 +2702,8 @@ removing a name is a deliberate API decision.
 
 - **Stable (API level 1).** The default package definition, `memorySystemConfigSchema`, `MemorySessionLedgerError`,
   `resolveMemorySystemConfig`, the ledger record names (`OBSERVATIONS_RECORDED`, `OBSERVATIONS_REPEATED`,
-  `WM_RECORDED`, `TASK_STATE_RECORDED`, `BOUNDARY_RECORDED`, `OBSERVATIONS_TOMBSTONED`, `SCOPE_SET`), `foldObservationalMemoryLedger`, `activeObservations`, `activeWmItems`,
-  `buildObservationalMemoryContextBlocks`, `createMemoryId`, the chunk store contract (`MEMORY_CHUNK_STORE_SERVICE`,
-  `createSqliteChunkStore`, `SqliteChunkStore` and the `ChunkStore` types; [Chunks](#chunks)), and the config, ledger and
+  `WM_RECORDED`, `TASK_STATE_RECORDED`, `BOUNDARY_RECORDED`, `OBSERVATIONS_TOMBSTONED`, `SCOPE_SET`, `SCOPE_STEP`), `foldObservationalMemoryLedger`, `activeObservations`, `activeWmItems`,
+  `buildObservationalMemoryContextBlocks`, `createMemoryId`, and the config, ledger and
   record types. For long-term
   memory: `createMemory`, `createLongTermMemory`, `memoryFabricConfigSchema` (the `ltm`
   section), `resolveMemoryFabricConfig`, `resolveLifecycleConfig`, `parseMemoryNoteMetadata`, `encodeMemoryNoteMetadata`,

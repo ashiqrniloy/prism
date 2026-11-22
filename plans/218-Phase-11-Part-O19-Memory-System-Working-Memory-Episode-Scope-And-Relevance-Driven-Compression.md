@@ -583,6 +583,11 @@ This implements roadmap Phase 11 "Memory model", part WM, after plan 217. It car
       `bun test --timeout=0 scripts/memory-bench`: 552 pass, 2 fail, both recorded since Task 1: the feature ledger's 17 fabric-config problems, and the Task 5 fixture's `git archive` of the removed `packages/memory/fabric` path. The third, `om_before_runs_from_pinned_pre_216_revision`, now passes. Not run: the safety suite and the package suites, since no package code changed (whole-plan verification).
 
 - [ ] Task 6: Gate M-2 — live WM efficacy (paid), and plan end
+  - Amended 2026-11-17 (owner, external benchmark instead of our own authored screen; [plan 218.1](218.1-Phase-11-Part-O19.1-Memory-Benchmarks-External-Outcome-Suites-Replace-BEAM-And-LongMemEval.md) Tasks 4–6):
+    - **The default rule reads M6**, LOCA-Bench task accuracy (`WM` vs `STM-only`, plan 218.1 Task 5), wherever the 2026-11-13 rule below says "the `long-horizon` family". The rule's thresholds are unchanged; plan 218.1 Task 5 writes it into the gate record as `locaBenchScreen`.
+    - **The `long-horizon` family is not run**; plan 218.1 Task 5 deletes it. Its `--estimate` and approval criteria below no longer apply.
+    - **M5** (Compact-Bench literal retention) is reported as a diagnostic beside M6. **S5** (policy survival on τ-bench, plan 218.1 Task 6) is reported if it has run, otherwise `missing`; neither changes the default.
+    - **Order:** Task 6 resumes after plan 218.1 Task 5.
   - Amended 2026-11-13 (owner, memory evaluation; design §14); these criteria add to the ones below:
     - **Order.** Task 6 resumes after plan 218.2 Task 9 and plan 218.1 Task 3. The manifest is rebuilt on the new product hash, and every arm of the new product re-runs on it; reports from before plan 218.2 move to `runs/superseded-pre-218.2/`.
     - **Baseline arms** (plan 218.2 Task 8), on the `re-plan` and `long-session` families beside `WM`, `STM-only` and `OM-before`: `memory-off`, `fold` (tool-result folding, no memory package) and `llm-summary` (one summary call per compaction). They are reported comparators. They change no row; M1's frozen row stays.

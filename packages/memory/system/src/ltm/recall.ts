@@ -1,6 +1,5 @@
 import type { MemoryVectorHit, MemoryVectorRecord, RecallScoringOptions } from "@arnilo/prism-memory-system/core";
 import {
-  HARD_TOP_K_CAP,
   lexicalDice,
   lexicalTerms,
   type Memory,
@@ -55,12 +54,18 @@ export type FabricCandidateLoader = (
 ) => Promise<FabricCandidate[]>;
 
 /**
+ * Hits one recall ranks at most (`recall.window`). The `memory.recall` tool pages over this window with the model's
+ * `topK` and `page`, so it is a ceiling the host sets; the model's arguments never raise it.
+ */
+export const DEFAULT_RECALL_WINDOW = 32;
+
+/**
  * Window one recall may inspect: the `topK` hits plus the oversampled rows a linked neighbor can
  * be promoted from. `topK` at the hard cap leaves no room to expand, which is what asking for
  * every recallable note already means.
  */
-export function resolveCandidateLimit(topK: number): number {
-  return Math.min(HARD_TOP_K_CAP, topK * RECALL_OVERSAMPLE);
+export function resolveCandidateLimit(topK: number, window: number = DEFAULT_RECALL_WINDOW): number {
+  return Math.min(window, topK * RECALL_OVERSAMPLE);
 }
 
 /**
@@ -303,6 +308,8 @@ export function createFabricRecall(deps: {
   readonly priors?: import("./scope/recall.js").ScopePriors;
   /** `recall.expansion` (plan 210 Task 3.1); absent means off. */
   readonly queryExpansion?: boolean;
+  /** `recall.window`; default {@link DEFAULT_RECALL_WINDOW}. */
+  readonly recallWindow?: number;
 }): MemoryFabric["recall"] {
   const { loadCandidates, limits } = deps;
 
@@ -367,7 +374,7 @@ export function createFabricRecall(deps: {
       searchQuery,
       kinds,
       asOfMs,
-      resolveCandidateLimit(topK),
+      resolveCandidateLimit(topK, deps.recallWindow),
       recallOptions.signal,
       recallOptions.scoring,
       (recallOptions.minSimilarity ?? 0.35) * floorScale,
@@ -444,7 +451,7 @@ export function createFabricRecall(deps: {
         searchQuery,
         kinds,
         asOfMs,
-        resolveCandidateLimit(archivedCap),
+        resolveCandidateLimit(archivedCap, deps.recallWindow),
         recallOptions.signal,
         recallOptions.scoring,
         // The active floor is what made this result weak; an archived note is judged by rank only.

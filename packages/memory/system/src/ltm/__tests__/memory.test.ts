@@ -6,7 +6,6 @@ import {
   assertFiniteVector,
   createHashEmbedder,
   createMemoryVectorStore,
-  HARD_TOP_K_CAP,
   MemoryLimitError,
   MemoryValidationError,
   resolveMemoryLimits,
@@ -143,7 +142,9 @@ describe("@arnilo/prism-memory-system", () => {
     const limits = resolveMemoryLimits();
     assert.equal(limits.topK, 5);
     assert.equal(limits.messageRange, 0);
-    assert.throws(() => resolveMemoryLimits({ topK: HARD_TOP_K_CAP + 1 }), MemoryLimitError);
+    // Plan 239: the host's value is the cap; only an invalid value is refused.
+    assert.equal(resolveMemoryLimits({ topK: 1_000 }).topK, 1_000);
+    assert.throws(() => resolveMemoryLimits({ topK: 1.5 }), MemoryLimitError);
   });
 
   it("validates working-memory JSON Schema subset", () => {

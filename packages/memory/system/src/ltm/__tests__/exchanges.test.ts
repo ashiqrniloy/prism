@@ -612,7 +612,7 @@ describe("exchange steps (plan 209 Task 2)", () => {
     assert.deepEqual(config({ exchanges: { steps: true } }).steps, { maxSteps: 24 });
     assert.deepEqual(config({ exchanges: { steps: true, maxSteps: 5 } }).steps, { maxSteps: 5 });
     const exchangesSchema = (memoryFabricConfigSchema.properties as Record<string, any>).exchanges.anyOf[1].properties;
-    assert.equal(exchangesSchema.maxSteps.maximum, 64, "the schema bounds maxSteps");
+    assert.equal(exchangesSchema.maxSteps.maximum, undefined, "the host's maxSteps is the cap (plan 239)");
     assert.equal(exchangesSchema.maxSteps["x-prism-stability"], "tuning");
     assert.equal(exchangesSchema.steps["x-prism-stability"], "contract");
 

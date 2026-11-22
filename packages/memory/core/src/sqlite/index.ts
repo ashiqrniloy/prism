@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { closeSync, openSync } from "node:fs";
 import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant, grantAllows, sourceIdFromRecord } from "../acl.js";
-import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
+import { resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
 import { MemoryValidationError } from "../errors.js";
 import { lexicalCoverage, lexicalKeys, lexicalTermString, lexicalTerms } from "../lexical.js";
 import { assertInvalidationBatch, assertShareGrant, HARD_LINEAGE_EDGES, recordBlocked } from "../lineage.js";
@@ -418,7 +418,7 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
     },
     async topTags(scope, query = {}) {
       assertNotAborted(query.signal);
-      const limit = Math.min(resolveDirectoryLimit(query.limit), HARD_DIRECTORY_TAGS);
+      const limit = resolveDirectoryLimit(query.limit);
       const asOf = resolveDirectoryAsOf(query.asOf);
       const leg = (field: string) =>
         `SELECT s.id AS id, j.value AS tag FROM semantic_memory s, json_each(s.record,'${FABRIC}.${field}') j WHERE j.type='text' AND j.value<>'' AND ${ACTIVE_NOTE}`;

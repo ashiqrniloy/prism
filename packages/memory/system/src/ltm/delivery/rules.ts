@@ -43,8 +43,7 @@ export type FabricRulesCapture = "off" | "confirm";
 
 export interface MemoryFabricRulesConfig {
   /**
-   * Ceiling on the rendered block. Default 600, or 2,000 when `capture` is `confirm`; at most
-   * {@link HARD_RULES_TOKENS}.
+   * Ceiling on the rendered block. Default 600, or 2,000 when `capture` is `confirm`.
    */
   readonly maxTokens?: number;
   /** Scopes to include. Default both; `user` always renders first. */
@@ -62,7 +61,6 @@ export interface ResolvedFabricRulesOptions {
   readonly capture: FabricRulesCapture;
 }
 
-export const HARD_RULES_TOKENS = 3_000;
 export const DEFAULT_RULES_TOKENS = 600;
 /** The budget when capture is on: a captured rule set earns the larger always-loaded block. */
 export const DEFAULT_CAPTURE_RULES_TOKENS = 2_000;
@@ -92,8 +90,8 @@ export function resolveFabricRulesOptions(
   const capture = config.capture ?? DEFAULT_RULES_OPTIONS.capture;
   if (capture !== "off" && capture !== "confirm") throw new MemoryValidationError('rules.capture must be "off" or "confirm"');
   const maxTokens = config.maxTokens ?? (capture === "confirm" ? DEFAULT_CAPTURE_RULES_TOKENS : DEFAULT_RULES_TOKENS);
-  if (!Number.isSafeInteger(maxTokens) || maxTokens < 1 || maxTokens > HARD_RULES_TOKENS) {
-    throw new MemoryValidationError(`rules.maxTokens must be an integer in [1,${HARD_RULES_TOKENS}]`);
+  if (!Number.isSafeInteger(maxTokens) || maxTokens < 1) {
+    throw new MemoryValidationError("rules.maxTokens must be a positive integer");
   }
   const requested = config.scopes ?? DEFAULT_RULES_OPTIONS.scopes;
   if (!Array.isArray(requested) || requested.length === 0 || new Set(requested).size !== requested.length) {

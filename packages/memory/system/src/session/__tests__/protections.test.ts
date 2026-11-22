@@ -12,6 +12,7 @@ import { createObservationalFlush } from "../flush.js";
 import { activeWmItems, foldObservationalMemoryLedger } from "../ledger.js";
 import { isProtectedWmItem, protectedRecords } from "../protections.js";
 import { salienceSignals } from "../salience.js";
+import { prepareScope } from "../scope.js";
 import {
   type MemoryObservation,
   type MemoryTaskState,
@@ -83,6 +84,12 @@ function scripted(calls: readonly [string, Record<string, unknown>][], requests:
   };
 }
 
+const DEFAULT_SCOPE = (() => {
+  const prepared = prepareScope("1. Ship the retry fix", { maxBytes: 4_096 });
+  if (!prepared.ok) throw new Error("unreachable");
+  return prepared.scope;
+})();
+
 function harness(
   records: unknown[],
   client: ModelClient,
@@ -106,6 +113,7 @@ function harness(
     log,
     config,
     readState: () => ({ enabled: true }),
+    scopeFor: () => DEFAULT_SCOPE,
     clientFor: (_session, kind) => {
       calls.push(kind);
       return client;

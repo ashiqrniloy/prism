@@ -11,7 +11,6 @@ import {
 } from "@arnilo/prism";
 import {
   contentToText,
-  HARD_TOP_K_CAP,
   latestUserText,
   lexicalTerms,
   type Memory,
@@ -27,7 +26,10 @@ import { type FabricDirectoryHandle, memoryRetractionVersion, renderFabricDirect
 import { fitInjection } from "./excerpt.js";
 import type { LessonNudges } from "./lessons.js";
 import { isActiveNote } from "./lifecycle/index.js";
+import { DEFAULT_RECALL_WINDOW } from "./recall.js";
 import { isMemoryDecisionDeliverable, type MemoryFabric, type MemoryFabricRecallOptions } from "./types.js";
+
+const DEFAULT_INJECT_BUDGET_TOKENS = 4000;
 
 /** Tracks notes shown to the model in each session and records citations in assistant text. */
 export interface FabricCitationTracker {
@@ -379,6 +381,7 @@ export function createFabricContext(
   delivery?: FabricDeliveryStateStore,
   decisions?: FabricDecisions,
   lessonNudges?: Pick<LessonNudges, "take" | "forget">,
+  recallWindow: number = DEFAULT_RECALL_WINDOW,
 ) {
   const cache = new Map<string, SessionTail>();
   const snapshots = new Map<string, { version: number; blocks: readonly ContextBlock[]; ids: readonly string[] }>();
@@ -462,7 +465,7 @@ export function createFabricContext(
                 ...period.options,
                 kinds: inject.kinds,
                 minSimilarity: inject.minSimilarity ?? 0.2,
-                topK: HARD_TOP_K_CAP,
+                topK: recallWindow,
                 // Injection never shows archived notes, so it never pays for the archive query either.
                 archiveSearch: false,
                 signal: context.signal,
@@ -495,7 +498,7 @@ export function createFabricContext(
           const { hits, lines: semanticLines } = fitInjection(
             eligible,
             lexicalTerms(query),
-            inject.budgetTokens ?? 4000,
+            inject.budgetTokens ?? DEFAULT_INJECT_BUDGET_TOKENS,
             inject.topK ?? 12,
             eligible.length,
             inject.minScore,

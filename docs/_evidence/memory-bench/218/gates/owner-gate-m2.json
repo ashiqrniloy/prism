@@ -290,6 +290,1029 @@
         "unit": "prism-218-1-screen",
         "note": "resume: finished sessions are checkpointed; the unfinished session re-runs from scratch. Rule and budget unchanged; the stalled attempt’s logged exchanges stay in the screen-wide usage count (1.49M input tokens at relaunch)."
       }
+    ],
+    "amendments": [
+      {
+        "date": "2026-11-17",
+        "approvedBy": "owner",
+        "text": "\"I have no problem letting it finish. But we need to find an external benchmark that can actually help us make a definitive decision.\" … \"I would then run Loca-bench as part of 218.1 later instead of our own authored screen.\" (owner, 2026-11-17)",
+        "ruleChanged": false,
+        "change": "The screen finishes under the approved rule and its evidence is written, but its verdict is reported as a diagnostic (M5, literal retention, with its owner findings). It no longer sets the session default: plan 218.1 Task 5 (LOCA-Bench, row M6) does, through plan 218 Task 6's rule. Recorded before the final scoring; an interim local read of 17 WM sessions (no model calls) had been shown to the owner."
+      }
     ]
+  },
+  "locaBenchPilot": {
+    "date": "2026-11-17",
+    "approved": true,
+    "approvedBy": "owner",
+    "approvedAt": "2026-11-17T07:54:52.804Z",
+    "text": "\"Let's do this B = 64K at the 64k length would avoid this, but it roughly doubles the 64k cost estimate (to about $4–10).\" (owner, 2026-11-17, plan 218.1 Task 4, after the cost and time estimate)",
+    "ruleHash": "1a1e7a225747a4a181c9dbcbb45d2fbda56a263cd4a904b12e069e47c97a342e",
+    "rule": {
+      "suite": "loca-bench",
+      "codeRevision": "8b6fac49d9edd92922593e703b74ea255357c3ec",
+      "lengths": [
+        {
+          "preset": "64k",
+          "budget": 65536
+        }
+      ],
+      "order": "one length (owner, 2026-11-17): the 64k environment at B = 64K. At B = 32K LOCA's own ReAct cannot hold the large-schema tasks (Canvas: 147 tool schemas, about 17K tokens, plus one 10K-token tool output exceed the budget and its trimmer ends the episode), so calibration there would read a floor. If this length does not qualify, the finding goes to the owner with the measured cost; no second length runs under this rule",
+      "instances": "LOCA-Bench's 15 tasks at seed 42 (ordinal 1, the first configuration of each task): the development partition, never seeds 4-5",
+      "seed": 42,
+      "arms": [
+        "loca-react",
+        "memory-off",
+        "WM"
+      ],
+      "model": "opencode-go/muse-spark-1.3-contributor",
+      "worker": "opencode-go/muse-spark-1.3-contributor",
+      "maxOutputTokens": 8192,
+      "sampling": "temperature 1.0 for every arm (LOCA's ReAct); each arm leaves thinking at the provider's default, as LOCA's ReAct sends no reasoning field",
+      "budget": "B is the model's context window for the Prism arms (limits.contextWindow, maxOutputTokens taken from it) and LOCA's --max-context-size for loca-react (--max-tokens taken from it)",
+      "calibration": "at each length, memory-off's accuracy (mean reward over the 15 instances) lies inside loca-react's 95% Wilson score interval; otherwise the adapter is taken as wrong, the pilot stops there and the finding goes to the owner",
+      "select": {
+        "wmEngagedMin": 12,
+        "of": 15,
+        "engaged": "WM records at least one pass (memory.session.wm.recorded) in the instance",
+        "memoryOffAccuracy": [
+          0.1,
+          0.85
+        ],
+        "rule": "the selected length is the first, in order, that calibrates, where WM engages on at least 12 of 15 instances and memory-off accuracy lies in [0.10, 0.85] (neither floor nor ceiling)",
+        "none": "if no length qualifies, the finding goes to the owner and Task 5 does not start"
+      },
+      "reports": "per arm and length: accuracy, input and output tokens per instance (agent and worker apart), wall time per instance, WM passes, compactions, peak request size against B, failures; Task 5's estimate is computed from the selected length's measured tokens per instance",
+      "ceilingInputTokens": 500000000,
+      "ceilingBasis": "every usage log under the pilot's wire directory (Prism arms and loca-react)"
+    },
+    "budget": {
+      "estimateInputTokens": "54M–144M (45 instances x 1.2–3.2M; requests average about 40K tokens at B = 64K, 30–80 steps per instance)",
+      "estimateUsd": "about 11–13 for the complete run (measured 2026-11-17: 1.1–7.1M input tokens per instance; tasks that reach the 500-tool cap cost the most)",
+      "ceilingInputTokens": 500000000,
+      "ceilingBasis": "every usage log under the pilot's wire directory (Prism arms and loca-react)",
+      "wallTime": "about 3–4 h at concurrency 4 (10–15 s environment + 5–10 s model per step)"
+    },
+    "measuredBeforeApproval": {
+      "toolSchemaTokens64k": "mean about 9.6K per request (33–147 tools per task; Canvas about 17K)",
+      "environmentSecondsPerCall": "13–15 s with 6 instances at once, about 5 s alone (upstream MCPTool restarts every server per call)",
+      "reactAt32K": "LOCA ReAct ended Canvas after 2 calls at B = 32K: schemas plus one tool output exceeded the budget (trimming removed every message)"
+    },
+    "kernelFix": "session snapshot() leaf race fixed before the pilot (src/agent-session/session.ts; test append_during_the_branch_read_is_not_an_unknown_leaf): STM-only and WM failed with Unknown session leaf when a memory worker appended during a branch read",
+    "amendments": [
+      {
+        "date": "2026-11-17",
+        "approvedBy": "owner",
+        "approvedAt": "2026-11-17T13:54:18.970Z",
+        "text": "\"Yes do it. Let's do a complete run\" (owner, 2026-11-17, after the 52M-token status: some instances run to LOCA's 500-tool cap, so the 150M ceiling would stop the pilot at about 30–38 of 45 instances)",
+        "previousRuleHash": "c5f99c4067966e00a0ab5bb2b601855534055e240a02c336ccef14cb080f801e",
+        "ruleHash": "1bf1afb886ee3c218e3348c8d87ee18b3d4d5c8f336acd79e1e9415dc0d2c328",
+        "change": "ceilingInputTokens 150000000 -> 200000000; nothing else. The run under c5f99c40 drains at its own ceiling (no new instance past 150M, in-flight ones finish and checkpoint); its rows and usage logs then move to the amended rule's state directory and the pilot resumes, so the ceiling still counts every token from the first call.",
+        "ruleChanged": true
+      },
+      {
+        "date": "2026-11-17",
+        "approvedBy": "owner",
+        "approvedAt": "2026-11-17T14:04:05.844Z",
+        "text": "\"I have no issue with overspending. But you need to check intermittently and tell me what is the expected amount. Unless I stop or the quota of opencode go runs out, the full run should finish. No issue raising the ceiling further\" (owner, 2026-11-17)",
+        "previousRuleHash": "1bf1afb886ee3c218e3348c8d87ee18b3d4d5c8f336acd79e1e9415dc0d2c328",
+        "ruleHash": "1a1e7a225747a4a181c9dbcbb45d2fbda56a263cd4a904b12e069e47c97a342e",
+        "change": "ceilingInputTokens 200000000 -> 500000000; nothing else. The run under c5f99c40 still drains at its 150M ceiling and resumes under this rule. Harness, not rule: a provider fault (quota, rate limit, overload; LOCA ReAct ending on an API error) writes no row and the instance waits 15 min and runs again, without limit; Prism arms use the patient HTTP retries.",
+        "ruleChanged": true
+      }
+    ],
+    "launches": [
+      {
+        "at": "2026-11-17T11:06:31Z",
+        "unit": "prism-218-1-loca-pilot",
+        "ruleHash": "c5f99c4067966e00a0ab5bb2b601855534055e240a02c336ccef14cb080f801e",
+        "note": "stopped at 20.3M input tokens: the kernel default fence (49 tool rounds, 75 provider attempts) cut every Prism arm; Prism rows moved to superseded-49-round-fence, loca-react rows kept (token counts re-read from LOCA token_stats)"
+      },
+      {
+        "at": "2026-11-17T12:17:11Z",
+        "unit": "prism-218-1-loca-pilot",
+        "ruleHash": "c5f99c4067966e00a0ab5bb2b601855534055e240a02c336ccef14cb080f801e",
+        "note": "relaunch with the fence set past LOCA 500 tool uses; drains at the 150M ceiling"
+      },
+      {
+        "at": "2026-11-17T15:49:41.837Z",
+        "unit": "prism-218-1-loca-pilot",
+        "ruleHash": "c5f99c4067966e00",
+        "note": "stopped by the owner at 28 of 45 rows, 93.9M input tokens (about $6.10): Prism arms are not held to B (91 of 2,099 requests over 64K, largest 472K) while LOCA ReAct trims to B and ends when one tool output exceeds it; calibration is confounded. Owner: \"I would actually stop now. Go with option 2 of treating it as a product fix.\" Rows kept as diagnostics; the pilot re-runs after the product fix."
+      }
+    ],
+    "status": "stopped 2026-11-17 by the owner; awaiting the per-request window cap product fix"
+  },
+  "sessionBench": {
+    "pinnedBy": "plan 218.3 Task 10 (2026-11-18)",
+    "version": 3,
+    "templateHash": "844cd4d21df6a3aaff1b98d733040bf5fc51a18d94ccf0dfd6bf00ff98e4fbed",
+    "idsHash": "1937178f6107526c04e10b2bf0357f20bd106874f25fe1caf1c0495ee0738bda",
+    "sessionsHash": "58eb9e1660a98774f0f5685bb0c087916d151c52e49446b333066d0a88fd8413",
+    "arms": {
+      "memory-off-llm": {
+        "role": "decision",
+        "memoryConfigHash": "c0eae3c7c9f908504a41f047c14ac4a2bb1d50f01de435c2757dd742f0abc411"
+      },
+      "STM-only": {
+        "role": "decision",
+        "memoryConfigHash": "c59c9f3e1df63347c0ddb50f869cba560abb97210c197ed40dcf7056e2132e5e"
+      },
+      "STM+WM": {
+        "role": "decision",
+        "memoryConfigHash": "ac0c88498de1e4dd5006233adb7581b065f57da66bbe0a115151c49435e7e8c5"
+      },
+      "claude-code-prompt": {
+        "role": "side",
+        "memoryConfigHash": "c82afb4fcd89d26007afbfa26fac6c099e5592ce88bcaa9776b20ae5c913a285"
+      },
+      "codex-prompt": {
+        "role": "side",
+        "memoryConfigHash": "82895bdde3913c68d4a374c875be32c4340d8f4969ae62094bc80601d7dd3bd7"
+      },
+      "mem0": {
+        "role": "side",
+        "memoryConfigHash": "b756d89b5e27fcfc5da18ebdf4118fb50f42d14da035c68529d3bbae3d35b8e9"
+      },
+      "memory-off-drop": {
+        "role": "side",
+        "memoryConfigHash": "536a1b64bec4cd3da9dd038f1cc909b73189a539b3bd1c37b838edd1dfc26bc5"
+      },
+      "oracle-context": {
+        "role": "calibration",
+        "memoryConfigHash": "532809132cfe601174f65e3fe8e492cee623703f0abd2825813f033a6d991165"
+      },
+      "amnesic": {
+        "role": "calibration",
+        "memoryConfigHash": "196b9fef36d7fadedd807e6ff2a1d15b5bb48a4c0c8988bf7e8f91638048530f"
+      }
+    },
+    "pinnedV3By": "plan 218.3 Task 12 (2026-11-19): Session-Bench v3 (the D4 check requires the new value only; D3 hardened with look-alike flags that must stay off)",
+    "ownerDecisions": [
+      {
+        "date": "2026-11-18",
+        "decision": "memory-off-llm (and the reference and Mem0 arms on its compaction) keep keepRecentTokens = 20% of the input cap, session memory's rule, not the compaction package's absolute 20,000 (which overflows W = 32K)",
+        "text": "Match 20% (Recommended) (owner, 2026-11-18, plan 218.3 Task 10)"
+      }
+    ],
+    "references": {
+      "repository": "https://github.com/cai-jianfeng/compact-bench",
+      "commit": "9dd9a3f5a91b2de5acdf56cee2fc0a4d16dcefc5",
+      "file": "harness/cb_common.py",
+      "licence": "Apache-2.0 (the checkout's LICENSE)",
+      "prompts": {
+        "claude-code-prompt": "786e544ca55041f4e88bda9ea9398411caf96d936dd31af99dd2f2a1bb3f9bef",
+        "codex-prompt": "e1bbf80fab139e6b62d9f596c1e93ad47cf39b10a86efc767555bf4bfadebf95"
+      }
+    },
+    "thirdParty": {
+      "candidates": [
+        {
+          "id": "mem0",
+          "version": "3.3.1",
+          "included": true
+        },
+        {
+          "id": "letta",
+          "version": "0.34.12",
+          "included": false,
+          "reason": "Letta is an agent, not a memory layer: its memory works only inside Letta's own agent loop (the 0.34 package is 'Letta Code: stateful agents in your terminal'). Running it would replace Prism's agent, tools, system prompt and loop, so it cannot differ from the other arms in memory alone (G6)."
+        },
+        {
+          "id": "zep",
+          "version": "zep-cloud 4.1.0",
+          "included": false,
+          "reason": "Zep is a vendor-hosted service (a Zep account and key; data leaves the machine; behaviour not pinnable). Rejected by the plan's options (vendor-hosted services)."
+        },
+        {
+          "id": "graphiti",
+          "version": "0.31.2",
+          "included": false,
+          "reason": "At its documented defaults Graphiti's reranker needs token logprobs, which Prism's provider stream does not carry, so its calls cannot run on the same model through the metered harness path; replacing the reranker and the LLM client with non-default ones would break G10 (documented defaults)."
+        }
+      ],
+      "mem0": {
+        "package": "mem0ai",
+        "version": "3.3.1",
+        "lockSha256": "d3c1df6827be508c209b085450da2514a392e146dfa8884095b8eeb6f742aaa7",
+        "sqliteShimSha256": "a4a7597cc4b805e3954a3bb840f1dd556d38ae2ad83536e78750ab92d840e0ca",
+        "liveEmbedder": {
+          "provider": "llama.cpp",
+          "runtime": "llama.cpp llama-server, Vulkan backend (RADV), GPU offload of every layer",
+          "llamaCpp": {
+            "repo": "https://github.com/ggml-org/llama.cpp.git",
+            "tag": "b12533"
+          },
+          "vulkanHeaders": {
+            "repo": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+            "tag": "v1.4.363"
+          },
+          "spirvHeaders": {
+            "repo": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+            "tag": "vulkan-sdk-1.4.363.0"
+          },
+          "build": [
+            "-DGGML_VULKAN=ON",
+            "-DLLAMA_CURL=OFF",
+            "-DLLAMA_BUILD_TESTS=OFF",
+            "-DLLAMA_BUILD_EXAMPLES=OFF",
+            "-DLLAMA_BUILD_SERVER=ON",
+            "-DCMAKE_BUILD_TYPE=Release"
+          ],
+          "model": "gpustack/bge-m3-GGUF",
+          "base": "BAAI/bge-m3 (MIT)",
+          "revision": "2d48f1737679ad900d5c26c5aad5410e9c70fdca",
+          "file": "bge-m3-FP16.gguf",
+          "sha256": "daec91ffb5dd0c27411bd71f29932917c49cf529a641d0168496c3a501e3062c",
+          "dims": 1024,
+          "pooling": "cls",
+          "normalize": true,
+          "contextTokens": 8192,
+          "device": "the discrete GPU (AMD Radeon RX 6550M, RADV NAVI24, 4 GB): the Vulkan device whose name matches /NAVI ?24/i",
+          "tokens": "llama-server's usage.prompt_tokens",
+          "deviation": "Mem0's default embedder is OpenAI text-embedding-3-small; Gemini's free tier (Task 11) caps at 1,000 requests a day, so the owner chose a local embedder (2026-11-19) and then BGE-M3 for retrieval quality, on the GPU through llama.cpp/Vulkan: recorded as a G10 deviation",
+          "pinnedBy": "plan 218.3 Task 12 (2026-11-19)"
+        },
+        "testEmbedder": {
+          "provider": "gemini",
+          "model": "gemini-embedding-001",
+          "dims": 3072,
+          "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
+          "tokens": "estimated at 3.5 characters per token (the API reports no usage)",
+          "deviation": "Mem0's default embedder is OpenAI text-embedding-3-small; the owner holds no balance on a host that serves it and OpenCode Go / Ollama Cloud serve no embedding model, so Gemini gemini-embedding-001 is used (owner, 2026-11-18)",
+          "pinnedBy": "plan 218.3 Task 11 (2026-11-18)"
+        }
+      }
+    },
+    "live": {
+      "pinnedBy": "plan 218.3 Task 11 (2026-11-18), before any paid call",
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "configHashes": {
+        "memory-off-llm": "3e61b4a8037a1732e73f6f0e8a84c2840ba4c3fa6dcc2a0fcb874f20059678be",
+        "STM-only": "64ea70696bc78dfe1e058772e7a1c4a607945347c836b4b094e21780ccc228f9",
+        "STM+WM": "a29fb608834abd4704d9cd01744b8001b0972d1d33dbffd6e3796d376a195045",
+        "claude-code-prompt": "5bf9dd612c45a1c0780ab29488da500ff3b57a61eb8a9b64261d3de9499fce0b",
+        "codex-prompt": "7e601a79c00c4357e8912713adb9c32863179686f7fcd7fd744685c1d1275824",
+        "mem0": "0c683ca62cefa1c4b24e8d5e1f4bfac7d496a0a4a933e3e1dd7d92e7efb3d570",
+        "oracle-context": "ca9211be4913912cb4f39d265db8ad6e11bb2613c9183262c590216c430878b1",
+        "amnesic": "afc7423c2745b507047b6bd450ca1a5e0d71029958bc6b829fc55891fef9d74e"
+      },
+      "sharedConfigHash": "a3a13ab26b4e152230c289b51de74703ae3dce8c2be02c99e39a2c1786632dec"
+    },
+    "screenLive": {
+      "pinnedBy": "plan 218.3 Task 12 (2026-11-19), before any paid call",
+      "model": "opencode-go/hy4-flash-free",
+      "configHashes": {
+        "memory-off-llm": "451c89a1a3f6de5982ed35dfc583bbeb21d10612bd75a486619b2b72e587c6ad",
+        "STM-only": "8aa7909daae2156f7aa3d3e4e3009f4969d67691f4a43dea22a3c063aa79ba67",
+        "STM+WM": "d4b56d2340a1f897416d23a596ebc761d015e5a42e5383dbd0a4613ad7cf2c5b",
+        "claude-code-prompt": "01a48e7230549e6892466f8f9be420fb3581cb98de27982be31b76e057745f34",
+        "codex-prompt": "eb5e9abf440adb15977fe5c76c4e7279558c60d25fe4dad48f6c7b418326a09d",
+        "mem0": "fa7ef8a68f533bf718ac80fe98247382f14ecad4045bc3d6e7922ba6c4239f96",
+        "memory-off-drop": "7c10b910017a51bea07a166e10d2c624fa19051e578599a60ce8d473fdc6ad61",
+        "oracle-context": "8cafe427117609c330dcdde54466e9a052f4fcc8b16f52fab01b5da5b3530d9c",
+        "amnesic": "0d2cc1e738dda648f141133cf760163d19ee394d93e496080599266155307028"
+      },
+      "sharedConfigHash": "0ab8322c3f5e205ffd2fe2a3bb8bb74f27f58b23f0ee5bc90dafbd2205ab4b08"
+    }
+  },
+  "sessionBenchTest": {
+    "date": "2026-11-18",
+    "plan": "218.3 Task 11",
+    "approved": true,
+    "approvedBy": "owner",
+    "approvedAt": "2026-11-18T19:10:38.181Z",
+    "text": "\"Approve and start\" (owner, 2026-11-18, first rule hash aa435f18), then \"Fix as v2, rerun smoke (Recommended)\" (owner, 2026-11-18): the same rule on Session-Bench v2, restarted under its new hash; then \"Serial tool calls (Recommended)\" (owner, 2026-11-18): restarted under the new hash; then \"Fix, keep valid rows, rerun STM (Recommended)\" (owner, 2026-11-18): rule corrected (flag on main-agent requests only), 24 valid rows carried over, STM arms re-run",
+    "ownerDecisions": [
+      {
+        "date": "2026-11-18",
+        "decision": "model opencode-go/deepseek-v4.1-flash (Muse's 200K window cannot hold oracle-context's sessions of up to 260K)",
+        "text": "deepseek-v4.1-flash (Recommended)"
+      },
+      {
+        "date": "2026-11-18",
+        "decision": "Mem0's live embedder: Gemini gemini-embedding-001 (no OpenRouter balance; OpenCode Go and Ollama Cloud serve no embedding model)",
+        "text": "Gemini embedding (Recommended)"
+      },
+      {
+        "date": "2026-11-18",
+        "decision": "token ceiling 300M input tokens",
+        "text": "Ceiling 300M input (Recommended)"
+      },
+      {
+        "date": "2026-11-18",
+        "decision": "all 8 arms on 6 dev sessions (two per family)",
+        "text": "All 8 arms, 6 sessions (Recommended)"
+      },
+      {
+        "date": "2026-11-18",
+        "decision": "the serial-tool-calls flag goes on the main agent's requests only (those carrying a workspace tool): the first version sent it to every request with tools, and STM's and WM's workers (which record and judge through several tool calls in one turn and end after one clean turn) recorded one event per batch, so the 12 STM-only and STM+WM rows of rule ac8a1b5c are invalid (set aside under that root as invalid-serial-workers/, diagnostics only) and the finding read from them (STM at the amnesic floor on D2/D4) is retracted. The 24 rows of the other arms (calibration, memory-off-llm, claude-code-prompt) carry over to the new root unchanged: their memory calls carry no tools, so the flag never reached them, and the shared config hash is unchanged (a3a13ab2). The wire usage logs carry over too, so the ceiling counts all spend. Found by a live STM-only diagnostic of sb-rt-12 (transcripts in the scratchpad only, never in evidence)",
+        "text": "Fix, keep valid rows, rerun STM (Recommended)"
+      },
+      {
+        "date": "2026-11-18",
+        "decision": "Gemini's free tier answered its daily cap (1,000 embedding requests) during the mem0 arm; the run was stopped at 43/48 rows with mem0 on 1 clean session (sb-sc-19, 0 third-party errors). Task 11 closes on the 43 rows; mem0 is reported on 1 session and marked incomplete; the mem0 embedder is an open decision for Task 12 (local or paid: the screen needs thousands of embedding calls); the harness now pauses on an embedder daily cap instead of letting Mem0 run without memory",
+        "text": "Close Task 11 now (Recommended)"
+      }
+    ],
+    "ruleHash": "ed4cd202bbaec74c90c5f0e37ccbce96da86e9920658ce25ce194abf529ff0bc",
+    "rule": {
+      "suite": "session-bench",
+      "plan": "218.3 Task 11",
+      "benchmark": {
+        "version": 2,
+        "templateHash": "da493266ba03396884e4a16a4996da200c89b396e00f75a75a6315c6241cff80",
+        "idsHash": "1937178f6107526c04e10b2bf0357f20bd106874f25fe1caf1c0495ee0738bda",
+        "sessionsHash": "89cd48d9a5050392a85ea0855f26c4229e267f5edb9454d91f3e2a848bff526c"
+      },
+      "partition": "dev",
+      "sessions": [
+        "sb-sc-19",
+        "sb-sc-06",
+        "sb-id-12",
+        "sb-id-02",
+        "sb-rt-01",
+        "sb-rt-12"
+      ],
+      "selection": "the first two dev sessions of each family in the partition file's label-blind order (6 sessions)",
+      "arms": [
+        "memory-off-llm",
+        "STM-only",
+        "STM+WM",
+        "claude-code-prompt",
+        "codex-prompt",
+        "mem0",
+        "oracle-context",
+        "amnesic"
+      ],
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "worker": "opencode-go/deepseek-v4.1-flash",
+      "modelChoice": "owner, 2026-11-18: DeepSeek V4.1 Flash (1M window), not Muse: Muse's OpenCode Go window is 200K and dev sessions reach 260K, so oracle-context could not hold a session",
+      "sampling": {
+        "temperature": 0,
+        "thinkingLevel": "low",
+        "parallelToolCalls": false
+      },
+      "samplingNote": "temperature 0 for every call; the agent at thinkingLevel low (the memory workers' own default since gate M-2), so the 2,048-token output reserve is not spent thinking; Mem0's calls at low too; parallel_tool_calls false on the main agent's requests only, those that carry the workspace tools (owner, 2026-11-18, after the v2 smoke: DeepSeek read two ~18K artifacts in one round, over W, and no compaction can shrink fresh tool results; the benchmark assumes one artifact per round). Memory workers keep parallel calls: STM and WM record and judge through several tool calls in one turn and end after one clean turn (owner, 2026-11-18, after the first version of this rule sent the flag to every request with tools and STM recorded one event per batch)",
+      "window": 32000,
+      "maxOutputTokens": 2048,
+      "oracleWindow": "oracle-context's 1,000,000 (the model's window): no session compacts",
+      "limits": {
+        "maxTurns": 30,
+        "maxToolCalls": 30,
+        "maxInputTokens": 12000000,
+        "maxTotalTokens": 12100000,
+        "maxOutputTokens": 60000,
+        "maxWallTimeMs": 43200000
+      },
+      "embedder": {
+        "provider": "gemini",
+        "model": "gemini-embedding-001",
+        "dims": 3072,
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
+        "secret": "GEMINI_API_KEY",
+        "tokens": "estimated at 3.5 characters per token (the API reports no usage)",
+        "deviation": "Mem0's default embedder is OpenAI text-embedding-3-small; the owner holds no balance on a host that serves it and OpenCode Go / Ollama Cloud serve no embedding model, so Gemini gemini-embedding-001 is used (owner, 2026-11-18)"
+      },
+      "concurrency": 4,
+      "ceilingInputTokens": 300000000,
+      "ceilingBasis": "input tokens (cached included) across every usage log under the run's wire directory; no new job starts at or above it, jobs in flight finish",
+      "faults": "a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again, as often as needed (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start",
+      "order": [
+        "smoke: memory-off-llm on the smallest session of the slice, alone; it must finish with no fault, no provider error and no task failed for a reason other than its own limits, and its tokens give the projected total; a miss or a projected total over the ceiling stops the run for the owner",
+        "calibration: oracle-context and amnesic on every session; the live guardrails must hold before any other arm starts; a miss stops the run for the owner",
+        "the rest: memory-off-llm, STM-only, STM+WM, claude-code-prompt, codex-prompt, mem0 on every session"
+      ],
+      "liveGuardrails": {
+        "oracleTaskRateMin": 0.6,
+        "amnesicFailRateMin": {
+          "D2": 0.7,
+          "D4": 0.7
+        },
+        "text": "oracle-context passes at least 60% of tasks (the benchmark is solvable on this model); amnesic fails at least 70% of D2 checks and at least 70% of D4 checks (the dependencies are real)"
+      },
+      "checkins": "every 30 minutes and after every job: rows done, input tokens spent, projected total, quota waits",
+      "reports": "per arm: tasks passed, dependency checks by class, re-derivation calls, whole-run tokens (agent, workers and embeddings apart), cache share, wall time without quota waits; the live guardrails; the screen size",
+      "screen": {
+        "metric": "per-session dependency-check success (D1-D4 pooled), paired by session",
+        "comparisons": [
+          [
+            "memory-off-llm",
+            "STM-only"
+          ],
+          [
+            "STM-only",
+            "STM+WM"
+          ]
+        ],
+        "effect": 0.1,
+        "alpha": 0.05,
+        "power": 0.8,
+        "method": "n = ceil(((z_0.975 + z_0.8) * sd / effect)^2) with sd the larger of the two comparisons' standard deviation of per-session paired differences; at least 6; the dev partition holds 36 sessions, so n > 36 goes to the owner; cost = n x the measured mean input tokens per session summed over the decision and side arms; the effect detectable at n = 36 is reported beside it"
+      }
+    },
+    "checkins": [
+      {
+        "at": "2026-11-18T14:23:05.415Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "aa435f1899ced0df",
+        "note": "started on the owner's word"
+      },
+      {
+        "at": "2026-11-18T15:02:56.979Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "aa435f1899ced0df",
+        "note": "stopped after the smoke job's first task: a check defect (strict === against string-typed tool values) failed every live check in a 2-task diagnostic (about 0.9M tokens); owner chose v2"
+      },
+      {
+        "at": "2026-11-18T15:08:59.444Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "5294089146a79ae0",
+        "note": "v2 diagnostic (sb-rt-12 tasks 1-2, memory-off-llm): 3/3 checks pass; task 2 ended on maxToolCalls (30) after its work; restarted"
+      },
+      {
+        "at": "2026-11-18T15:23:58.516Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "5294089146a79ae0",
+        "note": "smoke STOP: memory-off-llm sb-rt-12 0/8 tasks completed (7 context_overflow, 1 maxToolCalls), 0.19M input; parallel tool calls over W; about 1.3M input spent on Task 11 so far. Also: biome reformatted checks.mjs after the v2 edit (formatting only), so v2 templateHash is da493266 (was 98cf1d70); no scored evidence on either"
+      },
+      {
+        "at": "2026-11-18T15:23:58.516Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "ac8a1b5c811c4284",
+        "note": "restarted with serial tool calls"
+      },
+      {
+        "at": "2026-11-18T15:45:16.387Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "ac8a1b5c811c4284",
+        "note": "smoke passed (memory-off-llm sb-rt-12 12/12 checks, 1.0M input); oracle-context 6/6 sessions done (83/90 checks; D4 1/5 or so, confounded); 50.3M input spent; amnesic running"
+      },
+      {
+        "at": "2026-11-18T19:10:38.181Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "ac8a1b5c811c4284",
+        "note": "paused at 36/48 rows (145.0M input spent); 12 STM rows invalid (serial flag reached the memory workers); also found and fixed this sitting: two jobs stalled 80 min on silent upstream streams after connection resets (stall guard, bounded drain), a context_overflow outcome misread as a provider fault (fault only on non-outcome failures), a resume crash on partial rows (pairs on shared sessions), and an unexplained silent exit 0 at 16:20Z (exit logging added)"
+      },
+      {
+        "at": "2026-11-18T19:10:38.181Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "ed4cd202bbaec74c",
+        "note": "resumed on the corrected rule with 24 carried-over rows; STM-only and STM+WM re-run"
+      },
+      {
+        "at": "2026-11-19T05:44:57.676Z",
+        "unit": "prism-218-3-session-bench-test",
+        "ruleHash": "ed4cd202bbaec74c",
+        "note": "stopped at 43/48 rows, 203.7M input spent (rule ac8a1b5c and ed4cd202 together, invalid STM rows and diagnostics included; plus about 2M in scratchpad diagnostics); evidence written: live guardrails hold (oracle 91.0% tasks; amnesic fails 100% of D2 and D4); screen n = 194 (D1-D4) / 193 (D1-D3) for a 10-point effect, above the 36 dev sessions: to the owner (Task 12)"
+      }
+    ],
+    "status": "closed 2026-11-19 at 43/48 rows (mem0 1/6); evidence docs/_evidence/memory-bench/218/session-bench-test.json; screen size to the owner",
+    "result": {
+      "rows": 43,
+      "complete": false,
+      "liveGuardrails": {
+        "complete": true,
+        "pass": true,
+        "rows": [
+          {
+            "id": "oracle-solvable",
+            "taskRate": 0.9104477611940298,
+            "min": 0.6,
+            "pass": true
+          },
+          {
+            "id": "amnesic-fails-D2",
+            "failRate": 1,
+            "min": 0.7,
+            "pass": true
+          },
+          {
+            "id": "amnesic-fails-D4",
+            "failRate": 1,
+            "min": 0.7,
+            "pass": true
+          }
+        ]
+      },
+      "screen": {
+        "n": 194,
+        "sd": 0.49617052027018416,
+        "verdict": "needs 194 sessions; dev holds 36: to the owner",
+        "estimatedInputTokensAt36": 518478300
+      },
+      "screenD1toD3": {
+        "n": 193,
+        "sd": 0.49558233609749636
+      },
+      "spentInputTokens": 203708610
+    }
+  },
+  "sessionBenchScreen": {
+    "date": "2026-11-21",
+    "plan": "218.3 Task 12",
+    "approved": true,
+    "approvedBy": "owner",
+    "approvedAt": "2026-11-21T14:56:07.127Z",
+    "text": "Owner, 2026-11-21: 'stop the arm and rerun the whole thing. You should use Muse Spark Contributor-1.3 as the worker model. Check if it supports low thinking first'; worker failures are not a valid finding; the standing rule holds: validate, and if the validation holds, run the live screen",
+    "ownerDecisions": [
+      {
+        "date": "2026-11-19",
+        "decision": "screen on all 36 dev sessions, all six decision and side arms (memory-off-llm, STM-only, STM+WM, claude-code-prompt, codex-prompt, mem0); about 520M input, ceiling 650M; the detectable effect is stated in the report",
+        "text": "36 dev, all 6 arms (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "Session-Bench v3: the D4 check requires the new value only; D3 hardened with pre-existing look-alike flags (_legacy, _pilot, _shadow) that must stay off",
+        "text": "D4 fix + harden D3"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "Mem0 embedder: a local embedder (bge-small-en-v1.5 on Transformers.js, CPU), recorded as a G10 deviation",
+        "text": "Local embedder (G10 deviation)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "WM model policy is the default under a host scope only at whole-run input per passed task <= 1.5x STM-only",
+        "text": "<=1.5x STM-only (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "the screen runs on opencode-go/hy4-flash-free (every arm and memory worker), not deepseek-v4.1-flash; given at the launch approval",
+        "text": "use hy4 flash free model from opencode go instead of deepseek-v4.1-flash"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "hy4-flash-free has a 1M window (OpenCode Go catalog; Prism falls back to 200K): the rule note is corrected",
+        "text": "i see that hy4-flash-free has 1M context window"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "a calibration gate on hy4: oracle-context and amnesic on Task 11 6-session slice, Task 11 live guardrails, before the other screen jobs",
+        "text": "Correct note + 6-session calibration (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "on the free route, model call failures never end the run and it always resumes: more transient statuses wait inside the request; an incomplete run exits 6 and the systemd unit restarts it (screen-unit.sh, Restart=on-failure, never on a stop for the owner or a pause)",
+        "text": "Since this is a free model, we must also have the setup built in the harness that model call failures do not kill the job and it can always resumed"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "Mem0 embedder: BGE-M3 (FP16 GGUF) on the discrete GPU through llama.cpp/Vulkan, for retrieval quality (replaces bge-small on CPU before any mem0 job ran)",
+        "text": "I want BGE-M3 for for retrieval quality. So do the setup"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "the smoke row of rule c798ff6a (memory-off-llm sb-rt-12) and its wire usage carry over: its run config hash (a11699e4, model, sampling, window and limits) recomputes identically under this rule and the embedder does not reach the arm; the ceiling counts that spend",
+        "text": "Carry it over (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "pause; the harness enforces one tool call per main-agent turn (the first runs, the others get a fixed answer), for every arm; offline test and a live sb-rt-11 diagnostic (2/2 tasks completed with it, 0/2 without) before the rerun",
+        "text": "Pause; harness enforces one call per round"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "calibration reruns under this rule (no rows carried); every row of the evidence runs under rule 14a65904",
+        "text": "Rerun calibration (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "ceiling 1.2B input tokens (was 650M)",
+        "text": "Raise ceiling to 1.2B now"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "deferred calls are not exempted at dispatch (the kernel charges maxToolCalls before the tool runs); maxToolCalls 60 for every arm instead (was 30)",
+        "text": "Exempt deferred calls, then: Raise maxToolCalls for all arms"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "maxTurns 60 for every arm (was 30), with maxToolCalls 60",
+        "text": "Also raise maxTurns to 60"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "pause the screen at the interim reading (STM-only below memory-off-llm, 154 of 362 STM-only task runs over W) and fix the overflow before STM-only and STM+WM run",
+        "text": "Pause now and fix the STM overflow first"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "relaunch under rule 59864e7c (session memory's observation pool min(20,000, 30% of the input cap)); memory-off-llm, oracle-context and amnesic rows carry over (they do not load the memory system; their config hashes recompute identically); STM-only and STM+WM rerun; after the first 6 STM-only sessions their overflow rate is compared with 43% and the run pauses for the owner if it has not fallen",
+        "text": "Approve, relaunch, check early (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "one STM-only diagnostic session (sb-sc-18) with a counts-only trace in a scratch cache, no screen rows",
+        "text": "Run the diagnostic (Recommended)"
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "fix the mid-loop compaction decline too, in the same round as the STM batch and recall fixes",
+        "text": "Go ahead and fix it."
+      },
+      {
+        "date": "2026-11-19",
+        "decision": "relaunch without asking again when a validation of the fixes is clean; on an anomaly fix it, validate again, then relaunch. Validation (sb-sc-18, all fixes): 0 window overflows (main and worker), 43/43 compactions succeeded, largest recall answer 19,193 characters, 8/11 tasks completed (others: 2 stopped, 1 maxRepeatedToolRounds); memory-off-llm, oracle-context and amnesic rows of rule 14de8907 carry over",
+        "text": "If everything looks okay after the validation, go ahead and run the live run and consider that as approved. But if there is any anomaly or issue, fix those issues, rerun validation and again if validation seems okay, do the live run."
+      },
+      {
+        "date": "2026-11-20",
+        "decision": "investigate why STM-only and STM+WM score lower with more tokens than memory-off-llm",
+        "text": "I want you to investigate the reasons for this"
+      },
+      {
+        "date": "2026-11-20",
+        "decision": "fix STM's tool-round batching, request context and cited outputs; validate on 3 sessions",
+        "text": "Do the proposed fixes. Once it is done, run another test to see if the fixes solves the issues. You do not need approval. Consider the run approved"
+      },
+      {
+        "date": "2026-11-20",
+        "decision": "new rule; memory workers on a cheap small model that accepts low reasoning (gpt-oss:20b on Ollama Cloud, picked by a 7-model replay probe); every arm re-run",
+        "text": "Yes setup the new rule and launch it. But another thing you should do is that pick a cheap and small model from either opencode go or ollama cloud and run the memory worker on that moder. This cheap and small model should also accept low reasoning."
+      },
+      {
+        "date": "2026-11-20",
+        "decision": "add memory-off-drop: no compacted summary, no STM, no WM (amnesic is a fresh session per task, so a separate arm)",
+        "text": "I want you to add another arm actually. This arm should have no compacted summary or STM or WM. Is that what is Amnesic at the moment? If it is, then fine"
+      },
+      {
+        "date": "2026-11-20",
+        "decision": "fix the output-cap failure in the product: retry with thinking off, a fallback record without the model, and the window's output room for worker calls in the harness",
+        "text": "Build all three and then rerun the 3-session validation and then launch the screen if it holds up"
+      },
+      {
+        "date": "2026-11-20",
+        "decision": "validation of rule aff9613b (counts only)",
+        "text": "3 dev sessions (sb-rt-11, sb-sc-18, sb-id-14) x 3 arms, worker gpt-oss:20b, all fixes: tasks passed STM-only 26/34, memory-off-llm 24/34, memory-off-drop 6/34 (before the three output-cap fixes: 19/34, 20/34, 5/34); window overflows 0 in every arm (STM-only 16 before); STM fallback records: 0 output_cap, 1 worker_error; 51 of 657 STM worker calls were answered with an error (Ollama Cloud 500s, 48 of them on sb-sc-18; the harness retries re-sent them); largest worker output 13,960 tokens under the window's room"
+      },
+      {
+        "date": "2026-11-21",
+        "decision": "stop rule aff9613b and rerun the whole screen with the memory workers on opencode-go/muse-spark-1.3-contributor, once it is shown to take low reasoning (live probe: 1,147 and 1,530 output tokens at low against 2,353 and 3,045 at high)",
+        "text": "Okay. I think you need to stop the arm and rerun the whole thing. You should use Muse Spark Contributor-1.3 as the worker model. Check if it supports low thinking first"
+      },
+      {
+        "date": "2026-11-21",
+        "decision": "a memory-worker failure is never a row: a job with a worker call failed after every retry or an STM batch recorded without the model runs again; a third worker fault of one job, or a provider's usage-limit answer, stops the run for the owner (fallback named by the owner: deepseek-v4.1-flash main with hy4-flash-free worker, not needed since Muse takes low)",
+        "text": "If that is not possible, we can also go with deepseek-v4.1-flash from opencode go as the main model and hy4-flash-free as the worker model. If the worker fails, that needs to be handled as worker failure is not a valid finding and defeats the purpose of the screen entirely"
+      },
+      {
+        "date": "2026-11-21",
+        "decision": "validation of rule a1c6df8d (counts only)",
+        "text": "3 dev sessions (sb-rt-11, sb-sc-18, sb-id-14) x 3 arms, worker muse-spark-1.3-contributor at low: tasks passed STM-only 23/34, memory-off-llm 23/34, memory-off-drop 4/34 (gpt-oss:20b on rule aff9613b: 26/34, 24/34, 6/34); 0 worker faults, 0 failed worker calls, 0 STM fallback records, 0 window overflows, 0 provider errors; 649 Muse calls all answered 200; worker output STM-only 232,866 tokens on 209 calls, memory-off-llm 114,322 on 106"
+      },
+      {
+        "date": "2026-11-21",
+        "decision": "drop working memory from the product, planned separately as plan 218.4 (runs after 218.3 Tasks 12-14, before 219); the STM D2 recording finding is a separate follow-up (218.4 Further Actions, P1)",
+        "text": "I would then drop WM. ... Yes, run the STM D2 replay and plan WM removal separately"
+      },
+      {
+        "date": "2026-11-21",
+        "decision": "STM's kept tail stays as is (mid-loop: newest tool round plus up to 20% of the input cap; between loops: the run's new input); no tail-size ablation",
+        "text": "I think that makes sense and is fine. We do not need the ablation study"
+      }
+    ],
+    "ruleHash": "a1c6df8dd548be4d305eadfb64d9ecba705033503b18ad2f771d2e68bb569271",
+    "rule": {
+      "suite": "session-bench",
+      "plan": "218.3 Task 12",
+      "gateSection": "sessionBenchScreen",
+      "livePinKey": "screenLive",
+      "evidence": "docs/_evidence/memory-bench/218/session-bench-screen.json",
+      "benchmark": {
+        "version": 3,
+        "templateHash": "844cd4d21df6a3aaff1b98d733040bf5fc51a18d94ccf0dfd6bf00ff98e4fbed",
+        "idsHash": "1937178f6107526c04e10b2bf0357f20bd106874f25fe1caf1c0495ee0738bda",
+        "sessionsHash": "58eb9e1660a98774f0f5685bb0c087916d151c52e49446b333066d0a88fd8413"
+      },
+      "partition": "dev",
+      "sessions": [
+        "sb-sc-19",
+        "sb-sc-06",
+        "sb-sc-18",
+        "sb-sc-14",
+        "sb-sc-10",
+        "sb-sc-08",
+        "sb-sc-16",
+        "sb-sc-07",
+        "sb-sc-12",
+        "sb-sc-15",
+        "sb-sc-04",
+        "sb-sc-02",
+        "sb-id-12",
+        "sb-id-02",
+        "sb-id-05",
+        "sb-id-07",
+        "sb-id-14",
+        "sb-id-13",
+        "sb-id-15",
+        "sb-id-01",
+        "sb-id-19",
+        "sb-id-03",
+        "sb-id-08",
+        "sb-id-16",
+        "sb-rt-01",
+        "sb-rt-12",
+        "sb-rt-11",
+        "sb-rt-07",
+        "sb-rt-19",
+        "sb-rt-06",
+        "sb-rt-14",
+        "sb-rt-03",
+        "sb-rt-10",
+        "sb-rt-13",
+        "sb-rt-02",
+        "sb-rt-08"
+      ],
+      "selection": "every dev session (36: 12 per family); heldout-a and heldout-b stay unread until gate A",
+      "arms": [
+        "memory-off-llm",
+        "STM-only",
+        "STM+WM",
+        "claude-code-prompt",
+        "codex-prompt",
+        "mem0",
+        "memory-off-drop"
+      ],
+      "armsChoice": "owner, 2026-11-19: 36 dev sessions, all six decision and side arms; the calibration arms run on a 6-session slice only, as a gate (see calibration). Owner, 2026-11-20: a seventh arm, memory-off-drop ('no compacted summary or STM or WM'): memory-off-llm's session and cut, the dropped messages replaced by one fixed line; amnesic stays the floor (a fresh session per task)",
+      "model": "opencode-go/hy4-flash-free",
+      "worker": "opencode-go/muse-spark-1.3-contributor",
+      "workerChoice": "owner, 2026-11-20: 'pick a cheap and small model from either opencode go or ollama cloud and run the memory worker on that model. This cheap and small model should also accept low reasoning'. A replay of six captured STM requests at reasoning low and a 2,048-token output (scratchpad, counts only): gpt-oss:20b 6/6 recorded, 136-774 output tokens, 2-5 s; glm-5.3-flash 6/6; inkling-2-small 6/6; qwen3.8-flash 5/6 (up to 1,787 reasoning tokens); mimo-v2.6-flash 5/6 (one at the cap); minimax-m3.1-flash and deepseek-v4.1-flash 6/6 with 1,000-1,300 reasoning tokens on some calls. Every arm's memory workers (STM, WM, LLM compaction summaries, Mem0) run on it; the main agent stays on hy4-flash-free. Owner, 2026-11-21 ('stop the arm and rerun the whole thing. You should use Muse Spark Contributor-1.3 as the worker model. Check if it supports low thinking first'): rule aff9613b stopped at 69/264 rows when Ollama Cloud answered 429 'monthly usage limit' to every gpt-oss:20b call from about 09:30Z (STM-only sb-id-01/02/03/16 were written from fallback records alone). muse-spark-1.3-contributor on OpenCode Go: catalog effort minimal/low/medium/high/xhigh, and a live probe (scratchpad, counts only: one arithmetic task, two pairs) spent 1,147 and 1,530 output tokens at low against 2,353 and 3,045 at high, so low reaches the model",
+      "workerFaults": "owner, 2026-11-21 ('worker failure is not a valid finding and defeats the purpose of the screen entirely'): a job with any memory-worker call that failed after every retry and wait (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again from its start after the fault wait; a third worker fault of one job stops the run for the owner; a provider's usage-limit answer (402/403/429 naming a usage, credit or quota limit) is never waited out and stops the run",
+      "modelChoice": "owner, 2026-11-19, at the launch approval: \"use hy4 flash free model from opencode go instead of deepseek-v4.1-flash\"; every arm and every memory worker on it. OpenCode Go's live catalog: 1,048,576 context (983,040 input), 65,536 output, price 0 (Prism's opencode-go provider has no static row for it and falls back to 200K; the harness window W is the same for every arm either way). Task 11's live guardrails were measured on deepseek-v4.1-flash, so the calibration stage re-checks them on this model (owner, 2026-11-19)",
+      "sampling": {
+        "temperature": 0,
+        "thinkingLevel": "low",
+        "parallelToolCalls": false,
+        "toolCallsPerTurn": 1,
+        "workerReasoningEffort": "low",
+        "workerOutput": "window"
+      },
+      "workerSamplingNote": "owner, 2026-11-20: workerReasoningEffort low is the default of every arm's memory-worker calls that set no effort of their own (a worker's own level wins, so STM's retry with thinking off reaches the wire); workerOutput window: a worker call may write what W leaves after its input (as a provider serving a W-token model allows), the main agent keeps the 2,048-token reserve. Found 2026-11-20: on rule 1a22763d hy4-flash-free ignored low and about 90% of STM worker calls (and memory-off-llm's summary calls) spent the whole 2,048 output reasoning, so the verdict measured a broken worker",
+      "toolCallsPerTurnNote": "owner, 2026-11-19 (\"Pause; harness enforces one call per round\"): hy4-flash-free ignores parallel_tool_calls:false (a scratchpad diagnostic on sb-rt-11 saw main-agent turns of 2 and 4 calls, e.g. a 3K file and a 17K artifact together), and Session-Bench assumes one artifact per round. The harness runs only the first tool call of each main-agent turn and answers the others with a fixed text (DEFERRED_TOOL_CALL_TEXT), for every arm alike; memory workers keep parallel calls; the model's output is never changed. Rule 77d8c3d4 was paused at 79/228 rows; its screen rows are superseded",
+      "oracleWindow": "oracle-context's 1,000,000 (the model's window): no session compacts",
+      "samplingModelNote": "thinkingLevel low is kept for equal treatment with Task 11's rule; Prism's catalog row for hy4-flash-free declares no reasoning-effort family, so the provider sends no effort and the model runs at its own default, the same for every arm",
+      "samplingNote": "temperature 0 for every call; the agent at thinkingLevel low (the memory workers' own default since gate M-2), so the 2,048-token output reserve is not spent thinking; Mem0's calls at low too; parallel_tool_calls false on the main agent's requests only, those that carry the workspace tools (owner, 2026-11-18, after the v2 smoke: DeepSeek read two ~18K artifacts in one round, over W, and no compaction can shrink fresh tool results; the benchmark assumes one artifact per round). Memory workers keep parallel calls: STM and WM record and judge through several tool calls in one turn and end after one clean turn (owner, 2026-11-18, after the first version of this rule sent the flag to every request with tools and STM recorded one event per batch)",
+      "window": 32000,
+      "maxOutputTokens": 2048,
+      "limits": {
+        "maxTurns": 60,
+        "maxToolCalls": 60,
+        "maxInputTokens": 12000000,
+        "maxTotalTokens": 12100000,
+        "maxOutputTokens": 60000,
+        "maxWallTimeMs": 43200000
+      },
+      "limitsNote": "owner, 2026-11-19 (\"Raise maxToolCalls for all arms\"): the kernel charges maxToolCalls at dispatch, so a deferred call (one tool call per turn) uses a slot; maxToolCalls goes from 30 to 60 for every arm. The smoke job of rule 14a65904 (memory-off-llm sb-rt-12) hit maxToolCalls on 2 of its 3 unfinished tasks with 7 deferred calls. maxTurns goes from 30 to 60 too (owner, 2026-11-19: 'Also raise maxTurns to 60'): one real call per turn would otherwise cap real calls at 30; the other limits are Task 11's",
+      "productFixes": [
+        {
+          "date": "2026-11-19",
+          "package": "@arnilo/prism-memory-system",
+          "change": "session memory's folded observation pool is min(20,000, 30% of the input cap) tokens (was a fixed 20,000)",
+          "reason": "owner, 2026-11-19 ('Pause now and fix the STM overflow first'): rule 14de8907 paused at 84/228 rows; on the 34 sessions both arms had finished, STM-only overflowed W on 154 of 362 task runs (6% at task 1, 59% at task 8, nearly all later) and memory-off-llm on none: a 20,000-token pool plus the 20% kept tail and the prompt left a compacted request over the 80% mid-loop trigger at W = 32K",
+          "rerunArms": [
+            "STM-only",
+            "STM+WM"
+          ],
+          "carriedArms": [
+            "memory-off-llm",
+            "oracle-context",
+            "amnesic"
+          ]
+        },
+        {
+          "date": "2026-11-19",
+          "package": "@arnilo/prism-memory-system",
+          "change": "an STM source batch takes at most half the worker model's input cap (a larger entry is cut with its marker); recall { query } and recall { cursor } at summary detail stay within the page bytes; a compaction reads STM coverage recorded past its snapshot as covering the snapshot; recall { entry } carries its page once (the value doubled it); harness: one tool call per main-agent turn covers memory-package tools (recall) through tool.call respond, not only the workspace tools",
+          "reason": "owner, 2026-11-19 ('Run the diagnostic', then 'Go ahead and fix it'): rule 59864e7c's early check (41/63 STM-only task runs over W) and a counts-only diagnostic of sb-sc-18 showed (1) one ~60K-character tool result sent whole to the STM worker overflowed it on every pass, so coverage never moved and every later task failed; (2) recall answers of 180K-214K characters; (3) a background STM pass in flight at a mid-loop compaction recorded coverage past the snapshot, read as none, so the compaction declined and the next request overflowed; (4) the validation of those fixes (sb-sc-18: 10/11 tasks completed, 0 worker overflows) overflowed once, on three ~33K-character recall entry pages in one turn",
+          "rerunArms": [
+            "STM-only",
+            "STM+WM"
+          ],
+          "carriedArms": [
+            "memory-off-llm",
+            "oracle-context",
+            "amnesic"
+          ]
+        },
+        {
+          "date": "2026-11-20",
+          "package": "@arnilo/prism-memory-system",
+          "change": "an STM source batch keeps a tool call with its results (an oversized result travels with its call, cut to fit); a background pass leaves an unanswered tool call for the next pass; a batch without the user's request carries it as context (no entry id); a record citing a tool call also cites its results; a cut recall page names how to read the entry whole",
+          "reason": "owner, 2026-11-20 ('investigate the reasons', then 'Do the proposed fixes'): rule 1a22763d finished with STM-only at 187/384 tasks against memory-off-llm's 206/384; a paired diagnostic (sb-rt-11, sb-sc-18, counts only) showed STM batches that split a call from its output, background passes run before the output existed, and batches that never showed the request they served",
+          "rerunArms": [
+            "memory-off-llm",
+            "STM-only",
+            "STM+WM",
+            "claude-code-prompt",
+            "codex-prompt",
+            "mem0",
+            "memory-off-drop"
+          ],
+          "carriedArms": []
+        },
+        {
+          "date": "2026-11-20",
+          "package": "@arnilo/prism-memory-system",
+          "change": "an STM pass whose model ends at its output cap before any call is asked once more with thinking off; a second miss records the batch without the model (one bounded event per request, assistant text and tool call, marked fallback output_cap, citing the entries); a compaction's coverage pass whose model fails records the batch the same way (fallback worker_error) instead of declining",
+          "reason": "owner, 2026-11-20 ('How can we fix this?', then 'Build all three'): a worker model that ignores a low reasoning setting left STM with nothing recorded and the window full; the product must hold whatever the host's worker model does. The harness reports each row's fallback count (meter.stmFallbacks)",
+          "rerunArms": [
+            "memory-off-llm",
+            "STM-only",
+            "STM+WM",
+            "claude-code-prompt",
+            "codex-prompt",
+            "mem0",
+            "memory-off-drop"
+          ],
+          "carriedArms": []
+        }
+      ],
+      "rerun": "owner, 2026-11-20 ('setup the new rule and launch it'): every arm and the calibration slice re-run under this rule; no row of rule 1a22763d is carried (the worker model, its effort and its output changed for every arm). Owner, 2026-11-21 ('rerun the whole thing'): no row of rule aff9613b is carried either (the worker model changed for every arm)",
+      "embedder": {
+        "provider": "llama.cpp",
+        "runtime": "llama.cpp llama-server, Vulkan backend (RADV), GPU offload of every layer",
+        "llamaCpp": {
+          "repo": "https://github.com/ggml-org/llama.cpp.git",
+          "tag": "b12533"
+        },
+        "vulkanHeaders": {
+          "repo": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+          "tag": "v1.4.363"
+        },
+        "spirvHeaders": {
+          "repo": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+          "tag": "vulkan-sdk-1.4.363.0"
+        },
+        "build": [
+          "-DGGML_VULKAN=ON",
+          "-DLLAMA_CURL=OFF",
+          "-DLLAMA_BUILD_TESTS=OFF",
+          "-DLLAMA_BUILD_EXAMPLES=OFF",
+          "-DLLAMA_BUILD_SERVER=ON",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        "model": "gpustack/bge-m3-GGUF",
+        "base": "BAAI/bge-m3 (MIT)",
+        "revision": "2d48f1737679ad900d5c26c5aad5410e9c70fdca",
+        "file": "bge-m3-FP16.gguf",
+        "sha256": "daec91ffb5dd0c27411bd71f29932917c49cf529a641d0168496c3a501e3062c",
+        "dims": 1024,
+        "pooling": "cls",
+        "normalize": true,
+        "contextTokens": 8192,
+        "device": "the discrete GPU (AMD Radeon RX 6550M, RADV NAVI24, 4 GB): the Vulkan device whose name matches /NAVI ?24/i",
+        "tokens": "llama-server's usage.prompt_tokens",
+        "deviation": "Mem0's default embedder is OpenAI text-embedding-3-small; Gemini's free tier (Task 11) caps at 1,000 requests a day, so the owner chose a local embedder (2026-11-19) and then BGE-M3 for retrieval quality, on the GPU through llama.cpp/Vulkan: recorded as a G10 deviation"
+      },
+      "embedderChoice": "owner, 2026-11-19: a local embedder, recorded as a G10 deviation (Gemini's free tier caps at 1,000 requests a day); then \"I want BGE-M3 for retrieval quality\": BGE-M3 on the GPU through llama.cpp/Vulkan",
+      "concurrency": 6,
+      "ceilingInputTokens": 1200000000,
+      "ceilingBasis": "input tokens (cached included) across every usage log under the run's wire directory; no new job starts at or above it, jobs in flight finish; Task 11 projected about 520M for this screen; owner, 2026-11-19 ('Raise ceiling to 1.2B now'): one tool call per turn re-sends the context more often (the smoke job used 2.44M input, 0.88M before) and rule 14a65904 projected 616M of 650M after its smoke job",
+      "faults": "a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again, as often as needed (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start",
+      "smokeOutcomes": [
+        "ERR_PRISM_RUN_LIMIT",
+        "context_overflow"
+      ],
+      "smokeOutcomesNote": "2026-11-19, from the paused smoke on hy4 (sb-rt-12: task 7 maxToolCalls, task 8 context_overflow, 0 provider errors): a window overflow is memory-off-llm's scored outcome (Task 11 finding 1: LLM compaction does not recover after an over-window turn), not a harness failure",
+      "calibration": {
+        "arms": [
+          "oracle-context",
+          "amnesic"
+        ],
+        "sessions": [
+          "sb-sc-19",
+          "sb-sc-06",
+          "sb-id-12",
+          "sb-id-02",
+          "sb-rt-01",
+          "sb-rt-12"
+        ],
+        "selection": "Task 11's slice (the first two dev sessions of each family), so the reading compares with Task 11's on deepseek-v4.1-flash",
+        "choice": "owner, 2026-11-19: re-check solvability and dependency reality on hy4-flash-free before the screen"
+      },
+      "liveGuardrails": {
+        "oracleTaskRateMin": 0.6,
+        "amnesicFailRateMin": {
+          "D2": 0.7,
+          "D4": 0.7
+        },
+        "text": "oracle-context passes at least 60% of tasks (the benchmark is solvable on this model); amnesic fails at least 70% of D2 checks and at least 70% of D4 checks (the dependencies are real)"
+      },
+      "order": [
+        "smoke: memory-off-llm on the smallest dev session, alone; it must finish with no fault, no provider error and no task failed for a reason other than an outcome the arm owns (smokeOutcomes); a miss or a projected total over the ceiling stops the run for the owner",
+        "calibration: oracle-context and amnesic on the 6-session calibration slice; the live guardrails must hold before the other screen jobs start; a miss stops the run for the owner",
+        "the rest: memory-off-llm, STM-only, STM+WM, claude-code-prompt, codex-prompt, mem0 on every dev session"
+      ],
+      "checkins": "every 30 minutes and after every job: rows done, input tokens spent, projected total, quota waits",
+      "analysis": {
+        "unit": "per check (dependency) or per task (task, control), paired by id; sessions are the clusters",
+        "statistic": "pairedClusterPermutation (scripts/memory-bench/stats.mjs): cluster bootstrap 95% interval of the mean paired difference, sign-flip p",
+        "iterations": 10000,
+        "seed": 7,
+        "dependency": "D1-D4 checks pooled (Session-Bench v3: the D4 check requires the new value only)",
+        "control": "C checks",
+        "reported": "every arm's scores, the pre-registered comparisons (score.mjs ANALYSIS), each decision arm against each side arm (sideComparisons) with the same statistic, cost per passed task, and the effect detectable at N"
+      },
+      "decision": {
+        "stm": {
+          "comparison": [
+            "memory-off-llm",
+            "STM-only"
+          ],
+          "text": "STM is worth shipping if STM-only beats memory-off-llm on dependency checks (95% interval lower bound > 0) and is not worse on control checks (lower bound of the C difference > -0.05)",
+          "dependencyLowerAbove": 0,
+          "controlLowerAbove": -0.05
+        },
+        "wm": {
+          "comparison": [
+            "STM-only",
+            "STM+WM"
+          ],
+          "text": "WM's model policy is the default under a host scope only if STM+WM beats STM-only on dependency checks (lower bound > 0) and its whole-run input tokens per passed task are at most 1.5x STM-only's; otherwise the deterministic policy is the default (without a scope the session is STM-only)",
+          "dependencyLowerAbove": 0,
+          "maxCostRatio": 1.5,
+          "cost": "whole-run input tokens (main + workers + embeddings, cached included) / tasks passed",
+          "costChoice": "owner, 2026-11-19: at most 1.5x STM-only"
+        },
+        "side": "a Prism decision arm below a side arm (the side arm's 95% interval of the difference entirely above 0 on task or dependency checks) goes to the owner as a finding"
+      },
+      "detectable": {
+        "method": "(z_0.975 + z_0.8) x sd of per-session paired dependency-rate differences / sqrt(N), from this run's sessions",
+        "task11": "at N = 36, about 23 points (memory-off-llm -> STM-only) and 8-12 points (STM-only -> STM+WM), from Task 11's 6 sessions"
+      }
+    },
+    "checkins": [
+      {
+        "date": "2026-11-21",
+        "event": "five worker faults (STM-only sb-id-05; STM+WM sb-sc-10, sb-sc-07, sb-sc-12, sb-id-02), one failed worker call each, every one after the job's last task; the wire logged every Muse exchange of those jobs as 200 with usage. The harness now names a fault's error kind: 'Error | unknown | | session closed', the background tracker's abort of a pass still in flight when the job's session closes (src/session/background.ts settle). No scored task can see it. Harness change (no rule change): a worker call whose request signal was aborted counts as meter.workerAborts, not a worker failure; provider failures still fault the job. The run was paused gracefully twice (no row lost) to load the error kinds and then this fix; the faulted jobs left no row and run again"
+      },
+      {
+        "date": "2026-11-22",
+        "event": "finished 264/264 rows (831M input on the wire, ceiling 1.2B); every row passed the worker-fault rule; faulted jobs (session-close aborts before the harness fix, two transient worker errors) left no row and ran again; OpenCode Go's free route answered 502 in bursts (up to ~14% of main-agent calls), absorbed by the patient retries"
+      }
+    ],
+    "status": "done 2026-11-22: 264/264 rows, complete; verdict STM ships, WM policy deterministic, 1 side finding",
+    "previousApprovals": [
+      {
+        "ruleHash": "c798ff6a0f220e73366a1b344f22a642b574614a4f5e2ef8b39de6b78369fdd6",
+        "approvedAt": "2026-11-19T06:59:19.182Z",
+        "text": "\"Yes, approve and launch\" (hy4-flash-free rule), then \"Correct note + 6-session calibration (Recommended)\" for the corrected rule (2026-11-19)",
+        "outcome": "launched 2026-11-19; paused after the smoke job (1 row: memory-off-llm sb-rt-12, 6/8 tasks, 0 provider errors, 0.88M input) for the embedder change; superseded"
+      },
+      {
+        "ruleHash": "77d8c3d434673bfb368f0d0d63904c0c5f53f2ebddc4678a7d4993f4cabd64d0",
+        "approvedAt": "2026-11-19T07:19:41.106Z",
+        "text": "Approve and relaunch (rule 77d8c3d4, 2026-11-19)",
+        "outcome": "ran 2026-11-19 07:19-11:36: calibration held on hy4 (oracle 98.5% of tasks, amnesic failed 100% of D2 and D4); screen paused at 79/228 rows after hy4 was found to ignore parallel_tool_calls:false (multi-call rounds overflow W regardless of memory); screen rows superseded"
+      },
+      {
+        "ruleHash": "14a65904ba5385021943d84e776f8a5cd28b883c470444de28ace19c2723f9d1",
+        "approvedAt": "2026-11-19T11:48:59.812Z",
+        "text": "Approve and relaunch (rule 14a65904, 2026-11-19)",
+        "outcome": "ran 2026-11-19 11:49-12:13: smoke passed (memory-off-llm sb-rt-12: 5/8 tasks, 0 overflows, 7 deferred calls, 2.44M input); stopped during calibration (6/228 rows) for the ceiling and maxToolCalls change; rows superseded"
+      },
+      {
+        "ruleHash": "14de8907bd5778bbacb78f3864dfe93bc5fb8ead27e80acf05410c221ee2046f",
+        "approvedAt": "2026-11-19T12:17:11.465Z",
+        "text": "Approve and relaunch (rule 14de8907, 2026-11-19)",
+        "outcome": "ran 2026-11-19 12:17-19:52: smoke passed; calibration held; paused at 88/228 rows (memory-off-llm 36, STM-only 36, STM+WM 4) after STM-only overflowed W on 154 of 362 task runs on the 34 sessions both arms had finished (memory-off-llm 0): session memory's fixed 20,000-token observation pool; memory-off-llm and calibration rows carried to rule 59864e7c, STM-only and STM+WM rows superseded"
+      },
+      {
+        "ruleHash": "59864e7c1e2e34844cd58a44e9bfbc2cdeb3bbf0985539b55dd856450654f658",
+        "approvedAt": "2026-11-19T20:10:15.026Z",
+        "text": "Approve, relaunch, check early (rule 59864e7c, 2026-11-19)",
+        "outcome": "ran 2026-11-19 20:11-20:57: early check after 6 STM-only sessions failed (41/63 task runs over W, 34/63 under 14de8907); paused with 12 STM-only rows, superseded; the pool cap was not the cause"
+      },
+      {
+        "ruleHash": "1a22763d88cf1dd8e53d8feeb47a68e7a6c33144a11a76f9771e0bd181444152",
+        "approvedAt": "2026-11-19T23:03:47.544Z",
+        "text": "Standing approval: 'If everything looks okay after the validation, go ahead and run the live run and consider that as approved' (rule 1a22763d, 2026-11-19)",
+        "outcome": "finished 228/228 on 2026-11-20 (790M input), verdict STM not shown, WM deterministic; superseded: hy4-flash-free ignored reasoning low and about 90% of STM worker calls (and memory-off-llm's summary calls) spent the whole 2,048-token output reasoning, so the verdict measured a broken worker. Evidence of that run is kept as written; this rule's report replaces it"
+      },
+      {
+        "ruleHash": "aff9613bd8320b2a29a93e777d97c23994bf8bf460242b4192d23908cbe4670b",
+        "approvedAt": "2026-11-20T20:09:48.084Z",
+        "text": "Owner, 2026-11-20: 'Yes setup the new rule and launch it' (worker on a cheap small model that accepts low reasoning), 'add another arm ... no compacted summary or STM or WM', then 2026-11-21: 'Build all three and then rerun the 3-session validation and then launch the screen if it holds up'",
+        "checkins": [
+          {
+            "date": "2026-11-21",
+            "event": "smoke stop: memory-off-llm sb-rt-12 had 0 failed tasks, 0 overflows, 4 provider errors (OpenCode Go free route: 12 of 152 main-agent calls answered 502; Ollama worker 34/34 OK); row discarded (kept under discarded/smoke-1) and the smoke re-run under the same rule",
+            "text": "Rerun the smoke (Recommended)"
+          }
+        ],
+        "outcome": "stopped 2026-11-21 at 69/264 rows (289M input): from about 09:30Z Ollama Cloud answered 429 'monthly usage limit' to every gpt-oss:20b worker call, and the harness did not treat it as a stop; STM-only sb-id-01/02/03/16 were written from fallback records alone (15/36/76/79 batches; sb-id-16: 245 of 245 worker calls failed). memory-off-llm (36), calibration (12, guardrails held: oracle 1.0, amnesic fails D2/D4 at 1.0) and the first 17 STM-only rows were clean, but no row is carried (the worker model changed for every arm). Rows kept under ~/.cache/prism/session-bench/live/aff9613bd8320b2a/"
+      }
+    ],
+    "carriedRows": [],
+    "verdict": {
+      "stm": "ship",
+      "wmPolicy": "deterministic",
+      "findings": [
+        "memory-off-llm below mem0 on dependency"
+      ],
+      "evidence": "docs/_evidence/memory-bench/218/session-bench-screen.json",
+      "finishedAt": "2026-11-22T03:21:58.312Z"
+    }
   }
 }

@@ -5,14 +5,13 @@
  * from `session.json` (tool calls and replies), the probe tools answer with the fixture's outputs, and the STM worker
  * is scripted from `annotations.json`: per batch it records the annotated events whose last source is in the batch,
  * citing the batch's own entry ids. Everything between those two scripts is product code: batching, validation,
- * the verbatim check, redaction, caps, habituation, boundaries, the chunk store, the ledger, the render and recall.
+ * redaction, caps, habituation, boundaries, the ledger, the render and recall of the original entries.
  *
  *   timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only stm
  *
  * Rows carry counts, hashes and verdicts only (the plan 210 harness rule).
  */
-import { mkdirSync } from "node:fs";
-import { isAbsolute, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { loadLongSessionFixture } from "../long-session.mjs";
 import { digest, events, packages, receivedText, responder } from "./harness.mjs";
 
@@ -129,13 +128,6 @@ export function scriptedStm(log, { shape = "event", fx = longSession(), testing 
               ...(offersStatus && event.kind === "outcome" ? { status: "passed" } : {}),
               ...(offersDurable && DURABLE_EVENTS[event.id] ? { durable: DURABLE_EVENTS[event.id] } : {}),
               ...(supersedes ? { supersedes } : {}),
-              ...(event.chunks.length
-                ? {
-                    chunks: event.chunks
-                      .filter((chunk) => steps.has(chunk.source))
-                      .map((chunk) => ({ sourceEntryId: steps.get(chunk.source), text: chunk.text })),
-                  }
-                : {}),
             }
           : {
               content: event.kind === "outcome" ? `completed: ${event.description}` : event.description,
@@ -207,12 +199,19 @@ function sentinelTiers(prism) {
 }
 
 /**
- * Replay the fixture through one agent. `config` overlays the memory-system options; `chunkStore` is provided as the
- * `memory.chunks` service; `sentinels` adds the scope/LTM blocks and a WM reflection carrying a sentinel. Plan 218
+ * Replay the fixture through one agent. `config` overlays the memory-system options; `sentinels` adds the scope/LTM blocks and a WM reflection carrying a sentinel. Plan 218
  * Task 5: `wmWorker` answers WM requests (`config.wm` then configures WM, on by default with it), and `beforeTurn`
  * runs before a turn with the harness (to set the episode scope with `memory:scope`).
  */
-export async function replayLongSession({ config = {}, chunkStore, sentinels = false, secrets = true, turns, wmWorker, beforeTurn } = {}) {
+export async function replayLongSession({
+  config = {},
+  sentinels = false,
+  secrets = true,
+  turns,
+  wmWorker,
+  beforeTurn,
+  keepRecentEntries,
+} = {}) {
   const { prism, testing } = await packages();
   const memory = await import("@arnilo/prism-memory-system");
   const fx = longSession();
@@ -231,6 +230,11 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
       const toolTurn = request.messages.at(-1)?.role === "tool";
       if (!toolTurn) step = 0;
       if (current === "recall") {
+        // Plan 218.3 Task 4: a recall page that names where to read on is followed before the next call.
+        const more = toolTurn
+          ? JSON.stringify(request.messages.at(-1)).match(/continue with recall \{ entry: \\"([^"\\]+)\\", offset: (\d+) \}/)
+          : null;
+        if (more) return ev.call("recall", { entry: more[1], offset: Number(more[2]) }, `recall-more-${step}-${more[2]}`);
         if (toolTurn && step >= recallIds.length) return ev.say("Recalled.");
         const id = recallIds[step++];
         // A string recalls by id; an object is the recall call's arguments (plan 218.2 Task 7: `{ query }`).
@@ -289,27 +293,19 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
       : sentinels
         ? { model: STM_MODEL, triggerTokens: 1 }
         : false,
-    context: { compactAt: { maxTokens: 9_999_999 }, ...(config.context ?? {}) },
+    ...(sentinels && config.scope === undefined ? { scope: { text: "Probe session scope." } } : {}),
+    context: { compactAfterRun: { maxTokens: 9_999_999 }, ...(config.context ?? {}) },
     worker: { maxTurns: 2, ...(config.worker ?? {}) },
     ...Object.fromEntries(Object.entries(config).filter(([key]) => !["stm", "wm", "context", "worker"].includes(key))),
   };
   const extra = [];
-  if (chunkStore)
-    extra.push(
-      prism.definePackage({
-        name: "@probe/chunk-store",
-        version: "0.0.0",
-        requires: { api: 1 },
-        setup(api) {
-          api.services.provide(memory.MEMORY_CHUNK_STORE_SERVICE, chunkStore);
-        },
-      })(),
-    );
   if (sentinels) extra.push(sentinelTiers(prism));
   const agent = await prism.createAgent({
     model: { provider: "mock", model: "main", limits: { contextWindow: 10_000_000, maxOutputTokens: 0 } },
     packages: [main, worker, fixtureTools(prism, fx, toolLog), compactionCounter, ...extra, memory.default(memoryConfig)],
     slots: { store: prism.createMemorySessionStore() },
+    // Plan 218.3 Task 2 retired `context.recentMessages`; a probe that needs a bare cut sets the kernel's keep instead.
+    ...(keepRecentEntries === undefined ? {} : { compaction: { keepRecentEntries } }),
     limits: RUN_LIMITS,
   });
   const stream = agent.subscribe();
@@ -383,9 +379,9 @@ export async function replayLongSession({ config = {}, chunkStore, sentinels = f
       return (await ledger()).observations.find((item) => item.description === event.description);
     },
     /** After the replay: compact the transcript away, then let the main model recall `eventIds` by record id. */
-    async recallTurn(eventIds) {
+    async recallTurn(eventIds, args = {}) {
       const ids = [];
-      for (const id of eventIds) ids.push((await this.recordOf(id))?.id ?? "000000000000");
+      for (const id of eventIds) ids.push({ id: (await this.recordOf(id))?.id ?? "000000000000", ...args });
       return this.recallCalls(ids);
     },
     /** After the replay: compact the transcript away, then let the main model call `recall` once per entry (an id or the call's arguments). */
@@ -562,44 +558,39 @@ export const probes = [
     },
   },
   {
-    // Probe 2 (S2): recall returns the large tool output's chunk and the code snippet verbatim; no other tool runs.
+    // Probe 2 (S2, plan 218.3 Task 4): recall returns the original source entries, the large tool output and the code
+    // read byte-equal (the large one in pages, following each page's continuation); no other tool runs.
     id: "stm.recall-verbatim",
     async run() {
       const ids = h0Ids();
-      const h = await replayLongSession({ config: { context: { recentMessages: 0 } } });
+      const h = await replayLongSession();
       try {
         const runsBefore = h.toolLog.filter((call) => call.name !== "recall").length;
-        const out = await h.recallTurn(ids);
+        const out = await h.recallTurn(ids, { detail: "full" });
         const recalled = out.results.filter((row) => row.name === "recall").map((row) => row.text);
-        // Each recalled chunk body (after its `[chunk …] from …, N bytes:` header) must be byte-equal to the annotated
-        // excerpt (edges trimmed, as stored) and a substring of the original tool output.
-        const bodies = recalled.flatMap((text) =>
-          text
-            .split(/\n\[chunk [0-9a-f]+\] from [^\n]*, \d+ bytes:\n/)
-            .slice(1)
-            .map((body) => body.split(/\n\[chunk /)[0]),
-        );
-        const expected = ids.flatMap((id) => h.fx.events.find((event) => event.id === id).chunks);
-        const exact = expected.filter((chunk) =>
-          bodies.some((body) => body === chunk.text.trim() && h.fx.calls.get(chunk.source)?.output.includes(body)),
-        );
+        const pages = originalPages(recalled);
+        const sources = [...new Set(ids.flatMap((id) => h.fx.events.find((event) => event.id === id).chunks.map((chunk) => chunk.source)))];
+        const exact = sources.filter((source) => {
+          const output = h.fx.calls.get(source)?.output;
+          return output !== undefined && [...pages.values()].some((text) => text.endsWith(output));
+        });
         const leftContext = !receivedText(out.request ?? {}).includes(h.fx.calls.get("c209").output.slice(0, 2000));
         const others = out.calls.filter((call) => call.name !== "recall");
         return {
           surface: "tool-result",
           property:
-            "recall by STM id returns the large tool output's chunk and the code-read chunk byte-equal, after the source left context, with no other tool run",
+            "recall by STM id with detail full returns the large tool output and the code read byte-equal from the session store (the large one paged by offset), after the source left context, with no other tool run",
           control: "trigger-absent",
           fires: recalled.length,
           reaches: exact.length > 0,
           correct:
-            exact.length === expected.length &&
+            exact.length === sources.length &&
             others.length === 0 &&
             leftContext &&
             h.toolLog.filter((c) => c.name !== "recall").length === runsBefore,
           on: digest(recalled),
           off: digest([]),
-          counts: { chunks: expected.length, byteEqual: exact.length, otherToolCalls: others.length },
+          counts: { sources: sources.length, byteEqual: exact.length, recallCalls: recalled.length, otherToolCalls: others.length },
         };
       } finally {
         await h.close();
@@ -755,53 +746,39 @@ export const probes = [
     },
   },
   {
-    // Probe 7: only referrer removal deletes chunks.
-    id: "stm.referrer-delete",
-    async run(dir) {
-      const memory = await import("@arnilo/prism-memory-system");
-      mkdirSync(dir, { recursive: true });
-      const store = await memory.createSqliteChunkStore({ path: isAbsolute(dir) ? join(dir, "chunks.sqlite") : ":memory:" });
-      const deletes = [];
-      const unrefDeleted = [];
-      const realDelete = store.delete.bind(store);
-      store.delete = (id) => {
-        deletes.push(id);
-        return realDelete(id);
-      };
-      const realApply = store.apply.bind(store);
-      store.apply = async (ops) => {
-        const result = await realApply(ops);
-        unrefDeleted.push(...result.deleted);
-        return result;
-      };
-      const h = await replayLongSession({ chunkStore: store });
+    // Probe 7 (plan 218.3 Task 4): STM keeps no copy of session content; a superseded record's evidence stays readable.
+    id: "stm.no-session-copy",
+    async run() {
+      const h = await replayLongSession();
       try {
+        const entries = await h.session.entries();
+        const ledgerText = JSON.stringify(entries.filter((entry) => entry.kind !== "message").map((entry) => entry.data ?? null));
+        // Every tool output long enough to be unmistakable, by its first 120 characters.
+        const outputs = [...h.fx.calls.values()].map((call) => call.output ?? "").filter((output) => output.length >= 200);
+        const copied = outputs.filter((output) => ledgerText.includes(JSON.stringify(output.slice(0, 120)).slice(1, -1)));
         const ledger = await h.ledger();
         const superseded = h.fx.expected.superseded.map(({ event }) => h.fx.events.find((item) => item.id === event));
-        const droppedRefs = superseded.flatMap(
-          (event) => ledger.observations.find((item) => item.description === event.description)?.chunkRefs ?? [],
-        );
-        const live = await store.list(h.session.id);
-        const secret = (await Promise.all(live.map((chunk) => store.get(chunk.id, h.session.id)))).some((chunk) =>
-          chunk?.text.includes(h.fx.secret),
-        );
+        const records = superseded.flatMap((event) => ledger.observations.filter((item) => item.description === event.description));
+        const ids = new Set(entries.map((entry) => entry.id));
+        const unreadable = records.flatMap((record) => record.sourceEntryIds.filter((id) => !ids.has(id)));
         return {
-          surface: "chunk-store",
-          property: "a chunk is deleted only when its last referrer goes (a superseded record's chunk); no other path reaches delete",
-          fires: deletes.length,
-          reaches: droppedRefs.length > 0 && deletes.length > 0,
-          correct:
-            digest([...deletes].sort()) === digest([...unrefDeleted].sort()) &&
-            digest([...deletes].sort()) === digest(droppedRefs.map((ref) => ref.id).sort()) &&
-            live.length > 0 &&
-            !secret,
-          on: digest(deletes.length),
-          off: digest(unrefDeleted.length),
-          counts: { deletes: deletes.length, unrefDeletes: unrefDeleted.length, liveChunks: live.length },
+          surface: "ledger",
+          property:
+            "no ledger record carries a tool output (records cite entry ids), and a superseded record's source entries stay on the branch for recall",
+          fires: outputs.length,
+          reaches: records.length > 0 && outputs.length > 0,
+          correct: copied.length === 0 && unreadable.length === 0,
+          on: digest({ copied: copied.length }),
+          off: digest({ unreadable: unreadable.length }),
+          counts: {
+            outputs: outputs.length,
+            copied: copied.length,
+            supersededRecords: records.length,
+            unreadableSources: unreadable.length,
+          },
         };
       } finally {
         await h.close();
-        store.close();
       }
     },
   },
@@ -810,22 +787,11 @@ export const probes = [
     // observer, and chunk bytes per 10k eligible tokens with their share of the transcript bytes they cover.
     id: "stm.cost",
     async run() {
-      const memory = await import("@arnilo/prism-memory-system");
-      const store = await memory.createSqliteChunkStore({ path: ":memory:" });
-      const h = await replayLongSession({ chunkStore: store });
+      const h = await replayLongSession();
       let stm;
       try {
         const eligible = await eligibleTokens(h.session);
-        const chunks = await store.list(h.session.id);
-        const chunkBytes = chunks.reduce((sum, chunk) => sum + chunk.bytes, 0);
         const ledger = await h.ledger();
-        const covered = new Set(ledger.observations.flatMap((item) => (item.chunkRefs ?? []).map((ref) => ref.sourceEntryId)));
-        const coveredBytes = (await h.session.entries())
-          .filter((entry) => covered.has(entry.id))
-          .reduce((sum, entry) => sum + Buffer.byteLength(JSON.stringify(entry.message), "utf8"), 0);
-        const transcriptBytes = (await h.session.entries())
-          .filter((entry) => entry.kind === "message")
-          .reduce((sum, entry) => sum + Buffer.byteLength(JSON.stringify(entry.message), "utf8"), 0);
         stm = {
           eligibleTokens: eligible,
           passes: h.stmLog.passes,
@@ -835,15 +801,9 @@ export const probes = [
           inputPer10k: per10k(h.stmLog.inputTokens, eligible),
           records: ledger.observations.filter(isStmRow).length,
           savedByHabituation: ledger.observations.reduce((sum, item) => sum + Math.max(0, (item.count ?? 1) - 1), 0),
-          chunks: chunks.length,
-          chunkBytes,
-          chunkBytesPer10k: per10k(chunkBytes, eligible),
-          chunkShareOfCovered: coveredBytes ? Math.round((chunkBytes / coveredBytes) * 1000) / 1000 : null,
-          chunkShareOfTranscript: Math.round((chunkBytes / transcriptBytes) * 10_000) / 10_000,
         };
       } finally {
         await h.close();
-        store.close();
       }
       const before = await replayOmBefore();
       const omBefore = before && {
@@ -857,11 +817,11 @@ export const probes = [
       return {
         surface: "worker-request",
         property:
-          "on the long-session fixture, STM worker tokens per 10k eligible tokens against the pre-redesign observer, and stored chunk bytes under 25% of the transcript they cover",
+          "on the long-session fixture, STM worker tokens per 10k eligible tokens against the pre-redesign observer (plan 218.3 Task 4: no chunk store, so no stored bytes)",
         control: "trigger-absent",
         fires: stm.passes,
-        reaches: stm.chunks > 0,
-        correct: stm.chunkShareOfCovered !== null && stm.chunkShareOfCovered < 0.25 && omBefore !== null,
+        reaches: stm.records > 0,
+        correct: stm.records > 0 && omBefore !== null,
         on: digest(stm),
         off: digest(omBefore),
         counts: { stm, omBefore: omBefore ?? "worktree-missing" },
@@ -869,6 +829,36 @@ export const probes = [
     },
   },
 ];
+
+/**
+ * The original content each recalled page carries, by entry id: page headers (`[time] [entry] role (bytes a–b of N…):`)
+ * mark where a slice starts; slices of one entry are put in offset order and joined (plan 218.3 Task 4).
+ */
+export function originalPages(texts) {
+  const header = /^\[[^\]\n]+\] \[([^\]\n]+)\] \w+ \((?:bytes (\d+)–\d+ of \d+[^)\n]*|\d+ bytes[^)\n]*)\):$/gm;
+  const slices = new Map();
+  for (const text of texts) {
+    const marks = [...text.matchAll(header)];
+    for (const [index, mark] of marks.entries()) {
+      const start = mark.index + mark[0].length + 1;
+      const end = index + 1 < marks.length ? marks[index + 1].index - 1 : text.length;
+      const offset = Number(mark[2] ?? 0);
+      const byEntry = slices.get(mark[1]) ?? new Map();
+      // The last slice of a record's evidence may be followed by the line listing entries past the page.
+      byEntry.set(offset, text.slice(start, end).replace(/\n\[\d+ more source entr(?:y|ies) past this page[^\n]*\]$/, ""));
+      slices.set(mark[1], byEntry);
+    }
+  }
+  return new Map(
+    [...slices].map(([entry, byOffset]) => [
+      entry,
+      [...byOffset]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, slice]) => slice)
+        .join(""),
+    ]),
+  );
+}
 
 /** The events probe 2 recalls: the large tool result and the code read (`expected.recall`). */
 function h0Ids() {

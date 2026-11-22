@@ -1,17 +1,15 @@
 /**
  * Plan 218 Task 2: the WM pass gives verdicts on named STM records, incrementally (I6). It tombstones what it
- * processed (I2), moves chunk referrers from STM to the WM items that cite them (I3), and leaves records without a
- * verdict on the STM surface for the next pass.
+ * processed (I2) and leaves records without a verdict on the STM surface for the next pass. Items cite records by id;
+ * no chunk is kept (plan 218.3 Task 4).
  */
 import { it } from "bun:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import type { JsonValue, ModelClient, ProviderEvent, SessionContext, SessionEntry, SessionLog } from "@arnilo/prism";
 
 type ProviderRequest = Parameters<ModelClient["generate"]>[0];
 
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
-import { type ChunkStore, createChunkStoreHandle, createSqliteChunkStore, type PreparedChunk } from "../../chunks.js";
 import { resolveMemorySystemConfig } from "../config.js";
 import { observationalMemoryBlock } from "../context.js";
 import { createObservationalFlush } from "../flush.js";
@@ -76,6 +74,12 @@ function scripted(calls: readonly [string, Record<string, unknown>][], requests:
   };
 }
 
+const DEFAULT_SCOPE = (() => {
+  const prepared = prepareScope("1. Run the campaign suites\n2. Verify the retry fix", { maxBytes: 4_096, at: A.timestamp });
+  if (!prepared.ok) throw new Error("unreachable");
+  return prepared.scope;
+})();
+
 function harness(records: unknown[], client: ModelClient, config: Parameters<typeof resolveMemorySystemConfig>[0] = {}) {
   const data = structuredClone(records) as JsonValue[];
   const session = { id: "s", entries: async () => [] as SessionEntry[] } as unknown as SessionContext;
@@ -89,7 +93,13 @@ function harness(records: unknown[], client: ModelClient, config: Parameters<typ
     data,
     session,
     ledger: () => foldObservationalMemoryLedger(data),
-    deps: { log, readState: () => ({ enabled: true }), clientFor: () => client, onStatus: () => {} },
+    deps: {
+      log,
+      readState: () => ({ enabled: true }),
+      scopeFor: () => DEFAULT_SCOPE,
+      clientFor: () => client,
+      onStatus: () => {},
+    },
     flush: createObservationalFlush({
       log,
       config: resolveMemorySystemConfig({
@@ -98,6 +108,7 @@ function harness(records: unknown[], client: ModelClient, config: Parameters<typ
         ...config,
       }),
       readState: () => ({ enabled: true }),
+      scopeFor: () => DEFAULT_SCOPE,
       clientFor: () => client,
       onStatus: () => {},
     }),
@@ -199,36 +210,6 @@ it("processed_stm_is_tombstoned_and_recallable", async () => {
   assert.equal(recalled.state, "tombstoned");
   assert.match(recalled.text, /tombstoned: wm discard out-of-scope/);
   assert.deepEqual(activeObservations(h.ledger()), []);
-});
-
-it("chunk_cited_by_wm_survives_uncited_chunk_deleted", async () => {
-  const store: ChunkStore = await createSqliteChunkStore({ path: ":memory:" });
-  const chunk = (text: string, sourceEntryId: string): PreparedChunk => {
-    const sha256 = createHash("sha256").update(text).digest("hex");
-    return { id: sha256.slice(0, 24), sourceEntryId, sha256, bytes: Buffer.byteLength(text), text };
-  };
-  const kept = chunk("12 passed, 0 failed", "e-aa");
-  const dropped = chunk("README text", "e-dd");
-  const ref = ({ text: _text, ...rest }: PreparedChunk) => rest;
-  await store.put(kept, { kind: "stm", id: A.id, sessionId: "s" });
-  await store.put(dropped, { kind: "stm", id: D.id, sessionId: "s" });
-  const withChunk = { ...A, chunkRefs: [ref(kept)] };
-  const withOther = { ...D, chunkRefs: [ref(dropped)] };
-  const h = harness(
-    [recorded(withChunk, withOther)],
-    judgeClient([A, D], { keep: [{ id: A.id, reason: "result" }], discard: { finished: [D.id] } }),
-  );
-  const flush = createObservationalFlush({
-    ...h.deps,
-    config: resolveMemorySystemConfig({ wm: { triggerTokens: 1 }, rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" } }),
-    chunks: createChunkStoreHandle("memory", () => store),
-  });
-  await flush.flush(h.session);
-  const [event] = activeWmItems(h.ledger());
-  assert.deepEqual(event?.chunkRefs, [ref(kept)]);
-  assert.equal((await store.get(kept.id, "s"))?.text, kept.text, "the chunk a WM item cites survives");
-  assert.equal(await store.get(dropped.id, "s"), undefined, "the uncited chunk is deleted with its last referrer");
-  assert.equal(renderObservationalMemory([event!], []).includes(kept.text), false, "chunk text never renders");
 });
 
 it("wm_judge_reports_named_rejections", async () => {
@@ -474,36 +455,21 @@ it("wm_waits_for_new_records_after_an_empty_or_failed_attempt", async () => {
   assert.equal(calls, 3);
 });
 
-it("scope_change_rejudges_live_tombstones", async () => {
-  const store: ChunkStore = await createSqliteChunkStore({ path: ":memory:" });
-  const chunk = (text: string, sourceEntryId: string): PreparedChunk => {
-    const sha256 = createHash("sha256").update(text).digest("hex");
-    return { id: sha256.slice(0, 24), sourceEntryId, sha256, bytes: Buffer.byteLength(text), text };
-  };
-  const ref = ({ text: _text, ...rest }: PreparedChunk) => rest;
-  const live = chunk("baseline: 12 passed in 41 s", "e-aa");
-  const gone = chunk("README text", "e-dd");
-  await store.put(live, { kind: "stm", id: A.id, sessionId: "s" });
-  // A second referrer in this session (a WM item elsewhere cites the chunk), so it outlives A's discard.
-  await store.ref(live.id, { kind: "wm", id: "eeeeeeeeeeee", sessionId: "s" });
-  await store.put(gone, { kind: "stm", id: D.id, sessionId: "s" });
-  const withLive = { ...A, chunkRefs: [ref(live)] };
-  const withGone = { ...D, chunkRefs: [ref(gone)] };
+it("scope_change_rejudges_discarded_records", async () => {
+  // Plan 218.3 Task 4: a record's evidence is its cited entries on the branch, so every discarded record is offerable.
   const plain = record("ffffffffffff", "Timed the baseline run at 41 s");
   let spec: Parameters<typeof judgeClient>[1] = { discard: { finished: [A.id, D.id], "out-of-scope": [plain.id] } };
   const requests: ProviderRequest[] = [];
-  const client = judgeClient([withLive, withGone, plain], (prompt) => (typeof spec === "function" ? spec(prompt) : spec), requests);
-  const h = harness([recorded(withLive, withGone, plain)], client);
+  const client = judgeClient([A, D, plain], (prompt) => (typeof spec === "function" ? spec(prompt) : spec), requests);
+  const h = harness([recorded(A, D, plain)], client);
   const flush = createObservationalFlush({
     ...h.deps,
     config: resolveMemorySystemConfig({ wm: { triggerTokens: 1 }, rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" } }),
-    chunks: createChunkStoreHandle("memory", () => store),
   });
   await flush.flush(h.session);
   assert.deepEqual(activeObservations(h.ledger()), [], "all three discarded");
-  assert.equal(await store.get(gone.id, "s"), undefined, "D's chunk lost its last referrer");
 
-  // The re-plan: a new step needs the baseline result. The next pass is sent the discarded records whose chunks live.
+  // The re-plan: a new step needs the baseline result. The next pass is sent the discarded records.
   h.data.push({ type: SCOPE_SET, hash: "1111111111111111", bytes: 40, at: A.timestamp } as unknown as JsonValue);
   spec = {
     keep: [{ id: A.id, reason: "step 4 compares against the baseline" }],
@@ -513,24 +479,22 @@ it("scope_change_rejudges_live_tombstones", async () => {
   requests.length = 0;
   await flush.flush(h.session, { forceWm: true });
   const prompt = promptText(requests[0]!);
-  assert.match(prompt, /Earlier discarded records \(2; the episode scope changed\)/);
+  assert.match(prompt, /Earlier discarded records \(3; the episode scope changed\)/);
   assert.match(prompt, /\[j1\][^\n]*Timed the baseline run/);
-  assert.match(prompt, /\[j2\][^\n]*Ran the campaign suite one/);
-  assert.equal(prompt.includes(D.description), false, "a record whose chunks were deleted is not offered");
+  assert.ok(prompt.includes(D.description), "every discarded record is offered");
+  assert.match(prompt, /Ran the campaign suite one/);
+  assert.doesNotMatch(prompt, /chunks?:/, "no chunk marker");
   // Only keep applies to re-judged records: a discard or summary naming one names no record of the batch.
   assert.match(replies(requests[1]!).join("\n"), /unknown_id.*unknown_id/s, "only keep applies to re-judged records");
   const recordedPass = h.data.filter((value) => (value as { type?: string }).type === WM_RECORDED).at(-1) as unknown as {
-    rejudge: { scopeHash: string; offered: number; kept: string[]; chunkDropped: string[] };
+    rejudge: { scopeHash: string; offered: number; kept: string[] };
     processedIds?: string[];
   };
-  assert.deepEqual(recordedPass.rejudge, { scopeHash: "1111111111111111", offered: 2, kept: [A.id], chunkDropped: [D.id] });
+  assert.deepEqual(recordedPass.rejudge, { scopeHash: "1111111111111111", offered: 3, kept: [A.id] });
   assert.equal(recordedPass.processedIds, undefined, "a kept-back record is not processed again");
   const [event] = activeWmItems(h.ledger());
   assert.deepEqual(event?.citedIds, [A.id]);
-  assert.deepEqual(event?.chunkRefs, [ref(live)]);
   assert.match(h.ledger().tombstones?.[A.id]?.reason ?? "", /^wm discard finished$/, "the record stays tombstoned");
-  await store.unref(live.id, { kind: "wm", id: "eeeeeeeeeeee", sessionId: "s" });
-  assert.equal((await store.get(live.id, "s"))?.text, live.text, "the new WM item holds the chunk");
 
   // Re-judged once: the next pass, and the same scope set again, offer nothing.
   requests.length = 0;

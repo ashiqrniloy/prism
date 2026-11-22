@@ -1,0 +1,9 @@
+{
+  "name": "better-sqlite3",
+  "version": "12.6.2-bun-shim",
+  "private": true,
+  "description": "Plan 218.3 Task 10: better-sqlite3's API over bun:sqlite, so Mem0's default SQLite vector and history stores run under Bun unchanged (native better-sqlite3 has no build for this runtime).",
+  "type": "module",
+  "main": "index.js",
+  "exports": { ".": "./index.js" }
+}

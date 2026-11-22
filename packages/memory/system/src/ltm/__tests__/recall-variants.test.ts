@@ -38,7 +38,9 @@ describe("plan 210 Task 3.1 recall variants", () => {
 
   it("recall_variant_fields_default_off_and_fail_closed_on_unknown_values", () => {
     const base = resolveMemoryFabricConfig({});
-    assert.deepEqual(base.recall, { expansion: false, gather: false });
+    assert.deepEqual(base.recall, { expansion: false, gather: false, window: 32 });
+    assert.equal(resolveMemoryFabricConfig({ recall: { window: 200 } }).recall.window, 200);
+    assert.throws(() => resolveMemoryFabricConfig({ recall: { window: 0 } }), /recall\.window/);
     assert.throws(() => resolveMemoryFabricConfig({ recall: { expansion: "yes" as never } }), /recall\.expansion/);
   });
   // `inject.cardExcerpt`: a pointer card shows the first 120 characters of the user half. `query` centres the same width

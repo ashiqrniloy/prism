@@ -4,7 +4,6 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sourceFingerprint } from "./acceptance.mjs";
-import { createChunkMeter, meteredChunkStore } from "./chunk-meter.mjs";
 import { memoryModelGateVerdict } from "./robustness.mjs";
 import {
   assertM1Gate,
@@ -288,28 +287,4 @@ test("m1_verdicts_computed_from_memory_model_criteria_only", async () => {
     () => memoryModelGateVerdict("M-1", { ...evidence, memoryModelCriteriaHash: "0".repeat(64) }),
     /different memory-model criteria/,
   );
-});
-
-test("chunk_meter_counts_stored_bytes_and_peak", async () => {
-  const deleted = new Set();
-  const inner = {
-    put: async () => {},
-    ref: async () => true,
-    unref: async (id) => ({ deleted: !deleted.has(id) && deleted.add(id) && true }),
-    apply: async (ops) => ({ deleted: ops.filter((op) => op.op === "unref").map((op) => op.id) }),
-    get: async () => undefined,
-    list: async () => [],
-  };
-  const meter = createChunkMeter();
-  const store = meteredChunkStore(inner, meter);
-  const by = { kind: "stm", id: "r", sessionId: "s" };
-  await store.apply([
-    { op: "put", chunk: { id: "a", bytes: 100 }, by },
-    { op: "put", chunk: { id: "b", bytes: 50 }, by },
-    { op: "put", chunk: { id: "a", bytes: 100 }, by: { ...by, id: "r2" } },
-  ]);
-  assert.deepEqual([meter.bytes, meter.peakBytes, meter.chunks], [150, 150, 2]);
-  await store.apply([{ op: "unref", id: "a", by }]);
-  await store.unref("b", by);
-  assert.deepEqual([meter.bytes, meter.peakBytes, meter.chunks, meter.deletes], [0, 150, 0, 2]);
 });

@@ -6,7 +6,7 @@
  * the `<episode_scope>` block, the task state, the target, the salience list and the record lines — and follows the
  * scope: a record a remaining plan step reads (`expected.laterSteps`, `expected.replan`) is kept with `neededLater`,
  * protected records are kept, the rest is summarised to the stated target or discarded. Everything between the scripts
- * is product code: triggers, batching, protections, the verdict tools, tombstones, chunk referrers, re-judgment, the
+ * is product code: triggers, batching, protections, the verdict tools, tombstones, re-judgment, the
  * ledger and the render.
  *
  *   timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only wm
@@ -52,8 +52,8 @@ function scopeSetter({ injection = false, replan = true } = {}) {
 
 // Plan 218.2 Task 5: the prompt names records, items and re-judged records by ordinal (`r3`, `w1`, `j2`), not by id.
 const RECORD_LINE =
-  /^- \[(r[0-9]+)\] (\S+) (.+?)(?: ×(\d+))? \((low|medium|high|critical)\)(?: \[chunks: [^\]]+\])?(?: salient: ([\w, ]+?))?(?: protected: (\w+))?: (.*)$/;
-const REJUDGE_LINE = /^- \[(j[0-9]+)\] (\S+) (\w+) \((low|medium|high|critical)\)(?: \[chunks: \d+\])?: (.*)$/;
+  /^- \[(r[0-9]+)\] (\S+) (.+?)(?: ×(\d+))? \((low|medium|high|critical)\)(?: salient: ([\w, ]+?))?(?: protected: (\w+))?: (.*)$/;
+const REJUDGE_LINE = /^- \[(j[0-9]+)\] (\S+) (\w+) \((low|medium|high|critical)\): (.*)$/;
 const ITEM_LINE = /^- \[(w[0-9]+)\] (event|summary|fact) \((low|medium|high|critical)\) cites ([^:]*): (.*)$/;
 
 const recordOf = (m) => ({
@@ -593,14 +593,12 @@ export const probes = [
     },
   },
   {
-    // Probe 6: after the re-plan, re-judgment brings back an earlier-discarded record the new step needs (no chunks), and
-    // reports chunk dropped for one whose chunk died with its discard.
+    // Probe 6: after the re-plan, re-judgment brings back an earlier-discarded record the new step needs. Plan 218.3 Task 4:
+    // evidence lives in the session store, so the record whose chunk once died with its discard is offered too.
     id: "wm.rejudge",
     async run() {
-      const memory = await import("@arnilo/prism-memory-system");
       const arm = async (rejudgeTokens) => {
-        const store = await memory.createSqliteChunkStore({ path: ":memory:" });
-        const h = await replayWm({ chunkStore: store, config: { wm: { rejudgeTokens } } });
+        const h = await replayWm({ config: { wm: { rejudgeTokens } } });
         try {
           const ledger = await h.ledger();
           const fx = h.fx;
@@ -617,7 +615,12 @@ export const probes = [
             restored: rejudge?.kept.includes(restored?.id) ?? false,
             restoredActive: activeItems(ledger).some((item) => item.kind === "event" && item.citedIds.includes(restored?.id)),
             restoredNeededLater: activeItems(ledger).find((item) => item.citedIds.includes(restored?.id))?.neededLater ?? null,
-            chunkDropped: rejudge?.chunkDropped.includes(dropped?.id) ?? false,
+            droppedOffered: h.wmPasses().some(
+              (request) =>
+                receivedText({ messages: JSON.parse(request.text).messages.filter((message) => message.role === "user") })
+                  .split("## Earlier discarded records")[1]
+                  ?.includes(dropped?.description ?? "\u0000") ?? false,
+            ),
             rejudgePrompts: h
               .wmPasses()
               // Re-judged records are shown as `j` ordinals: find the restored one by its description.
@@ -631,7 +634,6 @@ export const probes = [
           };
         } finally {
           await h.close();
-          store.close();
         }
       };
       const on = await arm(8_000);
@@ -639,21 +641,26 @@ export const probes = [
       return {
         surface: "ledger",
         property:
-          "after a scope change that adds a step needing an earlier-discarded record, the next WM pass is offered it and keeps it back into WM; a discarded record whose chunk died is reported as chunk dropped",
+          "after a scope change that adds a step needing an earlier-discarded record, the next WM pass is offered it and keeps it back into WM; every discarded record is offerable (its evidence stays in the session store)",
         fires: on.offered,
         reaches: on.restoredActive !== off.restoredActive,
         correct:
           on.discardedBefore.every(Boolean) &&
           on.restored &&
           on.restoredActive &&
-          on.chunkDropped &&
+          on.droppedOffered &&
           on.restoredNeededLater === `step ${longSession().expected.replan.step}` &&
           on.rejudgePrompts === 1 &&
           !off.restoredActive &&
           off.rejudgePrompts === 0,
         on: digest(on),
         off: digest(off),
-        counts: { offered: on.offered, restored: on.restored, chunkDropped: on.chunkDropped, restoredWithoutRejudge: off.restoredActive },
+        counts: {
+          offered: on.offered,
+          restored: on.restored,
+          droppedOffered: on.droppedOffered,
+          restoredWithoutRejudge: off.restoredActive,
+        },
       };
     },
   },
@@ -711,47 +718,36 @@ export const probes = [
     },
   },
   {
-    // Probe 8 (I2-I3): with WM on, only referrer removal deletes chunks; every chunk an active WM item cites stays live.
-    id: "wm.referrer-delete",
+    // Probe 8 (plan 218.3 Task 4): a WM item's evidence is its cited records' source entries, still on the branch after
+    // those records' tombstones; nothing is copied or deleted.
+    id: "wm.evidence-readable",
     async run() {
-      const memory = await import("@arnilo/prism-memory-system");
-      const store = await memory.createSqliteChunkStore({ path: ":memory:" });
-      const deletes = [];
-      const unrefDeleted = [];
-      const realDelete = store.delete.bind(store);
-      store.delete = (id) => {
-        deletes.push(id);
-        return realDelete(id);
-      };
-      const realApply = store.apply.bind(store);
-      store.apply = async (ops) => {
-        const result = await realApply(ops);
-        unrefDeleted.push(...result.deleted);
-        return result;
-      };
-      const h = await replayWm({ chunkStore: store });
+      const h = await replayWm({});
       try {
         const ledger = await h.ledger();
         const items = activeItems(ledger);
-        const cited = new Set(items.flatMap((item) => (item.chunkRefs ?? []).map((ref) => ref.id)));
-        const live = new Set((await store.list(h.session.id)).map((chunk) => chunk.id));
-        const citedDead = [...cited].filter((id) => !live.has(id));
-        const deletedButCited = unrefDeleted.filter((id) => cited.has(id));
+        const byId = new Map(ledger.observations.map((record) => [record.id, record]));
+        const cited = items.flatMap((item) => item.citedIds.flatMap((id) => byId.get(id) ?? []));
+        const tombstoned = cited.filter((record) => ledger.tombstones?.[record.id]);
+        const ids = new Set((await h.session.entries()).map((entry) => entry.id));
+        const unreadable = cited.flatMap((record) => record.sourceEntryIds.filter((id) => !ids.has(id)));
         return {
-          surface: "chunk-store",
-          property:
-            "a chunk is deleted only when its last referrer goes; a chunk an active WM item cites survives its STM record's tombstone",
-          fires: unrefDeleted.length,
-          reaches: cited.size > 0 && unrefDeleted.length > 0,
-          correct:
-            digest([...deletes].sort()) === digest([...unrefDeleted].sort()) && citedDead.length === 0 && deletedButCited.length === 0,
-          on: digest({ deletes: deletes.length, cited: cited.size }),
-          off: digest({ citedDead: citedDead.length }),
-          counts: { deletes: deletes.length, unrefDeletes: unrefDeleted.length, wmCitedChunks: cited.size, citedDead: citedDead.length },
+          surface: "ledger",
+          property: "every source entry an active WM item's cited records name stays on the branch after their tombstones",
+          fires: cited.length,
+          reaches: tombstoned.length > 0,
+          correct: cited.length > 0 && unreadable.length === 0,
+          on: digest({ cited: cited.length, tombstoned: tombstoned.length }),
+          off: digest({ unreadable: unreadable.length }),
+          counts: {
+            items: items.length,
+            citedRecords: cited.length,
+            tombstonedCited: tombstoned.length,
+            unreadableSources: unreadable.length,
+          },
         };
       } finally {
         await h.close();
-        store.close();
       }
     },
   },
@@ -760,7 +756,7 @@ export const probes = [
     // and WM keeps the mark.
     id: "wm.attribution",
     async run() {
-      const h = await replayWm({ turns: ["t0", "t7", "t7b", "t7c"] });
+      const h = await replayWm({ turns: ["t0", "t1", "t7", "t7b", "t7c"] });
       try {
         const ledger = await h.ledger();
         const proposal = recordByEvent(ledger, h.fx, h.fx.expected.attribution.proposal);

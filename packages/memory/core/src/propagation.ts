@@ -18,11 +18,11 @@ import { assertNotAborted, requireNonEmptyString, requireScope } from "./util.js
 export const DELETION_REASON: MemoryInvalidationReason = "forgotten";
 
 /**
- * Privileged delete ceiling. One propagation may mark far more than the interactive
- * 256-edge walk; 4096 keeps a single-pass, fail-closed bound (over the cap the whole
- * delete rejects, so nothing is left half-tombstoned).
+ * Default privileged delete bound (`createDeletionPropagator({ maxEdges })`). One propagation may mark far more than
+ * the interactive 256-edge walk; the bound keeps a single-pass, fail-closed delete (over it the whole delete rejects,
+ * so nothing is left half-tombstoned). The host's value is the cap.
  */
-export const HARD_PROPAGATION_EDGES = 4_096;
+export const DEFAULT_PROPAGATION_EDGES = 4_096;
 
 /** Store contract: lineage invalidation plus an optional atomic transaction wrapper. */
 export interface DeletionPropagationStore extends VectorStore {
@@ -71,6 +71,8 @@ export interface DeletionPropagatorOptions {
   readonly handlers?: readonly DeletionPropagationHandler[];
   /** Tombstone reason; default `forgotten`. */
   readonly reason?: MemoryInvalidationReason;
+  /** Ids one propagation may mark; over it the delete rejects whole. Default {@link DEFAULT_PROPAGATION_EDGES}. */
+  readonly maxEdges?: number;
 }
 
 export interface DeletionPropagator {
@@ -95,6 +97,8 @@ export function createDeletionPropagator(options: DeletionPropagatorOptions): De
     throw new MemoryScopeError("deletion authorization tenantId does not match the propagation scope");
   }
   const reason = options.reason ?? DELETION_REASON;
+  const maxEdges = options.maxEdges ?? DEFAULT_PROPAGATION_EDGES;
+  if (!Number.isSafeInteger(maxEdges) || maxEdges < 1) throw new MemoryValidationError("maxEdges must be a positive integer");
   const handlers = new Map<string, DeletionPropagationHandler>();
 
   function register(handler: DeletionPropagationHandler): void {
@@ -131,7 +135,7 @@ export function createDeletionPropagator(options: DeletionPropagatorOptions): De
     }
     const records = await getByThread.call(store, scope);
     assertNotAborted(signal);
-    const ids = collectInvalidationIds(records, [sourceId], { maxEdges: HARD_PROPAGATION_EDGES });
+    const ids = collectInvalidationIds(records, [sourceId], { maxEdges });
     const at = new Date().toISOString();
     const entries = ids.map((id) => ({
       id,
