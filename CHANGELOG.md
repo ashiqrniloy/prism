@@ -1,6 +1,6 @@
 ## [Unreleased]
 
-## [0.14.0] - 2026-11-22
+## [0.14.0] - 2026-11-23
 
 - `@arnilo/prism-extensions/compaction`: an empty summary (a reasoning model that spent its output thinking) is retried once with thinking off before falling back to the kernel default (plan 240 Task 10).
 

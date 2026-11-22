@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.14.0] - 2026-11-22
+## [0.14.0] - 2026-11-23
 
 Requires `@arnilo/prism` `^0.14.0` (kernel API level 2). The 0.14.0 changes to this bundle are listed in the root
 [CHANGELOG](../../CHANGELOG.md) `[0.14.0]` section:

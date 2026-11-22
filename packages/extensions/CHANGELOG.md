@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.14.0] - 2026-11-22
+## [0.14.0] - 2026-11-23
 
 - **`compaction`: an empty summary is asked again with thinking off (plan 240 Task 10).** A reasoning summary model that ignores a low effort can spend its whole output thinking and answer no text. The summary call is now retried once with `thinkingLevel: "none"`, as session memory's STM worker is, and only a second empty answer falls back to the kernel default. Seen live on opencode-go/hy4-flash-free: before, most compactions fell back; after, every compaction was an LLM summary.
 

@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.14.0] - 2026-11-22
+## [0.14.0] - 2026-11-23
 
 - Consolidate eleven providers into `@arnilo/prism-ai`, with one import per provider.
 
