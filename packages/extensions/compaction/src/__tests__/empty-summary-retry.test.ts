@@ -52,7 +52,7 @@ describe("LLM compaction retries an empty summary with thinking off (plan 240 Ta
   it("two_empty_answers_still_fail_so_the_package_falls_back", async () => {
     const requests: ProviderRequest[] = [];
     const compactor = createLlmCompactor({ clientFor: summaryClient(provider([""], requests), model), keepRecentTokens: 0 });
-    await assert.rejects(compactor.compact({ sessionId: "s1", entries }), /Summarization failed: empty response/);
+    await assert.rejects(async () => compactor.compact({ sessionId: "s1", entries }), /Summarization failed: empty response/);
     assert.equal(requests.length, 2, "no third call");
   });
 });
