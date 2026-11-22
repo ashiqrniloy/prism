@@ -41,9 +41,11 @@ if (invokedDirectly) {
   Database = (await import("bun:sqlite")).Database;
 }
 
-// 011_evaluations: the two tables this drill drops to roll the schema back one version.
-const LAST_STEP = "011_evaluations";
-const LAST_STEP_TABLES = ["prism_evaluations", "prism_experiment_reports"];
+// 013_session_entry_seq (plan 230 Task 4): PostgreSQL adds `prism_session_entries.seq` (backfilled in the old order) and
+// its `(session_id, seq)` index; SQLite records the step only. The drill drops both to roll the schema back one version.
+// The current store orders by `seq`, so at the previous shape the drill checks the data with raw SQL, then re-applies.
+const LAST_STEP = "013_session_entry_seq";
+const LAST_STEP_INDEX = "prism_session_entries_session_seq_idx";
 
 function parseArgs(argv) {
   const args = { selfTest: false, url: undefined };
@@ -98,22 +100,37 @@ async function drillPostgres(url) {
     assert.equal((await store.list(sessionId)).length, 2, "seed must land");
     mark("seed");
 
-    // Downgrade one version: inverse of 011's additive DDL + its history row.
-    for (const table of LAST_STEP_TABLES) await pool.query(`DROP TABLE IF EXISTS ${schema}.${table}`);
+    const before = (await store.list(sessionId)).map((entry) => entry.id);
+
+    // Downgrade one version: inverse of 013's DDL (the index, the column) + its history row.
+    await pool.query(`DROP INDEX IF EXISTS ${schema}.${LAST_STEP_INDEX}`);
+    await pool.query(`ALTER TABLE ${schema}.prism_session_entries DROP COLUMN IF EXISTS seq`);
     await pool.query(`DELETE FROM ${schema}.prism_migrations WHERE name = '${LAST_STEP}'`);
     mark("downgrade-last");
 
-    // Verify schema compat at the previous shape: the store works and data survived.
-    const downgraded = await createPostgresPersistence({ pool, schema, skipMigrations: true }); // previous shape by design
-    await downgraded.append({ ...seedEntries("x")[0], id: "drill-post", sessionId, timestamp: "2026-01-01T00:00:02.000Z" });
-    const survived = await downgraded.list(sessionId);
-    assert.equal(survived.length, 3, "seeded durable data must survive the downgrade");
-    mark("verify-compat");
+    // At the previous shape the seeded rows survive (raw SQL: the current store reads `seq`).
+    const raw = await pool.query(`SELECT count(*)::int AS n FROM ${schema}.prism_session_entries WHERE session_id = $1`, [sessionId]);
+    assert.equal(raw.rows[0].n, 2, "seeded durable data must survive the downgrade");
+    mark("verify-previous-shape");
 
+    // Re-apply backfills `seq` in the old order; the store works and keeps the order.
     const reapplied = await pgMigrations.applyPostgresMigrations(pool, schema);
     assert.equal(reapplied.length, expectedStepCount, "re-apply must restore the contract");
     await pgMigrations.verifyMigrationIdempotency(pool, schema);
-    assert.equal((await downgraded.list(sessionId)).length, 3, "re-apply must not touch data");
+    const restored = await createPostgresPersistence({ pool, schema, skipMigrations: true });
+    assert.deepEqual(
+      (await restored.list(sessionId)).map((entry) => entry.id),
+      before,
+      "re-apply must keep the data and its order",
+    );
+    await restored.append({
+      ...seedEntries("x")[0],
+      id: "drill-post",
+      sessionId,
+      parentId: before.at(-1),
+      timestamp: "2026-01-01T00:00:02.000Z",
+    });
+    assert.equal((await restored.list(sessionId)).length, 3, "the store must work after re-apply");
     mark("re-apply");
 
     // Breakage canary: tamper a checksum row; the runner must fail closed.
@@ -143,9 +160,8 @@ async function drillSqlite() {
     store.close();
     steps.push("apply+seed");
 
-    // Downgrade one version (inverse of 011) on the raw handle.
+    // Downgrade one version (inverse of 013, a recorded no-op on SQLite) on the raw handle.
     const raw = new Database(filename);
-    for (const table of LAST_STEP_TABLES) raw.exec(`DROP TABLE IF EXISTS ${table}`);
     raw.prepare("DELETE FROM prism_migrations WHERE name = ?").run(LAST_STEP);
     raw.close();
     steps.push("downgrade-last");
