@@ -1,5 +1,6 @@
 import type { JsonObject, ModelProvider, ProviderEvent, ProviderRequest, Usage } from "../contracts.js";
 import type { SecretSource } from "./provider-package.js";
+import { SECRET_SOURCE_FOR_REQUEST } from "./secret-source.js";
 import { providerError } from "../models/events.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "./codecs/anthropic-messages.js";
@@ -80,7 +81,13 @@ export async function resolveProviderApiKey(
   if (resolveCustom && request) {
     return resolveCustom(request);
   }
-  return source?.();
+  const forRequest =
+    request && source
+      ? (source as { readonly [SECRET_SOURCE_FOR_REQUEST]?: (request: ProviderRequest) => Promise<string | undefined> })[
+          SECRET_SOURCE_FOR_REQUEST
+        ]
+      : undefined;
+  return forRequest ? forRequest(request as ProviderRequest) : source?.();
 }
 
 /**

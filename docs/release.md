@@ -264,10 +264,10 @@ The inventory and the provider adapters below are generated from the workspace m
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.14.0 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-ai` | 0.14.0 | capability |
+| `@arnilo/prism` | 0.14.1 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-ai` | 0.14.1 | capability |
 | `@arnilo/prism-extensions` | 0.14.0 | capability |
-| `@arnilo/prism-hosts` | 0.14.0 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
+| `@arnilo/prism-hosts` | 0.14.1 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
 | `@arnilo/prism-knowledge` | 0.14.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range |
 | `@arnilo/prism-memory-system` | 0.14.0 | capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools |
 | `@arnilo/prism-tools` | 0.14.0 | capability |
@@ -280,17 +280,17 @@ All eleven provider subpaths ship in `@arnilo/prism-ai` at 0.13.0, including Com
 
 | adapter package | version |
 | --- | --- |
-| `@arnilo/prism-ai/commandcode` | 0.14.0 |
-| `@arnilo/prism-ai/hyper` | 0.14.0 |
-| `@arnilo/prism-ai/kilo` | 0.14.0 |
-| `@arnilo/prism-ai/laya` | 0.14.0 |
-| `@arnilo/prism-ai/liquid` | 0.14.0 |
-| `@arnilo/prism-ai/litellm` | 0.14.0 |
-| `@arnilo/prism-ai/ollama-cloud` | 0.14.0 |
-| `@arnilo/prism-ai/openai-codex` | 0.14.0 |
-| `@arnilo/prism-ai/opencode-go` | 0.14.0 |
-| `@arnilo/prism-ai/openrouter` | 0.14.0 |
-| `@arnilo/prism-ai/typesafe` | 0.14.0 |
+| `@arnilo/prism-ai/commandcode` | 0.14.1 |
+| `@arnilo/prism-ai/hyper` | 0.14.1 |
+| `@arnilo/prism-ai/kilo` | 0.14.1 |
+| `@arnilo/prism-ai/laya` | 0.14.1 |
+| `@arnilo/prism-ai/liquid` | 0.14.1 |
+| `@arnilo/prism-ai/litellm` | 0.14.1 |
+| `@arnilo/prism-ai/ollama-cloud` | 0.14.1 |
+| `@arnilo/prism-ai/openai-codex` | 0.14.1 |
+| `@arnilo/prism-ai/opencode-go` | 0.14.1 |
+| `@arnilo/prism-ai/openrouter` | 0.14.1 |
+| `@arnilo/prism-ai/typesafe` | 0.14.1 |
 <!-- generated:package-truth:providers end -->
 
 ## Verify a published package

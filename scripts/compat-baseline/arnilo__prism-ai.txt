@@ -212,7 +212,7 @@
 ./openai-codex OpenAICodexAuthError	class OpenAICodexAuthError extends Error { constructor(code: string, message: string); readonly code: string; }
 ./openai-codex OpenAICodexAuthMethod	type OpenAICodexAuthMethod = Extract<AuthMethod, { kind: "oauth"; }>
 ./openai-codex OpenAICodexCredentialRecord	interface OpenAICodexCredentialRecord { readonly access: string; readonly clientId: string; readonly earliestRefreshAt?: number; readonly expires: number; readonly hostId: string; readonly idToken?: string; readonly refresh: string; readonly scope: string; readonly sub?: string; readonly v: 1; }
-./openai-codex OpenAICodexCredentialSlot	interface OpenAICodexCredentialSlot { delete?(ref: string): Promise<void>; resolve(ref: string): Promise<Secret | undefined>; store?(ref: string, secret: Secret): Promise<void>; }
+./openai-codex OpenAICodexCredentialSlot	interface OpenAICodexCredentialSlot { delete?(ref: string): Promise<void>; resolve(ref: string, request?: ProviderRequest): Promise<Secret | undefined>; store?(ref: string, secret: Secret): Promise<void>; }
 ./openai-codex OpenAICodexModelConfig	interface OpenAICodexModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: string; readonly reasoning?: JsonObject; }; readonly provider?: "openai-codex"; }
 ./openai-codex OpenAICodexModelEntry	interface OpenAICodexModelEntry { readonly auto_compact_token_limit?: number | null; readonly context_window?: number; readonly default_reasoning_level?: string; readonly description?: string; readonly display_name?: string; readonly input_modalities?: readonly string[]; readonly max_context_window?: number; readonly slug: string; readonly supported_in_api?: boolean; readonly supported_reasoning_levels?: readonly (string | { readonly effort?: string; })[]; readonly supports_parallel_tool_calls?: boolean; readonly supports_reasoning_summary_parameter?: boolean; readonly visibility?: string; }
 ./openai-codex OpenAICodexOAuthConfig	interface OpenAICodexOAuthConfig { readonly appName?: string; readonly callback?: "listen" | "paste"; readonly callbackPort?: number; readonly credential: string; readonly fetch?: typeof fetch; readonly now?: () => number; readonly signal?: AbortSignal; readonly slot?: OpenAICodexCredentialSlot; }
@@ -234,7 +234,7 @@
 ./openai-codex listOpenAICodexModels	function listOpenAICodexModels(options?: ListOpenAICodexModelsOptions): Promise<readonly ModelConfig[]>
 ./openai-codex mapOpenAICodexModel	function mapOpenAICodexModel(entry: OpenAICodexModelEntry, provider?: string): ModelConfig
 ./openai-codex openAICodexAffinity	function openAICodexAffinity(request: ProviderRequest): Record<string, string>
-./openai-codex openAICodexApiKey	function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal) => Promise<string>
+./openai-codex openAICodexApiKey	function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal, request?: ProviderRequest) => Promise<string>
 ./openai-codex openAICodexAuth	function openAICodexAuth(config: OpenAICodexOAuthConfig): OpenAICodexAuthMethod
 ./openai-codex openAICodexErrorCode	function openAICodexErrorCode(bodyText: string): string | undefined
 ./openai-codex openAICodexHttpError	function openAICodexHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error

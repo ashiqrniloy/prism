@@ -220,6 +220,12 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
      */
     resolve(ref: string): Promise<Secret | undefined>;
     /**
+     * The same, for a model call: pass the `request` the provider's `generate` received (or a spread copy). When the
+     * kernel built it, the slot's `CredentialContext` carries its `sessionId` and `principal`. An object a package
+     * built gives the context only the package, so a package cannot name a session or principal.
+     */
+    resolve(ref: string, request: ProviderRequest | undefined): Promise<Secret | undefined>;
+    /**
      * Writes a ref through the `credentials` slot, for a package that declares `credentials:write` as
      * well as `credentials`; without that capability both members are `undefined` rather than throwing.
      * `env:` refs are never writable, and a slot without `store` fails closed. The written value joins

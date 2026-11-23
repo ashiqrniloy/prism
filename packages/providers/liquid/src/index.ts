@@ -12,7 +12,7 @@
  * by llama.cpp's `llama-server`). They stay separate because the hosted provider requires a key and the
  * local one must work without one.
  */
-import type { JsonSchema, PackageInstance } from "@arnilo/prism";
+import type { JsonSchema, PackageInstance, ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -81,7 +81,7 @@ function definitionFor(options: LiquidProviderPackageOptions) {
     description: "Liquid provider package for Prism.",
     config: configSchema,
     setup: async (prism) => {
-      const resolve = (target: string) => prism.credentials.resolve(target);
+      const resolve = (target: string, request?: ProviderRequest) => prism.credentials.resolve(target, request);
       const warn = (message: string) => prism.status.note("warn", message);
 
       if (prism.config.hosted !== false) {

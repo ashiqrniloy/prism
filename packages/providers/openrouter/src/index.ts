@@ -1,4 +1,4 @@
-import { type JsonSchema, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { type JsonSchema, type ModelConfig, type PackageInstance, type ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -74,7 +74,7 @@ function definitionFor(options: OpenRouterProviderPackageOptions) {
       }
       const id = options.id ?? "openrouter";
       const ref = prism.config.apiKey ?? OPENROUTER_DEFAULT_API_KEY_REF;
-      const resolve = (target: string) => prism.credentials.resolve(target);
+      const resolve = (target: string, request?: ProviderRequest) => prism.credentials.resolve(target, request);
       const apiKey = refSource(resolve, ref);
       if ((await resolve(ref)) === undefined) prism.status.note("warn", `openrouter: no API key at ${ref}`);
       const provider = createOpenRouterProvider({ ...prism.config, apiKey, id, fetch: options.fetch });

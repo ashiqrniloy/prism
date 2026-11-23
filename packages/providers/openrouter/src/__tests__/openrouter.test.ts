@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createAgent, type JsonObject, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
+import { createAgent, type CredentialContext, type JsonObject, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
 import {
   applyThinkingLevelForModel,
   collectProviderEvents,
@@ -227,6 +227,38 @@ describe("OpenRouter", () => {
       const result = await (await agent.session()).run("hi");
       assert.equal(result.status, "failed");
       if (result.status === "failed") assert.equal(result.error?.code, "credential_unavailable");
+    } finally {
+      await agent.dispose();
+    }
+  });
+  it("openrouter_resolves_its_key_with_the_run_session_and_principal", async () => {
+    const seen: CredentialContext[] = [];
+    const principal = { kind: "user", id: "u-1" };
+    const body = `data: ${JSON.stringify({ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`;
+    const agent = await createAgent({
+      model,
+      principal,
+      slots: {
+        credentials: {
+          resolve: (_ref: string, ctx: CredentialContext) => {
+            seen.push(ctx);
+            return { type: "api_key", value: "sk-or-test" };
+          },
+        },
+      },
+      packages: [
+        openrouter({
+          apiKey: "env:OPENROUTER_API_KEY",
+          models: [model],
+          fetch: (async () => new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } })) as never,
+        }),
+      ],
+    });
+    try {
+      const session = await agent.session();
+      seen.length = 0; // the setup probe has no request, so no session
+      assert.equal((await session.run("hi")).status, "completed");
+      assert.deepEqual(seen, [{ package: "@arnilo/prism-ai/openrouter", sessionId: session.id, principal }]);
     } finally {
       await agent.dispose();
     }

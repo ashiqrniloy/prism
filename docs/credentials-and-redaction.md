@@ -26,17 +26,39 @@ interface CredentialResolver {
   store?(ref: string, secret: Secret, ctx: CredentialContext): Promise<void> | void;
   delete?(ref: string, ctx: CredentialContext): Promise<void> | void;
 }
+interface CredentialContext {
+  readonly package?: string;      // the package asking, when the kernel knows it
+  readonly signal?: AbortSignal;
+  readonly sessionId?: string;    // kernel-set: the session of the model call (0.14.1)
+  readonly principal?: Principal; // kernel-set: that call's host principal (0.14.1)
+}
 createEnvRefCredentialResolver(env?: Readonly<Record<string, string | undefined>>): CredentialResolver
 
 type SecretSource = () => Promise<string | undefined>; // @arnilo/prism/provider-kit
-refSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string>
-optionalRefSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined>
+refSource(resolve: (ref: string, request?: ProviderRequest) => Promise<Secret | undefined>, ref: string): () => Promise<string>
+optionalRefSource(resolve: (ref: string, request?: ProviderRequest) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined>
+PackageAPI["credentials"].resolve(ref: string, request?: ProviderRequest): Promise<Secret | undefined>
 
 redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T
 errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): ErrorInfo
 ```
 
 `secrets` must be the exact values to redact. Undefined and empty values are ignored.
+
+**Who a credential is for.** `sessionId` and `principal` are set by the kernel, never by a package. They are present when a credential is resolved for a model call the kernel is serving:
+
+- the built-in `openai-compatible` provider resolves `ModelSpec.credential` with the context of the request it serves;
+- a package provider passes the `request` its `generate` received to `credentials.resolve(ref, request)`. A `refSource` / `optionalRefSource` built from such a `resolve` does this by itself under `createRoutedProvider`;
+- a package's `models.client(...).generate(..., { session })` call carries that session's id and principal.
+
+The kernel marks each request it hands a provider with a private token. A spread copy of the request keeps the token, so a provider that adds headers still resolves for its caller. An object the package builds has no token, whatever its `options.sessionId` says, and its context holds only `package`. `store` and `delete` keep the `{ package }` context. The principal is the run's (`RunOptions.principal`), else the agent's (`AgentConfig.principal`). It stays opaque and host-asserted: the kernel never verifies it. Use it for attribution, or to pick a credential that belongs to one user, such as an OAuth grant. Do not use it as the boundary between tenants; bind one resolver per tenant instead.
+
+The token lives only while its call's stream is open. Once the stream ends, throws, or is closed early, the kernel revokes it, so a request (or its token) that a package kept names no session afterwards.
+
+Two limits apply:
+
+- **Memory workers.** The `@arnilo/prism-memory-system` workers (STM, WM, the observation dropper and LTM extraction, all through `runMemoryWorkerLoop`) call `models.client` without `{ session }`, so a credential they resolve carries `{ package }` only. Passing the session would also charge worker tokens to the run and run the session's model hooks on worker calls, so this stays as it is in 0.14.x.
+- **`openai-codex` refresh.** The provider reads its grant with the request, so the slot sees the session and principal. It writes a refreshed grant back through `store`, which carries `{ package }` only. A resolver that hands out a different grant per principal under one ref cannot tell whose grant a refresh is writing. Give each principal its own `credential` ref (one agent, or one package instance, per user), or keep codex grants per host. Concurrent refreshes are single-flight per grant, not per ref, so two principals never share a refreshed token.
 
 ## Outputs / response / events
 

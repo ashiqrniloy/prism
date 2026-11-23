@@ -14,7 +14,7 @@
  * writes `keyring:kilo`. With neither, the package still registers and a `warn` note says only
  * `:free` models are reachable; the gateway accepts anonymous free requests.
  */
-import { type JsonSchema, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { type JsonSchema, type ModelConfig, type PackageInstance, type ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -100,7 +100,7 @@ function definitionFor(options: KiloProviderPackageOptions) {
       const credentialRef = prism.config.credential ?? KILO_DEFAULT_CREDENTIAL_REF;
       if (!credentialRef.startsWith("keyring:"))
         throw new Error(`kilo: ${credentialRef.split(":")[0]}: refs are read-only; use ${KILO_DEFAULT_CREDENTIAL_REF}`);
-      const resolve = (target: string) => prism.credentials.resolve(target);
+      const resolve = (target: string, request?: ProviderRequest) => prism.credentials.resolve(target, request);
       const keyValue = async () => (await resolve(apiKeyRef))?.value;
       const credential = await resolve(credentialRef);
       const loginValue = bearerValue(credential);

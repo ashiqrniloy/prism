@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "prismVersion": "0.14.0",
+  "prismVersion": "0.14.1",
   "contentHash": "2835346b1c4cfa1b058f0d1723b4a8376ef62767b3b9a6202f3673974aeaff80",
   "codes": [
     {"code":"ERR_PRISM_A2A_CONFIG","namespace":"ERR_PRISM","package":"@arnilo/prism-hosts","file":"packages/hosts/a2a/src/errors.ts","line":41,"errorClass":"A2AConfigError","meaning":"Invalid `serveA2A` / `connectA2A` options, thrown at construction.","sampleMessage":null,"docs":[]},

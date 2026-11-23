@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-23
+
+- `./host-builder`: the version-exact API index (`data/api.json`) is regenerated for `@arnilo/prism` 0.14.1. It adds `CredentialContext.sessionId` and `principal`, the `credentials.resolve(ref, request)` overload, and the request-aware `refSource` / `optionalRefSource`. No runtime change.
+
 ## [0.14.0] - 2026-11-23
 
 Consolidate ten host and driver workspaces into `@arnilo/prism-hosts` subpaths. Preserve library exports, protocol caps, authentication, sandboxing and both executable bins. Host-builder indexes and the installer use bundle specifiers. Versions remain in lockstep with the kernel.
