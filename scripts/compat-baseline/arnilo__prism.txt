@@ -741,7 +741,7 @@
 . validateJsonSchema	function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult
 . validateLoadedSkillBodies	function validateLoadedSkillBodies(value: unknown, bounds?: SkillBodyBounds): asserts value is readonly LoadedSkillBodiesEntry[]
 . validateSessionAppendBatch	function validateSessionAppendBatch(entries: readonly SessionEntry[]): SessionAppendBatch | undefined
-. version	const version = "0.14.0"
+. version	const version = "0.14.1"
 . waitForRetry	function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 . withContextBlocks	function withContextBlocks(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft | undefined
 ./artifacts ARTIFACT_BODY_ERROR_CODES	const ARTIFACT_BODY_ERROR_CODES: Readonly<Record<ArtifactBodyErrorCode, `ERR_PRISM_ARTIFACT_BODY_${ArtifactBodyErrorCode}`>>
