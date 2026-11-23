@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-23
+
+- Provider packages pass the request they serve to `credentials.resolve(ref, request)`, so on kernel 0.14.1 the credentials slot's `CredentialContext` carries the call's `sessionId` and `principal`. On kernel 0.14.0 the extra argument is ignored. This covers `commandcode`, `hyper`, `kilo`, `liquid`, `litellm`, `ollama-cloud`, `opencode-go`, `openrouter` and `openai-codex`.
+- `./openai-codex`: `OpenAICodexCredentialSlot.resolve(ref, request?)`; `openAICodexApiKey(config)` returns `(signal?, request?)`; `OpenAICodexProviderOptions.resolveApiKey` (new) resolves per request. Concurrent refreshes are single-flight per grant (ref and refresh token), not per ref, so a slot that answers one ref with a different grant per principal never hands one principal another's refreshed token. The refreshed grant is still written with `{ package }` only.
+
 ## [0.14.0] - 2026-11-23
 
 - Consolidate eleven providers into `@arnilo/prism-ai`, with one import per provider.

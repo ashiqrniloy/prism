@@ -8,7 +8,7 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import type { AuthContext, HostPort, Secret } from "@arnilo/prism";
+import type { AuthContext, HostPort, ProviderRequest, Secret } from "@arnilo/prism";
 import {
   credentialRecordFromSecret,
   credentialRecordToSecret,
@@ -547,6 +547,33 @@ describe("openai-codex sign in with ChatGPT (plan 204 Task 4)", () => {
     assert.deepEqual(Object.keys(form).sort(), ["client_id", "grant_type", "refresh_token", "resource"]);
     assert.equal(form.client_id, "oaiapp_stored");
     assert.equal(form.refresh_token, "stored-refresh");
+  });
+
+  it("refresh_single_flight_is_per_grant_and_reads_with_the_request", async () => {
+    // A slot that answers one ref with a different grant per caller: concurrent refreshes must not share a result.
+    const auth = fakeAuth();
+    const grants = {
+      a: credentialRecordToSecret(record({ refresh: "refresh-user-a" })),
+      b: credentialRecordToSecret(record({ refresh: "refresh-user-b" })),
+    };
+    const seen: (ProviderRequest | undefined)[] = [];
+    const userOf = (request?: ProviderRequest) => (request?.options as { user?: "a" | "b" } | undefined)?.user ?? "a";
+    const slot = {
+      resolve: async (_ref: string, request?: ProviderRequest) => {
+        seen.push(request);
+        return grants[userOf(request)];
+      },
+      store: async () => undefined,
+    };
+    const apiKey = openAICodexApiKey({ credential: "keyring:openai-codex", fetch: auth.fetch, now: () => NOW, slot });
+    const forUser = (user: "a" | "b") =>
+      ({ model: { provider: "openai-codex", model: "m" }, messages: [], options: { user } }) as ProviderRequest;
+    const [a, b] = await Promise.all([apiKey(undefined, forUser("a")), apiKey(undefined, forUser("b"))]);
+    assert.equal(auth.tokenCalls, 2, "two grants, two refreshes");
+    assert.notEqual(a, b, "each caller gets its own grant's token");
+    const sent = auth.calls.filter((call) => call.form.grant_type === "refresh_token").map((call) => call.form.refresh_token);
+    assert.deepEqual(sent.sort(), ["refresh-user-a", "refresh-user-b"]);
+    assert.ok(seen.length > 0 && seen.every((request) => request !== undefined), "every read carried its request");
   });
 
   it("refresh_reused_rereads_store_once", async () => {

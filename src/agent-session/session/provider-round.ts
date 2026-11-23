@@ -8,6 +8,7 @@ import type {
   ErrorInfo,
   Message,
   ModelConfig,
+  ModelProvider,
   ProviderEvent,
   ProviderRequest,
   ProviderStopReason,
@@ -412,17 +413,18 @@ export async function generateProviderTurn(
     const provider = session.activeProvider!;
     const runtime = tryAgentRuntime(session.agent);
     // The object each provider receives is bound to this run's session and principal, so a credential resolve that
-    // passes it on learns who the call is for (`CredentialContext`). Bound at the call, after every `model.call` copy.
+    // passes it on learns who the call is for (`CredentialContext`). Bound at the call, after every `model.call` copy,
+    // and revoked when the stream settles.
     const caller = { sessionId: session.id, principal: session.activePrincipal ?? session.agent.config.principal };
-    const bind = (request: import("../../contracts.js").ProviderRequest) =>
-      runtime ? runtime.packages.bindCaller(request, caller) : request;
+    const call = (target: ModelProvider, request: ProviderRequest) =>
+      runtime ? runtime.packages.generateFor(target, request, caller) : target.generate(request);
     const stream = await session.hooks().around(
       "model.call",
       turnRequest,
-      (request) => Promise.resolve(provider.generate(bind(request))),
+      (request) => Promise.resolve(call(provider, request)),
       { sessionId: session.id, runId },
       // The onward path for a handler that picks another model: the registry, no hooks, no metering.
-      runtime ? (request) => runtime.packages.resolveProvider(request.model).generate(bind(request)) : undefined,
+      runtime ? (request) => call(runtime.packages.resolveProvider(request.model), request) : undefined,
     );
     for await (const event of stream) {
       throwIfAborted(turnAbort.signal);

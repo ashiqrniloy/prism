@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "prismVersion": "0.14.0",
+  "prismVersion": "0.14.1",
   "contentHash": "75fc16968d39788d3d4456f0868c2220580fa4537621501d37e2a473142ee766",
   "examples": [
     {"path":"examples/a2a-client.ts","title":"Bun-only demo (the examples tsconfig is Node-typed): the one Bun global this file uses.","gate":"executed","imports":["@arnilo/prism","@arnilo/prism-hosts/a2a","@arnilo/prism/provider-kit"],"requiresEnv":["DEMO_A2A_TOKEN"],"needsCredentials":true},

@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   type AgentConfig,
+  type CredentialContext,
   type CredentialResolver,
   createAgent,
   createDefaultRetryPolicy,
   type ModelConfig,
+  type Principal,
   type ProviderEvent,
   type ProviderRequest,
   type Secret,
@@ -372,6 +374,46 @@ describe("@arnilo/prism-ai/openai-codex package", () => {
     assert.deepEqual(first.capabilities?.thinkingLevels, ["low", "high"], "ultra is dropped");
     assert.equal(first.limits?.maxOutputTokens, undefined, "a null ceiling stays unknown rather than guessed");
     assert.equal(listed[1]?.limits?.maxOutputTokens, undefined);
+  });
+
+  it("openai_codex_resolves_its_grant_with_the_run_session_and_principal", async () => {
+    const secret = credentialRecordToSecret({
+      v: 1,
+      clientId: "oaiapp_ctx_fixture",
+      hostId: "urn:uuid:11111111-2222-3333-4444-555555555555",
+      access: KEY,
+      refresh: "fixture-refresh-never-sent",
+      expires: Date.now() + 3_600_000,
+      scope: OPENAI_CODEX_SCOPE,
+    });
+    const seen: CredentialContext[] = [];
+    const resolver: CredentialResolver = {
+      resolve: (_ref, ctx) => {
+        seen.push(ctx);
+        return secret;
+      },
+      store: () => undefined,
+    };
+    const principal: Principal = { kind: "user", id: "u-1" };
+    const agent = await createAgent(
+      agentConfig({
+        slots: { credentials: resolver },
+        principal,
+        packages: [
+          openaiCodex({ credential: CREDENTIAL, appName: "Prism Tests", models: openAICodexModels, fetch: async () => completed("ok") }),
+        ],
+      }),
+    );
+    try {
+      const setup = seen.length;
+      const session = await agent.session();
+      assert.equal((await session.run("hi")).status, "completed");
+      const pkg = "@arnilo/prism-ai/openai-codex";
+      assert.deepEqual(seen.slice(0, setup), Array(setup).fill({ package: pkg }), "a setup read names no session");
+      assert.deepEqual(seen.slice(setup), [{ package: pkg, sessionId: session.id, principal }]);
+    } finally {
+      await agent.dispose();
+    }
   });
 
   it("direct_credential_slots_authorize_provider_and_discovery_without_refresh", async () => {

@@ -176,11 +176,17 @@ export interface LoadedPackages {
   /** The agent's provider resolution: the model's provider id picks from the registry. Throws `Unknown provider: <id>`. */
   resolveProvider(model: ModelConfig): ModelProvider;
   /**
-   * Kernel-internal seam: returns a copy of `request` that carries a kernel-issued caller token (a private symbol, kept
-   * by spread copies), so a credential resolve that passes that request, or a provider's copy of it, gets its
-   * `sessionId` and `principal` in the `CredentialContext`. A package cannot reach it.
+   * Kernel-internal seam: calls `provider.generate` with a copy of `request` that carries a kernel-issued caller token
+   * (a private symbol, kept by spread copies), so a credential resolve that passes that request, or a provider's copy
+   * of it, gets its `sessionId` and `principal` in the `CredentialContext`. The token is revoked when the stream
+   * settles (ends, throws, or is returned early), so a package that kept it cannot name that caller later. A package
+   * cannot reach this seam.
    */
-  bindCaller(request: ProviderRequest, caller: { readonly sessionId?: string; readonly principal?: Principal }): ProviderRequest;
+  generateFor(
+    provider: ModelProvider,
+    request: ProviderRequest,
+    caller: { readonly sessionId?: string; readonly principal?: Principal },
+  ): AsyncIterable<ProviderEvent>;
   /**
    * Kernel-internal seam (plan 229 Task 4): `spec` filled in from its provider's catalog, read at most once per
    * provider per agent. No entry, or no catalog, answers `spec` as given. Never called during `createAgent`.
@@ -790,16 +796,32 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
 
   // Who each kernel-built provider request is for. The request carries a kernel-issued token under a private symbol,
   // so a provider's spread copy (`{ ...request, options }`) keeps it, while an object a package builds has none. The
-  // token maps to the caller only here, so a package cannot name a session or principal it was not given.
+  // token maps to the caller only here, so a package cannot name a session or principal it was not given. The token
+  // lives only while its call's stream is open: a package that kept it (the symbol is visible to reflection) cannot
+  // replay it for a later call or from outside a call.
   const requestCallers = new WeakMap<object, RequestCaller>();
-  const bindCaller = (request: ProviderRequest, caller: RequestCaller): ProviderRequest => {
-    if (!caller.sessionId && !caller.principal) return request;
+  const generateFor = (provider: ModelProvider, request: ProviderRequest, caller: RequestCaller): AsyncIterable<ProviderEvent> => {
+    if (!caller.sessionId && !caller.principal) return provider.generate(request);
     const token = Object.freeze({});
     requestCallers.set(token, {
       ...(caller.sessionId ? { sessionId: caller.sessionId } : {}),
       ...(caller.principal ? { principal: caller.principal } : {}),
     });
-    return Object.assign({ ...request }, { [REQUEST_CALLER]: token });
+    const revoke = (): void => void requestCallers.delete(token);
+    let stream: AsyncIterable<ProviderEvent>;
+    try {
+      stream = provider.generate(Object.assign({ ...request }, { [REQUEST_CALLER]: token }));
+    } catch (error) {
+      revoke();
+      throw error;
+    }
+    return (async function* () {
+      try {
+        yield* stream;
+      } finally {
+        revoke();
+      }
+    })();
   };
   const callerContext = (request: unknown, owner?: string): CredentialContext => {
     const token = typeof request === "object" && request !== null ? (request as { [REQUEST_CALLER]?: object })[REQUEST_CALLER] : undefined;
@@ -902,7 +924,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     // The session the package named is the caller of record; the kernel set its id and principal on the view.
     const caller: RequestCaller = { sessionId: session?.id, principal: session?.principal };
     const callAny = (candidate: ProviderRequest): AsyncIterable<ProviderEvent> =>
-      resolveProvider(candidate.model).generate(bindCaller(candidate, caller));
+      generateFor(resolveProvider(candidate.model), candidate, caller);
 
     let outgoing: ProviderRequest = stamp({ ...request, model });
     const requestSecrets: (string | undefined)[] = [];
@@ -1429,7 +1451,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     provider: (id) => providerEntries.get(id)?.provider,
     providers: () => [...[...providerEntries.values()].map((entry) => ({ owner: entry.owner, provider: entry.provider }))],
     resolveProvider,
-    bindCaller,
+    generateFor,
     describeModel,
     kernelNote: (level, message) => note(KERNEL_OWNER, level, message),
     commands: () => [...commandEntries.values()],

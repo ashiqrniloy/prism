@@ -51,6 +51,11 @@ export interface OpenAICodexProviderOptions {
   /** The grant's access token, refreshed by the caller's source. */
   readonly apiKey?: SecretSource;
   /**
+   * The access token for one request; takes precedence over {@link apiKey} for model calls (discovery still uses
+   * `apiKey`). A package passes the request on to `credentials.resolve`, so the slot sees the call's session.
+   */
+  readonly resolveApiKey?: (request: ProviderRequest) => Promise<string | undefined>;
+  /**
    * A writable `keyring:` ref holding the grant. With {@link credentialSource} the provider refreshes
    * and persists it itself, so a caller outside a package setup (a probe, a script) needs no host.
    */
@@ -76,6 +81,7 @@ export function createOpenAICodexProvider(options: OpenAICodexProviderOptions = 
     id: options.id ?? "openai-codex",
     baseUrl: options.baseUrl ?? OPENAI_CODEX_DEFAULT_BASE_URL,
     apiKey,
+    ...(options.resolveApiKey ? { resolveApiKey: options.resolveApiKey } : {}),
     fetch: options.fetch,
     requestFailedPrefix: "openai-codex",
     routes: { [OPENAI_CODEX_ROUTE]: OPENAI_CODEX_RESPONSES_ROUTE },

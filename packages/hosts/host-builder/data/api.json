@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "prismVersion": "0.14.0",
-  "contentHash": "6f139256a2efe6f02f61271699afe7fa8e2acece149a0d110b93486002831319",
+  "prismVersion": "0.14.1",
+  "contentHash": "c9c6aa168dc641e80ea7dc0bf3042363e61142d480291133d81d1e8878a58079",
   "packages": [
     {
       "name": "@arnilo/prism",
-      "version": "0.14.0",
+      "version": "0.14.1",
       "path": ".",
       "experimental": false,
       "entries": [
@@ -756,7 +756,7 @@
             {"name":"validateJsonSchema","kind":"function","signature":"export declare function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult","summary":"Validates `value` against `schema` and returns it with defaults applied.","examples":["examples/secure-agent.ts","examples/web-research.ts"]},
             {"name":"validateLoadedSkillBodies","kind":"function","signature":"export declare function validateLoadedSkillBodies(value: unknown, bounds?: SkillBodyBounds): asserts value is readonly LoadedSkillBodiesEntry[]","summary":"Fail-closed shape/cap validation for a persisted bodies payload (load and save sides)."},
             {"name":"validateSessionAppendBatch","kind":"function","signature":"export declare function validateSessionAppendBatch(entries: readonly SessionEntry[]): SessionAppendBatch | undefined","summary":"The store-independent part of `SessionStore.appendMany` validation (plan 230 Task 5): one session, no id twice, and the parents the batch does not carry itself.","docs":["node_modules/@arnilo/prism/docs/slots.md"]},
-            {"name":"version","kind":"const","signature":"export declare const version = \"0.14.0\"","docs":["node_modules/@arnilo/prism/docs/agent-adapters.md","node_modules/@arnilo/prism/docs/events.md","node_modules/@arnilo/prism/docs/limits.md","node_modules/@arnilo/prism/docs/live-testing.md","node_modules/@arnilo/prism/docs/long-running.md","node_modules/@arnilo/prism/docs/manifest.md"]},
+            {"name":"version","kind":"const","signature":"export declare const version = \"0.14.1\"","docs":["node_modules/@arnilo/prism/docs/agent-adapters.md","node_modules/@arnilo/prism/docs/events.md","node_modules/@arnilo/prism/docs/limits.md","node_modules/@arnilo/prism/docs/live-testing.md","node_modules/@arnilo/prism/docs/long-running.md","node_modules/@arnilo/prism/docs/manifest.md"]},
             {"name":"waitForRetry","kind":"function","signature":"export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>"},
             {"name":"withContextBlocks","kind":"function","signature":"export declare function withContextBlocks(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft | undefined","summary":"Append `blocks` to a draft's context, or return `undefined` when there is nothing to add — the transform's way of saying \"no change\", so the controller skips re-deriving the request.","examples":["examples/context.ts","examples/custom-builders.ts","examples/instruction-injection.ts","examples/rag.ts"]}
           ]
@@ -1388,7 +1388,7 @@
     },
     {
       "name": "@arnilo/prism-ai",
-      "version": "0.14.0",
+      "version": "0.14.1",
       "path": "packages/providers",
       "experimental": false,
       "entries": [
@@ -1652,7 +1652,7 @@
             {"name":"OpenAICodexAuthError","kind":"class","signature":"export declare class OpenAICodexAuthError extends Error","members":["readonly code: string","constructor(code: string, message: string)"],"summary":"Base for every sign-in failure."},
             {"name":"OpenAICodexAuthMethod","kind":"type","signature":"export type OpenAICodexAuthMethod = Extract<AuthMethod, { kind: \"oauth\"; }>","summary":"The shape `openAICodexAuth` returns; still a plain `AuthMethod` to a host."},
             {"name":"OpenAICodexCredentialRecord","kind":"interface","signature":"export interface OpenAICodexCredentialRecord","members":["readonly v: 1","readonly clientId: string","readonly hostId: string","readonly access: string","readonly refresh: string","readonly expires: number","readonly earliestRefreshAt?: number","readonly scope: string","readonly sub?: string","readonly idToken?: string"],"summary":"The record the credential ref holds."},
-            {"name":"OpenAICodexCredentialSlot","kind":"interface","signature":"export interface OpenAICodexCredentialSlot","members":["resolve(ref: string): Promise<Secret | undefined>","store?(ref: string, secret: Secret): Promise<void>","delete?(ref: string): Promise<void>"],"summary":"What the OAuth client needs from the credentials slot: read the record, write the rotation."},
+            {"name":"OpenAICodexCredentialSlot","kind":"interface","signature":"export interface OpenAICodexCredentialSlot","members":["resolve(ref: string, request?: ProviderRequest): Promise<Secret | undefined>","store?(ref: string, secret: Secret): Promise<void>","delete?(ref: string): Promise<void>"],"summary":"What the OAuth client needs from the credentials slot: read the record, write the rotation."},
             {"name":"OpenAICodexModelConfig","kind":"interface","signature":"export interface OpenAICodexModelConfig extends Omit<ModelConfig, \"provider\" | \"compat\">","members":["readonly provider?: \"openai-codex\"","readonly compat?: JsonObject & { readonly route?: string; readonly reasoning?: JsonObject; }"]},
             {"name":"OpenAICodexModelEntry","kind":"interface","signature":"export interface OpenAICodexModelEntry","members":["readonly slug: string","readonly display_name?: string","readonly description?: string","readonly visibility?: string","readonly context_window?: number","readonly max_context_window?: number","readonly auto_compact_token_limit?: number | null","readonly input_modalities?: readonly string[]","readonly supported_reasoning_levels?: readonly (string | { readonly effort?: string; })[]","readonly default_reasoning_level?: string","readonly supported_in_api?: boolean","readonly supports_parallel_tool_calls?: boolean","readonly supports_reasoning_summary_parameter?: boolean"],"summary":"One `GET /models` entry, as measured on a sign-in grant (plan 204 Task 5): the payload nests the catalog under `models` and carries capability fields on every entry."},
             {"name":"OpenAICodexOAuthConfig","kind":"interface","signature":"export interface OpenAICodexOAuthConfig","members":["readonly credential: string","readonly appName?: string","readonly callbackPort?: number","readonly callback?: \"listen\" | \"paste\"","readonly fetch?: typeof fetch","readonly now?: () => number","readonly slot?: OpenAICodexCredentialSlot","readonly signal?: AbortSignal"]},
@@ -1674,7 +1674,7 @@
             {"name":"listOpenAICodexModels","kind":"function","signature":"export declare function listOpenAICodexModels(options?: ListOpenAICodexModelsOptions): Promise<readonly ModelConfig[]>","summary":"Asks `GET /models` with the current grant and keeps the entries the catalog lists."},
             {"name":"mapOpenAICodexModel","kind":"function","signature":"export declare function mapOpenAICodexModel(entry: OpenAICodexModelEntry, provider?: string): ModelConfig","summary":"Maps one discovery entry to a `ModelConfig`; unknown facts stay undefined rather than guessed."},
             {"name":"openAICodexAffinity","kind":"function","signature":"export declare function openAICodexAffinity(request: ProviderRequest): Record<string, string>","summary":"Cache and routing affinity: both headers carry the sanitized session key, so a request from the same session lands on the same backend and reuses the same prompt cache."},
-            {"name":"openAICodexApiKey","kind":"function","signature":"export declare function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal) => Promise<string>","summary":"The provider's request-time credential: the stored access token, refreshed when it expires within OPENAI_CODEX_EXPIRY_MARGIN_MS."},
+            {"name":"openAICodexApiKey","kind":"function","signature":"export declare function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal, request?: ProviderRequest) => Promise<string>","summary":"The provider's request-time credential: the stored access token, refreshed when it expires within OPENAI_CODEX_EXPIRY_MARGIN_MS."},
             {"name":"openAICodexAuth","kind":"function","signature":"export declare function openAICodexAuth(config: OpenAICodexOAuthConfig): OpenAICodexAuthMethod","summary":"The provider's `AuthMethod`.","docs":["node_modules/@arnilo/prism/docs/credentials-and-redaction.md"]},
             {"name":"openAICodexErrorCode","kind":"function","signature":"export declare function openAICodexErrorCode(bodyText: string): string | undefined","summary":"Reads the provider code out of a failure body: `{\"detail\": \"...\"}` admission bodies carry it as prose ending in the code, `{\"error\": {\"code\": ...}}` carries it as a field."},
             {"name":"openAICodexHttpError","kind":"function","signature":"export declare function openAICodexHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error","summary":"Builds the failure for a non-2xx Responses response."},
@@ -3121,7 +3121,7 @@
     },
     {
       "name": "@arnilo/prism-hosts",
-      "version": "0.14.0",
+      "version": "0.14.1",
       "path": "packages/hosts",
       "experimental": false,
       "entries": [
@@ -4311,7 +4311,7 @@
             {"name":"resolveMemoryWorkerLimits","kind":"function","signature":"export declare function resolveMemoryWorkerLimits(input?: MemoryWorkerLimitOptions): ResolvedMemoryWorkerLimits","docs":["node_modules/@arnilo/prism/docs/migrate-to-0.13.md"]},
             {"name":"resolveRecallScoring","kind":"function","signature":"export declare function resolveRecallScoring(options: RecallScoringOptions | undefined): ResolvedRecallScoring | undefined","summary":"Validate weights (finite, in [0,1]) and sum-normalize."},
             {"name":"revokedIdsAbsent","kind":"function","signature":"export declare function revokedIdsAbsent(environment: { readonly injectedIds?: readonly string[]; } | undefined, deniedIds: readonly string[]): { readonly score: number; }","summary":"072 invariant body: wrap with `defineScorer({ invariant: true, score: ..."},
-            {"name":"runMemoryWorkerLoop","kind":"function","signature":"export declare function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<MemoryWorkerLoopResult>","docs":["node_modules/@arnilo/prism/docs/migrate-to-0.13.md"]},
+            {"name":"runMemoryWorkerLoop","kind":"function","signature":"export declare function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<MemoryWorkerLoopResult>","docs":["node_modules/@arnilo/prism/docs/credentials-and-redaction.md","node_modules/@arnilo/prism/docs/migrate-to-0.13.md"]},
             {"name":"scanScopedMemoryContent","kind":"function","signature":"export declare function scanScopedMemoryContent(text: string): { readonly ok: true; } | { readonly ok: false; readonly class: \"prompt-injection\" | \"exfil\" | \"invisible-unicode\"; }","docs":["node_modules/@arnilo/prism/docs/migrate-to-0.13.md"]},
             {"name":"scopeKey","kind":"function","signature":"export declare function scopeKey(scope: MemoryScope): string"},
             {"name":"selectAdjacentRecords","kind":"function","signature":"export declare function selectAdjacentRecords(threadRecords: readonly MemoryVectorRecord[], hits: readonly MemoryVectorHit[], messageRange: number): MemoryVectorRecord[]"},

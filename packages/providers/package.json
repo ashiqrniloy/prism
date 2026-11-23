@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-ai",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Prism provider packages. Import each provider through its subpath.",
   "type": "module",
   "exports": {

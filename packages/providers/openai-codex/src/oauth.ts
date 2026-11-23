@@ -17,7 +17,7 @@
  * in metadata, so a host that adapts OAuth credentials (`access`/`refresh`/`expires`) sees them.
  */
 
-import type { AuthContext, AuthMethod, Secret } from "@arnilo/prism";
+import type { AuthContext, AuthMethod, ProviderRequest, Secret } from "@arnilo/prism";
 import { verifyIdToken } from "./jwt.js";
 
 /** The `AuthMethod` id a host uses to find this login. */
@@ -108,7 +108,11 @@ export class OpenAICodexReauthorizeError extends OpenAICodexAuthError {
 
 /** What the OAuth client needs from the credentials slot: read the record, write the rotation. */
 export interface OpenAICodexCredentialSlot {
-  resolve(ref: string): Promise<Secret | undefined>;
+  /**
+   * Reads the record. `request` is the provider request a model call is serving, when there is one; a package passes it
+   * to `credentials.resolve(ref, request)` so the slot's `CredentialContext` names the call's session and principal.
+   */
+  resolve(ref: string, request?: ProviderRequest): Promise<Secret | undefined>;
   store?(ref: string, secret: Secret): Promise<void>;
   delete?(ref: string): Promise<void>;
 }
@@ -612,7 +616,11 @@ export function openAICodexAuth(config: OpenAICodexOAuthConfig): OpenAICodexAuth
 
 // ---------------------------------------------------------------- refresh
 
-/** In-process single-flight per credential ref: two concurrent turns make one refresh request. */
+/**
+ * In-process single-flight per grant: two concurrent turns on the same grant make one refresh request. Keyed by the
+ * ref and the grant's refresh token, so a slot that answers one ref with a different grant per principal never hands
+ * one principal's refreshed token to another.
+ */
 const refreshes = new Map<string, Promise<OpenAICodexCredentialRecord>>();
 
 async function requireRecord(config: OpenAICodexOAuthConfig): Promise<OpenAICodexCredentialRecord> {
@@ -675,25 +683,39 @@ async function refreshGrant(
  * {@link OPENAI_CODEX_EXPIRY_MARGIN_MS}. `earliest_refresh_at` is stored but never gates — the server
  * accepted an early refresh four minutes after issue.
  */
-export function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal) => Promise<string> {
+export function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal, request?: ProviderRequest) => Promise<string> {
   const now = config.now ?? Date.now;
-  return async (signal) => {
-    const record = await requireRecord(config);
+  return async (signal, request) => {
+    // Every read for this call passes its request on, so the slot learns the call's session and principal.
+    const slot = config.slot;
+    const forCall =
+      request && slot
+        ? {
+            ...config,
+            slot: {
+              resolve: (ref: string) => slot.resolve(ref, request),
+              ...(slot.store ? { store: slot.store.bind(slot) } : {}),
+              ...(slot.delete ? { delete: slot.delete.bind(slot) } : {}),
+            },
+          }
+        : config;
+    const record = await requireRecord(forCall);
     if (record.expires - now() > OPENAI_CODEX_EXPIRY_MARGIN_MS) return record.access;
-    const pending = refreshes.get(config.credential);
+    const key = `${config.credential}\0${record.refresh}`;
+    const pending = refreshes.get(key);
     if (pending) return (await pending).access;
-    const attempt = signal ? { ...config, signal } : config;
+    const attempt = signal ? { ...forCall, signal } : forCall;
     const refresh = (async () => {
       // Re-read first: another turn or process may already have rotated the record this call saw.
       const current = await requireRecord(attempt);
       if (current.expires - now() > OPENAI_CODEX_EXPIRY_MARGIN_MS) return current;
       return refreshGrant(attempt, current, now);
     })();
-    refreshes.set(config.credential, refresh);
+    refreshes.set(key, refresh);
     try {
       return (await refresh).access;
     } finally {
-      if (refreshes.get(config.credential) === refresh) refreshes.delete(config.credential);
+      if (refreshes.get(key) === refresh) refreshes.delete(key);
     }
   };
 }

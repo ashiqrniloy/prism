@@ -19,7 +19,7 @@
  * lists and a run fails with a sign-in error instead of `Unknown provider`. The host runs the
  * sign-in: this package declares the `oauth` `AuthMethod`, and nothing in the kernel runs it.
  */
-import { type JsonSchema, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { type JsonSchema, type ModelConfig, type PackageInstance, type ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -95,7 +95,7 @@ function definitionFor(options: OpenAICodexProviderPackageOptions) {
       // A sign-in writes this ref, so an `env:` ref can never work: fail at load, not at login.
       assertWritableCredentialRef(credential);
       const slot = {
-        resolve: (ref: string) => prism.credentials.resolve(ref),
+        resolve: (ref: string, request?: ProviderRequest) => prism.credentials.resolve(ref, request),
         ...(prism.credentials.store
           ? {
               store: (ref: string, secret: Parameters<NonNullable<typeof prism.credentials.store>>[1]) =>
@@ -123,6 +123,8 @@ function definitionFor(options: OpenAICodexProviderPackageOptions) {
         id,
         baseUrl,
         apiKey,
+        // A model call reads the grant with its request, so the slot sees the call's session and principal.
+        resolveApiKey: (request) => apiKey(undefined, request),
         fetch: options.fetch,
       });
       const configured = prism.config.models;

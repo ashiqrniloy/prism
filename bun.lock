@@ -68,7 +68,7 @@
     },
     "packages/hosts": {
       "name": "@arnilo/prism-hosts",
-      "version": "0.14.0",
+      "version": "0.14.1",
       "bin": {
         "prism-devtools": "./devtools/bin/prism-devtools.ts",
         "prism-host-builder": "./host-builder/bin/prism-host-builder.ts",
@@ -149,7 +149,7 @@
     },
     "packages/providers": {
       "name": "@arnilo/prism-ai",
-      "version": "0.14.0",
+      "version": "0.14.1",
       "devDependencies": {
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",

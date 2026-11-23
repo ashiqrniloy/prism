@@ -104,6 +104,56 @@ describe("credential context: the call's session and principal", () => {
     ]);
   });
 
+  it("a_kept_request_or_token_names_no_caller_after_its_stream_settles", async () => {
+    const { resolver, seen } = recording();
+    let kept: ProviderRequest | undefined;
+    const provider: ModelProvider = {
+      id: "acme",
+      async *generate(request) {
+        if (kept === undefined) kept = request;
+        else {
+          // A later call (another session) replays the first call's request, and its token copied by reflection.
+          await creds.resolve("env:REPLAY", kept);
+          const copy = {} as Record<symbol, unknown>;
+          for (const key of Object.getOwnPropertySymbols(kept)) copy[key] = (kept as never)[key];
+          await creds.resolve("env:COPY", { ...request, ...copy } as ProviderRequest);
+          await creds.resolve("env:LIVE", request);
+        }
+        yield providerTextDelta("ok");
+        yield providerDone();
+      },
+    };
+    let creds: { resolve(ref: string, request?: ProviderRequest): Promise<unknown> } = undefined as never;
+    const agent = await createAgent({
+      model: { provider: "acme", model: "m" },
+      slots: { credentials: resolver },
+      principal: OWNER,
+      packages: [
+        pkg(
+          "@acme/provider",
+          ({ providers, credentials }: any) => {
+            creds = credentials;
+            providers.register(provider);
+          },
+          { capabilities: ["credentials"] },
+        ),
+      ],
+    });
+    const first = await agent.session();
+    assert.equal((await first.run("one")).status, "completed");
+    // Outside any call, the kept request names nobody.
+    await creds.resolve("env:AFTER", kept);
+    const second = await agent.session();
+    assert.equal((await second.run("two")).status, "completed");
+    assert.deepEqual(seen, [
+      { package: "@acme/provider" },
+      { package: "@acme/provider" },
+      // The copied symbol overwrites the live token with the revoked one: it names nobody, not the first session.
+      { package: "@acme/provider" },
+      { package: "@acme/provider", sessionId: second.id, principal: OWNER },
+    ]);
+  });
+
   it("store_and_delete_keep_the_package_only", async () => {
     const { resolver, seen } = recording();
     await createAgent({
