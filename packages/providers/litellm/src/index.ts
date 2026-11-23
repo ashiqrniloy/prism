@@ -1,4 +1,4 @@
-import { type JsonSchema, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { type JsonSchema, type ModelConfig, type PackageInstance, type ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -52,7 +52,7 @@ function definitionFor(options: LiteLLMProviderPackageOptions) {
       const baseUrl = prism.config.baseUrl ?? LITELLM_DEFAULT_BASE_URL;
       assertLiteLLMBaseUrl(baseUrl);
       const ref = prism.config.apiKey ?? LITELLM_DEFAULT_API_KEY_REF;
-      const resolve = (target: string) => prism.credentials.resolve(target);
+      const resolve = (target: string, request?: ProviderRequest) => prism.credentials.resolve(target, request);
       const apiKey = refSource(resolve, ref);
       // A proxy started without a master key accepts anonymous requests, so no key is not an error.
       if ((await resolve(ref)) === undefined)

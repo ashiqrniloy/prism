@@ -18,7 +18,7 @@
  * every request. A ref that resolves to nothing records a `warn` status note and registers the
  * provider anyway; a run then fails with `credential_unavailable`.
  */
-import type { JsonSchema, ModelConfig, PackageInstance } from "@arnilo/prism";
+import type { JsonSchema, ModelConfig, PackageInstance, ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -82,7 +82,7 @@ function definitionFor(options: OllamaCloudProviderPackageOptions) {
     setup: async (prism) => {
       const id = options.id ?? "ollama-cloud";
       const ref = prism.config.apiKey ?? OLLAMA_CLOUD_DEFAULT_API_KEY_REF;
-      const resolve = (target: string) => prism.credentials.resolve(target);
+      const resolve = (target: string, request?: ProviderRequest) => prism.credentials.resolve(target, request);
       const apiKey = refSource(resolve, ref);
       if ((await resolve(ref)) === undefined) prism.status.note("warn", `ollama-cloud: no API key at ${ref}`);
       const baseUrl = prism.config.baseUrl;

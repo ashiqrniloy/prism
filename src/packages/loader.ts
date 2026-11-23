@@ -1,3 +1,4 @@
+import type { Principal } from "../contracts-core/principal.js";
 import type {
   AgentConfig,
   ResolvedAgentCeilings,
@@ -139,6 +140,12 @@ export interface LoadedPackage {
   readonly source: "code" | "manifest:user" | "manifest:project";
 }
 
+/** Private: where a kernel-built provider request carries its caller token. Never exported. */
+const REQUEST_CALLER = Symbol("prism.request.caller");
+
+/** Who a provider request is for, as the kernel knows it. Both opaque; the principal is host-asserted. */
+type RequestCaller = { readonly sessionId?: string; readonly principal?: Principal };
+
 export interface LoadedPackages {
   /** Packages in load order. The inline host package is not listed. */
   readonly packages: readonly LoadedPackage[];
@@ -168,6 +175,12 @@ export interface LoadedPackages {
   providers(): readonly { readonly owner: string; readonly provider: ModelProvider }[];
   /** The agent's provider resolution: the model's provider id picks from the registry. Throws `Unknown provider: <id>`. */
   resolveProvider(model: ModelConfig): ModelProvider;
+  /**
+   * Kernel-internal seam: returns a copy of `request` that carries a kernel-issued caller token (a private symbol, kept
+   * by spread copies), so a credential resolve that passes that request, or a provider's copy of it, gets its
+   * `sessionId` and `principal` in the `CredentialContext`. A package cannot reach it.
+   */
+  bindCaller(request: ProviderRequest, caller: { readonly sessionId?: string; readonly principal?: Principal }): ProviderRequest;
   /**
    * Kernel-internal seam (plan 229 Task 4): `spec` filled in from its provider's catalog, read at most once per
    * provider per agent. No entry, or no catalog, answers `spec` as given. Never called during `createAgent`.
@@ -436,7 +449,10 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       BUILTIN_PROVIDER_ID,
       {
         owner: KERNEL_OWNER,
-        provider: createBuiltinProvider({ resolveCredential: (ref) => resolveCredentialRef(ref), fetch: options.fetch }),
+        provider: createBuiltinProvider({
+          resolveCredential: (ref, request) => resolveCredentialRef(ref, callerContext(request)),
+          fetch: options.fetch,
+        }),
       },
     ],
   ]);
@@ -772,6 +788,25 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     commandEntries.set(command.name, { name: command.name, description: command.description, package: owner, command });
   };
 
+  // Who each kernel-built provider request is for. The request carries a kernel-issued token under a private symbol,
+  // so a provider's spread copy (`{ ...request, options }`) keeps it, while an object a package builds has none. The
+  // token maps to the caller only here, so a package cannot name a session or principal it was not given.
+  const requestCallers = new WeakMap<object, RequestCaller>();
+  const bindCaller = (request: ProviderRequest, caller: RequestCaller): ProviderRequest => {
+    if (!caller.sessionId && !caller.principal) return request;
+    const token = Object.freeze({});
+    requestCallers.set(token, {
+      ...(caller.sessionId ? { sessionId: caller.sessionId } : {}),
+      ...(caller.principal ? { principal: caller.principal } : {}),
+    });
+    return Object.assign({ ...request }, { [REQUEST_CALLER]: token });
+  };
+  const callerContext = (request: unknown, owner?: string): CredentialContext => {
+    const token = typeof request === "object" && request !== null ? (request as { [REQUEST_CALLER]?: object })[REQUEST_CALLER] : undefined;
+    const caller = token ? requestCallers.get(token) : undefined;
+    return { ...(owner !== undefined ? { package: owner } : {}), ...caller };
+  };
+
   /** The credentials slot, resolved on use. A value it returns is redacted from everything this agent raises from then on. */
   const resolveCredentialRef = async (ref: string, ctx: CredentialContext = {}): Promise<Secret | undefined> => {
     const assigned = (options.slotAssignments ?? {}) as Partial<Record<SlotName, unknown>>;
@@ -864,7 +899,10 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     const known = (): readonly string[] => [...secrets, ...((retry?.secrets ?? []) as string[])];
     // The kernel names the caller; a value the package passed, or a transform wrote, never stands.
     const stamp = (candidate: ProviderRequest): ProviderRequest => ({ ...candidate, origin: { kind: "package", package: owner } });
-    const callAny = (candidate: ProviderRequest): AsyncIterable<ProviderEvent> => resolveProvider(candidate.model).generate(candidate);
+    // The session the package named is the caller of record; the kernel set its id and principal on the view.
+    const caller: RequestCaller = { sessionId: session?.id, principal: session?.principal };
+    const callAny = (candidate: ProviderRequest): AsyncIterable<ProviderEvent> =>
+      resolveProvider(candidate.model).generate(bindCaller(candidate, caller));
 
     let outgoing: ProviderRequest = stamp({ ...request, model });
     const requestSecrets: (string | undefined)[] = [];
@@ -1168,9 +1206,9 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
         },
       },
       credentials: {
-        async resolve(ref: string) {
+        async resolve(ref: string, request?: ProviderRequest) {
           requireCapability(name, entry.capabilities, "credentials", "credentials.resolve");
-          return resolveCredentialRef(ref, { package: name });
+          return resolveCredentialRef(ref, callerContext(request, name));
         },
         ...(entry.capabilities.has("credentials:write")
           ? {
@@ -1391,6 +1429,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     provider: (id) => providerEntries.get(id)?.provider,
     providers: () => [...[...providerEntries.values()].map((entry) => ({ owner: entry.owner, provider: entry.provider }))],
     resolveProvider,
+    bindCaller,
     describeModel,
     kernelNote: (level, message) => note(KERNEL_OWNER, level, message),
     commands: () => [...commandEntries.values()],

@@ -1,6 +1,7 @@
 /** Contracts-core resources family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
+import type { Principal } from "./principal.js";
 
 export interface Resource {
   readonly uri: string;
@@ -43,6 +44,17 @@ export interface Secret {
 export interface CredentialContext {
   /** The package asking, when the kernel knows it. */
   readonly package?: string;
+  /**
+   * The session of the model call the credential is for. Kernel-set, never by a package: present only when the
+   * resolve is for a provider request the kernel built (a run turn, or a package's `models.client` call with a
+   * session). A resolver may use it for attribution or a credential that belongs to one session's user.
+   */
+  readonly sessionId?: string;
+  /**
+   * The host principal of that call (the run's, else the agent's default). Kernel-set under the same rule as
+   * `sessionId`. Opaque and host-asserted: the kernel never verifies it, and it is never a credential.
+   */
+  readonly principal?: Principal;
   /** Aborts a resolver that talks to a backend or a person. */
   readonly signal?: AbortSignal;
 }

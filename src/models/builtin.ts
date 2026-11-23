@@ -1,4 +1,4 @@
-import type { ModelProvider, ModelSpec, Secret } from "../contracts.js";
+import type { ModelProvider, ModelSpec, ProviderRequest, Secret } from "../contracts.js";
 import { CredentialUnavailableError } from "../credentials/errors.js";
 import { createRoutedProvider } from "../provider-kit/routed-provider.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
@@ -12,8 +12,11 @@ export { CredentialUnavailableError };
 export const BUILTIN_PROVIDER_ID = "openai-compatible";
 
 export interface BuiltinProviderOptions {
-  /** Resolves a ref through the `credentials` slot. Called on every request, never at construction. */
-  readonly resolveCredential: (ref: string) => Promise<Secret | undefined> | Secret | undefined;
+  /**
+   * Resolves a ref through the `credentials` slot. Called on every request, never at construction, with the
+   * request the provider received, so the kernel can name its session and principal to the slot.
+   */
+  readonly resolveCredential: (ref: string, request: ProviderRequest) => Promise<Secret | undefined> | Secret | undefined;
   readonly fetch?: typeof fetch;
 }
 
@@ -30,7 +33,7 @@ export function createBuiltinProvider(options: BuiltinProviderOptions): ModelPro
     async resolveApiKey(request) {
       const ref = (request.model as ModelSpec).credential;
       if (ref === undefined) return undefined;
-      const credential = await options.resolveCredential(ref);
+      const credential = await options.resolveCredential(ref, request);
       if (!credential?.value) throw new CredentialUnavailableError(ref);
       return credential.value;
     },

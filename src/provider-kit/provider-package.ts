@@ -12,6 +12,8 @@ import type { PackageAPI, PackageDefinition, PackageInstance } from "../packages
 import { definePackage } from "../packages/define.js";
 import type { JsonSchema } from "../packages/schema.js";
 import type { Secret } from "../contracts-core/resources.js";
+import type { ProviderRequest } from "../contracts-core/provider.js";
+import { SECRET_SOURCE_FOR_REQUEST } from "./secret-source.js";
 import { CredentialUnavailableError } from "../credentials/errors.js";
 import { KERNEL_API_LEVEL, KERNEL_VERSION } from "../version.js";
 
@@ -98,21 +100,42 @@ export function modelsProperty(description?: string): JsonSchema {
  */
 export type SecretSource = () => Promise<string | undefined>;
 
-/** A `SecretSource` that resolves `ref` through the credentials slot on every call. */
-export function refSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string> {
-  return async () => {
-    const secret = await resolve(ref);
+/**
+ * A `SecretSource` that resolves `ref` through the credentials slot on every call. The provider request, when the
+ * caller has one, is passed on, so the slot learns the call's session and principal (`CredentialContext`).
+ */
+export function refSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string>;
+export function refSource(
+  resolve: (ref: string, request?: ProviderRequest) => Promise<Secret | undefined>,
+  ref: string,
+): () => Promise<string>;
+export function refSource(
+  resolve: (ref: string, request?: ProviderRequest) => Promise<Secret | undefined>,
+  ref: string,
+): () => Promise<string> {
+  const read = async (request?: ProviderRequest): Promise<string> => {
+    const secret = await resolve(ref, request);
     if (secret === undefined || secret.value === "") throw new CredentialUnavailableError(ref);
     return secret.value;
   };
+  return Object.assign(() => read(), { [SECRET_SOURCE_FOR_REQUEST]: (request: ProviderRequest) => read(request) });
 }
 
 /** An optional ref: an unresolved credential is `undefined`, never an error. */
-export function optionalRefSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined> {
-  return async () => {
-    const secret = await resolve(ref);
+export function optionalRefSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined>;
+export function optionalRefSource(
+  resolve: (ref: string, request?: ProviderRequest) => Promise<Secret | undefined>,
+  ref: string,
+): () => Promise<string | undefined>;
+export function optionalRefSource(
+  resolve: (ref: string, request?: ProviderRequest) => Promise<Secret | undefined>,
+  ref: string,
+): () => Promise<string | undefined> {
+  const read = async (request?: ProviderRequest): Promise<string | undefined> => {
+    const secret = await resolve(ref, request);
     return secret?.value === "" ? undefined : secret?.value;
   };
+  return Object.assign(() => read(), { [SECRET_SOURCE_FOR_REQUEST]: (request: ProviderRequest) => read(request) });
 }
 
 export interface ProviderPackageDefinitionSpec<Config> {

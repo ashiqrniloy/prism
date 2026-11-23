@@ -16,7 +16,7 @@
  * A ref that resolves to nothing records a `warn` status note and registers the provider anyway, so
  * `agent.models` still lists the catalog; a run then fails with `credential_unavailable`.
  */
-import { type JsonSchema, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { type JsonSchema, type ModelConfig, type PackageInstance, type ProviderRequest } from "@arnilo/prism";
 import {
   baseUrlProperty,
   defineProviderPackage,
@@ -73,7 +73,7 @@ function definitionFor(options: OpenCodeGoProviderPackageOptions) {
     setup: async (prism) => {
       const id = options.id ?? "opencode-go";
       const ref = prism.config.apiKey ?? OPENCODE_GO_DEFAULT_API_KEY_REF;
-      const resolve = (target: string) => prism.credentials.resolve(target);
+      const resolve = (target: string, request?: ProviderRequest) => prism.credentials.resolve(target, request);
       const apiKey = refSource(resolve, ref);
       // Register regardless: a credential problem must not turn into `Unknown provider`, and the
       // catalog should still list. The note is what a host shows the user.
