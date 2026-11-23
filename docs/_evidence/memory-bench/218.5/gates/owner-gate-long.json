@@ -570,7 +570,7 @@
       "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
       "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
     },
-    "ruleHash": "0de8550da98359fb835d7a63b3619ce3d679f7ce3ce6d74da3d70c8a53bb8e3c",
+    "ruleHash": "c2e39021beab579e5299429dd3107b3e87840cdf76917cbf7772ace0fa9b240b",
     "rule": {
       "suite": "session-bench-long",
       "plan": "218.5 Task 6",
@@ -611,7 +611,7 @@
           "scripts/memory-bench/run.mjs",
           "scripts/memory-bench/stats.mjs"
         ],
-        "hash": "83fbcf12482e50e5641712be24f7fdbf0b2aa98edbe2a62323f05e9362b341bf"
+        "hash": "5a93a9e98f176d0d7ad538c1b7942b872264d5b95701877d3bdefbe237d111ce"
       },
       "partition": "dev",
       "sessions": [
@@ -682,8 +682,8 @@
       },
       "rehearsal": "no arm runs the Rehearsal drop: the memory system turns it on only when wm and ltm are both on, and no arm turns ltm on (Task 5 finding 1); the rows count the drops (0 expected)",
       "model": "opencode-go/hy4-flash-free",
-      "worker": "opencode-go/muse-spark-1.3-contributor",
-      "modelChoice": "the screen's models (rule a1c6df8d, plan 218.3 Task 12): the main agent on hy4-flash-free, every memory worker (STM, WM, LLM-compaction summaries, Mem0) on muse-spark-1.3-contributor at reasoning low; the same worker serves every arm",
+      "worker": "opencode-go/beam-free",
+      "modelChoice": "the main agent on hy4-flash-free, as in the screen (rule a1c6df8d, plan 218.3 Task 12); every memory worker (STM, WM, LLM-compaction summaries, Mem0) on beam-free at reasoning low, the same worker for every arm. Task 7 (owner, 2026-11-24): beam-free replaces the screen's muse-spark-1.3-contributor, which failed about 1 worker call in 30-100 on the pilot's smoke job (an upstream 400 before the answer, an upstream server_error mid-stream); in a 15-call streamed tool-call probe beam-free answered 15 of 15 with tool calls, p50 6.3 s, max 8.9 s (iceman-contributor-free: 15 of 15, p50 13.7 s, max 165 s)",
       "sampling": {
         "temperature": 0,
         "thinkingLevel": "low",
@@ -861,8 +861,8 @@
     },
     "approved": true,
     "approvedBy": "owner",
-    "approvedAt": "2026-11-23T17:51:27Z",
-    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. 0de8550d differs only in the harness's failure handling (live.mjs): a provider setup failure is a provider fault; a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); every provider request turns the kernel's 60 s connect timeout off, which had cut every outage and quota wait at 60 s (0de8550d). The owner approved going ahead with this third change on 2026-11-23 (\"You can go ahead\"). Product hash unchanged",
+    "approvedAt": "2026-11-23T18:10:44Z",
+    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged",
     "pending": "the owner's word on this hash (plan 218.5 Task 7). Owner calls folded into the rule as recommended: wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome"
   }
 }

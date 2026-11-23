@@ -105,7 +105,7 @@ export const pilotIds = (partitions = file) => Object.values(partitions.abilitie
 export const LONG_RUN_ARMS = Object.freeze([...LONG_DECISION_ARMS, ...LONG_SIDE_ARMS]);
 
 const MODEL = "opencode-go/hy4-flash-free";
-const WORKER = "opencode-go/muse-spark-1.3-contributor";
+const WORKER = "opencode-go/beam-free";
 const SAMPLING = Object.freeze({
   temperature: 0,
   thinkingLevel: "low",
@@ -183,7 +183,7 @@ export function buildLongRule() {
     model: MODEL,
     worker: WORKER,
     modelChoice:
-      "the screen's models (rule a1c6df8d, plan 218.3 Task 12): the main agent on hy4-flash-free, every memory worker (STM, WM, LLM-compaction summaries, Mem0) on muse-spark-1.3-contributor at reasoning low; the same worker serves every arm",
+      "the main agent on hy4-flash-free, as in the screen (rule a1c6df8d, plan 218.3 Task 12); every memory worker (STM, WM, LLM-compaction summaries, Mem0) on beam-free at reasoning low, the same worker for every arm. Task 7 (owner, 2026-11-24): beam-free replaces the screen's muse-spark-1.3-contributor, which failed about 1 worker call in 30-100 on the pilot's smoke job (an upstream 400 before the answer, an upstream server_error mid-stream); in a 15-call streamed tool-call probe beam-free answered 15 of 15 with tool calls, p50 6.3 s, max 8.9 s (iceman-contributor-free: 15 of 15, p50 13.7 s, max 165 s)",
     sampling: { ...SAMPLING },
     samplingNote:
       "the screen's: temperature 0; the agent at thinkingLevel low; one tool call per main-agent turn (the harness answers the others with a fixed text); workerReasoningEffort low; workerOutput window (a worker call may write what W leaves after its input)",
