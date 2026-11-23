@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- **Working memory: seven mechanical fixes (plan 218.5 Task 3; experimental).** They fix the defects the Session-Bench screen's ledgers showed, so none has a flag.
+  - **Behaviour change:** a WM pass runs on pressure only, once the records it can judge reach `wm.triggerTokens`. A new boundary marker no longer runs one (it gave 14–16 passes in a 12-task session whose surface never passed 900 tokens).
+  - **Behaviour change:** a record marked `durable`, a `statement` citing a user message and a user message kept word for word are never in a WM batch, under either policy. They get no verdict, are never tombstoned and stay on the STM surface; `wm.triggerTokens` no longer counts them.
+  - A WM `event` kept from a record the code still protects (`constraint`, `task_state`, `unresolved_error`, `open_question`) cannot be superseded (`protected`).
+  - One summary or fact supersedes at most 3 items (`too_many_supersedes`).
+  - An item's relevance is the highest among what it cites, set by code. `judge` no longer takes `relevance` for a summary or fact.
+  - An item's time span comes from the STM records behind what it cites, never from the items it replaces.
+  - A fact may supersede an item the user stated only when it cites a newer user record (`user_item_needs_newer_user_record`).
+  - **Removed (experimental surface):** `WmRecordedData.boundaries` and `ObservationalMemoryLedger.wmBoundariesSeen`, with the trigger that read them. A stored record that still carries `boundaries` folds, and the count is ignored. The deterministic policy's own selection is unchanged.
+- **`context.eviction`: a candidate order for what the memory block leaves out (plan 218.5 Task 3).** New key `context.eviction: "relevance" | "protect-user"` (tuning; new type export `MemorySystemEviction`). The default `"relevance"` is the order the package shipped with: lowest relevance first, then smallest. `"protect-user"` leaves out the agent's own records first (lowest relevance, then oldest) and no durable record or user statement while one of those remains. No behaviour changes unless the key is set; the default may change on plan 218.5's long-session verdict.
+
 ## [0.14.0] - 2026-11-23
 
 - **Working memory is off unless configured, and the session tier is stable (plan 240 Task 4).** **Behaviour change:** an omitted `wm` component is now off (it followed `stm`), so `memorySystem({ enabled: true })` runs STM as the session's compaction with no WM, Rehearsal or LTM. `wm: {}` turns working memory on, and it still runs only under a host scope. `wm.policy` now defaults to `"deterministic"` (no model call); set `"model"` for model verdicts. That default follows the Session-Bench screen (rule a1c6df8d): STM+WM against STM-only was −0.02 on dependency at 1.27× the cost. `enabled` stays `false`, so installing the package turns no session on and the host opts in. The README's config stability table marks every `wm.*`, `rehearsal.*`, `scope.*`, `ltm.*` and `sleep.*` path `experimental`, outside the stability promise; the session tier (`enabled`, `stm`, `context`, `worker`, `recall`, `recallLimits`) is under it. The profiles are re-cut: `stm` (`{ enabled: true }`) is the default recipe, and `session` (STM + WM) is experimental.

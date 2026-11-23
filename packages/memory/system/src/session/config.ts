@@ -83,6 +83,12 @@ export function resolveObservationsPoolTokens(inputCapTokens: number | undefined
 }
 
 export type MemorySystemRehearsalPolicy = "model" | "lowest-relevance";
+/**
+ * The order STM records are left out of the memory block when the pool is over its bound (plan 218.5 Task 3).
+ * `"relevance"`: lowest relevance first, then smallest. `"protect-user"`: the agent's own records first (lowest
+ * relevance, then oldest), and no durable record or user statement while one of those remains.
+ */
+export type MemorySystemEviction = "relevance" | "protect-user";
 /** `"model"` asks the WM model for verdicts; `"deterministic"` keeps protected records and outcomes and discards the lowest-relevance oldest to the target, with no call. */
 export type MemorySystemWmPolicy = "model" | "deterministic";
 
@@ -197,6 +203,11 @@ export interface MemorySessionConfig {
      * the run's new input.
      */
     readonly keepRecentTokens?: number;
+    /**
+     * The order STM records are left out of the memory block when the pool is over its bound. Default `"relevance"`.
+     * `"protect-user"` is a candidate under measurement (plan 218.5); the default may change on its verdict.
+     */
+    readonly eviction?: MemorySystemEviction;
   };
   /** Worker loop ceilings. Defaults and hard caps are the package's own (`limits.ts`). */
   readonly worker?: MemoryWorkerLimitOptions;
@@ -415,6 +426,13 @@ const memorySystemSchema: JsonSchema = {
           minimum: 1,
           description: "Tokens a mid-loop compaction keeps verbatim besides the newest tool round. Default 20% of the model's input cap.",
         },
+        eviction: {
+          type: "string",
+          enum: ["relevance", "protect-user"],
+          default: "relevance",
+          description:
+            'The order STM records are left out of the memory block when the pool is over its bound. "relevance": lowest relevance first, then smallest. "protect-user": the agent\'s own records first (lowest relevance, then oldest), and no durable record or user statement while one of those remains.',
+        },
       },
     },
     worker: {
@@ -555,6 +573,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "context.compactAfterRun.maxTokens",
   "context.compactAfterRun.ratio",
   "context.keepRecentTokens",
+  "context.eviction",
   "recallLimits.pageLimit",
   "recallLimits.pageBytes",
   "recallLimits.maxPageLimit",
@@ -638,6 +657,7 @@ export interface ResolvedMemorySystemConfig {
     readonly compactAfterRun: ResolvedCompactAfterRun;
     /** Absent: 20% of the input cap (or of `compactAfterRun.maxTokens`), resolved at each compaction. */
     readonly keepRecentTokens?: number;
+    readonly eviction: MemorySystemEviction;
   };
   readonly worker: MemoryWorkerLimitOptions;
   /**
@@ -780,6 +800,7 @@ export function resolveMemorySystemConfig(
       compactAt: resolveCompactAt(config.context?.compactAt),
       compactAfterRun: resolveCompactAfterRun(config.context?.compactAfterRun),
       ...keepRecentTokensOf(config.context?.keepRecentTokens),
+      eviction: config.context?.eviction === "protect-user" ? "protect-user" : "relevance",
     },
     worker: { ...config.worker },
     scope: resolveScopeConfig(config.scope),

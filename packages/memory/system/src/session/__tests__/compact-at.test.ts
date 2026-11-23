@@ -18,6 +18,7 @@ describe("session memory compaction triggers", () => {
       compaction: true,
       compactAt: { ratio: DEFAULT_COMPACT_AT_RATIO },
       compactAfterRun: { maxTokens: DEFAULT_COMPACT_AFTER_RUN_TOKENS },
+      eviction: "relevance",
     });
     expect(DEFAULT_COMPACT_AT_RATIO).toBe(0.8);
     expect(DEFAULT_COMPACT_AFTER_RUN_TOKENS).toBe(80_000);

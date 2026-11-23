@@ -4832,6 +4832,13 @@
       "reason": "WM item record field bound"
     },
     {
+      "name": "MAX_WM_SUPERSEDES",
+      "file": "packages/memory/system/src/session/workers/wm.ts",
+      "class": "format",
+      "default": 3,
+      "reason": "WM item record field bound: items one summary or fact may supersede"
+    },
+    {
       "name": "DEFAULT_EXPIRES_IN_SECONDS",
       "file": "packages/providers/kilo/src/auth.ts",
       "class": "format",

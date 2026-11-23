@@ -74,14 +74,17 @@ function profileConfig(profile: ProfileName, root: string): MemorySystemConfig {
   }
 }
 
-/** The observer: one `record_event` call sourced from the first entry its prompt lists. */
+/**
+ * The observer: one `record_event` call sourced from the first entry its prompt lists. It records a `result`, which
+ * working memory judges; a user `statement` gets no verdict and stays on the STM surface.
+ */
 function observe(request: ProviderRequest): ProviderEvent[] {
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];
   const sourceId = prompt?.type === "text" ? /\[[^\]]+\] \[([^\]]+)\] (?:user|assistant|tool|system):/.exec(prompt.text)?.[1] : undefined;
   if (request.messages.some((message) => message.role === "tool") || !sourceId) return [providerDone()];
   return [
     providerToolCall(
-      toolCallContent("observe-1", "record_event", { kind: "statement", description: FACT, relevance: "high", sourceEntryIds: [sourceId] }),
+      toolCallContent("observe-1", "record_event", { kind: "result", description: FACT, relevance: "high", sourceEntryIds: [sourceId] }),
     ),
     providerDone(),
   ];

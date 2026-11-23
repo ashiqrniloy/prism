@@ -70,7 +70,8 @@ function recordingObserver(requests: ProviderRequest[], options: { failOnCall?: 
       const ids = [...text.matchAll(/\] \[([^\]]+)\] (?:user|assistant|tool|system):/g)].map((match) => match[1]!);
       yield providerToolCall(
         toolCallContent(`c${requests.length}`, "record_event", {
-          kind: "statement",
+          // A result: working memory judges it. A user statement would stay on the STM surface (plan 218.5 Task 3).
+          kind: "result",
           description: `Saw ${ids.join(",")}`,
           sourceEntryIds: ids,
         }),

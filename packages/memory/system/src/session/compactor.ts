@@ -60,6 +60,7 @@ export function createObservationalCompactor(options: ObservationalCompactorOpti
     ledgerOf: (context) => ledgerFor(options, context),
     keepEntryIds: (context) => kept.get(context) ?? [],
     ...(options.config.scope.text ? { scopeFallback: options.config.scope.text } : {}),
+    eviction: options.config.context.eviction,
   });
   return {
     name: "session-memory",

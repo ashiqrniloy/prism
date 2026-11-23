@@ -10,6 +10,7 @@
  */
 import { type JsonValue, type ModelClient, redactSecrets, type SessionContext, type SessionEntry, type SessionLog } from "@arnilo/prism";
 import { resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-system/core";
+import { isDurableOrUserStatement } from "./attribution.js";
 import { type ResolvedMemorySystemConfig, type ResolvedWorkerSettings, resolveModelInputCap } from "./config.js";
 import {
   eligibleObservationSources,
@@ -304,10 +305,12 @@ async function pass(
       };
 
     const afterObservations = ledgerOf(deps.log.entries(session));
-    const surface = activeObservations(afterObservations);
+    const stmSurface = activeObservations(afterObservations);
+    // Plan 218.5 Task 3: WM judges what the agent did and found. A durable record or a user statement is never in a
+    // batch, so no verdict tombstones it and it stays on the STM surface, under either policy. The trigger counts the
+    // records WM can judge: pressure it cannot relieve runs no pass. A new boundary no longer runs one either.
+    const surface = stmSurface.filter((record) => !isDurableOrUserStatement(record));
     const surfaceTokens = surface.reduce((sum, item) => sum + item.tokenCount, 0);
-    const boundaryCount = afterObservations.boundaries?.length ?? 0;
-    const newBoundary = boundaryCount > (afterObservations.wmBoundariesSeen ?? 0);
     // After an attempt that did nothing, wait for a fresh trigger of new records instead of re-running every pass.
     const sinceEmptyAttempt = observationTokensSinceEmptyWmAttempt(deps.log.entries(session));
     const tokenTrigger =
@@ -321,12 +324,7 @@ async function pass(
       config.wm.enabled && scope && config.wm.policy === "model" && config.wm.rejudgeTokens > 0
         ? pendingScopeChange(deps.log.entries(session))
         : undefined;
-    if (
-      config.wm.enabled &&
-      scope &&
-      (surface.length || scopeChange || releasable.length) &&
-      (options.forceWm === true || tokenTrigger || newBoundary)
-    ) {
+    if (config.wm.enabled && scope && (surface.length || scopeChange || releasable.length) && (options.forceWm === true || tokenTrigger)) {
       // The batch: the oldest records up to `wm.batchTokens`; `judge` gives every verdict in one call (plan 218.2 Task 5),
       // so no record limit tied to the call cap applies. The rest waits for the next pass.
       let batch = wmBatch(surface, config.wm.batchTokens);
@@ -361,7 +359,7 @@ async function pass(
           ? selectLookAheadRecords(afterObservations, progress.remaining, {
               maxRecords: config.wm.lookAheadRecords,
               maxTokens: config.wm.lookAheadTokens,
-              exclude: new Set([...surface, ...(rejudge?.records ?? [])].map((record) => record.id)),
+              exclude: new Set([...stmSurface, ...(rejudge?.records ?? [])].map((record) => record.id)),
             })
           : [];
       let output: Awaited<ReturnType<typeof runWm>>;
@@ -376,6 +374,7 @@ async function pass(
                   ledger: afterObservations,
                   salience,
                   protections,
+                  protectRequestPasses: config.wm.protectRequestPasses,
                   targetRatio: config.wm.targetRatio,
                   ...(rejudge?.records.length ? { rejudge: rejudge.records } : {}),
                   ...(lookAhead.length ? { lookAhead } : {}),
@@ -389,7 +388,7 @@ async function pass(
                 });
         } catch (error) {
           // A failed attempt is an empty one: it processes nothing, and the next attempt waits for new records.
-          if (!options.signal?.aborted) await record({ items: [], boundaries: boundaryCount });
+          if (!options.signal?.aborted) await record({ items: [] });
           throw error;
         }
         // Plan 218 Task 6 (gate M-2): a model call that spent its output limit before giving any verdict retries once on
@@ -441,7 +440,6 @@ async function pass(
               } satisfies WmLookAhead,
             }
           : {}),
-        boundaries: boundaryCount,
       });
       // Every processed record leaves the STM surface with its verdict as the reason; recall still finds it (I2).
       const at = new Date().toISOString();

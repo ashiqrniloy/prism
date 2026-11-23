@@ -7,6 +7,7 @@ import {
   redactSecrets,
   type SessionEntry,
 } from "@arnilo/prism";
+import type { MemorySystemEviction } from "./config.js";
 import { eligibleObservationSources, unscannedEntries } from "./coverage-helpers.js";
 import { activeObservations, activeWmItems, foldObservationalMemoryLedger, type ObservationalMemoryLedger } from "./ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "./memory-bounds.js";
@@ -37,6 +38,8 @@ export interface ObservationalMemoryCompactorOptions {
   readonly keepEntryIds?: (context: CompactionContext) => readonly string[];
   /** The config scope (`scope.text`): orders WM items by step before any `scope.set` (plan 218.3 Task 8). */
   readonly scopeFallback?: EpisodeScope;
+  /** `context.eviction`: the order records are left out in when the pool is over its bound. Default `"relevance"`. */
+  readonly eviction?: MemorySystemEviction;
 }
 
 const DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
@@ -85,6 +88,7 @@ export function createObservationalMemoryCompactor(options: ObservationalMemoryC
         source.droppedObservationIds,
         maxTokens,
         HARD_MAX_FOLDED_PAYLOAD_BYTES,
+        options.eviction,
       );
       const memory = {
         observations: bounded.observations,

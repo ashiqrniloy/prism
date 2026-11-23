@@ -31,6 +31,7 @@ export function createCompactionContextCache(log: SessionLog<JsonValue>, config:
       [],
       config.rehearsal.targetTokens,
       HARD_MAX_FOLDED_PAYLOAD_BYTES,
+      config.context.eviction,
     ),
     ...(ledger.taskState ? { taskState: ledger.taskState } : {}),
     ...(ledger.latestObservationCoverageId ? { latestObservationCoverageId: ledger.latestObservationCoverageId } : {}),

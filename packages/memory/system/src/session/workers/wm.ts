@@ -9,6 +9,13 @@
  * own. A record left without a verdict stays on the STM surface for the next pass. Summaries and facts supersede only
  * the WM items they name; nothing replaces the WM set. The worker records nothing itself: the flush appends its items
  * and tombstones, which keep the 12-character ids.
+ *
+ * Plan 218.5 Task 3 put five rules in code (the 2026-11-22 critique's defects): an event kept from a record the code
+ * still protects is never replaced; one summary or fact replaces at most `MAX_WM_SUPERSEDES` items; an item's relevance
+ * is the highest among what it cites, never the model's rating; its time span comes from the STM records behind what it
+ * cites, never from the items it replaces; and a fact replaces an item the user stated only when it cites a newer user
+ * record. The flush holds the other two: a pass runs on pressure only, and a durable record or a user statement is
+ * never in a batch.
  */
 import type { JsonObject, ModelClient, ProviderRequestOptions, ToolDefinition, ToolResult } from "@arnilo/prism";
 import { redactSecrets } from "@arnilo/prism";
@@ -22,7 +29,7 @@ import { attributionLabel, attributionOfSources, isAssistantProposal } from "../
 import { createMemoryId } from "../ids.js";
 import { activeObservations, activeWmItems, type ObservationalMemoryLedger } from "../ledger.js";
 import { normalizeEventText } from "../normalize.js";
-import { type ProtectionReason, protectedTokenCount } from "../protections.js";
+import { type ProtectionReason, protectedRecords, protectedTokenCount } from "../protections.js";
 import type { SalienceSignal } from "../salience.js";
 import {
   type EpisodeScope,
@@ -56,7 +63,7 @@ export const DEFAULT_WM_INSTRUCTION = [
   "You are working memory. Call judge once with a verdict for every new STM record (r1…rN): keep it (it stays as an event), fold it with related records into one summary, or discard it as finished, out-of-scope, superseded or duplicate.",
   "Keep what the episode scope's whole remaining work needs, including later planned steps, not only the current task. Keep salient records (errors, corrections, denials, failed verifications) unless they are resolved.",
   "Add a fact for an episode fact several records or items support. Each summary or fact covers one subject in a few sentences; write a changed value as old → new with its dates.",
-  "supersedes names the existing WM items (w1…wM) a new summary or fact replaces; other items stay. A record you give no verdict waits for the next pass. Records under Already kept are settled: give them no verdict.",
+  "supersedes names the existing WM items (w1…wM) a new summary or fact replaces, at most 3; other items stay. An item kept from a protected record cannot be replaced, and a fact replaces an item the user stated only when it cites a newer user record. A record you give no verdict waits for the next pass. Records under Already kept are settled: give them no verdict.",
   "Relevance comes first; then aim at the token target as pressure: summarize or discard what later work does not need, but never drop needed material to meet it. Protected records cannot be discarded.",
   'Set neededLater to the scope step that needs an item when a later planned step depends on it. Mark a remaining scope step finished via finishedSteps only when citing STM outcome records with status "passed". Release items listed under Items for finished steps via discard.finished when no longer needed.',
   "Earlier records for coming steps (a1…aL) are past records code matched to a remaining scope step: keep one (keep with a) only when that step will need it; it returns as an event for that step. Leave the rest; no other verdict applies to them.",
@@ -73,8 +80,16 @@ export type WmRejection =
   | "citation_outside_active_set"
   | "invalid_arguments"
   | "protected"
+  | "too_many_supersedes"
+  | "user_item_needs_newer_user_record"
   | "unsupported_step_finish"
   | "unknown_step";
+
+/**
+ * WM items one summary or fact may replace (plan 218.5 Task 3). Uncapped, one fact replaced 25 items in a screen
+ * session, and its one stale clause then stood for all of them.
+ */
+export const MAX_WM_SUPERSEDES = 3;
 
 /** The salience order the prompt asks WM to keep first (plan 218 Task 3). */
 export const SALIENCE_PRIORITY: readonly SalienceSignal[] = ["correction", "denial", "error", "failed_verification"];
@@ -111,6 +126,8 @@ export interface RunWmOptions extends MemoryWorkerLimitOptions {
   readonly salience?: ReadonlyMap<string, readonly SalienceSignal[]>;
   /** Protected records in the batch (`protectedRecords`): `discard` refuses them with `protected`, enforced here, not by the prompt. */
   readonly protections?: ReadonlyMap<string, ProtectionReason>;
+  /** `wm.protectRequestPasses`, for the protections of the records current WM events were kept from (default 8). */
+  readonly protectRequestPasses?: number;
   /** `wm.targetRatio`: the prompt states `targetRatio` × the batch's tokens as the items' target. */
   readonly targetRatio?: number;
   /**
@@ -149,7 +166,6 @@ export const SETTLED_PROTECTIONS: ReadonlySet<ProtectionReason | undefined> = ne
 /** Refused entries one `judge` result lists; the rest are counted in `applied` only by their absence. */
 const MAX_JUDGE_REFUSALS = 64;
 
-const RELEVANCE: JsonObject = { type: "string", enum: [...relevanceValues] };
 const NEEDED_LATER: JsonObject = { type: "string", minLength: 1, description: "The scope step that needs this item later." };
 
 export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
@@ -176,6 +192,38 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   const finishedStepSet = new Set(progress?.finished.map((step) => step.step) ?? []);
   const acceptedFinishedSteps = new Map<number, readonly string[]>();
   const releasable = progress ? [...inputItems.values()].filter((item) => isReleasableWmItem(item.neededLater, finishedStepSet)) : [];
+  const ledgerOrder = new Map(ledger.observations.map((record, index) => [record.id, index]));
+  const ledgerItems = new Map(ledger.wmItems.map((item) => [item.id, item]));
+  /** The STM records ids rest on: a record itself, or the records behind a WM item, through the items it cites. */
+  const recordsBehind = (ids: readonly string[], seen = new Set<string>()): MemoryObservation[] =>
+    ids.flatMap((id) => {
+      if (seen.has(id)) return [];
+      seen.add(id);
+      const record = batch.get(id) ?? knownRecords.get(id);
+      if (record) return [record];
+      const item = madeItems.get(id) ?? ledgerItems.get(id);
+      return item ? recordsBehind(item.citedIds, seen) : [];
+    });
+  // Protected items (plan 218.5 Task 3): a current WM event whose record the code protects for the episode or until a
+  // link resolves it (`SETTLED_PROTECTIONS`). Read from the ledger on every pass, so an error a passed outcome resolved,
+  // or a constraint a later record superseded, frees its event. No summary or fact may replace one.
+  const events = [...inputItems.values()].filter((item) => item.kind === "event");
+  const eventProtections = protectedRecords(
+    ledger,
+    events.flatMap((item) => item.citedIds.flatMap((id) => knownRecords.get(id) ?? [])),
+    {
+      ...(options.salience ? { salience: options.salience } : {}),
+      ...(options.protectRequestPasses === undefined ? {} : { protectRequestPasses: options.protectRequestPasses }),
+      finishedSteps: finishedStepSet,
+    },
+  );
+  const protectedItems = new Map<string, ProtectionReason>();
+  for (const item of events) {
+    const reason = item.citedIds
+      .map((id) => eventProtections.get(id))
+      .find((value) => value !== undefined && SETTLED_PROTECTIONS.has(value));
+    if (reason) protectedItems.set(item.id, reason);
+  }
 
   /** A record id that may take a verdict now. `keep` also takes a record sent for re-judgment or look-ahead. */
   const verdictId = (id: unknown, rejudged = false): WmRejection | undefined => {
@@ -191,9 +239,10 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     if (activeRecords.has(id) || inputItems.has(id) || madeItems.has(id)) return undefined;
     return knownRecords.has(id) || knownItems.has(id) ? "citation_outside_active_set" : "unknown_id";
   };
-  /** A WM item a summary or fact may supersede: one this pass was given and no call superseded yet. */
+  /** A WM item a summary or fact may supersede: one this pass was given, not protected, and that no call superseded yet. */
   const supersedableId = (id: unknown): WmRejection | undefined => {
     if (!isMemoryId(id)) return "unknown_id";
+    if (protectedItems.has(id)) return "protected";
     if (inputItems.has(id) && !superseded.has(id)) return undefined;
     return knownItems.has(id) || knownRecords.has(id) || madeItems.has(id) ? "citation_outside_active_set" : "unknown_id";
   };
@@ -206,8 +255,6 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   };
   const text = (value: unknown): string =>
     typeof value === "string" ? truncateText(redactSecrets(normalizeEventText(value), secrets)) : "";
-  const relevance = (value: unknown, fallback: MemoryRelevance): MemoryRelevance =>
-    (relevanceValues as readonly unknown[]).includes(value) ? (value as MemoryRelevance) : fallback;
   const result = (context: { toolCallId: string }, name: string, value: Record<string, unknown>): ToolResult => ({
     toolCallId: context.toolCallId,
     name,
@@ -236,7 +283,13 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   type Applied =
     | { readonly ok: true; readonly itemId?: string }
     | { readonly ok: false; readonly reason: WmRejection; readonly id?: string; readonly protection?: ProtectionReason };
-  const refusal = (rejection: { reason: WmRejection; id?: string }): Applied => ({ ok: false, ...rejection });
+  const refusal = (rejection: { reason: WmRejection; id?: string }): Applied => {
+    const protection = rejection.reason === "protected" && rejection.id ? protectedItems.get(rejection.id) : undefined;
+    return { ok: false, ...rejection, ...(protection ? { protection } : {}) };
+  };
+  /** Why a summary or fact may not replace `ids`: more than the cap, or the first item that is not supersedable. */
+  const supersedeRejection = (ids: readonly unknown[]) =>
+    ids.length > MAX_WM_SUPERSEDES ? { reason: "too_many_supersedes" as const } : firstRejection(ids, supersedableId);
 
   const applyKeep = (id: unknown, reasonText: unknown, later: unknown): Applied => {
     const rejection = firstRejection([id], (value) => verdictId(value, true));
@@ -251,17 +304,11 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     return { ok: true, itemId: item.id };
   };
 
-  const applySummary = (
-    recordIds: readonly unknown[],
-    bodyText: unknown,
-    rel: unknown,
-    supersedes: readonly unknown[],
-    later: unknown,
-  ): Applied => {
+  const applySummary = (recordIds: readonly unknown[], bodyText: unknown, supersedes: readonly unknown[], later: unknown): Applied => {
     const rejection =
       (recordIds.length ? undefined : { reason: "unknown_id" as const }) ??
       firstRejection(recordIds, verdictId) ??
-      firstRejection(supersedes, supersedableId);
+      supersedeRejection(supersedes);
     if (rejection) return refusal(rejection);
     const body = text(bodyText);
     if (!body) return refusal({ reason: "empty_text" });
@@ -269,7 +316,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     const replaced = sources(supersedes as string[]).items;
     const records = sources(cited).records;
     const item = add({
-      ...newItem("summary", body, relevance(rel, "medium"), cited, records, replaced, supersedes as string[]),
+      ...newItem("summary", body, maxRelevance(records), cited, recordsBehind(cited), records, replaced, supersedes as string[]),
       ...neededLater(later),
     });
     if (!item) return refusal({ reason: "invalid_arguments" });
@@ -278,25 +325,39 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     return { ok: true, itemId: item.id };
   };
 
-  const applyFact = (
-    supportIds: readonly unknown[],
-    bodyText: unknown,
-    rel: unknown,
-    supersedes: readonly unknown[],
-    later: unknown,
-  ): Applied => {
+  const applyFact = (supportIds: readonly unknown[], bodyText: unknown, supersedes: readonly unknown[], later: unknown): Applied => {
     const rejection =
       (supportIds.length ? undefined : { reason: "unknown_id" as const }) ??
       firstRejection(supportIds, citableId) ??
-      firstRejection(supersedes, supersedableId);
+      supersedeRejection(supersedes);
     if (rejection) return refusal(rejection);
     const body = text(bodyText);
     if (!body) return refusal({ reason: "empty_text" });
     const cited = supportIds as string[];
     const support = sources(cited);
     const replaced = sources(supersedes as string[]).items;
+    // Attribution precedence (plan 218.5 Task 3): a fact replaces an item the user stated only when it cites a user
+    // record recorded after every record behind that item. A tool result or a stale document cannot outrank the user;
+    // an item whose records the ledger does not hold cannot be shown older, so it stays.
+    const newestUserRecord = Math.max(-1, ...support.records.filter(fromUser).map((record) => ledgerOrder.get(record.id) ?? -1));
+    for (const target of replaced.filter(fromUser)) {
+      const behind = recordsBehind(target.citedIds);
+      const newest = behind.length
+        ? Math.max(...behind.map((record) => ledgerOrder.get(record.id) ?? Number.POSITIVE_INFINITY))
+        : Number.POSITIVE_INFINITY;
+      if (!(newestUserRecord > newest)) return refusal({ reason: "user_item_needs_newer_user_record", id: target.id });
+    }
     const item = add({
-      ...newItem("fact", body, relevance(rel, "medium"), cited, support.records, [...support.items, ...replaced], supersedes as string[]),
+      ...newItem(
+        "fact",
+        body,
+        maxRelevance([...support.records, ...support.items]),
+        cited,
+        recordsBehind(cited),
+        support.records,
+        [...support.items, ...replaced],
+        supersedes as string[],
+      ),
       ...neededLater(later),
     });
     if (!item) return refusal({ reason: "invalid_arguments" });
@@ -403,7 +464,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
   const judge: ToolDefinition = {
     name: "judge",
     description:
-      'Give every verdict for this batch in one call. Records are r1…rN, current working-memory items w1…wM, re-judged records j1…jK, earlier records for coming steps a1…aL. keep: records that stay as events (r, j for a re-judged record, or a for an earlier record a coming step needs). discard: records by reason (finished also accepts w items offered under Items for finished steps). summaries: several records folded into one summary of one subject. facts: episode facts that records or items support (support lists "r4" or "w1"); a fact gives no verdict. finishedSteps: remaining scope steps proven done by cited STM passed-outcome records. supersedes lists the w items a summary or fact replaces. A protected record cannot be discarded. Each entry is checked on its own; refused entries are listed so you can fix them.',
+      'Give every verdict for this batch in one call. Records are r1…rN, current working-memory items w1…wM, re-judged records j1…jK, earlier records for coming steps a1…aL. keep: records that stay as events (r, j for a re-judged record, or a for an earlier record a coming step needs). discard: records by reason (finished also accepts w items offered under Items for finished steps). summaries: several records folded into one summary of one subject. facts: episode facts that records or items support (support lists "r4" or "w1"); a fact gives no verdict. finishedSteps: remaining scope steps proven done by cited STM passed-outcome records. supersedes lists the w items a summary or fact replaces: at most 3, and never an item kept from a protected record. A protected record cannot be discarded. Each entry is checked on its own; refused entries are listed so you can fix them.',
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -438,11 +499,10 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
             properties: {
               of: { ...ORDINALS, minItems: 1 },
               text: { type: "string", minLength: 1 },
-              relevance: RELEVANCE,
               supersedes: ITEM_ORDINALS,
               neededLater: NEEDED_LATER,
             },
-            required: ["of", "text", "relevance"],
+            required: ["of", "text"],
           },
         },
         facts: {
@@ -453,11 +513,10 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
             properties: {
               text: { type: "string", minLength: 1 },
               support: { type: "array", minItems: 1, items: { type: "string", pattern: "^[rw][1-9][0-9]*$" } },
-              relevance: RELEVANCE,
               supersedes: ITEM_ORDINALS,
               neededLater: NEEDED_LATER,
             },
-            required: ["text", "support", "relevance"],
+            required: ["text", "support"],
           },
         },
         finishedSteps: {
@@ -512,7 +571,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
         const of = [...new Set(list(entry.of))];
         note(
           `summaries[${index}]`,
-          applySummary(mapped(of, "r"), entry.text, entry.relevance, mapped([...new Set(list(entry.supersedes))], "w"), entry.neededLater),
+          applySummary(mapped(of, "r"), entry.text, mapped([...new Set(list(entry.supersedes))], "w"), entry.neededLater),
         );
       });
       const discards =
@@ -534,10 +593,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
         });
       entries(args.facts).forEach((entry, index) => {
         const support = mapped([...new Set(list(entry.support))], "r", ["r", "w"]);
-        note(
-          `facts[${index}]`,
-          applyFact(support, entry.text, entry.relevance, mapped([...new Set(list(entry.supersedes))], "w"), entry.neededLater),
-        );
+        note(`facts[${index}]`, applyFact(support, entry.text, mapped([...new Set(list(entry.supersedes))], "w"), entry.neededLater));
       });
       const unjudged = offered.filter((record) => !verdicts.has(record.id)).length;
       return result(context, "judge", {
@@ -710,17 +766,22 @@ function eventItem(record: MemoryObservation, reason: string): MemoryWmItem {
     relevance: record.relevance,
     citedIds: [record.id],
     ...(reason ? { reason } : {}),
-    ...spanOf([record], []),
+    ...spanOf([record]),
     ...attributionOf([record], []),
     tokenCount: record.tokenCount,
   };
 }
 
+/**
+ * A summary or fact. `spanRecords` are the STM records behind what it cites (its time span); `records` and `items` are
+ * what its speaker side comes from, the items it replaces included.
+ */
 function newItem(
   kind: Exclude<MemoryWmItemKind, "event">,
   text: string,
   relevance: MemoryRelevance,
   citedIds: readonly string[],
+  spanRecords: readonly MemoryObservation[],
   records: readonly MemoryObservation[],
   items: readonly MemoryWmItem[],
   supersedes: readonly string[],
@@ -732,7 +793,7 @@ function newItem(
     relevance,
     citedIds,
     ...(supersedes.length ? { supersedes } : {}),
-    ...spanOf(records, items),
+    ...spanOf(spanRecords),
     ...attributionOf(records, items),
     tokenCount: estimateTextTokens(text),
   };
@@ -744,11 +805,26 @@ function attributionOf(records: readonly MemoryObservation[], items: readonly Me
   return attribution ? { attribution } : {};
 }
 
-function spanOf(records: readonly MemoryObservation[], items: readonly MemoryWmItem[]): { observedFrom?: string; observedTo?: string } {
-  const dates = [
-    ...records.flatMap((record) => [record.observedAt ?? record.timestamp, record.lastAt]),
-    ...items.flatMap((item) => [item.observedFrom, item.observedTo]),
-  ]
+/** Whether a record or item carries user content (`user`, or `mixed` with the assistant's). */
+function fromUser(source: { readonly attribution?: MemoryAttribution }): boolean {
+  return source.attribution === "user" || source.attribution === "mixed";
+}
+
+/** Plan 218.5 Task 3: the highest relevance among an item's cited sources. The model's own rating is not read. */
+function maxRelevance(sources: readonly { readonly relevance: MemoryRelevance }[]): MemoryRelevance {
+  return sources.reduce<MemoryRelevance>(
+    (max, source) => (relevanceValues.indexOf(source.relevance) > relevanceValues.indexOf(max) ? source.relevance : max),
+    "low",
+  );
+}
+
+/**
+ * An item's time span: from the STM records behind what it cites only (plan 218.5 Task 3). An item it replaces lends
+ * no date, so a summary that restates an old value does not read as the newest.
+ */
+function spanOf(records: readonly MemoryObservation[]): { observedFrom?: string; observedTo?: string } {
+  const dates = records
+    .flatMap((record) => [record.observedAt ?? record.timestamp, record.lastAt])
     .filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}T/.test(date) && Number.isFinite(Date.parse(date)))
     .map((date) => new Date(date).toISOString())
     .sort();

@@ -88,7 +88,7 @@ function scriptedProvider(counts: { recordNotes: number }): ModelProvider {
       const ids = [...prompt.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]!);
       if (!alreadyCalled && names.has("record_event") && ids.length > 0) {
         yield providerToolCall(
-          toolCallContent("o1", "record_event", { kind: "statement", description: USER_TEXT, relevance: "high", sourceEntryIds: ids }),
+          toolCallContent("o1", "record_event", { kind: "result", description: USER_TEXT, relevance: "high", sourceEntryIds: ids }),
         );
       } else if (!alreadyCalled && names.has("judge") && ids.length > 0) {
         const of = [...prompt.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));

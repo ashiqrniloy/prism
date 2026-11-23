@@ -153,7 +153,7 @@ With the toggle on:
 | --- | --- | --- |
 | STM pass | after a turn, once the unscanned eligible tokens reach `stm.triggerTokens` (or, with `stm.boundaries: true`, when the tail holds a user turn after an idle gap: at most one extra STM call per boundary) | one branch read, one STM call per batch of the unread tail (one batch unless the tail exceeds about twice `stm.triggerTokens`, at least 32 KB serialized, or half of `worker.maxMessageBytes`; only the latter cuts an entry), one ledger record per recorded batch; date prefixes add about 6 tokens per message, plus gap markers; task state and supersession use the same call |
 | Habituation and boundary markers | inside the STM pass; idle-gap markers on every pass that sees a new one | a string comparison per new event against at most `stm.habituation.windowEvents` records, one ledger record per repeat or marker, no model call |
-| WM pass | in the same pass, once the STM surface (records without a WM verdict) reaches `wm.triggerTokens`, or a boundary marker is new since the last WM attempt; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive (a new boundary still runs it) | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
+| WM pass | in the same pass, once the STM records WM can judge (no WM verdict yet; not durable, not a user statement) reach `wm.triggerTokens`; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive. A boundary marker no longer runs one | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
 | Rehearsal pass | after the WM step (even if it records nothing), once the active pool exceeds `rehearsal.targetTokens` | one rehearsal call (or none with `policy: "lowest-relevance"`), one ledger record |
 | Context block | after foreign compaction only | pinned ledger in memory; one entry scan and log write per compaction, awaited before the next request; one reconciliation scan on reopen |
 | Compaction (`context.compaction` on) | mid-loop when the request reaches `context.compactAt.ratio` of the input cap; when a run starts after a completed loop, at `context.compactAfterRun` ([Compaction](#compaction)) | the vote is one state read and a comparison; the compaction first runs STM over the entries it will remove that no pass has covered yet (one STM call per batch, below `stm.triggerTokens`; none when the background passes are up to date), then reads the ledger already in memory. A mid-loop compaction breaks the cached prefix inside the loop; a between-loop one breaks it where the next run's new input starts anyway |
@@ -253,6 +253,20 @@ run's start is a between-loop check: it compacts, STM records the output from it
 as the kernel does for any compactor. The check uses the same estimate as the cut, so a message just under the cap by
 that estimate is compacted around and retried.
 
+**What the memory block leaves out past its bound (`context.eviction`).** The block holds at most a pool of STM record
+tokens: 20,000, or 30% of the model's input cap when that is smaller. Past it, records are left out of the block (they
+stay in the ledger, and `recall` still finds them) in one of two orders:
+
+- `"relevance"` (the default): lowest relevance first, then smallest first, whatever the record's age or speaker. Most
+  records are `medium`, so among them the shortest go first.
+- `"protect-user"`: the agent's own records go first (lowest relevance first, then oldest), and no durable record or
+  user statement is left out while one of the agent's remains. Past that, user records go lowest relevance first, then
+  oldest.
+
+`"protect-user"` is a candidate under measurement (plan 218.5's long-session benchmark); the default may change on its
+verdict, which is why the key is `tuning`. The order costs one sort per compaction either way. It does not order the
+Rehearsal drop, which keeps its own policy (`rehearsal.policy`).
+
 A session with memory off (its `memory:session` toggle off) is compacted by the kernel default, at the kernel's
 trigger, and keeps the kernel's overflow recovery (compact once, retry, else fail); so does an agent with
 `context.compaction: false`.
@@ -318,7 +332,7 @@ defaults below.
 | `stm.instruction`, `wm.instruction`, `rehearsal.instruction` | none | Text appended to that worker's default prompt; it cannot change the worker's tools |
 | `stm.thinkingLevel`, `wm.thinkingLevel`, `rehearsal.thinkingLevel` | `low` | Reasoning level for that worker's model calls (`none` … `max`). A model without reasoning levels ignores it; set a level to override |
 | `wm.model` | the session's model | WM worker model |
-| `wm.triggerTokens` | `10000` | STM surface tokens (records without a WM verdict) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
+| `wm.triggerTokens` | `10000` | Tokens of the STM records WM can judge (no WM verdict yet; durable records and user statements are not counted) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
 | `wm.batchTokens` | `3000` | STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass |
 | `wm.targetRatio` | `0.2` | Items' tokens over the batch's tokens a WM pass aims at (0.01 to 1), as pressure after relevance; protected records are never cut ([Working memory](#working-memory)) |
 | `wm.protectRequestPasses` | `8` | WM passes a user request or error stays protected by its `resolves` link without a resolving outcome; then the pass records `protectionLapsed` ([Working memory](#working-memory)) |
@@ -333,6 +347,7 @@ defaults below.
 | `context.compactAt` | `{ "ratio": 0.8 }` | The mid-loop trigger: compact inside an agentic loop when the request reaches `ratio` of the model's input cap |
 | `context.compactAfterRun` | `{ "maxTokens": 80000 }` | The between-loop trigger, checked when a run starts after a completed loop: `maxTokens`, or `ratio` of the input cap (the smaller when both are set). `maxTokens` is required for a model that declares no window |
 | `context.keepRecentTokens` | 20% of the input cap (else of `compactAfterRun.maxTokens`) | Tokens a mid-loop compaction keeps verbatim besides the newest tool round ([Compaction](#compaction)) |
+| `context.eviction` | `"relevance"` | The order STM records are left out of the memory block when the pool is over its bound: `"relevance"` (lowest relevance first, then smallest) or the candidate `"protect-user"` ([Compaction](#compaction)) |
 | `worker.maxTaskStateBytes` | `2048` | Maximum UTF-8 text bytes in the replaced task state and rendered task section; the host's value is the cap |
 | `worker.*` | see `limits.ts` | Worker loop ceilings (`maxTurns`, `maxToolCalls`, byte caps) |
 | `recall` | `true` | Expose the `recall` tool while the session's toggle is on |
@@ -448,7 +463,7 @@ own model, compaction from the ledger, the per-session toggle, a second process 
 ### Ledger
 
 A WM pass appends one `memory.session.wm.recorded` record (`WM_RECORDED`): `{ items, supersededItemIds?, processedIds?,
-boundaries, compression?, budgetUnmet?, rejudge? }`, then one `memory.session.observations.tombstoned` record per verdict reason (`wm keep <item>`, `wm
+compression?, budgetUnmet?, rejudge? }` (a record written before plan 218.5 Task 3 may also carry `boundaries`; it is ignored), then one `memory.session.observations.tombstoned` record per verdict reason (`wm keep <item>`, `wm
 summarize <item>`, `wm discard <finished|out-of-scope|superseded|duplicate|budget>`; `budget` is the deterministic policy's). The fold adds items and drops only the
 superseded ones it names; nothing replaces the WM set. A pass that recorded no item and processed no record (or failed)
 is an empty attempt. Inactive evidence remains in the ledger for `recall`, marked `(dropped)` or `(tombstoned:
@@ -619,8 +634,8 @@ description; no model call.
 - a task-state change: the goal, open questions, decisions or next steps differ from the previous task state;
 - a user turn after an idle gap of at least `stm.boundaryGapMinutes` (10) since the previous message (`gapMinutes`).
 
-Markers cost no model call; plan 218's WM trigger reads them. Outcome and task-state boundaries come out of an STM
-pass that already runs. An idle gap is visible before any call, so with `stm.boundaries: true` it runs an STM pass
+Markers cost no model call. No worker reads them today: a new marker used to run a WM pass, and plan 218.5 Task 3
+retired that trigger. Outcome and task-state boundaries come out of an STM pass that already runs. An idle gap is visible before any call, so with `stm.boundaries: true` it runs an STM pass
 even below `stm.triggerTokens`: at most one extra STM call per boundary. The default `false` avoids that cost; the
 marker is still recorded and the tail waits for the token trigger.
 
@@ -645,6 +660,12 @@ denied tool call (`hook_denied` on the branch) or a failed verification (`status
 without a status a failure phrase in its description). The signals come from the records the STM worker wrote and
 their source entries; the WM model sets none.
 
+**What WM judges (plan 218.5 Task 3).** WM judges what the agent did and found. A record marked `durable`, a
+`statement` that cites a user message, and a user message kept word for word (`verbatim`) are never in a batch, under
+either policy. They get no verdict, so no pass tombstones them, and they stay on the STM surface as recorded. No worker
+output can remove one. Before this, a summary could fold a user's rule into a task line and the next pass rewrite it
+again (the Session-Bench screen's D2 loss).
+
 **Settled first (plan 218.2 Task 5).** A record protected as `constraint`, `task_state`, `unresolved_error` or
 `open_question` (see the protections below) is kept as a WM `event` by code before the model is asked, with
 `protected: <class>` as its reason. The request lists these records under "Already kept" and asks no verdict for them;
@@ -659,15 +680,15 @@ call:
 ```json
 { "keep": [{ "r": 4, "reason": "task 3 reads this path", "neededLater": "Task 3" }],
   "discard": { "finished": [2, 3], "out-of-scope": [], "superseded": [7], "duplicate": [] },
-  "summaries": [{ "of": [5, 6], "text": "…", "relevance": "medium", "supersedes": ["w2"] }],
-  "facts": [{ "text": "…", "support": ["r4", "w1"], "relevance": "high" }] }
+  "summaries": [{ "of": [5, 6], "text": "…", "supersedes": ["w2"] }],
+  "facts": [{ "text": "…", "support": ["r4", "w1"] }] }
 ```
 
 | Entry | Effect |
 | --- | --- |
 | `keep` | a WM `event` item: the record's description, relevance, time and side, and the reason; `j` in place of `r` keeps a re-judged record, `a` an earlier record for a coming step (its `neededLater` is set to that step) |
-| `summaries` | one WM `summary` per entry, citing those records and inheriting their time span and side |
-| `facts` | an episode `fact` per entry, citing records and items (`support`); it gives no verdict |
+| `summaries` | one WM `summary` per entry, citing those records and inheriting their time span, their side and the highest relevance among them |
+| `facts` | an episode `fact` per entry, citing records and items (`support`), with the highest relevance among them; it gives no verdict |
 | `discard` | no item; records by reason: `finished`, `out-of-scope`, `superseded` or `duplicate`; a protected record is refused. `finished` also accepts `w` ordinals for items listed under `Items for finished steps` |
 | `finishedSteps` | marks remaining scope steps finished (`[{ step, evidence: ["r1"] }]`) when every cited record is an STM `outcome` with `status: "passed"`; otherwise refused with `unsupported_step_finish` |
 
@@ -677,8 +698,9 @@ under `Items for finished steps` for release (`discard.finished`); items without
 in the order finishedSteps, keep, summaries, discard, facts, and the valid ones apply; the result lists each refused entry
 (`{ entry, reason, ordinal?, protection? }`, at most 64) with `unknown_id` (an ordinal outside the request, which can
 never name a record outside the batch), `unknown_step`, `unsupported_step_finish`, `already_processed` (a second verdict, a settled record, an already-finished step, or a re-judged record
-named outside `keep`), `empty_text`, `citation_outside_active_set` (a WM item already superseded), `invalid_arguments`
-or `protected` with the protection class, plus `applied` and `unjudged` counts, so one more turn can fix them. A record
+named outside `keep`), `empty_text`, `citation_outside_active_set` (a WM item already superseded), `invalid_arguments`,
+`too_many_supersedes`, `user_item_needs_newer_user_record` or `protected` with the protection class, plus `applied` and
+`unjudged` counts, so one more turn can fix them. A record
 left without a verdict stays on the STM surface and rendered, for the next pass. The instruction asks for one subject per
 item in a few sentences, with a changed value written as old → new with its dates, and to keep what the scope's later
 planned steps need, not only the current task.
@@ -691,8 +713,25 @@ against `judge` on the plan 218.2 worker replay. With `judge`, every worker mode
 never replaces the WM set. Every processed record leaves the STM surface with a tombstone carrying its verdict and
 stays recallable by id, with its source entries read from the session store.
 
-**When it runs.** Once the STM surface reaches `wm.triggerTokens` (10,000), or when a boundary marker is new since the
-last WM attempt; no pass runs while one is in flight for the session. A pass sends at most `wm.batchTokens` (3,000) of
+**What a summary or fact may replace, and what it carries (plan 218.5 Task 3).** These rules are code, not prompt text:
+
+- **A protected event is never replaced.** A WM `event` kept from a record the code still protects as `constraint`,
+  `task_state`, `unresolved_error` or `open_question` cannot be named in `supersedes` (`protected`, with the class). The
+  protection is read from the ledger on every pass, so an error a passed outcome resolved frees its event.
+- **At most 3 items per summary or fact** (`MAX_WM_SUPERSEDES`); more is refused with `too_many_supersedes`. On the
+  screen one fact replaced 25 items, and its one stale clause then stood for all of them.
+- **Relevance is set by code:** the highest among the records (and, for a fact, the items) the new item cites. `judge`
+  takes no `relevance` argument; one sent anyway is ignored.
+- **The time span comes from the STM records behind what the item cites.** An item it replaces lends no date, so a
+  summary that restates an old value does not read as the newest.
+- **A fact replaces what the user said only on the user's word.** A fact may supersede an item whose side is the user's
+  (`user`, or `user + assistant`) only when it cites a user record recorded after every record behind that item;
+  otherwise `user_item_needs_newer_user_record`. A tool result or a stale document cannot outrank the user.
+
+**When it runs: on pressure only (plan 218.5 Task 3).** Once the records WM can judge reach `wm.triggerTokens` (10,000);
+no pass runs while one is in flight for the session. A new boundary marker no longer runs a pass: on the screen that
+gave 14–16 passes in a 12-task session whose surface never passed 900 tokens, and every pass with nothing to relieve
+is one more chance to drop a clause. A pass sends at most `wm.batchTokens` (3,000) of
 the oldest records, so the verdicts fit one model's output: plan 217's gate M-1 saw two answer models write nothing when
 the whole log of about 22k tokens went in one call. A model call that stops on its output limit before giving any verdict (gate M-2: Muse Spark 1.3 spent the limit
 on reasoning in half its calls) retries once on the older half of the batch; the newer half waits for the next pass.
@@ -729,8 +768,8 @@ are code in `protections.ts`, shared with plan 219's Rehearsal, not prompt text:
 by code before the model is asked, and `judge` refuses a discard of any protected record with `protected`
 
 - a user statement recorded `durable: "constraint"` (`constraint`), for the episode, until a later record `supersedes`
-  it; it is settled as an event of its own, so no summary folds it in (`durable: "preference"` is not protected here;
-  Rehearsal reads it);
+  it. Since plan 218.5 Task 3 no durable record is in a WM batch, so this class now guards the events a ledger written
+  before it kept from one: no summary or fact may replace such an event;
 - a user `request` no `outcome` names in `resolves` yet (`task_state`). When no outcome in the ledger carries `resolves`
   (an older ledger, or a worker that never sets it), the batch rule applies instead: a `request` or `decision` the
   current task state was written from. A `decision` always follows the batch rule;
@@ -758,7 +797,7 @@ salient records as `event` items, summarises nothing, and discards the rest lowe
 a relevance, until the kept tokens reach the target (tombstone reason `wm discard budget`). It suits cost-capped hosts;
 its items are the records' own lines, so the achieved ratio is often above the target.
 
-**Cost.** One WM call per trigger crossing or new boundary (none with `wm.policy: "deterministic"`, and none when every
+**Cost.** One WM call per trigger crossing (none with `wm.policy: "deterministic"`, and none when every
 record in the batch is settled), usually one turn with one `judge` call, its input bounded
 by `wm.batchTokens` plus the active WM items, the task state and the scope (at most `scope.maxBytes`), and, only on the
 first pass after a scope change, at most `wm.rejudgeTokens` of re-judged records, and, while scope steps remain, at most
@@ -2557,6 +2596,7 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `context.compactAfterRun.maxTokens` | tuning |
 | `context.compactAfterRun.ratio` | tuning |
 | `context.keepRecentTokens` | tuning |
+| `context.eviction` | tuning |
 | `worker` | contract |
 | `worker.maxTaskStateBytes` | tuning |
 | `worker.maxTurns` | tuning |

@@ -36,7 +36,8 @@ function workerProvider(): ModelProvider {
         } else if (names.has("record_event")) {
           yield providerToolCall(
             toolCallContent("c1", "record_event", {
-              kind: "statement",
+              // A result: working memory judges it. A user statement would stay on the STM surface (plan 218.5 Task 3).
+              kind: "result",
               description: OBSERVATION_TEXT,
               relevance: "high",
               sourceEntryIds: ids,

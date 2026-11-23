@@ -34,6 +34,22 @@ export function attributionOfEntries(entries: readonly SessionEntry[]): MemoryAt
   );
 }
 
+/**
+ * A record the user stated (plan 218.5 Task 3): a `statement` that cites a user message, or a user message kept word
+ * for word. A `mixed` record counts, since it carries user content.
+ */
+export function isUserStatement(record: Pick<MemoryObservation, "kind" | "attribution" | "verbatim">): boolean {
+  return (record.attribution === "user" || record.attribution === "mixed") && (record.kind === "statement" || record.verbatim === true);
+}
+
+/**
+ * The records working memory never gives a verdict (so never tombstones) and the `protect-user` eviction order leaves
+ * out last: a record marked `durable`, or a user statement ({@link isUserStatement}).
+ */
+export function isDurableOrUserStatement(record: Pick<MemoryObservation, "kind" | "attribution" | "verbatim" | "durable">): boolean {
+  return record.durable !== undefined || isUserStatement(record);
+}
+
 /** True when an STM record is something the assistant proposed, not something the user stated or that happened. */
 export function isAssistantProposal(record: Pick<MemoryObservation, "kind" | "attribution">): boolean {
   return record.attribution === "assistant" && PROPOSAL_KINDS.has(record.kind);

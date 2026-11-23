@@ -7,6 +7,7 @@ export type {
   MemorySessionComponents,
   MemorySessionConfig,
   MemorySessionConfigInput,
+  MemorySystemEviction,
   MemorySystemRehearsalPolicy,
   MemorySystemWmPolicy,
   MemorySystemWorkerConfig,

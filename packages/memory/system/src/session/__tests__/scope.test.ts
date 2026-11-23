@@ -73,7 +73,7 @@ function allWorkers(seen: { stm: ProviderRequest[]; wm: ProviderRequest[]; rehea
       if (tools.includes("record_event")) {
         const ids = [...prompt.matchAll(/\] \[([^\]]+)\] (?:user|assistant|tool|system):/g)].map((match) => match[1]!);
         yield providerToolCall(
-          toolCallContent("c1", "record_event", { kind: "statement", description: `Saw ${ids.join(",")}`, sourceEntryIds: ids }),
+          toolCallContent("c1", "record_event", { kind: "result", description: `Saw ${ids.join(",")}`, sourceEntryIds: ids }),
         );
       } else if (tools.includes("judge")) {
         const of = [...prompt.matchAll(/^- \[r([0-9]+)\] \d{4}-/gm)].map((match) => Number(match[1]));

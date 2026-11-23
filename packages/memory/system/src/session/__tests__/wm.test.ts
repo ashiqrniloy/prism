@@ -17,14 +17,7 @@ import { activeObservations, activeWmItems, foldObservationalMemoryLedger } from
 import { recallObservationalMemory } from "../recall.js";
 import { renderObservationalMemory } from "../render.js";
 import { prepareScope, SCOPE_SET } from "../scope.js";
-import {
-  BOUNDARY_RECORDED,
-  type MemoryObservation,
-  MemorySessionLedgerError,
-  type MemoryWmItem,
-  OBSERVATIONS_RECORDED,
-  WM_RECORDED,
-} from "../types.js";
+import { type MemoryObservation, MemorySessionLedgerError, type MemoryWmItem, OBSERVATIONS_RECORDED, WM_RECORDED } from "../types.js";
 import { runDropper } from "../workers/dropper.js";
 import { DEFAULT_WM_INSTRUCTION, runWm } from "../workers/wm.js";
 import { judgeClient, promptText } from "./judge-helpers.js";
@@ -298,29 +291,6 @@ it("wm_prompt_carries_scope_task_state_and_salience_never_to_stm", async () => {
     requests[0]!.tools?.map((tool) => tool.name),
     ["judge"],
   );
-});
-
-it("a_new_boundary_triggers_wm_below_the_token_trigger", async () => {
-  let calls = 0;
-  const client: ModelClient = {
-    ...done,
-    async *generate() {
-      calls++;
-      yield providerDone();
-    },
-  };
-  const boundary = (entryId: string) => ({ type: BOUNDARY_RECORDED, reason: "outcome", entryId, recordId: A.id, at: A.timestamp });
-  const h = harness([recorded(A)], client, {
-    wm: { policy: "model", triggerTokens: 1_000 },
-    rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },
-  });
-  await h.flush.flush(h.session);
-  assert.equal(calls, 0, "below the trigger and no boundary");
-  h.data.push(boundary("x1") as unknown as JsonValue);
-  await h.flush.flush(h.session);
-  assert.equal(calls, 1, "a new boundary runs WM");
-  await h.flush.flush(h.session);
-  assert.equal(calls, 1, "the same boundary does not run it again");
 });
 
 it("rehearse_only_wm_runs_a_pass_below_the_trigger", async () => {

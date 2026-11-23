@@ -9,7 +9,7 @@ import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { createObservationalMemoryCommands } from "../commands.js";
 import { resolveMemorySystemConfig } from "../config.js";
 import { createObservationalFlush } from "../flush.js";
-import { activeWmItems, foldObservationalMemoryLedger } from "../ledger.js";
+import { activeObservations, activeWmItems, foldObservationalMemoryLedger } from "../ledger.js";
 import { isProtectedWmItem, protectedRecords } from "../protections.js";
 import { salienceSignals } from "../salience.js";
 import { prepareScope } from "../scope.js";
@@ -379,26 +379,29 @@ it("constraint_never_discarded_and_survives_a_new_task_state", async () => {
     [recorded(constraint, preference, PLAIN), taskState(["e-new"])],
     judgeClient(
       [constraint, preference, PLAIN],
-      (prompt) => ({
-        keep: [{ id: PLAIN.id, reason: "listing" }],
-        // The constraint is settled by code and has an ordinal under Already kept: naming it is refused.
-        summaries: [{ of: [`r${prompt.match(/\[r([0-9]+)\][^\n]*never touch the public API/)![1]}`], text: "API rule", relevance: "low" }],
-        discard: { finished: [preference.id] },
-      }),
+      // The model tries to discard the preference and the constraint; neither has an ordinal to name.
+      { keep: [{ id: PLAIN.id, reason: "listing" }], discard: { finished: [preference.id, constraint.id] } },
       requests,
     ),
   );
   assert.deepEqual(Object.fromEntries(protectedRecords(h.ledger())), { [constraint.id]: "constraint" });
   await h.flush.flush(h.session);
-  // The constraint is kept as an event of its own by code (plan 218.2 Task 5): a summary naming it is refused; a
-  // preference is not protected from WM (Rehearsal's, plan 219).
-  const replies = toolReplies(requests[1]!);
-  assert.match(replies, /"entry":"summaries\[0\]","reason":"already_processed"/);
+  // Plan 218.5 Task 3: a durable record is never in a WM batch, so the pass is not sent the constraint or the
+  // preference, gives neither a verdict and tombstones neither. Both stay on the STM surface.
+  assert.doesNotMatch(promptText(requests[0]!), /never touch the public API|short commit messages/);
+  assert.equal((toolReplies(requests[1]!).match(/"reason":"unknown_id"/g) ?? []).length, 2);
   const ledger = h.ledger();
-  assert.match(ledger.tombstones?.[constraint.id]?.reason ?? "", /^wm keep [a-f0-9]{12}$/);
-  assert.equal(activeWmItems(ledger).find((made) => made.citedIds.includes(constraint.id))?.reason, "protected: constraint");
-  assert.equal(ledger.tombstones?.[preference.id]?.reason, "wm discard finished");
-  // A WM event kept from a constraint is protected for Rehearsal; without the ledger only facts and neededLater are.
+  assert.deepEqual(Object.keys(ledger.tombstones ?? {}), [PLAIN.id]);
+  assert.deepEqual(
+    activeObservations(ledger).map((kept) => kept.id),
+    [constraint.id, preference.id],
+  );
+  assert.deepEqual(
+    activeWmItems(ledger).map((made) => made.citedIds),
+    [[PLAIN.id]],
+  );
+  // A WM event kept from a constraint (a ledger written before plan 218.5) is protected for Rehearsal; without the
+  // ledger only facts and neededLater are.
   const event: MemoryWmItem = {
     id: "e1e1e1e1e1e1",
     kind: "event",

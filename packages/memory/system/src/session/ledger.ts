@@ -41,12 +41,10 @@ export interface ObservationalMemoryLedger {
   readonly dropReasons?: Readonly<Record<string, string>>;
   /** Records whose surface WM removed (each got a verdict), by id. They leave the active set; `recall` still finds them. */
   readonly tombstones?: Readonly<Record<string, MemoryTombstone>>;
-  /** Event boundary markers in ledger order, one per `(reason, entryId)` (plan 217 Task 3; plan 218's WM trigger reads them). */
+  /** Event boundary markers in ledger order, one per `(reason, entryId)` (plan 217 Task 3). */
   readonly boundaries?: readonly MemoryBoundary[];
   /** WM items a later pass superseded by name. */
   readonly supersededWmItemIds?: readonly string[];
-  /** Boundary markers the ledger held at the latest WM attempt; a marker past this count is new to WM. */
-  readonly wmBoundariesSeen?: number;
   /** The latest WM pass that processed records, when its protected records alone exceeded its target (plan 218 Task 3). */
   readonly budgetUnmet?: WmBudgetUnmet;
   /** WM passes that processed records (plan 218.2 Task 3); absent before the first. */
@@ -102,7 +100,6 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
   let taskState: MemoryTaskState | undefined;
   let latestObservationCoverageId: string | undefined;
   let latestDropCoverageId: string | undefined;
-  let wmBoundariesSeen: number | undefined;
   let budgetUnmet: WmBudgetUnmet | undefined;
   let wmPasses = 0;
   const recordedAtWmPass: Record<string, number> = {};
@@ -139,7 +136,6 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
         if (!wmItems.has(item.id)) wmItems.set(item.id, item);
         superseded.delete(item.id);
       }
-      wmBoundariesSeen = data.boundaries ?? wmBoundariesSeen;
       // The latest pass that processed records decides; an empty attempt leaves the last verdict standing.
       if (data.processedIds?.length) {
         budgetUnmet = data.budgetUnmet;
@@ -203,7 +199,6 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
     ...(Object.keys(dropReasons).length ? { dropReasons } : {}),
     ...(Object.keys(tombstones).length ? { tombstones } : {}),
     supersededWmItemIds: [...superseded],
-    ...(wmBoundariesSeen === undefined ? {} : { wmBoundariesSeen }),
     ...(budgetUnmet ? { budgetUnmet } : {}),
     ...(wmPasses ? { wmPasses } : {}),
     ...(Object.keys(recordedAtWmPass).length ? { recordedAtWmPass } : {}),

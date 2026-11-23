@@ -230,16 +230,16 @@ export interface ObservationsRecordedData {
 }
 
 /**
- * One WM pass. `processedIds` are the STM records that received a verdict (each is also tombstoned); `boundaries` is
- * how many boundary markers the ledger held when the pass ran, so a later marker is new to WM. A pass that recorded no
- * item and processed no record (or failed) is an empty attempt: the next one waits for `wm.triggerTokens` of new records.
+ * One WM pass. `processedIds` are the STM records that received a verdict (each is also tombstoned). A pass that
+ * recorded no item and processed no record (or failed) is an empty attempt: the next one waits for `wm.triggerTokens` of
+ * new records. A record written before plan 218.5 Task 3 may carry `boundaries` (a boundary count the retired boundary
+ * trigger read); it is ignored.
  */
 export interface WmRecordedData {
   readonly type: typeof WM_RECORDED;
   readonly items: readonly unknown[];
   readonly supersededItemIds?: readonly string[];
   readonly processedIds?: readonly string[];
-  readonly boundaries?: number;
   /**
    * The pass's compression (plan 218 Task 3): `processedTokens` are the surface tokens of the records it gave a verdict,
    * `itemTokens` those of the items it wrote, `targetTokens` is `wm.targetRatio` × the batch's tokens.
@@ -437,7 +437,6 @@ export function isWmRecordedData(value: unknown): value is WmRecordedData {
     Array.isArray(value.items) &&
     (value.supersededItemIds === undefined || (isStringArray(value.supersededItemIds) && value.supersededItemIds.every(isMemoryId))) &&
     (value.processedIds === undefined || (isStringArray(value.processedIds) && value.processedIds.every(isMemoryId))) &&
-    (value.boundaries === undefined || (Number.isSafeInteger(value.boundaries) && (value.boundaries as number) >= 0)) &&
     (value.compression === undefined || isTokenRecord(value.compression, ["processedTokens", "itemTokens", "targetTokens"])) &&
     (value.budgetUnmet === undefined || isTokenRecord(value.budgetUnmet, ["protectedTokens", "targetTokens"])) &&
     (value.rejudge === undefined || isWmRejudge(value.rejudge)) &&

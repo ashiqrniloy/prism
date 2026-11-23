@@ -88,7 +88,8 @@ describe("WM host scope and step progress (plan 218.3 Task 7)", () => {
           const id = /\[[^\]]+\] \[([^\]]+)\] user:/.exec(prompt)?.[1] ?? `e${stmCounter}`;
           yield providerToolCall(
             toolCallContent(`s${stmCounter}`, "record_event", {
-              kind: "statement",
+              // A result: working memory judges it. A user statement would stay on the STM surface (plan 218.5 Task 3).
+              kind: "result",
               description: `Observed ${stmCounter}`,
               sourceEntryIds: [id],
             }),
