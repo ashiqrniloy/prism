@@ -198,7 +198,7 @@ export function buildLongRule() {
     ceilingBasis:
       "owner, Task 2: 2.3B input tokens (cached included) across every usage log under the run's wire directory, for the pilot and the full run under one hash; no new job starts at or above it, jobs in flight finish",
     faults:
-      "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows",
+      'the screen\'s: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure ("Upstream request failed") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch)',
     workerFaults:
       "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
     overflow:
@@ -311,6 +311,36 @@ export function readLongRows(root) {
     .map((entry) => assertLongRowHoldsNoText(JSON.parse(readFileSync(join(dir, entry), "utf8"))));
 }
 
+/** A gateway 400 that names a fault upstream of it, not the request it was sent (OpenCode Go, 2026-11-23). */
+export const UPSTREAM_FAILED_400 = /Upstream request failed/i;
+/**
+ * Task 7 (owner, 2026-11-23: the run must survive model call failures). The pilot's first job met one OpenCode Go 400
+ * "Upstream request failed: [invalid_request_error] reasoning_effort ..." in 32 worker calls, on a request whose twins
+ * passed (12 of 12 probes at the same effort, 7 of 7 at 2K-64K output caps and long inputs). `benchmarkFetch` hands any
+ * invalid_request 400 back at once, so one such answer made the whole job a worker fault. Here a 400 that names an
+ * upstream failure is sent again up to `retries` times (5 s, 20 s, 60 s), then handed on as it came; a 400 the gateway
+ * raises itself (no upstream named) is handed on at once. A request that is truly invalid fails the same way 4 times.
+ */
+export function upstreamRetryFetch(
+  inner,
+  { delaysMs = [5_000, 20_000, 60_000], log = () => {}, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = {},
+) {
+  return async (input, init) => {
+    for (let attempt = 0; ; attempt++) {
+      const response = await inner(input, init);
+      if (response.status !== 400 || attempt >= delaysMs.length || init?.signal?.aborted) return response;
+      const text = await response
+        .clone()
+        .text()
+        .catch(() => "");
+      if (!UPSTREAM_FAILED_400.test(text)) return response;
+      await response.body?.cancel();
+      log(`provider answered 400 (an upstream failure); sending again in ${delaysMs[attempt] / 1000} s`);
+      await sleep(delaysMs[attempt]);
+    }
+  };
+}
+
 /** One (arm, session) on the live models: progress after each task, the ledger in the run root, a row at the end. */
 export async function runLongLiveJob({ root, rule, arm, sessionId, embedder, log }) {
   const { liveProviders, refOf } = await import("../run.mjs");
@@ -325,7 +355,13 @@ export async function runLongLiveJob({ root, rule, arm, sessionId, embedder, log
       maxOutputTokens: rule.maxOutputTokens,
       patient: true,
       wrapFetch: (base) =>
-        quotaWaitFetch(stallGuardFetch(serialToolCallsFetch(base)), { clock, log: (line) => log(`${arm} ${sessionId}: ${line}`) }),
+        quotaWaitFetch(
+          stallGuardFetch(serialToolCallsFetch(upstreamRetryFetch(base, { log: (line) => log(`${arm} ${sessionId}: ${line}`) }))),
+          {
+            clock,
+            log: (line) => log(`${arm} ${sessionId}: ${line}`),
+          },
+        ),
     });
   } catch (error) {
     // A setup error (credential, model, provider) fails the same way again. Anything else at setup (the catalog fetch
