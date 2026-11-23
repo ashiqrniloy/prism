@@ -1,0 +1,816 @@
+{
+  "kind": "session-bench-long-report-v1",
+  "mode": "live-pilot",
+  "partition": "dev",
+  "benchmark": {
+    "version": 1,
+    "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
+    "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c",
+    "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1"
+  },
+  "window": 32000,
+  "fixedRequestTokens": {
+    "offline": 1826,
+    "live": 1416,
+    "toolList": 410
+  },
+  "arms": [
+    "memory-off-llm",
+    "amnesic",
+    "oracle-notes"
+  ],
+  "classes": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D2R",
+    "C"
+  ],
+  "configHashes": {
+    "memory-off-llm": "451c89a1a3f6de5982ed35dfc583bbeb21d10612bd75a486619b2b72e587c6ad",
+    "amnesic": "0d2cc1e738dda648f141133cf760163d19ee394d93e496080599266155307028",
+    "oracle-notes": "6c6227c0ff8782c945b6bbcada65bff7d4cef1b2ac7ee2d9dc32f80ea9d7a9ab"
+  },
+  "sharedConfigHash": "0ab8322c3f5e205ffd2fe2a3bb8bb74f27f58b23f0ee5bc90dafbd2205ab4b08",
+  "sessions": [
+    "sbl-sc-05",
+    "sbl-id-08",
+    "sbl-rt-07"
+  ],
+  "scores": {
+    "memory-off-llm": {
+      "overall": {
+        "tasks": 100,
+        "tasksPassed": 50,
+        "classes": {
+          "C": {
+            "pass": 70,
+            "total": 106,
+            "rate": 0.660377358490566
+          },
+          "D2": {
+            "pass": 0,
+            "total": 9,
+            "rate": 0
+          },
+          "D1": {
+            "pass": 1,
+            "total": 3,
+            "rate": 0.3333333333333333
+          },
+          "D3": {
+            "pass": 2,
+            "total": 3,
+            "rate": 0.6666666666666666
+          },
+          "D4": {
+            "pass": 0,
+            "total": 9,
+            "rate": 0
+          },
+          "D2R": {
+            "pass": 0,
+            "total": 2,
+            "rate": 0
+          }
+        },
+        "rederivations": 131,
+        "toolCalls": 560,
+        "taskRate": 0.5
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 100,
+          "tasksPassed": 50,
+          "classes": {
+            "C": {
+              "pass": 70,
+              "total": 106
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 1,
+              "total": 3
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D4": {
+              "pass": 0,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 131,
+          "toolCalls": 560
+        }
+      }
+    },
+    "amnesic": {
+      "overall": {
+        "tasks": 300,
+        "tasksPassed": 203,
+        "classes": {
+          "C": {
+            "pass": 265,
+            "total": 318,
+            "rate": 0.8333333333333334
+          },
+          "D2": {
+            "pass": 0,
+            "total": 27,
+            "rate": 0
+          },
+          "D1": {
+            "pass": 8,
+            "total": 9,
+            "rate": 0.8888888888888888
+          },
+          "D3": {
+            "pass": 6,
+            "total": 9,
+            "rate": 0.6666666666666666
+          },
+          "D4": {
+            "pass": 3,
+            "total": 27,
+            "rate": 0.1111111111111111
+          },
+          "D2R": {
+            "pass": 0,
+            "total": 6,
+            "rate": 0
+          }
+        },
+        "rederivations": 553,
+        "toolCalls": 1805,
+        "taskRate": 0.6766666666666666
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 100,
+          "tasksPassed": 64,
+          "classes": {
+            "C": {
+              "pass": 82,
+              "total": 106
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 2,
+              "total": 3
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D4": {
+              "pass": 2,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 157,
+          "toolCalls": 538
+        },
+        "sbl-id-08": {
+          "tasks": 100,
+          "tasksPassed": 74,
+          "classes": {
+            "C": {
+              "pass": 99,
+              "total": 106
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 0,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 205,
+          "toolCalls": 671
+        },
+        "sbl-rt-07": {
+          "tasks": 100,
+          "tasksPassed": 65,
+          "classes": {
+            "C": {
+              "pass": 84,
+              "total": 106
+            },
+            "D4": {
+              "pass": 1,
+              "total": 9
+            },
+            "D3": {
+              "pass": 1,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 191,
+          "toolCalls": 596
+        }
+      }
+    },
+    "oracle-notes": {
+      "overall": {
+        "tasks": 300,
+        "tasksPassed": 164,
+        "classes": {
+          "C": {
+            "pass": 181,
+            "total": 318,
+            "rate": 0.5691823899371069
+          },
+          "D2": {
+            "pass": 13,
+            "total": 27,
+            "rate": 0.48148148148148145
+          },
+          "D1": {
+            "pass": 3,
+            "total": 9,
+            "rate": 0.3333333333333333
+          },
+          "D3": {
+            "pass": 1,
+            "total": 9,
+            "rate": 0.1111111111111111
+          },
+          "D4": {
+            "pass": 15,
+            "total": 27,
+            "rate": 0.5555555555555556
+          },
+          "D2R": {
+            "pass": 4,
+            "total": 6,
+            "rate": 0.6666666666666666
+          }
+        },
+        "rederivations": 268,
+        "toolCalls": 1254,
+        "taskRate": 0.5466666666666666
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 100,
+          "tasksPassed": 42,
+          "classes": {
+            "C": {
+              "pass": 47,
+              "total": 106
+            },
+            "D2": {
+              "pass": 4,
+              "total": 9
+            },
+            "D1": {
+              "pass": 0,
+              "total": 3
+            },
+            "D3": {
+              "pass": 1,
+              "total": 3
+            },
+            "D4": {
+              "pass": 1,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 1,
+              "total": 2
+            }
+          },
+          "rederivations": 74,
+          "toolCalls": 337
+        },
+        "sbl-id-08": {
+          "tasks": 100,
+          "tasksPassed": 63,
+          "classes": {
+            "C": {
+              "pass": 70,
+              "total": 106
+            },
+            "D1": {
+              "pass": 1,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 0,
+              "total": 3
+            },
+            "D2": {
+              "pass": 5,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 1,
+              "total": 2
+            }
+          },
+          "rederivations": 110,
+          "toolCalls": 487
+        },
+        "sbl-rt-07": {
+          "tasks": 100,
+          "tasksPassed": 59,
+          "classes": {
+            "C": {
+              "pass": 64,
+              "total": 106
+            },
+            "D4": {
+              "pass": 6,
+              "total": 9
+            },
+            "D3": {
+              "pass": 0,
+              "total": 3
+            },
+            "D2": {
+              "pass": 4,
+              "total": 9
+            },
+            "D1": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 84,
+          "toolCalls": 430
+        }
+      }
+    }
+  },
+  "buckets": {
+    "memory-off-llm": {
+      "none": {
+        "C": {
+          "pass": 70,
+          "total": 106
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 0,
+          "total": 3
+        },
+        "D1": {
+          "pass": 1,
+          "total": 1
+        },
+        "D3": {
+          "pass": 1,
+          "total": 1
+        },
+        "D4": {
+          "pass": 0,
+          "total": 3
+        }
+      },
+      "after": {
+        "D1": {
+          "pass": 0,
+          "total": 2
+        },
+        "D4": {
+          "pass": 0,
+          "total": 6
+        },
+        "D2": {
+          "pass": 0,
+          "total": 6
+        },
+        "D2R": {
+          "pass": 0,
+          "total": 2
+        },
+        "D3": {
+          "pass": 1,
+          "total": 2
+        }
+      }
+    },
+    "amnesic": {
+      "none": {
+        "C": {
+          "pass": 265,
+          "total": 318
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 0,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 1,
+          "total": 3
+        },
+        "D4": {
+          "pass": 0,
+          "total": 9
+        }
+      },
+      "after": {
+        "D1": {
+          "pass": 5,
+          "total": 6
+        },
+        "D4": {
+          "pass": 3,
+          "total": 18
+        },
+        "D2": {
+          "pass": 0,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 0,
+          "total": 6
+        },
+        "D3": {
+          "pass": 5,
+          "total": 6
+        }
+      }
+    },
+    "oracle-notes": {
+      "none": {
+        "C": {
+          "pass": 181,
+          "total": 318
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 6,
+          "total": 9
+        },
+        "D1": {
+          "pass": 2,
+          "total": 3
+        },
+        "D3": {
+          "pass": 0,
+          "total": 3
+        },
+        "D4": {
+          "pass": 6,
+          "total": 9
+        }
+      },
+      "after": {
+        "D1": {
+          "pass": 1,
+          "total": 6
+        },
+        "D4": {
+          "pass": 9,
+          "total": 18
+        },
+        "D2": {
+          "pass": 7,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 4,
+          "total": 6
+        },
+        "D3": {
+          "pass": 1,
+          "total": 6
+        }
+      }
+    }
+  },
+  "cost": {
+    "memory-off-llm": {
+      "main": {
+        "calls": 664,
+        "inputTokens": 11803994,
+        "cachedInputTokens": 6570240,
+        "outputTokens": 182788
+      },
+      "workers": {
+        "calls": 125,
+        "inputTokens": 547981,
+        "cachedInputTokens": 90880,
+        "outputTokens": 144999
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 39,
+      "wholeRunTokens": 12679762,
+      "wholeRunTokensPerPassedTask": 253595,
+      "cacheShare": 0.5392757028734271,
+      "simulatedPrefixShare": 0.887300556636168
+    },
+    "amnesic": {
+      "main": {
+        "calls": 2404,
+        "inputTokens": 25326402,
+        "cachedInputTokens": 18302464,
+        "outputTokens": 380687
+      },
+      "workers": {
+        "calls": 0,
+        "inputTokens": 0,
+        "cachedInputTokens": 0,
+        "outputTokens": 0
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 334,
+      "wholeRunTokens": 25707089,
+      "wholeRunTokensPerPassedTask": 126636,
+      "cacheShare": 0.7226634087226445,
+      "simulatedPrefixShare": 0.8439399992741827
+    },
+    "oracle-notes": {
+      "main": {
+        "calls": 1586,
+        "inputTokens": 27808262,
+        "cachedInputTokens": 15607040,
+        "outputTokens": 563473
+      },
+      "workers": {
+        "calls": 338,
+        "inputTokens": 1517746,
+        "cachedInputTokens": 296768,
+        "outputTokens": 294016
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 114,
+      "wholeRunTokens": 30183497,
+      "wholeRunTokensPerPassedTask": 184046,
+      "cacheShare": 0.5423107024999788,
+      "simulatedPrefixShare": 0.84820748148617
+    }
+  },
+  "faults": {
+    "memory-off-llm": [],
+    "amnesic": [],
+    "oracle-notes": []
+  },
+  "pressure": {},
+  "wallMs": 19792388,
+  "plan": "218.5 Task 6",
+  "model": "opencode-go/hy4-flash-free",
+  "worker": "opencode-go/beam-free",
+  "ruleHash": "c2e39021beab579e5299429dd3107b3e87840cdf76917cbf7772ace0fa9b240b",
+  "rows": 7,
+  "complete": false,
+  "firstAfterTask": {
+    "sbl-sc-05": 67,
+    "sbl-id-08": 68,
+    "sbl-rt-07": 64
+  },
+  "quotaWaitMs": 0,
+  "wireUsage": {
+    "inputTokens": 67004385,
+    "outputTokens": 1565963
+  },
+  "liveGuardrails": {
+    "complete": false,
+    "pass": false,
+    "rows": [
+      {
+        "id": "oracle-notes-solvable",
+        "taskRate": 0.5466666666666666,
+        "min": 0.6,
+        "pass": false
+      },
+      {
+        "id": "amnesic-fails-D2",
+        "failRate": 1,
+        "min": 0.7,
+        "pass": true
+      },
+      {
+        "id": "amnesic-fails-D4",
+        "failRate": 0.8888888888888888,
+        "min": 0.7,
+        "pass": true
+      },
+      {
+        "id": "amnesic-fails-D2R",
+        "failRate": 1,
+        "min": 0.7,
+        "pass": true
+      },
+      {
+        "id": "G11-live",
+        "reached": 0,
+        "sessions": 3,
+        "min": 2,
+        "pass": false
+      },
+      {
+        "id": "no-window-overflow",
+        "overflows": 0,
+        "max": 0,
+        "pass": true
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "a": "STM-only",
+      "b": "STM-only-protect",
+      "status": "not-run"
+    },
+    {
+      "a": "STM-only",
+      "b": "STM+WM",
+      "status": "not-run"
+    },
+    {
+      "a": "STM-only",
+      "b": "STM+WM-deterministic",
+      "status": "not-run"
+    },
+    {
+      "a": "STM-only-protect",
+      "b": "STM+WM",
+      "status": "not-run"
+    },
+    {
+      "a": "STM-only-protect",
+      "b": "STM+WM-deterministic",
+      "status": "not-run"
+    },
+    {
+      "a": "memory-off-llm",
+      "b": "STM-only",
+      "status": "not-run"
+    },
+    {
+      "a": "memory-off-llm",
+      "b": "STM-only-protect",
+      "status": "not-run"
+    }
+  ],
+  "verdict": {
+    "analysis": "session-bench-long-analysis-v1",
+    "step1": {
+      "base": "STM-only",
+      "candidate": "STM-only-protect",
+      "status": "not-run",
+      "after": null,
+      "control": null,
+      "protectWins": false,
+      "reference": "STM-only",
+      "evictionDefault": "relevance",
+      "rule": "STM-only-protect becomes the reference, and protect-user the eviction default, if it beats STM-only on after dependency checks (95% lower bound > 0) and its C lower bound is > -5 points; otherwise the reference is STM-only"
+    },
+    "step2": {
+      "reference": "STM-only",
+      "referenceCostPerPassedTask": null,
+      "arms": [
+        {
+          "arm": "STM+WM",
+          "status": "not-run",
+          "level": 0.975,
+          "adjustedP": null,
+          "after": null,
+          "control": null,
+          "task": null,
+          "costPerPassedTask": null,
+          "costRatio": null,
+          "keeps": false,
+          "underDropBound": false,
+          "detectableEffect": null,
+          "interaction": null
+        },
+        {
+          "arm": "STM+WM-deterministic",
+          "status": "not-run",
+          "level": 0.975,
+          "adjustedP": null,
+          "after": null,
+          "control": null,
+          "task": null,
+          "costPerPassedTask": null,
+          "costRatio": null,
+          "keeps": false,
+          "underDropBound": false,
+          "detectableEffect": null,
+          "interaction": null
+        }
+      ],
+      "outcome": "incomplete",
+      "wmDefaultPolicy": null,
+      "rule": "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides"
+    },
+    "stmAtLength": {
+      "comparison": null,
+      "finding": null
+    },
+    "side": [
+      {
+        "arm": "STM-only",
+        "side": "mem0",
+        "status": "not-run"
+      },
+      {
+        "arm": "STM-only-protect",
+        "side": "mem0",
+        "status": "not-run"
+      },
+      {
+        "arm": "STM+WM",
+        "side": "mem0",
+        "status": "not-run"
+      },
+      {
+        "arm": "STM+WM-deterministic",
+        "side": "mem0",
+        "status": "not-run"
+      },
+      {
+        "arm": "memory-off-llm",
+        "side": "mem0",
+        "status": "not-run"
+      }
+    ],
+    "summary": {
+      "reference": "STM-only",
+      "evictionDefault": "relevance",
+      "wm": "incomplete",
+      "stmAtLengthFinding": false
+    }
+  },
+  "finishedAt": "2026-11-23T19:57:04.413Z"
+}

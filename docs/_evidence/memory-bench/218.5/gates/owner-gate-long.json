@@ -864,5 +864,17 @@
     "approvedAt": "2026-11-23T18:10:44Z",
     "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged",
     "pending": "the owner's word on this hash (plan 218.5 Task 7). Owner calls folded into the rule as recommended: wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome"
-  }
+  },
+  "checkins": [
+    {
+      "at": "2026-11-23T19:57:04Z",
+      "task": 7,
+      "ruleHash": "c2e39021beab579e5299429dd3107b3e87840cdf76917cbf7772ace0fa9b240b",
+      "outcome": "STOP at calibration: oracle-notes-solvable missed (taskRate 0.547 < 0.60); amnesic D2 1.00, D4 0.89, D2R 1.00 held; 0 overflows; smoke held",
+      "rows": 7,
+      "inputTokens": 67004385,
+      "outsideCeilingInputTokens": 20884615,
+      "next": "owner: a new oracle-notes delivery (new hash) and a new pilot; see plan 218.5 Task 7 notes"
+    }
+  ]
 }
