@@ -1274,7 +1274,8 @@ export const FEATURES = [
     defaultRef: "observational.wm",
     cost: {
       // Plan 218 Task 2: verdicts on named STM records replaced the whole-log reflector.
-      modelCalls: "1 pass per wm.triggerTokens (10k) of STM surface or new boundary, at most wm.batchTokens (3k) sent",
+      modelCalls:
+        "1 pass per wm.triggerTokens (10k) of the STM records WM can judge (pressure only since plan 218.5 Task 3), at most wm.batchTokens (3k) sent",
       writes: "wm.recorded and tombstone records",
       tokens: "1.29 reflector calls per arm (offline mock)",
     },
@@ -1347,7 +1348,7 @@ export const FEATURES = [
     group: "om",
     name: "Session memory compaction (compaction slot from the ledger; mid-loop compactAt, between-loop compactAfterRun)",
     owner: OM,
-    config: ["om:context", "om:context.compaction", "om:context.compactAt.*", "om:context.compactAfterRun.*"],
+    config: ["om:context", "om:context.compaction", "om:context.compactAt.*", "om:context.compactAfterRun.*", "om:context.eviction"],
     defaultRef: "observational.context",
     cost: { modelCalls: "0 extra (summarizes from the ledger)", writes: "compaction entry", tokens: "replaces the transcript prefix" },
     roles: ["accuracy", "cost"],

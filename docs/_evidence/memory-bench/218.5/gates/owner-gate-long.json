@@ -1,0 +1,867 @@
+{
+  "schemaVersion": 1,
+  "kind": "session-bench-long-owner-gate",
+  "plan": "218.5",
+  "status": "rule frozen 2026-11-23 (Task 6): `sessionBenchLong` holds the rule and its hash, unapproved. No paid call is approved by this record until the owner approves that hash (approved, approvedBy owner, approvedAt, text). Design review (Task 2) and the owner decisions below.",
+  "ownerDecisions": [
+    {
+      "date": "2026-11-23",
+      "id": "tasksPerSession",
+      "decision": "100 tasks per session, in 4 phases of 25. Chosen with the measurement in view: the pool overflows at task 53 on average (39 densest, 70 sparsest), so 48% of the session runs under eviction and 37 tasks fall in the `after` bucket; eviction does not reach high records (the user's rules and changes) before about task 132. 125 tasks was the recommendation.",
+      "text": "100 tasks"
+    },
+    {
+      "date": "2026-11-23",
+      "id": "power",
+      "decision": "12 dev sessions, one run each: 4 per family, so the per-family draw is [4, 4, 4] of 12 (not the [6, 3, 3] the plan's Expected Outcome stated). At least 60 D2 and 60 D4 checks in the `after` bucket over the dev set. The pilot's spread replaces the detectable-effect estimate (about 14 points).",
+      "text": "12 dev, 1 run each (Recommended)"
+    },
+    {
+      "date": "2026-11-23",
+      "id": "mem0",
+      "decision": "mem0 runs as a side arm: reported beside the decision arms, never read by the verdict.",
+      "text": "Run mem0 as a side arm"
+    },
+    {
+      "date": "2026-11-23",
+      "id": "burdenOfProof",
+      "decision": "Task 6's three-way rule: keep WM on a lower bound > 0 with the control and cost guards, drop WM when both WM arms' upper bounds are under +5 points, the owner decides in between.",
+      "text": "Three-way rule (Recommended)"
+    },
+    {
+      "date": "2026-11-23",
+      "id": "tokenCeiling",
+      "decision": "2.3B input tokens for the pilot and the full run under one hash: the upper-bound estimate of about 1.97B (1.64B decision arms, 0.23B mem0, 0.10B calibration) plus about 15% for jobs that rerun.",
+      "text": "2.3B input tokens (Recommended)"
+    }
+  ],
+  "design": {
+    "task": "plan 218.5 Task 2",
+    "date": "2026-11-23",
+    "script": "scripts/memory-bench/session-bench-long/pressure.mjs",
+    "source": {
+      "ledgers": 36,
+      "arm": "STM-only",
+      "ledgersHash": "7c6caf95038dec290ed9798a8b58a224bd04c1e2dc3636140295d70100180a47"
+    },
+    "window": 32000,
+    "caps": {
+      "harnessInputCap": 29952,
+      "productInputCap": 28928,
+      "poolTokens": 8678,
+      "keepRecentTokens": 5785,
+      "compactAtTokens": 23142.4,
+      "fixedRequestTokens": {
+        "live": 1416,
+        "withToolList": 1826
+      }
+    },
+    "pressure": {
+      "tasks": 384,
+      "recordsPerTask": {
+        "mean": 4.5,
+        "densest": 6.2,
+        "sparsest": 3.5
+      },
+      "tokensPerTask": {
+        "mean": 156.6,
+        "densest": 215.1,
+        "sparsest": 118.7
+      },
+      "tokensPerTaskByRelevance": {
+        "low": 0.4,
+        "medium": 93.5,
+        "high": 62.4,
+        "critical": 0.3
+      },
+      "highTokensPerTask": 62.7,
+      "recordedTokensPerTask": 196.1,
+      "verbatimTokensPerTask": 41.2,
+      "protectedTokensPerTask": 46,
+      "scopeTokens": 407.5,
+      "largestPoolTokens": 2876,
+      "overflowTask": {
+        "mean": 53,
+        "densest": 39,
+        "sparsest": 70
+      },
+      "highOverflowTask": 132,
+      "rehearsalTask": {
+        "mean": 126,
+        "densest": 92
+      },
+      "densestSession": "sb-rt-14",
+      "sparsestSession": "sb-rt-13"
+    },
+    "render": {
+      "ratio": {
+        "measuredMean": 1.5479,
+        "measuredMin": 1.4908,
+        "measuredMax": 1.6149,
+        "atPoolBound": 1.5381
+      },
+      "lineCharsPerDescriptionToken": {
+        "mean": 5.1258,
+        "max": 5.2442
+      },
+      "headerChars": 1187,
+      "blockTokensAtPoolBound": 13348,
+      "fullFolds": 0
+    },
+    "rounds": {
+      "artifactReads": 429,
+      "overheadTokens": {
+        "mean": 128,
+        "max": 2222
+      },
+      "escapeRatio": 1.0275
+    },
+    "observed": {
+      "compactions": 422,
+      "midLoop": 416,
+      "maxRequestAfterCompaction": 24278
+    },
+    "worstRequest": {
+      "share": 0.9,
+      "limitTokens": 26956,
+      "v3Artifact": {
+        "fixedTokens": 1826,
+        "blockTokens": 13348,
+        "tailTokens": 21231,
+        "tokens": 36405,
+        "cap": 29952,
+        "share": 1.2154
+      },
+      "chosenArtifact": {
+        "fixedTokens": 1826,
+        "blockTokens": 13348,
+        "tailTokens": 11470,
+        "tokens": 26644,
+        "cap": 29952,
+        "share": 0.8896
+      },
+      "maxArtifactTokens": 9304,
+      "underTrigger": {
+        "tokens": 28659,
+        "cap": 29952,
+        "share": 0.9568
+      },
+      "underTriggerLive": {
+        "tokens": 28249,
+        "cap": 29952,
+        "share": 0.9431
+      }
+    },
+    "artifactTokens": [
+      6000,
+      9000
+    ],
+    "buckets": {
+      "beforeBelowTask": 39,
+      "afterAboveTask": 63,
+      "byLength": {
+        "80": {
+          "tasksPastOverflow": 28,
+          "shareUnderEviction": 0.35,
+          "tasksInAfterBucket": 17,
+          "tasksPastHighOverflow": 0
+        },
+        "100": {
+          "tasksPastOverflow": 48,
+          "shareUnderEviction": 0.48,
+          "tasksInAfterBucket": 37,
+          "tasksPastHighOverflow": 0
+        },
+        "125": {
+          "tasksPastOverflow": 73,
+          "shareUnderEviction": 0.584,
+          "tasksInAfterBucket": 62,
+          "tasksPastHighOverflow": 0
+        },
+        "150": {
+          "tasksPastOverflow": 98,
+          "shareUnderEviction": 0.6533,
+          "tasksInAfterBucket": 87,
+          "tasksPastHighOverflow": 19
+        }
+      }
+    },
+    "findings": [
+      {
+        "id": "pool-bounds-description-tokens",
+        "text": "The pool bound counts description tokens, but the block the request carries is larger.",
+        "poolTokens": 8678,
+        "blockTokensAtPoolBound": 13348,
+        "ratio": 1.5381
+      },
+      {
+        "id": "product-cap-below-harness-cap",
+        "text": "Session memory sizes itself from the kernel's input cap (W minus the output reserve minus 1,024), not the provider wrapper's.",
+        "productInputCap": 28928,
+        "harnessInputCap": 29952
+      },
+      {
+        "id": "trigger-near-the-cap",
+        "text": "The mid-loop trigger counts 4 characters per token over messages and the summary; in window tokens with the fixed part, a request just under it is close to the cap.",
+        "tokens": 28659,
+        "cap": 29952,
+        "share": 0.9568,
+        "live": {
+          "tokens": 28249,
+          "cap": 29952,
+          "share": 0.9431
+        }
+      },
+      {
+        "id": "eviction-reaches-medium-records-only",
+        "text": "Eviction leaves out the lowest relevance first. Word-for-word user messages and corrections are high, so until the high records alone pass the pool, only lower records are left out.",
+        "highTokensPerTask": 62.7,
+        "highOverflowTask": 132
+      },
+      {
+        "id": "rehearsal-drop-in-reach",
+        "text": "The rehearsal drop starts when active records pass its target. Its model is the session's unless rehearsal.model is set.",
+        "targetTokens": 20000,
+        "task": {
+          "mean": 126,
+          "densest": 92
+        }
+      },
+      {
+        "id": "protected-records-fill-the-pool",
+        "text": "Word-for-word user messages, user statements and durable records alone reach the pool at this task: from there an order that protects them has nothing else to leave out.",
+        "protectedTokensPerTask": 46,
+        "task": 180
+      }
+    ],
+    "sessions": [
+      {
+        "session": "sb-id-01",
+        "tasks": 8,
+        "records": 33,
+        "descriptionTokens": 1466,
+        "tokensPerTask": 146,
+        "overflowTask": 58,
+        "renderRatio": 1.4908
+      },
+      {
+        "session": "sb-id-02",
+        "tasks": 14,
+        "records": 60,
+        "descriptionTokens": 2504,
+        "tokensPerTask": 140.1,
+        "overflowTask": 59,
+        "renderRatio": 1.5871
+      },
+      {
+        "session": "sb-id-03",
+        "tasks": 12,
+        "records": 46,
+        "descriptionTokens": 2153,
+        "tokensPerTask": 142.5,
+        "overflowTask": 58,
+        "renderRatio": 1.5077
+      },
+      {
+        "session": "sb-id-05",
+        "tasks": 10,
+        "records": 47,
+        "descriptionTokens": 1932,
+        "tokensPerTask": 157,
+        "overflowTask": 53,
+        "renderRatio": 1.5487
+      },
+      {
+        "session": "sb-id-07",
+        "tasks": 8,
+        "records": 35,
+        "descriptionTokens": 1486,
+        "tokensPerTask": 148.9,
+        "overflowTask": 57,
+        "renderRatio": 1.6032
+      },
+      {
+        "session": "sb-id-08",
+        "tasks": 11,
+        "records": 49,
+        "descriptionTokens": 1996,
+        "tokensPerTask": 146.6,
+        "overflowTask": 57,
+        "renderRatio": 1.5446
+      },
+      {
+        "session": "sb-id-12",
+        "tasks": 12,
+        "records": 58,
+        "descriptionTokens": 2360,
+        "tokensPerTask": 160.3,
+        "overflowTask": 52,
+        "renderRatio": 1.5208
+      },
+      {
+        "session": "sb-id-13",
+        "tasks": 10,
+        "records": 52,
+        "descriptionTokens": 2021,
+        "tokensPerTask": 165.3,
+        "overflowTask": 51,
+        "renderRatio": 1.5721
+      },
+      {
+        "session": "sb-id-14",
+        "tasks": 10,
+        "records": 51,
+        "descriptionTokens": 1943,
+        "tokensPerTask": 155.4,
+        "overflowTask": 54,
+        "renderRatio": 1.5551
+      },
+      {
+        "session": "sb-id-15",
+        "tasks": 9,
+        "records": 52,
+        "descriptionTokens": 2089,
+        "tokensPerTask": 193.8,
+        "overflowTask": 44,
+        "renderRatio": 1.5601
+      },
+      {
+        "session": "sb-id-16",
+        "tasks": 11,
+        "records": 49,
+        "descriptionTokens": 2114,
+        "tokensPerTask": 157.6,
+        "overflowTask": 53,
+        "renderRatio": 1.5347
+      },
+      {
+        "session": "sb-id-19",
+        "tasks": 13,
+        "records": 72,
+        "descriptionTokens": 2876,
+        "tokensPerTask": 185.2,
+        "overflowTask": 45,
+        "renderRatio": 1.5213
+      },
+      {
+        "session": "sb-rt-01",
+        "tasks": 11,
+        "records": 48,
+        "descriptionTokens": 1926,
+        "tokensPerTask": 140.4,
+        "overflowTask": 60,
+        "renderRatio": 1.5452
+      },
+      {
+        "session": "sb-rt-02",
+        "tasks": 10,
+        "records": 44,
+        "descriptionTokens": 1881,
+        "tokensPerTask": 148,
+        "overflowTask": 56,
+        "renderRatio": 1.5726
+      },
+      {
+        "session": "sb-rt-03",
+        "tasks": 8,
+        "records": 45,
+        "descriptionTokens": 1851,
+        "tokensPerTask": 191.3,
+        "overflowTask": 44,
+        "renderRatio": 1.5678
+      },
+      {
+        "session": "sb-rt-06",
+        "tasks": 14,
+        "records": 62,
+        "descriptionTokens": 2697,
+        "tokensPerTask": 158.4,
+        "overflowTask": 52,
+        "renderRatio": 1.5146
+      },
+      {
+        "session": "sb-rt-07",
+        "tasks": 13,
+        "records": 59,
+        "descriptionTokens": 2590,
+        "tokensPerTask": 163.7,
+        "overflowTask": 51,
+        "renderRatio": 1.5027
+      },
+      {
+        "session": "sb-rt-08",
+        "tasks": 9,
+        "records": 31,
+        "descriptionTokens": 1448,
+        "tokensPerTask": 124.9,
+        "overflowTask": 67,
+        "renderRatio": 1.5663
+      },
+      {
+        "session": "sb-rt-10",
+        "tasks": 8,
+        "records": 37,
+        "descriptionTokens": 1572,
+        "tokensPerTask": 160.1,
+        "overflowTask": 53,
+        "renderRatio": 1.5682
+      },
+      {
+        "session": "sb-rt-11",
+        "tasks": 13,
+        "records": 63,
+        "descriptionTokens": 2643,
+        "tokensPerTask": 163.2,
+        "overflowTask": 50,
+        "renderRatio": 1.5982
+      },
+      {
+        "session": "sb-rt-12",
+        "tasks": 8,
+        "records": 45,
+        "descriptionTokens": 1869,
+        "tokensPerTask": 144.5,
+        "overflowTask": 56,
+        "renderRatio": 1.5934
+      },
+      {
+        "session": "sb-rt-13",
+        "tasks": 13,
+        "records": 47,
+        "descriptionTokens": 2028,
+        "tokensPerTask": 118.7,
+        "overflowTask": 70,
+        "renderRatio": 1.5235
+      },
+      {
+        "session": "sb-rt-14",
+        "tasks": 10,
+        "records": 64,
+        "descriptionTokens": 2563,
+        "tokensPerTask": 215.1,
+        "overflowTask": 39,
+        "renderRatio": 1.5276
+      },
+      {
+        "session": "sb-rt-19",
+        "tasks": 10,
+        "records": 46,
+        "descriptionTokens": 1850,
+        "tokensPerTask": 148.5,
+        "overflowTask": 56,
+        "renderRatio": 1.5762
+      },
+      {
+        "session": "sb-sc-02",
+        "tasks": 11,
+        "records": 50,
+        "descriptionTokens": 2118,
+        "tokensPerTask": 154.5,
+        "overflowTask": 54,
+        "renderRatio": 1.5512
+      },
+      {
+        "session": "sb-sc-04",
+        "tasks": 12,
+        "records": 53,
+        "descriptionTokens": 2359,
+        "tokensPerTask": 159.1,
+        "overflowTask": 52,
+        "renderRatio": 1.5291
+      },
+      {
+        "session": "sb-sc-06",
+        "tasks": 10,
+        "records": 51,
+        "descriptionTokens": 2120,
+        "tokensPerTask": 176,
+        "overflowTask": 48,
+        "renderRatio": 1.5274
+      },
+      {
+        "session": "sb-sc-07",
+        "tasks": 8,
+        "records": 37,
+        "descriptionTokens": 1557,
+        "tokensPerTask": 150.1,
+        "overflowTask": 56,
+        "renderRatio": 1.579
+      },
+      {
+        "session": "sb-sc-08",
+        "tasks": 12,
+        "records": 53,
+        "descriptionTokens": 2313,
+        "tokensPerTask": 155.8,
+        "overflowTask": 53,
+        "renderRatio": 1.5108
+      },
+      {
+        "session": "sb-sc-10",
+        "tasks": 8,
+        "records": 32,
+        "descriptionTokens": 1304,
+        "tokensPerTask": 126.6,
+        "overflowTask": 67,
+        "renderRatio": 1.6149
+      },
+      {
+        "session": "sb-sc-12",
+        "tasks": 13,
+        "records": 50,
+        "descriptionTokens": 2373,
+        "tokensPerTask": 147,
+        "overflowTask": 56,
+        "renderRatio": 1.513
+      },
+      {
+        "session": "sb-sc-14",
+        "tasks": 10,
+        "records": 55,
+        "descriptionTokens": 2330,
+        "tokensPerTask": 196.4,
+        "overflowTask": 43,
+        "renderRatio": 1.5163
+      },
+      {
+        "session": "sb-sc-15",
+        "tasks": 11,
+        "records": 54,
+        "descriptionTokens": 2395,
+        "tokensPerTask": 177.9,
+        "overflowTask": 47,
+        "renderRatio": 1.5418
+      },
+      {
+        "session": "sb-sc-16",
+        "tasks": 11,
+        "records": 40,
+        "descriptionTokens": 1786,
+        "tokensPerTask": 126.7,
+        "overflowTask": 66,
+        "renderRatio": 1.5525
+      },
+      {
+        "session": "sb-sc-18",
+        "tasks": 11,
+        "records": 51,
+        "descriptionTokens": 2050,
+        "tokensPerTask": 151.5,
+        "overflowTask": 55,
+        "renderRatio": 1.532
+      },
+      {
+        "session": "sb-sc-19",
+        "tasks": 12,
+        "records": 52,
+        "descriptionTokens": 2137,
+        "tokensPerTask": 141.2,
+        "overflowTask": 59,
+        "renderRatio": 1.5545
+      }
+    ]
+  },
+  "sessionBenchLong": {
+    "benchmark": {
+      "version": 1,
+      "seed": "prism-218.5-session-bench-long-v1",
+      "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
+      "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1",
+      "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
+      "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
+    },
+    "ruleHash": "7391bbc613cff38ae30e5d087a435b9189ccd05c0711a35c94a14f7361030def",
+    "rule": {
+      "suite": "session-bench-long",
+      "plan": "218.5 Task 6",
+      "gateSection": "sessionBenchLong",
+      "evidence": {
+        "pilot": "docs/_evidence/memory-bench/218.5/session-bench-long-pilot.json",
+        "run": "docs/_evidence/memory-bench/218.5/session-bench-long.json"
+      },
+      "benchmark": {
+        "version": 1,
+        "seed": "prism-218.5-session-bench-long-v1",
+        "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
+        "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1",
+        "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
+        "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
+      },
+      "product": {
+        "package": "@arnilo/prism-memory-system",
+        "dir": "packages/memory/system/src",
+        "files": 93,
+        "hash": "35f6a6884d6bf41d39c29a8404282a1d91a249e87d1d7dbcd29c5c3ae281296b",
+        "note": "the package's src after plan 218.5 Tasks 1 and 3 (tests excluded); the kernel and providers are the tree's at the run"
+      },
+      "harness": {
+        "files": [
+          "scripts/memory-bench/session-bench-long/agents.mjs",
+          "scripts/memory-bench/session-bench-long/arms.mjs",
+          "scripts/memory-bench/session-bench-long/guardrails.mjs",
+          "scripts/memory-bench/session-bench-long/instrument.mjs",
+          "scripts/memory-bench/session-bench-long/live.mjs",
+          "scripts/memory-bench/session-bench-long/run.mjs",
+          "scripts/memory-bench/session-bench-long/score.mjs",
+          "scripts/memory-bench/session-bench/arms/prism.mjs",
+          "scripts/memory-bench/session-bench/arms/third-party.mjs",
+          "scripts/memory-bench/session-bench/live.mjs",
+          "scripts/memory-bench/session-bench/run.mjs",
+          "scripts/memory-bench/session-bench/score.mjs",
+          "scripts/memory-bench/run.mjs",
+          "scripts/memory-bench/stats.mjs"
+        ],
+        "hash": "77179ade19d6783a1d118ed874807b257376f833064026834a88a97f9bcf2653"
+      },
+      "partition": "dev",
+      "sessions": [
+        "sbl-sc-05",
+        "sbl-sc-10",
+        "sbl-sc-00",
+        "sbl-sc-02",
+        "sbl-id-08",
+        "sbl-id-00",
+        "sbl-id-02",
+        "sbl-id-04",
+        "sbl-rt-07",
+        "sbl-rt-09",
+        "sbl-rt-02",
+        "sbl-rt-00"
+      ],
+      "pilotSessions": [
+        "sbl-sc-05",
+        "sbl-id-08",
+        "sbl-rt-07"
+      ],
+      "selection": "every dev session (12: 4 per family; owner, Task 2); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
+      "arms": [
+        "memory-off-llm",
+        "STM-only",
+        "STM-only-protect",
+        "STM+WM",
+        "STM+WM-deterministic",
+        "mem0"
+      ],
+      "decisionArms": [
+        "memory-off-llm",
+        "STM-only",
+        "STM-only-protect",
+        "STM+WM",
+        "STM+WM-deterministic"
+      ],
+      "sideArms": [
+        "mem0"
+      ],
+      "armsNote": "each arm differs only in `memory` (arms.mjs). STM-only: the 0.14.0 defaults (WM off) with Task 1's fixes, context.eviction relevance; STM-only-protect: protect-user; STM+WM: WM on, model policy, each phase's scope through memory:scope; STM+WM-deterministic: the same, deterministic policy; mem0: the side arm (owner, Task 2), reported beside the decision arms and never read by the verdict",
+      "calibration": {
+        "arms": [
+          "amnesic",
+          "oracle-notes"
+        ],
+        "sessions": [
+          "sbl-sc-05",
+          "sbl-id-08",
+          "sbl-rt-07"
+        ],
+        "text": "amnesic (the floor: a fresh session per task) and oracle-notes (the ceiling: memory-off-llm plus every dependency's current evidence) on the 3 pilot sessions"
+      },
+      "configHashes": {
+        "memory-off-llm": "451c89a1a3f6de5982ed35dfc583bbeb21d10612bd75a486619b2b72e587c6ad",
+        "STM-only": "36a31d99bf1a5fd1a9a631afc027da4ecc2d963758c93557bd8a1c86270d1a57",
+        "STM-only-protect": "7050594366ec2ac269beee3ffd8fdb24d4ba8b1c916f2a9f24d951d8ab6af54a",
+        "STM+WM": "03f2a1a33fcaa3c0d52f8b8285392dab3035a18d88e3bdc132a8cd5b52d2bd8b",
+        "STM+WM-deterministic": "e78743eb60f51f65e0ee5a3f25b639c559637b63cba057f282f33ede9512b1e5",
+        "mem0": "fa7ef8a68f533bf718ac80fe98247382f14ecad4045bc3d6e7922ba6c4239f96",
+        "amnesic": "0d2cc1e738dda648f141133cf760163d19ee394d93e496080599266155307028",
+        "oracle-notes": "6c6227c0ff8782c945b6bbcada65bff7d4cef1b2ac7ee2d9dc32f80ea9d7a9ab"
+      },
+      "sharedConfigHash": "0ab8322c3f5e205ffd2fe2a3bb8bb74f27f58b23f0ee5bc90dafbd2205ab4b08",
+      "wm": {
+        "triggerTokens": 3000,
+        "text": "both WM arms pin wm.triggerTokens 3,000 (one wm.batchTokens batch per pass; Task 3 finding 1). At the product default 10,000 WM's first pass comes at about task 89, after the pool overflows at about task 53. Offline (Task 5) the first pass comes at task 33-34, 2-4 passes per session. Live G11 applies to the STM arms only; the WM arms report their first pass and whether the pool overflowed"
+      },
+      "rehearsal": "no arm runs the Rehearsal drop: the memory system turns it on only when wm and ltm are both on, and no arm turns ltm on (Task 5 finding 1); the rows count the drops (0 expected)",
+      "model": "opencode-go/hy4-flash-free",
+      "worker": "opencode-go/muse-spark-1.3-contributor",
+      "modelChoice": "the screen's models (rule a1c6df8d, plan 218.3 Task 12): the main agent on hy4-flash-free, every memory worker (STM, WM, LLM-compaction summaries, Mem0) on muse-spark-1.3-contributor at reasoning low; the same worker serves every arm",
+      "sampling": {
+        "temperature": 0,
+        "thinkingLevel": "low",
+        "parallelToolCalls": false,
+        "toolCallsPerTurn": 1,
+        "workerReasoningEffort": "low",
+        "workerOutput": "window"
+      },
+      "samplingNote": "the screen's: temperature 0; the agent at thinkingLevel low; one tool call per main-agent turn (the harness answers the others with a fixed text); workerReasoningEffort low; workerOutput window (a worker call may write what W leaves after its input)",
+      "window": 32000,
+      "maxOutputTokens": 2048,
+      "limits": {
+        "maxTurns": 60,
+        "maxToolCalls": 60,
+        "maxInputTokens": 12000000,
+        "maxTotalTokens": 12100000,
+        "maxOutputTokens": 60000,
+        "maxWallTimeMs": 43200000
+      },
+      "limitsNote": "the screen's live limits: maxToolCalls and maxTurns 60 for every arm",
+      "embedder": {
+        "provider": "llama.cpp",
+        "runtime": "llama.cpp llama-server, Vulkan backend (RADV), GPU offload of every layer",
+        "llamaCpp": {
+          "repo": "https://github.com/ggml-org/llama.cpp.git",
+          "tag": "b12533"
+        },
+        "vulkanHeaders": {
+          "repo": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+          "tag": "v1.4.363"
+        },
+        "spirvHeaders": {
+          "repo": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+          "tag": "vulkan-sdk-1.4.363.0"
+        },
+        "build": [
+          "-DGGML_VULKAN=ON",
+          "-DLLAMA_CURL=OFF",
+          "-DLLAMA_BUILD_TESTS=OFF",
+          "-DLLAMA_BUILD_EXAMPLES=OFF",
+          "-DLLAMA_BUILD_SERVER=ON",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        "model": "gpustack/bge-m3-GGUF",
+        "base": "BAAI/bge-m3 (MIT)",
+        "revision": "2d48f1737679ad900d5c26c5aad5410e9c70fdca",
+        "file": "bge-m3-FP16.gguf",
+        "sha256": "daec91ffb5dd0c27411bd71f29932917c49cf529a641d0168496c3a501e3062c",
+        "dims": 1024,
+        "pooling": "cls",
+        "normalize": true,
+        "contextTokens": 8192,
+        "device": "the discrete GPU (AMD Radeon RX 6550M, RADV NAVI24, 4 GB): the Vulkan device whose name matches /NAVI ?24/i",
+        "tokens": "llama-server's usage.prompt_tokens",
+        "deviation": "Mem0's default embedder is OpenAI text-embedding-3-small; Gemini's free tier (Task 11) caps at 1,000 requests a day, so the owner chose a local embedder (2026-11-19) and then BGE-M3 for retrieval quality, on the GPU through llama.cpp/Vulkan: recorded as a G10 deviation"
+      },
+      "embedderNote": "mem0's embedder is the screen's: BGE-M3 on llama.cpp (Vulkan), local",
+      "concurrency": 6,
+      "ceilingInputTokens": 2300000000,
+      "ceilingBasis": "owner, Task 2: 2.3B input tokens (cached included) across every usage log under the run's wire directory, for the pilot and the full run under one hash; no new job starts at or above it, jobs in flight finish",
+      "faults": "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows",
+      "workerFaults": "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
+      "overflow": "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no overflow on any row (Task 7: a miss stops the run, the fix is a new hash). Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
+      "smokeOutcomes": [
+        "ERR_PRISM_RUN_LIMIT",
+        "context_overflow"
+      ],
+      "liveGuardrails": {
+        "oracleTaskRateMin": 0.6,
+        "amnesicFailRateMin": {
+          "D2": 0.7,
+          "D4": 0.7,
+          "D2R": 0.7
+        },
+        "pressureArm": "STM-only",
+        "pressureSessionsMin": 2,
+        "maxOverflows": 0
+      },
+      "order": [
+        "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
+        "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no provider error, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run",
+        "calibration: amnesic and oracle-notes on the pilot sessions; oracle-notes passes >= 60% of tasks and amnesic fails >= 70% of D2, D4 and D2R, or the run stops",
+        "pilot: the decision arms and mem0 on the pilot sessions; then live G11 (STM-only's pool overflows before the first after dependent in >= 2 of 3) and no overflow on any row, or the run stops (Task 7)",
+        "the rest (Task 8, on the owner's word): the decision arms and mem0 on the other 9 dev sessions; the pilot's rows count"
+      ],
+      "checkins": "every 30 minutes and after every job: rows done, input tokens spent, projected total",
+      "instrumentation": "each memory-system row carries, per task, block tokens (rendered and description), active STM tokens, fullFold, records left out by relevance and how many were durable or user statements, Rehearsal drops, WM items, tombstones and passes; per dependent, whether its sources' records were in the block (ids only)",
+      "analysis": {
+        "version": "session-bench-long-analysis-v1",
+        "unit": "check or task, paired by id across arms; sessions are the clusters",
+        "statistic": "pairedClusterPermutation (scripts/memory-bench/stats.mjs): cluster bootstrap interval of the mean paired difference, sign-flip p",
+        "iterations": 10000,
+        "seed": 7,
+        "alpha": 0.05,
+        "metrics": [
+          "task",
+          "D1",
+          "D2",
+          "D3",
+          "D4",
+          "D2R",
+          "C",
+          "before",
+          "after",
+          "before:D1",
+          "before:D2",
+          "before:D3",
+          "before:D4",
+          "after:D1",
+          "after:D2",
+          "after:D3",
+          "after:D4"
+        ],
+        "pooled": "before and after pool D1-D4 only (same class mix in both buckets); D2R is its own metric (after only)",
+        "comparisons": [
+          [
+            "STM-only",
+            "STM-only-protect"
+          ],
+          [
+            "STM-only",
+            "STM+WM"
+          ],
+          [
+            "STM-only",
+            "STM+WM-deterministic"
+          ],
+          [
+            "STM-only-protect",
+            "STM+WM"
+          ],
+          [
+            "STM-only-protect",
+            "STM+WM-deterministic"
+          ],
+          [
+            "memory-off-llm",
+            "STM-only"
+          ],
+          [
+            "memory-off-llm",
+            "STM-only-protect"
+          ]
+        ],
+        "sideArm": "mem0",
+        "reported": "every arm's scores per class and bucket, every comparison above on every metric, each decision arm against mem0 (side, never read by the verdict), whole-run tokens per passed task, the pressure counts, and the effect detectable at N"
+      },
+      "decision": {
+        "reference": {
+          "base": "STM-only",
+          "candidate": "STM-only-protect",
+          "metric": "after",
+          "dependencyLowerAbove": 0,
+          "controlLowerAbove": -0.05,
+          "text": "STM-only-protect becomes the reference, and protect-user the eviction default, if it beats STM-only on after dependency checks (95% lower bound > 0) and its C lower bound is > -5 points; otherwise the reference is STM-only"
+        },
+        "wm": {
+          "arms": [
+            "STM+WM",
+            "STM+WM-deterministic"
+          ],
+          "metric": "after",
+          "keepLowerAbove": 0,
+          "controlLowerAbove": -0.05,
+          "maxCostRatio": 1.5,
+          "dropUpperBelow": 0.05,
+          "cost": "whole-run tokens (main and workers, input and output, plus embeddings) per passed task",
+          "text": "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides"
+        },
+        "stmAtLength": {
+          "against": "memory-off-llm",
+          "text": "if reference - memory-off-llm has a lower bound <= 0 on after while before's lower bound is > 0, the report sends a P1 STM finding to the owner"
+        }
+      }
+    },
+    "approved": true,
+    "approvedBy": "owner",
+    "approvedAt": "2026-11-23T15:53:48Z",
+    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner; 7391bbc6 differs only in the harness's failure handling the owner's condition asked for (live.mjs: a provider setup failure is a provider fault, a stage with a job missing is a restart), product hash unchanged"
+  }
+}

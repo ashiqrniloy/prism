@@ -150,8 +150,8 @@ export const probes = [
   {
     id: "om.reflector",
     async run() {
-      // Plan 218 Task 2: a new boundary (the task state the worker records) also runs WM, so the off arm turns WM off
-      // rather than raising its trigger.
+      // The off arm turns WM off rather than raising its trigger. (Until plan 218.5 Task 3 a new boundary also ran WM
+      // below the trigger; a pass now runs on pressure only.)
       const arm = async (on) => {
         const h = await omAgent({
           // Plan 216: `reflector` → `wm`, `dropper` → `rehearsal` (inert here, as before), which needs `ltm` on (Task 6).

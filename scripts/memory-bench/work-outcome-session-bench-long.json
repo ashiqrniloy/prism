@@ -1,0 +1,230 @@
+{
+  "benchmark": "session-bench-long",
+  "version": 1,
+  "plan": "218.5",
+  "task": 4,
+  "seed": "prism-218.5-session-bench-long-v1",
+  "source": "scripts/memory-bench/session-bench-long (project-owned synthetic generator over Session-Bench v3's workspace and families); sessions rebuild from the seed, ids and hashes only",
+  "draw": "SHA-256(\"prism-218.5-session-bench-long-v1:\" + id), ascending inside each family; strata [dev, heldout-a, heldout-b]",
+  "strata": {
+    "service-config": [
+      4,
+      4,
+      4
+    ],
+    "incident-desk": [
+      4,
+      4,
+      4
+    ],
+    "release-train": [
+      4,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; plan 218.5's pilot and run read dev only; heldout-a and heldout-b stay unread",
+  "window": {
+    "tokens": 32000,
+    "minSpanWindows": 1.5,
+    "minTaskGap": 3,
+    "jobArtifactTokens": [
+      6000,
+      9000
+    ],
+    "sideArtifactTokens": [
+      2500,
+      4000
+    ],
+    "worstRequestShare": 0.9,
+    "measuredWorstCase": {
+      "render": {
+        "lineCharsPerDescriptionToken": 5.2442,
+        "headerChars": 1187
+      },
+      "round": {
+        "overheadTokens": 2222,
+        "escapeRatio": 1.0275
+      }
+    }
+  },
+  "layout": {
+    "tasks": 100,
+    "phaseTasks": 25,
+    "buckets": {
+      "beforeBelowTask": 39,
+      "afterAboveTask": 63
+    },
+    "ranges": {
+      "sources": [
+        1,
+        10
+      ],
+      "before": [
+        20,
+        38
+      ],
+      "midSources": [
+        40,
+        52
+      ],
+      "after": [
+        64,
+        100
+      ],
+      "lateChange": [
+        70,
+        80
+      ],
+      "lateChangeGap": 10
+    },
+    "dependentsPerSession": {
+      "D1": {
+        "before": 1,
+        "after": 2
+      },
+      "D2": {
+        "before": 3,
+        "after": 6
+      },
+      "D3": {
+        "before": 1,
+        "after": 2
+      },
+      "D4": {
+        "before": 3,
+        "after": 6
+      },
+      "D2R": {
+        "before": 0,
+        "after": 2
+      }
+    }
+  },
+  "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
+  "coreFiles": [
+    "../session-bench/env/workspace.mjs",
+    "../session-bench/templates/families.mjs",
+    "../session-bench/templates/build.mjs",
+    "../session-bench/checks.mjs",
+    "../session-bench/agents.mjs",
+    "pressure.mjs",
+    "build.mjs",
+    "checks.mjs",
+    "agents.mjs",
+    "generate.mjs"
+  ],
+  "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1",
+  "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
+  "counts": {
+    "sessions": 36,
+    "tasks": 3600,
+    "checks": 4752,
+    "dependents": {
+      "before": {
+        "D1": 36,
+        "D2": 108,
+        "D3": 36,
+        "D4": 108,
+        "D2R": 0
+      },
+      "after": {
+        "D1": 72,
+        "D2": 216,
+        "D3": 72,
+        "D4": 216,
+        "D2R": 72
+      }
+    },
+    "devDependents": {
+      "before": {
+        "D1": 12,
+        "D2": 36,
+        "D3": 12,
+        "D4": 36,
+        "D2R": 0
+      },
+      "after": {
+        "D1": 24,
+        "D2": 72,
+        "D3": 24,
+        "D4": 72,
+        "D2R": 24
+      }
+    },
+    "minSessionTokens": 738923,
+    "minSpanTokens": 61625,
+    "minSpanTasks": 9,
+    "maxTaskTokens": 16389,
+    "jobArtifactTokens": [
+      6004,
+      8821
+    ],
+    "largestOutputTokens": 8821,
+    "worstRequestTokens": 26460,
+    "maxScopeBytes": 3609
+  },
+  "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c",
+  "abilities": {
+    "dev": {
+      "service-config": [
+        "sbl-sc-05",
+        "sbl-sc-10",
+        "sbl-sc-00",
+        "sbl-sc-02"
+      ],
+      "incident-desk": [
+        "sbl-id-08",
+        "sbl-id-00",
+        "sbl-id-02",
+        "sbl-id-04"
+      ],
+      "release-train": [
+        "sbl-rt-07",
+        "sbl-rt-09",
+        "sbl-rt-02",
+        "sbl-rt-00"
+      ]
+    },
+    "heldout-a": {
+      "service-config": [
+        "sbl-sc-07",
+        "sbl-sc-11",
+        "sbl-sc-09",
+        "sbl-sc-04"
+      ],
+      "incident-desk": [
+        "sbl-id-03",
+        "sbl-id-01",
+        "sbl-id-06",
+        "sbl-id-05"
+      ],
+      "release-train": [
+        "sbl-rt-08",
+        "sbl-rt-06",
+        "sbl-rt-01",
+        "sbl-rt-05"
+      ]
+    },
+    "heldout-b": {
+      "service-config": [
+        "sbl-sc-06",
+        "sbl-sc-08",
+        "sbl-sc-01",
+        "sbl-sc-03"
+      ],
+      "incident-desk": [
+        "sbl-id-11",
+        "sbl-id-07",
+        "sbl-id-09",
+        "sbl-id-10"
+      ],
+      "release-train": [
+        "sbl-rt-04",
+        "sbl-rt-11",
+        "sbl-rt-03",
+        "sbl-rt-10"
+      ]
+    }
+  }
+}

@@ -486,7 +486,8 @@ export const probes = [
     // Probe 4 (M3): the median achieved ratio is at most target + 0.1 over passes whose protected share is under the target.
     id: "wm.target-ratio",
     async run() {
-      // The default trigger (10,000 tokens, or a new boundary): batches of a task's records, not one record per pass.
+      // The default trigger (10,000 tokens; a new boundary no longer runs a pass, plan 218.5 Task 3): batches of a
+      // task's records, not one record per pass.
       const h = await replayWm({ config: { wm: { triggerTokens: 10_000 } } });
       let passes;
       let target;

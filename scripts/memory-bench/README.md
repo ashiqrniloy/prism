@@ -607,6 +607,37 @@ timeout 60   bun scripts/memory-bench/session-bench/screen.mjs --rule           
 bun scripts/memory-bench/session-bench/screen.mjs --live [--status | --report | --pause | --resume]
 ```
 
+### Session-Bench Long (plan 218.5 Tasks 2, 4, 5 and 6)
+
+Session-Bench Long is the long-session variant that decides working memory. Each session runs 100 tool-using tasks in
+four phases of 25, each with its own scope, at a 32K window. It builds on Session-Bench v3's workspace, families and
+checks by import and never edits them, so v3's pins do not move. Dependents sit in two pre-registered distance buckets:
+`before` task 39 (before STM's pool overflows in the densest measured session) and `after` task 63 (after the mean
+overflow task plus 10). It adds ship-day chains of 2 or 3 changes, standing rules checked several times, and a revoked
+rule scored jointly (`D2R`). The methodology, the size rules and the limits are in
+[`session-bench-long/README.md`](session-bench-long/README.md).
+
+| File | Role |
+| --- | --- |
+| `session-bench-long/pressure.mjs` | The design review (Task 2): STM's measured pressure per task, the task at which the pool overflows, the worst request after a compaction, and so the artifact range and the buckets. |
+| `session-bench-long/build.mjs` | The builder: one 100-task session from a seed and an id, with v3's four jobs at 6,000 to 9,000-token artifacts. |
+| `session-bench-long/checks.mjs` | v3's check kinds plus `created-ticket-labels`, the joint revoke check; rows carry the dependent's bucket. |
+| `session-bench-long/agents.mjs` | The scripted oracle and amnesic agents over the long bench's checks. |
+| `session-bench-long/generate.mjs` | The generator. It writes `work-outcome-session-bench-long.json`: the seed, `templateHash`, `sessionsHash`, `scopesHash`, the label-blind 4/4/4 draw per family and `idsHash`. It refuses a session that breaks a size rule or leaks an answer. `--check` regenerates the file byte for byte. |
+| `session-bench-long/arms.mjs` | The arms (Task 5): five decision arms, `mem0` as a side arm, and the `amnesic` and `oracle-notes` calibration arms. |
+| `session-bench-long/run.mjs` | The runner (Task 5), extending v3's by import: phase scopes, `oracle-notes`, the offline mocks (the STM worker records at Task 2's rates), per-task instrumentation and `--jobs`. |
+| `session-bench-long/instrument.mjs` | Per-task counts read from the session store: the block, the pool, records left out by relevance, Rehearsal drops, WM; per dependent, whether its sources' records were in the block. Counts and record ids only. |
+| `session-bench-long/guardrails.mjs` | G1–G10 over the long bench, plus G11 (the pool overflows before the first `after` dependent, offline); `--live` checks a live report. |
+| `session-bench-long/score.mjs` | The pre-registered analysis (`ANALYSIS_LONG`, G8) and the verdict (`longVerdict`): the STM reference, then keep / drop / owner for WM on the `after` bucket, Holm over the two WM arms, and the STM-at-length finding. |
+| `session-bench-long/live.mjs` | The frozen rule (`SESSION_BENCH_LONG_RULE`; `--rule`, `--write-gate`) and the live runner (`--live [--pilot]`, `--status`, `--report`, `--pause`, `--resume`); refuses a rule hash the gate does not approve. |
+
+```sh
+timeout 600  bun scripts/memory-bench/session-bench-long/generate.mjs --check
+timeout 1800 bun scripts/memory-bench/session-bench-long/guardrails.mjs
+timeout 1800 bun scripts/memory-bench/session-bench-long/run.mjs --offline --jobs 6
+timeout 900  bun test --timeout=0 scripts/memory-bench/session-bench-long
+```
+
 ## Measurement repair protocol
 
 New runs use `product-phases-delivery-v3`; old answer/reuse fingerprints are incompatible. The owner-closed 23-cell screen stays closed, and its report bytes and scores remain historical evidence.
