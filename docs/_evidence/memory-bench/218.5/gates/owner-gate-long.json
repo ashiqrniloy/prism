@@ -570,7 +570,7 @@
       "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
       "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
     },
-    "ruleHash": "d1701bb0dff7c8f5e3734c677fcd36cbd7578df57600530e08c7ea34eaef5880",
+    "ruleHash": "0de8550da98359fb835d7a63b3619ce3d679f7ce3ce6d74da3d70c8a53bb8e3c",
     "rule": {
       "suite": "session-bench-long",
       "plan": "218.5 Task 6",
@@ -611,7 +611,7 @@
           "scripts/memory-bench/run.mjs",
           "scripts/memory-bench/stats.mjs"
         ],
-        "hash": "61f95c192c15a203806fba9ae4d39caf3abeae025d35697ef6d7858b747cd687"
+        "hash": "83fbcf12482e50e5641712be24f7fdbf0b2aa98edbe2a62323f05e9362b341bf"
       },
       "partition": "dev",
       "sessions": [
@@ -744,7 +744,7 @@
       "concurrency": 6,
       "ceilingInputTokens": 2300000000,
       "ceilingBasis": "owner, Task 2: 2.3B input tokens (cached included) across every usage log under the run's wire directory, for the pilot and the full run under one hash; no new job starts at or above it, jobs in flight finish",
-      "faults": "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure (\"Upstream request failed\") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch)",
+      "faults": "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure (\"Upstream request failed\") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch); every provider request turns the kernel's 60 s connect timeout off (withoutConnectTimeout), because it wraps the whole injected fetch and cut every wait above at 60 s; stallGuardFetch's 300 s no-headers and idle guards stay",
       "workerFaults": "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
       "overflow": "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no overflow on any row (Task 7: a miss stops the run, the fix is a new hash). Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
       "smokeOutcomes": [
@@ -861,7 +861,8 @@
     },
     "approved": true,
     "approvedBy": "owner",
-    "approvedAt": "2026-11-23T16:16:17Z",
-    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. d1701bb0 differs only in the harness's failure handling the owner's condition asked for (live.mjs): a provider setup failure is a provider fault; a stage with a job missing is a restart (both in 7391bbc6, which ran 0 rows); and a 400 naming an upstream failure is resent up to 3 times (upstreamRetryFetch, after 7391bbc6's smoke job met one in 32 worker calls and was stopped). Product hash unchanged"
+    "approvedAt": "2026-11-23T17:51:27Z",
+    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. 0de8550d differs only in the harness's failure handling (live.mjs): a provider setup failure is a provider fault; a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); every provider request turns the kernel's 60 s connect timeout off, which had cut every outage and quota wait at 60 s (0de8550d). The owner approved going ahead with this third change on 2026-11-23 (\"You can go ahead\"). Product hash unchanged",
+    "pending": "the owner's word on this hash (plan 218.5 Task 7). Owner calls folded into the rule as recommended: wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome"
   }
 }

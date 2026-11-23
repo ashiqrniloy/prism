@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { upstreamRetryFetch } from "./live.mjs";
+import { upstreamRetryFetch, withoutConnectTimeout } from "./live.mjs";
 
 const UPSTREAM =
   '{"error":{"message":"Upstream request failed: [invalid_request_error] reasoning_effort \'low\' is not supported","type":"invalid_request_error"}}';
@@ -42,5 +42,23 @@ describe("upstreamRetryFetch (plan 218.5 Task 7)", () => {
     const { fetch, sent } = answers([503, "busy"]);
     expect((await upstreamRetryFetch(fetch, noSleep)("u", {})).status).toBe(503);
     expect(sent.length).toBe(1);
+  });
+});
+
+describe("withoutConnectTimeout (plan 218.5 Task 7)", () => {
+  test("every request turns the kernel's connect timeout off and keeps the rest of its options", async () => {
+    const seen = [];
+    const provider = {
+      id: "p",
+      async *generate(input) {
+        seen.push(input.options);
+        yield { type: "done" };
+      },
+    };
+    const [wrapped] = withoutConnectTimeout([provider]);
+    expect(wrapped.id).toBe("p");
+    for await (const _ of wrapped.generate({ options: { sessionId: "s", timeouts: { idleMs: 5 } } }));
+    for await (const _ of wrapped.generate({}));
+    expect(seen).toEqual([{ sessionId: "s", timeouts: { idleMs: 5, connectMs: null } }, { timeouts: { connectMs: null } }]);
   });
 });

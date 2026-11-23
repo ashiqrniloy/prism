@@ -198,7 +198,7 @@ export function buildLongRule() {
     ceilingBasis:
       "owner, Task 2: 2.3B input tokens (cached included) across every usage log under the run's wire directory, for the pilot and the full run under one hash; no new job starts at or above it, jobs in flight finish",
     faults:
-      'the screen\'s: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure ("Upstream request failed") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch)',
+      "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure (\"Upstream request failed\") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch); every provider request turns the kernel's 60 s connect timeout off (withoutConnectTimeout), because it wraps the whole injected fetch and cut every wait above at 60 s; stallGuardFetch's 300 s no-headers and idle guards stay",
     workerFaults:
       "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
     overflow:
@@ -341,6 +341,22 @@ export function upstreamRetryFetch(
   };
 }
 
+/**
+ * Task 7 (owner, 2026-11-23: the run must survive an internet outage). The kernel's provider transport (Phase 19) gives
+ * every request a 60 s connect timeout around the whole injected fetch, so the harness's waits inside it (the patient
+ * retries, `quotaWaitFetch`'s 15-minute outage and quota waits, `upstreamRetryFetch`) were cut at 60 s: the pilot's
+ * smoke job lost 4 worker calls that way, and an outage would have become worker faults and a STOP. Every provider
+ * request here turns the kernel's connect timeout off; `stallGuardFetch` keeps a 300 s no-headers guard inside the
+ * waits (retried as a transport error) and its 300 s idle guard, and the kernel's idle timeout stays.
+ */
+export function withoutConnectTimeout(providers) {
+  return providers.map((provider) => ({
+    ...provider,
+    generate: (input) =>
+      provider.generate({ ...input, options: { ...input.options, timeouts: { ...input.options?.timeouts, connectMs: null } } }),
+  }));
+}
+
 /** One (arm, session) on the live models: progress after each task, the ledger in the run root, a row at the end. */
 export async function runLongLiveJob({ root, rule, arm, sessionId, embedder, log }) {
   const { liveProviders, refOf } = await import("../run.mjs");
@@ -371,6 +387,7 @@ export async function runLongLiveJob({ root, rule, arm, sessionId, embedder, log
       `${arm} ${sessionId}: provider setup failed (${error?.name ?? "Error"}: ${error?.message ?? error})`,
     );
   }
+  const providers = withoutConnectTimeout(live.providers);
   const session = createSession(sessionId);
   const started = performance.now();
   let result;
@@ -378,7 +395,7 @@ export async function runLongLiveJob({ root, rule, arm, sessionId, embedder, log
     result = await runLongArmSession({
       session,
       arm,
-      providers: () => live.providers,
+      providers: () => providers,
       model: live.models.get(rule.model),
       workerModel: rule.worker,
       workerSpec: live.models.get(rule.worker),
