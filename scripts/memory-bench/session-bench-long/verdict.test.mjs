@@ -192,7 +192,7 @@ describe("live.mjs", () => {
     expect(rule.window).toBe(32_000);
     expect(rule.concurrency).toBe(6);
     expect(rule.ceilingInputTokens).toBe(2_300_000_000);
-    expect(rule.worker).toBe("opencode-go/deepseek-v4.1-flash");
+    expect(rule.worker).toBe("opencode-go/muse-spark-1.3-contributor");
     expect(rule.sampling).toMatchObject({ workerReasoningEffort: "low", workerOutput: "window" });
     expect(rule.wm.triggerTokens).toBe(3_000);
     expect(rule.product.hash).toMatch(/^[0-9a-f]{64}$/);

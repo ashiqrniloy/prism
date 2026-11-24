@@ -105,7 +105,7 @@ export const pilotIds = (partitions = file) => Object.values(partitions.abilitie
 export const LONG_RUN_ARMS = Object.freeze([...LONG_DECISION_ARMS, ...LONG_SIDE_ARMS]);
 
 const MODEL = "opencode-go/hy4-flash-free";
-const WORKER = "opencode-go/deepseek-v4.1-flash";
+const WORKER = "opencode-go/muse-spark-1.3-contributor";
 const SAMPLING = Object.freeze({
   temperature: 0,
   thinkingLevel: "low",
@@ -191,7 +191,7 @@ export function buildLongRule() {
     model: MODEL,
     worker: WORKER,
     modelChoice:
-      "the main agent on hy4-flash-free, as in the screen (rule a1c6df8d, plan 218.3 Task 12); every memory worker (STM, WM, LLM-compaction summaries, Mem0) on deepseek-v4.1-flash (paid) at reasoning low, the same worker for every arm. Task 7: the screen's muse-spark-1.3-contributor failed about 1 worker call in 30-100 (owner, 2026-11-24: beam-free); beam-free then hit its free daily allowance after about 2,950 calls (429 rate_limit_error, retry-after about 9.7 hours) one hour into rule 0d6beef6's calibration (owner, 2026-11-24: \"I want to switch the memory worker to paid model. Use deepseek-v4.1-flash\"). In a 5-call tool-call probe at reasoning low deepseek-v4.1-flash answered 5 of 5 with the tool call, 10-22 s each. The buckets were sized on beam-free's STM rate (104 description tokens a task); the pilot's live G11 checks they hold on this worker",
+      "the main agent on hy4-flash-free, as in the screen (rule a1c6df8d, plan 218.3 Task 12); every memory worker (STM, WM, LLM-compaction summaries, Mem0) on muse-spark-1.3-contributor at reasoning low, the same worker for every arm, as in the screen. Task 7 history: muse-spark failed about 1 worker call in 30-100 on the first smoke job (an upstream 400 before the answer, now resent by upstreamRetryFetch; an upstream server_error mid-stream), so the owner moved to beam-free (2026-11-24); beam-free hit its free daily allowance after about 2,950 calls (429 rate_limit_error, retry-after about 9.7 hours) in rule 0d6beef6's calibration; the owner moved to deepseek-v4.1-flash (paid), which answered tool calls in 10-35 s (p50 21.5 s, 29-58 reasoning tokens: gateway latency, not thinking). Owner, 2026-11-24: \"Let's try muse spark 1.2 or 1.3 contributor\". In a 12-call parallel tool-call probe at reasoning low: muse-spark-1.3-contributor 12 of 12, p50 4.7 s, max 6.6 s; 1.2 12 of 12, p50 4.4 s, max 4.9 s. 1.3 is chosen: it was the screen's worker and its v3 ledgers are the Task 2 design measurement",
     sampling: { ...SAMPLING },
     samplingNote:
       "the screen's: temperature 0; the agent at thinkingLevel low; one tool call per main-agent turn (the harness answers the others with a fixed text); workerReasoningEffort low; workerOutput window (a worker call may write what W leaves after its input)",

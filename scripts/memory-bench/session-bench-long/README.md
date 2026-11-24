@@ -344,7 +344,7 @@ the gate does not approve on the owner's word, and any guardrail report with a m
   and the v3 and shared modules they run). An edit to any of them is a new rule;
 - each arm's config hash on the live model, and the shared hash (G6);
 - the models: the main agent on `opencode-go/hy4-flash-free`; every memory worker on
-  `opencode-go/deepseek-v4.1-flash` (Task 7, owner 2026-11-24, paid; `beam-free` before it hit its free daily allowance, and the screen used `muse-spark-1.3-contributor`) at `workerReasoningEffort: "low"`, `workerOutput: "window"`;
+  `opencode-go/muse-spark-1.3-contributor` (as in the screen; Task 7 tried `beam-free`, which hit its free daily allowance, and `deepseek-v4.1-flash`, which answered in 10–35 s; owner, 2026-11-24) at `workerReasoningEffort: "low"`, `workerOutput: "window"`;
 - W = 32K, the 12 dev sessions, concurrency 6, and a ceiling of 2.3B input tokens;
 - the screen's harness rules: a worker fault leaves no row; a job's third worker fault or a usage limit halts the run
   with `STOP:`; worker aborts are not faults;
