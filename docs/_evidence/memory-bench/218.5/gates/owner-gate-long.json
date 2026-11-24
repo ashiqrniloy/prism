@@ -570,7 +570,7 @@
       "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
       "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
     },
-    "ruleHash": "c2e39021beab579e5299429dd3107b3e87840cdf76917cbf7772ace0fa9b240b",
+    "ruleHash": "60898b623252c1362d5719b6583daa8a4db6549883a68630ec596e2c206b108d",
     "rule": {
       "suite": "session-bench-long",
       "plan": "218.5 Task 6",
@@ -611,7 +611,7 @@
           "scripts/memory-bench/run.mjs",
           "scripts/memory-bench/stats.mjs"
         ],
-        "hash": "5a93a9e98f176d0d7ad538c1b7942b872264d5b95701877d3bdefbe237d111ce"
+        "hash": "15a4a6884b834b7766a8849ea1c33acf26d0258159b0494ae5b034552d64ddf0"
       },
       "partition": "dev",
       "sessions": [
@@ -666,16 +666,16 @@
         "text": "amnesic (the floor: a fresh session per task) and oracle-notes (the ceiling: memory-off-llm plus every dependency's current evidence) on the 3 pilot sessions"
       },
       "configHashes": {
-        "memory-off-llm": "451c89a1a3f6de5982ed35dfc583bbeb21d10612bd75a486619b2b72e587c6ad",
-        "STM-only": "36a31d99bf1a5fd1a9a631afc027da4ecc2d963758c93557bd8a1c86270d1a57",
-        "STM-only-protect": "7050594366ec2ac269beee3ffd8fdb24d4ba8b1c916f2a9f24d951d8ab6af54a",
-        "STM+WM": "03f2a1a33fcaa3c0d52f8b8285392dab3035a18d88e3bdc132a8cd5b52d2bd8b",
-        "STM+WM-deterministic": "e78743eb60f51f65e0ee5a3f25b639c559637b63cba057f282f33ede9512b1e5",
-        "mem0": "fa7ef8a68f533bf718ac80fe98247382f14ecad4045bc3d6e7922ba6c4239f96",
-        "amnesic": "0d2cc1e738dda648f141133cf760163d19ee394d93e496080599266155307028",
-        "oracle-notes": "6c6227c0ff8782c945b6bbcada65bff7d4cef1b2ac7ee2d9dc32f80ea9d7a9ab"
+        "memory-off-llm": "27add5eb43c4df491a1ce83b723c44a8e72c65dba7343940b52ccad89b612df2",
+        "STM-only": "baf861e274ef7317c009249ec1d0785394501697bebaf71d383b859e9e9e7268",
+        "STM-only-protect": "0c20e3031daf712dfdbedddf80f0f11226a69e002ae8f3afb18f969b4523a899",
+        "STM+WM": "2a81794368ef0564d00a2632dc95de7e954c55571d2014b4e01f90788c22e037",
+        "STM+WM-deterministic": "73667082043a78e144126e6a2329ae90278889558b96890c14040877a01f11d9",
+        "mem0": "917fc4995dc09c3e1edf04a9c38ff94ae9faaad465cf525d83fbb8aec9cdc945",
+        "amnesic": "f849a7b27d057ff44484794430f92452592d225b1f1322793228b4718ebf7d55",
+        "oracle-notes": "5928ef5374c811277765d13ac644d81b087b5d047a37192ef99d66a8dd211eb8"
       },
-      "sharedConfigHash": "0ab8322c3f5e205ffd2fe2a3bb8bb74f27f58b23f0ee5bc90dafbd2205ab4b08",
+      "sharedConfigHash": "74137943c5f84dea335b036593aa2dc77a07b968e05a7b5f76273695745c511a",
       "wm": {
         "triggerTokens": 3000,
         "text": "both WM arms pin wm.triggerTokens 3,000 (one wm.batchTokens batch per pass; Task 3 finding 1). At the product default 10,000 WM's first pass comes at about task 89, after the pool overflows at about task 53. Offline (Task 5) the first pass comes at task 33-34, 2-4 passes per session. Live G11 applies to the STM arms only; the WM arms report their first pass and whether the pool overflowed"
@@ -695,6 +695,9 @@
       "samplingNote": "the screen's: temperature 0; the agent at thinkingLevel low; one tool call per main-agent turn (the harness answers the others with a fixed text); workerReasoningEffort low; workerOutput window (a worker call may write what W leaves after its input)",
       "window": 32000,
       "maxOutputTokens": 2048,
+      "mainOutputTokens": 16384,
+      "mainWindow": 46336,
+      "outputNote": "Task 7 (owner, 2026-11-24): the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336); the input cap stays W minus 2,048 (29,952), so the pool (8,678), the kept tail, the mid-loop trigger, the job sizes and G11 are the design's. The memory worker keeps W 32,000, 2,048 by default and its workerOutput room. Why: on rule c2e39021 hy4-flash-free at thinking low spent the whole 2,048 on reasoning on hard turns and ended the task with no answer (oracle-notes 54.7%); resent at 4,096, 8,192 and 16,384, 2, 1 and 0 of the 4 capped turns still hit the cap (most reasoning 12,061). The owner kept thinking low (thinking none is not real-world use). The per-task limits stay (60,000 output tokens a task)",
       "limits": {
         "maxTurns": 60,
         "maxToolCalls": 60,
@@ -861,9 +864,8 @@
     },
     "approved": true,
     "approvedBy": "owner",
-    "approvedAt": "2026-11-23T18:10:44Z",
-    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged",
-    "pending": "the owner's word on this hash (plan 218.5 Task 7). Owner calls folded into the rule as recommended: wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome"
+    "approvedAt": "2026-11-24T00:00:00Z",
+    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged. Rule c2e39021 stopped at calibration (oracle-notes 54.7% < 60%): hy4-flash-free at thinking low spent its whole 2,048-token output on reasoning on hard turns. Owner, 2026-11-24: \"I am hesitant to go with thinking low for the main model as that does not correspond to real world usage. Can we increase the 32k window?\", then \"Yes go ahead with the proposed caps\": the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336); the input cap (29,952), the pool, the sizes and G11 are unchanged, the worker keeps W 32,000 (60898b62)"
   },
   "checkins": [
     {

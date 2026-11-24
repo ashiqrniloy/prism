@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { upstreamRetryFetch, withoutConnectTimeout } from "./live.mjs";
+import { resolveInputCap } from "@arnilo/prism";
+import { MAX_OUTPUT_TOKENS } from "../session-bench/run.mjs";
+import { buildLongRule, MAIN_OUTPUT_TOKENS, upstreamRetryFetch, withoutConnectTimeout } from "./live.mjs";
+import { productInputCap } from "./pressure.mjs";
+import { longSharedConfig, mainModel } from "./run.mjs";
 
 const UPSTREAM =
   '{"error":{"message":"Upstream request failed: [invalid_request_error] reasoning_effort \'low\' is not supported","type":"invalid_request_error"}}';
@@ -60,5 +64,36 @@ describe("withoutConnectTimeout (plan 218.5 Task 7)", () => {
     for await (const _ of wrapped.generate({ options: { sessionId: "s", timeouts: { idleMs: 5 } } }));
     for await (const _ of wrapped.generate({}));
     expect(seen).toEqual([{ sessionId: "s", timeouts: { idleMs: 5, connectMs: null } }, { timeouts: { connectMs: null } }]);
+  });
+});
+
+describe("the main agent's output reserve (plan 218.5 Task 7, owner 2026-11-24)", () => {
+  test("the main model asks for 16,384 output tokens and the product's input cap stays the design's", () => {
+    const model = mainModel({ provider: "p", model: "m", parameters: { maxTokens: 2_048, temperature: 0 } }, {
+      window: 32_000,
+      mainOutputTokens: MAIN_OUTPUT_TOKENS,
+    });
+    expect(model.limits).toEqual({ contextWindow: 46_336, maxOutputTokens: 16_384 });
+    expect(model.parameters).toEqual({ maxTokens: 16_384, temperature: 0 });
+    expect(resolveInputCap({}, model)).toBe(productInputCap(32_000));
+    expect(model.limits.contextWindow - model.limits.maxOutputTokens).toBe(32_000 - MAX_OUTPUT_TOKENS);
+  });
+
+  test("at the default reserve the model and the shared config are the offline ones", () => {
+    expect(mainModel({ provider: "p", model: "m" }, { window: 32_000 })).toEqual({
+      provider: "p",
+      model: "m",
+      limits: { contextWindow: 32_000, maxOutputTokens: MAX_OUTPUT_TOKENS },
+    });
+    expect("mainOutputTokens" in longSharedConfig({ window: 32_000 })).toBe(false);
+    expect(longSharedConfig({ window: 32_000, mainOutputTokens: 16_384 }).mainOutputTokens).toBe(16_384);
+  });
+
+  test("the rule records the reserve and the main window", () => {
+    const rule = buildLongRule();
+    expect(rule.mainOutputTokens).toBe(16_384);
+    expect(rule.mainWindow).toBe(46_336);
+    expect(rule.maxOutputTokens).toBe(2_048);
+    expect(rule.window).toBe(32_000);
   });
 });

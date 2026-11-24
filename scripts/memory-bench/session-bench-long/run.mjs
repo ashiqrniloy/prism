@@ -247,6 +247,24 @@ const phaseOf = (session, n) => session.phases.find((phase) => phase.from <= n &
  * and the instrumentation (`pressure`: one row per task; `dependents`: one row per dependent; `summary`). `maxTasks`
  * stops after that many tasks (the guardrails' probes); a row that stops early never counts toward a score.
  */
+/**
+ * Task 7 (owner, 2026-11-24): the main agent's own output reserve. The input cap stays W minus the harness's 2,048-token
+ * reserve (29,952 at W 32,000), so the pool, the kept tail, the mid-loop trigger and the job sizes stay the design's,
+ * and the main agent's model window grows by what its reserve grows (46,336 at 16,384): hy4-flash-free at thinking low
+ * spent the whole 2,048 on reasoning on hard turns and ended its task with no answer. The memory worker keeps W and its
+ * `workerOutput` room. At the default (2,048) the shared config, and so every offline hash, is unchanged.
+ */
+export function longSharedConfig({ mainOutputTokens = MAX_OUTPUT_TOKENS, ...options }) {
+  const shared = sharedConfig(options);
+  return mainOutputTokens === MAX_OUTPUT_TOKENS ? shared : { ...shared, mainOutputTokens };
+}
+/** The main agent's model: its window is the input cap plus its own reserve, and every request asks for that reserve. */
+export function mainModel(model, { window, mainOutputTokens = MAX_OUTPUT_TOKENS }) {
+  const limits = { contextWindow: window - MAX_OUTPUT_TOKENS + mainOutputTokens, maxOutputTokens: mainOutputTokens };
+  if (mainOutputTokens === MAX_OUTPUT_TOKENS) return { ...model, limits };
+  return { ...model, limits, parameters: { ...model.parameters, maxTokens: mainOutputTokens } };
+}
+
 export async function runLongArmSession({
   session,
   arm,
@@ -254,6 +272,7 @@ export async function runLongArmSession({
   model,
   workerModel,
   window = WINDOW_TOKENS,
+  mainOutputTokens = MAX_OUTPUT_TOKENS,
   temperature = 0,
   embedder = hashEmbedder(),
   thinkingLevel,
@@ -270,7 +289,8 @@ export async function runLongArmSession({
 }) {
   const config = longArmConfig(
     arm,
-    sharedConfig({
+    longSharedConfig({
+      mainOutputTokens,
       model,
       temperature,
       window,
@@ -302,7 +322,7 @@ export async function runLongArmSession({
   const packageWorker = workerSpec ? { ...workerSpec, limits: { contextWindow: window, maxOutputTokens: MAX_OUTPUT_TOKENS } } : workerModel;
   const store = createMemorySessionStore();
   const agent = await createAgent({
-    model: { ...model, limits: { contextWindow: window, maxOutputTokens: MAX_OUTPUT_TOKENS } },
+    model: mainModel(model, { window, mainOutputTokens }),
     instructions: SYSTEM_PROMPT,
     ...(thinkingLevel ? { thinkingLevel } : {}),
     packages: [

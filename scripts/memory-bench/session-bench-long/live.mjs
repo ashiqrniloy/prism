@@ -39,7 +39,7 @@ import {
   WORKER_FAULT_LIMIT,
   workerFailure,
 } from "../session-bench/live.mjs";
-import { accumulateArm, emptyArmTotals, MAX_OUTPUT_TOKENS, sharedConfig } from "../session-bench/run.mjs";
+import { accumulateArm, emptyArmTotals, MAX_OUTPUT_TOKENS } from "../session-bench/run.mjs";
 import {
   assertLongEqualTreatment,
   LONG_CALIBRATION_ARMS,
@@ -52,7 +52,7 @@ import {
 import { createSession, partitionIds, sessionBenchLongPartitions, sessionSizes, WINDOW_TOKENS } from "./generate.mjs";
 import { LIVE_GUARDRAILS, LONG_GATE_FILE, liveLongGuardrails } from "./guardrails.mjs";
 import { firstAfterTask } from "./instrument.mjs";
-import { longReport, runLongArmSession } from "./run.mjs";
+import { longReport, longSharedConfig, runLongArmSession } from "./run.mjs";
 import { ANALYSIS_LONG, compareLong, LONG_DECISION, longUnits, longVerdict } from "./score.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -115,15 +115,23 @@ const SAMPLING = Object.freeze({
   workerOutput: "window",
 });
 const LIMITS = Object.freeze({ ...LIVE_LIMITS, maxToolCalls: 60, maxTurns: 60 });
+/** The main agent's output reserve (owner, 2026-11-24): its model window is the input cap plus this (46,336). */
+export const MAIN_OUTPUT_TOKENS = 16_384;
 
-/** The live shared config (G6) for a rule's model, sampling, window and limits. */
-function liveShared({ model, sampling, window, limits }) {
+/** The live shared config (G6) for a rule's model, sampling, window, limits and main-agent output reserve. */
+function liveShared({ model, sampling, window, limits, mainOutputTokens }) {
   const [provider, ...rest] = model.split("/");
-  return sharedConfig({ model: { provider, model: rest.join("/") }, window, limits, ...sampling });
+  return longSharedConfig({ model: { provider, model: rest.join("/") }, window, limits, mainOutputTokens, ...sampling });
 }
 /** Each arm's config hash on the live model, and the shared hash the decision and side arms hold in common (G6). */
-export function liveArmHashes({ model = MODEL, sampling = SAMPLING, window = WINDOW_TOKENS, limits = LIMITS } = {}) {
-  const shared = liveShared({ model, sampling, window, limits });
+export function liveArmHashes({
+  model = MODEL,
+  sampling = SAMPLING,
+  window = WINDOW_TOKENS,
+  limits = LIMITS,
+  mainOutputTokens = MAIN_OUTPUT_TOKENS,
+} = {}) {
+  const shared = liveShared({ model, sampling, window, limits, mainOutputTokens });
   const configs = [...LONG_RUN_ARMS, ...LONG_CALIBRATION_ARMS].map((arm) => longArmConfig(arm, shared));
   return {
     configHashes: Object.fromEntries(configs.map((config) => [config.arm, configHash(config)])),
@@ -189,6 +197,10 @@ export function buildLongRule() {
       "the screen's: temperature 0; the agent at thinkingLevel low; one tool call per main-agent turn (the harness answers the others with a fixed text); workerReasoningEffort low; workerOutput window (a worker call may write what W leaves after its input)",
     window: WINDOW_TOKENS,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
+    mainOutputTokens: MAIN_OUTPUT_TOKENS,
+    mainWindow: WINDOW_TOKENS - MAX_OUTPUT_TOKENS + MAIN_OUTPUT_TOKENS,
+    outputNote:
+      "Task 7 (owner, 2026-11-24): the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336); the input cap stays W minus 2,048 (29,952), so the pool (8,678), the kept tail, the mid-loop trigger, the job sizes and G11 are the design's. The memory worker keeps W 32,000, 2,048 by default and its workerOutput room. Why: on rule c2e39021 hy4-flash-free at thinking low spent the whole 2,048 on reasoning on hard turns and ended the task with no answer (oracle-notes 54.7%); resent at 4,096, 8,192 and 16,384, 2, 1 and 0 of the 4 capped turns still hit the cap (most reasoning 12,061). The owner kept thinking low (thinking none is not real-world use). The per-task limits stay (60,000 output tokens a task)",
     limits: { ...LIMITS },
     limitsNote: "the screen's live limits: maxToolCalls and maxTurns 60 for every arm",
     embedder: JSON.parse(JSON.stringify(LOCAL_EMBEDDER)),
@@ -400,6 +412,7 @@ export async function runLongLiveJob({ root, rule, arm, sessionId, embedder, log
       workerModel: rule.worker,
       workerSpec: live.models.get(rule.worker),
       window: rule.window,
+      mainOutputTokens: rule.mainOutputTokens,
       temperature: rule.sampling.temperature,
       thinkingLevel: rule.sampling.thinkingLevel,
       limits: rule.limits,
