@@ -27,7 +27,8 @@ import {
   worstRequest,
 } from "./pressure.mjs";
 
-export const SESSION_BENCH_LONG_VERSION = 1;
+/** Version 2 (plan 218.5 Task 7, owner 2026-11-24): 150 tasks, the buckets from the live pool overflow. */
+export const SESSION_BENCH_LONG_VERSION = 2;
 export const SESSION_BENCH_LONG_SEED = "prism-218.5-session-bench-long-v1";
 export const SESSIONS_PER_FAMILY = 12;
 /** Sessions per partition and family: [dev, heldout-a, heldout-b] (owner, plan 218.5 Task 2: 12 dev sessions). */

@@ -22,7 +22,19 @@ Plan 218.5 Task 2 measured the pressure on 36 stored STM-only sessions (`pressur
 | Task at which the pool overflows | 53 | 39 | 70 |
 
 A long session therefore needs well over 53 tasks. The owner chose **100 tasks**, so about half of each session runs
-under eviction.
+under eviction (benchmark version 1).
+
+**Version 2 (Task 7, 2026-11-24).** Live, on the `beam-free` memory worker, STM recorded much less than the v3 ledgers
+showed (the 3 STM-only pilot ledgers of rule `60898b62`, the gate record's `design`; Task 2's record is under
+`designHistory`):
+
+| Measure | Mean | Densest session | Sparsest session |
+| --- | --- | --- | --- |
+| Active description tokens per task | 104.1 | 116.0 | 97.3 |
+| Task at which the pool overflows | 84 | 75 | 90 |
+
+The pool overflowed after every version-1 `after` dependent (tasks 64–100), so live G11 could not hold. The owner chose
+**150 tasks** over a smaller window or a product pool setting. The offline worker mock now records at the live rates.
 
 ## What is taken from v3
 
@@ -42,7 +54,7 @@ value a rule check fails, and assign a ticket to the owner a guide names.
 
 ## Sessions (`build.mjs`)
 
-A session runs **100 tasks in four phases of 25**. Each phase opens with its own scope: a numbered plan with one step per
+A session runs **150 tasks in six phases of 25** (version 2; version 1 ran 100 in four). Each phase opens with its own scope: a numbered plan with one step per
 task of that phase. A real host re-scopes a long session this way, and each new scope makes WM judge its items again.
 `session.phases` holds `{ n, from, to, scope }`; the runner sends a phase's scope before the phase's first task.
 
@@ -55,9 +67,9 @@ Every task has a job with its own `C` check, so the context grows by one artifac
 | 1–10 | **Sources.** Every rule, tool fact, own decision and first ship day, at most two per task. |
 | 20–38 | **`before` dependents**, one per task. |
 | 40–52 | **Mid sources.** A rule is revoked, and two ship days change again. |
-| 64–100 | **`after` dependents**, one per task. One ship day changes a third time in tasks 70–80. |
+| 95–150 | **`after` dependents**, one per task. One ship day changes a third time in tasks 110–125. |
 
-No dependent sits in tasks 39–63.
+No dependent sits in tasks 39–94. An answer value is never a task number, so no scope step or prompt holds it.
 
 ### Distance buckets
 

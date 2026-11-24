@@ -1,20 +1,26 @@
 /**
  * Plan 218.5 Task 4: the long bench's session builder. A session is a pure function of its id and the benchmark seed:
- * 100 tasks in four phases of 25, each phase with its own scope (a numbered plan, one step per task), the workspace
- * state, the labelled dependencies and every task's checks and scripted plan.
+ * 150 tasks in six phases of 25 (version 2, Task 7), each phase with its own scope (a numbered plan, one step per task),
+ * the workspace state, the labelled dependencies and every task's checks and scripted plan.
  *
  * Session-Bench v3 is read, never edited: the families, the filler vocabulary, the seeded generator and the workspace
  * are imported. v3 does not export its job makers, so the four jobs are written again here at the long bench's artifact
  * size. The only Prism import reached is the kernel's estimator through `./pressure.mjs`; nothing reaches the memory
  * system (G2).
  *
- * Layout (task numbers; the buckets come from plan 218.5 Task 2's measured overflow point):
+ * Layout (task numbers; the buckets come from the live pool overflow the Task 7 pilot measured, the gate record's
+ * `design`):
  *
  * - **1–10, sources.** Every rule, fact, own decision and first value, at most two per task.
- * - **20–38, `before` dependents.** One per task, before the densest session's pool overflow (task 39).
+ * - **20–38, `before` dependents.** One per task, well before the densest session's pool overflow.
  * - **40–52, mid sources.** A rule is revoked and two ship days change again.
- * - **64–100, `after` dependents.** One per task, after the mean overflow task plus 10 (task 63). One ship day changes a
- *   third time inside this range (70–80), with a dependent on each side of the change.
+ * - **after the mean overflow task plus 10, to 150: `after` dependents.** One per task. One ship day changes a third time
+ *   inside this range (110–125), with a dependent on each side of the change.
+ *
+ * Version 1 (100 tasks, `after` from task 64) was sized on plan 218.5 Task 2's offline measurement (v3 ledgers, the
+ * muse-spark worker: 156.6 description tokens a task, overflow at task 53). Live on beam-free (Task 7, rule 60898b62) STM
+ * recorded 98 a task and first overflowed at task 88-90, after every `after` dependent; the owner chose longer sessions
+ * over a smaller window or a product pool setting (2026-11-24).
  *
  * A dependency row is one check occasion: a standing rule checked four times is four rows that share a `group` and
  * their sources. Every row keeps v3's shape (`sources`, `dependent`, `answer`, `evidence`), so v3's plan format applies.
@@ -24,18 +30,21 @@ import { DAYS, FAMILIES, FILLER, PEOPLE, TOKEN_WORDS } from "../session-bench/te
 import { REVOKE_CLASS } from "./checks.mjs";
 import { LONG_JOB_ARTIFACT_TOKENS } from "./pressure.mjs";
 
-export const LONG_TASKS = 100;
+export const LONG_TASKS = 150;
 export const PHASE_TASKS = 25;
-/** The pre-registered distance buckets (the gate record's `design.buckets`): by the dependent's task number. */
-export const BUCKETS = Object.freeze({ beforeBelowTask: 39, afterAboveTask: 63 });
+/**
+ * The pre-registered distance buckets (the gate record's `design.buckets`, from the Task 7 pilot's live STM-only
+ * ledgers): `before` below the densest session's overflow task (75), `after` above the mean's plus 10 (94).
+ */
+export const BUCKETS = Object.freeze({ beforeBelowTask: 75, afterAboveTask: 94 });
 export const bucketOf = (task) => (task < BUCKETS.beforeBelowTask ? "before" : task > BUCKETS.afterAboveTask ? "after" : null);
 /** Where each kind of part may sit (inclusive task ranges). */
 export const LAYOUT = Object.freeze({
   sources: Object.freeze([1, 10]),
-  before: Object.freeze([20, BUCKETS.beforeBelowTask - 1]),
+  before: Object.freeze([20, 38]),
   midSources: Object.freeze([40, 52]),
   after: Object.freeze([BUCKETS.afterAboveTask + 1, LONG_TASKS]),
-  lateChange: Object.freeze([70, 80]),
+  lateChange: Object.freeze([110, 125]),
   /** Fewest tasks from the late change to the dependent that needs its value. */
   lateChangeGap: 10,
 });
@@ -550,7 +559,14 @@ export function buildLongSession(family, index, seed) {
     );
   for (const feature of family.features) for (const suffix of FLAG_LOOKALIKES) env.config[`flags.${feature}_${suffix}`] = false;
 
-  const used = { services: new Set(), features: new Set(), words: new Set(), subjects: new Set(), values: new Set() };
+  // A value never equals a task number: a scope step ("130. ...") or a prompt ("Task 130.") would then hold the answer.
+  const used = {
+    services: new Set(),
+    features: new Set(),
+    words: new Set(),
+    subjects: new Set(),
+    values: new Set(range([1, LONG_TASKS])),
+  };
   const fresh = (list, kind) => {
     const left = list.filter((item) => !used[kind].has(item));
     if (!left.length) throw new Error(`SessionBenchLongBuild: ${id} ran out of ${kind}`);

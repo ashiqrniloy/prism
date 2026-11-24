@@ -75,7 +75,7 @@ test("long_sessions_regenerate_byte_for_byte", () => {
   assert.equal(JSON.stringify(createSession(one.id)), JSON.stringify(one));
 });
 
-test("sessions_run_100_tasks_in_four_scoped_phases", () => {
+test("sessions_run_150_tasks_in_six_scoped_phases", () => {
   for (const session of dev) {
     assert.equal(session.tasks.length, LONG_TASKS);
     assert.deepEqual(
@@ -85,6 +85,8 @@ test("sessions_run_100_tasks_in_four_scoped_phases", () => {
         [2, 26, 50],
         [3, 51, 75],
         [4, 76, 100],
+        [5, 101, 125],
+        [6, 126, 150],
       ],
     );
     for (const phase of session.phases) {
@@ -106,7 +108,7 @@ test("sessions_run_100_tasks_in_four_scoped_phases", () => {
 });
 
 test("dependents_sit_in_the_pre_registered_buckets", () => {
-  // The buckets are plan 218.5 Task 2's: before the densest session's overflow task, after the mean's plus 10.
+  // The buckets are the Task 7 pilot's live ones: before the densest session's overflow task, after the mean's plus 10.
   assert.equal(bucketOf(BUCKETS.beforeBelowTask - 1), "before");
   assert.equal(bucketOf(BUCKETS.beforeBelowTask), null);
   assert.equal(bucketOf(BUCKETS.afterAboveTask), null);
@@ -316,7 +318,7 @@ test("size_rules_are_refused_at_build_time", () => {
   assert.throws(() => sessionSizes(between), /dependents, expected/);
   const short = copy(one);
   short.tasks.pop();
-  assert.throws(() => sessionSizes(short), /holds 99 tasks/);
+  assert.throws(() => sessionSizes(short), new RegExp(`holds ${LONG_TASKS - 1} tasks`));
 });
 
 test("long_bench_imports_no_memory_package", () => {
@@ -338,10 +340,10 @@ test("pins_match_the_design_review", () => {
   assert.equal(MEASURED_WORST_CASE.round.overheadTokens, design.rounds.overheadTokens.max);
   assert.equal(MEASURED_WORST_CASE.round.escapeRatio, design.rounds.escapeRatio);
   assert.equal(WINDOW_TOKENS, design.window);
-  // The owner's length and power (Task 2): 100 tasks in phases of 25, 12 dev sessions.
-  assert.match(ownerDecisions.find((row) => row.id === "tasksPerSession").decision, /^100 tasks per session, in 4 phases of 25/);
+  // The owner's length (Task 7, version 2: 150 tasks in phases of 25) and power (Task 2: 12 dev sessions).
+  assert.match(ownerDecisions.find((row) => row.id === "tasksPerSession").decision, /^150 tasks per session, in 6 phases of 25/);
   assert.match(ownerDecisions.find((row) => row.id === "power").decision, /^12 dev sessions/);
-  assert.equal(LONG_TASKS / PHASE_TASKS, 4);
-  assert.equal(file.layout.tasks, 100);
-  assert.equal(file.counts.tasks, 3_600);
+  assert.equal(LONG_TASKS / PHASE_TASKS, 6);
+  assert.equal(file.layout.tasks, 150);
+  assert.equal(file.counts.tasks, 5_400);
 });

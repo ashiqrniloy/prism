@@ -1,6 +1,6 @@
 {
   "benchmark": "session-bench-long",
-  "version": 1,
+  "version": 2,
   "plan": "218.5",
   "task": 4,
   "seed": "prism-218.5-session-bench-long-v1",
@@ -49,11 +49,11 @@
     }
   },
   "layout": {
-    "tasks": 100,
+    "tasks": 150,
     "phaseTasks": 25,
     "buckets": {
-      "beforeBelowTask": 39,
-      "afterAboveTask": 63
+      "beforeBelowTask": 75,
+      "afterAboveTask": 94
     },
     "ranges": {
       "sources": [
@@ -69,12 +69,12 @@
         52
       ],
       "after": [
-        64,
-        100
+        95,
+        150
       ],
       "lateChange": [
-        70,
-        80
+        110,
+        125
       ],
       "lateChangeGap": 10
     },
@@ -101,7 +101,7 @@
       }
     }
   },
-  "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
+  "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
   "coreFiles": [
     "../session-bench/env/workspace.mjs",
     "../session-bench/templates/families.mjs",
@@ -114,12 +114,12 @@
     "agents.mjs",
     "generate.mjs"
   ],
-  "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1",
-  "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
+  "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c",
+  "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
   "counts": {
     "sessions": 36,
-    "tasks": 3600,
-    "checks": 4752,
+    "tasks": 5400,
+    "checks": 6552,
     "dependents": {
       "before": {
         "D1": 36,
@@ -152,17 +152,17 @@
         "D2R": 24
       }
     },
-    "minSessionTokens": 738923,
-    "minSpanTokens": 61625,
+    "minSessionTokens": 1101394,
+    "minSpanTokens": 64085,
     "minSpanTasks": 9,
-    "maxTaskTokens": 16389,
+    "maxTaskTokens": 15227,
     "jobArtifactTokens": [
-      6004,
-      8821
+      6002,
+      8841
     ],
-    "largestOutputTokens": 8821,
-    "worstRequestTokens": 26460,
-    "maxScopeBytes": 3609
+    "largestOutputTokens": 8841,
+    "worstRequestTokens": 26481,
+    "maxScopeBytes": 3575
   },
   "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c",
   "abilities": {

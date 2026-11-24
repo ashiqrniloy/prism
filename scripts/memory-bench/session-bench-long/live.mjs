@@ -170,7 +170,7 @@ export function buildLongRule() {
     sessions: devIds(),
     pilotSessions: pilotIds(),
     selection:
-      "every dev session (12: 4 per family; owner, Task 2); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
+      "every dev session (12: 4 per family; owner, Task 2), 150 tasks each (benchmark version 2; owner, Task 7, 2026-11-24: on the pilot's live rates the pool first overflowed at task 75-90, after every version-1 `after` dependent); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
     arms: [...LONG_RUN_ARMS],
     decisionArms: [...LONG_DECISION_ARMS],
     sideArms: [...LONG_SIDE_ARMS],
@@ -184,7 +184,7 @@ export function buildLongRule() {
     ...liveArmHashes(),
     wm: {
       triggerTokens: WM_TRIGGER_TOKENS,
-      text: "both WM arms pin wm.triggerTokens 3,000 (one wm.batchTokens batch per pass; Task 3 finding 1). At the product default 10,000 WM's first pass comes at about task 89, after the pool overflows at about task 53. Offline (Task 5) the first pass comes at task 33-34, 2-4 passes per session. Live G11 applies to the STM arms only; the WM arms report their first pass and whether the pool overflowed",
+      text: "both WM arms pin wm.triggerTokens 3,000 (one wm.batchTokens batch per pass; Task 3 finding 1). At the product default 10,000 WM's first pass comes at about task 89, after the pool overflows at about task 53. Offline (Task 5) the first pass comes at task 33-34, 2-4 passes per session. Live G11 applies to the STM arms only; the WM arms report their first pass and whether the pool overflowed. Benchmark version 2 (Task 7): live STM records about two thirds of the offline rate, so the pool first overflows at about task 84 (75-90) and the WM trigger fires later than these offline numbers; 3,000 stays, so WM still passes well before the overflow",
     },
     rehearsal:
       "no arm runs the Rehearsal drop: the memory system turns it on only when wm and ltm are both on, and no arm turns ltm on (Task 5 finding 1); the rows count the drops (0 expected)",

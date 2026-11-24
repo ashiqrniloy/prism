@@ -73,7 +73,10 @@ test("row_counts_hold_no_text", async () => {
   walk(row);
   for (const text of strings) assert.match(text, /^[A-Za-z0-9_.:+-]{1,48}$/, `a row holds text: ${text.slice(0, 60)}`);
   const json = JSON.stringify(row);
-  for (const dep of session.deps) for (const text of [dep.answer, ...dependencyEvidence(dep)]) assert.ok(!json.includes(text));
+  // Whole tokens only: a numeric answer ("490") may sit inside a count ("2490") by chance.
+  const holds = (text) => new RegExp(`(^|[^A-Za-z0-9])${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Za-z0-9])`).test(json);
+  for (const dep of session.deps)
+    for (const text of [dep.answer, ...dependencyEvidence(dep)]) assert.ok(!holds(text), `${dep.id} ${text}`);
   // The instrumentation saw the session: blocks, records, and a source check for each dependent so far.
   const last = run.instrumentation.pressure.at(-1);
   assert.equal(run.instrumentation.pressure.length, 26);
@@ -133,8 +136,9 @@ test("memory_arms_differ_only_in_eviction_and_wm_and_run_no_rehearsal", () => {
 
 test("worker_mock_records_at_the_design_reviews_rates", () => {
   const rates = workerRates();
-  assert.equal(rates.mediumTokens, 93.5);
-  assert.equal(rates.statementTokens, 21.2);
+  // The Task 7 pilot's live STM-only ledgers (benchmark version 2): medium 65.7, high 38.4 less verbatim 37.6.
+  assert.equal(rates.mediumTokens, 65.7);
+  assert.equal(rates.statementTokens, 0.8);
 });
 
 // Plan 218.5 Task 6: `score.mjs` `ANALYSIS_LONG` ends G8's pending state (Task 5 asserted it pending).

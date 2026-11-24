@@ -5,10 +5,16 @@
   "status": "rule frozen 2026-11-23 (Task 6): `sessionBenchLong` holds the rule and its hash, unapproved. No paid call is approved by this record until the owner approves that hash (approved, approvedBy owner, approvedAt, text). Design review (Task 2) and the owner decisions below.",
   "ownerDecisions": [
     {
-      "date": "2026-11-23",
+      "date": "2026-11-24",
       "id": "tasksPerSession",
-      "decision": "100 tasks per session, in 4 phases of 25. Chosen with the measurement in view: the pool overflows at task 53 on average (39 densest, 70 sparsest), so 48% of the session runs under eviction and 37 tasks fall in the `after` bucket; eviction does not reach high records (the user's rules and changes) before about task 132. 125 tasks was the recommendation.",
-      "text": "100 tasks"
+      "decision": "150 tasks per session, in 6 phases of 25 (benchmark version 2). Chosen with the Task 7 pilot's live measurement in view: on beam-free STM records 104.1 description tokens a task (97.3-116) and the pool first overflows at task 84 on average (75 densest, 90 sparsest), after every version-1 `after` dependent (tasks 64-100). Dependents in `before` stay at tasks 20-38, `after` moves to tasks 95-150, so 67 tasks run past the mean overflow and 56 fall in the `after` bucket. A smaller window and a product pool setting were the other options.",
+      "text": "150-task sessions (Recommended)",
+      "supersedes": {
+        "date": "2026-11-23",
+        "id": "tasksPerSession",
+        "decision": "100 tasks per session, in 4 phases of 25. Chosen with the measurement in view: the pool overflows at task 53 on average (39 densest, 70 sparsest), so 48% of the session runs under eviction and 37 tasks fall in the `after` bucket; eviction does not reach high records (the user's rules and changes) before about task 132. 125 tasks was the recommendation.",
+        "text": "100 tasks"
+      }
     },
     {
       "date": "2026-11-23",
@@ -36,13 +42,14 @@
     }
   ],
   "design": {
-    "task": "plan 218.5 Task 2",
-    "date": "2026-11-23",
+    "task": "plan 218.5 Task 7 (benchmark version 2)",
+    "date": "2026-11-24",
     "script": "scripts/memory-bench/session-bench-long/pressure.mjs",
     "source": {
-      "ledgers": 36,
+      "ledgers": 3,
       "arm": "STM-only",
-      "ledgersHash": "7c6caf95038dec290ed9798a8b58a224bd04c1e2dc3636140295d70100180a47"
+      "ledgersHash": "8c210f442ea5f8104119f6134d364dd2b868c62defc5c4d2f4f0f1e42b0332ed",
+      "note": "the 3 STM-only ledgers of the Task 7 pilot under rule 60898b62 (live: main agent hy4-flash-free, worker beam-free, W 32,000), sessions sbl-sc-05, sbl-id-08, sbl-rt-07; the runner logged first overflows at tasks 78, 90 and 90 (this projection: 75, 90, 88)"
     },
     "window": 32000,
     "caps": {
@@ -57,41 +64,41 @@
       }
     },
     "pressure": {
-      "tasks": 384,
+      "tasks": 300,
       "recordsPerTask": {
-        "mean": 4.5,
-        "densest": 6.2,
-        "sparsest": 3.5
+        "mean": 2.5,
+        "densest": 2.8,
+        "sparsest": 2.3
       },
       "tokensPerTask": {
-        "mean": 156.6,
-        "densest": 215.1,
-        "sparsest": 118.7
+        "mean": 104.1,
+        "densest": 116,
+        "sparsest": 97.3
       },
       "tokensPerTaskByRelevance": {
-        "low": 0.4,
-        "medium": 93.5,
-        "high": 62.4,
-        "critical": 0.3
+        "low": 0,
+        "medium": 65.7,
+        "high": 38.4,
+        "critical": 0
       },
-      "highTokensPerTask": 62.7,
-      "recordedTokensPerTask": 196.1,
-      "verbatimTokensPerTask": 41.2,
-      "protectedTokensPerTask": 46,
-      "scopeTokens": 407.5,
-      "largestPoolTokens": 2876,
+      "highTokensPerTask": 38.4,
+      "recordedTokensPerTask": 105.9,
+      "verbatimTokensPerTask": 37.6,
+      "protectedTokensPerTask": 67.5,
+      "scopeTokens": 0,
+      "largestPoolTokens": 11596,
       "overflowTask": {
-        "mean": 53,
-        "densest": 39,
-        "sparsest": 70
+        "mean": 84,
+        "densest": 75,
+        "sparsest": 90
       },
-      "highOverflowTask": 132,
+      "highOverflowTask": 227,
       "rehearsalTask": {
-        "mean": 126,
-        "densest": 92
+        "mean": 193,
+        "densest": 173
       },
-      "densestSession": "sb-rt-14",
-      "sparsestSession": "sb-rt-13"
+      "densestSession": "sbl-sc-05",
+      "sparsestSession": "sbl-id-08"
     },
     "render": {
       "ratio": {
@@ -117,9 +124,9 @@
       "escapeRatio": 1.0275
     },
     "observed": {
-      "compactions": 422,
-      "midLoop": 416,
-      "maxRequestAfterCompaction": 24278
+      "compactions": 247,
+      "midLoop": 226,
+      "maxRequestAfterCompaction": 23283
     },
     "worstRequest": {
       "share": 0.9,
@@ -157,32 +164,32 @@
       9000
     ],
     "buckets": {
-      "beforeBelowTask": 39,
-      "afterAboveTask": 63,
+      "beforeBelowTask": 75,
+      "afterAboveTask": 94,
       "byLength": {
         "80": {
-          "tasksPastOverflow": 28,
-          "shareUnderEviction": 0.35,
-          "tasksInAfterBucket": 17,
+          "tasksPastOverflow": 0,
+          "shareUnderEviction": 0,
+          "tasksInAfterBucket": 0,
           "tasksPastHighOverflow": 0
         },
         "100": {
-          "tasksPastOverflow": 48,
-          "shareUnderEviction": 0.48,
-          "tasksInAfterBucket": 37,
+          "tasksPastOverflow": 17,
+          "shareUnderEviction": 0.17,
+          "tasksInAfterBucket": 6,
           "tasksPastHighOverflow": 0
         },
         "125": {
-          "tasksPastOverflow": 73,
-          "shareUnderEviction": 0.584,
-          "tasksInAfterBucket": 62,
+          "tasksPastOverflow": 42,
+          "shareUnderEviction": 0.336,
+          "tasksInAfterBucket": 31,
           "tasksPastHighOverflow": 0
         },
         "150": {
-          "tasksPastOverflow": 98,
-          "shareUnderEviction": 0.6533,
-          "tasksInAfterBucket": 87,
-          "tasksPastHighOverflow": 19
+          "tasksPastOverflow": 67,
+          "shareUnderEviction": 0.4467,
+          "tasksInAfterBucket": 56,
+          "tasksPastHighOverflow": 0
         }
       }
     },
@@ -191,8 +198,8 @@
         "id": "pool-bounds-description-tokens",
         "text": "The pool bound counts description tokens, but the block the request carries is larger.",
         "poolTokens": 8678,
-        "blockTokensAtPoolBound": 13348,
-        "ratio": 1.5381
+        "blockTokensAtPoolBound": 13038,
+        "ratio": 1.5024
       },
       {
         "id": "product-cap-below-harness-cap",
@@ -215,362 +222,94 @@
       {
         "id": "eviction-reaches-medium-records-only",
         "text": "Eviction leaves out the lowest relevance first. Word-for-word user messages and corrections are high, so until the high records alone pass the pool, only lower records are left out.",
-        "highTokensPerTask": 62.7,
-        "highOverflowTask": 132
+        "highTokensPerTask": 38.4,
+        "highOverflowTask": 227
       },
       {
         "id": "rehearsal-drop-in-reach",
         "text": "The rehearsal drop starts when active records pass its target. Its model is the session's unless rehearsal.model is set.",
         "targetTokens": 20000,
         "task": {
-          "mean": 126,
-          "densest": 92
+          "mean": 193,
+          "densest": 173
         }
       },
       {
         "id": "protected-records-fill-the-pool",
         "text": "Word-for-word user messages, user statements and durable records alone reach the pool at this task: from there an order that protects them has nothing else to leave out.",
-        "protectedTokensPerTask": 46,
-        "task": 180
+        "protectedTokensPerTask": 67.5,
+        "task": 129
       }
     ],
     "sessions": [
       {
-        "session": "sb-id-01",
-        "tasks": 8,
-        "records": 33,
-        "descriptionTokens": 1466,
-        "tokensPerTask": 146,
-        "overflowTask": 58,
-        "renderRatio": 1.4908
+        "session": "sbl-id-08",
+        "tasks": 100,
+        "records": 225,
+        "descriptionTokens": 9732,
+        "tokensPerTask": 97.3,
+        "overflowTask": 90,
+        "renderRatio": 1.4711
       },
       {
-        "session": "sb-id-02",
-        "tasks": 14,
-        "records": 60,
-        "descriptionTokens": 2504,
-        "tokensPerTask": 140.1,
-        "overflowTask": 59,
-        "renderRatio": 1.5871
+        "session": "sbl-rt-07",
+        "tasks": 100,
+        "records": 233,
+        "descriptionTokens": 9900,
+        "tokensPerTask": 99,
+        "overflowTask": 88,
+        "renderRatio": 1.4773
       },
       {
-        "session": "sb-id-03",
-        "tasks": 12,
-        "records": 46,
-        "descriptionTokens": 2153,
-        "tokensPerTask": 142.5,
-        "overflowTask": 58,
-        "renderRatio": 1.5077
-      },
-      {
-        "session": "sb-id-05",
-        "tasks": 10,
-        "records": 47,
-        "descriptionTokens": 1932,
-        "tokensPerTask": 157,
-        "overflowTask": 53,
-        "renderRatio": 1.5487
-      },
-      {
-        "session": "sb-id-07",
-        "tasks": 8,
-        "records": 35,
-        "descriptionTokens": 1486,
-        "tokensPerTask": 148.9,
-        "overflowTask": 57,
-        "renderRatio": 1.6032
-      },
-      {
-        "session": "sb-id-08",
-        "tasks": 11,
-        "records": 49,
-        "descriptionTokens": 1996,
-        "tokensPerTask": 146.6,
-        "overflowTask": 57,
-        "renderRatio": 1.5446
-      },
-      {
-        "session": "sb-id-12",
-        "tasks": 12,
-        "records": 58,
-        "descriptionTokens": 2360,
-        "tokensPerTask": 160.3,
-        "overflowTask": 52,
-        "renderRatio": 1.5208
-      },
-      {
-        "session": "sb-id-13",
-        "tasks": 10,
-        "records": 52,
-        "descriptionTokens": 2021,
-        "tokensPerTask": 165.3,
-        "overflowTask": 51,
-        "renderRatio": 1.5721
-      },
-      {
-        "session": "sb-id-14",
-        "tasks": 10,
-        "records": 51,
-        "descriptionTokens": 1943,
-        "tokensPerTask": 155.4,
-        "overflowTask": 54,
-        "renderRatio": 1.5551
-      },
-      {
-        "session": "sb-id-15",
-        "tasks": 9,
-        "records": 52,
-        "descriptionTokens": 2089,
-        "tokensPerTask": 193.8,
-        "overflowTask": 44,
-        "renderRatio": 1.5601
-      },
-      {
-        "session": "sb-id-16",
-        "tasks": 11,
-        "records": 49,
-        "descriptionTokens": 2114,
-        "tokensPerTask": 157.6,
-        "overflowTask": 53,
-        "renderRatio": 1.5347
-      },
-      {
-        "session": "sb-id-19",
-        "tasks": 13,
-        "records": 72,
-        "descriptionTokens": 2876,
-        "tokensPerTask": 185.2,
-        "overflowTask": 45,
-        "renderRatio": 1.5213
-      },
-      {
-        "session": "sb-rt-01",
-        "tasks": 11,
-        "records": 48,
-        "descriptionTokens": 1926,
-        "tokensPerTask": 140.4,
-        "overflowTask": 60,
-        "renderRatio": 1.5452
-      },
-      {
-        "session": "sb-rt-02",
-        "tasks": 10,
-        "records": 44,
-        "descriptionTokens": 1881,
-        "tokensPerTask": 148,
-        "overflowTask": 56,
-        "renderRatio": 1.5726
-      },
-      {
-        "session": "sb-rt-03",
-        "tasks": 8,
-        "records": 45,
-        "descriptionTokens": 1851,
-        "tokensPerTask": 191.3,
-        "overflowTask": 44,
-        "renderRatio": 1.5678
-      },
-      {
-        "session": "sb-rt-06",
-        "tasks": 14,
-        "records": 62,
-        "descriptionTokens": 2697,
-        "tokensPerTask": 158.4,
-        "overflowTask": 52,
-        "renderRatio": 1.5146
-      },
-      {
-        "session": "sb-rt-07",
-        "tasks": 13,
-        "records": 59,
-        "descriptionTokens": 2590,
-        "tokensPerTask": 163.7,
-        "overflowTask": 51,
-        "renderRatio": 1.5027
-      },
-      {
-        "session": "sb-rt-08",
-        "tasks": 9,
-        "records": 31,
-        "descriptionTokens": 1448,
-        "tokensPerTask": 124.9,
-        "overflowTask": 67,
-        "renderRatio": 1.5663
-      },
-      {
-        "session": "sb-rt-10",
-        "tasks": 8,
-        "records": 37,
-        "descriptionTokens": 1572,
-        "tokensPerTask": 160.1,
-        "overflowTask": 53,
-        "renderRatio": 1.5682
-      },
-      {
-        "session": "sb-rt-11",
-        "tasks": 13,
-        "records": 63,
-        "descriptionTokens": 2643,
-        "tokensPerTask": 163.2,
-        "overflowTask": 50,
-        "renderRatio": 1.5982
-      },
-      {
-        "session": "sb-rt-12",
-        "tasks": 8,
-        "records": 45,
-        "descriptionTokens": 1869,
-        "tokensPerTask": 144.5,
-        "overflowTask": 56,
-        "renderRatio": 1.5934
-      },
-      {
-        "session": "sb-rt-13",
-        "tasks": 13,
-        "records": 47,
-        "descriptionTokens": 2028,
-        "tokensPerTask": 118.7,
-        "overflowTask": 70,
-        "renderRatio": 1.5235
-      },
-      {
-        "session": "sb-rt-14",
-        "tasks": 10,
-        "records": 64,
-        "descriptionTokens": 2563,
-        "tokensPerTask": 215.1,
-        "overflowTask": 39,
-        "renderRatio": 1.5276
-      },
-      {
-        "session": "sb-rt-19",
-        "tasks": 10,
-        "records": 46,
-        "descriptionTokens": 1850,
-        "tokensPerTask": 148.5,
-        "overflowTask": 56,
-        "renderRatio": 1.5762
-      },
-      {
-        "session": "sb-sc-02",
-        "tasks": 11,
-        "records": 50,
-        "descriptionTokens": 2118,
-        "tokensPerTask": 154.5,
-        "overflowTask": 54,
-        "renderRatio": 1.5512
-      },
-      {
-        "session": "sb-sc-04",
-        "tasks": 12,
-        "records": 53,
-        "descriptionTokens": 2359,
-        "tokensPerTask": 159.1,
-        "overflowTask": 52,
-        "renderRatio": 1.5291
-      },
-      {
-        "session": "sb-sc-06",
-        "tasks": 10,
-        "records": 51,
-        "descriptionTokens": 2120,
-        "tokensPerTask": 176,
-        "overflowTask": 48,
-        "renderRatio": 1.5274
-      },
-      {
-        "session": "sb-sc-07",
-        "tasks": 8,
-        "records": 37,
-        "descriptionTokens": 1557,
-        "tokensPerTask": 150.1,
-        "overflowTask": 56,
-        "renderRatio": 1.579
-      },
-      {
-        "session": "sb-sc-08",
-        "tasks": 12,
-        "records": 53,
-        "descriptionTokens": 2313,
-        "tokensPerTask": 155.8,
-        "overflowTask": 53,
-        "renderRatio": 1.5108
-      },
-      {
-        "session": "sb-sc-10",
-        "tasks": 8,
-        "records": 32,
-        "descriptionTokens": 1304,
-        "tokensPerTask": 126.6,
-        "overflowTask": 67,
-        "renderRatio": 1.6149
-      },
-      {
-        "session": "sb-sc-12",
-        "tasks": 13,
-        "records": 50,
-        "descriptionTokens": 2373,
-        "tokensPerTask": 147,
-        "overflowTask": 56,
-        "renderRatio": 1.513
-      },
-      {
-        "session": "sb-sc-14",
-        "tasks": 10,
-        "records": 55,
-        "descriptionTokens": 2330,
-        "tokensPerTask": 196.4,
-        "overflowTask": 43,
-        "renderRatio": 1.5163
-      },
-      {
-        "session": "sb-sc-15",
-        "tasks": 11,
-        "records": 54,
-        "descriptionTokens": 2395,
-        "tokensPerTask": 177.9,
-        "overflowTask": 47,
-        "renderRatio": 1.5418
-      },
-      {
-        "session": "sb-sc-16",
-        "tasks": 11,
-        "records": 40,
-        "descriptionTokens": 1786,
-        "tokensPerTask": 126.7,
-        "overflowTask": 66,
-        "renderRatio": 1.5525
-      },
-      {
-        "session": "sb-sc-18",
-        "tasks": 11,
-        "records": 51,
-        "descriptionTokens": 2050,
-        "tokensPerTask": 151.5,
-        "overflowTask": 55,
-        "renderRatio": 1.532
-      },
-      {
-        "session": "sb-sc-19",
-        "tasks": 12,
-        "records": 52,
-        "descriptionTokens": 2137,
-        "tokensPerTask": 141.2,
-        "overflowTask": 59,
-        "renderRatio": 1.5545
+        "session": "sbl-sc-05",
+        "tasks": 100,
+        "records": 276,
+        "descriptionTokens": 11596,
+        "tokensPerTask": 116,
+        "overflowTask": 75,
+        "renderRatio": 1.4693
       }
-    ]
+    ],
+    "observedTask2": {
+      "compactions": 422,
+      "midLoop": 416,
+      "maxRequestAfterCompaction": 24278
+    },
+    "renderLive": {
+      "ratio": {
+        "measuredMean": 1.4726,
+        "measuredMin": 1.4693,
+        "measuredMax": 1.4773,
+        "atPoolBound": 1.5024
+      },
+      "lineCharsPerDescriptionToken": {
+        "mean": 5.0889,
+        "max": 5.1146
+      },
+      "headerChars": 1227,
+      "blockTokensAtPoolBound": 13038,
+      "fullFolds": 62
+    },
+    "roundsLive": {
+      "artifactReads": 0,
+      "overheadTokens": {
+        "mean": 0,
+        "max": 0
+      },
+      "escapeRatio": 1
+    },
+    "worstCaseNote": "render, rounds and worstRequest stay Task 2's (the generator pins them, MEASURED_WORST_CASE): live, the line cost is lower (5.1146 chars a description token at most vs 5.2442) and the header 40 characters longer (1,227 vs 1,187), about 11 tokens, inside the worst request's margin (26,415 vs the 26,956 limit)"
   },
   "sessionBenchLong": {
     "benchmark": {
-      "version": 1,
+      "version": 2,
       "seed": "prism-218.5-session-bench-long-v1",
-      "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
-      "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1",
-      "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
+      "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
+      "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c",
+      "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
       "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
     },
-    "ruleHash": "60898b623252c1362d5719b6583daa8a4db6549883a68630ec596e2c206b108d",
+    "ruleHash": "0d6beef6321eb3c16b73a1c38cf402d205d1af1bf2dc335d3e007760690c899e",
     "rule": {
       "suite": "session-bench-long",
       "plan": "218.5 Task 6",
@@ -580,11 +319,11 @@
         "run": "docs/_evidence/memory-bench/218.5/session-bench-long.json"
       },
       "benchmark": {
-        "version": 1,
+        "version": 2,
         "seed": "prism-218.5-session-bench-long-v1",
-        "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
-        "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1",
-        "scopesHash": "98f5c09b32e42e408fef4878f3e0e3567b0d7e20de8e4d04148decaa55b7c734",
+        "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
+        "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c",
+        "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
         "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
       },
       "product": {
@@ -611,7 +350,7 @@
           "scripts/memory-bench/run.mjs",
           "scripts/memory-bench/stats.mjs"
         ],
-        "hash": "15a4a6884b834b7766a8849ea1c33acf26d0258159b0494ae5b034552d64ddf0"
+        "hash": "c1656f323833dab41ceeb86e95b6385178a6d373dc31f4e1060f25a48caff7de"
       },
       "partition": "dev",
       "sessions": [
@@ -633,7 +372,7 @@
         "sbl-id-08",
         "sbl-rt-07"
       ],
-      "selection": "every dev session (12: 4 per family; owner, Task 2); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
+      "selection": "every dev session (12: 4 per family; owner, Task 2), 150 tasks each (benchmark version 2; owner, Task 7, 2026-11-24: on the pilot's live rates the pool first overflowed at task 75-90, after every version-1 `after` dependent); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
       "arms": [
         "memory-off-llm",
         "STM-only",
@@ -678,7 +417,7 @@
       "sharedConfigHash": "74137943c5f84dea335b036593aa2dc77a07b968e05a7b5f76273695745c511a",
       "wm": {
         "triggerTokens": 3000,
-        "text": "both WM arms pin wm.triggerTokens 3,000 (one wm.batchTokens batch per pass; Task 3 finding 1). At the product default 10,000 WM's first pass comes at about task 89, after the pool overflows at about task 53. Offline (Task 5) the first pass comes at task 33-34, 2-4 passes per session. Live G11 applies to the STM arms only; the WM arms report their first pass and whether the pool overflowed"
+        "text": "both WM arms pin wm.triggerTokens 3,000 (one wm.batchTokens batch per pass; Task 3 finding 1). At the product default 10,000 WM's first pass comes at about task 89, after the pool overflows at about task 53. Offline (Task 5) the first pass comes at task 33-34, 2-4 passes per session. Live G11 applies to the STM arms only; the WM arms report their first pass and whether the pool overflowed. Benchmark version 2 (Task 7): live STM records about two thirds of the offline rate, so the pool first overflows at about task 84 (75-90) and the WM trigger fires later than these offline numbers; 3,000 stays, so WM still passes well before the overflow"
       },
       "rehearsal": "no arm runs the Rehearsal drop: the memory system turns it on only when wm and ltm are both on, and no arm turns ltm on (Task 5 finding 1); the rows count the drops (0 expected)",
       "model": "opencode-go/hy4-flash-free",
@@ -864,8 +603,8 @@
     },
     "approved": true,
     "approvedBy": "owner",
-    "approvedAt": "2026-11-24T00:00:00Z",
-    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged. Rule c2e39021 stopped at calibration (oracle-notes 54.7% < 60%): hy4-flash-free at thinking low spent its whole 2,048-token output on reasoning on hard turns. Owner, 2026-11-24: \"I am hesitant to go with thinking low for the main model as that does not correspond to real world usage. Can we increase the 32k window?\", then \"Yes go ahead with the proposed caps\": the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336); the input cap (29,952), the pool, the sizes and G11 are unchanged, the worker keeps W 32,000 (60898b62)"
+    "approvedAt": "2026-11-24T11:40:00Z",
+    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged. Rule c2e39021 stopped at calibration (oracle-notes 54.7% < 60%): hy4-flash-free at thinking low spent its whole 2,048-token output on reasoning on hard turns. Owner, 2026-11-24: \"I am hesitant to go with thinking low for the main model as that does not correspond to real world usage. Can we increase the 32k window?\", then \"Yes go ahead with the proposed caps\": the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336) (60898b62). Rule 60898b62 held calibration (oracle-notes 87%) and was paused in the pilot stage: live STM recorded 104 description tokens a task and the pool first overflowed at tasks 78-90, after every `after` dependent, so live G11 could not hold. Owner, 2026-11-24: \"Go with option 2, redesign the pressure\", choosing \"150-task sessions (Recommended)\": benchmark version 2, 150 tasks in 6 phases, buckets from the live ledgers (before < 75, after > 94), the offline worker mock at the live rates"
   },
   "checkins": [
     {
@@ -877,6 +616,534 @@
       "inputTokens": 67004385,
       "outsideCeilingInputTokens": 20884615,
       "next": "owner: a new oracle-notes delivery (new hash) and a new pilot; see plan 218.5 Task 7 notes"
+    }
+  ],
+  "designHistory": [
+    {
+      "task": "plan 218.5 Task 2",
+      "date": "2026-11-23",
+      "script": "scripts/memory-bench/session-bench-long/pressure.mjs",
+      "source": {
+        "ledgers": 36,
+        "arm": "STM-only",
+        "ledgersHash": "7c6caf95038dec290ed9798a8b58a224bd04c1e2dc3636140295d70100180a47"
+      },
+      "window": 32000,
+      "caps": {
+        "harnessInputCap": 29952,
+        "productInputCap": 28928,
+        "poolTokens": 8678,
+        "keepRecentTokens": 5785,
+        "compactAtTokens": 23142.4,
+        "fixedRequestTokens": {
+          "live": 1416,
+          "withToolList": 1826
+        }
+      },
+      "pressure": {
+        "tasks": 384,
+        "recordsPerTask": {
+          "mean": 4.5,
+          "densest": 6.2,
+          "sparsest": 3.5
+        },
+        "tokensPerTask": {
+          "mean": 156.6,
+          "densest": 215.1,
+          "sparsest": 118.7
+        },
+        "tokensPerTaskByRelevance": {
+          "low": 0.4,
+          "medium": 93.5,
+          "high": 62.4,
+          "critical": 0.3
+        },
+        "highTokensPerTask": 62.7,
+        "recordedTokensPerTask": 196.1,
+        "verbatimTokensPerTask": 41.2,
+        "protectedTokensPerTask": 46,
+        "scopeTokens": 407.5,
+        "largestPoolTokens": 2876,
+        "overflowTask": {
+          "mean": 53,
+          "densest": 39,
+          "sparsest": 70
+        },
+        "highOverflowTask": 132,
+        "rehearsalTask": {
+          "mean": 126,
+          "densest": 92
+        },
+        "densestSession": "sb-rt-14",
+        "sparsestSession": "sb-rt-13"
+      },
+      "render": {
+        "ratio": {
+          "measuredMean": 1.5479,
+          "measuredMin": 1.4908,
+          "measuredMax": 1.6149,
+          "atPoolBound": 1.5381
+        },
+        "lineCharsPerDescriptionToken": {
+          "mean": 5.1258,
+          "max": 5.2442
+        },
+        "headerChars": 1187,
+        "blockTokensAtPoolBound": 13348,
+        "fullFolds": 0
+      },
+      "rounds": {
+        "artifactReads": 429,
+        "overheadTokens": {
+          "mean": 128,
+          "max": 2222
+        },
+        "escapeRatio": 1.0275
+      },
+      "observed": {
+        "compactions": 422,
+        "midLoop": 416,
+        "maxRequestAfterCompaction": 24278
+      },
+      "worstRequest": {
+        "share": 0.9,
+        "limitTokens": 26956,
+        "v3Artifact": {
+          "fixedTokens": 1826,
+          "blockTokens": 13348,
+          "tailTokens": 21231,
+          "tokens": 36405,
+          "cap": 29952,
+          "share": 1.2154
+        },
+        "chosenArtifact": {
+          "fixedTokens": 1826,
+          "blockTokens": 13348,
+          "tailTokens": 11470,
+          "tokens": 26644,
+          "cap": 29952,
+          "share": 0.8896
+        },
+        "maxArtifactTokens": 9304,
+        "underTrigger": {
+          "tokens": 28659,
+          "cap": 29952,
+          "share": 0.9568
+        },
+        "underTriggerLive": {
+          "tokens": 28249,
+          "cap": 29952,
+          "share": 0.9431
+        }
+      },
+      "artifactTokens": [
+        6000,
+        9000
+      ],
+      "buckets": {
+        "beforeBelowTask": 39,
+        "afterAboveTask": 63,
+        "byLength": {
+          "80": {
+            "tasksPastOverflow": 28,
+            "shareUnderEviction": 0.35,
+            "tasksInAfterBucket": 17,
+            "tasksPastHighOverflow": 0
+          },
+          "100": {
+            "tasksPastOverflow": 48,
+            "shareUnderEviction": 0.48,
+            "tasksInAfterBucket": 37,
+            "tasksPastHighOverflow": 0
+          },
+          "125": {
+            "tasksPastOverflow": 73,
+            "shareUnderEviction": 0.584,
+            "tasksInAfterBucket": 62,
+            "tasksPastHighOverflow": 0
+          },
+          "150": {
+            "tasksPastOverflow": 98,
+            "shareUnderEviction": 0.6533,
+            "tasksInAfterBucket": 87,
+            "tasksPastHighOverflow": 19
+          }
+        }
+      },
+      "findings": [
+        {
+          "id": "pool-bounds-description-tokens",
+          "text": "The pool bound counts description tokens, but the block the request carries is larger.",
+          "poolTokens": 8678,
+          "blockTokensAtPoolBound": 13348,
+          "ratio": 1.5381
+        },
+        {
+          "id": "product-cap-below-harness-cap",
+          "text": "Session memory sizes itself from the kernel's input cap (W minus the output reserve minus 1,024), not the provider wrapper's.",
+          "productInputCap": 28928,
+          "harnessInputCap": 29952
+        },
+        {
+          "id": "trigger-near-the-cap",
+          "text": "The mid-loop trigger counts 4 characters per token over messages and the summary; in window tokens with the fixed part, a request just under it is close to the cap.",
+          "tokens": 28659,
+          "cap": 29952,
+          "share": 0.9568,
+          "live": {
+            "tokens": 28249,
+            "cap": 29952,
+            "share": 0.9431
+          }
+        },
+        {
+          "id": "eviction-reaches-medium-records-only",
+          "text": "Eviction leaves out the lowest relevance first. Word-for-word user messages and corrections are high, so until the high records alone pass the pool, only lower records are left out.",
+          "highTokensPerTask": 62.7,
+          "highOverflowTask": 132
+        },
+        {
+          "id": "rehearsal-drop-in-reach",
+          "text": "The rehearsal drop starts when active records pass its target. Its model is the session's unless rehearsal.model is set.",
+          "targetTokens": 20000,
+          "task": {
+            "mean": 126,
+            "densest": 92
+          }
+        },
+        {
+          "id": "protected-records-fill-the-pool",
+          "text": "Word-for-word user messages, user statements and durable records alone reach the pool at this task: from there an order that protects them has nothing else to leave out.",
+          "protectedTokensPerTask": 46,
+          "task": 180
+        }
+      ],
+      "sessions": [
+        {
+          "session": "sb-id-01",
+          "tasks": 8,
+          "records": 33,
+          "descriptionTokens": 1466,
+          "tokensPerTask": 146,
+          "overflowTask": 58,
+          "renderRatio": 1.4908
+        },
+        {
+          "session": "sb-id-02",
+          "tasks": 14,
+          "records": 60,
+          "descriptionTokens": 2504,
+          "tokensPerTask": 140.1,
+          "overflowTask": 59,
+          "renderRatio": 1.5871
+        },
+        {
+          "session": "sb-id-03",
+          "tasks": 12,
+          "records": 46,
+          "descriptionTokens": 2153,
+          "tokensPerTask": 142.5,
+          "overflowTask": 58,
+          "renderRatio": 1.5077
+        },
+        {
+          "session": "sb-id-05",
+          "tasks": 10,
+          "records": 47,
+          "descriptionTokens": 1932,
+          "tokensPerTask": 157,
+          "overflowTask": 53,
+          "renderRatio": 1.5487
+        },
+        {
+          "session": "sb-id-07",
+          "tasks": 8,
+          "records": 35,
+          "descriptionTokens": 1486,
+          "tokensPerTask": 148.9,
+          "overflowTask": 57,
+          "renderRatio": 1.6032
+        },
+        {
+          "session": "sb-id-08",
+          "tasks": 11,
+          "records": 49,
+          "descriptionTokens": 1996,
+          "tokensPerTask": 146.6,
+          "overflowTask": 57,
+          "renderRatio": 1.5446
+        },
+        {
+          "session": "sb-id-12",
+          "tasks": 12,
+          "records": 58,
+          "descriptionTokens": 2360,
+          "tokensPerTask": 160.3,
+          "overflowTask": 52,
+          "renderRatio": 1.5208
+        },
+        {
+          "session": "sb-id-13",
+          "tasks": 10,
+          "records": 52,
+          "descriptionTokens": 2021,
+          "tokensPerTask": 165.3,
+          "overflowTask": 51,
+          "renderRatio": 1.5721
+        },
+        {
+          "session": "sb-id-14",
+          "tasks": 10,
+          "records": 51,
+          "descriptionTokens": 1943,
+          "tokensPerTask": 155.4,
+          "overflowTask": 54,
+          "renderRatio": 1.5551
+        },
+        {
+          "session": "sb-id-15",
+          "tasks": 9,
+          "records": 52,
+          "descriptionTokens": 2089,
+          "tokensPerTask": 193.8,
+          "overflowTask": 44,
+          "renderRatio": 1.5601
+        },
+        {
+          "session": "sb-id-16",
+          "tasks": 11,
+          "records": 49,
+          "descriptionTokens": 2114,
+          "tokensPerTask": 157.6,
+          "overflowTask": 53,
+          "renderRatio": 1.5347
+        },
+        {
+          "session": "sb-id-19",
+          "tasks": 13,
+          "records": 72,
+          "descriptionTokens": 2876,
+          "tokensPerTask": 185.2,
+          "overflowTask": 45,
+          "renderRatio": 1.5213
+        },
+        {
+          "session": "sb-rt-01",
+          "tasks": 11,
+          "records": 48,
+          "descriptionTokens": 1926,
+          "tokensPerTask": 140.4,
+          "overflowTask": 60,
+          "renderRatio": 1.5452
+        },
+        {
+          "session": "sb-rt-02",
+          "tasks": 10,
+          "records": 44,
+          "descriptionTokens": 1881,
+          "tokensPerTask": 148,
+          "overflowTask": 56,
+          "renderRatio": 1.5726
+        },
+        {
+          "session": "sb-rt-03",
+          "tasks": 8,
+          "records": 45,
+          "descriptionTokens": 1851,
+          "tokensPerTask": 191.3,
+          "overflowTask": 44,
+          "renderRatio": 1.5678
+        },
+        {
+          "session": "sb-rt-06",
+          "tasks": 14,
+          "records": 62,
+          "descriptionTokens": 2697,
+          "tokensPerTask": 158.4,
+          "overflowTask": 52,
+          "renderRatio": 1.5146
+        },
+        {
+          "session": "sb-rt-07",
+          "tasks": 13,
+          "records": 59,
+          "descriptionTokens": 2590,
+          "tokensPerTask": 163.7,
+          "overflowTask": 51,
+          "renderRatio": 1.5027
+        },
+        {
+          "session": "sb-rt-08",
+          "tasks": 9,
+          "records": 31,
+          "descriptionTokens": 1448,
+          "tokensPerTask": 124.9,
+          "overflowTask": 67,
+          "renderRatio": 1.5663
+        },
+        {
+          "session": "sb-rt-10",
+          "tasks": 8,
+          "records": 37,
+          "descriptionTokens": 1572,
+          "tokensPerTask": 160.1,
+          "overflowTask": 53,
+          "renderRatio": 1.5682
+        },
+        {
+          "session": "sb-rt-11",
+          "tasks": 13,
+          "records": 63,
+          "descriptionTokens": 2643,
+          "tokensPerTask": 163.2,
+          "overflowTask": 50,
+          "renderRatio": 1.5982
+        },
+        {
+          "session": "sb-rt-12",
+          "tasks": 8,
+          "records": 45,
+          "descriptionTokens": 1869,
+          "tokensPerTask": 144.5,
+          "overflowTask": 56,
+          "renderRatio": 1.5934
+        },
+        {
+          "session": "sb-rt-13",
+          "tasks": 13,
+          "records": 47,
+          "descriptionTokens": 2028,
+          "tokensPerTask": 118.7,
+          "overflowTask": 70,
+          "renderRatio": 1.5235
+        },
+        {
+          "session": "sb-rt-14",
+          "tasks": 10,
+          "records": 64,
+          "descriptionTokens": 2563,
+          "tokensPerTask": 215.1,
+          "overflowTask": 39,
+          "renderRatio": 1.5276
+        },
+        {
+          "session": "sb-rt-19",
+          "tasks": 10,
+          "records": 46,
+          "descriptionTokens": 1850,
+          "tokensPerTask": 148.5,
+          "overflowTask": 56,
+          "renderRatio": 1.5762
+        },
+        {
+          "session": "sb-sc-02",
+          "tasks": 11,
+          "records": 50,
+          "descriptionTokens": 2118,
+          "tokensPerTask": 154.5,
+          "overflowTask": 54,
+          "renderRatio": 1.5512
+        },
+        {
+          "session": "sb-sc-04",
+          "tasks": 12,
+          "records": 53,
+          "descriptionTokens": 2359,
+          "tokensPerTask": 159.1,
+          "overflowTask": 52,
+          "renderRatio": 1.5291
+        },
+        {
+          "session": "sb-sc-06",
+          "tasks": 10,
+          "records": 51,
+          "descriptionTokens": 2120,
+          "tokensPerTask": 176,
+          "overflowTask": 48,
+          "renderRatio": 1.5274
+        },
+        {
+          "session": "sb-sc-07",
+          "tasks": 8,
+          "records": 37,
+          "descriptionTokens": 1557,
+          "tokensPerTask": 150.1,
+          "overflowTask": 56,
+          "renderRatio": 1.579
+        },
+        {
+          "session": "sb-sc-08",
+          "tasks": 12,
+          "records": 53,
+          "descriptionTokens": 2313,
+          "tokensPerTask": 155.8,
+          "overflowTask": 53,
+          "renderRatio": 1.5108
+        },
+        {
+          "session": "sb-sc-10",
+          "tasks": 8,
+          "records": 32,
+          "descriptionTokens": 1304,
+          "tokensPerTask": 126.6,
+          "overflowTask": 67,
+          "renderRatio": 1.6149
+        },
+        {
+          "session": "sb-sc-12",
+          "tasks": 13,
+          "records": 50,
+          "descriptionTokens": 2373,
+          "tokensPerTask": 147,
+          "overflowTask": 56,
+          "renderRatio": 1.513
+        },
+        {
+          "session": "sb-sc-14",
+          "tasks": 10,
+          "records": 55,
+          "descriptionTokens": 2330,
+          "tokensPerTask": 196.4,
+          "overflowTask": 43,
+          "renderRatio": 1.5163
+        },
+        {
+          "session": "sb-sc-15",
+          "tasks": 11,
+          "records": 54,
+          "descriptionTokens": 2395,
+          "tokensPerTask": 177.9,
+          "overflowTask": 47,
+          "renderRatio": 1.5418
+        },
+        {
+          "session": "sb-sc-16",
+          "tasks": 11,
+          "records": 40,
+          "descriptionTokens": 1786,
+          "tokensPerTask": 126.7,
+          "overflowTask": 66,
+          "renderRatio": 1.5525
+        },
+        {
+          "session": "sb-sc-18",
+          "tasks": 11,
+          "records": 51,
+          "descriptionTokens": 2050,
+          "tokensPerTask": 151.5,
+          "overflowTask": 55,
+          "renderRatio": 1.532
+        },
+        {
+          "session": "sb-sc-19",
+          "tasks": 12,
+          "records": 52,
+          "descriptionTokens": 2137,
+          "tokensPerTask": 141.2,
+          "overflowTask": 59,
+          "renderRatio": 1.5545
+        }
+      ]
     }
   ]
 }
