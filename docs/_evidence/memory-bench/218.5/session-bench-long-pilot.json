@@ -3,10 +3,10 @@
   "mode": "live-pilot",
   "partition": "dev",
   "benchmark": {
-    "version": 1,
-    "templateHash": "01b3dd91e1d55b66d7e24b9b6d932cce0daf2eb1d85c946ecf3c8cd1dc004713",
+    "version": 2,
+    "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
     "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c",
-    "sessionsHash": "53aad043b0b645ab9a52ad63c8d4d21ae7a9fa37bfc33b011f7a480b7048d5c1"
+    "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c"
   },
   "window": 32000,
   "fixedRequestTokens": {
@@ -16,6 +16,11 @@
   },
   "arms": [
     "memory-off-llm",
+    "STM-only",
+    "STM-only-protect",
+    "STM+WM",
+    "STM+WM-deterministic",
+    "mem0",
     "amnesic",
     "oracle-notes"
   ],
@@ -28,11 +33,16 @@
     "C"
   ],
   "configHashes": {
-    "memory-off-llm": "451c89a1a3f6de5982ed35dfc583bbeb21d10612bd75a486619b2b72e587c6ad",
-    "amnesic": "0d2cc1e738dda648f141133cf760163d19ee394d93e496080599266155307028",
-    "oracle-notes": "6c6227c0ff8782c945b6bbcada65bff7d4cef1b2ac7ee2d9dc32f80ea9d7a9ab"
+    "memory-off-llm": "27add5eb43c4df491a1ce83b723c44a8e72c65dba7343940b52ccad89b612df2",
+    "STM-only": "baf861e274ef7317c009249ec1d0785394501697bebaf71d383b859e9e9e7268",
+    "STM-only-protect": "0c20e3031daf712dfdbedddf80f0f11226a69e002ae8f3afb18f969b4523a899",
+    "STM+WM": "2a81794368ef0564d00a2632dc95de7e954c55571d2014b4e01f90788c22e037",
+    "STM+WM-deterministic": "73667082043a78e144126e6a2329ae90278889558b96890c14040877a01f11d9",
+    "mem0": "917fc4995dc09c3e1edf04a9c38ff94ae9faaad465cf525d83fbb8aec9cdc945",
+    "amnesic": "f849a7b27d057ff44484794430f92452592d225b1f1322793228b4718ebf7d55",
+    "oracle-notes": "5928ef5374c811277765d13ac644d81b087b5d047a37192ef99d66a8dd211eb8"
   },
-  "sharedConfigHash": "0ab8322c3f5e205ffd2fe2a3bb8bb74f27f58b23f0ee5bc90dafbd2205ab4b08",
+  "sharedConfigHash": "74137943c5f84dea335b036593aa2dc77a07b968e05a7b5f76273695745c511a",
   "sessions": [
     "sbl-sc-05",
     "sbl-id-08",
@@ -41,63 +51,63 @@
   "scores": {
     "memory-off-llm": {
       "overall": {
-        "tasks": 100,
-        "tasksPassed": 50,
+        "tasks": 450,
+        "tasksPassed": 366,
         "classes": {
           "C": {
-            "pass": 70,
-            "total": 106,
-            "rate": 0.660377358490566
+            "pass": 436,
+            "total": 468,
+            "rate": 0.9316239316239316
           },
           "D2": {
             "pass": 0,
-            "total": 9,
+            "total": 27,
             "rate": 0
           },
           "D1": {
-            "pass": 1,
-            "total": 3,
-            "rate": 0.3333333333333333
+            "pass": 9,
+            "total": 9,
+            "rate": 1
           },
           "D3": {
-            "pass": 2,
-            "total": 3,
-            "rate": 0.6666666666666666
+            "pass": 8,
+            "total": 9,
+            "rate": 0.8888888888888888
           },
           "D4": {
-            "pass": 0,
-            "total": 9,
-            "rate": 0
+            "pass": 4,
+            "total": 27,
+            "rate": 0.14814814814814814
           },
           "D2R": {
             "pass": 0,
-            "total": 2,
+            "total": 6,
             "rate": 0
           }
         },
-        "rederivations": 131,
-        "toolCalls": 560,
-        "taskRate": 0.5
+        "rederivations": 585,
+        "toolCalls": 2557,
+        "taskRate": 0.8133333333333334
       },
       "sessions": {
         "sbl-sc-05": {
-          "tasks": 100,
-          "tasksPassed": 50,
+          "tasks": 150,
+          "tasksPassed": 120,
           "classes": {
             "C": {
-              "pass": 70,
-              "total": 106
+              "pass": 145,
+              "total": 156
             },
             "D2": {
               "pass": 0,
               "total": 9
             },
             "D1": {
-              "pass": 1,
+              "pass": 3,
               "total": 3
             },
             "D3": {
-              "pass": 2,
+              "pass": 3,
               "total": 3
             },
             "D4": {
@@ -109,25 +119,923 @@
               "total": 2
             }
           },
-          "rederivations": 131,
-          "toolCalls": 560
+          "rederivations": 284,
+          "toolCalls": 1012
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 116,
+          "classes": {
+            "C": {
+              "pass": 141,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 0,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 134,
+          "toolCalls": 696
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 130,
+          "classes": {
+            "C": {
+              "pass": 150,
+              "total": 156
+            },
+            "D4": {
+              "pass": 4,
+              "total": 9
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 167,
+          "toolCalls": 849
+        }
+      }
+    },
+    "STM-only": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 421,
+        "classes": {
+          "C": {
+            "pass": 446,
+            "total": 468,
+            "rate": 0.9529914529914529
+          },
+          "D2": {
+            "pass": 19,
+            "total": 27,
+            "rate": 0.7037037037037037
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 25,
+            "total": 27,
+            "rate": 0.9259259259259259
+          },
+          "D2R": {
+            "pass": 5,
+            "total": 6,
+            "rate": 0.8333333333333334
+          }
+        },
+        "rederivations": 428,
+        "toolCalls": 2391,
+        "taskRate": 0.9355555555555556
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 144,
+          "classes": {
+            "C": {
+              "pass": 150,
+              "total": 156
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 1,
+              "total": 2
+            }
+          },
+          "rederivations": 197,
+          "toolCalls": 902
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 146,
+          "classes": {
+            "C": {
+              "pass": 152,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 168,
+          "toolCalls": 761
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 131,
+          "classes": {
+            "C": {
+              "pass": 144,
+              "total": 156
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 1,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 63,
+          "toolCalls": 728
+        }
+      }
+    },
+    "STM-only-protect": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 410,
+        "classes": {
+          "C": {
+            "pass": 427,
+            "total": 468,
+            "rate": 0.9123931623931624
+          },
+          "D2": {
+            "pass": 26,
+            "total": 27,
+            "rate": 0.9629629629629629
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 23,
+            "total": 27,
+            "rate": 0.8518518518518519
+          },
+          "D2R": {
+            "pass": 6,
+            "total": 6,
+            "rate": 1
+          }
+        },
+        "rederivations": 191,
+        "toolCalls": 1966,
+        "taskRate": 0.9111111111111111
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 127,
+          "classes": {
+            "C": {
+              "pass": 133,
+              "total": 156
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 6,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 82,
+          "toolCalls": 608
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 149,
+          "classes": {
+            "C": {
+              "pass": 155,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 56,
+          "toolCalls": 769
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 134,
+          "classes": {
+            "C": {
+              "pass": 139,
+              "total": 156
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 53,
+          "toolCalls": 589
+        }
+      }
+    },
+    "STM+WM": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 407,
+        "classes": {
+          "C": {
+            "pass": 425,
+            "total": 468,
+            "rate": 0.9081196581196581
+          },
+          "D2": {
+            "pass": 23,
+            "total": 27,
+            "rate": 0.8518518518518519
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 8,
+            "total": 9,
+            "rate": 0.8888888888888888
+          },
+          "D4": {
+            "pass": 24,
+            "total": 27,
+            "rate": 0.8888888888888888
+          },
+          "D2R": {
+            "pass": 6,
+            "total": 6,
+            "rate": 1
+          }
+        },
+        "rederivations": 250,
+        "toolCalls": 2088,
+        "taskRate": 0.9044444444444445
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 124,
+          "classes": {
+            "C": {
+              "pass": 130,
+              "total": 156
+            },
+            "D2": {
+              "pass": 7,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 72,
+          "toolCalls": 641
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 141,
+          "classes": {
+            "C": {
+              "pass": 147,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 91,
+          "toolCalls": 813
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 142,
+          "classes": {
+            "C": {
+              "pass": 148,
+              "total": 156
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 87,
+          "toolCalls": 634
+        }
+      }
+    },
+    "STM+WM-deterministic": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 410,
+        "classes": {
+          "C": {
+            "pass": 429,
+            "total": 468,
+            "rate": 0.9166666666666666
+          },
+          "D2": {
+            "pass": 23,
+            "total": 27,
+            "rate": 0.8518518518518519
+          },
+          "D1": {
+            "pass": 7,
+            "total": 9,
+            "rate": 0.7777777777777778
+          },
+          "D3": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 26,
+            "total": 27,
+            "rate": 0.9629629629629629
+          },
+          "D2R": {
+            "pass": 4,
+            "total": 6,
+            "rate": 0.6666666666666666
+          }
+        },
+        "rederivations": 260,
+        "toolCalls": 2003,
+        "taskRate": 0.9111111111111111
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 135,
+          "classes": {
+            "C": {
+              "pass": 141,
+              "total": 156
+            },
+            "D2": {
+              "pass": 7,
+              "total": 9
+            },
+            "D1": {
+              "pass": 2,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 1,
+              "total": 2
+            }
+          },
+          "rederivations": 85,
+          "toolCalls": 633
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 139,
+          "classes": {
+            "C": {
+              "pass": 146,
+              "total": 156
+            },
+            "D1": {
+              "pass": 2,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 116,
+          "toolCalls": 684
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 136,
+          "classes": {
+            "C": {
+              "pass": 142,
+              "total": 156
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 7,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 1,
+              "total": 2
+            }
+          },
+          "rederivations": 59,
+          "toolCalls": 686
+        }
+      }
+    },
+    "mem0": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 383,
+        "classes": {
+          "C": {
+            "pass": 437,
+            "total": 468,
+            "rate": 0.9337606837606838
+          },
+          "D2": {
+            "pass": 10,
+            "total": 27,
+            "rate": 0.37037037037037035
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 10,
+            "total": 27,
+            "rate": 0.37037037037037035
+          },
+          "D2R": {
+            "pass": 0,
+            "total": 6,
+            "rate": 0
+          }
+        },
+        "rederivations": 378,
+        "toolCalls": 2218,
+        "taskRate": 0.8511111111111112
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 121,
+          "classes": {
+            "C": {
+              "pass": 144,
+              "total": 156
+            },
+            "D2": {
+              "pass": 1,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 0,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 85,
+          "toolCalls": 640
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 132,
+          "classes": {
+            "C": {
+              "pass": 150,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 4,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 4,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 165,
+          "toolCalls": 833
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 130,
+          "classes": {
+            "C": {
+              "pass": 143,
+              "total": 156
+            },
+            "D4": {
+              "pass": 6,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 5,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 128,
+          "toolCalls": 745
         }
       }
     },
     "amnesic": {
       "overall": {
-        "tasks": 300,
-        "tasksPassed": 203,
+        "tasks": 450,
+        "tasksPassed": 349,
         "classes": {
           "C": {
-            "pass": 265,
-            "total": 318,
-            "rate": 0.8333333333333334
+            "pass": 408,
+            "total": 468,
+            "rate": 0.8717948717948718
           },
           "D2": {
             "pass": 0,
             "total": 27,
             "rate": 0
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 7,
+            "total": 9,
+            "rate": 0.7777777777777778
+          },
+          "D4": {
+            "pass": 8,
+            "total": 27,
+            "rate": 0.2962962962962963
+          },
+          "D2R": {
+            "pass": 0,
+            "total": 6,
+            "rate": 0
+          }
+        },
+        "rederivations": 916,
+        "toolCalls": 2780,
+        "taskRate": 0.7755555555555556
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 110,
+          "classes": {
+            "C": {
+              "pass": 129,
+              "total": 156
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D4": {
+              "pass": 3,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 271,
+          "toolCalls": 852
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 124,
+          "classes": {
+            "C": {
+              "pass": 144,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 4,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 226,
+          "toolCalls": 907
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 115,
+          "classes": {
+            "C": {
+              "pass": 135,
+              "total": 156
+            },
+            "D4": {
+              "pass": 1,
+              "total": 9
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 419,
+          "toolCalls": 1021
+        }
+      }
+    },
+    "oracle-notes": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 405,
+        "classes": {
+          "C": {
+            "pass": 424,
+            "total": 468,
+            "rate": 0.905982905982906
+          },
+          "D2": {
+            "pass": 24,
+            "total": 27,
+            "rate": 0.8888888888888888
           },
           "D1": {
             "pass": 8,
@@ -140,234 +1048,95 @@
             "rate": 0.6666666666666666
           },
           "D4": {
-            "pass": 3,
+            "pass": 26,
             "total": 27,
-            "rate": 0.1111111111111111
+            "rate": 0.9629629629629629
           },
           "D2R": {
-            "pass": 0,
+            "pass": 6,
             "total": 6,
-            "rate": 0
+            "rate": 1
           }
         },
-        "rederivations": 553,
-        "toolCalls": 1805,
-        "taskRate": 0.6766666666666666
+        "rederivations": 305,
+        "toolCalls": 2061,
+        "taskRate": 0.9
       },
       "sessions": {
         "sbl-sc-05": {
-          "tasks": 100,
-          "tasksPassed": 64,
+          "tasks": 150,
+          "tasksPassed": 133,
           "classes": {
             "C": {
-              "pass": 82,
-              "total": 106
+              "pass": 139,
+              "total": 156
             },
             "D2": {
-              "pass": 0,
-              "total": 9
-            },
-            "D1": {
-              "pass": 2,
-              "total": 3
-            },
-            "D3": {
-              "pass": 2,
-              "total": 3
-            },
-            "D4": {
-              "pass": 2,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 0,
-              "total": 2
-            }
-          },
-          "rederivations": 157,
-          "toolCalls": 538
-        },
-        "sbl-id-08": {
-          "tasks": 100,
-          "tasksPassed": 74,
-          "classes": {
-            "C": {
-              "pass": 99,
-              "total": 106
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D4": {
-              "pass": 0,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 0,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 0,
-              "total": 2
-            }
-          },
-          "rederivations": 205,
-          "toolCalls": 671
-        },
-        "sbl-rt-07": {
-          "tasks": 100,
-          "tasksPassed": 65,
-          "classes": {
-            "C": {
-              "pass": 84,
-              "total": 106
-            },
-            "D4": {
-              "pass": 1,
-              "total": 9
-            },
-            "D3": {
-              "pass": 1,
-              "total": 3
-            },
-            "D2": {
-              "pass": 0,
+              "pass": 9,
               "total": 9
             },
             "D1": {
               "pass": 3,
               "total": 3
             },
-            "D2R": {
-              "pass": 0,
-              "total": 2
-            }
-          },
-          "rederivations": 191,
-          "toolCalls": 596
-        }
-      }
-    },
-    "oracle-notes": {
-      "overall": {
-        "tasks": 300,
-        "tasksPassed": 164,
-        "classes": {
-          "C": {
-            "pass": 181,
-            "total": 318,
-            "rate": 0.5691823899371069
-          },
-          "D2": {
-            "pass": 13,
-            "total": 27,
-            "rate": 0.48148148148148145
-          },
-          "D1": {
-            "pass": 3,
-            "total": 9,
-            "rate": 0.3333333333333333
-          },
-          "D3": {
-            "pass": 1,
-            "total": 9,
-            "rate": 0.1111111111111111
-          },
-          "D4": {
-            "pass": 15,
-            "total": 27,
-            "rate": 0.5555555555555556
-          },
-          "D2R": {
-            "pass": 4,
-            "total": 6,
-            "rate": 0.6666666666666666
-          }
-        },
-        "rederivations": 268,
-        "toolCalls": 1254,
-        "taskRate": 0.5466666666666666
-      },
-      "sessions": {
-        "sbl-sc-05": {
-          "tasks": 100,
-          "tasksPassed": 42,
-          "classes": {
-            "C": {
-              "pass": 47,
-              "total": 106
-            },
-            "D2": {
-              "pass": 4,
-              "total": 9
-            },
-            "D1": {
-              "pass": 0,
-              "total": 3
-            },
             "D3": {
-              "pass": 1,
-              "total": 3
-            },
-            "D4": {
-              "pass": 1,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 1,
-              "total": 2
-            }
-          },
-          "rederivations": 74,
-          "toolCalls": 337
-        },
-        "sbl-id-08": {
-          "tasks": 100,
-          "tasksPassed": 63,
-          "classes": {
-            "C": {
-              "pass": 70,
-              "total": 106
-            },
-            "D1": {
-              "pass": 1,
+              "pass": 3,
               "total": 3
             },
             "D4": {
               "pass": 8,
               "total": 9
             },
-            "D3": {
-              "pass": 0,
-              "total": 3
-            },
-            "D2": {
-              "pass": 5,
-              "total": 9
-            },
             "D2R": {
-              "pass": 1,
+              "pass": 2,
               "total": 2
             }
           },
-          "rederivations": 110,
-          "toolCalls": 487
+          "rederivations": 91,
+          "toolCalls": 690
         },
-        "sbl-rt-07": {
-          "tasks": 100,
-          "tasksPassed": 59,
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 138,
           "classes": {
             "C": {
-              "pass": 64,
-              "total": 106
+              "pass": 144,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
             },
             "D4": {
-              "pass": 6,
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 115,
+          "toolCalls": 672
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 134,
+          "classes": {
+            "C": {
+              "pass": 141,
+              "total": 156
+            },
+            "D4": {
+              "pass": 9,
               "total": 9
             },
             "D3": {
@@ -375,7 +1144,7 @@
               "total": 3
             },
             "D2": {
-              "pass": 4,
+              "pass": 7,
               "total": 9
             },
             "D1": {
@@ -387,8 +1156,8 @@
               "total": 2
             }
           },
-          "rederivations": 84,
-          "toolCalls": 430
+          "rederivations": 99,
+          "toolCalls": 699
         }
       }
     }
@@ -397,56 +1166,296 @@
     "memory-off-llm": {
       "none": {
         "C": {
-          "pass": 70,
-          "total": 106
+          "pass": 436,
+          "total": 468
         }
       },
       "before": {
         "D2": {
           "pass": 0,
-          "total": 3
+          "total": 9
         },
         "D1": {
-          "pass": 1,
-          "total": 1
+          "pass": 3,
+          "total": 3
         },
         "D3": {
-          "pass": 1,
-          "total": 1
+          "pass": 2,
+          "total": 3
         },
         "D4": {
           "pass": 0,
-          "total": 3
+          "total": 9
         }
       },
       "after": {
-        "D1": {
-          "pass": 0,
-          "total": 2
-        },
-        "D4": {
-          "pass": 0,
-          "total": 6
-        },
         "D2": {
           "pass": 0,
-          "total": 6
+          "total": 18
         },
         "D2R": {
           "pass": 0,
-          "total": 2
+          "total": 6
+        },
+        "D4": {
+          "pass": 4,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
+          "total": 6
         },
         "D3": {
-          "pass": 1,
-          "total": 2
+          "pass": 6,
+          "total": 6
+        }
+      }
+    },
+    "STM-only": {
+      "none": {
+        "C": {
+          "pass": 446,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 7,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 3,
+          "total": 3
+        },
+        "D4": {
+          "pass": 9,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2": {
+          "pass": 12,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 5,
+          "total": 6
+        },
+        "D4": {
+          "pass": 16,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
+          "total": 6
+        },
+        "D3": {
+          "pass": 6,
+          "total": 6
+        }
+      }
+    },
+    "STM-only-protect": {
+      "none": {
+        "C": {
+          "pass": 427,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 8,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 3,
+          "total": 3
+        },
+        "D4": {
+          "pass": 5,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2": {
+          "pass": 18,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 6,
+          "total": 6
+        },
+        "D4": {
+          "pass": 18,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
+          "total": 6
+        },
+        "D3": {
+          "pass": 6,
+          "total": 6
+        }
+      }
+    },
+    "STM+WM": {
+      "none": {
+        "C": {
+          "pass": 425,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 8,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 2,
+          "total": 3
+        },
+        "D4": {
+          "pass": 8,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2": {
+          "pass": 15,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 6,
+          "total": 6
+        },
+        "D4": {
+          "pass": 16,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
+          "total": 6
+        },
+        "D3": {
+          "pass": 6,
+          "total": 6
+        }
+      }
+    },
+    "STM+WM-deterministic": {
+      "none": {
+        "C": {
+          "pass": 429,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 8,
+          "total": 9
+        },
+        "D1": {
+          "pass": 2,
+          "total": 3
+        },
+        "D3": {
+          "pass": 3,
+          "total": 3
+        },
+        "D4": {
+          "pass": 8,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2": {
+          "pass": 15,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 4,
+          "total": 6
+        },
+        "D4": {
+          "pass": 18,
+          "total": 18
+        },
+        "D1": {
+          "pass": 5,
+          "total": 6
+        },
+        "D3": {
+          "pass": 6,
+          "total": 6
+        }
+      }
+    },
+    "mem0": {
+      "none": {
+        "C": {
+          "pass": 437,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 6,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 3,
+          "total": 3
+        },
+        "D4": {
+          "pass": 2,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2": {
+          "pass": 4,
+          "total": 18
+        },
+        "D2R": {
+          "pass": 0,
+          "total": 6
+        },
+        "D4": {
+          "pass": 8,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
+          "total": 6
+        },
+        "D3": {
+          "pass": 6,
+          "total": 6
         }
       }
     },
     "amnesic": {
       "none": {
         "C": {
-          "pass": 265,
-          "total": 318
+          "pass": 408,
+          "total": 468
         }
       },
       "before": {
@@ -459,7 +1468,7 @@
           "total": 3
         },
         "D3": {
-          "pass": 1,
+          "pass": 2,
           "total": 3
         },
         "D4": {
@@ -468,20 +1477,20 @@
         }
       },
       "after": {
-        "D1": {
-          "pass": 5,
-          "total": 6
-        },
-        "D4": {
-          "pass": 3,
-          "total": 18
-        },
         "D2": {
           "pass": 0,
           "total": 18
         },
         "D2R": {
           "pass": 0,
+          "total": 6
+        },
+        "D4": {
+          "pass": 8,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
           "total": 6
         },
         "D3": {
@@ -493,47 +1502,47 @@
     "oracle-notes": {
       "none": {
         "C": {
-          "pass": 181,
-          "total": 318
+          "pass": 424,
+          "total": 468
         }
       },
       "before": {
         "D2": {
-          "pass": 6,
+          "pass": 8,
           "total": 9
         },
         "D1": {
-          "pass": 2,
+          "pass": 3,
           "total": 3
         },
         "D3": {
-          "pass": 0,
+          "pass": 2,
           "total": 3
         },
         "D4": {
-          "pass": 6,
+          "pass": 8,
           "total": 9
         }
       },
       "after": {
-        "D1": {
-          "pass": 1,
-          "total": 6
-        },
-        "D4": {
-          "pass": 9,
-          "total": 18
-        },
         "D2": {
-          "pass": 7,
+          "pass": 16,
           "total": 18
         },
         "D2R": {
-          "pass": 4,
+          "pass": 6,
+          "total": 6
+        },
+        "D4": {
+          "pass": 18,
+          "total": 18
+        },
+        "D1": {
+          "pass": 5,
           "total": 6
         },
         "D3": {
-          "pass": 1,
+          "pass": 4,
           "total": 6
         }
       }
@@ -542,16 +1551,16 @@
   "cost": {
     "memory-off-llm": {
       "main": {
-        "calls": 664,
-        "inputTokens": 11803994,
-        "cachedInputTokens": 6570240,
-        "outputTokens": 182788
+        "calls": 3026,
+        "inputTokens": 57718549,
+        "cachedInputTokens": 32478720,
+        "outputTokens": 1069149
       },
       "workers": {
-        "calls": 125,
-        "inputTokens": 547981,
-        "cachedInputTokens": 90880,
-        "outputTokens": 144999
+        "calls": 495,
+        "inputTokens": 2437452,
+        "cachedInputTokens": 17917,
+        "outputTokens": 703399
       },
       "embeddings": {
         "calls": 0,
@@ -560,18 +1569,148 @@
       "thirdPartyErrors": 0,
       "overflows": 0,
       "providerErrors": 0,
-      "deferredToolCalls": 39,
-      "wholeRunTokens": 12679762,
-      "wholeRunTokensPerPassedTask": 253595,
-      "cacheShare": 0.5392757028734271,
-      "simulatedPrefixShare": 0.887300556636168
+      "deferredToolCalls": 72,
+      "wholeRunTokens": 61928549,
+      "wholeRunTokensPerPassedTask": 169204,
+      "cacheShare": 0.5402060718763536,
+      "simulatedPrefixShare": 0.8786828331855808
+    },
+    "STM-only": {
+      "main": {
+        "calls": 2878,
+        "inputTokens": 65128115,
+        "cachedInputTokens": 23870592,
+        "outputTokens": 732242
+      },
+      "workers": {
+        "calls": 589,
+        "inputTokens": 9549670,
+        "cachedInputTokens": 1060014,
+        "outputTokens": 665463
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 121,
+      "wholeRunTokens": 76075490,
+      "wholeRunTokensPerPassedTask": 180702,
+      "cacheShare": 0.3338423334328944,
+      "simulatedPrefixShare": 0.8888859026424589
+    },
+    "STM-only-protect": {
+      "main": {
+        "calls": 2457,
+        "inputTokens": 54827315,
+        "cachedInputTokens": 22347008,
+        "outputTokens": 1056138
+      },
+      "workers": {
+        "calls": 549,
+        "inputTokens": 8946035,
+        "cachedInputTokens": 921840,
+        "outputTokens": 587816
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 79,
+      "wholeRunTokens": 65417304,
+      "wholeRunTokensPerPassedTask": 159554,
+      "cacheShare": 0.36486789544535453,
+      "simulatedPrefixShare": 0.8772780507202876
+    },
+    "STM+WM": {
+      "main": {
+        "calls": 2600,
+        "inputTokens": 55371847,
+        "cachedInputTokens": 26686720,
+        "outputTokens": 1022214
+      },
+      "workers": {
+        "calls": 608,
+        "inputTokens": 9495280,
+        "cachedInputTokens": 1158389,
+        "outputTokens": 687013
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 21,
+      "wholeRunTokens": 66576354,
+      "wholeRunTokensPerPassedTask": 163578,
+      "cacheShare": 0.42926379335406667,
+      "simulatedPrefixShare": 0.9013663846734655
+    },
+    "STM+WM-deterministic": {
+      "main": {
+        "calls": 2491,
+        "inputTokens": 56070027,
+        "cachedInputTokens": 25958784,
+        "outputTokens": 982506
+      },
+      "workers": {
+        "calls": 597,
+        "inputTokens": 9311962,
+        "cachedInputTokens": 1057817,
+        "outputTokens": 653411
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 45,
+      "wholeRunTokens": 67017906,
+      "wholeRunTokensPerPassedTask": 163458,
+      "cacheShare": 0.4132116721013183,
+      "simulatedPrefixShare": 0.903257453533377
+    },
+    "mem0": {
+      "main": {
+        "calls": 2687,
+        "inputTokens": 51895411,
+        "cachedInputTokens": 24653440,
+        "outputTokens": 1018946
+      },
+      "workers": {
+        "calls": 951,
+        "inputTokens": 6265709,
+        "cachedInputTokens": 3282358,
+        "outputTokens": 1089901
+      },
+      "embeddings": {
+        "calls": 2290,
+        "inputTokens": 177225
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 59,
+      "wholeRunTokens": 60447192,
+      "wholeRunTokensPerPassedTask": 157826,
+      "cacheShare": 0.48031740104042014,
+      "simulatedPrefixShare": 0.7181277724939829
     },
     "amnesic": {
       "main": {
-        "calls": 2404,
-        "inputTokens": 25326402,
-        "cachedInputTokens": 18302464,
-        "outputTokens": 380687
+        "calls": 3680,
+        "inputTokens": 40471188,
+        "cachedInputTokens": 27698176,
+        "outputTokens": 1606085
       },
       "workers": {
         "calls": 0,
@@ -586,24 +1725,24 @@
       "thirdPartyErrors": 0,
       "overflows": 0,
       "providerErrors": 0,
-      "deferredToolCalls": 334,
-      "wholeRunTokens": 25707089,
-      "wholeRunTokensPerPassedTask": 126636,
-      "cacheShare": 0.7226634087226445,
-      "simulatedPrefixShare": 0.8439399992741827
+      "deferredToolCalls": 438,
+      "wholeRunTokens": 42077273,
+      "wholeRunTokensPerPassedTask": 120565,
+      "cacheShare": 0.6843924621140353,
+      "simulatedPrefixShare": 0.8366396610858485
     },
     "oracle-notes": {
       "main": {
-        "calls": 1586,
-        "inputTokens": 27808262,
-        "cachedInputTokens": 15607040,
-        "outputTokens": 563473
+        "calls": 2529,
+        "inputTokens": 47273237,
+        "cachedInputTokens": 29912064,
+        "outputTokens": 1167694
       },
       "workers": {
-        "calls": 338,
-        "inputTokens": 1517746,
-        "cachedInputTokens": 296768,
-        "outputTokens": 294016
+        "calls": 455,
+        "inputTokens": 2196819,
+        "cachedInputTokens": 26870,
+        "outputTokens": 653634
       },
       "embeddings": {
         "calls": 0,
@@ -612,45 +1751,180 @@
       "thirdPartyErrors": 0,
       "overflows": 0,
       "providerErrors": 0,
-      "deferredToolCalls": 114,
-      "wholeRunTokens": 30183497,
-      "wholeRunTokensPerPassedTask": 184046,
-      "cacheShare": 0.5423107024999788,
-      "simulatedPrefixShare": 0.84820748148617
+      "deferredToolCalls": 55,
+      "wholeRunTokens": 51291384,
+      "wholeRunTokensPerPassedTask": 126645,
+      "cacheShare": 0.605193048497863,
+      "simulatedPrefixShare": 0.8528687579957644
     }
   },
   "faults": {
     "memory-off-llm": [],
+    "STM-only": [],
+    "STM-only-protect": [],
+    "STM+WM": [],
+    "STM+WM-deterministic": [],
+    "mem0": [],
     "amnesic": [],
     "oracle-notes": []
   },
-  "pressure": {},
-  "wallMs": 19792388,
+  "pressure": {
+    "STM-only": {
+      "sbl-sc-05": {
+        "firstOverflowTask": 84,
+        "firstWmPassTask": null,
+        "wmPasses": 0,
+        "leftOutProtected": 2,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13187,
+        "maxActiveStmTokens": 14406
+      },
+      "sbl-id-08": {
+        "firstOverflowTask": 100,
+        "firstWmPassTask": null,
+        "wmPasses": 0,
+        "leftOutProtected": 3,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13354,
+        "maxActiveStmTokens": 13625
+      },
+      "sbl-rt-07": {
+        "firstOverflowTask": 104,
+        "firstWmPassTask": null,
+        "wmPasses": 0,
+        "leftOutProtected": 3,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13392,
+        "maxActiveStmTokens": 12694
+      }
+    },
+    "STM-only-protect": {
+      "sbl-sc-05": {
+        "firstOverflowTask": 98,
+        "firstWmPassTask": null,
+        "wmPasses": 0,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13413,
+        "maxActiveStmTokens": 13762
+      },
+      "sbl-id-08": {
+        "firstOverflowTask": 107,
+        "firstWmPassTask": null,
+        "wmPasses": 0,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13394,
+        "maxActiveStmTokens": 12581
+      },
+      "sbl-rt-07": {
+        "firstOverflowTask": 108,
+        "firstWmPassTask": null,
+        "wmPasses": 0,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13578,
+        "maxActiveStmTokens": 12055
+      }
+    },
+    "STM+WM": {
+      "sbl-sc-05": {
+        "firstOverflowTask": null,
+        "firstWmPassTask": 74,
+        "wmPasses": 2,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 12924,
+        "maxActiveStmTokens": 7836
+      },
+      "sbl-id-08": {
+        "firstOverflowTask": null,
+        "firstWmPassTask": 53,
+        "wmPasses": 2,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 13712,
+        "maxActiveStmTokens": 7316
+      },
+      "sbl-rt-07": {
+        "firstOverflowTask": null,
+        "firstWmPassTask": 59,
+        "wmPasses": 2,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 12364,
+        "maxActiveStmTokens": 7242
+      }
+    },
+    "STM+WM-deterministic": {
+      "sbl-sc-05": {
+        "firstOverflowTask": null,
+        "firstWmPassTask": 66,
+        "wmPasses": 2,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 18379,
+        "maxActiveStmTokens": 7853
+      },
+      "sbl-id-08": {
+        "firstOverflowTask": null,
+        "firstWmPassTask": 59,
+        "wmPasses": 2,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 20106,
+        "maxActiveStmTokens": 7833
+      },
+      "sbl-rt-07": {
+        "firstOverflowTask": null,
+        "firstWmPassTask": 61,
+        "wmPasses": 2,
+        "leftOutProtected": 0,
+        "rehearsalDrops": 0,
+        "rehearsalDropsProtected": 0,
+        "maxBlockRenderedTokens": 18241,
+        "maxActiveStmTokens": 7450
+      }
+    }
+  },
+  "wallMs": 127036056,
   "plan": "218.5 Task 6",
   "model": "opencode-go/hy4-flash-free",
-  "worker": "opencode-go/beam-free",
-  "ruleHash": "c2e39021beab579e5299429dd3107b3e87840cdf76917cbf7772ace0fa9b240b",
-  "rows": 7,
-  "complete": false,
+  "worker": "opencode-go/muse-spark-1.3-contributor",
+  "ruleHash": "eb3b52695c55a1fbccf2e420d9f7271c2eceacab8ae2ce5c58cb515fb3e1415d",
+  "approvedAt": "2026-11-24T16:05:00Z",
+  "rows": 24,
+  "complete": true,
   "firstAfterTask": {
-    "sbl-sc-05": 67,
-    "sbl-id-08": 68,
-    "sbl-rt-07": 64
+    "sbl-sc-05": 96,
+    "sbl-id-08": 101,
+    "sbl-rt-07": 99
   },
   "quotaWaitMs": 0,
   "wireUsage": {
-    "inputTokens": 67004385,
-    "outputTokens": 1565963
+    "inputTokens": 517344257,
+    "outputTokens": 14958908
   },
   "liveGuardrails": {
-    "complete": false,
-    "pass": false,
+    "complete": true,
+    "pass": true,
     "rows": [
       {
         "id": "oracle-notes-solvable",
-        "taskRate": 0.5466666666666666,
+        "taskRate": 0.9,
         "min": 0.6,
-        "pass": false
+        "pass": true
       },
       {
         "id": "amnesic-fails-D2",
@@ -660,7 +1934,7 @@
       },
       {
         "id": "amnesic-fails-D4",
-        "failRate": 0.8888888888888888,
+        "failRate": 0.7037037037037037,
         "min": 0.7,
         "pass": true
       },
@@ -672,10 +1946,10 @@
       },
       {
         "id": "G11-live",
-        "reached": 0,
+        "reached": 2,
         "sessions": 3,
         "min": 2,
-        "pass": false
+        "pass": true
       },
       {
         "id": "no-window-overflow",
@@ -689,37 +1963,1731 @@
     {
       "a": "STM-only",
       "b": "STM-only-protect",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.024444444444444446,
+          "ci95": [
+            -0.11333333333333333,
+            0.02
+          ],
+          "p": 1,
+          "ci": [
+            -0.11333333333333333,
+            0.02
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.25925925925925924,
+          "ci95": [
+            -0.1111111111111111,
+            0.8888888888888888
+          ],
+          "p": 1,
+          "ci": [
+            -0.1111111111111111,
+            0.8888888888888888
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": -0.07407407407407407,
+          "ci95": [
+            -0.3333333333333333,
+            0.1111111111111111
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0.1111111111111111
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.5
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.0405982905982906,
+          "ci95": [
+            -0.10897435897435898,
+            0.019230769230769232
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.10897435897435898,
+            0.019230769230769232
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.125,
+          "ci95": [
+            -0.5,
+            0.125
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0.125
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.4375
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.4375
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": -0.4444444444444444,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.16666666666666666
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.16666666666666666
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.3827338091326876
     },
     {
       "a": "STM-only",
       "b": "STM+WM",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.03111111111111111,
+          "ci95": [
+            -0.13333333333333333,
+            0.07333333333333333
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.13333333333333333,
+            0.07333333333333333
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.14814814814814814,
+          "ci95": [
+            -0.2222222222222222,
+            0.7777777777777778
+          ],
+          "p": 1,
+          "ci": [
+            -0.2222222222222222,
+            0.7777777777777778
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": -0.037037037037037035,
+          "ci95": [
+            -0.1111111111111111,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.1111111111111111,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.5
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.04487179487179487,
+          "ci95": [
+            -0.1282051282051282,
+            0.02564102564102564
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.1282051282051282,
+            0.02564102564102564
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.041666666666666664,
+          "ci95": [
+            -0.125,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.125,
+            0
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": 0.0625,
+          "ci95": [
+            -0.125,
+            0.375
+          ],
+          "p": 1,
+          "ci": [
+            -0.125,
+            0.375
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            -0.16666666666666666,
+            0.8333333333333334
+          ],
+          "p": 1,
+          "ci": [
+            -0.16666666666666666,
+            0.8333333333333334
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0,
+          "ci95": [
+            -0.16666666666666666,
+            0.16666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.16666666666666666,
+            0.16666666666666666
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.44065634485530847
     },
     {
       "a": "STM-only",
       "b": "STM+WM-deterministic",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.024444444444444446,
+          "ci95": [
+            -0.06,
+            0.03333333333333333
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.06,
+            0.03333333333333333
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": -0.2222222222222222,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.14814814814814814,
+          "ci95": [
+            -0.2222222222222222,
+            0.6666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.2222222222222222,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.037037037037037035,
+          "ci95": [
+            0,
+            0.1111111111111111
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.1111111111111111
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.03632478632478633,
+          "ci95": [
+            -0.057692307692307696,
+            -0.01282051282051282
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.057692307692307696,
+            -0.01282051282051282
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.041666666666666664,
+          "ci95": [
+            -0.25,
+            0.25
+          ],
+          "p": 1,
+          "ci": [
+            -0.25,
+            0.25
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": 0.08333333333333333,
+          "ci95": [
+            -0.125,
+            0.3125
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.125,
+            0.3125
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            -0.16666666666666666,
+            0.6666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.16666666666666666,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.16666666666666666
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.16666666666666666
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.355028699795311
     },
     {
       "a": "STM-only-protect",
       "b": "STM+WM",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.006666666666666667,
+          "ci95": [
+            -0.05333333333333334,
+            0.05333333333333334
+          ],
+          "p": 1,
+          "ci": [
+            -0.05333333333333334,
+            0.05333333333333334
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.1111111111111111,
+            -0.1111111111111111
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.1111111111111111,
+            -0.1111111111111111
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.037037037037037035,
+          "ci95": [
+            -0.1111111111111111,
+            0.2222222222222222
+          ],
+          "p": 1,
+          "ci": [
+            -0.1111111111111111,
+            0.2222222222222222
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.004273504273504274,
+          "ci95": [
+            -0.05128205128205128,
+            0.057692307692307696
+          ],
+          "p": 1,
+          "ci": [
+            -0.05128205128205128,
+            0.057692307692307696
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.08333333333333333,
+          "ci95": [
+            -0.125,
+            0.375
+          ],
+          "p": 1,
+          "ci": [
+            -0.125,
+            0.375
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": -0.10416666666666667,
+          "ci95": [
+            -0.125,
+            -0.0625
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.125,
+            -0.0625
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.16666666666666666,
+            -0.16666666666666666
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.16666666666666666,
+            -0.16666666666666666
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.16666666666666666,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.16666666666666666,
+            0
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.05836635871068684
     },
     {
       "a": "STM-only-protect",
       "b": "STM+WM-deterministic",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": 0,
+          "ci95": [
+            -0.06666666666666667,
+            0.05333333333333334
+          ],
+          "p": 1,
+          "ci": [
+            -0.06666666666666667,
+            0.05333333333333334
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": -0.2222222222222222,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.2222222222222222,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.2222222222222222,
+            0
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            -0.1111111111111111,
+            0.3333333333333333
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.1111111111111111,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": 0.004273504273504274,
+          "ci95": [
+            -0.057692307692307696,
+            0.05128205128205128
+          ],
+          "p": 1,
+          "ci": [
+            -0.057692307692307696,
+            0.05128205128205128
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.08333333333333333,
+          "ci95": [
+            -0.25,
+            0.375
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.25,
+            0.375
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": -0.08333333333333333,
+          "ci95": [
+            -0.125,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.125,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            -0.3333333333333333,
+            1
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.3333333333333333,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.1167327174213737
     },
     {
       "a": "memory-off-llm",
       "b": "STM-only",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": 0.12222222222222222,
+          "ci95": [
+            0.006666666666666667,
+            0.2
+          ],
+          "p": 0.25,
+          "ci": [
+            0.006666666666666667,
+            0.2
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.7037037037037037,
+          "ci95": [
+            0.1111111111111111,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.1111111111111111,
+            1
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.7777777777777778,
+          "ci95": [
+            0.4444444444444444,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.4444444444444444,
+            1
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0.8333333333333334,
+          "ci95": [
+            0.5,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.5,
+            1
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": 0.021367521367521368,
+          "ci95": [
+            -0.038461538461538464,
+            0.07051282051282051
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.038461538461538464,
+            0.07051282051282051
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.7083333333333334,
+          "ci95": [
+            0.625,
+            0.75
+          ],
+          "p": 0.25,
+          "ci": [
+            0.625,
+            0.75
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": 0.5,
+          "ci95": [
+            0.0625,
+            0.75
+          ],
+          "p": 0.25,
+          "ci": [
+            0.0625,
+            0.75
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.7777777777777778,
+          "ci95": [
+            0.3333333333333333,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.3333333333333333,
+            1
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            1,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": 0.6666666666666666,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.6666666666666666,
+          "ci95": [
+            0.16666666666666666,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.16666666666666666,
+            1
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.614927746190597
     },
     {
       "a": "memory-off-llm",
       "b": "STM-only-protect",
-      "status": "not-run"
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": 0.09777777777777778,
+          "ci95": [
+            0.02666666666666667,
+            0.22
+          ],
+          "p": 0.25,
+          "ci": [
+            0.02666666666666667,
+            0.22
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.9629629629629629,
+          "ci95": [
+            0.8888888888888888,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.8888888888888888,
+            1
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.7037037037037037,
+          "ci95": [
+            0.4444444444444444,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.4444444444444444,
+            1
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            1,
+            1
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.019230769230769232,
+          "ci95": [
+            -0.07692307692307693,
+            0.08974358974358974
+          ],
+          "p": 1,
+          "ci": [
+            -0.07692307692307693,
+            0.08974358974358974
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.5833333333333334,
+          "ci95": [
+            0.25,
+            0.75
+          ],
+          "p": 0.25,
+          "ci": [
+            0.25,
+            0.75
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": 0.6666666666666666,
+          "ci95": [
+            0.5,
+            0.75
+          ],
+          "p": 0.25,
+          "ci": [
+            0.5,
+            0.75
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.8888888888888888,
+          "ci95": [
+            0.6666666666666666,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.6666666666666666,
+            1
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0.3333333333333333,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0.5555555555555556,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 18,
+          "diff": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            1,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.7777777777777778,
+          "ci95": [
+            0.3333333333333333,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.3333333333333333,
+            1
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.2334654348427474
     }
   ],
   "verdict": {
@@ -727,9 +3695,35 @@
     "step1": {
       "base": "STM-only",
       "candidate": "STM-only-protect",
-      "status": "not-run",
-      "after": null,
-      "control": null,
+      "status": "compared",
+      "after": {
+        "n": 48,
+        "diff": 0.16666666666666666,
+        "ci95": [
+          0,
+          0.4375
+        ],
+        "p": 0.5,
+        "ci": [
+          0,
+          0.4375
+        ],
+        "level": 0.95
+      },
+      "control": {
+        "n": 468,
+        "diff": -0.0405982905982906,
+        "ci95": [
+          -0.10897435897435898,
+          0.019230769230769232
+        ],
+        "p": 0.5,
+        "ci": [
+          -0.10897435897435898,
+          0.019230769230769232
+        ],
+        "level": 0.95
+      },
       "protectWins": false,
       "reference": "STM-only",
       "evictionDefault": "relevance",
@@ -737,80 +3731,406 @@
     },
     "step2": {
       "reference": "STM-only",
-      "referenceCostPerPassedTask": null,
+      "referenceCostPerPassedTask": 180702,
       "arms": [
         {
           "arm": "STM+WM",
-          "status": "not-run",
+          "status": "compared",
           "level": 0.975,
-          "adjustedP": null,
-          "after": null,
-          "control": null,
-          "task": null,
-          "costPerPassedTask": null,
-          "costRatio": null,
+          "adjustedP": 1,
+          "after": {
+            "n": 48,
+            "diff": 0.0625,
+            "ci95": [
+              -0.125,
+              0.375
+            ],
+            "p": 1,
+            "ci": [
+              -0.125,
+              0.375
+            ],
+            "level": 0.975
+          },
+          "control": {
+            "n": 468,
+            "diff": -0.04487179487179487,
+            "ci95": [
+              -0.1282051282051282,
+              0.02564102564102564
+            ],
+            "p": 0.5,
+            "ci": [
+              -0.1282051282051282,
+              0.02564102564102564
+            ],
+            "level": 0.975
+          },
+          "task": {
+            "n": 450,
+            "diff": -0.03111111111111111,
+            "ci95": [
+              -0.13333333333333333,
+              0.07333333333333333
+            ],
+            "p": 0.75,
+            "ci": [
+              -0.13333333333333333,
+              0.07333333333333333
+            ],
+            "level": 0.95
+          },
+          "costPerPassedTask": 163578,
+          "costRatio": 0.9052362453099578,
           "keeps": false,
           "underDropBound": false,
-          "detectableEffect": null,
-          "interaction": null
+          "detectableEffect": 0.44065634485530847,
+          "interaction": {
+            "sessions": 3,
+            "diff": 0.10416666666666667,
+            "ci95": [
+              -0.0625,
+              0.375
+            ]
+          }
         },
         {
           "arm": "STM+WM-deterministic",
-          "status": "not-run",
+          "status": "compared",
           "level": 0.975,
-          "adjustedP": null,
-          "after": null,
-          "control": null,
-          "task": null,
-          "costPerPassedTask": null,
-          "costRatio": null,
+          "adjustedP": 1,
+          "after": {
+            "n": 48,
+            "diff": 0.08333333333333333,
+            "ci95": [
+              -0.125,
+              0.3125
+            ],
+            "p": 0.75,
+            "ci": [
+              -0.125,
+              0.3125
+            ],
+            "level": 0.975
+          },
+          "control": {
+            "n": 468,
+            "diff": -0.03632478632478633,
+            "ci95": [
+              -0.057692307692307696,
+              -0.01282051282051282
+            ],
+            "p": 0.25,
+            "ci": [
+              -0.057692307692307696,
+              -0.01282051282051282
+            ],
+            "level": 0.975
+          },
+          "task": {
+            "n": 450,
+            "diff": -0.024444444444444446,
+            "ci95": [
+              -0.06,
+              0.03333333333333333
+            ],
+            "p": 0.5,
+            "ci": [
+              -0.06,
+              0.03333333333333333
+            ],
+            "level": 0.95
+          },
+          "costPerPassedTask": 163458,
+          "costRatio": 0.9045721685426835,
           "keeps": false,
           "underDropBound": false,
-          "detectableEffect": null,
-          "interaction": null
+          "detectableEffect": 0.355028699795311,
+          "interaction": {
+            "sessions": 3,
+            "diff": 0.125,
+            "ci95": [
+              0,
+              0.3125
+            ]
+          }
         }
       ],
-      "outcome": "incomplete",
+      "outcome": "owner",
       "wmDefaultPolicy": null,
       "rule": "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides"
     },
     "stmAtLength": {
-      "comparison": null,
+      "comparison": {
+        "after": {
+          "n": 48,
+          "diff": 0.5,
+          "ci95": [
+            0.0625,
+            0.75
+          ],
+          "p": 0.25,
+          "ci": [
+            0.0625,
+            0.75
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.7083333333333334,
+          "ci95": [
+            0.625,
+            0.75
+          ],
+          "p": 0.25,
+          "ci": [
+            0.625,
+            0.75
+          ],
+          "level": 0.95
+        }
+      },
       "finding": null
     },
     "side": [
       {
         "arm": "STM-only",
         "side": "mem0",
-        "status": "not-run"
+        "task": {
+          "n": 450,
+          "diff": -0.08444444444444445,
+          "ci95": [
+            -0.15333333333333332,
+            -0.006666666666666667
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.15333333333333332,
+            -0.006666666666666667
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.75,
+            0.125
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.75,
+            0.125
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.625,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.625,
+            0
+          ],
+          "level": 0.95
+        }
       },
       {
         "arm": "STM-only-protect",
         "side": "mem0",
-        "status": "not-run"
+        "task": {
+          "n": 450,
+          "diff": -0.06,
+          "ci95": [
+            -0.11333333333333333,
+            -0.02666666666666667
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.11333333333333333,
+            -0.02666666666666667
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": -0.5,
+          "ci95": [
+            -0.75,
+            -0.3125
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.75,
+            -0.3125
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.20833333333333334,
+          "ci95": [
+            -0.375,
+            -0.125
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.375,
+            -0.125
+          ],
+          "level": 0.95
+        }
       },
       {
         "arm": "STM+WM",
         "side": "mem0",
-        "status": "not-run"
+        "task": {
+          "n": 450,
+          "diff": -0.05333333333333334,
+          "ci95": [
+            -0.08,
+            -0.02
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.08,
+            -0.02
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": -0.3958333333333333,
+          "ci95": [
+            -0.625,
+            -0.25
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.625,
+            -0.25
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.2916666666666667,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        }
       },
       {
         "arm": "STM+WM-deterministic",
         "side": "mem0",
-        "status": "not-run"
+        "task": {
+          "n": 450,
+          "diff": -0.06,
+          "ci95": [
+            -0.09333333333333334,
+            -0.04
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.09333333333333334,
+            -0.04
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": -0.4166666666666667,
+          "ci95": [
+            -0.625,
+            -0.1875
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.625,
+            -0.1875
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.2916666666666667,
+          "ci95": [
+            -0.5,
+            -0.125
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.5,
+            -0.125
+          ],
+          "level": 0.95
+        }
       },
       {
         "arm": "memory-off-llm",
         "side": "mem0",
-        "status": "not-run"
+        "task": {
+          "n": 450,
+          "diff": 0.03777777777777778,
+          "ci95": [
+            0,
+            0.10666666666666667
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.10666666666666667
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 48,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.3125
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.3125
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.375,
+          "ci95": [
+            0.125,
+            0.625
+          ],
+          "p": 0.25,
+          "ci": [
+            0.125,
+            0.625
+          ],
+          "level": 0.95
+        }
       }
     ],
     "summary": {
       "reference": "STM-only",
       "evictionDefault": "relevance",
-      "wm": "incomplete",
+      "wm": "owner",
       "stmAtLengthFinding": false
     }
   },
-  "finishedAt": "2026-11-23T19:57:04.413Z"
+  "finishedAt": "2026-11-25T01:39:44.982Z"
 }
