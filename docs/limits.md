@@ -1135,7 +1135,7 @@ A new limit constant in `src/` or `packages/` fails the inventory gate (`scripts
 | system | `DEFAULT_WM_BATCH_TOKENS` | policy | 3,000 | `packageConfig["@arnilo/prism-memory-system"].wm.batchTokens` | `packages/memory/system/src/session/config.ts` |
 | system | `DEFAULT_WM_LOOKAHEAD_RECORDS` | policy | 12 | `packageConfig["@arnilo/prism-memory-system"].wm.lookAheadRecords` | `packages/memory/system/src/session/config.ts` |
 | system | `DEFAULT_WM_LOOKAHEAD_TOKENS` | policy | 3,000 | `packageConfig["@arnilo/prism-memory-system"].wm.lookAheadTokens` | `packages/memory/system/src/session/config.ts` |
-| system | `DEFAULT_WM_PROTECT_REQUEST_PASSES` | policy | 8 | `packageConfig["@arnilo/prism-memory-system"].wm.protectRequestPasses` | `packages/memory/system/src/session/config.ts` |
+| system | `DEFAULT_WM_PROTECT_REQUEST_TASKS` | policy | 3 | `packageConfig["@arnilo/prism-memory-system"].wm.protectRequestTasks` | `packages/memory/system/src/session/config.ts` |
 | system | `DEFAULT_WM_REJUDGE_TOKENS` | policy | 8,000 | `packageConfig["@arnilo/prism-memory-system"].wm.rejudgeTokens` | `packages/memory/system/src/session/config.ts` |
 | system | `DEFAULT_WM_TRIGGER_TOKENS` | policy | 10,000 | `packageConfig["@arnilo/prism-memory-system"].wm.triggerTokens` | `packages/memory/system/src/session/config.ts` |
 

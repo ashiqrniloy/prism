@@ -55,8 +55,11 @@ export const DEFAULT_WM_REJUDGE_TOKENS = 8_000;
 export const DEFAULT_WM_LOOKAHEAD_RECORDS = 12;
 /** Record tokens one WM pass is offered for the scope's remaining steps (plan 218.3 Task 1 decision 5). */
 export const DEFAULT_WM_LOOKAHEAD_TOKENS = 3_000;
-/** WM passes a request or error stays protected by link without a resolving outcome (plan 218.2 Task 3). */
-export const DEFAULT_WM_PROTECT_REQUEST_PASSES = 8;
+/**
+ * Newer user requests a request or error stays protected by link without a resolving outcome (plan 218.2 Task 3;
+ * counted in tasks since plan 218.5 Task 7: counted in WM passes, it outlived every task of a long session).
+ */
+export const DEFAULT_WM_PROTECT_REQUEST_TASKS = 3;
 export const DEFAULT_REHEARSAL_TARGET_TOKENS = 20_000;
 /** The mid-loop trigger: the share of the model's input cap a request may reach inside an agentic loop (plan 218.3 Task 2). */
 export const DEFAULT_COMPACT_AT_RATIO = 0.8;
@@ -171,10 +174,11 @@ export interface MemorySessionConfig {
     /** Tokens of those look-ahead records one WM pass is offered. Default 3_000. */
     readonly lookAheadTokens?: number;
     /**
-     * WM passes a user request (or an error) stays protected without an outcome naming it in `resolves`; then the pass
-     * records `protection_lapsed` and may discard it. Read only when the recorder writes `resolves`. Default 8.
+     * Newer user requests a user request (or an error) stays protected through without an outcome naming it in
+     * `resolves`; then the next WM pass records `protection_lapsed` and may discard it. Read only when the recorder
+     * writes `resolves`. Default 3.
      */
-    readonly protectRequestPasses?: number;
+    readonly protectRequestTasks?: number;
     /** `"model"` (default) or `"deterministic"` (no model call). */
     readonly policy?: MemorySystemWmPolicy;
   };
@@ -341,12 +345,12 @@ const memorySystemSchema: JsonSchema = {
           default: DEFAULT_WM_LOOKAHEAD_TOKENS,
           description: "Tokens of earlier STM records one WM pass is offered for the scope's remaining steps.",
         },
-        protectRequestPasses: {
+        protectRequestTasks: {
           type: "integer",
           minimum: 1,
-          default: DEFAULT_WM_PROTECT_REQUEST_PASSES,
+          default: DEFAULT_WM_PROTECT_REQUEST_TASKS,
           description:
-            "WM passes a user request or error stays protected without an outcome naming it in resolves; then the pass records protection_lapsed.",
+            "Newer user requests a user request or error stays protected through without an outcome naming it in resolves; then the next WM pass records protection_lapsed.",
         },
         policy: {
           type: "string",
@@ -565,7 +569,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "wm.rejudgeTokens",
   "wm.lookAheadRecords",
   "wm.lookAheadTokens",
-  "wm.protectRequestPasses",
+  "wm.protectRequestTasks",
   "wm.thinkingLevel",
   "rehearsal.targetTokens",
   "rehearsal.thinkingLevel",
@@ -642,7 +646,7 @@ export interface ResolvedMemorySystemConfig {
     readonly rejudgeTokens: number;
     readonly lookAheadRecords: number;
     readonly lookAheadTokens: number;
-    readonly protectRequestPasses: number;
+    readonly protectRequestTasks: number;
     readonly policy: MemorySystemWmPolicy;
   };
   /** `enabled` is the `rehearsal` component: off, no dropper pass runs. */
@@ -786,7 +790,7 @@ export function resolveMemorySystemConfig(
       rejudgeTokens: config.wm?.rejudgeTokens ?? DEFAULT_WM_REJUDGE_TOKENS,
       lookAheadRecords: config.wm?.lookAheadRecords ?? DEFAULT_WM_LOOKAHEAD_RECORDS,
       lookAheadTokens: config.wm?.lookAheadTokens ?? DEFAULT_WM_LOOKAHEAD_TOKENS,
-      protectRequestPasses: config.wm?.protectRequestPasses ?? DEFAULT_WM_PROTECT_REQUEST_PASSES,
+      protectRequestTasks: config.wm?.protectRequestTasks ?? DEFAULT_WM_PROTECT_REQUEST_TASKS,
       policy: config.wm?.policy === "model" ? "model" : "deterministic",
     },
     rehearsal: {

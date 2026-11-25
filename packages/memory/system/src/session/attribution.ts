@@ -50,6 +50,16 @@ export function isDurableOrUserStatement(record: Pick<MemoryObservation, "kind" 
   return record.durable !== undefined || isUserStatement(record);
 }
 
+/**
+ * The records working memory never batches, so never gives a verdict (plan 218.5 Task 3, narrowed in Task 7): a record
+ * marked `durable`, or a user `statement`. A user message kept word for word that is not a statement (a task request) is
+ * judged once its task is over: until then `task_state` protects it, and the discard tool refuses it. Kept out of every
+ * batch, the 150 task requests of a long session filled two thirds of the pool and WM could relieve none of it.
+ */
+export function isWmExempt(record: Pick<MemoryObservation, "kind" | "attribution" | "durable">): boolean {
+  return record.durable !== undefined || ((record.attribution === "user" || record.attribution === "mixed") && record.kind === "statement");
+}
+
 /** True when an STM record is something the assistant proposed, not something the user stated or that happened. */
 export function isAssistantProposal(record: Pick<MemoryObservation, "kind" | "attribution">): boolean {
   return record.attribution === "assistant" && PROPOSAL_KINDS.has(record.kind);

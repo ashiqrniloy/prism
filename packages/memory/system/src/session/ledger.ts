@@ -47,10 +47,6 @@ export interface ObservationalMemoryLedger {
   readonly supersededWmItemIds?: readonly string[];
   /** The latest WM pass that processed records, when its protected records alone exceeded its target (plan 218 Task 3). */
   readonly budgetUnmet?: WmBudgetUnmet;
-  /** WM passes that processed records (plan 218.2 Task 3); absent before the first. */
-  readonly wmPasses?: number;
-  /** For each record recorded after a processing WM pass, how many such passes the ledger held then (absent: 0). */
-  readonly recordedAtWmPass?: Readonly<Record<string, number>>;
   /** Finished scope steps by ordinal string (`"1"`), reset per step on scope text changes or on clear. */
   readonly scopeSteps?: Readonly<Record<string, ScopeStepState>>;
   /**
@@ -101,8 +97,6 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
   let latestObservationCoverageId: string | undefined;
   let latestDropCoverageId: string | undefined;
   let budgetUnmet: WmBudgetUnmet | undefined;
-  let wmPasses = 0;
-  const recordedAtWmPass: Record<string, number> = {};
   const scopeSteps = new Map<string, ScopeStepState>();
   let scopeStepHashes: Readonly<Record<string, string>> | undefined;
   let scopeCheckedSteps: readonly number[] | undefined;
@@ -123,10 +117,7 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
       taskState = data.taskState;
     } else if (isObservationsRecordedData(data)) {
       for (const observation of data.observations)
-        if (isMemoryObservation(observation) && !observations.has(observation.id)) {
-          observations.set(observation.id, observation);
-          if (wmPasses > 0) recordedAtWmPass[observation.id] = wmPasses;
-        }
+        if (isMemoryObservation(observation) && !observations.has(observation.id)) observations.set(observation.id, observation);
       latestObservationCoverageId = data.coversUpToId ?? latestObservationCoverageId;
     } else if (isWmRecordedData(data)) {
       // Incremental (I6): a pass adds items and supersedes only the items it names; it never replaces the set.
@@ -137,10 +128,7 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
         superseded.delete(item.id);
       }
       // The latest pass that processed records decides; an empty attempt leaves the last verdict standing.
-      if (data.processedIds?.length) {
-        budgetUnmet = data.budgetUnmet;
-        wmPasses += 1;
-      }
+      if (data.processedIds?.length) budgetUnmet = data.budgetUnmet;
     } else if (isObservationsDroppedData(data)) {
       for (const id of data.observationIds) {
         dropped.add(id);
@@ -200,8 +188,6 @@ export function foldObservationalMemoryLedger(sources: readonly unknown[]): Obse
     ...(Object.keys(tombstones).length ? { tombstones } : {}),
     supersededWmItemIds: [...superseded],
     ...(budgetUnmet ? { budgetUnmet } : {}),
-    ...(wmPasses ? { wmPasses } : {}),
-    ...(Object.keys(recordedAtWmPass).length ? { recordedAtWmPass } : {}),
     ...(scopeSteps.size ? { scopeSteps: Object.fromEntries(scopeSteps) } : {}),
     ...(scopeStepHashes === undefined ? {} : { scopeStepHashes }),
     ...(scopeCheckedSteps?.length ? { scopeCheckedSteps } : {}),

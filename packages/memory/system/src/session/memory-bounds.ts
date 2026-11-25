@@ -13,10 +13,20 @@ const relevanceRank: Record<MemoryObservation["relevance"], number> = {
   critical: 3,
 };
 
-type EvictionCompare = (left: MemoryObservation, right: MemoryObservation) => number;
+/**
+ * What eviction compares (plan 218.5 Task 7: STM records and WM items both count against the pool). `user` is the
+ * user's side under `protect-user`: a durable record or a user statement; a WM item is never on it.
+ */
+interface Evictable {
+  readonly relevance: MemoryObservation["relevance"];
+  readonly tokenCount: number;
+  readonly time: number;
+  readonly user: boolean;
+}
+type EvictionCompare = (left: Evictable, right: Evictable) => number;
 
-const timeOf = (item: MemoryObservation): number => {
-  const time = Date.parse(item.observedAt ?? item.timestamp);
+const timeOf = (value: string | undefined): number => {
+  const time = Date.parse(value ?? "");
   return Number.isFinite(time) ? time : 0;
 };
 
@@ -29,10 +39,11 @@ const timeOf = (item: MemoryObservation): number => {
 const EVICTION_ORDER: Record<MemorySystemEviction, EvictionCompare> = {
   relevance: (left, right) => relevanceRank[left.relevance] - relevanceRank[right.relevance] || left.tokenCount - right.tokenCount,
   "protect-user": (left, right) =>
-    Number(isDurableOrUserStatement(left)) - Number(isDurableOrUserStatement(right)) ||
-    relevanceRank[left.relevance] - relevanceRank[right.relevance] ||
-    timeOf(left) - timeOf(right),
+    Number(left.user) - Number(right.user) || relevanceRank[left.relevance] - relevanceRank[right.relevance] || left.time - right.time,
 };
+
+/** A WM item eviction leaves for last: a `fact` or one marked `neededLater` (what later steps read). */
+const heldItem = (item: MemoryWmItem): boolean => item.kind === "fact" || item.neededLater !== undefined;
 
 export interface BoundedMemoryPayload {
   readonly observations: readonly MemoryObservation[];
@@ -41,33 +52,59 @@ export interface BoundedMemoryPayload {
   readonly fullFold: boolean;
 }
 
+/**
+ * Bound the block to `maxTokens`. Plan 218.5 Task 7: WM items count against the same pool as the STM records, so a
+ * WM arm's block is bounded as STM's is (deterministic WM's one-item-per-record kept growing to 20K rendered tokens in a
+ * 150-task session). Over the bound, STM records and WM items are left out together in the eviction order; WM facts and
+ * items marked `neededLater` go last. Left-out items stay in the ledger, where `recall` reads them.
+ */
 export function boundMemoryPayload(
   observations: readonly MemoryObservation[],
   wmItems: readonly MemoryWmItem[],
   droppedObservationIds: readonly string[],
-  maxObservationTokens: number,
+  maxTokens: number,
   maxPayloadBytes: number,
   eviction: MemorySystemEviction = "relevance",
 ): BoundedMemoryPayload {
   let kept = [...observations];
-  let totalTokens = kept.reduce((sum, item) => sum + item.tokenCount, 0);
-  let fullFold = totalTokens > maxObservationTokens;
-  const sorted = [...kept].sort(EVICTION_ORDER[eviction]);
+  let items = [...wmItems];
+  let totalTokens = [...kept, ...items].reduce((sum, item) => sum + item.tokenCount, 0);
+  let fullFold = totalTokens > maxTokens;
+  const order = EVICTION_ORDER[eviction];
+  const candidates = [
+    ...kept.map((record) => ({
+      id: record.id,
+      item: false,
+      held: false,
+      value: {
+        relevance: record.relevance,
+        tokenCount: record.tokenCount,
+        time: timeOf(record.observedAt ?? record.timestamp),
+        user: isDurableOrUserStatement(record),
+      },
+    })),
+    ...items.map((item) => ({
+      id: item.id,
+      item: true,
+      held: heldItem(item),
+      value: { relevance: item.relevance, tokenCount: item.tokenCount, time: timeOf(item.observedTo), user: false },
+    })),
+  ].sort((a, b) => Number(a.held) - Number(b.held) || order(a.value, b.value));
   while (
-    kept.length &&
-    (totalTokens > maxObservationTokens ||
-      foldedByteLength({ observations: kept, wmItems, droppedObservationIds, fullFold }) > maxPayloadBytes)
+    (kept.length || items.length) &&
+    (totalTokens > maxTokens || foldedByteLength({ observations: kept, wmItems: items, droppedObservationIds, fullFold }) > maxPayloadBytes)
   ) {
-    const drop = sorted.shift();
+    const drop = candidates.shift();
     if (!drop) break;
-    kept = kept.filter((item) => item.id !== drop.id);
-    totalTokens -= drop.tokenCount;
+    if (drop.item) items = items.filter((item) => item.id !== drop.id);
+    else kept = kept.filter((item) => item.id !== drop.id);
+    totalTokens -= drop.value.tokenCount;
     fullFold = true;
   }
-  if (foldedByteLength({ observations: kept, wmItems, droppedObservationIds, fullFold }) > maxPayloadBytes) {
+  if (foldedByteLength({ observations: kept, wmItems: items, droppedObservationIds, fullFold }) > maxPayloadBytes) {
     throw new Error(`Observational memory folded payload exceeds ${maxPayloadBytes} bytes`);
   }
-  return { observations: kept, wmItems, droppedObservationIds, fullFold };
+  return { observations: kept, wmItems: items, droppedObservationIds, fullFold };
 }
 
 function foldedByteLength(payload: BoundedMemoryPayload): number {

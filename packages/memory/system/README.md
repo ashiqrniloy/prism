@@ -153,7 +153,7 @@ With the toggle on:
 | --- | --- | --- |
 | STM pass | after a turn, once the unscanned eligible tokens reach `stm.triggerTokens` (or, with `stm.boundaries: true`, when the tail holds a user turn after an idle gap: at most one extra STM call per boundary) | one branch read, one STM call per batch of the unread tail (one batch unless the tail exceeds about twice `stm.triggerTokens`, at least 32 KB serialized, or half of `worker.maxMessageBytes`; only the latter cuts an entry), one ledger record per recorded batch; date prefixes add about 6 tokens per message, plus gap markers; task state and supersession use the same call |
 | Habituation and boundary markers | inside the STM pass; idle-gap markers on every pass that sees a new one | a string comparison per new event against at most `stm.habituation.windowEvents` records, one ledger record per repeat or marker, no model call |
-| WM pass | in the same pass, once the STM records WM can judge (no WM verdict yet; not durable, not a user statement) reach `wm.triggerTokens`; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive. A boundary marker no longer runs one | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
+| WM pass | in the same pass, once the STM records WM can judge (no WM verdict yet; not durable, not a user `statement`) reach `wm.triggerTokens`; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive. A boundary marker no longer runs one | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
 | Rehearsal pass | after the WM step (even if it records nothing), once the active pool exceeds `rehearsal.targetTokens` | one rehearsal call (or none with `policy: "lowest-relevance"`), one ledger record |
 | Context block | after foreign compaction only | pinned ledger in memory; one entry scan and log write per compaction, awaited before the next request; one reconciliation scan on reopen |
 | Compaction (`context.compaction` on) | mid-loop when the request reaches `context.compactAt.ratio` of the input cap; when a run starts after a completed loop, at `context.compactAfterRun` ([Compaction](#compaction)) | the vote is one state read and a comparison; the compaction first runs STM over the entries it will remove that no pass has covered yet (one STM call per batch, below `stm.triggerTokens`; none when the background passes are up to date), then reads the ledger already in memory. A mid-loop compaction breaks the cached prefix inside the loop; a between-loop one breaks it where the next run's new input starts anyway |
@@ -254,8 +254,9 @@ as the kernel does for any compactor. The check uses the same estimate as the cu
 that estimate is compacted around and retried.
 
 **What the memory block leaves out past its bound (`context.eviction`).** The block holds at most a pool of STM record
-tokens: 20,000, or 30% of the model's input cap when that is smaller. Past it, records are left out of the block (they
-stay in the ledger, and `recall` still finds them) in one of two orders:
+and WM item tokens: 20,000, or 30% of the model's input cap when that is smaller. Past it, records and WM items are left
+out of the block together (they stay in the ledger, and `recall` still finds them) in one of two orders, with WM `fact`
+items and items marked `neededLater` left out last:
 
 - `"relevance"` (the default): lowest relevance first, then smallest first, whatever the record's age or speaker. Most
   records are `medium`, so among them the shortest go first.
@@ -332,14 +333,14 @@ defaults below.
 | `stm.instruction`, `wm.instruction`, `rehearsal.instruction` | none | Text appended to that worker's default prompt; it cannot change the worker's tools |
 | `stm.thinkingLevel`, `wm.thinkingLevel`, `rehearsal.thinkingLevel` | `low` | Reasoning level for that worker's model calls (`none` … `max`). A model without reasoning levels ignores it; set a level to override |
 | `wm.model` | the session's model | WM worker model |
-| `wm.triggerTokens` | `10000` | Tokens of the STM records WM can judge (no WM verdict yet; durable records and user statements are not counted) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
+| `wm.triggerTokens` | `10000` | Tokens of the STM records WM can judge (no WM verdict yet; durable records and user `statement` records are not counted) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
 | `wm.batchTokens` | `3000` | STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass |
 | `wm.targetRatio` | `0.2` | Items' tokens over the batch's tokens a WM pass aims at (0.01 to 1), as pressure after relevance; protected records are never cut ([Working memory](#working-memory)) |
-| `wm.protectRequestPasses` | `8` | WM passes a user request or error stays protected by its `resolves` link without a resolving outcome; then the pass records `protectionLapsed` ([Working memory](#working-memory)) |
+| `wm.protectRequestTasks` | `3` | Newer user requests a user request or error stays protected through by its `resolves` link without a resolving outcome; then the next pass records `protectionLapsed` (was `wm.protectRequestPasses`, 8 WM passes) ([Working memory](#working-memory)) |
 | `wm.rejudgeTokens` | `8000` | Tokens of discarded records the first WM pass after a scope change is also sent to keep back; `0` turns re-judgment off ([Working memory](#working-memory)) |
 | `wm.lookAheadRecords` | `12` | Earlier records (discarded or dropped) matching the scope's remaining steps one WM pass is offered to keep; `0` turns look-ahead off ([Working memory](#working-memory)) |
 | `wm.lookAheadTokens` | `3000` | Tokens of those look-ahead records one WM pass is offered |
-| `wm.policy` | `"deterministic"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, outcomes and salient records and discards the lowest-relevance oldest to the target, with no model call |
+| `wm.policy` | `"deterministic"` | `"model"` asks the WM model; `"deterministic"` keeps protected records, salient records and high or critical outcomes and discards the lowest-relevance oldest to the target, with no model call |
 | `rehearsal.model` | the session's model | Rehearsal worker model (today's dropper) |
 | `rehearsal.targetTokens` | `20000` | Active-observation token budget rehearsal approaches |
 | `rehearsal.policy` | `"model"` | `"model"` asks the rehearsal model; `"lowest-relevance"` drops deterministically |
@@ -660,10 +661,13 @@ denied tool call (`hook_denied` on the branch) or a failed verification (`status
 without a status a failure phrase in its description). The signals come from the records the STM worker wrote and
 their source entries; the WM model sets none.
 
-**What WM judges (plan 218.5 Task 3).** WM judges what the agent did and found. A record marked `durable`, a
-`statement` that cites a user message, and a user message kept word for word (`verbatim`) are never in a batch, under
-either policy. They get no verdict, so no pass tombstones them, and they stay on the STM surface as recorded. No worker
-output can remove one. Before this, a summary could fold a user's rule into a task line and the next pass rewrite it
+**What WM judges (plan 218.5 Tasks 3 and 7).** WM judges what the agent did and found, and the user's finished task
+requests. A record marked `durable` and a `statement` that cites a user message are never in a batch, under either
+policy. They get no verdict, so no pass tombstones them, and they stay on the STM surface as recorded. No worker
+output can remove one. A user's task request kept word for word (`verbatim`) is batched: `task_state` protects it until
+its task is over (an outcome resolves it, or `wm.protectRequestTasks` newer requests arrive), and the discard tool
+refuses it while protected. Kept out of every batch (Task 3), the task requests of a 150-task session filled about two
+thirds of the pool, and WM could relieve none of it. Before this, a summary could fold a user's rule into a task line and the next pass rewrite it
 again (the Session-Bench screen's D2 loss).
 
 **Settled first (plan 218.2 Task 5).** A record protected as `constraint`, `task_state`, `unresolved_error` or
@@ -780,10 +784,11 @@ by code before the model is asked, and `judge` refuses a discard of any protecte
 - a question (`?`) the task state was written from while it lists open questions (`open_question`);
 - a record an active WM item marked `neededLater` cites (`needed_later`).
 
-Protections by link (`task_state` and `unresolved_error` read from `resolves`) are bounded: after
-`wm.protectRequestPasses` (8) WM passes that processed records with no resolving outcome, the record is no longer
-protected and the pass names it in `protectionLapsed` on its `wm.recorded` record, so a worker that never resolves cannot
-grow `budgetUnmet` without limit. Only a ledger record written through the STM tool (`resolves`, `supersedes`, both
+Protections by link (`task_state` and `unresolved_error` read from `resolves`) are bounded: once
+`wm.protectRequestTasks` (3) newer user requests are recorded with no resolving outcome, the task has moved on, the
+record is no longer protected, and the next pass names it in `protectionLapsed` on its `wm.recorded` record, so a worker
+that rarely resolves cannot grow `budgetUnmet` without limit. (Plan 218.5 Task 7: counted in WM passes, the bound was
+never reached in a 150-task session, which ran about two passes.) Only a ledger record written through the STM tool (`resolves`, `supersedes`, both
 validated ids) clears a protection; a prompt cannot. `isProtectedWmItem(item, ledger)` also protects a WM `event` kept
 from a constraint.
 
@@ -2580,7 +2585,7 @@ table against `memorySystemConfigSchema`; a field without a tier, or a tier that
 | `wm.rejudgeTokens` | experimental |
 | `wm.lookAheadRecords` | experimental |
 | `wm.lookAheadTokens` | experimental |
-| `wm.protectRequestPasses` | experimental |
+| `wm.protectRequestTasks` | experimental |
 | `wm.policy` | experimental |
 | `rehearsal` | experimental |
 | `rehearsal.model` | experimental |

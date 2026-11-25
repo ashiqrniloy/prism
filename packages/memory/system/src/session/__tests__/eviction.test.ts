@@ -9,7 +9,7 @@ import { memorySessionConfigSchema, resolveMemorySystemConfig } from "../config.
 import type { ObservationalMemoryLedger } from "../ledger.js";
 import { boundMemoryPayload, HARD_MAX_FOLDED_PAYLOAD_BYTES } from "../memory-bounds.js";
 import { createObservationalMemoryCompactor } from "../strategy.js";
-import type { MemoryObservation } from "../types.js";
+import type { MemoryObservation, MemoryWmItem } from "../types.js";
 
 const at = (minute: number) => `2026-11-12T10:${String(minute).padStart(2, "0")}:00.000Z`;
 let next = 0;
@@ -91,4 +91,38 @@ it("compaction_folds_the_pool_in_the_configured_eviction_order", async () => {
   assert.equal(byRelevance.includes(oldResult.description), true);
   assert.equal(protectUser.includes(rule.description), true);
   assert.equal(protectUser.includes(oldResult.description), false);
+});
+
+it("wm_items_count_against_the_pool_and_are_left_out_with_the_records", () => {
+  // Plan 218.5 Task 7: deterministic WM kept one item per record and the block grew past STM's bound. Items now share
+  // the pool: over it, items and records go together in the eviction order, and facts or `neededLater` items go last.
+  const item = (id: string, text: string, tokenCount: number, extra: Partial<MemoryWmItem> = {}): MemoryWmItem => ({
+    id,
+    kind: "event",
+    text,
+    relevance: "medium",
+    citedIds: [],
+    observedTo: at(9),
+    tokenCount,
+    ...extra,
+  });
+  const routine = item("wm:event:1", "Task 59 finished: closed T-206", 30, { relevance: "low" });
+  const fact = item("wm:fact:1", "The release channel is #release", 10, { kind: "fact", relevance: "low" });
+  const later = item("wm:event:2", "Step 4 needs the loader path", 10, { relevance: "low", neededLater: "4" });
+  const bound = (maxTokens: number) => boundMemoryPayload(all, [routine, fact, later], [], maxTokens, HARD_MAX_FOLDED_PAYLOAD_BYTES);
+  const fits = bound(total + 50);
+  assert.deepEqual([fits.observations.length, fits.wmItems.length, fits.fullFold], [all.length, 3, false]);
+  // One token over: the low-relevance routine item goes first, before any medium record.
+  const over = bound(total + 49);
+  assert.deepEqual(over.wmItems.map((made) => made.id), [fact.id, later.id]);
+  assert.equal(over.observations.length, all.length);
+  assert.equal(over.fullFold, true);
+  // The whole block stays within the bound, and the held items outlast every record.
+  for (const maxTokens of [total, 60, 20, 10]) {
+    const made = bound(maxTokens);
+    const tokens = [...made.observations, ...made.wmItems].reduce((sum, value) => sum + value.tokenCount, 0);
+    assert.ok(tokens <= maxTokens, `${tokens} <= ${maxTokens}`);
+  }
+  assert.deepEqual(bound(20).observations, []);
+  assert.deepEqual(bound(20).wmItems.map((made) => made.id), [fact.id, later.id]);
 });

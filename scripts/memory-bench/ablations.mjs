@@ -70,7 +70,7 @@ const paths = new Set([
   "session.wm.batchTokens",
   "session.wm.targetRatio",
   "session.wm.rejudgeTokens",
-  "session.wm.protectRequestPasses",
+  "session.wm.protectRequestTasks",
   "session.wm.policy",
   "session.rehearsal.targetTokens",
   "session.rehearsal.policy",

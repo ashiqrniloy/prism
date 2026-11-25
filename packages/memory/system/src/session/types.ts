@@ -253,7 +253,7 @@ export interface WmRecordedData {
   readonly lookAhead?: WmLookAhead;
   /**
    * `protection_lapsed` (plan 218.2 Task 3): batch records whose link protection (a request or error no outcome named in
-   * `resolves`) ended after `wm.protectRequestPasses` passes, so this pass could discard them.
+   * `resolves`) ended once `wm.protectRequestTasks` newer user requests were recorded, so this pass could discard them.
    */
   readonly protectionLapsed?: readonly string[];
 }

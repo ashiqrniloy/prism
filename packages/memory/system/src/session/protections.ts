@@ -3,7 +3,7 @@
  * Rehearsal may never drop. Protections are read from the ledger by code, never from the prompt, so a model cannot
  * talk its way past them; the WM `discard` tool refuses a protected record with `protected`.
  */
-import { DEFAULT_WM_PROTECT_REQUEST_PASSES } from "./config.js";
+import { DEFAULT_WM_PROTECT_REQUEST_TASKS } from "./config.js";
 import { activeWmItems, type ObservationalMemoryLedger } from "./ledger.js";
 import type { SalienceSignal } from "./salience.js";
 import { isReleasableWmItem } from "./scope.js";
@@ -23,16 +23,21 @@ import type { MemoryObservation, MemoryWmItem } from "./types.js";
  * - `open_question`: a question (`?`) the current task state was written from while that task state lists open questions;
  * - `needed_later`: cited by an active WM item the WM model marked `neededLater` with a scope reference.
  *
- * A link protection (`task_state` or `unresolved_error` read from `resolves`) ends after `protectRequestPasses` WM passes
- * that processed records without a resolving outcome; `onLapse` names each such record (`protection_lapsed`).
+ * A link protection (`task_state` or `unresolved_error` read from `resolves`) ends once `protectRequestTasks` newer user
+ * requests are in the ledger without a resolving outcome (plan 218.5 Task 7: the task moved on); `onLapse` names each
+ * such record (`protection_lapsed`).
  */
+/** A request the user made (not one the assistant or a tool wrote down). */
+const isUserRequest = (record: MemoryObservation): boolean =>
+  record.kind === "request" && record.attribution !== "assistant" && record.attribution !== "tool";
+
 export type ProtectionReason = "constraint" | "task_state" | "fact" | "unresolved_error" | "open_question" | "needed_later";
 
 export interface ProtectionOptions {
   /** Salience signals by record id; a later `outcome` with `failed_verification` resolves no error. */
   readonly salience?: ReadonlyMap<string, readonly SalienceSignal[]>;
-  /** `wm.protectRequestPasses` (default 8). */
-  readonly protectRequestPasses?: number;
+  /** `wm.protectRequestTasks` (default 3). */
+  readonly protectRequestTasks?: number;
   /** Finished scope steps: a WM item whose `neededLater` steps are all finished stops protecting its cited records. */
   readonly finishedSteps?: ReadonlySet<number>;
   /** Called with each record whose link protection lapsed, so the pass records `protection_lapsed`. */
@@ -61,10 +66,12 @@ export function protectedRecords(
   const resolvedRequests = new Set(outcomes.flatMap(({ record }) => record.resolves ?? []));
   const resolvedErrors = new Set(outcomes.flatMap(({ record }) => (resolvesErrors(record, options) ? (record.resolves ?? []) : [])));
   const resolvingOutcomes = outcomes.filter(({ record }) => resolvesErrors(record, options)).map(({ index }) => index);
-  const limit = options.protectRequestPasses ?? DEFAULT_WM_PROTECT_REQUEST_PASSES;
-  /** A link protection holds for `limit` processing WM passes after the record was recorded; past it, it lapses once. */
+  const limit = options.protectRequestTasks ?? DEFAULT_WM_PROTECT_REQUEST_TASKS;
+  // Ledger positions of the user's requests: a link protection holds until `limit` newer ones are recorded after it.
+  const requestAt = ledger.observations.flatMap((record, index) => (isUserRequest(record) ? [index] : []));
   const held = (record: MemoryObservation): boolean => {
-    if ((ledger.wmPasses ?? 0) - (ledger.recordedAtWmPass?.[record.id] ?? 0) < limit) return true;
+    const at = order.get(record.id) ?? Number.POSITIVE_INFINITY;
+    if (requestAt.filter((index) => index > at).length < limit) return true;
     options.onLapse?.(record.id);
     return false;
   };
@@ -72,7 +79,7 @@ export function protectedRecords(
   for (const record of records) {
     const fromTaskState = record.sourceEntryIds.some((id) => taskEntries.has(id));
     const index = order.get(record.id) ?? Number.POSITIVE_INFINITY;
-    const userRequest = linked && record.kind === "request" && record.attribution !== "assistant" && record.attribution !== "tool";
+    const userRequest = linked && isUserRequest(record);
     const reason: ProtectionReason | undefined =
       record.durable === "constraint" && !superseded.has(record.id)
         ? "constraint"

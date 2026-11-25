@@ -4622,11 +4622,11 @@
       "config": "packageConfig[\"@arnilo/prism-memory-system\"].wm.lookAheadTokens"
     },
     {
-      "name": "DEFAULT_WM_PROTECT_REQUEST_PASSES",
+      "name": "DEFAULT_WM_PROTECT_REQUEST_TASKS",
       "file": "packages/memory/system/src/session/config.ts",
       "class": "policy",
-      "default": 8,
-      "config": "packageConfig[\"@arnilo/prism-memory-system\"].wm.protectRequestPasses"
+      "default": 3,
+      "config": "packageConfig[\"@arnilo/prism-memory-system\"].wm.protectRequestTasks"
     },
     {
       "name": "DEFAULT_WM_REJUDGE_TOKENS",

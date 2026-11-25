@@ -284,22 +284,28 @@ it("deterministic_policy_order_and_no_model_call", async () => {
   await h.flush.flush(h.session);
   // No model call: the flush never asked for the WM client.
   assert.ok(!h.calls.includes("wm"));
-  // 60 tokens, target 30. Outcome and error are fixed; low before medium before high, oldest first: lowOld, lowNew, medium.
+  // 60 tokens, target 30. The error is salient, so fixed; a routine (low) outcome is not (plan 218.5 Task 7): low before
+  // medium before high, oldest first: outcome, lowOld, lowNew.
   const ledger = h.ledger();
   assert.deepEqual(
     Object.entries(ledger.tombstones ?? {})
       .filter(([, tomb]) => tomb.reason === "wm discard budget")
       .map(([id]) => id),
-    [lowOld.id, lowNew.id, medium.id],
+    [outcome.id, lowOld.id, lowNew.id],
   );
   assert.deepEqual(
     activeWmItems(ledger).map((item) => [item.citedIds[0], item.kind]),
     [
-      [outcome.id, "event"],
+      [medium.id, "event"],
       [high.id, "event"],
       [error.id, "event"],
     ],
   );
+  // An outcome of high relevance is still kept whatever the target.
+  const shipped = record("6a6a6a6a6a6a", "Shipped the release", { kind: "outcome", relevance: "high" });
+  const kept = deterministicWm({ records: [shipped, lowOld], protections: new Map(), targetRatio: 0.01 });
+  assert.equal(kept.verdicts.get(shipped.id)?.verdict, "keep");
+  assert.equal(kept.verdicts.get(lowOld.id)?.verdict, "discard");
   // Every record got a verdict; nothing was summarised.
   assert.equal(Object.keys(ledger.tombstones ?? {}).length, batch.length);
   assert.ok(activeWmItems(ledger).every((item) => item.kind === "event"));
@@ -478,30 +484,41 @@ it("ledger_without_resolves_keeps_the_batch_rule", () => {
   assert.deepEqual(Object.fromEntries(protectedRecords(after, [request, loose, error])), { [request.id]: "task_state" });
 });
 
-it("request_protection_lapses_after_bounded_passes_and_is_recorded", async () => {
+it("request_protection_lapses_after_newer_user_requests_and_is_recorded", async () => {
   const request = record("e7e7e7e7e7e7", "User asked to add retry logging", { kind: "request", attribution: "user" });
   const error = record("e8e8e8e8e8e8", "Lint failed", { kind: "error" });
   const outcome = linkOutcome("e9e9e9e9e9e9", ["f0f0f0f0f0f0"]);
   const other = record("f0f0f0f0f0f0", "User asked to rename the flag", { kind: "request", attribution: "user" });
-  const history = [recorded(other, outcome), recorded(request, error), wmPass([other.id]), wmPass([outcome.id])];
+  const next = (id: string, text: string) => record(id, text, { kind: "request", attribution: "user" });
+  // Plan 218.5 Task 7: the bound counts the user's newer requests (the task moved on), not WM passes, which a long
+  // session runs too rarely for the protection to ever lapse.
+  const history = [
+    recorded(other, outcome),
+    recorded(request, error),
+    recorded(next("f1f1f1f1f1f1", "User asked to bump the version")),
+    recorded(next("f2f2f2f2f2f2", "User asked to tag the release")),
+  ];
   const ledger = foldObservationalMemoryLedger(history);
-  assert.equal(ledger.wmPasses, 2);
   // Under the bound both stay protected; at it, both lapse and are named.
-  assert.equal(protectedRecords(ledger, [request, error], { protectRequestPasses: 3 }).size, 2);
+  assert.equal(protectedRecords(ledger, [request, error], { protectRequestTasks: 3 }).size, 2);
   const lapsed: string[] = [];
-  assert.equal(protectedRecords(ledger, [request, error], { protectRequestPasses: 2, onLapse: (id) => lapsed.push(id) }).size, 0);
+  assert.equal(protectedRecords(ledger, [request, error], { protectRequestTasks: 2, onLapse: (id) => lapsed.push(id) }).size, 0);
   assert.deepEqual(lapsed, [request.id, error.id]);
-  // A record recorded after the passes counts only the passes since.
-  assert.equal(
-    protectedRecords(foldObservationalMemoryLedger([...history, recorded(PLAIN)]), [request], { protectRequestPasses: 2 }).size,
-    0,
-  );
+  // WM passes alone never lapse it, and an assistant's request is no newer task.
+  const passesOnly = foldObservationalMemoryLedger([recorded(other, outcome), recorded(request, error), wmPass([other.id]), wmPass([outcome.id])]);
+  assert.equal(protectedRecords(passesOnly, [request], { protectRequestTasks: 1 }).size, 1);
+  const assistantAsks = foldObservationalMemoryLedger([
+    recorded(other, outcome),
+    recorded(request),
+    recorded(record("f3f3f3f3f3f3", "Assistant asked for the token", { kind: "request", attribution: "assistant" })),
+  ]);
+  assert.equal(protectedRecords(assistantAsks, [request], { protectRequestTasks: 1 }).size, 1);
   // Through the flush: the pass may discard it and records `protection_lapsed`.
   const h = harness(history, judgeClient([request], { discard: { finished: [request.id] } }), {
-    protectRequestPasses: 2,
+    protectRequestTasks: 2,
   });
   await h.flush.flush(h.session);
   assert.deepEqual(wmRecord(h.data).protectionLapsed, [request.id, error.id]);
   assert.equal(h.ledger().tombstones?.[request.id]?.reason, "wm discard finished");
-  assert.equal(resolveMemorySystemConfig({}).wm.protectRequestPasses, 8);
+  assert.equal(resolveMemorySystemConfig({}).wm.protectRequestTasks, 3);
 });

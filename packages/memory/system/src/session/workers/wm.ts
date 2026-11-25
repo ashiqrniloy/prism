@@ -126,8 +126,8 @@ export interface RunWmOptions extends MemoryWorkerLimitOptions {
   readonly salience?: ReadonlyMap<string, readonly SalienceSignal[]>;
   /** Protected records in the batch (`protectedRecords`): `discard` refuses them with `protected`, enforced here, not by the prompt. */
   readonly protections?: ReadonlyMap<string, ProtectionReason>;
-  /** `wm.protectRequestPasses`, for the protections of the records current WM events were kept from (default 8). */
-  readonly protectRequestPasses?: number;
+  /** `wm.protectRequestTasks`, for the protections of the records current WM events were kept from (default 3). */
+  readonly protectRequestTasks?: number;
   /** `wm.targetRatio`: the prompt states `targetRatio` × the batch's tokens as the items' target. */
   readonly targetRatio?: number;
   /**
@@ -213,7 +213,7 @@ export async function runWm(options: RunWmOptions): Promise<WmPassOutput> {
     events.flatMap((item) => item.citedIds.flatMap((id) => knownRecords.get(id) ?? [])),
     {
       ...(options.salience ? { salience: options.salience } : {}),
-      ...(options.protectRequestPasses === undefined ? {} : { protectRequestPasses: options.protectRequestPasses }),
+      ...(options.protectRequestTasks === undefined ? {} : { protectRequestTasks: options.protectRequestTasks }),
       finishedSteps: finishedStepSet,
     },
   );
@@ -720,15 +720,19 @@ export interface DeterministicWmOptions {
 }
 
 /**
- * `wm.policy: "deterministic"` (plan 218 Task 3): no model call. Protected records, outcomes and salient records are
- * kept; nothing is summarised; the rest is discarded lowest relevance first, oldest first within a relevance, until
- * the kept tokens reach `targetRatio` × the batch's tokens. Every record gets a verdict. A discard's reason is `budget`.
+ * `wm.policy: "deterministic"` (plan 218 Task 3): no model call. Protected records, salient records and outcomes of
+ * high or critical relevance are kept; nothing is summarised; the rest is discarded lowest relevance first, oldest first
+ * within a relevance, until the kept tokens reach `targetRatio` × the batch's tokens. Every record gets a verdict. A
+ * discard's reason is `budget`. Plan 218.5 Task 7: a routine (medium or low) outcome is no longer kept unconditionally:
+ * kept, every "task N finished" became its own item and the block grew one item per finished task.
  */
 export function deterministicWm(options: DeterministicWmOptions): WmPassOutput {
   const total = options.records.reduce((sum, record) => sum + record.tokenCount, 0);
   const target = wmTargetTokens(total, options.targetRatio);
   const fixed = (record: MemoryObservation) =>
-    options.protections.has(record.id) || record.kind === "outcome" || (options.salience?.get(record.id)?.length ?? 0) > 0;
+    options.protections.has(record.id) ||
+    (record.kind === "outcome" && (record.relevance === "high" || record.relevance === "critical")) ||
+    (options.salience?.get(record.id)?.length ?? 0) > 0;
   const candidates = options.records
     .map((record, index) => ({ record, index }))
     .filter(({ record }) => !fixed(record))

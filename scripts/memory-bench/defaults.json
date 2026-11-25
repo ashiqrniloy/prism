@@ -21,7 +21,7 @@
         "rejudgeTokens": 8000,
         "lookAheadRecords": 12,
         "lookAheadTokens": 3000,
-        "protectRequestPasses": 8,
+        "protectRequestTasks": 3,
         "policy": "model"
       },
       "rehearsal": {
