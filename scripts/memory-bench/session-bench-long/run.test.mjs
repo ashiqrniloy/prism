@@ -146,7 +146,7 @@ test("offline_guardrails_pass_with_nothing_pending", async () => {
   const report = await checkLongGuardrails({ probe: false, pressure: false });
   assert.equal(report.pass, true, JSON.stringify(report.guardrails.filter((row) => !row.pass)));
   assert.deepEqual(report.pending, []);
-  assert.equal(report.guardrails.find((row) => row.id === "G8").analysis, "session-bench-long-analysis-v1");
+  assert.equal(report.guardrails.find((row) => row.id === "G8").analysis, "session-bench-long-analysis-v2");
   assert.deepEqual(
     report.guardrails.map((row) => row.id),
     ["G1", "G2", "G3", "G4", "G5", "sizes", "G6", "G7", "G8", "G9", "G10", "G11"],

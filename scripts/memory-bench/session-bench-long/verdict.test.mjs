@@ -219,3 +219,17 @@ describe("live.mjs", () => {
     expect(() => assertLongRowHoldsNoText({ ...row, instrumentation: { note: "x".repeat(65) } })).toThrow(/longer than an id/);
   });
 });
+
+describe("the control guard leaves out count-errors (plan 218.5 Task 7, owner 2026-11-25)", () => {
+  test("C-stable holds the C checks of every job but count-errors; C and task keep them all", async () => {
+    const { CONTROL_METRIC, longUnits, NOISY_JOBS } = await import("./score.mjs");
+    expect(CONTROL_METRIC).toBe("C-stable");
+    expect([...NOISY_JOBS]).toEqual(["count-errors"]);
+    const row = (task, job, pass) => ({ session: "s1", task, check: `t${task}.0.0`, class: "C", job, pass });
+    const checks = [row(1, "count-errors", false), row(2, "close-resolved", true), row(3, "owner-assign", true)];
+    const { units } = longUnits({ checks });
+    expect(units.C.length).toBe(3);
+    expect(units[CONTROL_METRIC].map((unit) => unit.id)).toEqual(["s1:t2.0.0", "s1:t3.0.0"]);
+    expect(units.task.length).toBe(3);
+  });
+});

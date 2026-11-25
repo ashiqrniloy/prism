@@ -18,10 +18,19 @@ import { DEPENDENCY_CLASSES, LONG_CHECK_CLASSES, REVOKE_CLASS } from "./checks.m
 /** The classes the bucket metrics pool: every dependency class but the revoke (Task 4 finding 4). */
 export const POOLED_CLASSES = Object.freeze(DEPENDENCY_CLASSES.filter((cls) => cls !== REVOKE_CLASS));
 export const BUCKETS = Object.freeze(["before", "after"]);
+/**
+ * Jobs whose `C` checks the control guard leaves out (plan 218.5 Task 7, owner 2026-11-25). In the pilot nearly every
+ * `C` failure in every arm was `count-errors` (the main model counting `ERROR` lines in a 6-9K-token log): `amnesic`,
+ * with no memory, failed it most, and two arms that were identical until task 98 failed it 5 and 18 times on one
+ * session. It measures the model's counting, not memory, so it stays in `C` and `task` but not in `C-stable`.
+ */
+export const NOISY_JOBS = Object.freeze(["count-errors"]);
+/** The control metric: `C` checks of every job but {@link NOISY_JOBS}. */
+export const CONTROL_METRIC = "C-stable";
 
 /** The pre-registered analysis (G8). Positive `diff` means the second arm of a pair is better. */
 export const ANALYSIS_LONG = Object.freeze({
-  version: "session-bench-long-analysis-v1",
+  version: "session-bench-long-analysis-v2",
   unit: "check or task, paired by id across arms; sessions are the clusters",
   statistic:
     "pairedClusterPermutation (scripts/memory-bench/stats.mjs): cluster bootstrap interval of the mean paired difference, sign-flip p",
@@ -31,10 +40,12 @@ export const ANALYSIS_LONG = Object.freeze({
   metrics: Object.freeze([
     "task",
     ...LONG_CHECK_CLASSES,
+    CONTROL_METRIC,
     ...BUCKETS,
     ...BUCKETS.flatMap((b) => POOLED_CLASSES.map((cls) => `${b}:${cls}`)),
   ]),
   pooled: "before and after pool D1-D4 only (same class mix in both buckets); D2R is its own metric (after only)",
+  control: "C-stable: the C checks of every job but count-errors (NOISY_JOBS); every check row of class C carries its task's job",
   comparisons: Object.freeze([
     ["STM-only", "STM-only-protect"],
     ["STM-only", "STM+WM"],
@@ -57,7 +68,7 @@ export const LONG_DECISION = Object.freeze({
     metric: "after",
     dependencyLowerAbove: 0,
     controlLowerAbove: -0.05,
-    text: "STM-only-protect becomes the reference, and protect-user the eviction default, if it beats STM-only on after dependency checks (95% lower bound > 0) and its C lower bound is > -5 points; otherwise the reference is STM-only",
+    text: "STM-only-protect becomes the reference, and protect-user the eviction default, if it beats STM-only on after dependency checks (95% lower bound > 0) and its C-stable lower bound is > -5 points; otherwise the reference is STM-only",
   }),
   wm: Object.freeze({
     arms: Object.freeze(["STM+WM", "STM+WM-deterministic"]),
@@ -67,7 +78,7 @@ export const LONG_DECISION = Object.freeze({
     maxCostRatio: 1.5,
     dropUpperBelow: 0.05,
     cost: "whole-run tokens (main and workers, input and output, plus embeddings) per passed task",
-    text: "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides",
+    text: "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C-stable lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides",
   }),
   stmAtLength: Object.freeze({
     against: "memory-off-llm",
@@ -87,6 +98,7 @@ export function longUnits({ checks, tasks = [] }) {
   const unit = (row) => ({ id: `${row.session}:${row.check}`, cluster: row.session, value: Number(row.pass) });
   const units = { task: scored.units.task };
   for (const cls of LONG_CHECK_CLASSES) units[cls] = checks.filter((row) => row.class === cls).map(unit);
+  units[CONTROL_METRIC] = checks.filter((row) => row.class === "C" && !NOISY_JOBS.includes(row.job)).map(unit);
   for (const bucket of BUCKETS) {
     units[bucket] = checks.filter((row) => row.bucket === bucket && POOLED_CLASSES.includes(row.class)).map(unit);
     for (const cls of POOLED_CLASSES)
@@ -243,7 +255,7 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
   const ref = decision.reference;
   const step1 = compareLong(units, [ref.base, ref.candidate], options);
   const protectWins =
-    step1.status === "compared" && lower(step1, ref.metric) > ref.dependencyLowerAbove && lower(step1, "C") > ref.controlLowerAbove;
+    step1.status === "compared" && lower(step1, ref.metric) > ref.dependencyLowerAbove && lower(step1, CONTROL_METRIC) > ref.controlLowerAbove;
   const reference = protectWins ? ref.candidate : ref.base;
   // Step 2: each WM arm against the reference; Holm's step-down over the two arms' sign-flip p on `after`.
   const wm = decision.wm;
@@ -268,7 +280,7 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
     const level = levels[arm] ?? 1 - alpha / 2;
     const row =
       raw[index].status === "compared"
-        ? compareLong(units, [reference, arm], { ...options, levels: { [wm.metric]: level, C: level } })
+        ? compareLong(units, [reference, arm], { ...options, levels: { [wm.metric]: level, [CONTROL_METRIC]: level } })
         : raw[index];
     const cost = costPerPassedTask[arm] ?? null;
     const costRatio = refCost && cost ? cost / refCost : null;
@@ -276,7 +288,7 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
     const keeps =
       compared &&
       lower(row, wm.metric) > wm.keepLowerAbove &&
-      lower(row, "C") > wm.controlLowerAbove &&
+      lower(row, CONTROL_METRIC) > wm.controlLowerAbove &&
       costRatio !== null &&
       costRatio <= wm.maxCostRatio;
     return {
@@ -285,7 +297,7 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
       level,
       adjustedP: levels.adjustedP?.[arm] ?? null,
       after: compared ? row.metrics[wm.metric] : null,
-      control: compared ? row.metrics.C : null,
+      control: compared ? row.metrics[CONTROL_METRIC] : null,
       task: compared ? row.metrics.task : null,
       costPerPassedTask: cost,
       costRatio,
@@ -317,7 +329,7 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
       candidate: ref.candidate,
       status: step1.status,
       after: step1.metrics?.after ?? null,
-      control: step1.metrics?.C ?? null,
+      control: step1.metrics?.[CONTROL_METRIC] ?? null,
       protectWins,
       reference,
       evictionDefault: protectWins ? "protect-user" : "relevance",

@@ -376,7 +376,8 @@ export async function runLongArmSession({
         ...(result?.error?.code ? { code: result.error.code } : {}),
         ...(limit ? { limit } : {}),
       };
-      checks.push(...taskCheckRows(session, task, ws.state));
+      // A `C` row names its task's job, so the control guard can leave out the noisy ones (score.mjs NOISY_JOBS).
+      checks.push(...taskCheckRows(session, task, ws.state).map((row) => (row.class === "C" ? { ...row, job: task.job } : row)));
       await thirdParty?.add(task.prompt, result);
       if (instrumented) {
         folded = foldStoredSession(await store.list(sessionId(0)));

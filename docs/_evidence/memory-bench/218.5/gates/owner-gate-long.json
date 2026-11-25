@@ -309,7 +309,7 @@
       "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
       "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
     },
-    "ruleHash": "eb3b52695c55a1fbccf2e420d9f7271c2eceacab8ae2ce5c58cb515fb3e1415d",
+    "ruleHash": "aeb684e07e6f3911659b5871948064500e1180868c09a0bddabccad046e73a2c",
     "rule": {
       "suite": "session-bench-long",
       "plan": "218.5 Task 6",
@@ -330,8 +330,8 @@
         "package": "@arnilo/prism-memory-system",
         "dir": "packages/memory/system/src",
         "files": 93,
-        "hash": "35f6a6884d6bf41d39c29a8404282a1d91a249e87d1d7dbcd29c5c3ae281296b",
-        "note": "the package's src after plan 218.5 Tasks 1 and 3 (tests excluded); the kernel and providers are the tree's at the run"
+        "hash": "fbdbed24428442d276dfd11a9014ca5309fd4f24d41ab65214a0aa994cee321a",
+        "note": "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; finished task requests are batched for WM; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes"
       },
       "harness": {
         "files": [
@@ -350,7 +350,7 @@
           "scripts/memory-bench/run.mjs",
           "scripts/memory-bench/stats.mjs"
         ],
-        "hash": "046e672fcf089b67e44922a4872964a285dd5adc65d0f9b9da930c9a32114aaf"
+        "hash": "8632e7364423c2455e27f49f7372a2dc5d99f8ecfa625ec2285a856acbba98e6"
       },
       "partition": "dev",
       "sessions": [
@@ -504,6 +504,7 @@
         "pressureSessionsMin": 2,
         "maxOverflows": 0
       },
+      "controlNote": "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job",
       "order": [
         "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
         "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no provider error, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run",
@@ -514,7 +515,7 @@
       "checkins": "every 30 minutes and after every job: rows done, input tokens spent, projected total",
       "instrumentation": "each memory-system row carries, per task, block tokens (rendered and description), active STM tokens, fullFold, records left out by relevance and how many were durable or user statements, Rehearsal drops, WM items, tombstones and passes; per dependent, whether its sources' records were in the block (ids only)",
       "analysis": {
-        "version": "session-bench-long-analysis-v1",
+        "version": "session-bench-long-analysis-v2",
         "unit": "check or task, paired by id across arms; sessions are the clusters",
         "statistic": "pairedClusterPermutation (scripts/memory-bench/stats.mjs): cluster bootstrap interval of the mean paired difference, sign-flip p",
         "iterations": 10000,
@@ -528,6 +529,7 @@
           "D4",
           "D2R",
           "C",
+          "C-stable",
           "before",
           "after",
           "before:D1",
@@ -540,6 +542,7 @@
           "after:D4"
         ],
         "pooled": "before and after pool D1-D4 only (same class mix in both buckets); D2R is its own metric (after only)",
+        "control": "C-stable: the C checks of every job but count-errors (NOISY_JOBS); every check row of class C carries its task's job",
         "comparisons": [
           [
             "STM-only",
@@ -580,7 +583,7 @@
           "metric": "after",
           "dependencyLowerAbove": 0,
           "controlLowerAbove": -0.05,
-          "text": "STM-only-protect becomes the reference, and protect-user the eviction default, if it beats STM-only on after dependency checks (95% lower bound > 0) and its C lower bound is > -5 points; otherwise the reference is STM-only"
+          "text": "STM-only-protect becomes the reference, and protect-user the eviction default, if it beats STM-only on after dependency checks (95% lower bound > 0) and its C-stable lower bound is > -5 points; otherwise the reference is STM-only"
         },
         "wm": {
           "arms": [
@@ -593,7 +596,7 @@
           "maxCostRatio": 1.5,
           "dropUpperBelow": 0.05,
           "cost": "whole-run tokens (main and workers, input and output, plus embeddings) per passed task",
-          "text": "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides"
+          "text": "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C-stable lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides"
         },
         "stmAtLength": {
           "against": "memory-off-llm",
@@ -603,8 +606,8 @@
     },
     "approved": true,
     "approvedBy": "owner",
-    "approvedAt": "2026-11-24T16:05:00Z",
-    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged. Rule c2e39021 stopped at calibration (oracle-notes 54.7% < 60%): hy4-flash-free at thinking low spent its whole 2,048-token output on reasoning on hard turns. Owner, 2026-11-24: \"I am hesitant to go with thinking low for the main model as that does not correspond to real world usage. Can we increase the 32k window?\", then \"Yes go ahead with the proposed caps\": the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336) (60898b62). Rule 60898b62 held calibration (oracle-notes 87%) and was paused in the pilot stage: live STM recorded 104 description tokens a task and the pool first overflowed at tasks 78-90, after every `after` dependent, so live G11 could not hold. Owner, 2026-11-24: \"Go with option 2, redesign the pressure\", choosing \"150-task sessions (Recommended)\": benchmark version 2, 150 tasks in 6 phases, buckets from the live ledgers (before < 75, after > 94), the offline worker mock at the live rates (0d6beef6). Rule 0d6beef6 stopped in calibration (1 row, the smoke job: 152/182 checks): beam-free answered 429 rate_limit_error with retry-after about 9.7 hours after about 2,950 calls that day, its free daily allowance. Owner, 2026-11-24: \"I want to switch the memory worker to paid model. Use deepseek-v4.1-flash\" (cddf6f16, stopped in its smoke job, 0 rows). Owner, 2026-11-24: \"I don't think deepseek-v4.1-flash has a low thinking mode and that is why it is taking so time. Let's try muse spark 1.2 or 1.3 contributor\": the worker is muse-spark-1.3-contributor, the screen's"
+    "approvedAt": "2026-11-25T03:30:00Z",
+    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged. Rule c2e39021 stopped at calibration (oracle-notes 54.7% < 60%): hy4-flash-free at thinking low spent its whole 2,048-token output on reasoning on hard turns. Owner, 2026-11-24: \"I am hesitant to go with thinking low for the main model as that does not correspond to real world usage. Can we increase the 32k window?\", then \"Yes go ahead with the proposed caps\": the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336) (60898b62). Rule 60898b62 held calibration (oracle-notes 87%) and was paused in the pilot stage: live STM recorded 104 description tokens a task and the pool first overflowed at tasks 78-90, after every `after` dependent, so live G11 could not hold. Owner, 2026-11-24: \"Go with option 2, redesign the pressure\", choosing \"150-task sessions (Recommended)\": benchmark version 2, 150 tasks in 6 phases, buckets from the live ledgers (before < 75, after > 94), the offline worker mock at the live rates (0d6beef6). Rule 0d6beef6 stopped in calibration (1 row, the smoke job: 152/182 checks): beam-free answered 429 rate_limit_error with retry-after about 9.7 hours after about 2,950 calls that day, its free daily allowance. Owner, 2026-11-24: \"I want to switch the memory worker to paid model. Use deepseek-v4.1-flash\" (cddf6f16, stopped in its smoke job, 0 rows). Owner, 2026-11-24: \"I don't think deepseek-v4.1-flash has a low thinking mode and that is why it is taking so time. Let's try muse spark 1.2 or 1.3 contributor\": the worker is muse-spark-1.3-contributor, the screen's (eb3b5269: the pilot completed, every live guardrail held). Owner, 2026-11-25, after the investigation of that pilot: \"Do all four fixes now and then rerun everything for task 7 from the start\": WM items count against the pool, finished task requests are batched for WM, request protection lapses after wm.protectRequestTasks (3) newer user requests, deterministic WM keeps only high or critical outcomes (product hash changes), and the control guard reads C-stable (analysis v2)"
   },
   "checkins": [
     {

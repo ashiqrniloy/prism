@@ -163,7 +163,7 @@ export function buildLongRule() {
       dir: PRODUCT_DIR,
       files: product.length,
       hash: filesHash(product),
-      note: "the package's src after plan 218.5 Tasks 1 and 3 (tests excluded); the kernel and providers are the tree's at the run",
+      note: "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; finished task requests are batched for WM; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes",
     },
     harness: { files: [...HARNESS_FILES], hash: filesHash(HARNESS_FILES) },
     partition: "dev",
@@ -217,6 +217,8 @@ export function buildLongRule() {
       "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no overflow on any row (Task 7: a miss stops the run, the fix is a new hash). Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
     smokeOutcomes: ["ERR_PRISM_RUN_LIMIT", "context_overflow"],
     liveGuardrails: { ...LIVE_GUARDRAILS, amnesicFailRateMin: { ...LIVE_GUARDRAILS.amnesicFailRateMin } },
+    controlNote:
+      "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job",
     order: [
       "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
       "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no provider error, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run",
@@ -296,7 +298,7 @@ const ROW_FIELDS = [
   "quotaWaits",
   "finishedAt",
 ];
-const CHECK_FIELDS = ["session", "task", "check", "class", "dep", "bucket", "pass"];
+const CHECK_FIELDS = ["session", "task", "check", "class", "dep", "bucket", "job", "pass"];
 const MAX_ROW_STRING = 64;
 const strings = (value, out = []) => {
   if (typeof value === "string") out.push(value);
