@@ -172,9 +172,14 @@ test("live_guardrails_read_the_calibration_and_pressure_rows", () => {
   assert.equal(liveLongGuardrails(report({ firstAfterTask: { a: 64, b: 55, c: 64 } })).pass, false);
   assert.equal(liveLongGuardrails(report({ cost: { "STM-only": { overflows: 1 } } })).pass, false);
   const weak = report({});
-  weak.scores.amnesic.overall.classes.D4 = { pass: 4, total: 10 };
+  weak.scores.amnesic.overall.classes.D4 = { pass: 5, total: 10 }; // fails 50%, under the 60% D4 floor
   assert.equal(liveLongGuardrails(weak).pass, false);
   const partial = report({});
   delete partial.scores.amnesic.sessions.c;
   assert.equal(liveLongGuardrails(partial).complete, false);
+});
+
+test("the amnesic D4 floor is 60%, D2 and D2R stay at 70% (plan 218.5 Task 7, owner 2026-11-25)", async () => {
+  const { LIVE_GUARDRAILS } = await import("./guardrails.mjs");
+  assert.deepEqual({ ...LIVE_GUARDRAILS.amnesicFailRateMin }, { D2: 0.7, D4: 0.6, [REVOKE_CLASS]: 0.7 });
 });

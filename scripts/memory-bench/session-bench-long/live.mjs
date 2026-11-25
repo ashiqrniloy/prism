@@ -222,7 +222,7 @@ export function buildLongRule() {
     order: [
       "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
       "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run. Provider errors the retries absorbed (a stream cut mid-answer and sent again) are reported, not a miss (owner, 2026-11-25: rule aeb684e0's smoke met one such cut at exchange 375 of the main model, and the strict rule would have stopped the run on a task that passed)",
-      "calibration: amnesic and oracle-notes on the pilot sessions; oracle-notes passes >= 60% of tasks and amnesic fails >= 70% of D2, D4 and D2R, or the run stops",
+      "calibration: amnesic and oracle-notes on the pilot sessions; oracle-notes passes >= 60% of tasks and amnesic fails >= 70% of D2 and D2R and >= 60% of D4 (owner, 2026-11-25: amnesic failed 70.4% then 63.0% of D4, the same 7 of 27 ship-day checks passing without memory both times), or the run stops",
       "pilot: the decision arms and mem0 on the pilot sessions; then live G11 (STM-only's pool overflows before the first after dependent in >= 2 of 3) and no overflow on any row, or the run stops (Task 7)",
       "the rest (Task 8, on the owner's word): the decision arms and mem0 on the other 9 dev sessions; the pilot's rows count",
     ],

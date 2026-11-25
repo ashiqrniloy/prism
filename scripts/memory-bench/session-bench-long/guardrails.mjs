@@ -42,12 +42,16 @@ export const LONG_GATE_FILE = join(REPO, "docs/_evidence/memory-bench/218.5/gate
 export const AMNESIC_FAIL_CLASSES = Object.freeze(["D2", "D4", REVOKE_CLASS]);
 /**
  * The live guardrails (plan 218.5 Tasks 5 and 7): `oracle-notes` passes at least 60% of tasks; `amnesic` fails at least
- * 70% of each of `D2`, `D4` and `D2R`; STM-only's recorded pool overflows before the first `after` dependent in at
- * least 2 of the 3 pilot sessions; no row overflows W.
+ * 70% of each of `D2` and `D2R` and 60% of `D4`; STM-only's recorded pool overflows before the first `after` dependent
+ * in at least 2 of the 3 pilot sessions; no row overflows W.
+ *
+ * `D4` at 60% (owner, 2026-11-25): `amnesic` failed 70.4% of `D4` in rule eb3b5269's pilot and 63.0% in a1c81772's;
+ * the same 7 of 27 checks (announcing a train's ship day) passed without memory both times, likely from the agent's
+ * own earlier `#release` posts or document edits, so the floor sits near two thirds and 70% was on its noise edge.
  */
 export const LIVE_GUARDRAILS = Object.freeze({
   oracleTaskRateMin: 0.6,
-  amnesicFailRateMin: Object.freeze({ D2: 0.7, D4: 0.7, [REVOKE_CLASS]: 0.7 }),
+  amnesicFailRateMin: Object.freeze({ D2: 0.7, D4: 0.6, [REVOKE_CLASS]: 0.7 }),
   pressureArm: "STM-only",
   pressureSessionsMin: 2,
   maxOverflows: 0,
