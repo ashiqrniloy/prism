@@ -34,6 +34,26 @@ describe("upstreamRetryFetch (plan 218.5 Task 7)", () => {
     expect(sent.length).toBe(4);
   });
 
+  test("a reasoning_effort refusal that outlasts the resends is sent once more without the parameter", async () => {
+    const { fetch, sent } = answers([400, UPSTREAM], [400, UPSTREAM], [400, UPSTREAM], [400, UPSTREAM], [200, "ok"]);
+    const lines = [];
+    const body = JSON.stringify({ model: "m", reasoning_effort: "low", messages: [] });
+    const response = await upstreamRetryFetch(fetch, { ...noSleep, log: (line) => lines.push(line) })("u", { body });
+    expect(response.status).toBe(200);
+    expect(sent.length).toBe(5);
+    expect(sent.slice(0, 4).every((sentBody) => sentBody === body)).toBe(true);
+    expect(JSON.parse(sent[4])).toEqual({ model: "m", messages: [] });
+    expect(lines.at(-1)).toMatch(/without it/);
+  });
+
+  test("another upstream 400 that outlasts the resends is handed on unchanged", async () => {
+    const other = '{"error":{"message":"Upstream request failed: [server_error] overloaded"}}';
+    const { fetch, sent } = answers([400, other]);
+    const response = await upstreamRetryFetch(fetch, noSleep)("u", { body: JSON.stringify({ reasoning_effort: "low" }) });
+    expect(response.status).toBe(400);
+    expect(sent.length).toBe(4);
+  });
+
   test("a 400 the gateway raises itself is handed on at once", async () => {
     const own = '{"type":"error","error":{"type":"MissingSessionID","message":"Request is missing x-opencode-session"}}';
     const { fetch, sent } = answers([400, own]);

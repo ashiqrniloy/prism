@@ -210,7 +210,7 @@ export function buildLongRule() {
     ceilingBasis:
       "owner, Task 2: 2.3B input tokens (cached included) across every usage log under the run's wire directory, for the pilot and the full run under one hash; no new job starts at or above it, jobs in flight finish",
     faults:
-      "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure (\"Upstream request failed\") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch); every provider request turns the kernel's 60 s connect timeout off (withoutConnectTimeout), because it wraps the whole injected fetch and cut every wait above at 60 s; stallGuardFetch's 300 s no-headers and idle guards stay",
+      "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure (\"Upstream request failed\") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch), and one that still refuses reasoning_effort is sent once more without it (Task 7, 2026-11-25: muse-spark's four-times-running refusal faulted two pilot jobs and a smoke job); every provider request turns the kernel's 60 s connect timeout off (withoutConnectTimeout), because it wraps the whole injected fetch and cut every wait above at 60 s; stallGuardFetch's 300 s no-headers and idle guards stay",
     workerFaults:
       "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
     overflow:
@@ -352,17 +352,42 @@ export function upstreamRetryFetch(
   return async (input, init) => {
     for (let attempt = 0; ; attempt++) {
       const response = await inner(input, init);
-      if (response.status !== 400 || attempt >= delaysMs.length || init?.signal?.aborted) return response;
+      if (response.status !== 400 || init?.signal?.aborted) return response;
       const text = await response
         .clone()
         .text()
         .catch(() => "");
       if (!UPSTREAM_FAILED_400.test(text)) return response;
+      if (attempt >= delaysMs.length) {
+        // Task 7 (2026-11-25): muse-spark refused `reasoning_effort` four times running on some worker calls (two
+        // faults in rule eb3b5269's pilot, one in f5b64d49's smoke). After the resends, the call goes once more without
+        // the parameter (the model's default reasoning), and the log names it.
+        const body = REASONING_UNSUPPORTED_400.test(text) ? withoutReasoningEffort(init?.body) : undefined;
+        if (!body) return response;
+        await response.body?.cancel();
+        log("provider refused reasoning_effort after every resend; sending once more without it");
+        return inner(input, { ...init, body });
+      }
       await response.body?.cancel();
       log(`provider answered 400 (an upstream failure); sending again in ${delaysMs[attempt] / 1000} s`);
       await sleep(delaysMs[attempt]);
     }
   };
+}
+
+/** The upstream 400 that names `reasoning_effort` as unsupported (OpenCode Go, muse-spark). */
+export const REASONING_UNSUPPORTED_400 = /reasoning_effort[^"]*not supported/i;
+/** A JSON request body without `reasoning_effort`, or `undefined` when the body is not JSON or carries none. */
+function withoutReasoningEffort(body) {
+  if (typeof body !== "string") return undefined;
+  try {
+    const json = JSON.parse(body);
+    if (!json || typeof json !== "object" || !("reasoning_effort" in json)) return undefined;
+    delete json.reasoning_effort;
+    return JSON.stringify(json);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
