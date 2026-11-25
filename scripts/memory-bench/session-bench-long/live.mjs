@@ -221,7 +221,7 @@ export function buildLongRule() {
       "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job",
     order: [
       "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
-      "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no provider error, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run",
+      "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run. Provider errors the retries absorbed (a stream cut mid-answer and sent again) are reported, not a miss (owner, 2026-11-25: rule aeb684e0's smoke met one such cut at exchange 375 of the main model, and the strict rule would have stopped the run on a task that passed)",
       "calibration: amnesic and oracle-notes on the pilot sessions; oracle-notes passes >= 60% of tasks and amnesic fails >= 70% of D2, D4 and D2R, or the run stops",
       "pilot: the decision arms and mem0 on the pilot sessions; then live G11 (STM-only's pool overflows before the first after dependent in >= 2 of 3) and no overflow on any row, or the run stops (Task 7)",
       "the rest (Task 8, on the owner's word): the decision arms and mem0 on the other 9 dev sessions; the pilot's rows count",
@@ -323,6 +323,16 @@ export function readLongRows(root) {
     .map(String)
     .filter((entry) => entry.endsWith(".json"))
     .map((entry) => assertLongRowHoldsNoText(JSON.parse(readFileSync(join(dir, entry), "utf8"))));
+}
+
+/**
+ * Why the smoke job stops the run, or `undefined` (Task 7, owner 2026-11-25). A task that failed outside the arm's
+ * outcomes is a miss; a provider error the retries absorbed (the task went on and passed or failed on its own) is not,
+ * so the strict rule's count of every error chunk no longer stops a run on a stream the kernel sent again.
+ */
+export function smokeFailure(row) {
+  const faulted = faultedTasks(row.status);
+  return faulted.length ? `${faulted.length} faulted tasks, ${row.meter.providerErrors} provider errors` : undefined;
 }
 
 /** A gateway 400 that names a fault upstream of it, not the request it was sent (OpenCode Go, 2026-11-23). */
@@ -689,10 +699,9 @@ export async function runLongLive({ rule = SESSION_BENCH_LONG_RULE, pilot = fals
     pausePoint();
     const smoke = readLongRows(root).find((row) => row.arm === "memory-off-llm" && row.session === stages.smokeSession);
     if (!smoke) throw new SessionBenchIncomplete("the smoke job left no row");
-    if (faultedTasks(smoke.status).length || smoke.meter.providerErrors)
-      throw new SessionBenchStop(
-        `smoke: ${faultedTasks(smoke.status).length} faulted tasks, ${smoke.meter.providerErrors} provider errors`,
-      );
+    const smokeMiss = smokeFailure(smoke);
+    if (smokeMiss) throw new SessionBenchStop(`smoke: ${smokeMiss}`);
+    if (smoke.meter.providerErrors) log(`smoke: ${smoke.meter.providerErrors} provider errors absorbed by the retries (reported)`);
     if (checkin().projectedInputTokens > rule.ceilingInputTokens)
       throw new SessionBenchStop("smoke: the projected total exceeds the ceiling");
     stages = longStages(rule, done());

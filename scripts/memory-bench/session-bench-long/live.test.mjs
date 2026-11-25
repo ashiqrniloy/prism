@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolveInputCap } from "@arnilo/prism";
 import { MAX_OUTPUT_TOKENS } from "../session-bench/run.mjs";
-import { buildLongRule, MAIN_OUTPUT_TOKENS, upstreamRetryFetch, withoutConnectTimeout } from "./live.mjs";
+import { buildLongRule, MAIN_OUTPUT_TOKENS, smokeFailure, upstreamRetryFetch, withoutConnectTimeout } from "./live.mjs";
 import { productInputCap } from "./pressure.mjs";
 import { longSharedConfig, mainModel } from "./run.mjs";
 
@@ -95,5 +95,14 @@ describe("the main agent's output reserve (plan 218.5 Task 7, owner 2026-11-24)"
     expect(rule.mainWindow).toBe(46_336);
     expect(rule.maxOutputTokens).toBe(2_048);
     expect(rule.window).toBe(32_000);
+  });
+});
+
+describe("the smoke rule (plan 218.5 Task 7, owner 2026-11-25)", () => {
+  test("a provider error the retries absorbed is reported, not a miss; a faulted task is a miss", () => {
+    const row = (status, providerErrors) => ({ status, meter: { providerErrors } });
+    expect(smokeFailure(row({ 1: { status: "completed" }, 2: { status: "completed" } }, 1))).toBeUndefined();
+    expect(smokeFailure(row({ 1: { status: "completed" }, 2: { status: "failed", code: "ERR_PRISM_RUN_LIMIT" } }, 0))).toBeUndefined();
+    expect(smokeFailure(row({ 1: { status: "failed", code: "ERR_PROVIDER" } }, 2))).toBe("1 faulted tasks, 2 provider errors");
   });
 });
