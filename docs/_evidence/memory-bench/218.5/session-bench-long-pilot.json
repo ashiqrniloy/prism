@@ -3,10 +3,10 @@
   "mode": "live-pilot",
   "partition": "dev",
   "benchmark": {
-    "version": 2,
-    "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
+    "version": 3,
+    "templateHash": "03690faefceca28769cc4aa451663aaaef0859b100b4a403b9dda52b06d2a05f",
     "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c",
-    "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c"
+    "sessionsHash": "a4d6562712ab2e0ddd1297cdba050f8c8c86b58dc11a3ec94d7c05a42325f3de"
   },
   "window": 32000,
   "fixedRequestTokens": {
@@ -16,11 +16,11 @@
   },
   "arms": [
     "memory-off-llm",
+    "mem0",
     "STM-only",
     "STM-only-protect",
     "STM+WM",
     "STM+WM-deterministic",
-    "mem0",
     "amnesic",
     "oracle-notes"
   ],
@@ -34,11 +34,11 @@
   ],
   "configHashes": {
     "memory-off-llm": "27add5eb43c4df491a1ce83b723c44a8e72c65dba7343940b52ccad89b612df2",
+    "mem0": "917fc4995dc09c3e1edf04a9c38ff94ae9faaad465cf525d83fbb8aec9cdc945",
     "STM-only": "baf861e274ef7317c009249ec1d0785394501697bebaf71d383b859e9e9e7268",
     "STM-only-protect": "0c20e3031daf712dfdbedddf80f0f11226a69e002ae8f3afb18f969b4523a899",
     "STM+WM": "2a81794368ef0564d00a2632dc95de7e954c55571d2014b4e01f90788c22e037",
     "STM+WM-deterministic": "73667082043a78e144126e6a2329ae90278889558b96890c14040877a01f11d9",
-    "mem0": "917fc4995dc09c3e1edf04a9c38ff94ae9faaad465cf525d83fbb8aec9cdc945",
     "amnesic": "f849a7b27d057ff44484794430f92452592d225b1f1322793228b4718ebf7d55",
     "oracle-notes": "5928ef5374c811277765d13ac644d81b087b5d047a37192ef99d66a8dd211eb8"
   },
@@ -52,32 +52,32 @@
     "memory-off-llm": {
       "overall": {
         "tasks": 450,
-        "tasksPassed": 354,
+        "tasksPassed": 381,
         "classes": {
           "C": {
-            "pass": 426,
+            "pass": 444,
             "total": 468,
-            "rate": 0.9102564102564102
+            "rate": 0.9487179487179487
           },
           "D2": {
-            "pass": 0,
+            "pass": 3,
             "total": 27,
-            "rate": 0
+            "rate": 0.1111111111111111
           },
           "D1": {
+            "pass": 8,
+            "total": 9,
+            "rate": 0.8888888888888888
+          },
+          "D3": {
             "pass": 9,
             "total": 9,
             "rate": 1
           },
-          "D3": {
-            "pass": 5,
-            "total": 9,
-            "rate": 0.5555555555555556
-          },
           "D4": {
-            "pass": 4,
+            "pass": 10,
             "total": 27,
-            "rate": 0.14814814814814814
+            "rate": 0.37037037037037035
           },
           "D2R": {
             "pass": 0,
@@ -85,17 +85,17 @@
             "rate": 0
           }
         },
-        "rederivations": 415,
-        "toolCalls": 2243,
-        "taskRate": 0.7866666666666666
+        "rederivations": 886,
+        "toolCalls": 2862,
+        "taskRate": 0.8466666666666667
       },
       "sessions": {
         "sbl-sc-05": {
           "tasks": 150,
-          "tasksPassed": 114,
+          "tasksPassed": 129,
           "classes": {
             "C": {
-              "pass": 137,
+              "pass": 151,
               "total": 156
             },
             "D2": {
@@ -107,11 +107,11 @@
               "total": 3
             },
             "D3": {
-              "pass": 1,
+              "pass": 3,
               "total": 3
             },
             "D4": {
-              "pass": 1,
+              "pass": 4,
               "total": 9
             },
             "D2R": {
@@ -119,15 +119,15 @@
               "total": 2
             }
           },
-          "rederivations": 179,
-          "toolCalls": 852
+          "rederivations": 595,
+          "toolCalls": 1324
         },
         "sbl-id-08": {
           "tasks": 150,
-          "tasksPassed": 121,
+          "tasksPassed": 133,
           "classes": {
             "C": {
-              "pass": 144,
+              "pass": 153,
               "total": 156
             },
             "D1": {
@@ -139,11 +139,11 @@
               "total": 9
             },
             "D3": {
-              "pass": 2,
+              "pass": 3,
               "total": 3
             },
             "D2": {
-              "pass": 0,
+              "pass": 3,
               "total": 9
             },
             "D2R": {
@@ -151,23 +151,23 @@
               "total": 2
             }
           },
-          "rederivations": 115,
-          "toolCalls": 731
+          "rederivations": 106,
+          "toolCalls": 717
         },
         "sbl-rt-07": {
           "tasks": 150,
           "tasksPassed": 119,
           "classes": {
             "C": {
-              "pass": 145,
+              "pass": 140,
               "total": 156
             },
             "D4": {
-              "pass": 0,
+              "pass": 3,
               "total": 9
             },
             "D3": {
-              "pass": 2,
+              "pass": 3,
               "total": 3
             },
             "D2": {
@@ -175,7 +175,7 @@
               "total": 9
             },
             "D1": {
-              "pass": 3,
+              "pass": 2,
               "total": 3
             },
             "D2R": {
@@ -183,20 +183,159 @@
               "total": 2
             }
           },
-          "rederivations": 121,
-          "toolCalls": 660
+          "rederivations": 185,
+          "toolCalls": 821
+        }
+      }
+    },
+    "mem0": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 394,
+        "classes": {
+          "C": {
+            "pass": 442,
+            "total": 468,
+            "rate": 0.9444444444444444
+          },
+          "D2": {
+            "pass": 9,
+            "total": 27,
+            "rate": 0.3333333333333333
+          },
+          "D1": {
+            "pass": 8,
+            "total": 9,
+            "rate": 0.8888888888888888
+          },
+          "D3": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D4": {
+            "pass": 15,
+            "total": 27,
+            "rate": 0.5555555555555556
+          },
+          "D2R": {
+            "pass": 0,
+            "total": 6,
+            "rate": 0
+          }
+        },
+        "rederivations": 333,
+        "toolCalls": 2278,
+        "taskRate": 0.8755555555555555
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 128,
+          "classes": {
+            "C": {
+              "pass": 150,
+              "total": 156
+            },
+            "D2": {
+              "pass": 1,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 3,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 88,
+          "toolCalls": 775
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 144,
+          "classes": {
+            "C": {
+              "pass": 153,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 92,
+          "toolCalls": 763
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 122,
+          "classes": {
+            "C": {
+              "pass": 139,
+              "total": 156
+            },
+            "D4": {
+              "pass": 3,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 0,
+              "total": 9
+            },
+            "D1": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 0,
+              "total": 2
+            }
+          },
+          "rederivations": 153,
+          "toolCalls": 740
         }
       }
     },
     "STM-only": {
       "overall": {
         "tasks": 450,
-        "tasksPassed": 431,
+        "tasksPassed": 423,
         "classes": {
           "C": {
-            "pass": 448,
+            "pass": 441,
             "total": 468,
-            "rate": 0.9572649572649573
+            "rate": 0.9423076923076923
           },
           "D2": {
             "pass": 26,
@@ -214,9 +353,9 @@
             "rate": 1
           },
           "D4": {
-            "pass": 25,
+            "pass": 27,
             "total": 27,
-            "rate": 0.9259259259259259
+            "rate": 1
           },
           "D2R": {
             "pass": 6,
@@ -224,426 +363,9 @@
             "rate": 1
           }
         },
-        "rederivations": 232,
-        "toolCalls": 2173,
-        "taskRate": 0.9577777777777777
-      },
-      "sessions": {
-        "sbl-sc-05": {
-          "tasks": 150,
-          "tasksPassed": 147,
-          "classes": {
-            "C": {
-              "pass": 153,
-              "total": 156
-            },
-            "D2": {
-              "pass": 8,
-              "total": 9
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D4": {
-              "pass": 9,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 63,
-          "toolCalls": 813
-        },
-        "sbl-id-08": {
-          "tasks": 150,
-          "tasksPassed": 148,
-          "classes": {
-            "C": {
-              "pass": 154,
-              "total": 156
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D4": {
-              "pass": 9,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 9,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 96,
-          "toolCalls": 729
-        },
-        "sbl-rt-07": {
-          "tasks": 150,
-          "tasksPassed": 136,
-          "classes": {
-            "C": {
-              "pass": 141,
-              "total": 156
-            },
-            "D4": {
-              "pass": 7,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 9,
-              "total": 9
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 73,
-          "toolCalls": 631
-        }
-      }
-    },
-    "STM-only-protect": {
-      "overall": {
-        "tasks": 450,
-        "tasksPassed": 421,
-        "classes": {
-          "C": {
-            "pass": 439,
-            "total": 468,
-            "rate": 0.938034188034188
-          },
-          "D2": {
-            "pass": 26,
-            "total": 27,
-            "rate": 0.9629629629629629
-          },
-          "D1": {
-            "pass": 8,
-            "total": 9,
-            "rate": 0.8888888888888888
-          },
-          "D3": {
-            "pass": 8,
-            "total": 9,
-            "rate": 0.8888888888888888
-          },
-          "D4": {
-            "pass": 26,
-            "total": 27,
-            "rate": 0.9629629629629629
-          },
-          "D2R": {
-            "pass": 6,
-            "total": 6,
-            "rate": 1
-          }
-        },
-        "rederivations": 278,
-        "toolCalls": 2173,
-        "taskRate": 0.9355555555555556
-      },
-      "sessions": {
-        "sbl-sc-05": {
-          "tasks": 150,
-          "tasksPassed": 130,
-          "classes": {
-            "C": {
-              "pass": 136,
-              "total": 156
-            },
-            "D2": {
-              "pass": 8,
-              "total": 9
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D3": {
-              "pass": 2,
-              "total": 3
-            },
-            "D4": {
-              "pass": 9,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 68,
-          "toolCalls": 675
-        },
-        "sbl-id-08": {
-          "tasks": 150,
-          "tasksPassed": 143,
-          "classes": {
-            "C": {
-              "pass": 149,
-              "total": 156
-            },
-            "D1": {
-              "pass": 2,
-              "total": 3
-            },
-            "D4": {
-              "pass": 8,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 9,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 112,
-          "toolCalls": 755
-        },
-        "sbl-rt-07": {
-          "tasks": 150,
-          "tasksPassed": 148,
-          "classes": {
-            "C": {
-              "pass": 154,
-              "total": 156
-            },
-            "D4": {
-              "pass": 9,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 9,
-              "total": 9
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 98,
-          "toolCalls": 743
-        }
-      }
-    },
-    "STM+WM": {
-      "overall": {
-        "tasks": 450,
-        "tasksPassed": 398,
-        "classes": {
-          "C": {
-            "pass": 418,
-            "total": 468,
-            "rate": 0.8931623931623932
-          },
-          "D2": {
-            "pass": 24,
-            "total": 27,
-            "rate": 0.8888888888888888
-          },
-          "D1": {
-            "pass": 9,
-            "total": 9,
-            "rate": 1
-          },
-          "D3": {
-            "pass": 9,
-            "total": 9,
-            "rate": 1
-          },
-          "D4": {
-            "pass": 23,
-            "total": 27,
-            "rate": 0.8518518518518519
-          },
-          "D2R": {
-            "pass": 5,
-            "total": 6,
-            "rate": 0.8333333333333334
-          }
-        },
-        "rederivations": 355,
-        "toolCalls": 2214,
-        "taskRate": 0.8844444444444445
-      },
-      "sessions": {
-        "sbl-sc-05": {
-          "tasks": 150,
-          "tasksPassed": 126,
-          "classes": {
-            "C": {
-              "pass": 132,
-              "total": 156
-            },
-            "D2": {
-              "pass": 7,
-              "total": 9
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D4": {
-              "pass": 6,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 94,
-          "toolCalls": 594
-        },
-        "sbl-id-08": {
-          "tasks": 150,
-          "tasksPassed": 138,
-          "classes": {
-            "C": {
-              "pass": 144,
-              "total": 156
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D4": {
-              "pass": 9,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 9,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 2,
-              "total": 2
-            }
-          },
-          "rederivations": 118,
-          "toolCalls": 839
-        },
-        "sbl-rt-07": {
-          "tasks": 150,
-          "tasksPassed": 134,
-          "classes": {
-            "C": {
-              "pass": 142,
-              "total": 156
-            },
-            "D4": {
-              "pass": 8,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 8,
-              "total": 9
-            },
-            "D1": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2R": {
-              "pass": 1,
-              "total": 2
-            }
-          },
-          "rederivations": 143,
-          "toolCalls": 781
-        }
-      }
-    },
-    "STM+WM-deterministic": {
-      "overall": {
-        "tasks": 450,
-        "tasksPassed": 407,
-        "classes": {
-          "C": {
-            "pass": 437,
-            "total": 468,
-            "rate": 0.9337606837606838
-          },
-          "D2": {
-            "pass": 18,
-            "total": 27,
-            "rate": 0.6666666666666666
-          },
-          "D1": {
-            "pass": 9,
-            "total": 9,
-            "rate": 1
-          },
-          "D3": {
-            "pass": 9,
-            "total": 9,
-            "rate": 1
-          },
-          "D4": {
-            "pass": 24,
-            "total": 27,
-            "rate": 0.8888888888888888
-          },
-          "D2R": {
-            "pass": 3,
-            "total": 6,
-            "rate": 0.5
-          }
-        },
-        "rederivations": 282,
-        "toolCalls": 2167,
-        "taskRate": 0.9044444444444445
+        "rederivations": 351,
+        "toolCalls": 2010,
+        "taskRate": 0.94
       },
       "sessions": {
         "sbl-sc-05": {
@@ -651,7 +373,7 @@
           "tasksPassed": 133,
           "classes": {
             "C": {
-              "pass": 141,
+              "pass": 139,
               "total": 156
             },
             "D2": {
@@ -667,20 +389,20 @@
               "total": 3
             },
             "D4": {
-              "pass": 6,
+              "pass": 9,
               "total": 9
             },
             "D2R": {
-              "pass": 1,
+              "pass": 2,
               "total": 2
             }
           },
-          "rederivations": 85,
-          "toolCalls": 662
+          "rederivations": 78,
+          "toolCalls": 581
         },
         "sbl-id-08": {
           "tasks": 150,
-          "tasksPassed": 143,
+          "tasksPassed": 145,
           "classes": {
             "C": {
               "pass": 151,
@@ -699,7 +421,7 @@
               "total": 3
             },
             "D2": {
-              "pass": 7,
+              "pass": 9,
               "total": 9
             },
             "D2R": {
@@ -707,15 +429,15 @@
               "total": 2
             }
           },
-          "rederivations": 143,
-          "toolCalls": 730
+          "rederivations": 158,
+          "toolCalls": 714
         },
         "sbl-rt-07": {
           "tasks": 150,
-          "tasksPassed": 131,
+          "tasksPassed": 145,
           "classes": {
             "C": {
-              "pass": 145,
+              "pass": 151,
               "total": 156
             },
             "D4": {
@@ -727,7 +449,7 @@
               "total": 3
             },
             "D2": {
-              "pass": 3,
+              "pass": 9,
               "total": 9
             },
             "D1": {
@@ -735,19 +457,297 @@
               "total": 3
             },
             "D2R": {
-              "pass": 0,
+              "pass": 2,
               "total": 2
             }
           },
-          "rederivations": 54,
-          "toolCalls": 775
+          "rederivations": 115,
+          "toolCalls": 715
         }
       }
     },
-    "mem0": {
+    "STM-only-protect": {
       "overall": {
         "tasks": 450,
-        "tasksPassed": 375,
+        "tasksPassed": 423,
+        "classes": {
+          "C": {
+            "pass": 440,
+            "total": 468,
+            "rate": 0.9401709401709402
+          },
+          "D2": {
+            "pass": 26,
+            "total": 27,
+            "rate": 0.9629629629629629
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 8,
+            "total": 9,
+            "rate": 0.8888888888888888
+          },
+          "D4": {
+            "pass": 25,
+            "total": 27,
+            "rate": 0.9259259259259259
+          },
+          "D2R": {
+            "pass": 6,
+            "total": 6,
+            "rate": 1
+          }
+        },
+        "rederivations": 169,
+        "toolCalls": 2269,
+        "taskRate": 0.94
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 142,
+          "classes": {
+            "C": {
+              "pass": 148,
+              "total": 156
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 50,
+          "toolCalls": 765
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 146,
+          "classes": {
+            "C": {
+              "pass": 152,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 67,
+          "toolCalls": 880
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 135,
+          "classes": {
+            "C": {
+              "pass": 140,
+              "total": 156
+            },
+            "D4": {
+              "pass": 7,
+              "total": 9
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 52,
+          "toolCalls": 624
+        }
+      }
+    },
+    "STM+WM": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 400,
+        "classes": {
+          "C": {
+            "pass": 414,
+            "total": 468,
+            "rate": 0.8846153846153846
+          },
+          "D2": {
+            "pass": 26,
+            "total": 27,
+            "rate": 0.9629629629629629
+          },
+          "D1": {
+            "pass": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "D3": {
+            "pass": 6,
+            "total": 9,
+            "rate": 0.6666666666666666
+          },
+          "D4": {
+            "pass": 26,
+            "total": 27,
+            "rate": 0.9629629629629629
+          },
+          "D2R": {
+            "pass": 6,
+            "total": 6,
+            "rate": 1
+          }
+        },
+        "rederivations": 217,
+        "toolCalls": 2372,
+        "taskRate": 0.8888888888888888
+      },
+      "sessions": {
+        "sbl-sc-05": {
+          "tasks": 150,
+          "tasksPassed": 128,
+          "classes": {
+            "C": {
+              "pass": 133,
+              "total": 156
+            },
+            "D2": {
+              "pass": 8,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 62,
+          "toolCalls": 681
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 137,
+          "classes": {
+            "C": {
+              "pass": 142,
+              "total": 156
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 64,
+          "toolCalls": 1010
+        },
+        "sbl-rt-07": {
+          "tasks": 150,
+          "tasksPassed": 135,
+          "classes": {
+            "C": {
+              "pass": 139,
+              "total": 156
+            },
+            "D4": {
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
+              "total": 9
+            },
+            "D1": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 91,
+          "toolCalls": 681
+        }
+      }
+    },
+    "STM+WM-deterministic": {
+      "overall": {
+        "tasks": 450,
+        "tasksPassed": 414,
         "classes": {
           "C": {
             "pass": 432,
@@ -755,46 +755,46 @@
             "rate": 0.9230769230769231
           },
           "D2": {
-            "pass": 6,
+            "pass": 26,
             "total": 27,
-            "rate": 0.2222222222222222
+            "rate": 0.9629629629629629
           },
           "D1": {
-            "pass": 8,
-            "total": 9,
-            "rate": 0.8888888888888888
-          },
-          "D3": {
             "pass": 9,
             "total": 9,
             "rate": 1
           },
+          "D3": {
+            "pass": 7,
+            "total": 9,
+            "rate": 0.7777777777777778
+          },
           "D4": {
-            "pass": 8,
+            "pass": 25,
             "total": 27,
-            "rate": 0.2962962962962963
+            "rate": 0.9259259259259259
           },
           "D2R": {
-            "pass": 0,
+            "pass": 6,
             "total": 6,
-            "rate": 0
+            "rate": 1
           }
         },
-        "rederivations": 362,
-        "toolCalls": 2175,
-        "taskRate": 0.8333333333333334
+        "rederivations": 227,
+        "toolCalls": 2247,
+        "taskRate": 0.92
       },
       "sessions": {
         "sbl-sc-05": {
           "tasks": 150,
-          "tasksPassed": 119,
+          "tasksPassed": 129,
           "classes": {
             "C": {
-              "pass": 139,
+              "pass": 134,
               "total": 156
             },
             "D2": {
-              "pass": 0,
+              "pass": 9,
               "total": 9
             },
             "D1": {
@@ -802,71 +802,71 @@
               "total": 3
             },
             "D3": {
+              "pass": 2,
+              "total": 3
+            },
+            "D4": {
+              "pass": 8,
+              "total": 9
+            },
+            "D2R": {
+              "pass": 2,
+              "total": 2
+            }
+          },
+          "rederivations": 50,
+          "toolCalls": 666
+        },
+        "sbl-id-08": {
+          "tasks": 150,
+          "tasksPassed": 145,
+          "classes": {
+            "C": {
+              "pass": 151,
+              "total": 156
+            },
+            "D1": {
               "pass": 3,
               "total": 3
             },
             "D4": {
-              "pass": 0,
+              "pass": 9,
+              "total": 9
+            },
+            "D3": {
+              "pass": 3,
+              "total": 3
+            },
+            "D2": {
+              "pass": 9,
               "total": 9
             },
             "D2R": {
-              "pass": 0,
+              "pass": 2,
               "total": 2
             }
           },
-          "rederivations": 74,
-          "toolCalls": 629
+          "rederivations": 58,
+          "toolCalls": 851
         },
-        "sbl-id-08": {
+        "sbl-rt-07": {
           "tasks": 150,
-          "tasksPassed": 133,
+          "tasksPassed": 140,
           "classes": {
             "C": {
               "pass": 147,
               "total": 156
             },
-            "D1": {
-              "pass": 2,
-              "total": 3
-            },
             "D4": {
-              "pass": 7,
+              "pass": 8,
               "total": 9
             },
             "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
-              "pass": 4,
-              "total": 9
-            },
-            "D2R": {
-              "pass": 0,
-              "total": 2
-            }
-          },
-          "rederivations": 135,
-          "toolCalls": 781
-        },
-        "sbl-rt-07": {
-          "tasks": 150,
-          "tasksPassed": 123,
-          "classes": {
-            "C": {
-              "pass": 146,
-              "total": 156
-            },
-            "D4": {
-              "pass": 1,
-              "total": 9
-            },
-            "D3": {
-              "pass": 3,
-              "total": 3
-            },
-            "D2": {
               "pass": 2,
+              "total": 3
+            },
+            "D2": {
+              "pass": 8,
               "total": 9
             },
             "D1": {
@@ -874,24 +874,24 @@
               "total": 3
             },
             "D2R": {
-              "pass": 0,
+              "pass": 2,
               "total": 2
             }
           },
-          "rederivations": 153,
-          "toolCalls": 765
+          "rederivations": 119,
+          "toolCalls": 730
         }
       }
     },
     "amnesic": {
       "overall": {
         "tasks": 450,
-        "tasksPassed": 354,
+        "tasksPassed": 349,
         "classes": {
           "C": {
-            "pass": 418,
+            "pass": 411,
             "total": 468,
-            "rate": 0.8931623931623932
+            "rate": 0.8782051282051282
           },
           "D2": {
             "pass": 0,
@@ -899,14 +899,14 @@
             "rate": 0
           },
           "D1": {
-            "pass": 8,
-            "total": 9,
-            "rate": 0.8888888888888888
-          },
-          "D3": {
             "pass": 9,
             "total": 9,
             "rate": 1
+          },
+          "D3": {
+            "pass": 5,
+            "total": 9,
+            "rate": 0.5555555555555556
           },
           "D4": {
             "pass": 8,
@@ -919,17 +919,17 @@
             "rate": 0
           }
         },
-        "rederivations": 720,
-        "toolCalls": 2513,
-        "taskRate": 0.7866666666666666
+        "rederivations": 639,
+        "toolCalls": 2421,
+        "taskRate": 0.7755555555555556
       },
       "sessions": {
         "sbl-sc-05": {
           "tasks": 150,
-          "tasksPassed": 115,
+          "tasksPassed": 117,
           "classes": {
             "C": {
-              "pass": 134,
+              "pass": 138,
               "total": 156
             },
             "D2": {
@@ -937,15 +937,15 @@
               "total": 9
             },
             "D1": {
-              "pass": 2,
-              "total": 3
-            },
-            "D3": {
               "pass": 3,
               "total": 3
             },
+            "D3": {
+              "pass": 2,
+              "total": 3
+            },
             "D4": {
-              "pass": 4,
+              "pass": 2,
               "total": 9
             },
             "D2R": {
@@ -953,12 +953,12 @@
               "total": 2
             }
           },
-          "rederivations": 210,
-          "toolCalls": 753
+          "rederivations": 216,
+          "toolCalls": 780
         },
         "sbl-id-08": {
           "tasks": 150,
-          "tasksPassed": 118,
+          "tasksPassed": 119,
           "classes": {
             "C": {
               "pass": 138,
@@ -969,7 +969,7 @@
               "total": 3
             },
             "D4": {
-              "pass": 4,
+              "pass": 5,
               "total": 9
             },
             "D3": {
@@ -985,23 +985,23 @@
               "total": 2
             }
           },
-          "rederivations": 215,
-          "toolCalls": 844
+          "rederivations": 190,
+          "toolCalls": 848
         },
         "sbl-rt-07": {
           "tasks": 150,
-          "tasksPassed": 121,
+          "tasksPassed": 113,
           "classes": {
             "C": {
-              "pass": 146,
+              "pass": 135,
               "total": 156
             },
             "D4": {
-              "pass": 0,
+              "pass": 1,
               "total": 9
             },
             "D3": {
-              "pass": 3,
+              "pass": 0,
               "total": 3
             },
             "D2": {
@@ -1017,8 +1017,8 @@
               "total": 2
             }
           },
-          "rederivations": 295,
-          "toolCalls": 916
+          "rederivations": 233,
+          "toolCalls": 793
         }
       }
     },
@@ -1028,29 +1028,29 @@
         "tasksPassed": 423,
         "classes": {
           "C": {
-            "pass": 442,
+            "pass": 452,
             "total": 468,
-            "rate": 0.9444444444444444
+            "rate": 0.9658119658119658
           },
           "D2": {
-            "pass": 24,
+            "pass": 25,
             "total": 27,
-            "rate": 0.8888888888888888
+            "rate": 0.9259259259259259
           },
           "D1": {
-            "pass": 8,
+            "pass": 7,
             "total": 9,
-            "rate": 0.8888888888888888
+            "rate": 0.7777777777777778
           },
           "D3": {
-            "pass": 9,
+            "pass": 3,
             "total": 9,
-            "rate": 1
+            "rate": 0.3333333333333333
           },
           "D4": {
-            "pass": 23,
+            "pass": 22,
             "total": 27,
-            "rate": 0.8518518518518519
+            "rate": 0.8148148148148148
           },
           "D2R": {
             "pass": 6,
@@ -1058,21 +1058,21 @@
             "rate": 1
           }
         },
-        "rederivations": 289,
-        "toolCalls": 1920,
+        "rederivations": 360,
+        "toolCalls": 2579,
         "taskRate": 0.94
       },
       "sessions": {
         "sbl-sc-05": {
           "tasks": 150,
-          "tasksPassed": 140,
+          "tasksPassed": 144,
           "classes": {
             "C": {
-              "pass": 146,
+              "pass": 155,
               "total": 156
             },
             "D2": {
-              "pass": 8,
+              "pass": 7,
               "total": 9
             },
             "D1": {
@@ -1084,7 +1084,7 @@
               "total": 3
             },
             "D4": {
-              "pass": 8,
+              "pass": 5,
               "total": 9
             },
             "D2R": {
@@ -1092,15 +1092,15 @@
               "total": 2
             }
           },
-          "rederivations": 124,
-          "toolCalls": 735
+          "rederivations": 165,
+          "toolCalls": 1166
         },
         "sbl-id-08": {
           "tasks": 150,
           "tasksPassed": 139,
           "classes": {
             "C": {
-              "pass": 146,
+              "pass": 149,
               "total": 156
             },
             "D1": {
@@ -1108,15 +1108,15 @@
               "total": 3
             },
             "D4": {
-              "pass": 7,
+              "pass": 9,
               "total": 9
             },
             "D3": {
-              "pass": 3,
+              "pass": 0,
               "total": 3
             },
             "D2": {
-              "pass": 8,
+              "pass": 9,
               "total": 9
             },
             "D2R": {
@@ -1124,15 +1124,15 @@
               "total": 2
             }
           },
-          "rederivations": 71,
-          "toolCalls": 595
+          "rederivations": 106,
+          "toolCalls": 723
         },
         "sbl-rt-07": {
           "tasks": 150,
-          "tasksPassed": 144,
+          "tasksPassed": 140,
           "classes": {
             "C": {
-              "pass": 150,
+              "pass": 148,
               "total": 156
             },
             "D4": {
@@ -1140,15 +1140,15 @@
               "total": 9
             },
             "D3": {
-              "pass": 3,
+              "pass": 0,
               "total": 3
             },
             "D2": {
-              "pass": 8,
+              "pass": 9,
               "total": 9
             },
             "D1": {
-              "pass": 3,
+              "pass": 2,
               "total": 3
             },
             "D2R": {
@@ -1156,8 +1156,8 @@
               "total": 2
             }
           },
-          "rederivations": 94,
-          "toolCalls": 590
+          "rederivations": 89,
+          "toolCalls": 690
         }
       }
     }
@@ -1166,13 +1166,13 @@
     "memory-off-llm": {
       "none": {
         "C": {
-          "pass": 426,
+          "pass": 444,
           "total": 468
         }
       },
       "before": {
         "D2": {
-          "pass": 0,
+          "pass": 3,
           "total": 9
         },
         "D1": {
@@ -1180,33 +1180,81 @@
           "total": 3
         },
         "D3": {
-          "pass": 2,
+          "pass": 3,
           "total": 3
         },
         "D4": {
-          "pass": 2,
+          "pass": 3,
           "total": 9
         }
       },
       "after": {
-        "D2": {
-          "pass": 0,
-          "total": 18
-        },
         "D2R": {
           "pass": 0,
           "total": 6
         },
         "D4": {
-          "pass": 2,
+          "pass": 7,
+          "total": 18
+        },
+        "D2": {
+          "pass": 0,
           "total": 18
         },
         "D1": {
-          "pass": 6,
+          "pass": 5,
           "total": 6
         },
         "D3": {
+          "pass": 6,
+          "total": 6
+        }
+      }
+    },
+    "mem0": {
+      "none": {
+        "C": {
+          "pass": 442,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
           "pass": 3,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 3,
+          "total": 3
+        },
+        "D4": {
+          "pass": 4,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2R": {
+          "pass": 0,
+          "total": 6
+        },
+        "D4": {
+          "pass": 11,
+          "total": 18
+        },
+        "D2": {
+          "pass": 6,
+          "total": 18
+        },
+        "D1": {
+          "pass": 5,
+          "total": 6
+        },
+        "D3": {
+          "pass": 6,
           "total": 6
         }
       }
@@ -1214,13 +1262,13 @@
     "STM-only": {
       "none": {
         "C": {
-          "pass": 448,
+          "pass": 441,
           "total": 468
         }
       },
       "before": {
         "D2": {
-          "pass": 8,
+          "pass": 9,
           "total": 9
         },
         "D1": {
@@ -1232,20 +1280,20 @@
           "total": 3
         },
         "D4": {
-          "pass": 8,
+          "pass": 9,
           "total": 9
         }
       },
       "after": {
-        "D2": {
-          "pass": 18,
-          "total": 18
-        },
         "D2R": {
           "pass": 6,
           "total": 6
         },
         "D4": {
+          "pass": 18,
+          "total": 18
+        },
+        "D2": {
           "pass": 17,
           "total": 18
         },
@@ -1262,103 +1310,7 @@
     "STM-only-protect": {
       "none": {
         "C": {
-          "pass": 439,
-          "total": 468
-        }
-      },
-      "before": {
-        "D2": {
-          "pass": 8,
-          "total": 9
-        },
-        "D1": {
-          "pass": 3,
-          "total": 3
-        },
-        "D3": {
-          "pass": 3,
-          "total": 3
-        },
-        "D4": {
-          "pass": 8,
-          "total": 9
-        }
-      },
-      "after": {
-        "D2": {
-          "pass": 18,
-          "total": 18
-        },
-        "D2R": {
-          "pass": 6,
-          "total": 6
-        },
-        "D4": {
-          "pass": 18,
-          "total": 18
-        },
-        "D1": {
-          "pass": 5,
-          "total": 6
-        },
-        "D3": {
-          "pass": 5,
-          "total": 6
-        }
-      }
-    },
-    "STM+WM": {
-      "none": {
-        "C": {
-          "pass": 418,
-          "total": 468
-        }
-      },
-      "before": {
-        "D2": {
-          "pass": 8,
-          "total": 9
-        },
-        "D1": {
-          "pass": 3,
-          "total": 3
-        },
-        "D3": {
-          "pass": 3,
-          "total": 3
-        },
-        "D4": {
-          "pass": 7,
-          "total": 9
-        }
-      },
-      "after": {
-        "D2": {
-          "pass": 16,
-          "total": 18
-        },
-        "D2R": {
-          "pass": 5,
-          "total": 6
-        },
-        "D4": {
-          "pass": 16,
-          "total": 18
-        },
-        "D1": {
-          "pass": 6,
-          "total": 6
-        },
-        "D3": {
-          "pass": 6,
-          "total": 6
-        }
-      }
-    },
-    "STM+WM-deterministic": {
-      "none": {
-        "C": {
-          "pass": 437,
+          "pass": 440,
           "total": 468
         }
       },
@@ -1381,16 +1333,16 @@
         }
       },
       "after": {
-        "D2": {
-          "pass": 10,
-          "total": 18
-        },
         "D2R": {
-          "pass": 3,
+          "pass": 6,
           "total": 6
         },
         "D4": {
-          "pass": 15,
+          "pass": 16,
+          "total": 18
+        },
+        "D2": {
+          "pass": 18,
           "total": 18
         },
         "D1": {
@@ -1398,12 +1350,60 @@
           "total": 6
         },
         "D3": {
-          "pass": 6,
+          "pass": 5,
           "total": 6
         }
       }
     },
-    "mem0": {
+    "STM+WM": {
+      "none": {
+        "C": {
+          "pass": 414,
+          "total": 468
+        }
+      },
+      "before": {
+        "D2": {
+          "pass": 8,
+          "total": 9
+        },
+        "D1": {
+          "pass": 3,
+          "total": 3
+        },
+        "D3": {
+          "pass": 2,
+          "total": 3
+        },
+        "D4": {
+          "pass": 9,
+          "total": 9
+        }
+      },
+      "after": {
+        "D2R": {
+          "pass": 6,
+          "total": 6
+        },
+        "D4": {
+          "pass": 17,
+          "total": 18
+        },
+        "D2": {
+          "pass": 18,
+          "total": 18
+        },
+        "D1": {
+          "pass": 6,
+          "total": 6
+        },
+        "D3": {
+          "pass": 4,
+          "total": 6
+        }
+      }
+    },
+    "STM+WM-deterministic": {
       "none": {
         "C": {
           "pass": 432,
@@ -1412,7 +1412,7 @@
       },
       "before": {
         "D2": {
-          "pass": 5,
+          "pass": 9,
           "total": 9
         },
         "D1": {
@@ -1420,33 +1420,33 @@
           "total": 3
         },
         "D3": {
-          "pass": 3,
+          "pass": 2,
           "total": 3
         },
         "D4": {
-          "pass": 3,
+          "pass": 8,
           "total": 9
         }
       },
       "after": {
-        "D2": {
-          "pass": 1,
-          "total": 18
-        },
         "D2R": {
-          "pass": 0,
+          "pass": 6,
           "total": 6
         },
         "D4": {
-          "pass": 5,
+          "pass": 17,
+          "total": 18
+        },
+        "D2": {
+          "pass": 17,
           "total": 18
         },
         "D1": {
-          "pass": 5,
+          "pass": 6,
           "total": 6
         },
         "D3": {
-          "pass": 6,
+          "pass": 5,
           "total": 6
         }
       }
@@ -1454,7 +1454,7 @@
     "amnesic": {
       "none": {
         "C": {
-          "pass": 418,
+          "pass": 411,
           "total": 468
         }
       },
@@ -1464,11 +1464,11 @@
           "total": 9
         },
         "D1": {
-          "pass": 2,
+          "pass": 3,
           "total": 3
         },
         "D3": {
-          "pass": 3,
+          "pass": 2,
           "total": 3
         },
         "D4": {
@@ -1477,10 +1477,6 @@
         }
       },
       "after": {
-        "D2": {
-          "pass": 0,
-          "total": 18
-        },
         "D2R": {
           "pass": 0,
           "total": 6
@@ -1489,12 +1485,16 @@
           "pass": 7,
           "total": 18
         },
+        "D2": {
+          "pass": 0,
+          "total": 18
+        },
         "D1": {
           "pass": 6,
           "total": 6
         },
         "D3": {
-          "pass": 6,
+          "pass": 3,
           "total": 6
         }
       }
@@ -1502,21 +1502,21 @@
     "oracle-notes": {
       "none": {
         "C": {
-          "pass": 442,
+          "pass": 452,
           "total": 468
         }
       },
       "before": {
         "D2": {
-          "pass": 8,
+          "pass": 7,
           "total": 9
         },
         "D1": {
-          "pass": 2,
+          "pass": 3,
           "total": 3
         },
         "D3": {
-          "pass": 3,
+          "pass": 1,
           "total": 3
         },
         "D4": {
@@ -1525,24 +1525,24 @@
         }
       },
       "after": {
-        "D2": {
-          "pass": 16,
-          "total": 18
-        },
         "D2R": {
           "pass": 6,
           "total": 6
         },
         "D4": {
-          "pass": 15,
+          "pass": 14,
+          "total": 18
+        },
+        "D2": {
+          "pass": 18,
           "total": 18
         },
         "D1": {
-          "pass": 6,
+          "pass": 4,
           "total": 6
         },
         "D3": {
-          "pass": 6,
+          "pass": 2,
           "total": 6
         }
       }
@@ -1551,16 +1551,16 @@
   "cost": {
     "memory-off-llm": {
       "main": {
-        "calls": 2712,
-        "inputTokens": 49439183,
-        "cachedInputTokens": 26541312,
-        "outputTokens": 1284983
+        "calls": 3330,
+        "inputTokens": 63204575,
+        "cachedInputTokens": 38740992,
+        "outputTokens": 871022
       },
       "workers": {
-        "calls": 481,
-        "inputTokens": 2207328,
-        "cachedInputTokens": 21313,
-        "outputTokens": 591612
+        "calls": 499,
+        "inputTokens": 2722416,
+        "cachedInputTokens": 57405,
+        "outputTokens": 810880
       },
       "embeddings": {
         "calls": 0,
@@ -1569,148 +1569,148 @@
       "thirdPartyErrors": 0,
       "overflows": 0,
       "providerErrors": 0,
-      "deferredToolCalls": 51,
-      "wholeRunTokens": 53523106,
-      "wholeRunTokensPerPassedTask": 151195,
-      "cacheShare": 0.5143159622147564,
-      "simulatedPrefixShare": 0.8663452382058118
-    },
-    "STM-only": {
-      "main": {
-        "calls": 2654,
-        "inputTokens": 59776608,
-        "cachedInputTokens": 24147456,
-        "outputTokens": 719383
-      },
-      "workers": {
-        "calls": 559,
-        "inputTokens": 8846047,
-        "cachedInputTokens": 970496,
-        "outputTokens": 625057
-      },
-      "embeddings": {
-        "calls": 0,
-        "inputTokens": 0
-      },
-      "thirdPartyErrors": 0,
-      "overflows": 0,
-      "providerErrors": 0,
-      "deferredToolCalls": 124,
-      "wholeRunTokens": 69967095,
-      "wholeRunTokensPerPassedTask": 162337,
-      "cacheShare": 0.36603002317529104,
-      "simulatedPrefixShare": 0.8893593548116893
-    },
-    "STM-only-protect": {
-      "main": {
-        "calls": 2679,
-        "inputTokens": 59416120,
-        "cachedInputTokens": 24287488,
-        "outputTokens": 811139
-      },
-      "workers": {
-        "calls": 565,
-        "inputTokens": 8999182,
-        "cachedInputTokens": 974676,
-        "outputTokens": 668289
-      },
-      "embeddings": {
-        "calls": 0,
-        "inputTokens": 0
-      },
-      "thirdPartyErrors": 0,
-      "overflows": 0,
-      "providerErrors": 0,
-      "deferredToolCalls": 76,
-      "wholeRunTokens": 69894730,
-      "wholeRunTokensPerPassedTask": 166021,
-      "cacheShare": 0.36924727745848435,
-      "simulatedPrefixShare": 0.8839996178700865
-    },
-    "STM+WM": {
-      "main": {
-        "calls": 2753,
-        "inputTokens": 52914410,
-        "cachedInputTokens": 30829824,
-        "outputTokens": 1174016
-      },
-      "workers": {
-        "calls": 654,
-        "inputTokens": 9076785,
-        "cachedInputTokens": 1202943,
-        "outputTokens": 830577
-      },
-      "embeddings": {
-        "calls": 0,
-        "inputTokens": 0
-      },
-      "thirdPartyErrors": 0,
-      "overflows": 0,
-      "providerErrors": 1,
-      "deferredToolCalls": 61,
-      "wholeRunTokens": 63995788,
-      "wholeRunTokensPerPassedTask": 160793,
-      "cacheShare": 0.5167309163825604,
-      "simulatedPrefixShare": 0.8852579125470632
-    },
-    "STM+WM-deterministic": {
-      "main": {
-        "calls": 2729,
-        "inputTokens": 54330484,
-        "cachedInputTokens": 30676224,
-        "outputTokens": 876228
-      },
-      "workers": {
-        "calls": 623,
-        "inputTokens": 8219104,
-        "cachedInputTokens": 1103967,
-        "outputTokens": 686318
-      },
-      "embeddings": {
-        "calls": 0,
-        "inputTokens": 0
-      },
-      "thirdPartyErrors": 0,
-      "overflows": 0,
-      "providerErrors": 0,
-      "deferredToolCalls": 72,
-      "wholeRunTokens": 64112134,
-      "wholeRunTokensPerPassedTask": 157524,
-      "cacheShare": 0.5080799413099252,
-      "simulatedPrefixShare": 0.8957694597837967
+      "deferredToolCalls": 59,
+      "wholeRunTokens": 67608893,
+      "wholeRunTokensPerPassedTask": 177451,
+      "cacheShare": 0.5885055030040731,
+      "simulatedPrefixShare": 0.8924193952889496
     },
     "mem0": {
       "main": {
-        "calls": 2644,
-        "inputTokens": 49834177,
-        "cachedInputTokens": 25238272,
-        "outputTokens": 1165392
+        "calls": 2746,
+        "inputTokens": 52388430,
+        "cachedInputTokens": 24663040,
+        "outputTokens": 938317
       },
       "workers": {
-        "calls": 934,
-        "inputTokens": 6085096,
-        "cachedInputTokens": 3270542,
-        "outputTokens": 979303
+        "calls": 967,
+        "inputTokens": 6493214,
+        "cachedInputTokens": 3335163,
+        "outputTokens": 1194986
       },
       "embeddings": {
-        "calls": 2280,
-        "inputTokens": 165701
+        "calls": 2304,
+        "inputTokens": 169494
       },
       "thirdPartyErrors": 0,
-      "overflows": 4,
+      "overflows": 0,
       "providerErrors": 0,
-      "deferredToolCalls": 66,
-      "wholeRunTokens": 58229669,
-      "wholeRunTokensPerPassedTask": 155279,
-      "cacheShare": 0.5098208984226243,
-      "simulatedPrefixShare": 0.7128330361184461
+      "deferredToolCalls": 43,
+      "wholeRunTokens": 61184441,
+      "wholeRunTokensPerPassedTask": 155290,
+      "cacheShare": 0.4754996820401278,
+      "simulatedPrefixShare": 0.7256389576188327
+    },
+    "STM-only": {
+      "main": {
+        "calls": 2500,
+        "inputTokens": 54999275,
+        "cachedInputTokens": 18335616,
+        "outputTokens": 799006
+      },
+      "workers": {
+        "calls": 569,
+        "inputTokens": 9148418,
+        "cachedInputTokens": 952570,
+        "outputTokens": 657539
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 36,
+      "wholeRunTokens": 65604238,
+      "wholeRunTokensPerPassedTask": 155093,
+      "cacheShare": 0.3006840168047821,
+      "simulatedPrefixShare": 0.8740552672075471
+    },
+    "STM-only-protect": {
+      "main": {
+        "calls": 2769,
+        "inputTokens": 60154062,
+        "cachedInputTokens": 21211648,
+        "outputTokens": 814495
+      },
+      "workers": {
+        "calls": 544,
+        "inputTokens": 8709788,
+        "cachedInputTokens": 888478,
+        "outputTokens": 651907
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 94,
+      "wholeRunTokens": 70330252,
+      "wholeRunTokensPerPassedTask": 166265,
+      "cacheShare": 0.32092492650352833,
+      "simulatedPrefixShare": 0.8859136114979415
+    },
+    "STM+WM": {
+      "main": {
+        "calls": 2964,
+        "inputTokens": 61445459,
+        "cachedInputTokens": 29965568,
+        "outputTokens": 1141230
+      },
+      "workers": {
+        "calls": 655,
+        "inputTokens": 10423383,
+        "cachedInputTokens": 1208930,
+        "outputTokens": 783853
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 42,
+      "wholeRunTokens": 73793925,
+      "wholeRunTokensPerPassedTask": 184485,
+      "cacheShare": 0.4337693099326687,
+      "simulatedPrefixShare": 0.9053117045526519
+    },
+    "STM+WM-deterministic": {
+      "main": {
+        "calls": 2759,
+        "inputTokens": 59192526,
+        "cachedInputTokens": 28443648,
+        "outputTokens": 909938
+      },
+      "workers": {
+        "calls": 599,
+        "inputTokens": 9310403,
+        "cachedInputTokens": 1076845,
+        "outputTokens": 678099
+      },
+      "embeddings": {
+        "calls": 0,
+        "inputTokens": 0
+      },
+      "thirdPartyErrors": 0,
+      "overflows": 0,
+      "providerErrors": 0,
+      "deferredToolCalls": 39,
+      "wholeRunTokens": 70090966,
+      "wholeRunTokensPerPassedTask": 169302,
+      "cacheShare": 0.43093767567223296,
+      "simulatedPrefixShare": 0.9072268987752664
     },
     "amnesic": {
       "main": {
-        "calls": 3416,
-        "inputTokens": 36774141,
-        "cachedInputTokens": 26522624,
-        "outputTokens": 1419544
+        "calls": 3321,
+        "inputTokens": 34021602,
+        "cachedInputTokens": 24432896,
+        "outputTokens": 1473986
       },
       "workers": {
         "calls": 0,
@@ -1724,25 +1724,25 @@
       },
       "thirdPartyErrors": 0,
       "overflows": 0,
-      "providerErrors": 3,
-      "deferredToolCalls": 422,
-      "wholeRunTokens": 38193685,
-      "wholeRunTokensPerPassedTask": 107892,
-      "cacheShare": 0.7212302797229172,
-      "simulatedPrefixShare": 0.8302611140104019
+      "providerErrors": 0,
+      "deferredToolCalls": 433,
+      "wholeRunTokens": 35495588,
+      "wholeRunTokensPerPassedTask": 101707,
+      "cacheShare": 0.7181583042444621,
+      "simulatedPrefixShare": 0.8269362817463122
     },
     "oracle-notes": {
       "main": {
-        "calls": 2390,
-        "inputTokens": 45220940,
-        "cachedInputTokens": 26251008,
-        "outputTokens": 1001279
+        "calls": 3048,
+        "inputTokens": 59548685,
+        "cachedInputTokens": 34046720,
+        "outputTokens": 717371
       },
       "workers": {
-        "calls": 457,
-        "inputTokens": 2194615,
-        "cachedInputTokens": 21524,
-        "outputTokens": 668726
+        "calls": 480,
+        "inputTokens": 2543334,
+        "cachedInputTokens": 43888,
+        "outputTokens": 821056
       },
       "embeddings": {
         "calls": 0,
@@ -1750,174 +1750,237 @@
       },
       "thirdPartyErrors": 0,
       "overflows": 0,
-      "providerErrors": 2,
-      "deferredToolCalls": 55,
-      "wholeRunTokens": 49085560,
-      "wholeRunTokensPerPassedTask": 116042,
-      "cacheShare": 0.5540909939786638,
-      "simulatedPrefixShare": 0.8478130011791188
+      "providerErrors": 0,
+      "deferredToolCalls": 76,
+      "wholeRunTokens": 63630446,
+      "wholeRunTokensPerPassedTask": 150427,
+      "cacheShare": 0.5490336527791116,
+      "simulatedPrefixShare": 0.8822580163377369
     }
   },
   "faults": {
     "memory-off-llm": [],
+    "mem0": [],
     "STM-only": [],
     "STM-only-protect": [],
     "STM+WM": [],
     "STM+WM-deterministic": [],
-    "mem0": [],
     "amnesic": [],
     "oracle-notes": []
   },
   "pressure": {
     "STM-only": {
       "sbl-sc-05": {
-        "firstOverflowTask": 102,
+        "firstOverflowTask": 99,
         "firstWmPassTask": null,
         "wmPasses": 0,
-        "leftOutProtected": 5,
+        "leftOutProtected": 2,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 13334,
-        "maxActiveStmTokens": 13004
+        "maxBlockRenderedTokens": 13488,
+        "maxActiveStmTokens": 12983
       },
       "sbl-id-08": {
-        "firstOverflowTask": 101,
+        "firstOverflowTask": 96,
         "firstWmPassTask": null,
         "wmPasses": 0,
-        "leftOutProtected": 7,
+        "leftOutProtected": 4,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 13398,
-        "maxActiveStmTokens": 13651
+        "maxBlockRenderedTokens": 13230,
+        "maxActiveStmTokens": 13732
       },
       "sbl-rt-07": {
-        "firstOverflowTask": 93,
+        "firstOverflowTask": 104,
         "firstWmPassTask": null,
         "wmPasses": 0,
-        "leftOutProtected": 6,
+        "leftOutProtected": 2,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 13283,
-        "maxActiveStmTokens": 13337
+        "maxBlockRenderedTokens": 13335,
+        "maxActiveStmTokens": 12927
       }
     },
     "STM-only-protect": {
       "sbl-sc-05": {
-        "firstOverflowTask": 108,
+        "firstOverflowTask": 95,
         "firstWmPassTask": null,
         "wmPasses": 0,
         "leftOutProtected": 0,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 13675,
-        "maxActiveStmTokens": 12502
+        "maxBlockRenderedTokens": 13498,
+        "maxActiveStmTokens": 13425
       },
       "sbl-id-08": {
-        "firstOverflowTask": 90,
+        "firstOverflowTask": 92,
         "firstWmPassTask": null,
         "wmPasses": 0,
         "leftOutProtected": 0,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 13308,
-        "maxActiveStmTokens": 14189
+        "maxBlockRenderedTokens": 13382,
+        "maxActiveStmTokens": 13767
       },
       "sbl-rt-07": {
-        "firstOverflowTask": 101,
+        "firstOverflowTask": 102,
         "firstWmPassTask": null,
         "wmPasses": 0,
         "leftOutProtected": 0,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 13354,
-        "maxActiveStmTokens": 13197
+        "maxBlockRenderedTokens": 13427,
+        "maxActiveStmTokens": 13392
       }
     },
     "STM+WM": {
       "sbl-sc-05": {
         "firstOverflowTask": null,
-        "firstWmPassTask": 32,
-        "wmPasses": 5,
+        "firstWmPassTask": 62,
+        "wmPasses": 2,
         "leftOutProtected": 0,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 8474,
-        "maxActiveStmTokens": 3200
+        "maxBlockRenderedTokens": 12520,
+        "maxActiveStmTokens": 7935
       },
       "sbl-id-08": {
-        "firstOverflowTask": null,
-        "firstWmPassTask": 31,
-        "wmPasses": 4,
-        "leftOutProtected": 0,
+        "firstOverflowTask": 150,
+        "firstWmPassTask": 58,
+        "wmPasses": 2,
+        "leftOutProtected": 4,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 6448,
-        "maxActiveStmTokens": 3107
+        "maxBlockRenderedTokens": 13495,
+        "maxActiveStmTokens": 8273
       },
       "sbl-rt-07": {
-        "firstOverflowTask": null,
-        "firstWmPassTask": 30,
-        "wmPasses": 4,
-        "leftOutProtected": 0,
+        "firstOverflowTask": 150,
+        "firstWmPassTask": 46,
+        "wmPasses": 2,
+        "leftOutProtected": 1,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 6062,
-        "maxActiveStmTokens": 3140
+        "maxBlockRenderedTokens": 13503,
+        "maxActiveStmTokens": 8308
       }
     },
     "STM+WM-deterministic": {
       "sbl-sc-05": {
         "firstOverflowTask": null,
-        "firstWmPassTask": 28,
-        "wmPasses": 4,
+        "firstWmPassTask": 55,
+        "wmPasses": 2,
         "leftOutProtected": 0,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 8116,
-        "maxActiveStmTokens": 3147
+        "maxBlockRenderedTokens": 13013,
+        "maxActiveStmTokens": 7447
       },
       "sbl-id-08": {
         "firstOverflowTask": null,
-        "firstWmPassTask": 31,
-        "wmPasses": 5,
+        "firstWmPassTask": 52,
+        "wmPasses": 2,
         "leftOutProtected": 0,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 8960,
-        "maxActiveStmTokens": 3099
+        "maxBlockRenderedTokens": 12883,
+        "maxActiveStmTokens": 7400
       },
       "sbl-rt-07": {
-        "firstOverflowTask": null,
-        "firstWmPassTask": 26,
-        "wmPasses": 4,
-        "leftOutProtected": 0,
+        "firstOverflowTask": 145,
+        "firstWmPassTask": 47,
+        "wmPasses": 2,
+        "leftOutProtected": 6,
         "rehearsalDrops": 0,
         "rehearsalDropsProtected": 0,
-        "maxBlockRenderedTokens": 8469,
-        "maxActiveStmTokens": 3189
+        "maxBlockRenderedTokens": 13657,
+        "maxActiveStmTokens": 8023
       }
     }
   },
-  "wallMs": 126151110,
+  "wallMs": 132226874,
   "plan": "218.5 Task 6",
   "model": "opencode-go/hy4-flash-free",
   "worker": "opencode-go/muse-spark-1.3-contributor",
-  "ruleHash": "f42e1fe00b3c7777ec0cd307ba91eede27f0624b9783878092e394ae68c872ea",
+  "ruleHash": "c64c5b9782c7d3af59dd9039d5481933a806e910a4271a5fa5b6003e0cd96de9",
+  "approvedAt": "2026-11-26T08:11:29Z",
   "rows": 24,
   "complete": true,
   "firstAfterTask": {
-    "sbl-sc-05": 96,
-    "sbl-id-08": 101,
-    "sbl-rt-07": 99
+    "sbl-sc-05": 113,
+    "sbl-id-08": 114,
+    "sbl-rt-07": 111
   },
-  "quotaWaitMs": 5400000,
+  "afterTasks": {
+    "sbl-sc-05": [
+      113,
+      115,
+      118,
+      119,
+      121,
+      123,
+      124,
+      126,
+      127,
+      128,
+      130,
+      134,
+      137,
+      138,
+      142,
+      144,
+      146,
+      147
+    ],
+    "sbl-id-08": [
+      114,
+      116,
+      118,
+      120,
+      123,
+      124,
+      125,
+      128,
+      130,
+      131,
+      133,
+      134,
+      139,
+      140,
+      143,
+      145,
+      148,
+      150
+    ],
+    "sbl-rt-07": [
+      111,
+      113,
+      115,
+      116,
+      117,
+      119,
+      120,
+      121,
+      123,
+      126,
+      128,
+      129,
+      134,
+      140,
+      141,
+      142,
+      143,
+      149
+    ]
+  },
+  "quotaWaitMs": 0,
   "wireUsage": {
-    "inputTokens": 453290637,
-    "outputTokens": 13503299
+    "inputTokens": 494305570,
+    "outputTokens": 13263685
   },
   "liveGuardrails": {
     "complete": true,
-    "pass": false,
+    "pass": true,
     "rows": [
       {
         "id": "oracle-notes-solvable",
@@ -1945,18 +2008,30 @@
       },
       {
         "id": "G11-live",
-        "reached": 1,
+        "reached": 3,
         "sessions": 3,
         "min": 2,
-        "pass": false
+        "shareMin": 0.5,
+        "scoredShare": {
+          "sbl-sc-05": 1,
+          "sbl-id-08": 1,
+          "sbl-rt-07": 0.8888888888888888
+        },
+        "pass": true
       },
       {
         "id": "no-window-overflow",
-        "overflows": 4,
+        "overflowTasks": 0,
+        "overflows": 0,
         "max": 0,
-        "pass": false
+        "pass": true
       }
     ]
+  },
+  "pressureTasks": {
+    "sbl-sc-05": 109,
+    "sbl-id-08": 106,
+    "sbl-rt-07": 114
   },
   "comparisons": [
     {
@@ -1967,28 +2042,28 @@
       "metrics": {
         "task": {
           "n": 450,
-          "diff": -0.022222222222222223,
+          "diff": 0,
           "ci95": [
-            -0.11333333333333333,
-            0.08
+            -0.06666666666666667,
+            0.06
           ],
-          "p": 0.75,
+          "p": 1,
           "ci": [
-            -0.11333333333333333,
-            0.08
+            -0.06666666666666667,
+            0.06
           ],
           "level": 0.95
         },
         "D1": {
           "n": 9,
-          "diff": -0.1111111111111111,
+          "diff": 0,
           "ci95": [
-            -0.3333333333333333,
+            0,
             0
           ],
           "p": 1,
           "ci": [
-            -0.3333333333333333,
+            0,
             0
           ],
           "level": 0.95
@@ -2015,6 +2090,789 @@
             0
           ],
           "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": -0.07407407407407407,
+          "ci95": [
+            -0.2222222222222222,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.2222222222222222,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.002136752136752137,
+          "ci95": [
+            -0.07051282051282051,
+            0.057692307692307696
+          ],
+          "p": 1,
+          "ci": [
+            -0.07051282051282051,
+            0.057692307692307696
+          ],
+          "level": 0.95
+        },
+        "C-stable": {
+          "n": 228,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.041666666666666664,
+          "ci95": [
+            -0.125,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.125,
+            0
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 46,
+          "diff": -0.043478260869565216,
+          "ci95": [
+            -0.21428571428571427,
+            0.0625
+          ],
+          "p": 1,
+          "ci": [
+            -0.21428571428571427,
+            0.0625
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
+          "diff": 0.0625,
+          "ci95": [
+            0,
+            0.16666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.16666666666666666
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.2348016549202728
+    },
+    {
+      "a": "STM-only",
+      "b": "STM+WM",
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.051111111111111114,
+          "ci95": [
+            -0.06666666666666667,
+            -0.03333333333333333
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.06666666666666667,
+            -0.03333333333333333
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.3333333333333333,
+            -0.3333333333333333
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.3333333333333333,
+            -0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": -0.037037037037037035,
+          "ci95": [
+            -0.1111111111111111,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.1111111111111111,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.057692307692307696,
+          "ci95": [
+            -0.07692307692307693,
+            -0.038461538461538464
+          ],
+          "p": 0.25,
+          "ci": [
+            -0.07692307692307693,
+            -0.038461538461538464
+          ],
+          "level": 0.95
+        },
+        "C-stable": {
+          "n": 228,
+          "diff": -0.0043859649122807015,
+          "ci95": [
+            -0.010309278350515464,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.010309278350515464,
+            0
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.08333333333333333,
+          "ci95": [
+            -0.125,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.125,
+            0
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 46,
+          "diff": -0.043478260869565216,
+          "ci95": [
+            -0.0625,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.0625,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
+          "diff": 0.0625,
+          "ci95": [
+            0,
+            0.16666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.16666666666666666
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": -0.05555555555555555,
+          "ci95": [
+            -0.16666666666666666,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.16666666666666666,
+            0
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.05836635871068685
+    },
+    {
+      "a": "STM-only",
+      "b": "STM+WM-deterministic",
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.02,
+          "ci95": [
+            -0.03333333333333333,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.03333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0,
+          "ci95": [
+            -0.1111111111111111,
+            0.1111111111111111
+          ],
+          "p": 1,
+          "ci": [
+            -0.1111111111111111,
+            0.1111111111111111
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": -0.2222222222222222,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": -0.07407407407407407,
+          "ci95": [
+            -0.1111111111111111,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.1111111111111111,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.019230769230769232,
+          "ci95": [
+            -0.03205128205128205,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.03205128205128205,
+            0
+          ],
+          "level": 0.95
+        },
+        "C-stable": {
+          "n": 228,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": -0.08333333333333333,
+          "ci95": [
+            -0.25,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.25,
+            0
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 46,
+          "diff": -0.043478260869565216,
+          "ci95": [
+            -0.07142857142857142,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.07142857142857142,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
+          "diff": 0,
+          "ci95": [
+            -0.25,
+            0.16666666666666666
+          ],
+          "p": 1,
+          "ci": [
+            -0.25,
+            0.16666666666666666
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": -0.05555555555555555,
+          "ci95": [
+            -0.16666666666666666,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.16666666666666666,
+            0
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.06295090640790119
+    },
+    {
+      "a": "STM-only-protect",
+      "b": "STM+WM",
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": -0.051111111111111114,
+          "ci95": [
+            -0.09333333333333334,
+            0
+          ],
+          "p": 0.5,
+          "ci": [
+            -0.09333333333333334,
+            0
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": -0.2222222222222222,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 0.5,
           "ci": [
             -0.3333333333333333,
             0
@@ -2051,57 +2909,57 @@
         },
         "C": {
           "n": 468,
-          "diff": -0.019230769230769232,
+          "diff": -0.05555555555555555,
           "ci95": [
-            -0.10897435897435898,
-            0.08333333333333333
+            -0.09615384615384616,
+            -0.00641025641025641
           ],
-          "p": 0.75,
+          "p": 0.25,
           "ci": [
-            -0.10897435897435898,
-            0.08333333333333333
+            -0.09615384615384616,
+            -0.00641025641025641
           ],
           "level": 0.95
         },
         "C-stable": {
-          "n": 231,
-          "diff": 0,
+          "n": 228,
+          "diff": -0.0043859649122807015,
           "ci95": [
-            0,
+            -0.010309278350515464,
             0
           ],
           "p": 1,
           "ci": [
-            0,
+            -0.010309278350515464,
             0
           ],
           "level": 0.95
         },
         "before": {
           "n": 24,
-          "diff": 0,
+          "diff": -0.041666666666666664,
           "ci95": [
             -0.125,
-            0.125
+            0
           ],
           "p": 1,
           "ci": [
             -0.125,
-            0.125
+            0
           ],
           "level": 0.95
         },
         "after": {
-          "n": 48,
-          "diff": -0.020833333333333332,
+          "n": 46,
+          "diff": 0,
           "ci95": [
-            -0.0625,
-            0.0625
+            -0.125,
+            0.21428571428571427
           ],
           "p": 1,
           "ci": [
-            -0.0625,
-            0.0625
+            -0.125,
+            0.21428571428571427
           ],
           "level": 0.95
         },
@@ -2135,14 +2993,14 @@
         },
         "before:D3": {
           "n": 3,
-          "diff": 0,
+          "diff": -0.3333333333333333,
           "ci95": [
-            0,
+            -1,
             0
           ],
           "p": 1,
           "ci": [
-            0,
+            -1,
             0
           ],
           "level": 0.95
@@ -2151,32 +3009,32 @@
           "n": 9,
           "diff": 0,
           "ci95": [
-            -0.3333333333333333,
-            0.3333333333333333
+            0,
+            0
           ],
           "p": 1,
           "ci": [
-            -0.3333333333333333,
-            0.3333333333333333
+            0,
+            0
           ],
           "level": 0.95
         },
         "after:D1": {
           "n": 6,
-          "diff": -0.16666666666666666,
+          "diff": 0,
           "ci95": [
-            -0.5,
+            0,
             0
           ],
           "p": 1,
           "ci": [
-            -0.5,
+            0,
             0
           ],
           "level": 0.95
         },
         "after:D2": {
-          "n": 18,
+          "n": 16,
           "diff": 0,
           "ci95": [
             0,
@@ -2194,12 +3052,12 @@
           "diff": -0.16666666666666666,
           "ci95": [
             -0.5,
-            0
+            0.5
           ],
           "p": 1,
           "ci": [
             -0.5,
-            0
+            0.5
           ],
           "level": 0.95
         },
@@ -2207,36 +3065,36 @@
           "n": 18,
           "diff": 0.05555555555555555,
           "ci95": [
-            0,
-            0.16666666666666666
+            -0.16666666666666666,
+            0.3333333333333333
           ],
           "p": 1,
           "ci": [
-            0,
-            0.16666666666666666
+            -0.16666666666666666,
+            0.3333333333333333
           ],
           "level": 0.95
         }
       },
-      "detectableEffect": 0.1167327174213737
+      "detectableEffect": 0.2920699264315349
     },
     {
-      "a": "STM-only",
-      "b": "STM+WM",
+      "a": "STM-only-protect",
+      "b": "STM+WM-deterministic",
       "status": "compared",
       "sessions": 3,
       "metrics": {
         "task": {
           "n": 450,
-          "diff": -0.07333333333333333,
+          "diff": -0.02,
           "ci95": [
-            -0.14,
-            -0.013333333333333334
+            -0.08666666666666667,
+            0.03333333333333333
           ],
-          "p": 0.25,
+          "p": 0.75,
           "ci": [
-            -0.14,
-            -0.013333333333333334
+            -0.08666666666666667,
+            0.03333333333333333
           ],
           "level": 0.95
         },
@@ -2256,20 +3114,48 @@
         },
         "D2": {
           "n": 27,
-          "diff": -0.07407407407407407,
+          "diff": 0,
           "ci95": [
             -0.1111111111111111,
-            0
+            0.1111111111111111
           ],
-          "p": 0.5,
+          "p": 1,
           "ci": [
             -0.1111111111111111,
-            0
+            0.1111111111111111
           ],
           "level": 0.95
         },
         "D3": {
           "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0,
+          "ci95": [
+            -0.1111111111111111,
+            0.1111111111111111
+          ],
+          "p": 1,
+          "ci": [
+            -0.1111111111111111,
+            0.1111111111111111
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
           "diff": 0,
           "ci95": [
             0,
@@ -2282,58 +3168,30 @@
           ],
           "level": 0.95
         },
-        "D4": {
-          "n": 27,
-          "diff": -0.07407407407407407,
-          "ci95": [
-            -0.3333333333333333,
-            0.1111111111111111
-          ],
-          "p": 1,
-          "ci": [
-            -0.3333333333333333,
-            0.1111111111111111
-          ],
-          "level": 0.95
-        },
-        "D2R": {
-          "n": 6,
-          "diff": -0.16666666666666666,
-          "ci95": [
-            -0.5,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            -0.5,
-            0
-          ],
-          "level": 0.95
-        },
         "C": {
           "n": 468,
-          "diff": -0.0641025641025641,
+          "diff": -0.017094017094017096,
           "ci95": [
-            -0.1346153846153846,
-            0.00641025641025641
+            -0.08974358974358974,
+            0.04487179487179487
           ],
-          "p": 0.5,
+          "p": 0.75,
           "ci": [
-            -0.1346153846153846,
-            0.00641025641025641
+            -0.08974358974358974,
+            0.04487179487179487
           ],
           "level": 0.95
         },
         "C-stable": {
-          "n": 231,
-          "diff": -0.008658008658008658,
+          "n": 228,
+          "diff": 0,
           "ci95": [
-            -0.02040816326530612,
+            0,
             0
           ],
           "p": 1,
           "ci": [
-            -0.02040816326530612,
+            0,
             0
           ],
           "level": 0.95
@@ -2353,916 +3211,133 @@
           "level": 0.95
         },
         "after": {
-          "n": 48,
+          "n": 46,
+          "diff": 0,
+          "ci95": [
+            -0.125,
+            0.14285714285714285
+          ],
+          "p": 1,
+          "ci": [
+            -0.125,
+            0.14285714285714285
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": -0.3333333333333333,
+          "ci95": [
+            -1,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -1,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
           "diff": -0.0625,
           "ci95": [
-            -0.125,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.125,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D1": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D2": {
-          "n": 9,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D3": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D4": {
-          "n": 9,
-          "diff": -0.1111111111111111,
-          "ci95": [
-            -0.6666666666666666,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            -0.6666666666666666,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "after:D1": {
-          "n": 6,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "after:D2": {
-          "n": 18,
-          "diff": -0.1111111111111111,
-          "ci95": [
-            -0.16666666666666666,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.16666666666666666,
-            0
-          ],
-          "level": 0.95
-        },
-        "after:D3": {
-          "n": 6,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "after:D4": {
-          "n": 18,
-          "diff": -0.05555555555555555,
-          "ci95": [
-            -0.16666666666666666,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            -0.16666666666666666,
-            0
-          ],
-          "level": 0.95
-        }
-      },
-      "detectableEffect": 0.10109349873969993
-    },
-    {
-      "a": "STM-only",
-      "b": "STM+WM-deterministic",
-      "status": "compared",
-      "sessions": 3,
-      "metrics": {
-        "task": {
-          "n": 450,
-          "diff": -0.05333333333333334,
-          "ci95": [
-            -0.09333333333333334,
-            -0.03333333333333333
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.09333333333333334,
-            -0.03333333333333333
-          ],
-          "level": 0.95
-        },
-        "D1": {
-          "n": 9,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "D2": {
-          "n": 27,
-          "diff": -0.2962962962962963,
-          "ci95": [
-            -0.6666666666666666,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.6666666666666666,
-            0
-          ],
-          "level": 0.95
-        },
-        "D3": {
-          "n": 9,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "D4": {
-          "n": 27,
-          "diff": -0.037037037037037035,
-          "ci95": [
-            -0.3333333333333333,
-            0.2222222222222222
-          ],
-          "p": 1,
-          "ci": [
-            -0.3333333333333333,
-            0.2222222222222222
-          ],
-          "level": 0.95
-        },
-        "D2R": {
-          "n": 6,
-          "diff": -0.5,
-          "ci95": [
-            -1,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -1,
-            0
-          ],
-          "level": 0.95
-        },
-        "C": {
-          "n": 468,
-          "diff": -0.023504273504273504,
-          "ci95": [
-            -0.07692307692307693,
-            0.02564102564102564
-          ],
-          "p": 0.75,
-          "ci": [
-            -0.07692307692307693,
-            0.02564102564102564
-          ],
-          "level": 0.95
-        },
-        "C-stable": {
-          "n": 231,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": 0.041666666666666664,
-          "ci95": [
-            -0.125,
-            0.125
-          ],
-          "p": 1,
-          "ci": [
-            -0.125,
-            0.125
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": -0.20833333333333334,
-          "ci95": [
-            -0.3125,
-            -0.0625
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.3125,
-            -0.0625
-          ],
-          "level": 0.95
-        },
-        "before:D1": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D2": {
-          "n": 9,
-          "diff": 0,
-          "ci95": [
-            -0.3333333333333333,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            -0.3333333333333333,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "before:D3": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D4": {
-          "n": 9,
-          "diff": 0.1111111111111111,
-          "ci95": [
-            0,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "after:D1": {
-          "n": 6,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "after:D2": {
-          "n": 18,
-          "diff": -0.4444444444444444,
-          "ci95": [
-            -1,
-            -0.16666666666666666
-          ],
-          "p": 0.25,
-          "ci": [
-            -1,
-            -0.16666666666666666
-          ],
-          "level": 0.95
-        },
-        "after:D3": {
-          "n": 6,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "after:D4": {
-          "n": 18,
-          "diff": -0.1111111111111111,
-          "ci95": [
-            -0.5,
-            0.16666666666666666
-          ],
-          "p": 1,
-          "ci": [
-            -0.5,
-            0.16666666666666666
-          ],
-          "level": 0.95
-        }
-      },
-      "detectableEffect": 0.21044289909350572
-    },
-    {
-      "a": "STM-only-protect",
-      "b": "STM+WM",
-      "status": "compared",
-      "sessions": 3,
-      "metrics": {
-        "task": {
-          "n": 450,
-          "diff": -0.051111111111111114,
-          "ci95": [
-            -0.09333333333333334,
-            -0.02666666666666667
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.09333333333333334,
-            -0.02666666666666667
-          ],
-          "level": 0.95
-        },
-        "D1": {
-          "n": 9,
-          "diff": 0.1111111111111111,
-          "ci95": [
-            0,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "D2": {
-          "n": 27,
-          "diff": -0.07407407407407407,
-          "ci95": [
-            -0.1111111111111111,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.1111111111111111,
-            0
-          ],
-          "level": 0.95
-        },
-        "D3": {
-          "n": 9,
-          "diff": 0.1111111111111111,
-          "ci95": [
-            0,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "D4": {
-          "n": 27,
-          "diff": -0.1111111111111111,
-          "ci95": [
-            -0.3333333333333333,
-            0.1111111111111111
-          ],
-          "p": 0.75,
-          "ci": [
-            -0.3333333333333333,
-            0.1111111111111111
-          ],
-          "level": 0.95
-        },
-        "D2R": {
-          "n": 6,
-          "diff": -0.16666666666666666,
-          "ci95": [
-            -0.5,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            -0.5,
-            0
-          ],
-          "level": 0.95
-        },
-        "C": {
-          "n": 468,
-          "diff": -0.04487179487179487,
-          "ci95": [
-            -0.07692307692307693,
-            -0.02564102564102564
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.07692307692307693,
-            -0.02564102564102564
-          ],
-          "level": 0.95
-        },
-        "C-stable": {
-          "n": 231,
-          "diff": -0.008658008658008658,
-          "ci95": [
-            -0.02040816326530612,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            -0.02040816326530612,
-            0
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": -0.041666666666666664,
-          "ci95": [
             -0.25,
-            0.125
+            0
           ],
           "p": 1,
           "ci": [
             -0.25,
-            0.125
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": -0.041666666666666664,
-          "ci95": [
-            -0.125,
-            0.0625
-          ],
-          "p": 0.75,
-          "ci": [
-            -0.125,
-            0.0625
-          ],
-          "level": 0.95
-        },
-        "before:D1": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D2": {
-          "n": 9,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D3": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D4": {
-          "n": 9,
-          "diff": -0.1111111111111111,
-          "ci95": [
-            -0.6666666666666666,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            -0.6666666666666666,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "after:D1": {
-          "n": 6,
-          "diff": 0.16666666666666666,
-          "ci95": [
-            0,
-            0.5
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.5
-          ],
-          "level": 0.95
-        },
-        "after:D2": {
-          "n": 18,
-          "diff": -0.1111111111111111,
-          "ci95": [
-            -0.16666666666666666,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.16666666666666666,
             0
           ],
           "level": 0.95
         },
         "after:D3": {
           "n": 6,
-          "diff": 0.16666666666666666,
+          "diff": 0,
           "ci95": [
-            0,
+            -0.5,
             0.5
           ],
           "p": 1,
           "ci": [
-            0,
+            -0.5,
             0.5
           ],
           "level": 0.95
         },
         "after:D4": {
           "n": 18,
-          "diff": -0.1111111111111111,
+          "diff": 0.05555555555555555,
           "ci95": [
             -0.16666666666666666,
-            0
+            0.3333333333333333
           ],
-          "p": 0.5,
+          "p": 1,
           "ci": [
             -0.16666666666666666,
-            0
+            0.3333333333333333
           ],
           "level": 0.95
         }
       },
-      "detectableEffect": 0.1544228700808659
-    },
-    {
-      "a": "STM-only-protect",
-      "b": "STM+WM-deterministic",
-      "status": "compared",
-      "sessions": 3,
-      "metrics": {
-        "task": {
-          "n": 450,
-          "diff": -0.03111111111111111,
-          "ci95": [
-            -0.11333333333333333,
-            0.02
-          ],
-          "p": 1,
-          "ci": [
-            -0.11333333333333333,
-            0.02
-          ],
-          "level": 0.95
-        },
-        "D1": {
-          "n": 9,
-          "diff": 0.1111111111111111,
-          "ci95": [
-            0,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "D2": {
-          "n": 27,
-          "diff": -0.2962962962962963,
-          "ci95": [
-            -0.6666666666666666,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.6666666666666666,
-            0
-          ],
-          "level": 0.95
-        },
-        "D3": {
-          "n": 9,
-          "diff": 0.1111111111111111,
-          "ci95": [
-            0,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "D4": {
-          "n": 27,
-          "diff": -0.07407407407407407,
-          "ci95": [
-            -0.3333333333333333,
-            0.1111111111111111
-          ],
-          "p": 1,
-          "ci": [
-            -0.3333333333333333,
-            0.1111111111111111
-          ],
-          "level": 0.95
-        },
-        "D2R": {
-          "n": 6,
-          "diff": -0.5,
-          "ci95": [
-            -1,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -1,
-            0
-          ],
-          "level": 0.95
-        },
-        "C": {
-          "n": 468,
-          "diff": -0.004273504273504274,
-          "ci95": [
-            -0.057692307692307696,
-            0.03205128205128205
-          ],
-          "p": 1,
-          "ci": [
-            -0.057692307692307696,
-            0.03205128205128205
-          ],
-          "level": 0.95
-        },
-        "C-stable": {
-          "n": 231,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": 0.041666666666666664,
-          "ci95": [
-            0,
-            0.125
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.125
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": -0.1875,
-          "ci95": [
-            -0.375,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.375,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D1": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D2": {
-          "n": 9,
-          "diff": 0,
-          "ci95": [
-            -0.3333333333333333,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            -0.3333333333333333,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "before:D3": {
-          "n": 3,
-          "diff": 0,
-          "ci95": [
-            0,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0
-          ],
-          "level": 0.95
-        },
-        "before:D4": {
-          "n": 9,
-          "diff": 0.1111111111111111,
-          "ci95": [
-            0,
-            0.3333333333333333
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
-        "after:D1": {
-          "n": 6,
-          "diff": 0.16666666666666666,
-          "ci95": [
-            0,
-            0.5
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.5
-          ],
-          "level": 0.95
-        },
-        "after:D2": {
-          "n": 18,
-          "diff": -0.4444444444444444,
-          "ci95": [
-            -1,
-            -0.16666666666666666
-          ],
-          "p": 0.25,
-          "ci": [
-            -1,
-            -0.16666666666666666
-          ],
-          "level": 0.95
-        },
-        "after:D3": {
-          "n": 6,
-          "diff": 0.16666666666666666,
-          "ci95": [
-            0,
-            0.5
-          ],
-          "p": 1,
-          "ci": [
-            0,
-            0.5
-          ],
-          "level": 0.95
-        },
-        "after:D4": {
-          "n": 18,
-          "diff": -0.16666666666666666,
-          "ci95": [
-            -0.5,
-            0
-          ],
-          "p": 1,
-          "ci": [
-            -0.5,
-            0
-          ],
-          "level": 0.95
-        }
-      },
-      "detectableEffect": 0.30328049621909975
+      "detectableEffect": 0.21678933235397974
     },
     {
       "a": "memory-off-llm",
@@ -3272,19 +3347,47 @@
       "metrics": {
         "task": {
           "n": 450,
-          "diff": 0.1711111111111111,
+          "diff": 0.09333333333333334,
           "ci95": [
-            0.11333333333333333,
-            0.22
+            0.02666666666666667,
+            0.17333333333333334
           ],
           "p": 0.25,
           "ci": [
-            0.11333333333333333,
-            0.22
+            0.02666666666666667,
+            0.17333333333333334
           ],
           "level": 0.95
         },
         "D1": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.8518518518518519,
+          "ci95": [
+            0.6666666666666666,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.6666666666666666,
+            1
+          ],
+          "level": 0.95
+        },
+        "D3": {
           "n": 9,
           "diff": 0,
           "ci95": [
@@ -3298,45 +3401,17 @@
           ],
           "level": 0.95
         },
-        "D2": {
-          "n": 27,
-          "diff": 0.9629629629629629,
-          "ci95": [
-            0.8888888888888888,
-            1
-          ],
-          "p": 0.25,
-          "ci": [
-            0.8888888888888888,
-            1
-          ],
-          "level": 0.95
-        },
-        "D3": {
-          "n": 9,
-          "diff": 0.4444444444444444,
-          "ci95": [
-            0.3333333333333333,
-            0.6666666666666666
-          ],
-          "p": 0.25,
-          "ci": [
-            0.3333333333333333,
-            0.6666666666666666
-          ],
-          "level": 0.95
-        },
         "D4": {
           "n": 27,
-          "diff": 0.7777777777777778,
+          "diff": 0.6296296296296297,
           "ci95": [
-            0.6666666666666666,
-            0.8888888888888888
+            0.5555555555555556,
+            0.6666666666666666
           ],
           "p": 0.25,
           "ci": [
-            0.6666666666666666,
-            0.8888888888888888
+            0.5555555555555556,
+            0.6666666666666666
           ],
           "level": 0.95
         },
@@ -3356,57 +3431,57 @@
         },
         "C": {
           "n": 468,
-          "diff": 0.04700854700854701,
+          "diff": -0.00641025641025641,
           "ci95": [
-            -0.02564102564102564,
-            0.10256410256410256
+            -0.07692307692307693,
+            0.07051282051282051
           ],
-          "p": 0.5,
+          "p": 0.75,
           "ci": [
-            -0.02564102564102564,
-            0.10256410256410256
+            -0.07692307692307693,
+            0.07051282051282051
           ],
           "level": 0.95
         },
         "C-stable": {
-          "n": 231,
-          "diff": 0.004329004329004329,
+          "n": 228,
+          "diff": 0.0043859649122807015,
           "ci95": [
             0,
-            0.01020408163265306
+            0.010309278350515464
           ],
           "p": 1,
           "ci": [
             0,
-            0.01020408163265306
+            0.010309278350515464
           ],
           "level": 0.95
         },
         "before": {
           "n": 24,
-          "diff": 0.625,
+          "diff": 0.5,
           "ci95": [
-            0.5,
+            0,
             0.75
           ],
-          "p": 0.25,
+          "p": 0.5,
           "ci": [
-            0.5,
+            0,
             0.75
           ],
           "level": 0.95
         },
         "after": {
-          "n": 48,
-          "diff": 0.75,
+          "n": 46,
+          "diff": 0.5869565217391305,
           "ci95": [
-            0.6875,
-            0.8125
+            0.4375,
+            0.75
           ],
           "p": 0.25,
           "ci": [
-            0.6875,
-            0.8125
+            0.4375,
+            0.75
           ],
           "level": 0.95
         },
@@ -3426,29 +3501,29 @@
         },
         "before:D2": {
           "n": 9,
-          "diff": 0.8888888888888888,
+          "diff": 0.6666666666666666,
           "ci95": [
-            0.6666666666666666,
+            0,
             1
           ],
-          "p": 0.25,
+          "p": 0.5,
           "ci": [
-            0.6666666666666666,
+            0,
             1
           ],
           "level": 0.95
         },
         "before:D3": {
           "n": 3,
-          "diff": 0.3333333333333333,
+          "diff": 0,
           "ci95": [
             0,
-            1
+            0
           ],
           "p": 1,
           "ci": [
             0,
-            1
+            0
           ],
           "level": 0.95
         },
@@ -3456,17 +3531,45 @@
           "n": 9,
           "diff": 0.6666666666666666,
           "ci95": [
-            0.3333333333333333,
+            0,
             1
           ],
-          "p": 0.25,
+          "p": 0.5,
           "ci": [
-            0.3333333333333333,
+            0,
             1
           ],
           "level": 0.95
         },
         "after:D1": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.5
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
+          "diff": 0.9375,
+          "ci95": [
+            0.8333333333333334,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.8333333333333334,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
           "n": 6,
           "diff": 0,
           "ci95": [
@@ -3480,50 +3583,22 @@
           ],
           "level": 0.95
         },
-        "after:D2": {
-          "n": 18,
-          "diff": 1,
-          "ci95": [
-            1,
-            1
-          ],
-          "p": 0.25,
-          "ci": [
-            1,
-            1
-          ],
-          "level": 0.95
-        },
-        "after:D3": {
-          "n": 6,
-          "diff": 0.5,
-          "ci95": [
-            0,
-            1
-          ],
-          "p": 0.5,
-          "ci": [
-            0,
-            1
-          ],
-          "level": 0.95
-        },
         "after:D4": {
           "n": 18,
-          "diff": 0.8333333333333334,
+          "diff": 0.6111111111111112,
           "ci95": [
-            0.8333333333333334,
-            0.8333333333333334
+            0.3333333333333333,
+            1
           ],
           "p": 0.25,
           "ci": [
-            0.8333333333333334,
-            0.8333333333333334
+            0.3333333333333333,
+            1
           ],
           "level": 0.95
         }
       },
-      "detectableEffect": 0.10109349873969993
+      "detectableEffect": 0.25359192842522216
     },
     {
       "a": "memory-off-llm",
@@ -3533,19 +3608,47 @@
       "metrics": {
         "task": {
           "n": 450,
-          "diff": 0.14888888888888888,
+          "diff": 0.09333333333333334,
           "ci95": [
-            0.10666666666666667,
-            0.19333333333333333
+            0.08666666666666667,
+            0.10666666666666667
           ],
           "p": 0.25,
           "ci": [
-            0.10666666666666667,
-            0.19333333333333333
+            0.08666666666666667,
+            0.10666666666666667
           ],
           "level": 0.95
         },
         "D1": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.8518518518518519,
+          "ci95": [
+            0.6666666666666666,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.6666666666666666,
+            1
+          ],
+          "level": 0.95
+        },
+        "D3": {
           "n": 9,
           "diff": -0.1111111111111111,
           "ci95": [
@@ -3559,45 +3662,17 @@
           ],
           "level": 0.95
         },
-        "D2": {
-          "n": 27,
-          "diff": 0.9629629629629629,
-          "ci95": [
-            0.8888888888888888,
-            1
-          ],
-          "p": 0.25,
-          "ci": [
-            0.8888888888888888,
-            1
-          ],
-          "level": 0.95
-        },
-        "D3": {
-          "n": 9,
-          "diff": 0.3333333333333333,
-          "ci95": [
-            0.3333333333333333,
-            0.3333333333333333
-          ],
-          "p": 0.25,
-          "ci": [
-            0.3333333333333333,
-            0.3333333333333333
-          ],
-          "level": 0.95
-        },
         "D4": {
           "n": 27,
-          "diff": 0.8148148148148148,
+          "diff": 0.5555555555555556,
           "ci95": [
-            0.5555555555555556,
-            1
+            0.4444444444444444,
+            0.6666666666666666
           ],
           "p": 0.25,
           "ci": [
-            0.5555555555555556,
-            1
+            0.4444444444444444,
+            0.6666666666666666
           ],
           "level": 0.95
         },
@@ -3617,56 +3692,56 @@
         },
         "C": {
           "n": 468,
-          "diff": 0.027777777777777776,
+          "diff": -0.008547008547008548,
           "ci95": [
-            -0.00641025641025641,
-            0.057692307692307696
+            -0.019230769230769232,
+            0
           ],
           "p": 0.5,
           "ci": [
-            -0.00641025641025641,
-            0.057692307692307696
+            -0.019230769230769232,
+            0
           ],
           "level": 0.95
         },
         "C-stable": {
-          "n": 231,
-          "diff": 0.004329004329004329,
+          "n": 228,
+          "diff": 0.0043859649122807015,
           "ci95": [
             0,
-            0.01020408163265306
+            0.010309278350515464
           ],
           "p": 1,
           "ci": [
             0,
-            0.01020408163265306
+            0.010309278350515464
           ],
           "level": 0.95
         },
         "before": {
           "n": 24,
-          "diff": 0.625,
+          "diff": 0.4583333333333333,
           "ci95": [
-            0.375,
-            0.875
+            0,
+            0.75
           ],
-          "p": 0.25,
+          "p": 0.5,
           "ci": [
-            0.375,
-            0.875
+            0,
+            0.75
           ],
           "level": 0.95
         },
         "after": {
-          "n": 48,
-          "diff": 0.7291666666666666,
+          "n": 46,
+          "diff": 0.5434782608695652,
           "ci95": [
-            0.6875,
+            0.35714285714285715,
             0.75
           ],
           "p": 0.25,
           "ci": [
-            0.6875,
+            0.35714285714285715,
             0.75
           ],
           "level": 0.95
@@ -3687,29 +3762,29 @@
         },
         "before:D2": {
           "n": 9,
-          "diff": 0.8888888888888888,
+          "diff": 0.5555555555555556,
           "ci95": [
-            0.6666666666666666,
+            0,
             1
           ],
-          "p": 0.25,
+          "p": 0.5,
           "ci": [
-            0.6666666666666666,
+            0,
             1
           ],
           "level": 0.95
         },
         "before:D3": {
           "n": 3,
-          "diff": 0.3333333333333333,
+          "diff": 0,
           "ci95": [
             0,
-            1
+            0
           ],
           "p": 1,
           "ci": [
             0,
-            1
+            0
           ],
           "level": 0.95
         },
@@ -3729,20 +3804,20 @@
         },
         "after:D1": {
           "n": 6,
-          "diff": -0.16666666666666666,
+          "diff": 0.16666666666666666,
           "ci95": [
-            -0.5,
-            0
+            0,
+            0.5
           ],
           "p": 1,
           "ci": [
-            -0.5,
-            0
+            0,
+            0.5
           ],
           "level": 0.95
         },
         "after:D2": {
-          "n": 18,
+          "n": 16,
           "diff": 1,
           "ci95": [
             1,
@@ -3757,7 +3832,543 @@
         },
         "after:D3": {
           "n": 6,
-          "diff": 0.3333333333333333,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.5,
+          "ci95": [
+            0.16666666666666666,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.16666666666666666,
+            1
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.32163701691240165
+    },
+    {
+      "a": "mem0",
+      "b": "STM-only",
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": 0.06444444444444444,
+          "ci95": [
+            0.006666666666666667,
+            0.15333333333333332
+          ],
+          "p": 0.25,
+          "ci": [
+            0.006666666666666667,
+            0.15333333333333332
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.6296296296296297,
+          "ci95": [
+            0.1111111111111111,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.1111111111111111,
+            1
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.4444444444444444,
+          "ci95": [
+            0,
+            0.6666666666666666
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            1,
+            1
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.002136752136752137,
+          "ci95": [
+            -0.07051282051282051,
+            0.07692307692307693
+          ],
+          "p": 1,
+          "ci": [
+            -0.07051282051282051,
+            0.07692307692307693
+          ],
+          "level": 0.95
+        },
+        "C-stable": {
+          "n": 228,
+          "diff": 0.0043859649122807015,
+          "ci95": [
+            0,
+            0.015384615384615385
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.015384615384615385
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.4583333333333333,
+          "ci95": [
+            0.125,
+            0.625
+          ],
+          "p": 0.25,
+          "ci": [
+            0.125,
+            0.625
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 46,
+          "diff": 0.3695652173913043,
+          "ci95": [
+            0,
+            0.6428571428571429
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.6428571428571429
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.6666666666666666,
+          "ci95": [
+            0.3333333333333333,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.3333333333333333,
+            1
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0.5555555555555556,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.5
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
+          "diff": 0.5625,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.3888888888888889,
+          "ci95": [
+            0,
+            0.6666666666666666
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        }
+      },
+      "detectableEffect": 0.5459991269218539
+    },
+    {
+      "a": "mem0",
+      "b": "STM-only-protect",
+      "status": "compared",
+      "sessions": 3,
+      "metrics": {
+        "task": {
+          "n": 450,
+          "diff": 0.06444444444444444,
+          "ci95": [
+            0.013333333333333334,
+            0.09333333333333334
+          ],
+          "p": 0.25,
+          "ci": [
+            0.013333333333333334,
+            0.09333333333333334
+          ],
+          "level": 0.95
+        },
+        "D1": {
+          "n": 9,
+          "diff": 0.1111111111111111,
+          "ci95": [
+            0,
+            0.3333333333333333
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.3333333333333333
+          ],
+          "level": 0.95
+        },
+        "D2": {
+          "n": 27,
+          "diff": 0.6296296296296297,
+          "ci95": [
+            0.1111111111111111,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.1111111111111111,
+            1
+          ],
+          "level": 0.95
+        },
+        "D3": {
+          "n": 9,
+          "diff": -0.1111111111111111,
+          "ci95": [
+            -0.3333333333333333,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.3333333333333333,
+            0
+          ],
+          "level": 0.95
+        },
+        "D4": {
+          "n": 27,
+          "diff": 0.37037037037037035,
+          "ci95": [
+            0,
+            0.6666666666666666
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.6666666666666666
+          ],
+          "level": 0.95
+        },
+        "D2R": {
+          "n": 6,
+          "diff": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            1,
+            1
+          ],
+          "level": 0.95
+        },
+        "C": {
+          "n": 468,
+          "diff": -0.004273504273504274,
+          "ci95": [
+            -0.01282051282051282,
+            0.00641025641025641
+          ],
+          "p": 0.75,
+          "ci": [
+            -0.01282051282051282,
+            0.00641025641025641
+          ],
+          "level": 0.95
+        },
+        "C-stable": {
+          "n": 228,
+          "diff": 0.0043859649122807015,
+          "ci95": [
+            0,
+            0.015384615384615385
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.015384615384615385
+          ],
+          "level": 0.95
+        },
+        "before": {
+          "n": 24,
+          "diff": 0.4166666666666667,
+          "ci95": [
+            0.125,
+            0.625
+          ],
+          "p": 0.25,
+          "ci": [
+            0.125,
+            0.625
+          ],
+          "level": 0.95
+        },
+        "after": {
+          "n": 46,
+          "diff": 0.32608695652173914,
+          "ci95": [
+            0,
+            0.5625
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            0.5625
+          ],
+          "level": 0.95
+        },
+        "before:D1": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D2": {
+          "n": 9,
+          "diff": 0.5555555555555556,
+          "ci95": [
+            0.3333333333333333,
+            1
+          ],
+          "p": 0.25,
+          "ci": [
+            0.3333333333333333,
+            1
+          ],
+          "level": 0.95
+        },
+        "before:D3": {
+          "n": 3,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0
+          ],
+          "level": 0.95
+        },
+        "before:D4": {
+          "n": 9,
+          "diff": 0.5555555555555556,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D1": {
+          "n": 6,
+          "diff": 0.16666666666666666,
+          "ci95": [
+            0,
+            0.5
+          ],
+          "p": 1,
+          "ci": [
+            0,
+            0.5
+          ],
+          "level": 0.95
+        },
+        "after:D2": {
+          "n": 16,
+          "diff": 0.625,
+          "ci95": [
+            0,
+            1
+          ],
+          "p": 0.5,
+          "ci": [
+            0,
+            1
+          ],
+          "level": 0.95
+        },
+        "after:D3": {
+          "n": 6,
+          "diff": -0.16666666666666666,
+          "ci95": [
+            -0.5,
+            0
+          ],
+          "p": 1,
+          "ci": [
+            -0.5,
+            0
+          ],
+          "level": 0.95
+        },
+        "after:D4": {
+          "n": 18,
+          "diff": 0.2777777777777778,
           "ci95": [
             0,
             0.5
@@ -3768,47 +4379,33 @@
             0.5
           ],
           "level": 0.95
-        },
-        "after:D4": {
-          "n": 18,
-          "diff": 0.8888888888888888,
-          "ci95": [
-            0.8333333333333334,
-            1
-          ],
-          "p": 0.25,
-          "ci": [
-            0.8333333333333334,
-            1
-          ],
-          "level": 0.95
         }
       },
-      "detectableEffect": 0.05836635871068684
+      "detectableEffect": 0.47526892092987866
     }
   ],
   "verdict": {
-    "analysis": "session-bench-long-analysis-v2",
+    "analysis": "session-bench-long-analysis-v3",
     "step1": {
       "base": "STM-only",
       "candidate": "STM-only-protect",
       "status": "compared",
       "after": {
-        "n": 48,
-        "diff": -0.020833333333333332,
+        "n": 46,
+        "diff": -0.043478260869565216,
         "ci95": [
-          -0.0625,
+          -0.21428571428571427,
           0.0625
         ],
         "p": 1,
         "ci": [
-          -0.0625,
+          -0.21428571428571427,
           0.0625
         ],
         "level": 0.95
       },
       "control": {
-        "n": 231,
+        "n": 228,
         "diff": 0,
         "ci95": [
           0,
@@ -3828,65 +4425,65 @@
     },
     "step2": {
       "reference": "STM-only",
-      "referenceCostPerPassedTask": 162337,
+      "referenceCostPerPassedTask": 155093,
       "arms": [
         {
           "arm": "STM+WM",
           "status": "compared",
           "level": 0.975,
-          "adjustedP": 0.5,
+          "adjustedP": 1,
           "after": {
-            "n": 48,
-            "diff": -0.0625,
+            "n": 46,
+            "diff": -0.043478260869565216,
             "ci95": [
-              -0.125,
+              -0.0625,
               0
             ],
             "p": 0.5,
             "ci": [
-              -0.125,
+              -0.0625,
               0
             ],
             "level": 0.975
           },
           "control": {
-            "n": 231,
-            "diff": -0.008658008658008658,
+            "n": 228,
+            "diff": -0.0043859649122807015,
             "ci95": [
-              -0.02040816326530612,
+              -0.010309278350515464,
               0
             ],
             "p": 1,
             "ci": [
-              -0.02040816326530612,
+              -0.010309278350515464,
               0
             ],
             "level": 0.975
           },
           "task": {
             "n": 450,
-            "diff": -0.07333333333333333,
+            "diff": -0.051111111111111114,
             "ci95": [
-              -0.14,
-              -0.013333333333333334
+              -0.06666666666666667,
+              -0.03333333333333333
             ],
             "p": 0.25,
             "ci": [
-              -0.14,
-              -0.013333333333333334
+              -0.06666666666666667,
+              -0.03333333333333333
             ],
             "level": 0.95
           },
-          "costPerPassedTask": 160793,
-          "costRatio": 0.9904889211947985,
+          "costPerPassedTask": 184485,
+          "costRatio": 1.1895120991920975,
           "keeps": false,
           "underDropBound": true,
-          "detectableEffect": 0.10109349873969993,
+          "detectableEffect": 0.05836635871068685,
           "interaction": {
             "sessions": 3,
-            "diff": -0.020833333333333332,
+            "diff": 0.041666666666666664,
             "ci95": [
-              -0.1875,
+              -0.0625,
               0.125
             ]
           }
@@ -3895,23 +4492,23 @@
           "arm": "STM+WM-deterministic",
           "status": "compared",
           "level": 0.975,
-          "adjustedP": 0.5,
+          "adjustedP": 1,
           "after": {
-            "n": 48,
-            "diff": -0.20833333333333334,
+            "n": 46,
+            "diff": -0.043478260869565216,
             "ci95": [
-              -0.3125,
-              -0.0625
+              -0.07142857142857142,
+              0
             ],
-            "p": 0.25,
+            "p": 0.5,
             "ci": [
-              -0.3125,
-              -0.0625
+              -0.07142857142857142,
+              0
             ],
             "level": 0.975
           },
           "control": {
-            "n": 231,
+            "n": 228,
             "diff": 0,
             "ci95": [
               0,
@@ -3926,29 +4523,29 @@
           },
           "task": {
             "n": 450,
-            "diff": -0.05333333333333334,
+            "diff": -0.02,
             "ci95": [
-              -0.09333333333333334,
-              -0.03333333333333333
+              -0.03333333333333333,
+              0
             ],
-            "p": 0.25,
+            "p": 0.5,
             "ci": [
-              -0.09333333333333334,
-              -0.03333333333333333
+              -0.03333333333333333,
+              0
             ],
             "level": 0.95
           },
-          "costPerPassedTask": 157524,
-          "costRatio": 0.9703517990353401,
+          "costPerPassedTask": 169302,
+          "costRatio": 1.0916159981430495,
           "keeps": false,
           "underDropBound": true,
-          "detectableEffect": 0.21044289909350572,
+          "detectableEffect": 0.06295090640790119,
           "interaction": {
             "sessions": 3,
-            "diff": -0.25,
+            "diff": 0.0386904761904762,
             "ci95": [
-              -0.4375,
-              0.0625
+              -0.0625,
+              0.1785714285714286
             ]
           }
         }
@@ -3960,29 +4557,29 @@
     "stmAtLength": {
       "comparison": {
         "after": {
-          "n": 48,
-          "diff": 0.75,
+          "n": 46,
+          "diff": 0.5869565217391305,
           "ci95": [
-            0.6875,
-            0.8125
+            0.4375,
+            0.75
           ],
           "p": 0.25,
           "ci": [
-            0.6875,
-            0.8125
+            0.4375,
+            0.75
           ],
           "level": 0.95
         },
         "before": {
           "n": 24,
-          "diff": 0.625,
+          "diff": 0.5,
           "ci95": [
-            0.5,
+            0,
             0.75
           ],
-          "p": 0.25,
+          "p": 0.5,
           "ci": [
-            0.5,
+            0,
             0.75
           ],
           "level": 0.95
@@ -3990,244 +4587,148 @@
       },
       "finding": null
     },
-    "side": [
-      {
-        "arm": "STM-only",
-        "side": "mem0",
-        "task": {
-          "n": 450,
-          "diff": -0.12444444444444444,
-          "ci95": [
-            -0.18666666666666668,
-            -0.08666666666666667
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.18666666666666668,
-            -0.08666666666666667
-          ],
-          "level": 0.95
+    "step3": {
+      "reference": "STM-only",
+      "baselines": [
+        {
+          "baseline": "memory-off-llm",
+          "status": "compared",
+          "level": 0.975,
+          "adjustedP": 0.5,
+          "after": {
+            "n": 46,
+            "diff": 0.5869565217391305,
+            "ci95": [
+              0.4375,
+              0.75
+            ],
+            "p": 0.25,
+            "ci": [
+              0.4375,
+              0.75
+            ],
+            "level": 0.975
+          },
+          "before": {
+            "n": 24,
+            "diff": 0.5,
+            "ci95": [
+              0,
+              0.75
+            ],
+            "p": 0.5,
+            "ci": [
+              0,
+              0.75
+            ],
+            "level": 0.95
+          },
+          "control": {
+            "n": 228,
+            "diff": 0.0043859649122807015,
+            "ci95": [
+              0,
+              0.010309278350515464
+            ],
+            "p": 1,
+            "ci": [
+              0,
+              0.010309278350515464
+            ],
+            "level": 0.975
+          },
+          "task": {
+            "n": 450,
+            "diff": 0.09333333333333334,
+            "ci95": [
+              0.02666666666666667,
+              0.17333333333333334
+            ],
+            "p": 0.25,
+            "ci": [
+              0.02666666666666667,
+              0.17333333333333334
+            ],
+            "level": 0.95
+          },
+          "outcome": "beats"
         },
-        "after": {
-          "n": 48,
-          "diff": -0.625,
-          "ci95": [
-            -0.75,
-            -0.4375
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.75,
-            -0.4375
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": -0.3333333333333333,
-          "ci95": [
-            -0.625,
-            -0.125
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.625,
-            -0.125
-          ],
-          "level": 0.95
+        {
+          "baseline": "mem0",
+          "status": "compared",
+          "level": 0.975,
+          "adjustedP": 0.5,
+          "after": {
+            "n": 46,
+            "diff": 0.3695652173913043,
+            "ci95": [
+              0,
+              0.6428571428571429
+            ],
+            "p": 0.5,
+            "ci": [
+              0,
+              0.6428571428571429
+            ],
+            "level": 0.975
+          },
+          "before": {
+            "n": 24,
+            "diff": 0.4583333333333333,
+            "ci95": [
+              0.125,
+              0.625
+            ],
+            "p": 0.25,
+            "ci": [
+              0.125,
+              0.625
+            ],
+            "level": 0.95
+          },
+          "control": {
+            "n": 228,
+            "diff": 0.0043859649122807015,
+            "ci95": [
+              0,
+              0.015384615384615385
+            ],
+            "p": 1,
+            "ci": [
+              0,
+              0.015384615384615385
+            ],
+            "level": 0.975
+          },
+          "task": {
+            "n": 450,
+            "diff": 0.06444444444444444,
+            "ci95": [
+              0.006666666666666667,
+              0.15333333333333332
+            ],
+            "p": 0.25,
+            "ci": [
+              0.006666666666666667,
+              0.15333333333333332
+            ],
+            "level": 0.95
+          },
+          "outcome": "not-shown"
         }
-      },
-      {
-        "arm": "STM-only-protect",
-        "side": "mem0",
-        "task": {
-          "n": 450,
-          "diff": -0.10222222222222223,
-          "ci95": [
-            -0.16666666666666666,
-            -0.06666666666666667
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.16666666666666666,
-            -0.06666666666666667
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": -0.6041666666666666,
-          "ci95": [
-            -0.75,
-            -0.375
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.75,
-            -0.375
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": -0.3333333333333333,
-          "ci95": [
-            -0.625,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.625,
-            0
-          ],
-          "level": 0.95
-        }
-      },
-      {
-        "arm": "STM+WM",
-        "side": "mem0",
-        "task": {
-          "n": 450,
-          "diff": -0.051111111111111114,
-          "ci95": [
-            -0.07333333333333333,
-            -0.03333333333333333
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.07333333333333333,
-            -0.03333333333333333
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": -0.5625,
-          "ci95": [
-            -0.625,
-            -0.4375
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.625,
-            -0.4375
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": -0.2916666666666667,
-          "ci95": [
-            -0.375,
-            -0.125
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.375,
-            -0.125
-          ],
-          "level": 0.95
-        }
-      },
-      {
-        "arm": "STM+WM-deterministic",
-        "side": "mem0",
-        "task": {
-          "n": 450,
-          "diff": -0.07111111111111111,
-          "ci95": [
-            -0.09333333333333334,
-            -0.05333333333333334
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.09333333333333334,
-            -0.05333333333333334
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": -0.4166666666666667,
-          "ci95": [
-            -0.5,
-            -0.375
-          ],
-          "p": 0.25,
-          "ci": [
-            -0.5,
-            -0.375
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": -0.375,
-          "ci95": [
-            -0.75,
-            0
-          ],
-          "p": 0.5,
-          "ci": [
-            -0.75,
-            0
-          ],
-          "level": 0.95
-        }
-      },
-      {
-        "arm": "memory-off-llm",
-        "side": "mem0",
-        "task": {
-          "n": 450,
-          "diff": 0.04666666666666667,
-          "ci95": [
-            0.02666666666666667,
-            0.08
-          ],
-          "p": 0.25,
-          "ci": [
-            0.02666666666666667,
-            0.08
-          ],
-          "level": 0.95
-        },
-        "after": {
-          "n": 48,
-          "diff": 0.125,
-          "ci95": [
-            0,
-            0.3125
-          ],
-          "p": 0.5,
-          "ci": [
-            0,
-            0.3125
-          ],
-          "level": 0.95
-        },
-        "before": {
-          "n": 24,
-          "diff": 0.2916666666666667,
-          "ci95": [
-            0,
-            0.5
-          ],
-          "p": 0.5,
-          "ci": [
-            0,
-            0.5
-          ],
-          "level": 0.95
-        }
-      }
-    ],
+      ],
+      "rule": "The reference against each baseline (memory-off-llm: LLM compaction; mem0) on after dependency checks, Holm-adjusted over the two baselines. The memory system beats a baseline if the reference's lower bound is > 0 and its C-stable lower bound > -5 points. Dev sessions decide the configuration only; the claim is read on held-out sessions (a later rule)"
+    },
     "summary": {
       "reference": "STM-only",
       "evictionDefault": "relevance",
       "wm": "drop",
+      "baselines": {
+        "memory-off-llm": "beats",
+        "mem0": "not-shown"
+      },
       "stmAtLengthFinding": false
     }
   },
-  "finishedAt": "2026-11-25T23:58:38.607Z"
+  "finishedAt": "2026-11-26T16:41:52.780Z"
 }

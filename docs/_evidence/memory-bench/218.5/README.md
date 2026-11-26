@@ -6,7 +6,7 @@ Evidence for plan 218.5 (memory system: STM recording fixes and a long-session b
 | --- | --- | --- |
 | `stm-fixes-replay.json` | 1 | The 36-session replay of the STM recording fixes. |
 | `gates/owner-gate-long.json` | 2, 6, 7 | The owner's design decisions, the frozen rule `sessionBenchLong` with its hash, and the owner's approval of the hash. |
-| `session-bench-long-pilot.json` | 7 | The live pilot's report under rule `f42e1fe0`: 24 rows (smoke, calibration and the pilot stage on 3 sessions), the live guardrails (G11-live and no-overflow missed) and the pilot verdict. |
+| `session-bench-long-pilot.json` | 7 | The live pilot's report under rule `c64c5b97`: 24 rows (smoke, calibration and the pilot stage on 3 sessions), the live guardrails (all held) and the pilot verdict. |
 
 ## Task 7: the live pilot (rule `eb3b5269` held every live guardrail; rerun after the WM fixes)
 
@@ -31,6 +31,14 @@ After the `eb3b5269` pilot the owner ordered four fixes and a rerun of Task 7 fr
 
 The fixes made WM run early (first pass at tasks 26-32) and stay bounded, but letting WM judge finished task requests cost the user's rules: STM+WM-deterministic passed 18 of 27 D2 checks and 3 of 6 D2R checks against STM-only's 26 and 6. The 3-session verdict reads WM `drop` (STM+WM `after` -6.3 points, STM+WM-deterministic -20.8). Task 8 decides on the 12 dev sessions, after the owner's call on that fix and on the G11 margin. The plan's Task 7 notes hold the details.
 
-### The owner's calls after `f42e1fe0` (2026-11-26): rule `a7dd52a3`, awaiting approval
+### The owner's calls after `f42e1fe0` (2026-11-26): rules `a7dd52a3` and `c64c5b97`
 
 The owner set the objective: decide WM objectively, and show objectively whether the memory system beats simple compaction and mem0. Fix 1 is reverted (a user task request kept word for word stays out of WM batches). Benchmark version 3 puts every `after` dependent in tasks 111-150, and analysis v3 scores an `after` check only at or past STM-only's measured first overflow in its session plus 10 tasks. mem0 becomes a baseline, beside `memory-off-llm`, in a new verdict step. The no-overflow guardrail now counts tasks that ended on an overflow: `f42e1fe0`'s 4 mem0 overflows were compacted around and every task completed. The claims against the baselines will be read on held-out sessions after Task 8.
+
+The kernel's compaction vote then gained the request's instructions, context blocks and tool declarations (owner: "Fix this already"), and rule `c64c5b97` pins those kernel files. `a7dd52a3` was stopped in its smoke job with no row.
+
+### The `c64c5b97` pilot (2026-11-26): every live guardrail held
+
+24 rows, 494M input tokens, 0 faults, 0 overflows on any row. `oracle-notes` passed 94.0% of tasks; `amnesic` failed 100% of D2 and D2R and 70.4% of D4; STM-only's pool first overflowed at tasks 99, 96 and 104, so 100%, 100% and 89% of the `after` dependents were scored. Tasks passed: `STM-only` 94.0%, `STM-only-protect` 94.0%, `STM+WM-deterministic` 92.0%, `STM+WM` 88.9%, `mem0` 87.6%, `memory-off-llm` 84.7%, `amnesic` 77.6%, `oracle-notes` 94.0%.
+
+The 3-session verdict (not the decision): reference `STM-only`, eviction `relevance`; WM `drop` (both WM arms -4.3 points on pressured `after` checks, upper bounds 0, costs 1.09-1.19x); the reference beats `memory-off-llm` (`after` +58.7 points, lower bound +43.8) and is ahead of `mem0` (`after` +37.0) without a lower bound above 0. Three sessions cannot reach significance; Task 8 runs the 12 dev sessions and the held-out run carries the claims.
