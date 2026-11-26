@@ -34,6 +34,7 @@ import {
   WINDOW_TOKENS,
 } from "./generate.mjs";
 import { firstAfterTask } from "./instrument.mjs";
+import { PRESSURE_MARGIN_TASKS, pressureTasksFrom } from "./score.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../../..");
@@ -54,7 +55,11 @@ export const LIVE_GUARDRAILS = Object.freeze({
   amnesicFailRateMin: Object.freeze({ D2: 0.7, D4: 0.6, [REVOKE_CLASS]: 0.7 }),
   pressureArm: "STM-only",
   pressureSessionsMin: 2,
-  maxOverflows: 0,
+  /** Analysis v3 (owner, 2026-11-26): a session counts when this share of its `after` dependents is scored. */
+  pressuredAfterShareMin: 0.5,
+  pressureMarginTasks: PRESSURE_MARGIN_TASKS,
+  /** Tasks that ended on a window overflow, on any arm (overflows the kernel compacted around are reported). */
+  maxOverflowTasks: 0,
 });
 
 /**
@@ -280,21 +285,37 @@ export function liveLongGuardrails(report, spec = LIVE_GUARDRAILS) {
     const failRate = row?.total ? 1 - row.pass / row.total : null;
     rows.push({ id: `amnesic-fails-${cls}`, failRate, min, pass: failRate !== null && failRate >= min });
   }
-  const summaries = report.pressure?.[spec.pressureArm] ?? {};
-  const reached = sessions.filter((id) => {
-    const overflow = summaries[id]?.firstOverflowTask;
-    const firstAfter = report.firstAfterTask?.[id];
-    return typeof overflow === "number" && typeof firstAfter === "number" && overflow < firstAfter;
-  }).length;
+  // G11-live (analysis v3): the share of each session's `after` dependents at or past the pressure arm's first
+  // overflow plus the margin, the checks the `after` metric scores.
+  const from = pressureTasksFrom(report.pressure?.[spec.pressureArm] ?? {}, spec.pressureMarginTasks);
+  const scoredShare = Object.fromEntries(
+    sessions.map((id) => {
+      const tasks = report.afterTasks?.[id] ?? [];
+      const start = from[id];
+      return [id, tasks.length && typeof start === "number" ? tasks.filter((task) => task >= start).length / tasks.length : 0];
+    }),
+  );
+  const reached = sessions.filter((id) => scoredShare[id] >= spec.pressuredAfterShareMin).length;
   rows.push({
     id: "G11-live",
     reached,
     sessions: sessions.length,
     min: spec.pressureSessionsMin,
+    shareMin: spec.pressuredAfterShareMin,
+    scoredShare,
     pass: reached >= spec.pressureSessionsMin,
   });
   const overflows = Object.values(report.cost ?? {}).reduce((sum, cost) => sum + (cost.overflows ?? 0), 0);
-  rows.push({ id: "no-window-overflow", overflows, max: spec.maxOverflows, pass: overflows <= spec.maxOverflows });
+  const overflowTasks = Object.values(report.faults ?? {})
+    .flat()
+    .filter((fault) => fault.code === "context_overflow").length;
+  rows.push({
+    id: "no-window-overflow",
+    overflowTasks,
+    overflows,
+    max: spec.maxOverflowTasks,
+    pass: overflowTasks <= spec.maxOverflowTasks,
+  });
   return { complete, pass: complete && rows.every((row) => row.pass), rows };
 }
 

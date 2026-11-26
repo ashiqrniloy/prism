@@ -27,10 +27,32 @@ export const BUCKETS = Object.freeze(["before", "after"]);
 export const NOISY_JOBS = Object.freeze(["count-errors"]);
 /** The control metric: `C` checks of every job but {@link NOISY_JOBS}. */
 export const CONTROL_METRIC = "C-stable";
+/**
+ * The pressure-relative `after` bucket (analysis v3, owner 2026-11-26). WM can only help once STM's pool is past its
+ * bound, and the task where that happens moves with the memory worker's recording rate (Task 7: 75-90, then 93-102).
+ * So an `after` check is scored only at or past {@link PRESSURE_ARM}'s first pool overflow in its session plus
+ * {@link PRESSURE_MARGIN_TASKS}, and a session where that arm never overflowed scores no `after` check. `before` is
+ * unchanged. The rows keep their generator bucket; only the units leave the early checks out.
+ */
+export const PRESSURE_ARM = "STM-only";
+export const PRESSURE_MARGIN_TASKS = 10;
+
+/**
+ * The first task each session's `after` checks are scored from: `firstOverflowTask + margin` of the pressure arm's
+ * instrumentation summary (`report.pressure[PRESSURE_ARM]`), or null when it never overflowed.
+ */
+export function pressureTasksFrom(summaries = {}, margin = PRESSURE_MARGIN_TASKS) {
+  return Object.fromEntries(
+    Object.entries(summaries).map(([id, summary]) => [
+      id,
+      typeof summary?.firstOverflowTask === "number" ? summary.firstOverflowTask + margin : null,
+    ]),
+  );
+}
 
 /** The pre-registered analysis (G8). Positive `diff` means the second arm of a pair is better. */
 export const ANALYSIS_LONG = Object.freeze({
-  version: "session-bench-long-analysis-v2",
+  version: "session-bench-long-analysis-v3",
   unit: "check or task, paired by id across arms; sessions are the clusters",
   statistic:
     "pairedClusterPermutation (scripts/memory-bench/stats.mjs): cluster bootstrap interval of the mean paired difference, sign-flip p",
@@ -45,6 +67,8 @@ export const ANALYSIS_LONG = Object.freeze({
     ...BUCKETS.flatMap((b) => POOLED_CLASSES.map((cls) => `${b}:${cls}`)),
   ]),
   pooled: "before and after pool D1-D4 only (same class mix in both buckets); D2R is its own metric (after only)",
+  pressure:
+    "after (pooled, per class, and D2R) scores a check only at or past STM-only's first pool overflow in its session plus 10 tasks (pressureTasksFrom); a session where STM-only never overflowed scores no after check",
   control: "C-stable: the C checks of every job but count-errors (NOISY_JOBS); every check row of class C carries its task's job",
   comparisons: Object.freeze([
     ["STM-only", "STM-only-protect"],
@@ -54,10 +78,11 @@ export const ANALYSIS_LONG = Object.freeze({
     ["STM-only-protect", "STM+WM-deterministic"],
     ["memory-off-llm", "STM-only"],
     ["memory-off-llm", "STM-only-protect"],
+    ["mem0", "STM-only"],
+    ["mem0", "STM-only-protect"],
   ]),
-  sideArm: "mem0",
   reported:
-    "every arm's scores per class and bucket, every comparison above on every metric, each decision arm against mem0 (side, never read by the verdict), whole-run tokens per passed task, the pressure counts, and the effect detectable at N",
+    "every arm's scores per class and bucket, every comparison above on every metric, whole-run tokens per passed task, the pressure counts and the after checks each session scored, and the effect detectable at N",
 });
 
 /** The pre-registered decision (plan 218.5 Task 6; owner, Task 2: the three-way rule). Points are fractions. */
@@ -80,6 +105,13 @@ export const LONG_DECISION = Object.freeze({
     cost: "whole-run tokens (main and workers, input and output, plus embeddings) per passed task",
     text: "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C-stable lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides",
   }),
+  baselines: Object.freeze({
+    arms: Object.freeze(["memory-off-llm", "mem0"]),
+    metric: "after",
+    beatsLowerAbove: 0,
+    controlLowerAbove: -0.05,
+    text: "The reference against each baseline (memory-off-llm: LLM compaction; mem0) on after dependency checks, Holm-adjusted over the two baselines. The memory system beats a baseline if the reference's lower bound is > 0 and its C-stable lower bound > -5 points. Dev sessions decide the configuration only; the claim is read on held-out sessions (a later rule)",
+  }),
   stmAtLength: Object.freeze({
     against: "memory-off-llm",
     text: "if reference - memory-off-llm has a lower bound <= 0 on after while before's lower bound is > 0, the report sends a P1 STM finding to the owner",
@@ -93,16 +125,24 @@ const Z_DETECT = 1.959963984540054 + 0.8416212335729143;
  * One arm's paired units from its rows: `task`, every class, the pooled buckets and each pooled class per bucket.
  * `checks` rows are blind (`scoreRows` refuses a row naming an arm).
  */
-export function longUnits({ checks, tasks = [] }) {
+export function longUnits({ checks, tasks = [] }, { pressureTasks } = {}) {
   const scored = scoreRows({ checks, tasks });
   const unit = (row) => ({ id: `${row.session}:${row.check}`, cluster: row.session, value: Number(row.pass) });
+  // Analysis v3: with `pressureTasks` (by session), an `after` row counts only at or past its session's task.
+  const inBucket = (row, bucket) => {
+    if (row.bucket !== bucket) return false;
+    if (bucket !== "after" || !pressureTasks) return true;
+    const from = pressureTasks[row.session];
+    return typeof from === "number" && row.task >= from;
+  };
   const units = { task: scored.units.task };
-  for (const cls of LONG_CHECK_CLASSES) units[cls] = checks.filter((row) => row.class === cls).map(unit);
+  for (const cls of LONG_CHECK_CLASSES)
+    units[cls] = checks.filter((row) => row.class === cls && (cls !== REVOKE_CLASS || inBucket(row, "after"))).map(unit);
   units[CONTROL_METRIC] = checks.filter((row) => row.class === "C" && !NOISY_JOBS.includes(row.job)).map(unit);
   for (const bucket of BUCKETS) {
-    units[bucket] = checks.filter((row) => row.bucket === bucket && POOLED_CLASSES.includes(row.class)).map(unit);
+    units[bucket] = checks.filter((row) => inBucket(row, bucket) && POOLED_CLASSES.includes(row.class)).map(unit);
     for (const cls of POOLED_CLASSES)
-      units[`${bucket}:${cls}`] = checks.filter((row) => row.bucket === bucket && row.class === cls).map(unit);
+      units[`${bucket}:${cls}`] = checks.filter((row) => inBucket(row, bucket) && row.class === cls).map(unit);
   }
   return { overall: scored.overall, sessions: scored.sessions, units };
 }
@@ -245,8 +285,8 @@ const upper = (row, metric) => row?.metrics?.[metric]?.ci?.[1];
 
 /**
  * The verdict (pure). `input.units[arm]` are `longUnits(...).units`; `input.costPerPassedTask[arm]` the whole-run tokens
- * per passed task. Returns step 1 (the reference), step 2 (keep / drop / owner), the STM-at-length finding, and the
- * side comparisons against mem0 (reported, never read).
+ * per passed task. Returns step 1 (the reference), step 2 (keep / drop / owner), step 3 (the reference against each
+ * baseline: beats / not shown) and the STM-at-length finding.
  */
 export function longVerdict(input, { decision = LONG_DECISION, iterations = ANALYSIS_LONG.iterations, seed = ANALYSIS_LONG.seed } = {}) {
   const { units, costPerPassedTask = {} } = input;
@@ -255,7 +295,9 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
   const ref = decision.reference;
   const step1 = compareLong(units, [ref.base, ref.candidate], options);
   const protectWins =
-    step1.status === "compared" && lower(step1, ref.metric) > ref.dependencyLowerAbove && lower(step1, CONTROL_METRIC) > ref.controlLowerAbove;
+    step1.status === "compared" &&
+    lower(step1, ref.metric) > ref.dependencyLowerAbove &&
+    lower(step1, CONTROL_METRIC) > ref.controlLowerAbove;
   const reference = protectWins ? ref.candidate : ref.base;
   // Step 2: each WM arm against the reference; Holm's step-down over the two arms' sign-flip p on `after`.
   const wm = decision.wm;
@@ -316,11 +358,39 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
     length.status === "compared" && lower(length, "after") <= 0 && lower(length, "before") > 0
       ? { finding: "P1", text: `${reference} - memory-off-llm: after lower bound <= 0 while before's is > 0` }
       : null;
-  const side = [...new Set([...ANALYSIS_LONG.comparisons.flat()])].map((arm) => {
-    const row = compareLong(units, [arm, ANALYSIS_LONG.sideArm], options);
-    return row.status === "compared"
-      ? { arm, side: ANALYSIS_LONG.sideArm, task: row.metrics.task, after: row.metrics.after, before: row.metrics.before }
-      : { arm, side: ANALYSIS_LONG.sideArm, status: "not-run" };
+  // Step 3: the reference against each baseline (positive diff: the reference is better), Holm over the baselines.
+  const base = decision.baselines;
+  const step3Raw = base.arms.map((arm) => compareLong(units, [arm, reference], options));
+  let baseLevels = {};
+  if (step3Raw.every((row) => row.status === "compared" && row.metrics[base.metric]?.p !== undefined)) {
+    const p = step3Raw.map((row) => row.metrics[base.metric].p);
+    const adjusted = holm(p);
+    const order = p.map((value, index) => ({ value, index })).sort((x, y) => x.value - y.value);
+    const firstRejected = adjusted[order[0].index] < alpha;
+    baseLevels = Object.fromEntries(
+      order.map(({ index }, rank) => [base.arms[index], rank === 0 || !firstRejected ? 1 - alpha / 2 : 1 - alpha]),
+    );
+    baseLevels.adjustedP = Object.fromEntries(base.arms.map((arm, index) => [arm, adjusted[index]]));
+  }
+  const baselines = base.arms.map((arm, index) => {
+    const level = baseLevels[arm] ?? 1 - alpha / 2;
+    const row =
+      step3Raw[index].status === "compared"
+        ? compareLong(units, [arm, reference], { ...options, levels: { [base.metric]: level, [CONTROL_METRIC]: level } })
+        : step3Raw[index];
+    const compared = row.status === "compared";
+    const beats = compared && lower(row, base.metric) > base.beatsLowerAbove && lower(row, CONTROL_METRIC) > base.controlLowerAbove;
+    return {
+      baseline: arm,
+      status: row.status,
+      level,
+      adjustedP: baseLevels.adjustedP?.[arm] ?? null,
+      after: compared ? row.metrics[base.metric] : null,
+      before: compared ? (row.metrics.before ?? null) : null,
+      control: compared ? row.metrics[CONTROL_METRIC] : null,
+      task: compared ? row.metrics.task : null,
+      outcome: !compared ? "incomplete" : beats ? "beats" : "not-shown",
+    };
   });
   return {
     analysis: ANALYSIS_LONG.version,
@@ -347,11 +417,12 @@ export function longVerdict(input, { decision = LONG_DECISION, iterations = ANAL
       comparison: length.status === "compared" ? { after: length.metrics.after, before: length.metrics.before } : null,
       finding: stmAtLength,
     },
-    side,
+    step3: { reference, baselines, rule: base.text },
     summary: {
       reference,
       evictionDefault: protectWins ? "protect-user" : "relevance",
       wm: outcome,
+      baselines: Object.fromEntries(baselines.map((row) => [row.baseline, row.outcome])),
       stmAtLengthFinding: Boolean(stmAtLength),
     },
   };

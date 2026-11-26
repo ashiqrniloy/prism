@@ -14,8 +14,8 @@
  * - **1–10, sources.** Every rule, fact, own decision and first value, at most two per task.
  * - **20–38, `before` dependents.** One per task, well before the densest session's pool overflow.
  * - **40–52, mid sources.** A rule is revoked and two ship days change again.
- * - **after the mean overflow task plus 10, to 150: `after` dependents.** One per task. One ship day changes a third time
- *   inside this range (110–125), with a dependent on each side of the change.
+ * - **111–150, `after` dependents.** One per task (version 3; version 2 began at 95). One ship day changes a third time
+ *   inside this range (118–132), with a dependent on each side of the change.
  *
  * Version 1 (100 tasks, `after` from task 64) was sized on plan 218.5 Task 2's offline measurement (v3 ledgers, the
  * muse-spark worker: 156.6 description tokens a task, overflow at task 53). Live on beam-free (Task 7, rule 60898b62) STM
@@ -33,10 +33,13 @@ import { LONG_JOB_ARTIFACT_TOKENS } from "./pressure.mjs";
 export const LONG_TASKS = 150;
 export const PHASE_TASKS = 25;
 /**
- * The pre-registered distance buckets (the gate record's `design.buckets`, from the Task 7 pilot's live STM-only
- * ledgers): `before` below the densest session's overflow task (75), `after` above the mean's plus 10 (94).
+ * The pre-registered distance buckets (the gate record's `design.buckets`): `before` below the densest session's
+ * overflow task in the Task 7 pilot (75). `after` above task 110 (benchmark version 3, Task 7 rerun f42e1fe0): the
+ * worker's recording rate moves STM-only's first overflow (tasks 93-102 at 82-90 tokens per task, 75-90 at 89-116), so
+ * version 2's `after` (above 94) began where the overflow did. The analysis scores an `after` check only past the
+ * session's measured overflow (`score.mjs` `pressureTasksFrom`); this layout gives it room for a quieter worker.
  */
-export const BUCKETS = Object.freeze({ beforeBelowTask: 75, afterAboveTask: 94 });
+export const BUCKETS = Object.freeze({ beforeBelowTask: 75, afterAboveTask: 110 });
 export const bucketOf = (task) => (task < BUCKETS.beforeBelowTask ? "before" : task > BUCKETS.afterAboveTask ? "after" : null);
 /** Where each kind of part may sit (inclusive task ranges). */
 export const LAYOUT = Object.freeze({
@@ -44,7 +47,7 @@ export const LAYOUT = Object.freeze({
   before: Object.freeze([20, 38]),
   midSources: Object.freeze([40, 52]),
   after: Object.freeze([BUCKETS.afterAboveTask + 1, LONG_TASKS]),
-  lateChange: Object.freeze([110, 125]),
+  lateChange: Object.freeze([118, 132]),
   /** Fewest tasks from the late change to the dependent that needs its value. */
   lateChangeGap: 10,
 });

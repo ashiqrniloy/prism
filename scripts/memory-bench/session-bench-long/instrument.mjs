@@ -107,6 +107,12 @@ export function foldStoredSession(entries) {
 
 /** The task of a session's first `after` dependent: G11 asks the pool to overflow before it. */
 export const firstAfterTask = (session) => Math.min(...session.deps.filter((dep) => dep.bucket === "after").map((dep) => dep.dependent));
+/** Every `after` dependent's task, ascending (the live G11 reads how many sit past the measured overflow). */
+export const afterTasks = (session) =>
+  session.deps
+    .filter((dep) => dep.bucket === "after")
+    .map((dep) => dep.dependent)
+    .sort((x, y) => x - y);
 
 /** What the latest compaction up to and including task `n` (or before it, `before: true`) left in and out of the block. */
 function blockAt(folded, n, { before = false } = {}) {

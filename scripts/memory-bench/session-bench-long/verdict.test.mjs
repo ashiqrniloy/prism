@@ -145,10 +145,56 @@ describe("longVerdict", () => {
     expect(verdictOf(units).step2.outcome).toBe("incomplete");
   });
 
+  test("step_3_reads_the_reference_against_each_baseline (owner, 2026-11-26)", () => {
+    // STM-only ahead of both baselines on after: beats both.
+    const weak = () => armRows({ after: () => 2 });
+    const ahead = verdictOf(allBase({ "memory-off-llm": weak(), mem0: weak() }));
+    expect(ahead.summary.baselines).toEqual({ "memory-off-llm": "beats", mem0: "beats" });
+    expect(ahead.step3.baselines.every((row) => row.after.diff > 0)).toBe(true);
+    // Level with mem0: not shown for mem0 only.
+    expect(verdictOf(allBase({ "memory-off-llm": weak() })).summary.baselines).toEqual({ "memory-off-llm": "beats", mem0: "not-shown" });
+    // A control loss below -5 points is no claim, whatever after says.
+    const lossyRef = armRows({ control: () => 7 });
+    expect(verdictOf(allBase({ "memory-off-llm": weak(), mem0: weak(), "STM-only": lossyRef })).summary.baselines.mem0).toBe("not-shown");
+    // A baseline that did not run: incomplete.
+    const units = allBase();
+    delete units.mem0;
+    expect(verdictOf(units).summary.baselines.mem0).toBe("incomplete");
+  });
+
   test("the analysis covers every decision arm, every class and both buckets (G8)", () => {
     for (const metric of ["task", "C", "D2R", "before", "after", "after:D4"]) expect(ANALYSIS_LONG.metrics).toContain(metric);
-    for (const arm of ["memory-off-llm", "STM-only", "STM-only-protect", "STM+WM", "STM+WM-deterministic"])
+    for (const arm of ["memory-off-llm", "mem0", "STM-only", "STM-only-protect", "STM+WM", "STM+WM-deterministic"])
       expect(ANALYSIS_LONG.comparisons.flat()).toContain(arm);
+  });
+});
+
+describe("the pressure-relative after bucket (analysis v3, owner 2026-11-26)", () => {
+  test("after scores a check only at or past its session's pressure task; before is unchanged", async () => {
+    const { pressureTasksFrom } = await import("./score.mjs");
+    expect(pressureTasksFrom({ a: { firstOverflowTask: 95 }, b: { firstOverflowTask: null }, c: {} })).toEqual({
+      a: 105,
+      b: null,
+      c: null,
+    });
+    const row = (session, task, cls, bucket) => ({ session, task, check: `t${task}`, class: cls, bucket, pass: true });
+    const checks = [
+      row("a", 30, "D2", "before"),
+      row("a", 104, "D2", "after"),
+      row("a", 105, "D4", "after"),
+      row("a", 140, "D2R", "after"),
+      row("b", 30, "D2", "before"),
+      row("b", 140, "D2", "after"),
+    ];
+    const { units } = longUnits({ checks }, { pressureTasks: { a: 105, b: null } });
+    expect(units.after.map((unit) => unit.id)).toEqual(["a:t105"]);
+    expect(units["after:D2"]).toEqual([]);
+    expect(units.D2R.map((unit) => unit.id)).toEqual(["a:t140"]);
+    expect(units.before.map((unit) => unit.id)).toEqual(["a:t30", "b:t30"]);
+    // D2 as a class keeps every check; only the after metrics and D2R read the pressure.
+    expect(units.D2.length).toBe(4);
+    // Without pressure tasks (offline), after is the generator's bucket.
+    expect(longUnits({ checks }).units.after.length).toBe(3);
   });
 });
 
@@ -198,7 +244,8 @@ describe("live.mjs", () => {
     expect(rule.product.hash).toMatch(/^[0-9a-f]{64}$/);
     expect(rule.configHashes).toEqual(liveArmHashes().configHashes);
     expect(Object.keys(rule.configHashes).sort()).toEqual([...rule.arms, ...rule.calibration.arms].sort());
-    // 6 arms x 12 sessions + 2 calibration arms x 3 pilot sessions; the pilot is 6 x 3 + 6.
+    // 6 arms x 12 sessions + 2 calibration arms x 3 pilot sessions; the pilot is 6 x 3 + 6. mem0 is a decision arm.
+    expect(rule.decisionArms).toContain("mem0");
     expect(longJobs(rule)).toHaveLength(78);
     expect(longJobs(rule, { pilot: true })).toHaveLength(24);
   });

@@ -1,6 +1,6 @@
 {
   "benchmark": "session-bench-long",
-  "version": 2,
+  "version": 3,
   "plan": "218.5",
   "task": 4,
   "seed": "prism-218.5-session-bench-long-v1",
@@ -53,7 +53,7 @@
     "phaseTasks": 25,
     "buckets": {
       "beforeBelowTask": 75,
-      "afterAboveTask": 94
+      "afterAboveTask": 110
     },
     "ranges": {
       "sources": [
@@ -69,12 +69,12 @@
         52
       ],
       "after": [
-        95,
+        111,
         150
       ],
       "lateChange": [
-        110,
-        125
+        118,
+        132
       ],
       "lateChangeGap": 10
     },
@@ -101,7 +101,7 @@
       }
     }
   },
-  "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
+  "templateHash": "03690faefceca28769cc4aa451663aaaef0859b100b4a403b9dda52b06d2a05f",
   "coreFiles": [
     "../session-bench/env/workspace.mjs",
     "../session-bench/templates/families.mjs",
@@ -114,8 +114,8 @@
     "agents.mjs",
     "generate.mjs"
   ],
-  "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c",
-  "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
+  "sessionsHash": "a4d6562712ab2e0ddd1297cdba050f8c8c86b58dc11a3ec94d7c05a42325f3de",
+  "scopesHash": "cbd0079917de67d2f0ffd907fccf5d4a07bd225eac847c53e0e841a9a9a51e8c",
   "counts": {
     "sessions": 36,
     "tasks": 5400,
@@ -152,17 +152,17 @@
         "D2R": 24
       }
     },
-    "minSessionTokens": 1101394,
-    "minSpanTokens": 64085,
+    "minSessionTokens": 1101077,
+    "minSpanTokens": 63260,
     "minSpanTasks": 9,
-    "maxTaskTokens": 15227,
+    "maxTaskTokens": 14877,
     "jobArtifactTokens": [
-      6002,
-      8841
+      6004,
+      8831
     ],
-    "largestOutputTokens": 8841,
-    "worstRequestTokens": 26481,
-    "maxScopeBytes": 3575
+    "largestOutputTokens": 8831,
+    "worstRequestTokens": 26470,
+    "maxScopeBytes": 3591
   },
   "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c",
   "abilities": {

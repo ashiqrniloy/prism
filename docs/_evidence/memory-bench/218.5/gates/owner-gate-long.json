@@ -5,6 +5,11 @@
   "status": "rule frozen 2026-11-23 (Task 6): `sessionBenchLong` holds the rule and its hash, unapproved. No paid call is approved by this record until the owner approves that hash (approved, approvedBy owner, approvedAt, text). Design review (Task 2) and the owner decisions below.",
   "ownerDecisions": [
     {
+      "date": "2026-11-26",
+      "id": "objectiveWmAndBaselines",
+      "decision": "After rule f42e1fe0 (owner: \"My objective is to objectively measure whether we should have WM or not. I also would like objectively conclude that whatever memory system we have is better than simple compaction or mem0\"; on the proposal: \"I agree. Go ahead as you suggested\"). (1) Fix 1 is reverted: a user task request kept word for word stays out of WM batches (f42e1fe0: STM+WM-deterministic D2 18/27, D2R 3/6 against STM-only 26/27, 6/6); fixes 2-4 stay. (2) Benchmark version 3 and analysis v3: after dependents in tasks 111-150, and after scores a check only at or past STM-only's first pool overflow in its session plus 10 tasks; live G11 asks that at least half of a session's after dependents be scored, in 2 of 3 pilot sessions. (3) mem0 is a baseline beside memory-off-llm, read by the verdict's step 3; the no-overflow guardrail counts tasks that ended on an overflow on any arm (f42e1fe0's 4 mem0 overflows were compacted around by the kernel; all 150 tasks completed). (4) The dev sessions decide the configuration; the claims against memory-off-llm and mem0 are read once on held-out sessions under a later rule. The compaction baseline is the strongest of three: in the 218.3 screen (36 sessions, the same worker) memory-off-llm passed 281/384 tasks, claude-code-prompt 260, codex-prompt 218."
+    },
+    {
       "date": "2026-11-24",
       "id": "tasksPerSession",
       "decision": "150 tasks per session, in 6 phases of 25 (benchmark version 2). Chosen with the Task 7 pilot's live measurement in view: on beam-free STM records 104.1 description tokens a task (97.3-116) and the pool first overflows at task 84 on average (75 densest, 90 sparsest), after every version-1 `after` dependent (tasks 64-100). Dependents in `before` stay at tasks 20-38, `after` moves to tasks 95-150, so 67 tasks run past the mean overflow and 56 fall in the `after` bucket. A smaller window and a product pool setting were the other options.",
@@ -165,7 +170,7 @@
     ],
     "buckets": {
       "beforeBelowTask": 75,
-      "afterAboveTask": 94,
+      "afterAboveTask": 110,
       "byLength": {
         "80": {
           "tasksPastOverflow": 0,
@@ -191,7 +196,8 @@
           "tasksInAfterBucket": 56,
           "tasksPastHighOverflow": 0
         }
-      }
+      },
+      "afterNote": "Benchmark version 3 (owner, 2026-11-26): after above task 110 (version 2: above 94). The analysis (v3) scores an after check only at or past STM-only's measured first overflow in its session plus 10 tasks. byLength is the Task 7 version-2 measurement."
     },
     "findings": [
       {
@@ -302,14 +308,14 @@
   },
   "sessionBenchLong": {
     "benchmark": {
-      "version": 2,
+      "version": 3,
       "seed": "prism-218.5-session-bench-long-v1",
-      "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
-      "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c",
-      "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
+      "templateHash": "03690faefceca28769cc4aa451663aaaef0859b100b4a403b9dda52b06d2a05f",
+      "sessionsHash": "a4d6562712ab2e0ddd1297cdba050f8c8c86b58dc11a3ec94d7c05a42325f3de",
+      "scopesHash": "cbd0079917de67d2f0ffd907fccf5d4a07bd225eac847c53e0e841a9a9a51e8c",
       "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
     },
-    "ruleHash": "f42e1fe00b3c7777ec0cd307ba91eede27f0624b9783878092e394ae68c872ea",
+    "ruleHash": "a7dd52a3dc4fe88fa512ef37851d8473f8677a08e12a883f1e44aa466dd22559",
     "rule": {
       "suite": "session-bench-long",
       "plan": "218.5 Task 6",
@@ -319,19 +325,19 @@
         "run": "docs/_evidence/memory-bench/218.5/session-bench-long.json"
       },
       "benchmark": {
-        "version": 2,
+        "version": 3,
         "seed": "prism-218.5-session-bench-long-v1",
-        "templateHash": "bfafa32137675114708a3c508faf465c43ebb10e7ead23c6297e9657a78d9e73",
-        "sessionsHash": "cde3307a0375595a90d03ad8df5e599e5bfcf26211133ce0ea3ba5b0fe84b09c",
-        "scopesHash": "56062b157afe88ac068c377af422b389913e6ef8720c0f7adb5a78b8ad3c3708",
+        "templateHash": "03690faefceca28769cc4aa451663aaaef0859b100b4a403b9dda52b06d2a05f",
+        "sessionsHash": "a4d6562712ab2e0ddd1297cdba050f8c8c86b58dc11a3ec94d7c05a42325f3de",
+        "scopesHash": "cbd0079917de67d2f0ffd907fccf5d4a07bd225eac847c53e0e841a9a9a51e8c",
         "idsHash": "194a6d5551c143959a8c9e4183db79ef13bc7ec14967aa32bf2c8dcdc511026c"
       },
       "product": {
         "package": "@arnilo/prism-memory-system",
         "dir": "packages/memory/system/src",
         "files": 93,
-        "hash": "fbdbed24428442d276dfd11a9014ca5309fd4f24d41ab65214a0aa994cee321a",
-        "note": "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; finished task requests are batched for WM; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes"
+        "hash": "72bfba49ee53fc510ae6cef2df5b8e3bf49106d8465b73e9ec4fc2f3e338fcb3",
+        "note": "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes. The fourth, batching finished task requests kept word for word for WM, is reverted (owner, 2026-11-26): rule f42e1fe0 showed WM discarding the user's rules that ride inside task requests (STM+WM-deterministic D2 18/27, D2R 3/6 against STM-only's 26/27, 6/6)"
       },
       "harness": {
         "files": [
@@ -350,7 +356,7 @@
           "scripts/memory-bench/run.mjs",
           "scripts/memory-bench/stats.mjs"
         ],
-        "hash": "139adcdb354e2f8130fc05401a9754939e64441dd6e309cb2df9ef3fa0061dc8"
+        "hash": "c7a0da9b0db9f9713c8f6c4bb37ebcabadccd327695e73a5f0362084668e30e3"
       },
       "partition": "dev",
       "sessions": [
@@ -372,26 +378,24 @@
         "sbl-id-08",
         "sbl-rt-07"
       ],
-      "selection": "every dev session (12: 4 per family; owner, Task 2), 150 tasks each (benchmark version 2; owner, Task 7, 2026-11-24: on the pilot's live rates the pool first overflowed at task 75-90, after every version-1 `after` dependent); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
+      "selection": "every dev session (12: 4 per family; owner, Task 2), 150 tasks each (benchmark version 2; owner, Task 7, 2026-11-24: on the pilot's live rates the pool first overflowed at task 75-90, after every version-1 `after` dependent; version 3, owner 2026-11-26: `after` dependents in tasks 111-150, scored past STM-only's measured overflow plus 10 tasks); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
       "arms": [
         "memory-off-llm",
-        "STM-only",
-        "STM-only-protect",
-        "STM+WM",
-        "STM+WM-deterministic",
-        "mem0"
-      ],
-      "decisionArms": [
-        "memory-off-llm",
+        "mem0",
         "STM-only",
         "STM-only-protect",
         "STM+WM",
         "STM+WM-deterministic"
       ],
-      "sideArms": [
-        "mem0"
+      "decisionArms": [
+        "memory-off-llm",
+        "mem0",
+        "STM-only",
+        "STM-only-protect",
+        "STM+WM",
+        "STM+WM-deterministic"
       ],
-      "armsNote": "each arm differs only in `memory` (arms.mjs). STM-only: the 0.14.0 defaults (WM off) with Task 1's fixes, context.eviction relevance; STM-only-protect: protect-user; STM+WM: WM on, model policy, each phase's scope through memory:scope; STM+WM-deterministic: the same, deterministic policy; mem0: the side arm (owner, Task 2), reported beside the decision arms and never read by the verdict",
+      "armsNote": "each arm differs only in `memory` (arms.mjs). STM-only: the 0.14.0 defaults (WM off) with Task 1's fixes, context.eviction relevance; STM-only-protect: protect-user; STM+WM: WM on, model policy, each phase's scope through memory:scope; STM+WM-deterministic: the same, deterministic policy; mem0: memory-off-llm plus mem0's retrieval as a context block; a baseline with memory-off-llm (owner, 2026-11-26: it was the side arm, Task 2), read by the verdict's step 3",
       "calibration": {
         "arms": [
           "amnesic",
@@ -406,11 +410,11 @@
       },
       "configHashes": {
         "memory-off-llm": "27add5eb43c4df491a1ce83b723c44a8e72c65dba7343940b52ccad89b612df2",
+        "mem0": "917fc4995dc09c3e1edf04a9c38ff94ae9faaad465cf525d83fbb8aec9cdc945",
         "STM-only": "baf861e274ef7317c009249ec1d0785394501697bebaf71d383b859e9e9e7268",
         "STM-only-protect": "0c20e3031daf712dfdbedddf80f0f11226a69e002ae8f3afb18f969b4523a899",
         "STM+WM": "2a81794368ef0564d00a2632dc95de7e954c55571d2014b4e01f90788c22e037",
         "STM+WM-deterministic": "73667082043a78e144126e6a2329ae90278889558b96890c14040877a01f11d9",
-        "mem0": "917fc4995dc09c3e1edf04a9c38ff94ae9faaad465cf525d83fbb8aec9cdc945",
         "amnesic": "f849a7b27d057ff44484794430f92452592d225b1f1322793228b4718ebf7d55",
         "oracle-notes": "5928ef5374c811277765d13ac644d81b087b5d047a37192ef99d66a8dd211eb8"
       },
@@ -488,7 +492,7 @@
       "ceilingBasis": "owner, Task 2: 2.3B input tokens (cached included) across every usage log under the run's wire directory, for the pilot and the full run under one hash; no new job starts at or above it, jobs in flight finish",
       "faults": "the screen's: a 429/5xx/transport answer that outlasts the patient retries waits 15 minutes inside the request and is sent again (quota waits never fail a task); a job a provider error still reaches is a fault: no row, wait 15 minutes, the session runs again from its start. Task 7 (owner, 2026-11-23: the run must survive model call failures and an internet outage): a job whose provider setup fails for any reason but a credential, model or provider error (the catalog fetch timing out, the network down) is a provider fault too, never a dropped job; a stage that ends with a job missing is a restart (exit 6, the unit restarts and resumes from the rows), never a guardrail read off missing rows; a 400 that names an upstream failure (\"Upstream request failed\") is sent again up to 3 times (5 s, 20 s, 60 s) before it reaches the run (upstreamRetryFetch), and one that still refuses reasoning_effort is sent once more without it (Task 7, 2026-11-25: muse-spark's four-times-running refusal faulted two pilot jobs and a smoke job); every provider request turns the kernel's 60 s connect timeout off (withoutConnectTimeout), because it wraps the whole injected fetch and cut every wait above at 60 s; stallGuardFetch's 300 s no-headers and idle guards stay",
       "workerFaults": "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
-      "overflow": "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no overflow on any row (Task 7: a miss stops the run, the fix is a new hash). Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
+      "overflow": "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no task to end on an overflow (owner, 2026-11-26: rule f42e1fe0's mem0 arm met 4 overflows on one session and the kernel compacted and retried each, so all 150 tasks completed; the compaction vote counts the conversation and its summaries, not a host's context block such as mem0's). Overflows the kernel recovered are reported per arm. Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
       "smokeOutcomes": [
         "ERR_PRISM_RUN_LIMIT",
         "context_overflow"
@@ -502,20 +506,22 @@
         },
         "pressureArm": "STM-only",
         "pressureSessionsMin": 2,
-        "maxOverflows": 0
+        "pressuredAfterShareMin": 0.5,
+        "pressureMarginTasks": 10,
+        "maxOverflowTasks": 0
       },
-      "controlNote": "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job",
+      "controlNote": "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job. Analysis v3 (owner, 2026-11-26): after scores a check only at or past STM-only's first pool overflow in its session plus 10 tasks (score.mjs pressureTasksFrom); mem0 is a baseline in step 3",
       "order": [
         "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
         "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run. Provider errors the retries absorbed (a stream cut mid-answer and sent again) are reported, not a miss (owner, 2026-11-25: rule aeb684e0's smoke met one such cut at exchange 375 of the main model, and the strict rule would have stopped the run on a task that passed)",
         "calibration: amnesic and oracle-notes on the pilot sessions; oracle-notes passes >= 60% of tasks and amnesic fails >= 70% of D2 and D2R and >= 60% of D4 (owner, 2026-11-25: amnesic failed 70.4% then 63.0% of D4, the same 7 of 27 ship-day checks passing without memory both times), or the run stops",
-        "pilot: the decision arms and mem0 on the pilot sessions; then live G11 (STM-only's pool overflows before the first after dependent in >= 2 of 3) and no overflow on any row, or the run stops (Task 7)",
-        "the rest (Task 8, on the owner's word): the decision arms and mem0 on the other 9 dev sessions; the pilot's rows count"
+        "pilot: the decision arms on the pilot sessions; then live G11 (at least half of a session's after dependents sit at or past STM-only's first overflow plus 10 tasks, in >= 2 of 3 sessions) and no task ended on an overflow, or the run stops (Task 7)",
+        "the rest (Task 8, on the owner's word): the decision arms on the other 9 dev sessions; the pilot's rows count. The dev sessions decide the configuration; the claims against memory-off-llm and mem0 are read on held-out sessions under a later rule"
       ],
       "checkins": "every 30 minutes and after every job: rows done, input tokens spent, projected total",
       "instrumentation": "each memory-system row carries, per task, block tokens (rendered and description), active STM tokens, fullFold, records left out by relevance and how many were durable or user statements, Rehearsal drops, WM items, tombstones and passes; per dependent, whether its sources' records were in the block (ids only)",
       "analysis": {
-        "version": "session-bench-long-analysis-v2",
+        "version": "session-bench-long-analysis-v3",
         "unit": "check or task, paired by id across arms; sessions are the clusters",
         "statistic": "pairedClusterPermutation (scripts/memory-bench/stats.mjs): cluster bootstrap interval of the mean paired difference, sign-flip p",
         "iterations": 10000,
@@ -542,6 +548,7 @@
           "after:D4"
         ],
         "pooled": "before and after pool D1-D4 only (same class mix in both buckets); D2R is its own metric (after only)",
+        "pressure": "after (pooled, per class, and D2R) scores a check only at or past STM-only's first pool overflow in its session plus 10 tasks (pressureTasksFrom); a session where STM-only never overflowed scores no after check",
         "control": "C-stable: the C checks of every job but count-errors (NOISY_JOBS); every check row of class C carries its task's job",
         "comparisons": [
           [
@@ -571,10 +578,17 @@
           [
             "memory-off-llm",
             "STM-only-protect"
+          ],
+          [
+            "mem0",
+            "STM-only"
+          ],
+          [
+            "mem0",
+            "STM-only-protect"
           ]
         ],
-        "sideArm": "mem0",
-        "reported": "every arm's scores per class and bucket, every comparison above on every metric, each decision arm against mem0 (side, never read by the verdict), whole-run tokens per passed task, the pressure counts, and the effect detectable at N"
+        "reported": "every arm's scores per class and bucket, every comparison above on every metric, whole-run tokens per passed task, the pressure counts and the after checks each session scored, and the effect detectable at N"
       },
       "decision": {
         "reference": {
@@ -598,16 +612,27 @@
           "cost": "whole-run tokens (main and workers, input and output, plus embeddings) per passed task",
           "text": "Each WM arm against the reference on after dependency checks, Holm-adjusted over the two WM arms. Keep WM if a WM arm's lower bound is > 0, its C-stable lower bound > -5 points and its whole-run tokens per passed task <= 1.5x the reference's (the best such arm sets WM's default policy under a host scope). Drop WM if both WM arms' upper bounds are < +5 points. Otherwise the owner decides"
         },
+        "baselines": {
+          "arms": [
+            "memory-off-llm",
+            "mem0"
+          ],
+          "metric": "after",
+          "beatsLowerAbove": 0,
+          "controlLowerAbove": -0.05,
+          "text": "The reference against each baseline (memory-off-llm: LLM compaction; mem0) on after dependency checks, Holm-adjusted over the two baselines. The memory system beats a baseline if the reference's lower bound is > 0 and its C-stable lower bound > -5 points. Dev sessions decide the configuration only; the claim is read on held-out sessions (a later rule)"
+        },
         "stmAtLength": {
           "against": "memory-off-llm",
           "text": "if reference - memory-off-llm has a lower bound <= 0 on after while before's lower bound is > 0, the report sends a P1 STM finding to the owner"
         }
       }
     },
-    "approved": true,
-    "approvedBy": "owner",
-    "approvedAt": "2026-11-25T15:10:00Z",
-    "text": "Owner, 2026-11-23 (plan 218.5 Task 7): \"Go ahead and run. But it must be able to handle model call failures and internet outage.\" Approves the rule as recommended in Task 6 (wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome), after hearing that a WM arm can lose tasks to window overflow and that one overflow stops the pilot. Hash 4bf863b3 was the one put to the owner. Harness failure handling since (live.mjs): a provider setup failure is a provider fault, a stage with a job missing is a restart (7391bbc6, 0 rows); a 400 naming an upstream failure is resent up to 3 times (d1701bb0, 0 rows); the kernel's 60 s connect timeout is off around the waits (0de8550d, 0 rows; owner: \"You can go ahead\"). Owner, 2026-11-24: \"Let's use a different model from opencode go. Free if possible. Such as: Beam free or iceman contributor free\": the worker is beam-free (c2e39021). Product hash unchanged. Rule c2e39021 stopped at calibration (oracle-notes 54.7% < 60%): hy4-flash-free at thinking low spent its whole 2,048-token output on reasoning on hard turns. Owner, 2026-11-24: \"I am hesitant to go with thinking low for the main model as that does not correspond to real world usage. Can we increase the 32k window?\", then \"Yes go ahead with the proposed caps\": the main agent reserves 16,384 output tokens and its model window is the input cap plus that (46,336) (60898b62). Rule 60898b62 held calibration (oracle-notes 87%) and was paused in the pilot stage: live STM recorded 104 description tokens a task and the pool first overflowed at tasks 78-90, after every `after` dependent, so live G11 could not hold. Owner, 2026-11-24: \"Go with option 2, redesign the pressure\", choosing \"150-task sessions (Recommended)\": benchmark version 2, 150 tasks in 6 phases, buckets from the live ledgers (before < 75, after > 94), the offline worker mock at the live rates (0d6beef6). Rule 0d6beef6 stopped in calibration (1 row, the smoke job: 152/182 checks): beam-free answered 429 rate_limit_error with retry-after about 9.7 hours after about 2,950 calls that day, its free daily allowance. Owner, 2026-11-24: \"I want to switch the memory worker to paid model. Use deepseek-v4.1-flash\" (cddf6f16, stopped in its smoke job, 0 rows). Owner, 2026-11-24: \"I don't think deepseek-v4.1-flash has a low thinking mode and that is why it is taking so time. Let's try muse spark 1.2 or 1.3 contributor\": the worker is muse-spark-1.3-contributor, the screen's (eb3b5269: the pilot completed, every live guardrail held). Owner, 2026-11-25, after the investigation of that pilot: \"Do all four fixes now and then rerun everything for task 7 from the start\": WM items count against the pool, finished task requests are batched for WM, request protection lapses after wm.protectRequestTasks (3) newer user requests, deterministic WM keeps only high or critical outcomes (product hash changes), and the control guard reads C-stable (analysis v2) (aeb684e0). Its smoke job met one main-model stream cut the kernel retried (exchange 375, no task failed), which the strict smoke rule counted as a provider error and would have stopped the run on. Owner, 2026-11-25: \"Fix the smoke rule now\": the smoke stops on a task failed outside the arm's outcomes; absorbed provider errors are reported (f5b64d49). Its smoke job met muse-spark refusing reasoning_effort four times running at task 137 (a worker fault). Owner, 2026-11-25, asked to approve hash a1c81772 for the fallback (after the resends, a reasoning_effort refusal is sent once more without the parameter): \"Approve a1c81772 (Recommended)\" (a1c81772). It stopped at calibration: amnesic failed 63.0% of D4 against 70% (70.4% in eb3b5269; the same 7 of 27 ship-day checks passed without memory both times). Owner, 2026-11-25: \"Floor D4 at 60% (Recommended)\", then, asked to approve hash f42e1fe0: \"Approve f42e1fe0 (Recommended)\""
+    "approved": false,
+    "approvedBy": "",
+    "approvedAt": "",
+    "text": "",
+    "pending": "the owner's word on this hash (plan 218.5 Task 7). Owner calls folded into the rule as recommended: wm.triggerTokens 3,000; after pools D1-D4, D2R its own metric; a W overflow is the arm's scored outcome"
   },
   "checkins": [
     {

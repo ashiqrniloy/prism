@@ -75,8 +75,7 @@ test("row_counts_hold_no_text", async () => {
   const json = JSON.stringify(row);
   // Whole tokens only: a numeric answer ("490") may sit inside a count ("2490") by chance.
   const holds = (text) => new RegExp(`(^|[^A-Za-z0-9])${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Za-z0-9])`).test(json);
-  for (const dep of session.deps)
-    for (const text of [dep.answer, ...dependencyEvidence(dep)]) assert.ok(!holds(text), `${dep.id} ${text}`);
+  for (const dep of session.deps) for (const text of [dep.answer, ...dependencyEvidence(dep)]) assert.ok(!holds(text), `${dep.id} ${text}`);
   // The instrumentation saw the session: blocks, records, and a source check for each dependent so far.
   const last = run.instrumentation.pressure.at(-1);
   assert.equal(run.instrumentation.pressure.length, 26);
@@ -146,7 +145,7 @@ test("offline_guardrails_pass_with_nothing_pending", async () => {
   const report = await checkLongGuardrails({ probe: false, pressure: false });
   assert.equal(report.pass, true, JSON.stringify(report.guardrails.filter((row) => !row.pass)));
   assert.deepEqual(report.pending, []);
-  assert.equal(report.guardrails.find((row) => row.id === "G8").analysis, "session-bench-long-analysis-v2");
+  assert.equal(report.guardrails.find((row) => row.id === "G8").analysis, "session-bench-long-analysis-v3");
   assert.deepEqual(
     report.guardrails.map((row) => row.id),
     ["G1", "G2", "G3", "G4", "G5", "sizes", "G6", "G7", "G8", "G9", "G10", "G11"],
@@ -163,14 +162,32 @@ test("live_guardrails_read_the_calibration_and_pressure_rows", () => {
       amnesic: { overall: { classes: classes(2) }, sessions: { a: {}, b: {}, c: {} } },
       "STM-only": { overall: {}, sessions: { a: {}, b: {}, c: {} } },
     },
-    pressure: { "STM-only": { a: { firstOverflowTask: 50 }, b: { firstOverflowTask: 60 }, c: { firstOverflowTask: 70 } } },
-    firstAfterTask: { a: 64, b: 64, c: 64 },
+    // Analysis v3: a session counts when at least half its `after` dependents sit at or past overflow + 10.
+    pressure: { "STM-only": { a: { firstOverflowTask: 95 }, b: { firstOverflowTask: 100 }, c: { firstOverflowTask: 115 } } },
+    afterTasks: { a: [111, 120, 130, 140], b: [111, 120, 130, 140], c: [111, 120, 130, 140] },
     cost: { "STM-only": { overflows: 0 } },
+    faults: { "STM-only": [] },
     ...over,
   });
+  const g11 = (r) => liveLongGuardrails(r).rows.find((row) => row.id === "G11-live");
   assert.equal(liveLongGuardrails(report({})).pass, true);
-  assert.equal(liveLongGuardrails(report({ firstAfterTask: { a: 64, b: 55, c: 64 } })).pass, false);
-  assert.equal(liveLongGuardrails(report({ cost: { "STM-only": { overflows: 1 } } })).pass, false);
+  assert.deepEqual(g11(report({})).scoredShare, { a: 1, b: 1, c: 0.5 });
+  // Overflow at 125.5 and 130 leaves 1 of 4 scored in each: one session reaches, under the 2 of 3.
+  const late = { "STM-only": { a: { firstOverflowTask: 95 }, b: { firstOverflowTask: 125.5 }, c: { firstOverflowTask: 130 } } };
+  assert.equal(liveLongGuardrails(report({ pressure: late })).pass, false);
+  // A session where STM-only never overflowed scores nothing.
+  assert.equal(
+    g11(report({ pressure: { "STM-only": { a: { firstOverflowTask: null }, b: {}, c: { firstOverflowTask: 95 } } } })).reached,
+    1,
+  );
+  // An overflow the kernel compacted around is reported, not a miss; a task that ended on one is a miss.
+  const recovered = liveLongGuardrails(report({ cost: { mem0: { overflows: 4 } } }));
+  assert.equal(recovered.pass, true);
+  assert.equal(recovered.rows.find((row) => row.id === "no-window-overflow").overflows, 4);
+  assert.equal(
+    liveLongGuardrails(report({ faults: { mem0: [{ session: "a", task: 3, status: "error", code: "context_overflow" }] } })).pass,
+    false,
+  );
   const weak = report({});
   weak.scores.amnesic.overall.classes.D4 = { pass: 5, total: 10 }; // fails 50%, under the 60% D4 floor
   assert.equal(liveLongGuardrails(weak).pass, false);

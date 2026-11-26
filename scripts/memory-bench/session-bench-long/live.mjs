@@ -44,16 +44,15 @@ import {
   assertLongEqualTreatment,
   LONG_CALIBRATION_ARMS,
   LONG_DECISION_ARMS,
-  LONG_SIDE_ARMS,
   longArmConfig,
   MEMORY_SYSTEM_ARMS,
   WM_TRIGGER_TOKENS,
 } from "./arms.mjs";
 import { createSession, partitionIds, sessionBenchLongPartitions, sessionSizes, WINDOW_TOKENS } from "./generate.mjs";
 import { LIVE_GUARDRAILS, LONG_GATE_FILE, liveLongGuardrails } from "./guardrails.mjs";
-import { firstAfterTask } from "./instrument.mjs";
+import { afterTasks, firstAfterTask } from "./instrument.mjs";
 import { longReport, longSharedConfig, runLongArmSession } from "./run.mjs";
-import { ANALYSIS_LONG, compareLong, LONG_DECISION, longUnits, longVerdict } from "./score.mjs";
+import { ANALYSIS_LONG, compareLong, LONG_DECISION, longUnits, longVerdict, PRESSURE_ARM, pressureTasksFrom } from "./score.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../../..");
@@ -101,8 +100,8 @@ export function productFiles(dir = PRODUCT_DIR) {
 /** The dev sessions, and the pilot's: the first dev session of each family in the partition file's label-blind order. */
 export const devIds = (partitions = file) => partitionIds(partitions, "dev");
 export const pilotIds = (partitions = file) => Object.values(partitions.abilities.dev).map((list) => list[0]);
-/** The decision and side arms: every session. The calibration arms: the pilot sessions only. */
-export const LONG_RUN_ARMS = Object.freeze([...LONG_DECISION_ARMS, ...LONG_SIDE_ARMS]);
+/** The decision arms: every session. The calibration arms: the pilot sessions only. */
+export const LONG_RUN_ARMS = Object.freeze([...LONG_DECISION_ARMS]);
 
 const MODEL = "opencode-go/hy4-flash-free";
 const WORKER = "opencode-go/muse-spark-1.3-contributor";
@@ -123,7 +122,7 @@ function liveShared({ model, sampling, window, limits, mainOutputTokens }) {
   const [provider, ...rest] = model.split("/");
   return longSharedConfig({ model: { provider, model: rest.join("/") }, window, limits, mainOutputTokens, ...sampling });
 }
-/** Each arm's config hash on the live model, and the shared hash the decision and side arms hold in common (G6). */
+/** Each arm's config hash on the live model, and the shared hash the decision arms hold in common (G6). */
 export function liveArmHashes({
   model = MODEL,
   sampling = SAMPLING,
@@ -163,19 +162,18 @@ export function buildLongRule() {
       dir: PRODUCT_DIR,
       files: product.length,
       hash: filesHash(product),
-      note: "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; finished task requests are batched for WM; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes",
+      note: "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes. The fourth, batching finished task requests kept word for word for WM, is reverted (owner, 2026-11-26): rule f42e1fe0 showed WM discarding the user's rules that ride inside task requests (STM+WM-deterministic D2 18/27, D2R 3/6 against STM-only's 26/27, 6/6)",
     },
     harness: { files: [...HARNESS_FILES], hash: filesHash(HARNESS_FILES) },
     partition: "dev",
     sessions: devIds(),
     pilotSessions: pilotIds(),
     selection:
-      "every dev session (12: 4 per family; owner, Task 2), 150 tasks each (benchmark version 2; owner, Task 7, 2026-11-24: on the pilot's live rates the pool first overflowed at task 75-90, after every version-1 `after` dependent); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
+      "every dev session (12: 4 per family; owner, Task 2), 150 tasks each (benchmark version 2; owner, Task 7, 2026-11-24: on the pilot's live rates the pool first overflowed at task 75-90, after every version-1 `after` dependent; version 3, owner 2026-11-26: `after` dependents in tasks 111-150, scored past STM-only's measured overflow plus 10 tasks); heldout-a and heldout-b stay unread. The pilot is the first dev session of each family in the label-blind order",
     arms: [...LONG_RUN_ARMS],
     decisionArms: [...LONG_DECISION_ARMS],
-    sideArms: [...LONG_SIDE_ARMS],
     armsNote:
-      "each arm differs only in `memory` (arms.mjs). STM-only: the 0.14.0 defaults (WM off) with Task 1's fixes, context.eviction relevance; STM-only-protect: protect-user; STM+WM: WM on, model policy, each phase's scope through memory:scope; STM+WM-deterministic: the same, deterministic policy; mem0: the side arm (owner, Task 2), reported beside the decision arms and never read by the verdict",
+      "each arm differs only in `memory` (arms.mjs). STM-only: the 0.14.0 defaults (WM off) with Task 1's fixes, context.eviction relevance; STM-only-protect: protect-user; STM+WM: WM on, model policy, each phase's scope through memory:scope; STM+WM-deterministic: the same, deterministic policy; mem0: memory-off-llm plus mem0's retrieval as a context block; a baseline with memory-off-llm (owner, 2026-11-26: it was the side arm, Task 2), read by the verdict's step 3",
     calibration: {
       arms: [...LONG_CALIBRATION_ARMS],
       sessions: pilotIds(),
@@ -214,17 +212,17 @@ export function buildLongRule() {
     workerFaults:
       "the screen's (owner, 2026-11-21): a job with any memory-worker call that failed after every retry (meter.workerErrors), or any STM batch recorded without the model (meter.stmFallbacks), leaves no row and runs again; a job's third worker fault, or a provider's usage-limit answer, halts the run with STOP: for the owner. workerAborts are not faults",
     overflow:
-      "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no overflow on any row (Task 7: a miss stops the run, the fix is a new hash). Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
+      "the harness rejects a request over W's input cap as a provider would (context_overflow). That is the arm's scored outcome, as in the screen (the task fails, the row stays, meter.overflows counts it); it is not a fault, because a rerun would meet the same block and reach the third-fault stop. The pilot's live guardrail allows no task to end on an overflow (owner, 2026-11-26: rule f42e1fe0's mem0 arm met 4 overflows on one session and the kernel compacted and retried each, so all 150 tasks completed; the compaction vote counts the conversation and its summaries, not a host's context block such as mem0's). Overflows the kernel recovered are reported per arm. Task 5 finding 2: the WM arms' block is not bounded by the pool (16,217 rendered tokens offline, a worst request near 98.5% of the cap), so a WM arm can overflow where the STM arms do not",
     smokeOutcomes: ["ERR_PRISM_RUN_LIMIT", "context_overflow"],
     liveGuardrails: { ...LIVE_GUARDRAILS, amnesicFailRateMin: { ...LIVE_GUARDRAILS.amnesicFailRateMin } },
     controlNote:
-      "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job",
+      "analysis v2 (owner, 2026-11-25): the control guard reads C-stable, the C checks of every job but count-errors (score.mjs NOISY_JOBS); C and task keep every job. Analysis v3 (owner, 2026-11-26): after scores a check only at or past STM-only's first pool overflow in its session plus 10 tasks (score.mjs pressureTasksFrom); mem0 is a baseline in step 3",
     order: [
       "pre-run: the offline guardrails G1-G11 pass with nothing pending (guardrails.mjs); the gate approves this hash",
       "smoke: memory-off-llm on the smallest pilot session, alone; no fault, no task failed outside the arm's outcomes, and a projected total within the ceiling; a miss stops the run. Provider errors the retries absorbed (a stream cut mid-answer and sent again) are reported, not a miss (owner, 2026-11-25: rule aeb684e0's smoke met one such cut at exchange 375 of the main model, and the strict rule would have stopped the run on a task that passed)",
       "calibration: amnesic and oracle-notes on the pilot sessions; oracle-notes passes >= 60% of tasks and amnesic fails >= 70% of D2 and D2R and >= 60% of D4 (owner, 2026-11-25: amnesic failed 70.4% then 63.0% of D4, the same 7 of 27 ship-day checks passing without memory both times), or the run stops",
-      "pilot: the decision arms and mem0 on the pilot sessions; then live G11 (STM-only's pool overflows before the first after dependent in >= 2 of 3) and no overflow on any row, or the run stops (Task 7)",
-      "the rest (Task 8, on the owner's word): the decision arms and mem0 on the other 9 dev sessions; the pilot's rows count",
+      "pilot: the decision arms on the pilot sessions; then live G11 (at least half of a session's after dependents sit at or past STM-only's first overflow plus 10 tasks, in >= 2 of 3 sessions) and no task ended on an overflow, or the run stops (Task 7)",
+      "the rest (Task 8, on the owner's word): the decision arms on the other 9 dev sessions; the pilot's rows count. The dev sessions decide the configuration; the claims against memory-off-llm and mem0 are read on held-out sessions under a later rule",
     ],
     checkins: "every 30 minutes and after every job: rows done, input tokens spent, projected total",
     instrumentation:
@@ -559,14 +557,14 @@ export function longProjection(rows, rule = SESSION_BENCH_LONG_RULE, { pilot = f
 }
 
 /** Each arm's blind units from rows (G7: the scorer never sees the arm). */
-export function unitsFromLongRows(rows) {
+export function unitsFromLongRows(rows, { pressureTasks } = {}) {
   const byArm = {};
   for (const row of rows) {
     const own = (byArm[row.arm] ??= { checks: [], tasks: [] });
     own.checks.push(...row.checks);
     own.tasks.push(...row.tasks);
   }
-  return Object.fromEntries(Object.entries(byArm).map(([arm, own]) => [arm, longUnits(own).units]));
+  return Object.fromEntries(Object.entries(byArm).map(([arm, own]) => [arm, longUnits(own, { pressureTasks }).units]));
 }
 
 /**
@@ -612,6 +610,7 @@ export function longLiveReport(rows, rule = SESSION_BENCH_LONG_RULE, { pilot = f
       rows: kept.length,
       complete: longJobs(rule, { pilot }).every((job) => kept.some((row) => row.arm === job.arm && row.session === job.session)),
       firstAfterTask: Object.fromEntries(ids.map((id) => [id, firstAfterTask(createSession(id, { verify: false }))])),
+      afterTasks: Object.fromEntries(ids.map((id) => [id, afterTasks(createSession(id, { verify: false }))])),
       quotaWaitMs: kept.reduce((sum, row) => sum + row.quotaWaitMs, 0),
       ...(root ? { wireUsage: wireUsage(join(root, "wire")) } : {}),
     },
@@ -622,9 +621,11 @@ export function longLiveReport(rows, rule = SESSION_BENCH_LONG_RULE, { pilot = f
   report.liveGuardrails = pilotReport
     ? liveLongGuardrails({ ...pilotReport, sessions: rule.pilotSessions }, rule.liveGuardrails)
     : { complete: false, pass: false, rows: [] };
-  // The analysis and the verdict read the decision and side arms on the sessions every one of them finished.
+  // The analysis and the verdict read the decision arms on the sessions every one of them finished.
   const runRows = kept.filter((row) => rule.arms.includes(row.arm));
-  const units = unitsFromLongRows(runRows);
+  // Analysis v3: `after` reads only the checks past STM-only's measured overflow in each session.
+  report.pressureTasks = pressureTasksFrom(report.pressure?.[PRESSURE_ARM] ?? {});
+  const units = unitsFromLongRows(runRows, { pressureTasks: report.pressureTasks });
   report.comparisons = ANALYSIS_LONG.comparisons.map((pair) => compareLong(units, pair));
   report.verdict = longVerdict({
     units,

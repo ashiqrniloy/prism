@@ -17,13 +17,21 @@ import {
 } from "../session-bench/arms/prism.mjs";
 import { dependencyEvidence } from "./agents.mjs";
 
-/** The decision arms (plan 218.5 Task 6): the verdict reads these only. */
-export const LONG_DECISION_ARMS = Object.freeze(["memory-off-llm", "STM-only", "STM-only-protect", "STM+WM", "STM+WM-deterministic"]);
-/** The side arm the owner kept (Task 2): reported beside the decision arms, never read by the verdict. */
-export const LONG_SIDE_ARMS = Object.freeze(["mem0"]);
+/**
+ * The decision arms (plan 218.5 Task 6): the verdict reads these only. mem0 was the owner's side arm (Task 2); since the
+ * Task 7 rerun (owner, 2026-11-26) it is a baseline the verdict's step 3 reads, with memory-off-llm.
+ */
+export const LONG_DECISION_ARMS = Object.freeze([
+  "memory-off-llm",
+  "mem0",
+  "STM-only",
+  "STM-only-protect",
+  "STM+WM",
+  "STM+WM-deterministic",
+]);
 /** The benchmark's own instruments: the floor and the ceiling. They differ from the decision arms by design. */
 export const LONG_CALIBRATION_ARMS = Object.freeze(["amnesic", "oracle-notes"]);
-export const LONG_ARMS = Object.freeze([...LONG_DECISION_ARMS, ...LONG_SIDE_ARMS, ...LONG_CALIBRATION_ARMS]);
+export const LONG_ARMS = Object.freeze([...LONG_DECISION_ARMS, ...LONG_CALIBRATION_ARMS]);
 /** The arms that run on session memory, and so have a ledger to instrument. */
 export const MEMORY_SYSTEM_ARMS = Object.freeze(["STM-only", "STM-only-protect", "STM+WM", "STM+WM-deterministic"]);
 /** The arms that set a scope through `memory:scope`, so WM runs. */

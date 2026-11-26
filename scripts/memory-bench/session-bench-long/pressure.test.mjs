@@ -284,7 +284,9 @@ test("gate_record_design_matches_the_script", () => {
     poolOverflowTask(design.pressure.tokensPerTask.mean, poolTokens(), design.pressure.scopeTokens),
   );
   assert.equal(design.buckets.beforeBelowTask, design.pressure.overflowTask.densest);
-  assert.equal(design.buckets.afterAboveTask, design.pressure.overflowTask.mean + 10);
+  // Version 2 set after at the mean overflow plus 10 (94); version 3 (owner, 2026-11-26) moves it past task 110 and
+  // scores after past each session's measured overflow instead.
+  assert.ok(design.buckets.afterAboveTask >= design.pressure.overflowTask.mean + 10);
   // Counts and ids only.
   for (const row of design.sessions)
     assert.deepEqual(Object.keys(row), [
