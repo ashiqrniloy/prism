@@ -1,10 +1,10 @@
 /** session (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 
+import { narrowScope } from "../agent/sessions.js";
 import { ActiveDurableRun, pendingDecisionsOf, resolveRunDecisions } from "../agent-approval.js";
 import { restoreRunSessionState } from "../agent-run-restore.js";
 import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
 import { agentFingerprint, runStateBounds, saveAgentRunState } from "../agent-run-state.js";
-import { createMemoryRunStateCell, type DurableRunStateOptions } from "../run-state-cell.js";
 import { isCompactionEntryData, resolveKeptStartIndex } from "../compaction.js";
 import type {
   Agent,
@@ -24,8 +24,8 @@ import type {
   ModelConfig,
   ModelProvider,
   ModelSpec,
-  OwnershipScope,
   NestedRunRef,
+  OwnershipScope,
   PendingDecision,
   PromptVersionRef,
   ProviderRequest,
@@ -37,12 +37,12 @@ import type {
   Session,
   SessionBranchRead,
   SessionEntry,
+  SessionForkOptions,
   SessionLimitsEntryData,
   SessionLimitsStatus,
   SessionLinks,
-  SessionSeedEntry,
-  SessionForkOptions,
   SessionOptions,
+  SessionSeedEntry,
   SessionStore,
   Skill,
   SteerOptions,
@@ -67,15 +67,15 @@ import {
   SessionNotFoundError,
   toRunResultStatus,
 } from "../contracts.js";
-import { createHookBus, type HookBus } from "../hooks/index.js";
 import type { Principal } from "../contracts-core/principal.js";
+import { createHookBus, type HookBus } from "../hooks/index.js";
 import type { AgentInput } from "../input.js";
 import type { LoopStrategy } from "../loop/index.js";
 import { estimateAssemblyTokens, estimateMessageTokens, estimateTextTokens, resolveInputCap } from "../models/estimate.js";
 import { resolveRunOptions } from "../models/ref.js";
-import { parseStructuredOutput } from "../provider-kit/structured-output.js";
-import { assertRunOptionsShape } from "./config-shape.js";
+import { PACKAGE_CALL_SEAM, type PackageCallSeam } from "../package-call-seam.js";
 import { type Capability, requireCapability } from "../packages/capabilities.js";
+import { parseStructuredOutput } from "../provider-kit/structured-output.js";
 import {
   errorToErrorInfo,
   redactAgentEvent,
@@ -88,20 +88,19 @@ import {
 import {
   ceilingsOf,
   hasConfiguredSessionLimits,
+  type RunLimitTracker,
   resolveBackgroundSettleMs,
   resolveSessionLimits,
   restoreSessionLimitsFromEntries,
-  type RunLimitTracker,
   SessionLimitTracker,
 } from "../run-limits.js";
+import { createMemoryRunStateCell, type DurableRunStateOptions } from "../run-state-cell.js";
 import { type BackgroundTracker, createBackgroundTracker } from "../session/background.js";
 import { createExternalState, type ExternalStateHandle, foldExternalState } from "../session/external-state.js";
 import { forkedEntryMetadata } from "../session/fork-lineage.js";
 import { bindSessionState, foldPackageState, type PackageStateData, SessionStateStore } from "../session/state.js";
-import { PACKAGE_CALL_SEAM, type PackageCallSeam } from "../package-call-seam.js";
 import type { SessionContext } from "../session-context.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
-import { narrowScope } from "../agent/sessions.js";
 import {
   createSessionEntry,
   entriesInScope,
@@ -120,6 +119,8 @@ import { validateLoadedSkillBodies } from "../skill-load.js";
 import { resolveAllActiveSkills } from "../skills.js";
 import { createSlotDefaults, createSlotRegistry, type SlotRegistry } from "../slots/index.js";
 import { pendingSuspensionOf, type SuspendedRunEntryData } from "../suspended-run.js";
+import { assertRunOptionsShape } from "./config-shape.js";
+import { continuationCheckpoint, owesModelTurn } from "./continue.js";
 import { tryAgentRuntime } from "./create-agent.js";
 import { EventSubscriber } from "./event-subscriber.js";
 import {
@@ -133,9 +134,8 @@ import {
   throwIfAbortedSignal,
   withoutTrailingInput,
 } from "./helpers.js";
-import { agentSkillSource } from "./runtime-registry.js";
-import { continuationCheckpoint, owesModelTurn } from "./continue.js";
 import { repairUnansweredToolCalls } from "./history-repair.js";
+import { agentSkillSource } from "./runtime-registry.js";
 import { executeRun } from "./session/assemble.js";
 import { withCatalogCost } from "./session/provider-round.js";
 import { asSessionHost } from "./session/types.js";
@@ -1174,20 +1174,28 @@ export class RuntimeAgentSession implements Session {
 
   /**
    * `RunOptions.chargeTo` must be a kernel view of an open session of this agent that is an ancestor of this one by
-   * links (plan 232 Task 2). The walk follows open sessions only, bounded by `MAX_SESSION_LINK_DEPTH`.
+   * links (plan 232 Task 2), or the session this one links to directly when that is another agent's (a delegate child
+   * backed by a host-supplied agent). The walk follows open sessions only, bounded by `MAX_SESSION_LINK_DEPTH`.
    */
   private assertChargeTarget(view: SessionContext): void {
     const target = viewSessions.get(view);
     const refuse = (reason: string): never => {
-      throw new TypeError(`RunOptions.chargeTo must be a session view of an ancestor of this session on the same agent: ${reason}`);
+      throw new TypeError(
+        `RunOptions.chargeTo must be a session view of an ancestor of this session on the same agent, or of its linked parent: ${reason}`,
+      );
     };
-    if (!target) refuse("not a kernel session view");
-    if (target!.agent !== this.agent) refuse("another agent's session");
+    if (!target) return refuse("not a kernel session view");
     const open = tryAgentRuntime(this.agent)?.openSessions;
+    if (target.agent !== this.agent) {
+      // Only a parent outside this agent: a session of this agent that shares the id is the real parent.
+      const parentHere = this.openParent ?? (this.parentSessionId === undefined ? undefined : findOpenSession(open, this.parentSessionId));
+      if (this.parentSessionId === target.id && parentHere === undefined) return;
+      refuse("another agent's session that is not this session's linked parent");
+    }
     let parentId = this.parentSessionId;
     let current: RuntimeAgentSession = this;
     for (let hop = 0; parentId !== undefined && hop < MAX_SESSION_LINK_DEPTH; hop += 1) {
-      if (parentId === target!.id) return;
+      if (parentId === target.id) return;
       const parent: RuntimeAgentSession | undefined = current.openParent ?? findOpenSession(open, parentId);
       if (!parent) break;
       current = parent;

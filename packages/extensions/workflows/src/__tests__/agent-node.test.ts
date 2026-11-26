@@ -148,7 +148,8 @@ describe("agentNode", () => {
       model: { provider: "refusing", model: "m" },
       packages: [providerPackage("refusing-provider", [refusing])],
     });
-    const h = await host({ worker, workspace, definition: single({ worktree: true }) });
+    // `profilePacing: false`: the busy profile fails the node instead of pacing it.
+    const h = await host({ worker, workspace, definition: single({ worktree: true, profilePacing: false }) });
     await assert.rejects(
       () => h.run.result(),
       (error: unknown) => error instanceof WorkflowRuntimeError && error.message.includes("child run failed"),

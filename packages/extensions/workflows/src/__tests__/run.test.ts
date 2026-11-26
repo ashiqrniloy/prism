@@ -1,8 +1,8 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
-import { CheckpointRestoreError } from "../checkpoint-restore.js";
 import { mockProvider } from "@arnilo/prism/testing";
+import { CheckpointRestoreError } from "../checkpoint-restore.js";
 import {
   agentNode,
   conditionalNode,
@@ -755,15 +755,22 @@ describe("runWorkflow", () => {
     });
     let result = await runWorkflow(workflow, null, { checkpoints, runId: "two-reviews-1" });
     assert.equal(result.status, "suspended");
+    assert.deepEqual(Object.keys(result.suspensions ?? {}).sort(), ["a", "b"]);
+    // Two are pending, so a resume must name one.
+    await assert.rejects(
+      resumeWorkflow(workflow, { runId: result.runId }, { checkpoints, resume: { decision: "approve", expectedVersion: result.version } }),
+      /name one with resume.nodeId/,
+    );
     result = await resumeWorkflow(
       workflow,
       { runId: result.runId },
       {
         checkpoints,
-        resume: { decision: "approve", expectedVersion: result.version },
+        resume: { nodeId: "a", decision: "approve", expectedVersion: result.version },
       },
     );
     assert.equal(result.status, "suspended");
+    assert.deepEqual(Object.keys(result.suspensions ?? {}), ["b"]);
     result = await resumeWorkflow(
       workflow,
       { runId: result.runId },

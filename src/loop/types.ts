@@ -123,6 +123,8 @@ export interface RunController {
   readonly limits: RunLimitTracker;
   /** The run's model: `RunOptions.model`, else the agent's. Absent on a model-less agent. */
   readonly model?: ModelRef;
+  /** `RunOptions.external`: how a driver narrows its configured spec for this run. Other loops ignore it. */
+  readonly external?: import("../contracts.js").RunOptions["external"];
   /** One provider turn: fires `turn.before`, `context.build`, `model.request`, `model.call`, `model.response`, `message.append`. */
   turn(options?: RunTurnOptions): Promise<RunTurnResult>;
   /**

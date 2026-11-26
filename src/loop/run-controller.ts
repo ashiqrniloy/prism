@@ -1,11 +1,12 @@
+import { ModelError } from "../agent-session/model-errors.js";
 import type {
   AgentEvent,
   AgentFinishReason,
   EventOrigin,
   JsonObject,
   JsonValue,
-  ModelRef,
   Message,
+  ModelRef,
   ProviderRequest,
   ProviderTurnResult,
   Session,
@@ -14,15 +15,14 @@ import type {
   ToolResult,
   Usage,
 } from "../contracts.js";
-import { ModelError } from "../agent-session/model-errors.js";
 import { packageEventFor } from "../hooks/emit.js";
 import { HOOK_EXECUTE_REWRITE, HookError } from "../hooks/errors.js";
-import { frozenCopy, jsonEqual } from "../hooks/json.js";
 import type { HookBus, RunEndDecision, ToolCallDecision, TurnBeforeDecision } from "../hooks/index.js";
+import { frozenCopy, jsonEqual } from "../hooks/json.js";
 import type { AgentInput } from "../input.js";
+import { toToolResultMessage } from "../input.js";
 import type { RunLimitTracker } from "../run-limits.js";
 import type { ExternalStateHandle } from "../session/external-state.js";
-import { toToolResultMessage } from "../input.js";
 import { dispatchableToolCalls, dispatchToolCallsInOrder, isRunControlError, syntheticFailureResult, throwIfAborted } from "./dispatch.js";
 import { applyRequestTransforms } from "./request-draft.js";
 import {
@@ -71,6 +71,8 @@ export interface RunControllerInternals {
   readonly limits: RunLimitTracker;
   /** The run's model: `RunOptions.model`, else the agent's. Absent on a model-less agent. */
   readonly model?: ModelRef;
+  /** `RunOptions.external`: a driver's per-run narrowing of its configured spec. */
+  readonly external?: import("../contracts.js").RunOptions["external"];
   readonly hooks: HookBus;
   readonly sessionId: string;
   readonly runId: string;
@@ -106,6 +108,8 @@ export interface RunControllerInternals {
   isToolCallExclusive?(call: ToolCallContent): boolean;
   /** Capabilities reported to `tool.call` for a call's tool. */
   effectsFor(call: ToolCallContent): readonly ToolCapabilityKind[];
+  /** Whether the call's tool declares `endsRun: true`, so its result may end the run. */
+  endsRun?(call: ToolCallContent): boolean;
   /**
    * Resolve the `{ ask }` calls of one tool round: inline `host.ui` confirms, or a `suspend`
    * resolution for each call that no UI answered. The kernel owns this so a loop cannot skip it.
@@ -114,7 +118,7 @@ export interface RunControllerInternals {
   /** Whether the loop can resume a suspended run (`snapshot` and `restore`, or the default loop). */
   readonly resumable?: boolean;
   /** Fold externally reported usage into the run's usage and limits. */
-  addUsage?(usage: Usage): void;
+  addUsage?(usage: Usage): void | Promise<void>;
   /** Whether `session.steer()` input is waiting. */
   hasPendingSteers?(): boolean;
   /** Drain the steer queue through the `run.input` gate; resolves the messages that survived it. */
@@ -158,6 +162,40 @@ export function createRunController(internals: RunControllerInternals): RunContr
   let pushedInput = false;
   /** Dispatchable calls of the last turn that no result has answered and no suspension owns yet. */
   const outstanding = new Map<string, ToolCallContent>();
+  /** Set once a declared tool's result asked to end the run: no further turn or tool call runs. */
+  let endedByTool: string | undefined;
+  const runEndedResult = (call: ToolCallContent): ToolResult => ({
+    toolCallId: call.id,
+    name: call.name,
+    error: { code: "run_ended", message: "a tool ended this run; no further tool calls run" },
+  });
+
+  /**
+   * Honours `endRun` on the round's results from tools that declare `endsRun`, and drops it (with a note) from
+   * any other. The first declared reason wins; the run ends after this round.
+   */
+  const applyEndRun = (calls: readonly ToolCallContent[], results: readonly ToolResult[]): ToolResult[] =>
+    results.map((result) => {
+      if (result.endRun === undefined) return result;
+      const call = calls.find((entry) => entry.id === result.toolCallId);
+      const reason = typeof result.endRun?.reason === "string" ? result.endRun.reason : "";
+      if (call !== undefined && internals.endsRun?.(call) === true) {
+        if (endedByTool === undefined) {
+          endedByTool = reason;
+          internals.setFinishReason("tool_end_run", reason);
+        }
+        return result;
+      }
+      const { endRun: _ignored, ...kept } = result;
+      internals.emit(
+        packageEventFor("kernel", internals.sessionId, internals.runId, "tool.end_run_ignored", {
+          toolCallId: result.toolCallId,
+          name: result.name,
+          reason: "the tool does not declare endsRun",
+        }),
+      );
+      return kept;
+    });
 
   const append = async (message: Message): Promise<Message> => {
     const transformed = await internals.hooks.transform("message.append", message, {
@@ -214,6 +252,8 @@ export function createRunController(internals: RunControllerInternals): RunContr
     // A loop that dropped the last round's calls and asks for another turn: answer them first, so
     // the next request never carries a call without its result.
     await settleOutstanding();
+    // A declared tool ended the run: no further provider turn.
+    if (endedByTool !== undefined) return { stopped: true, toolCalls: [], finishReason: "tool_end_run" };
     turnCount += 1;
     const currentTurn = turnCount;
     throwIfAborted(internals.signal);
@@ -347,6 +387,11 @@ export function createRunController(internals: RunControllerInternals): RunContr
       for (const call of calls) outstanding.delete(call.id);
       return settleCalls(calls, disposedResult);
     }
+    // A tool already ended this run (a driver's vendor may keep calling): refuse, and record the refusal.
+    if (endedByTool !== undefined) {
+      for (const call of calls) outstanding.delete(call.id);
+      return settleCalls(calls, runEndedResult);
+    }
     const origin = options?.origin;
     toolRounds += 1;
     // Evaluate `tool.call` for the whole round before dispatching, so several asks collect into
@@ -398,7 +443,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
       for (const call of calls) outstanding.delete(call.id);
       internals.onToolRoundSettled?.(calls, results);
       await internals.onToolRoundComplete?.();
-      return results;
+      return applyEndRun(calls, results);
     } finally {
       // The dispatch seam answered this round, or left a call to its suspension: none is outstanding.
       for (const call of calls) outstanding.delete(call.id);
@@ -598,7 +643,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
         return;
       }
       case "usage":
-        internals.addUsage?.(activity.usage);
+        await internals.addUsage?.(activity.usage);
         return;
       default: {
         const { kind, ...data } = activity;
@@ -712,6 +757,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
     signal: internals.signal,
     limits: internals.limits,
     model: internals.model,
+    ...(internals.external === undefined ? {} : { external: internals.external }),
     turn,
     executeTools,
     append: async (message) => {

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-26
+
 - **Working memory: seven mechanical fixes (plan 218.5 Task 3; experimental).** They fix the defects the Session-Bench screen's ledgers showed, so none has a flag.
   - **Behaviour change:** a WM pass runs on pressure only, once the records it can judge reach `wm.triggerTokens`. A new boundary marker no longer runs one (it gave 14–16 passes in a 12-task session whose surface never passed 900 tokens).
   - **Behaviour change:** a record marked `durable`, a `statement` citing a user message and a user message kept word for word are never in a WM batch, under either policy. They get no verdict, are never tombstoned and stay on the STM surface; `wm.triggerTokens` no longer counts them.

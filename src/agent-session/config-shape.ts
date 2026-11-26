@@ -311,6 +311,9 @@ const RUN_OPTIONS: Readonly<Record<string, Check>> = {
   ...SHARED,
   signal: object,
   interactive: boolean,
+  approvals: (value, path) => {
+    if (value !== "suspend" && value !== "deny") fail(path, '"suspend" or "deny"', value);
+  },
   validate: fn,
   tools: closedObject({ only: stringArray, concurrency }, "{ only?: string[], concurrency?: number }"),
   skills: (value, path) => {
@@ -320,6 +323,10 @@ const RUN_OPTIONS: Readonly<Record<string, Check>> = {
     if (value.only === undefined) fail(`${path}.only`, "a string array", value.only);
   },
   chargeTo: object,
+  external: closedObject(
+    { systemPrompt: object, model: string, prismTools: stringArray, builtinTools: object, limits: object },
+    "{ systemPrompt?, model?, prismTools?, builtinTools?, limits? }",
+  ),
   // `assertPromptVersionRef` owns the shape and runs before the run starts.
   promptVersion: any,
 };

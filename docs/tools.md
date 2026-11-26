@@ -100,6 +100,29 @@ resolveToolEffects({ name: "read_file", effects: ["read"], execute }); // ["read
 resolveToolEffects({ name: "legacy", execute }); // ["read", "write", "execute", "network", "external"]
 ```
 
+## Ending the run from a tool
+
+A tool that posts questions and waits for answers that arrive as the next run's input (a brainstorm interviewer) ends
+the run with its result:
+
+```ts
+const ask: ToolDefinition = {
+  name: "brainstorm_ask",
+  endsRun: true,
+  execute: async (args, ctx) => ({ toolCallId: ctx.toolCallId, name: "brainstorm_ask", value: "posted", endRun: { reason: "awaiting answers" } }),
+};
+```
+
+- The round finishes and every result is recorded. No further provider turn runs, and a tool call after it answers
+  `run_ended`. The run completes `stopped` with `stopReason: "tool_end_run"` and `stopDetail` set to `reason`. The
+  session stays usable: the next `session.run` continues the conversation.
+- Only a tool that declares `endsRun: true` may end a run. On any other tool's result `endRun` is dropped and a
+  `kernel` `tool.end_run_ignored` package event names the call, so an untrusted tool cannot cut runs short.
+- A Prism tool served to a driver agent (`prismTools`) ends the vendor's turn too: the driver interrupts it with its
+  abort ladder's first step (Claude Code SIGINT, Codex `turn/interrupt`, closing stdin), records the vendor resume
+  state as for any completed turn, and the run gets the same stop reason.
+- `endRun` is not written to the transcript; the model sees only the tool's text or value.
+
 ## Registries and filtering
 
 `createToolRegistry(tools?, options?)` stores `ToolDefinition` objects by name. `register(tool)`

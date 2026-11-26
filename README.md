@@ -75,12 +75,12 @@ Pass it to `createAgent({ packages: [...] })` next to the others. [docs/packages
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.14.1 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism` | 0.14.2 | core — runtime, CLI/RPC, templates, docs |
 | `@arnilo/prism-ai` | 0.14.1 | capability |
-| `@arnilo/prism-extensions` | 0.14.0 | capability |
-| `@arnilo/prism-hosts` | 0.14.1 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
-| `@arnilo/prism-knowledge` | 0.14.0-experimental.0 | capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range |
-| `@arnilo/prism-memory-system` | 0.14.0 | capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools |
+| `@arnilo/prism-extensions` | 0.14.1 | capability |
+| `@arnilo/prism-hosts` | 0.14.2 | library bundle — host protocols, channels, evaluations, devtools, headless routing, process driver and version-exact host-builder kit |
+| `@arnilo/prism-knowledge` | 0.14.0-experimental.1 | capability — experimental knowledge bundle: wiki and RAG subpaths; depends on the memory-system range |
+| `@arnilo/prism-memory-system` | 0.14.1 | capability — the memory system: session memory (STM) that observes the session, keeps a source-backed ledger, and compacts from it when the host turns it on; experimental WM, rehearsal and long-term memory (ltm), the store of record behind the memory.* tools |
 | `@arnilo/prism-tools` | 0.14.0 | capability |
 <!-- generated:package-truth:inventory end -->
 

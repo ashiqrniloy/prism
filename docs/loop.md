@@ -90,7 +90,10 @@ need a decision.
 `model.response`, `message.append`. `executeTools` fires, per call: `tool.call`, `tool.execute`,
 `tool.result`, `message.append`. `end` fires `run.end`; the first `{ continue }` re-enters the loop,
 capped by the continuation limit. A `turn.before` `{ stop }` ends the run with `stopReason:
-"hook_stop"`.
+"hook_stop"`. A tool round whose result carries an accepted `endRun` ends it with `stopReason: "tool_end_run"`: the
+next `turn` returns `stopped` without a provider call, and a later `executeTools` call answers `run_ended` (see
+[tools](tools.md#ending-the-run-from-a-tool)). `RunController.external` is `RunOptions.external`, which a driver uses
+to narrow its configured spec for one run ([drivers](drivers.md#the-run-context)).
 
 ## Request/response example
 

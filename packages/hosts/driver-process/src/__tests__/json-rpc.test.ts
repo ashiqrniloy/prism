@@ -308,3 +308,40 @@ test("json_rpc_request_failure_stops_accepting_new_handlers", async () => {
     },
   );
 });
+
+/** A Prism tool that ends the run (declares `endsRun`) and the vendor that served it. */
+const endingTool = {
+  name: "brainstorm_ask",
+  parameters: { type: "object", properties: {} },
+  endsRun: true,
+  execute: async () => ({ toolCallId: "t", name: "brainstorm_ask", value: "posted", endRun: { reason: "awaiting answers" } }),
+};
+for (const ladder of ["interrupt", "close-stdin"] as const)
+  test(`json_rpc_tool_end_run_ends_the_vendor_turn_${ladder}`, async () => {
+    await run(
+      {
+        config: { prismTools: ["brainstorm_ask"] },
+        agent: { tools: { add: [endingTool] } },
+        // The vendor keeps its turn open after the tool result; only the ladder's first step ends it.
+        source: rpcSource(
+          "await request('tool.call');process.stdin.on('end',()=>process.exit(0));" +
+            "createInterface({input:process.stdin}).on('line',l=>{if(JSON.parse(l).method==='interrupt'){notice('interrupted','yes');done();}});",
+        ),
+        adapter: (base) => ({
+          ...rpcAdapter(base),
+          abort: ladder === "interrupt" ? [{ rpc: "interrupt" }, { signal: "SIGTERM" }] : [{ closeStdin: true }, { signal: "SIGTERM" }],
+          requests: {
+            "tool.call": async ({ bridge }) =>
+              String((await bridge.invoke({ type: "tool_call", id: "t", name: "brainstorm_ask", arguments: {} })).value),
+          },
+        }),
+      },
+      (h, result) => {
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe("stopped");
+        expect(result.stopReason).toBe("tool_end_run");
+        expect(result.stopDetail).toBe("awaiting answers");
+        if (ladder === "interrupt") expect(JSON.stringify(h.events)).toContain("interrupted");
+      },
+    );
+  });

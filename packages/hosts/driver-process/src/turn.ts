@@ -15,6 +15,8 @@ export function createTurn(
   const encoding: { sessionId?: string; turnId?: string } = {};
   const pending: Message[] = [];
   let unmapped = 0;
+  /** Set when a Prism tool ended the run: the vendor's turn ends here, with no continuation and no queued prompt. */
+  let ending = false;
   let queue: Promise<unknown> = Promise.resolve();
   const enqueue = <T>(work: () => Promise<T>): Promise<T> => {
     const result = queue.then(work);
@@ -22,6 +24,7 @@ export function createTurn(
     return result;
   };
   const end = async (): Promise<RunEndResult> => {
+    if (ending) return { continue: false };
     const answer = await run.end();
     return adapter.descriptor.controls.continueOnStop ? answer : { continue: false };
   };
@@ -33,6 +36,12 @@ export function createTurn(
     encoding,
     enqueue,
     end,
+    requestEnd() {
+      ending = true;
+    },
+    get ending() {
+      return ending;
+    },
     steer: (message: Message, send: (frame: OutboundFrame) => Promise<void>) =>
       enqueue(async () => {
         switch (adapter.descriptor.controls.steer) {
@@ -95,7 +104,7 @@ export function createTurn(
           }
           return true;
         }
-        if (decoded.turnEnd && pending.length) {
+        if (decoded.turnEnd && pending.length && !ending) {
           await beforeNextTurn?.(encoding);
           await send(adapter.encode.prompt(pending.splice(0), encoding));
           return false;

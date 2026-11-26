@@ -43,6 +43,7 @@ const STOP: Readonly<Record<AgentFinishReason, "max_turn_requests" | "max_tokens
   hook_stop: "end_turn",
   hook_limit: "end_turn",
   denied: "refusal",
+  tool_end_run: "end_turn",
 };
 
 /**

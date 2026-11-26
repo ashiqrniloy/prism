@@ -301,9 +301,9 @@ export interface RunResult {
   readonly error?: ErrorInfo;
   /** String form of the abort reason when `status` is `"aborted"`. */
   readonly abortReason?: string;
-  /** Why a `stopped` run stopped: a ceiling, a `turn.before` stop, a `run.end` continuation cap, or `denied`. */
+  /** Why a `stopped` run stopped: a ceiling, a `turn.before` stop, a `run.end` continuation cap, `denied`, or an `endRun` tool result (`tool_end_run`). */
   readonly stopReason?: AgentFinishReason;
-  /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). */
+  /** Why the `turn.before` hook or an `endRun` tool result stopped the run (≤256 bytes, redacted). */
   readonly stopDetail?: string;
   /** Present when `status` is `"suspended"`: the unresolved decisions to pass to `session.resume`. Redacted. */
   readonly pending?: readonly PendingDecision[];

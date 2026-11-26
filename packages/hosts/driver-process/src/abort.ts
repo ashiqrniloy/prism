@@ -70,5 +70,18 @@ export function processShutdown(
       else if (!stopped) await signalLadder(child, { graceMs: Math.max(1, Math.floor(graceMs / 2)) });
       await exited;
     })());
-  return { abort, graceful: () => shutdown(true), failure: () => shutdown(false) };
+  let interrupting: Promise<void> | undefined;
+  /**
+   * Ends the vendor's current turn without aborting the run: only the ladder's first step (an interrupt
+   * signal, an interrupt request, or closing stdin), once. The turn then ends with `turnEnd` or the process exits.
+   */
+  const interrupt = () =>
+    (interrupting ??= (async () => {
+      const step = adapter.abort[0];
+      if (stopped || child.pid === undefined || step === undefined) return;
+      if ("rpc" in step) await transport.send({ method: step.rpc, params: step.params?.(encoding), notify: true });
+      else if ("closeStdin" in step) child.stdin.end();
+      else child.kill(step.signal);
+    })().catch(() => undefined));
+  return { abort, interrupt, graceful: () => shutdown(true), failure: () => shutdown(false) };
 }

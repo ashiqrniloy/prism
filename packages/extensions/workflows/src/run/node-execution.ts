@@ -11,7 +11,7 @@ import {
   WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
 } from "../limits.js";
 import { executeAgentNode } from "../nodes/agent-node.js";
-import { DEFAULT_MAX_PROFILE_BACKOFF_MS, runFanOutPool } from "../nodes/fan-out.js";
+import { DEFAULT_MAX_PROFILE_BACKOFF_MS, FIRST_BACKOFF_MS, isProfileBusy, runFanOutPool } from "../nodes/fan-out.js";
 import { executeGate, executeHumanGate, gatePassTargets } from "../nodes/gate.js";
 import { createScopedState } from "../scoped.js";
 import type {
@@ -40,6 +40,7 @@ import { cloneState, isCheckpointFailure, isWorkflowSuspension, persistCheckpoin
 import type { SchedulerState } from "./main.js";
 import { resolveMaxFanOut, resumeWorkflow, runWorkflow, suspend } from "./main.js";
 import { applyConditionalSkip, applyRouteSkip, releaseSuccessors } from "./skip.js";
+import { clearOwnedSuspensions, readSuspensions, SUSPENSION_PATH_SEPARATOR, suspensionOwner } from "./suspensions.js";
 import { updateWorkflowState } from "./validation.js";
 
 export async function runNode(
@@ -95,65 +96,67 @@ export async function runNode(
       const signal = combineSignals([options.signal, timeoutSignal]);
       const ctx = createContext(state, nodeId, options, signal);
 
-      result = await executeNode(
-        node,
-        ctx,
-        state,
-        options,
-        bus,
-        activeSessions,
-        node.kind === "loop"
-          ? async (iteration, iterationId) =>
-              emit({
-                type: "node_iteration_started",
-                workflowId: state.workflow.id,
-                runId: state.runId,
-                nodeId,
-                iteration,
-                iterationId,
-                timestamp: nowIso(),
-              })
-          : undefined,
-        node.kind === "loop"
-          ? async (iteration, iterationId, output, done) => {
-              const previousIteration = nodeState.iteration;
-              const previousOutput = nodeState.lastOutput;
-              const previousIterations = nodeState.iterations;
-              const iterations = previousIterations ?? [];
-              nodeState.iterations = iterations;
-              iterations.push({
-                schemaVersion: WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
-                iteration,
-                iterationId,
-                done,
-                ...(output === undefined ? {} : { output }),
-              } satisfies WorkflowLoopIterationRecord);
-              nodeState.iteration = iteration + 1;
-              nodeState.lastOutput = output;
-              try {
-                await persistCheckpoint(state, options, emit);
-              } catch (error) {
-                iterations.pop();
-                nodeState.iteration = previousIteration;
-                nodeState.lastOutput = previousOutput;
-                nodeState.iterations = previousIterations;
-                throw error;
+      result = await paced(state, nodeId, node, signal, () =>
+        executeNode(
+          node,
+          ctx,
+          state,
+          options,
+          bus,
+          activeSessions,
+          node.kind === "loop"
+            ? async (iteration, iterationId) =>
+                emit({
+                  type: "node_iteration_started",
+                  workflowId: state.workflow.id,
+                  runId: state.runId,
+                  nodeId,
+                  iteration,
+                  iterationId,
+                  timestamp: nowIso(),
+                })
+            : undefined,
+          node.kind === "loop"
+            ? async (iteration, iterationId, output, done) => {
+                const previousIteration = nodeState.iteration;
+                const previousOutput = nodeState.lastOutput;
+                const previousIterations = nodeState.iterations;
+                const iterations = previousIterations ?? [];
+                nodeState.iterations = iterations;
+                iterations.push({
+                  schemaVersion: WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION,
+                  iteration,
+                  iterationId,
+                  done,
+                  ...(output === undefined ? {} : { output }),
+                } satisfies WorkflowLoopIterationRecord);
+                nodeState.iteration = iteration + 1;
+                nodeState.lastOutput = output;
+                try {
+                  await persistCheckpoint(state, options, emit);
+                } catch (error) {
+                  iterations.pop();
+                  nodeState.iteration = previousIteration;
+                  nodeState.lastOutput = previousOutput;
+                  nodeState.iterations = previousIterations;
+                  throw error;
+                }
+                await emit({
+                  type: "node_iteration_finished",
+                  workflowId: state.workflow.id,
+                  runId: state.runId,
+                  nodeId,
+                  iteration,
+                  iterationId,
+                  done,
+                  ...(output === undefined ? {} : { output }),
+                  timestamp: nowIso(),
+                });
               }
-              await emit({
-                type: "node_iteration_finished",
-                workflowId: state.workflow.id,
-                runId: state.runId,
-                nodeId,
-                iteration,
-                iterationId,
-                done,
-                ...(output === undefined ? {} : { output }),
-                timestamp: nowIso(),
-              });
-            }
-          : undefined,
-        // The child session and worktree are durable before the agent runs, so a kill can reopen them.
-        async () => persistCheckpoint(state, options, emit),
+            : undefined,
+          // The child session and worktree are durable before the agent runs, so a kill can reopen them.
+          async () => persistCheckpoint(state, options, emit),
+        ),
       );
     } catch (error) {
       if (isCheckpointFailure(error)) throw error;
@@ -199,42 +202,43 @@ export async function runNode(
       if (!options.checkpoints) {
         throw new WorkflowRuntimeError("Durable workflow suspension requires checkpoints", "ERR_PRISM_WORKFLOW_SUSPEND");
       }
-      if (state.suspension && state.suspension.nodeId !== nodeId) {
-        // ponytail: one durable review cursor; queue concurrent suspension requests
-        // and rerun that node after the current review resolves.
-        nodeState.status = "ready";
-        if (!state.ready.includes(nodeId)) {
-          state.ready.push(nodeId);
-          state.ready.sort((a, b) => a.localeCompare(b));
-        }
-        await persistCheckpoint(state, options, emit);
-        return;
-      }
-      const descriptor: WorkflowSuspensionDescriptor = {
-        nodeId,
-        reason: result.output.reason,
-        data:
-          result.output.data === undefined
-            ? undefined
-            : boundNodeOutput(result.output.data, {
-                maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes,
-                redactor: options.redactor,
-              }),
-        resumeSchema: result.output.resumeSchema,
-        requestedAt: nowIso(),
-      };
+      const requestedAt = nowIso();
+      const bound = (data: unknown) =>
+        data === undefined
+          ? undefined
+          : boundNodeOutput(data, { maxNodeOutputBytes: state.workflow.limits?.maxNodeOutputBytes, redactor: options.redactor });
+      // A nested run's own suspensions surface one by one, under `<node>/<child id>`; any other node holds one.
+      const descriptors: WorkflowSuspensionDescriptor[] = result.childSuspensions?.length
+        ? result.childSuspensions.map((child) => ({
+            ...child,
+            nodeId: `${nodeId}${SUSPENSION_PATH_SEPARATOR}${child.nodeId}`,
+            data: bound(child.data),
+          }))
+        : [
+            {
+              nodeId,
+              reason: result.output.reason,
+              data: bound(result.output.data),
+              resumeSchema: result.output.resumeSchema,
+              requestedAt,
+            },
+          ];
+      // A suspended node blocks only its own successors: the run keeps scheduling every other ready node and
+      // becomes "suspended" only when nothing else can run.
       nodeState.status = "suspended";
       nodeState.error = undefined;
-      state.status = "suspended";
-      state.suspension = descriptor;
+      clearOwnedSuspensions(state.workflow, state.suspensions, nodeId);
+      for (const descriptor of descriptors) state.suspensions.set(descriptor.nodeId, descriptor);
       await persistCheckpoint(state, options, emit);
-      await emit({
-        type: "workflow_suspended",
-        workflowId: state.workflow.id,
-        runId: state.runId,
-        suspension: descriptor,
-        timestamp: descriptor.requestedAt,
-      });
+      for (const descriptor of descriptors) {
+        await emit({
+          type: "workflow_suspended",
+          workflowId: state.workflow.id,
+          runId: state.runId,
+          suspension: descriptor,
+          timestamp: descriptor.requestedAt,
+        });
+      }
       return;
     }
     const output = boundNodeOutput(result.output, {
@@ -355,10 +359,72 @@ function createContext(state: SchedulerState, nodeId: string, options: RunWorkfl
     ownership: options.ownership,
     metadata: options.metadata,
     resume:
-      state.resume?.nodeId === nodeId && state.resume.decision === "approve"
+      state.resume?.decision === "approve" && suspensionOwner(state.workflow, state.resume.nodeId)?.nodeId === nodeId
         ? { input: state.resumeInput, resumedAt: state.resume.resumedAt }
         : undefined,
   };
+}
+
+/**
+ * Runs one agent-node attempt, pacing it on a driver's `profile_busy` (unless `profilePacing: false`): the node
+ * gives its scheduler slot back, waits for another node to settle or a bounded backoff, then takes a free slot
+ * and starts again. The wait is not a failure and not a retry. Only a top-level node is paced here.
+ */
+async function paced<T>(
+  state: SchedulerState,
+  nodeId: string,
+  node: WorkflowNodeDefinition,
+  signal: AbortSignal | undefined,
+  attempt: () => Promise<T>,
+): Promise<T> {
+  if (node.kind !== "agent" || node.profilePacing === false) return attempt();
+  const maxBackoff = node.maxProfileBackoffMs ?? DEFAULT_MAX_PROFILE_BACKOFF_MS;
+  let backoff = FIRST_BACKOFF_MS;
+  for (;;) {
+    try {
+      return await attempt();
+    } catch (error) {
+      // A run that is already ending (a sibling failed) does not keep waiting on the profile.
+      if (!isProfileBusy(error) || isAbortError(error) || signal?.aborted || state.status !== "running") throw error;
+    }
+    state.running.delete(nodeId);
+    state.pacing.add(nodeId);
+    notifyProgress(state);
+    try {
+      const settled = await waitForProgress(state, backoff, signal);
+      backoff = settled ? FIRST_BACKOFF_MS : Math.min(backoff * 2, maxBackoff);
+      while (state.concurrency !== undefined && state.running.size >= state.concurrency) {
+        if (signal?.aborted) break;
+        await waitForProgress(state, maxBackoff, signal);
+      }
+    } finally {
+      state.pacing.delete(nodeId);
+      state.running.add(nodeId);
+    }
+    if (signal?.aborted) throw new WorkflowAbortError();
+  }
+}
+
+/** Wakes every node waiting on a busy profile; the scheduler calls it whenever a node settles. */
+export function notifyProgress(state: SchedulerState): void {
+  for (const wake of [...state.progress]) wake();
+}
+
+/** True when a node settled before `ms` passed; false on the timer or an abort. Leaves no timer behind. */
+function waitForProgress(state: SchedulerState, ms: number, signal: AbortSignal | undefined): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const done = (settled: boolean) => {
+      clearTimeout(timer);
+      state.progress.delete(wake);
+      signal?.removeEventListener("abort", aborted);
+      resolve(settled);
+    };
+    const wake = () => done(true);
+    const aborted = () => done(false);
+    const timer = setTimeout(() => done(false), ms);
+    state.progress.add(wake);
+    signal?.addEventListener("abort", aborted, { once: true });
+  });
 }
 
 async function executeNode(
@@ -376,6 +442,8 @@ async function executeNode(
   sessionId?: string;
   leafId?: string;
   runId?: string;
+  /** A nested run's pending suspensions, ids relative to that run. */
+  childSuspensions?: readonly WorkflowSuspensionDescriptor[];
 }> {
   switch (node.kind) {
     case "function":
@@ -524,7 +592,8 @@ async function executeNode(
           })
         : null;
       if (existing?.value.status === "suspended" && !ctx.resume) {
-        const childSuspension = existing.value.suspension;
+        const pending = [...readSuspensions(existing.value).values()];
+        const childSuspension = pending[0];
         if (!childSuspension) throw new WorkflowCheckpointError("Nested suspended workflow has no descriptor");
         return {
           output: suspend({
@@ -532,8 +601,10 @@ async function executeNode(
             data: childSuspension.data,
             resumeSchema: childSuspension.resumeSchema,
           }),
+          childSuspensions: pending,
         };
       }
+      const childTarget = ctx.resume && state.resume ? suspensionOwner(state.workflow, state.resume.nodeId)?.child : undefined;
       const result =
         existing && options.checkpoints
           ? await resumeWorkflow(
@@ -544,7 +615,12 @@ async function executeNode(
                 checkpoints: options.checkpoints,
                 resume:
                   existing.value.status === "suspended" && ctx.resume
-                    ? { decision: "approve", input: ctx.resume.input, expectedVersion: existing.version }
+                    ? {
+                        ...(childTarget === undefined ? {} : { nodeId: childTarget }),
+                        decision: "approve",
+                        input: ctx.resume.input,
+                        expectedVersion: existing.version,
+                      }
                     : undefined,
               },
             )
@@ -556,6 +632,7 @@ async function executeNode(
             data: result.suspension?.data,
             resumeSchema: result.suspension?.resumeSchema,
           }),
+          childSuspensions: [...readSuspensions(result).values()],
         };
       }
       if (node.scope) {

@@ -277,8 +277,10 @@ export async function adapterConformance(adapter: AgentAdapter, options: Adapter
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
       const started = Date.now();
-      controller.abort();
-      await running;
+      controller.abort("conformance abort");
+      const result = await running;
+      if (result.status !== "aborted") throw Error(`an aborted run settled ${result.status}, not aborted`);
+      if (result.abortReason !== "conformance abort") throw Error(`abortReason is ${result.abortReason ?? "missing"}`);
       // Plan 174 Task 11 (plan 173 Further Actions P3): the abort ladder itself is bounded by
       // `graceMs`, so this bound only has to catch a hang — the extra headroom is for loaded runs,
       // where a `release:gate` that also runs the Postgres legs starves this process.

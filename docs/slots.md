@@ -196,7 +196,7 @@ is registered, the kernel's own trigger applies:
 The estimate every trigger reads (and `compaction.when`'s `estimatedTokens`) is the branch's messages and carried
 summaries plus what the last main turn sent beside them: instructions, rendered context blocks (a memory block, a
 host's `context.build` retrieval) and tool declarations. At a run's start that overhead is the previous turn's. Before
-plan 218.5 Task 7 it was the branch alone, so a trigger fired late by the size of every block a package or host added,
+0.14.2 it was the branch alone, so a trigger fired late by the size of every block a package or host added,
 and the provider's overflow did the compacting.
 
 ```ts

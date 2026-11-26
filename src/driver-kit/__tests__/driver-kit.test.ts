@@ -7,12 +7,12 @@ import { createAgent, definePackage, type JsonValue, type RunController, type To
 import {
   createDriverLoop,
   createProfiles,
-  defineDriver,
-  driverPackage,
   type DriverDescriptor,
   type DriverRequires,
   type DriverRunContext,
   type DriverRuntime,
+  defineDriver,
+  driverPackage,
 } from "../index.js";
 
 const runtime = {
@@ -230,5 +230,41 @@ describe("driver kit", () => {
     assert.deepEqual(seen.services.consume("other-service"), { ok: true });
     assert.equal(seen.services.consume("absent"), undefined);
     await session.close();
+  });
+});
+
+describe("narrowSpec (RunOptions.external)", () => {
+  const spec = {
+    name: "cli",
+    profile: "p",
+    systemPrompt: { append: "configured" },
+    prismTools: ["lookup", "post"],
+    builtinTools: { allow: ["Read", "Grep", "Edit"], deny: ["Bash"] },
+    limits: { maxTurns: 10 },
+  } as const;
+  it("only_narrows_the_configured_spec", async () => {
+    const { narrowSpec } = await import("../index.js");
+    const narrowed = narrowSpec(
+      spec,
+      {
+        systemPrompt: { append: "run" },
+        model: "small",
+        prismTools: ["post", "unknown"],
+        builtinTools: { allow: ["Read", "Write"], deny: ["WebFetch"] },
+        limits: { maxTurns: 50 },
+      },
+      descriptor,
+    );
+    assert.deepEqual(narrowed.prismTools, ["post"]);
+    assert.deepEqual(narrowed.builtinTools, { allow: ["Read"], deny: ["Bash", "WebFetch"] });
+    assert.deepEqual(narrowed.limits, { maxTurns: 10 });
+    assert.deepEqual(narrowed.systemPrompt, { append: "run" });
+    assert.equal(narrowed.model, "small");
+    assert.equal(narrowSpec(spec, undefined, descriptor), spec);
+  });
+  it("a_prompt_mode_the_driver_cannot_honour_fails_closed", async () => {
+    const { narrowSpec } = await import("../index.js");
+    assert.throws(() => narrowSpec(spec, { systemPrompt: { replace: "x" } }, descriptor), /cannot replace the system prompt/);
+    assert.throws(() => narrowSpec(spec, { model: "m" }, { ...descriptor, models: "none" }), /takes no per-run model/);
   });
 });

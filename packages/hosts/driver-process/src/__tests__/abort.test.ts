@@ -44,9 +44,12 @@ setInterval(()=>{},30000);`,
       const running = h.session.run("go", { signal: controller.signal });
       await started;
       const start = Date.now();
-      controller.abort();
-      await running;
+      controller.abort("user abort");
+      const result = await running;
       expect(Date.now() - start).toBeLessThan(500);
+      // An abort before turnEnd settles the run aborted, with the signal's reason, as a native-loop run does.
+      expect(result.status).toBe("aborted");
+      expect(result.abortReason).toBe("user abort");
       const steps = readFileSync(`${h.root}/steps`, "utf8").trim().split("\n");
       expect(steps.slice(0, transport === "json-rpc" ? 4 : 3)).toEqual(
         transport === "json-rpc" ? ["rpc", "stdin", "SIGINT", "SIGTERM"] : ["stdin", "SIGINT", "SIGTERM"],
@@ -103,8 +106,26 @@ test("abort_during_final_flush_still_runs_abort_ladder", async () => {
     await turnEnd;
     await new Promise((resolve) => setTimeout(resolve, 20));
     controller.abort();
-    await running;
+    const result = await running;
     expect(readFileSync(`${h.root}/flush-abort`, "utf8")).toBe("aborted");
+    // The turn reached turnEnd before the abort arrived, so the run still completed.
+    expect(result.status).toBe("completed");
+  } finally {
+    await h.close();
+  }
+});
+
+test("abort_before_the_process_starts_reports_aborted", async () => {
+  const h = await harness({
+    source: `console.log(JSON.stringify({type:'turn.done'}))`,
+    adapter: (base) => ({ ...base, configure: () => ({}) }),
+  });
+  try {
+    const controller = new AbortController();
+    controller.abort("early");
+    const result = await h.session.run("go", { signal: controller.signal });
+    expect(result.status).toBe("aborted");
+    expect(result.abortReason).toBe("early");
   } finally {
     await h.close();
   }

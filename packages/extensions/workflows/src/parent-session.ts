@@ -2,6 +2,7 @@ import { type AgentEvent, type JsonObject, type JsonValue, type PackageAPI, type
 import { WorkflowRuntimeError } from "./errors.js";
 import { createWorkflowTransitionChannel } from "./events.js";
 import type { SchedulerState } from "./run/main.js";
+import { suspensionOwner } from "./run/suspensions.js";
 import { runWorkflow } from "./run.js";
 import { WORKFLOWS_SERVICE, type WorkflowRuntime } from "./services.js";
 import type {
@@ -102,7 +103,13 @@ export function createWorkflowEmitter(state: SchedulerState, options: RunWorkflo
     channel.emit(event);
     const parent = options.parent;
     if (!parent) return;
-    const nodeId = "nodeId" in event ? event.nodeId : event.type === "workflow_suspended" ? event.suspension.nodeId : undefined;
+    // A nested run's suspension is `<node>/<child id>`; its transition belongs to the owning node.
+    const nodeId =
+      "nodeId" in event
+        ? event.nodeId
+        : event.type === "workflow_suspended"
+          ? suspensionOwner(state.workflow, event.suspension.nodeId)?.nodeId
+          : undefined;
     if (!nodeId) return;
     const node = state.nodes.get(nodeId)!;
     let name: WorkflowPackageEvent["name"];
@@ -139,7 +146,9 @@ export function createWorkflowEmitter(state: SchedulerState, options: RunWorkflo
       status,
       ...(node.sessionId ? { childSessionId: node.sessionId } : {}),
       ...(event.type === "node_failed" ? { reason: "node_failed" } : {}),
-      ...(event.type === "workflow_suspended" ? { reason: "review_required" } : {}),
+      ...(event.type === "workflow_suspended"
+        ? { reason: "review_required", ...(event.suspension.nodeId === nodeId ? {} : { suspensionId: event.suspension.nodeId }) }
+        : {}),
     };
     const records: { name: WorkflowPackageEvent["name"]; data: JsonObject }[] = [{ name, data }];
     const definition = state.workflow.nodes[nodeId]!;

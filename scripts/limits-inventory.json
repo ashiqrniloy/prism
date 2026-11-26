@@ -2683,6 +2683,13 @@
       "config": "processDriver({ timeoutMs })"
     },
     {
+      "name": "END_RUN_SETTLE_MS",
+      "file": "packages/hosts/driver-process/src/driver.ts",
+      "class": "format",
+      "default": 200,
+      "reason": "algorithm parameter, not a limit: how long the vendor gets to read a run-ending tool result before its turn is interrupted"
+    },
+    {
       "name": "DEFAULT_CANDIDATE_MAX_BYTES",
       "file": "packages/hosts/evals/src/limits.ts",
       "class": "policy",

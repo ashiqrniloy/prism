@@ -14,6 +14,7 @@ import { cloneState, isCheckpointFailure, persistCheckpoint } from "./checkpoint
 import type { SchedulerState } from "./main.js";
 import { runNode } from "./node-execution.js";
 import { markRemaining, skipNode } from "./skip.js";
+import { firstSuspension, suspensionsRecord } from "./suspensions.js";
 import { validateState } from "./validation.js";
 
 export async function executeSuperstepScheduler(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult> {
@@ -166,6 +167,11 @@ export async function executeSuperstepScheduler(state: SchedulerState, options: 
       await Promise.all(workers);
       if (isCheckpointFailure(fatalError)) throw fatalError;
 
+      // A wave whose other nodes finished while one suspended stops at its barrier, suspended.
+      if (state.status === "running" && !fatalError && !options.signal?.aborted && state.suspensions.size > 0) {
+        state.status = "suspended";
+        await persistCheckpoint(state, options, emit);
+      }
       // Check if suspended or denied
       const currentStatus = state.status as WorkflowRunStatus;
       if (currentStatus === "suspended" || currentStatus === "denied") {
@@ -296,7 +302,8 @@ function formatResult(state: SchedulerState): WorkflowRunResult {
     status: state.status,
     version: state.version,
     outputs,
-    suspension: state.suspension,
+    suspension: firstSuspension(state.suspensions),
+    suspensions: suspensionsRecord(state.suspensions),
     resume: state.resume,
     state: cloneState(state.state),
     lineage: state.lineage,

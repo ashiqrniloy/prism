@@ -91,6 +91,8 @@ const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
     "retry",
     "metadata",
     "interactive",
+    // 0.14.2: deny instead of suspend for an unanswered ask.
+    "approvals",
     "redactor",
     "runLedger",
     "effectStore",
@@ -102,6 +104,8 @@ const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
     // Plan 232 Task 2: per-run skill narrowing and ancestor charging.
     "skills",
     "chargeTo",
+    // 0.14.2: a driver's per-run narrowing of its configured spec.
+    "external",
     "allowHiddenToolCalls",
     "inputLayout",
     "promptVersion",

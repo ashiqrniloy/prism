@@ -558,7 +558,7 @@ const observerProvider = {
           type: "tool_call",
           id: "c1",
           name: "record_event",
-          arguments: { kind: "statement", description: "Journey turn observed.", relevance: "high", sourceEntryIds },
+          arguments: { kind: "action", description: "Journey turn observed.", relevance: "high", sourceEntryIds },
         });
       }
     }
