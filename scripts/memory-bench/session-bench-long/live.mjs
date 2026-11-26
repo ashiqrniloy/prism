@@ -58,6 +58,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../../..");
 const file = sessionBenchLongPartitions();
 
+/** The kernel files of the compaction vote's estimate (plan 218.5 Task 7, 2026-11-26): pinned, so an edit is a new rule. */
+export const KERNEL_COMPACTION_FILES = Object.freeze(["src/agent-session/session.ts", "src/agent-session/session/assemble.ts"]);
+
 /** The memory system's product source (tests excluded): the rule pins its hash, so a product edit is a new rule. */
 export const PRODUCT_DIR = "packages/memory/system/src";
 /** The harness files the run executes beyond the frozen core (`templateHash`): an edit to any is a new rule. */
@@ -163,6 +166,11 @@ export function buildLongRule() {
       files: product.length,
       hash: filesHash(product),
       note: "the package's src after plan 218.5 Tasks 1, 3 and 7 (tests excluded); the kernel and providers are the tree's at the run. Task 7's fixes (owner, 2026-11-25): WM items count against the pool; link protections lapse after wm.protectRequestTasks (3) newer user requests; deterministic WM keeps only high or critical outcomes. The fourth, batching finished task requests kept word for word for WM, is reverted (owner, 2026-11-26): rule f42e1fe0 showed WM discarding the user's rules that ride inside task requests (STM+WM-deterministic D2 18/27, D2R 3/6 against STM-only's 26/27, 6/6)",
+    },
+    kernel: {
+      files: [...KERNEL_COMPACTION_FILES],
+      hash: filesHash(KERNEL_COMPACTION_FILES),
+      note: "the kernel's compaction vote (owner, 2026-11-26: \"Fix this already\"): its estimate counts the last main turn's instructions, rendered context blocks and tool declarations beside the branch, so every arm's trigger sees the memory block or mem0's retrieval it used to miss (rule f42e1fe0's mem0 arm overflowed W 4 times on that gap). Every arm compacts on the request it sends; the STM arms' trigger now counts their own memory block",
     },
     harness: { files: [...HARNESS_FILES], hash: filesHash(HARNESS_FILES) },
     partition: "dev",
