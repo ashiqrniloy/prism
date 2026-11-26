@@ -8,9 +8,10 @@ import type { RunWorkflowOptions, WorkflowRunResult } from "../types.js";
 import { errorCode, errorMessage, isAbortError, nowIso } from "../util.js";
 import { cloneState, isCheckpointFailure, persistCheckpoint } from "./checkpoint.js";
 import type { SchedulerState } from "./main.js";
-import { runNode } from "./node-execution.js";
+import { notifyProgress, runNode } from "./node-execution.js";
 import { markRemaining, skipNode } from "./skip.js";
 import { executeSuperstepScheduler } from "./superstep.js";
+import { firstSuspension, suspensionsRecord } from "./suspensions.js";
 import { validateState } from "./validation.js";
 
 export async function executeScheduler(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult> {
@@ -23,6 +24,7 @@ export async function executeScheduler(state: SchedulerState, options: RunWorkfl
 async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowOptions): Promise<WorkflowRunResult> {
   const workflowConcurrency = state.workflow.limits?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY;
   const concurrency = Math.min(options.concurrency ?? workflowConcurrency, workflowConcurrency);
+  state.concurrency = concurrency;
   const maxNodes = state.workflow.limits?.maxNodes ?? DEFAULT_MAX_NODES;
   const nestedDepth = options.nestedDepth ?? 0;
   const maxNestedDepth = Math.min(
@@ -83,6 +85,7 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
       }
     }
     kick();
+    notifyProgress(state);
   };
 
   const onAbort = () => {
@@ -114,7 +117,9 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
   await persistCheckpoint(state, options, emit);
 
   try {
-    while ((state.ready.length > 0 || state.running.size > 0) && state.status === "running" && !fatalError) {
+    // A node paced on a busy profile holds no slot but is still in flight; the run waits for it.
+    const inFlight = () => state.running.size + state.pacing.size;
+    while ((state.ready.length > 0 || inFlight() > 0) && state.status === "running" && !fatalError) {
       while (state.ready.length > 0 && state.running.size < concurrency && state.status === "running") {
         const nodeId = state.ready.shift()!;
         if (state.skipped.has(nodeId) || state.completed.has(nodeId)) continue;
@@ -128,10 +133,11 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
           .finally(() => {
             state.running.delete(nodeId);
             kick();
+            notifyProgress(state);
           });
       }
 
-      if (state.running.size === 0) break;
+      if (inFlight() === 0) break;
       if (options.signal?.aborted) {
         fatalError = new WorkflowAbortError();
         state.status = "aborted";
@@ -141,7 +147,7 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
       await waitForProgress();
     }
 
-    while (state.running.size > 0) {
+    while (inFlight() > 0) {
       await waitForProgress();
     }
 
@@ -155,6 +161,9 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
       markRemaining(state, "aborted");
     } else if (state.status === "suspended" || state.status === "denied") {
       // Suspension and denial are already fully represented in the checkpoint.
+    } else if (state.suspensions.size > 0) {
+      // Every branch that could run has run; what is left waits on a pending suspension.
+      state.status = "suspended";
     } else if ([...state.nodes.values()].some((node) => node.status === "failed")) {
       state.status = "failed";
     } else if ([...state.nodes.values()].every((node) => node.status === "succeeded" || node.status === "skipped")) {
@@ -203,7 +212,8 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
       status: state.status,
       version: state.version,
       outputs,
-      suspension: state.suspension,
+      suspension: firstSuspension(state.suspensions),
+      suspensions: suspensionsRecord(state.suspensions),
       resume: state.resume,
       state: cloneState(state.state),
       lineage: state.lineage,

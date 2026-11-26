@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-26
+
+- **`workflows`: per-node suspensions; a suspension no longer halts independent branches.** **Fixed:** two nodes that suspended in one run overwrote each other's descriptor, a resume released every suspended node with one input (the other re-asked, or an `agentNode` resumed with no decision batch), and one suspension stopped the scheduler from starting any other ready node. Now:
+  - A suspended node blocks only its own successors. The run ends `suspended` only when nothing else can run.
+  - `WorkflowRunResult.suspensions` and the checkpoint's `suspensions` hold one descriptor per node, in request order. `suspension` is deprecated and holds the first.
+  - `resumeWorkflow(..., { resume: { nodeId, decision, input, expectedVersion } })` releases that node only (new `WorkflowResumeRequest.nodeId`). **Behaviour change:** with several pending, a resume without `nodeId` fails with `WorkflowCheckpointError`. With one pending it may still be omitted.
+  - A `workflowNode` whose child run holds several suspensions surfaces each as `<node>/<child id>`.
+  - `workflow_suspended` and `workflow.suspended` are emitted once per suspension.
+  - A run killed mid-branch keeps every pending suspension on resume. A checkpoint with only `suspension` still resumes.
+  - Tests: `workflows/src/__tests__/suspensions.test.ts`.
+- **`workflows`: `profile_busy` pacing for every `agentNode`.** A top-level `agentNode` whose child run is refused with the driver kit's `profile_busy` gives its scheduler slot back, waits for another node to settle or a backoff (`maxProfileBackoffMs`, default 2000), then starts again. The wait is never a failure and never a retry. **Behaviour change:** two parallel nodes on one profile with `maxConcurrentRuns: 1` now both succeed instead of failing one. `agentNode({ profilePacing: false })` fails fast as before.
+- **`delegate`: children on a host-supplied agent.** `children.<name>.agent` names an agent supplied with `delegateWithAgents(agents, config)` (new) or registered through the `delegate.agents` service (new; `DELEGATE_AGENTS_SERVICE`, `DelegateAgentRegistry`, `DelegateAgentSource`). The child runs as a session of that agent (an external CLI on `driver-process`, another native agent), linked to the parent session, with the same queueing, limits, ceilings, paging, report modes, `hidden` and service. For a driver, `instructions`, `model`, `tools.only` (registered names become `prismTools`, the rest its built-in allow-list) and `limits.maxTurns` narrow its spec through `RunOptions.external`. Under a non-interactive parent its approvals are denied, never suspended. Its usage is charged to the parent run. `inherit` is now optional when `agent` is set; `agent` with `inherit`, `isolation: "worktree"` or `context` fails `createAgent`. Requires `@arnilo/prism` 0.14.2; the peer window stays `>=0.14.0`, and on an older kernel an agent child's run fails on the unknown run option. Tests: `delegate/src/__tests__/agent-child.test.ts`.
+
 ## [0.14.0] - 2026-11-23
 
 - **`compaction`: an empty summary is asked again with thinking off (plan 240 Task 10).** A reasoning summary model that ignores a low effort can spend its whole output thinking and answer no text. The summary call is now retried once with `thinkingLevel: "none"`, as session memory's STM worker is, and only a second empty answer falls back to the kernel default. Seen live on opencode-go/hy4-flash-free: before, most compactions fell back; after, every compaction was an LLM summary.

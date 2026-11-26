@@ -174,6 +174,10 @@ Small, bounded, vendor-neutral helpers for driving a child process. None holds d
 
 `tools`, `skills`, `host`, and `services` come from the driver package's own `PackageAPI` and are read per run, so a package loaded later is visible.
 
+`spec` is the configured spec narrowed by the run's `RunOptions.external` (`narrowSpec(spec, run.external, descriptor)`), so one configured agent can serve a delegate child or a workflow node with its own instructions, tool allow-list and model. The run may only narrow: `prismTools` and `builtinTools.allow` intersect the configured lists, `builtinTools.deny` adds to them, `limits.maxTurns` takes the lower value, and `systemPrompt` and `model` replace the configured ones. A prompt mode the descriptor does not list, or a `model` on a `models: "none"` driver, fails the run with `driver_capability_missing`.
+
+A run whose `run.signal` aborts before the vendor's `turnEnd` ends `aborted` with its `abortReason`, as a native run does; the process driver keeps its abort ladder, grace and SIGKILL deadlines, and archives no resume state. A turn that reached `turnEnd` before the abort arrived still completes.
+
 `relayCommand()` returns `[process.execPath, <the kernel's cli.js>]`, resolved from the module's own URL rather than `PATH` or `cwd`. Append `relay hook --run <dir>` or `relay mcp --run <dir>` to get the command a vendor's hook or MCP configuration runs. In the source layout, where only `cli.ts` exists, it falls back to that file and throws `driver_unavailable` unless the process is Bun.
 
 ## Callback broker and relay

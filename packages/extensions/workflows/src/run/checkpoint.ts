@@ -15,6 +15,7 @@ import type {
 } from "../types.js";
 import { nowIso, redactValue } from "../util.js";
 import type { SchedulerState } from "./main.js";
+import { firstSuspension, readSuspensions, suspensionsRecord } from "./suspensions.js";
 
 export function serializePendingActivations(
   activations?: Map<string, { from: Set<string>; round: number }>,
@@ -124,7 +125,8 @@ async function saveCheckpoint(
     createdAt: state.createdAt,
     updatedAt: nowIso(),
     redacted: Boolean(options.redactor),
-    suspension: state.suspension,
+    suspension: firstSuspension(state.suspensions),
+    suspensions: suspensionsRecord(state.suspensions),
     resume: state.resume,
     state: cloneState(state.state),
     stateVersion: state.stateVersion,
@@ -188,7 +190,8 @@ export function resultFromRecord(workflowId: string, record: WorkflowCheckpointR
     status: record.value.status,
     version: record.version,
     outputs,
-    suspension: record.value.suspension,
+    suspension: firstSuspension(readSuspensions(record.value)),
+    suspensions: suspensionsRecord(readSuspensions(record.value)),
     resume: record.value.resume,
     state: cloneState(record.value.state ?? {}),
     lineage: record.value.lineage,

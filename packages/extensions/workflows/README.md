@@ -55,7 +55,18 @@ A graph with a cycle, a route node, or `limits.maxSupersteps` runs on the supers
 | Checkpoint list page | 100, at most 500 | `list({ limit })`; `createWorkflowCheckpointAdapter({ maxListLimit })` |
 | Graph export size | 10,000 nodes | `workflowGraphToMermaid(view, { maxNodes })` / `workflowGraphToDot(view, { maxNodes })` |
 
-`runWorkflow(def, input, options)` runs; `resumeWorkflow(def, { runId }, { checkpoints, resume })` resumes a suspended run exactly once; `suspend({ reason, data?, resumeSchema? })` returns from a node to pause durably; `replayWorkflow(def, { sourceRunId, fromNodeId }, { checkpoints })` forks a new run from one completed node without mutating the source; `serializeWorkflowGraph` / `workflowGraphToMermaid` / `workflowGraphToDot` project the definition for a UI.
+`runWorkflow(def, input, options)` runs; `resumeWorkflow(def, { runId }, { checkpoints, resume })` answers one pending suspension of a run exactly once; `suspend({ reason, data?, resumeSchema? })` returns from a node to pause durably; `replayWorkflow(def, { sourceRunId, fromNodeId }, { checkpoints })` forks a new run from one completed node without mutating the source; `serializeWorkflowGraph` / `workflowGraphToMermaid` / `workflowGraphToDot` project the definition for a UI.
+
+### Suspensions
+
+A suspended node blocks only its own successors. The scheduler keeps starting every other ready node, and the run ends `suspended` only when nothing else can run and at least one suspension is pending. Each suspended node keeps its own descriptor (`reason`, `data`, `resumeSchema`):
+
+- `WorkflowRunResult.suspensions` and the checkpoint's `suspensions` map node ids to descriptors, in request order. `suspension` is deprecated and holds the first one.
+- `resumeWorkflow(def, { runId }, { checkpoints, resume: { nodeId, decision, input, expectedVersion } })` releases that node only, with its own `input`; the other suspended nodes stay suspended. `nodeId` may be omitted only when exactly one suspension is pending; otherwise, or for an id that is not pending, the resume fails with `WorkflowCheckpointError`. `deny` denies the whole run, as before.
+- A `workflowNode` whose child run holds several suspensions surfaces each under its child-qualified id `<node>/<child id>` (for example `t3/await`), and `resume.nodeId: "t3/await"` resumes that one inside the child.
+- `workflow_suspended` (and the `workflow.suspended` package event, with `suspensionId` for a nested one) is emitted once per suspension.
+- A run killed while other branches still ran is saved as `running` with its suspensions; `resumeWorkflow` without `resume` continues those branches and keeps every suspension pending.
+- A checkpoint written before per-node suspensions (only `suspension`) still resumes.
 
 ### `agentNode`
 
@@ -63,7 +74,7 @@ A graph with a cycle, a route node, or `limits.maxSupersteps` runs on the supers
 agentNode({ agent: uiEngineer, worktree: true, input: (ctx) => ctx.workflowInput, output: (result) => result.text })
 ```
 
-`agentNode({ agent, session?, input?, runOptions?, worktree?, output? })` runs any `Agent` through its public session API. By default each attempt opens a new child session with `parent: { sessionId: <host parent session>, agentId: agent.id, workflowRunId }`, so `createSessionIndex(store).list({ workflowRunId })` finds it. `session(ctx)` supplies one instead. `output(result, ctx)` maps the child's `RunResult`; the default is the final assistant text. A child run that suspends (an approval) suspends the workflow with reason `child_session_suspended` and the child session id in the suspension data. A remote agent works too: `connectA2A` (`@arnilo/prism-hosts/a2a`) and `connectAgent` (`@arnilo/prism-hosts/remote`) return `Agent` proxies, and their events carry `origin.executedBy: "external"`.
+`agentNode({ agent, session?, input?, runOptions?, worktree?, output?, profilePacing?, maxProfileBackoffMs? })` runs any `Agent` through its public session API. By default each attempt opens a new child session with `parent: { sessionId: <host parent session>, agentId: agent.id, workflowRunId }`, so `createSessionIndex(store).list({ workflowRunId })` finds it. `session(ctx)` supplies one instead. `output(result, ctx)` maps the child's `RunResult`; the default is the final assistant text. A child run that suspends (an approval) suspends the workflow with reason `child_session_suspended` and the child session id in the suspension data. A remote agent works too: `connectA2A` (`@arnilo/prism-hosts/a2a`) and `connectAgent` (`@arnilo/prism-hosts/remote`) return `Agent` proxies, and their events carry `origin.executedBy: "external"`.
 
 `worktree: true` (or `{ dispose: "keep" | "dispose" }`) creates a worktree through the `workspace` service (`@arnilo/prism-tools/coding`) bound to the child session, so its tools resolve to it. After the run the node calls `workspace.diff(path)`, emits each change as an `agent.file` package event (`source: "diff"`, with `sessionId`, `workflowRunId`, `nodeId`), and returns `{ output, worktree: { path, branch, truncated } }` for a merge gate. Without the `workspace` service, or without a host parent, the node fails with `WorkflowRuntimeError` code `missing_service`; it never falls back to the main tree. The worktree is kept by default for the merge gate, so the host or the gate disposes it; `dispose: "dispose"` force-disposes it when the node ends. Cost: one child session per attempt and one `diff` call per worktree node.
 
@@ -75,6 +86,8 @@ agentNode({ agent: uiEngineer, worktree: true, input: (ctx) => ctx.workflowInput
 - **Supplied session** (`session: () => taskSession`): the first execution creates the worktree. Every later execution, whether a gate back edge (`onFail: "work"`) or a retry, finds it through `workspace.worktree.bound(session.id)` and continues in it. `worktree.create` runs once, and the attempt sees the files the last one left. The `agent.file` diff runs against the worktree's base, so after a retry it covers every attempt. If the held worktree is on a different branch than `branch` asks for, the node fails with `worktree_branch_mismatch`. A worktree the host created and bound to that session itself is reused the same way.
 - **Durable resume** after a process kill: the node rebinds its recorded worktree (see below).
 - With `dispose: "dispose"`, the worktree is removed after every execution, so the next execution starts from a new one even with a supplied session. Keep the default `"keep"` when a back edge should fix what the gate found.
+
+**Profile pacing.** A node whose child run is refused with the driver kit's `profile_busy` (two parallel nodes on one CLI profile with `maxConcurrentRuns: 1`) gives its scheduler slot back, waits until another node settles or a backoff passes (100 ms doubling to `maxProfileBackoffMs`, default 2000), then takes a free slot and starts again. The wait is never a failure and never a `retries` attempt. `profilePacing: false` fails the node instead. Any other driver error, including `profile_principal_mismatch`, fails the node. A fan-out item is paced by its `fanOut` (below).
 
 ### `fanOut`
 
@@ -115,7 +128,7 @@ Names are exported once in `WORKFLOW_EVENTS`:
 | `workflow.node.completed` | Node succeeds, or is skipped (`status: "skipped"`) |
 | `workflow.node.failed` | Node fails or aborts |
 | `workflow.gate` | A conditional or route node selects successor ids |
-| `workflow.suspended` | Durable review is requested |
+| `workflow.suspended` | Durable review is requested (once per suspended node) |
 | `workflow.notice` | Stream-only, never persisted: the live stream closed because the consumer fell behind |
 
 Each event contains bounded JSON (at most 16 KiB before the session's additional redaction):

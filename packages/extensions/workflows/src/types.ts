@@ -36,6 +36,11 @@ export interface WorkflowSuspension<ResumeInput = unknown> {
 }
 
 export interface WorkflowResumeRequest {
+  /**
+   * The pending suspension this resume answers: a node id, or `<workflowNode>/<child id>` for one inside a
+   * nested run. Only that node is released; the others stay suspended. May be omitted when exactly one is pending.
+   */
+  readonly nodeId?: string;
   readonly decision: "approve" | "deny";
   readonly input?: unknown;
   /** Version shown to the reviewer; required to claim a suspended checkpoint exactly once. */
@@ -170,6 +175,14 @@ export interface AgentNodeDefinition extends WorkflowNodeBase {
   readonly worktree?: AgentNodeWorktree;
   /** Maps the child's `RunResult` to the node output; default is the final assistant text. */
   readonly output?: (result: RunResult, ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
+  /**
+   * `false`: a driver's `profile_busy` fails the node. By default (`true`) the node releases its scheduler
+   * slot, waits until another node finishes or a bounded backoff passes, and starts again; the wait is never
+   * a failure and never counts as a retry. Fan-out items are paced by their fan-out node instead.
+   */
+  readonly profilePacing?: boolean;
+  /** Longest wait between starts on a busy profile, ms. Default 2000. */
+  readonly maxProfileBackoffMs?: number;
 }
 
 export interface FunctionNodeDefinition extends WorkflowNodeBase {
@@ -390,7 +403,10 @@ export interface WorkflowCheckpointValue {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly redacted: boolean;
+  /** @deprecated The first entry of `suspensions`; kept for hosts that read one descriptor. */
   readonly suspension?: WorkflowSuspensionDescriptor;
+  /** Every pending suspension, by node id (child-qualified for a nested run), in request order. */
+  readonly suspensions?: Readonly<Record<string, WorkflowSuspensionDescriptor>>;
   readonly resume?: WorkflowResumeRecord;
   readonly state?: JsonObject;
   readonly stateVersion?: number;
@@ -623,7 +639,13 @@ export interface WorkflowRunHandle {
 export interface WorkflowRunResult extends WorkflowRunHandle {
   readonly outputs: Readonly<Record<string, unknown>>;
   readonly state: Readonly<JsonObject>;
+  /** @deprecated The first entry of `suspensions`; kept for hosts that read one descriptor. */
   readonly suspension?: WorkflowSuspensionDescriptor;
+  /**
+   * Every pending suspension, by node id, in request order. A suspended node blocks only its own successors,
+   * so a run reaches `suspended` only when nothing else can run. A nested run's entries are `<node>/<child id>`.
+   */
+  readonly suspensions?: Readonly<Record<string, WorkflowSuspensionDescriptor>>;
   readonly resume?: WorkflowResumeRecord;
   readonly lineage?: WorkflowReplayLineage;
 }

@@ -1,8 +1,5 @@
 /** Context-assembly + runInternal orchestrator (plan 059). */
 
-import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
-import { ModelError } from "../model-errors.js";
-import { estimateAssemblyTokens, estimateRequestExtrasTokens, estimateTextTokens } from "../../models/estimate.js";
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import { AgentRunSuspended } from "../../agent-approval.js";
 import { agentFingerprint, validateRunStateOptions } from "../../agent-run-state.js";
@@ -18,25 +15,23 @@ import type {
   ResolvedRunOptions,
   RunRecord,
   RunResult,
-  ToolDefinition,
   ToolCallContent,
+  ToolDefinition,
   Usage,
 } from "../../contracts.js";
 import { AgentLoopStateError, AgentRunStateError, isSessionAppendConflict, SESSION_CONFLICT_CODE } from "../../contracts.js";
+import { packageEventFor } from "../../hooks/emit.js";
 import { HookError } from "../../hooks/errors.js";
 import { jsonEqual } from "../../hooks/json.js";
+import { requestHostUi } from "../../host/response.js";
 import type { AgentInput, PromptInstruction } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
 import type { AskRequest, AskResolution, LoopStrategy, RunTurnOptions } from "../../loop/index.js";
-import { packageEventFor } from "../../hooks/emit.js";
 import { createRunController } from "../../loop/index.js";
 import { applyRequestTransforms } from "../../loop/request-draft.js";
+import { estimateAssemblyTokens, estimateRequestExtrasTokens, estimateTextTokens } from "../../models/estimate.js";
+import { packageCallSeamOf } from "../../package-call-seam.js";
 import { applyDefaultProviderRequestOptions } from "../../provider-kit/provider-request-policy.js";
-import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
-import { ceilingsOf, describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
-import { createSessionEntry } from "../../session-stores.js";
-import { applyRestoredSkillBodies, createLoadSkillTool } from "../../skill-load.js";
-import { createSkillRegistry } from "../../skills.js";
 import {
   DEFAULT_STRUCTURED_OUTPUT_REPAIRS,
   parseStructuredOutput,
@@ -44,8 +39,15 @@ import {
   resolveStructuredOutputRun,
   structuredOutputRepairMessage,
 } from "../../provider-kit/structured-output.js";
+import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
+import { ceilingsOf, describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
+import { createSessionEntry } from "../../session-stores.js";
+import { applyRestoredSkillBodies, createLoadSkillTool } from "../../skill-load.js";
+import { createSkillRegistry } from "../../skills.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../../system-prompts.js";
 import { clampTurnToolNames, createToolRegistry, resolveToolConcurrency, resolveToolEffects, selectRunTools } from "../../tools.js";
+import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
+import { settleContinuationTip } from "../continue.js";
 import {
   bridgeAbort,
   createUsageAccumulator,
@@ -55,10 +57,10 @@ import {
   isSteerSoftInterrupt,
   throwIfAborted,
 } from "../helpers.js";
+import { ModelError } from "../model-errors.js";
 import { assignedLoop, tryAgentRuntime } from "../runtime-registry.js";
 import { cleanupRun, persistDurable, persistSucceeded, writeRunCheckpoint } from "./persist.js";
-import { settleContinuationTip } from "../continue.js";
-import { generateWithRetry, recordPackageCallUsage, recordProviderUsage } from "./provider-round.js";
+import { chargeAncestor, generateWithRetry, recordPackageCallUsage, recordProviderUsage } from "./provider-round.js";
 import {
   bindChargeStallRound,
   bindChargeToolRound,
@@ -69,9 +71,7 @@ import {
   stageAskDecisions,
   suspendGatedRound,
 } from "./tool-round.js";
-import { requestHostUi } from "../../host/response.js";
 import type { RoundContext, SessionHost } from "./types.js";
-import { packageCallSeamOf } from "../../package-call-seam.js";
 
 /**
  * A request's tokens outside the branch the compaction vote counts: its system-role messages (instructions, rendered
@@ -205,7 +205,12 @@ async function resolveAskDecisions(
   if (inlineResolved.length > 0) {
     ctx.session.emit({ type: "decision.resolved", sessionId: ctx.session.id, runId: ctx.runId, decisions: inlineResolved, via: "inline" });
   }
-  if (toSuspend.length > 0 && options.suspend === false) {
+  if (toSuspend.length > 0 && ctx.options.approvals === "deny") {
+    // The run denies what nobody answered instead of suspending (`RunOptions.approvals`).
+    for (const { call } of toSuspend) {
+      resolutions.set(call.id, { kind: "deny", reason: "non_interactive: no interactive approver; the call was denied" });
+    }
+  } else if (toSuspend.length > 0 && options.suspend === false) {
     // The loop cannot resume (an external-agent driver without `snapshot`/`restore`): refuse instead of staging.
     for (const { call } of toSuspend) resolutions.set(call.id, { kind: "suspend" });
   } else if (toSuspend.length > 0) {
@@ -259,7 +264,7 @@ type LoopInternals = {
   applyPendingSteers(): Promise<boolean>;
   drainSteers(): Promise<readonly Message[]>;
   onSteer(listener: () => void): () => void;
-  addUsage(usage: import("../../contracts.js").Usage): void;
+  addUsage(usage: import("../../contracts.js").Usage): Promise<void>;
   emit(event: import("../../contracts.js").AgentEvent): void;
   /** The loop's turn counter advanced; the provider attempt emits the catalog's `turn.started`. */
   onTurnStart?(turn: number): void;
@@ -660,9 +665,11 @@ async function assembleRoundContext(params: {
     applyPendingSteers: () => session.applyPendingSteers(runId, metadata, controller.signal),
     drainSteers: () => session.drainSteers(runId, controller.signal),
     onSteer: (listener) => session.onSteer(listener),
-    addUsage: (usage) => {
+    addUsage: async (usage) => {
       limits.recordUsage(usage);
       runUsage.add(usage);
+      // Usage a loop reports (a driver's vendor) reaches the `chargeTo` ancestor like a provider turn's does.
+      await chargeAncestor(session, model ?? { provider: "external", model: session.agent.id }, usage);
     },
     onTurnStart: (turn) => {
       session.activeLoopTurn = turn;
@@ -677,6 +684,7 @@ async function assembleRoundContext(params: {
     ...loopInternals,
     session: session as unknown as import("../../contracts.js").Session,
     model: options.model ?? session.agent.config.model,
+    ...(options.external === undefined ? {} : { external: options.external }),
     loopOwner: session.slots().ownerOf("loop", session.agent.config.slots?.loop),
     resumable: isDurableLoop(ctx.loop),
     limits,
@@ -689,6 +697,7 @@ async function assembleRoundContext(params: {
       const tool = registry.get(call.name);
       return tool ? resolveToolEffects(tool) : ALL_TOOL_CAPABILITY_KINDS;
     },
+    endsRun: (call) => registry.get(call.name)?.endsRun === true,
     queueContinuation: (continuation) => {
       const messages: Message[] = [{ role: "user", content: [{ type: "text", text: continuation.reason }] }];
       if (continuation.steer !== undefined) {

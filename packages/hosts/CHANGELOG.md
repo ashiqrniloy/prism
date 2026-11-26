@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-11-26
+
+- `./driver-process`: **Fixed:** an aborted driver run resolved `completed` with no `abortReason`. A run whose `run.signal` aborts before the vendor's `turnEnd` (including one aborted before the process starts) now ends `aborted` with the signal's reason, as a native run does. The abort ladder, the `graceMs` and SIGKILL deadlines and the no-archive-on-abort rule are unchanged, and a turn that reached `turnEnd` before the abort still completes. `adapterConformance`'s `abort_within_grace` leg now also asserts `status: "aborted"` and the reason.
+- `./driver-process`: a Prism-served tool (`prismTools` over MCP, or a json-rpc request handler's `bridge`) that returns an accepted `endRun` ends the vendor's turn: after 200 ms for the vendor to read the result, the driver runs its abort ladder's first step once (Claude Code SIGINT, Codex `turn/interrupt`, closing stdin), treats `turnEnd` or the process exit as the end of the turn, archives the resume state, and the run ends `stopped` with `stopReason: "tool_end_run"`. Requires `@arnilo/prism` 0.14.2.
+- `./driver-process`: the run's spec is narrowed by `RunOptions.external` (the kit's `narrowSpec`), so a delegate child or workflow node can run a configured CLI with its own instructions and a read-only built-in tool list.
+- `./acp`: `tool_end_run` maps to the ACP stop reason `end_turn`.
+- `./host-builder`: the version-exact API index (`data/api.json`) is regenerated for `@arnilo/prism` 0.14.2.
+
 ## [0.14.1] - 2026-11-23
 
 - `./host-builder`: the version-exact API index (`data/api.json`) is regenerated for `@arnilo/prism` 0.14.1. It adds `CredentialContext.sessionId` and `principal`, the `credentials.resolve(ref, request)` overload, and the request-aware `refSource` / `optionalRefSource`. No runtime change.

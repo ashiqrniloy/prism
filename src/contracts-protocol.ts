@@ -11,6 +11,7 @@ export interface CheckpointRestoreAudit {
   readonly hooks: readonly CheckpointRestoreAuditEntry[];
   readonly durationMs: number;
 }
+
 import type {
   CompactionOptions,
   ContentBlock,
@@ -34,8 +35,8 @@ import type {
   Usage,
 } from "./contracts-core.js";
 import type { AgentRunInterruption, PendingDecision, ResumeNestedRun } from "./contracts-run-state.js";
-import type { BudgetExhaustionAttribution } from "./run-limits.js";
 import type { SecretRedactor } from "./redaction.js";
+import type { BudgetExhaustionAttribution } from "./run-limits.js";
 import type { ToolValidator } from "./tools.js";
 
 export type ProviderEvent =
@@ -89,6 +90,12 @@ export interface RunOptions {
    * answer approvals through `session.resume` instead of a boolean confirm.
    */
   readonly interactive?: boolean;
+  /**
+   * What an approval request that nobody answers inline does: `"suspend"` (default) stages it and the run suspends for
+   * `session.resume`; `"deny"` denies the call (`non_interactive`) and the run goes on. A delegate child on a
+   * host-supplied agent under a non-interactive parent uses `"deny"`, so its approvals never wait on a terminal.
+   */
+  readonly approvals?: "suspend" | "deny";
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
   /** Optional durable recovery store. Per-run value overrides this agent default. */
@@ -129,6 +136,20 @@ export interface RunOptions {
    * outliving its parent's run), no `child_run` ledger row is written while its session limits (if any) are still charged.
    */
   readonly chargeTo?: import("./session-context.js").SessionContext;
+  /**
+   * Narrows a driver agent's configured spec (`ExternalAgentSpec`) for this run: a delegate child or an
+   * orchestrating host runs one configured external agent with its own instructions, tool allow-list and model. The driver only
+   * narrows: `prismTools` and `builtinTools.allow` intersect the configured lists, `builtinTools.deny` adds to
+   * them, `limits.maxTurns` takes the lower value. A prompt mode the driver cannot honour fails the run closed.
+   * Loops other than drivers ignore it.
+   */
+  readonly external?: {
+    readonly systemPrompt?: { readonly replace: string } | { readonly append: string };
+    readonly model?: string;
+    readonly prismTools?: readonly string[];
+    readonly builtinTools?: { readonly allow?: readonly string[]; readonly deny?: readonly string[] };
+    readonly limits?: { readonly maxTurns?: number };
+  };
   /** Opt-in: tools hidden by `RunOptions.tools` stay callable by name (default off). Overrides agent config. */
   readonly allowHiddenToolCalls?: true;
   readonly inputLayout?: InputAssemblyLayout;
@@ -200,7 +221,7 @@ export interface DelegatedAgentStepData {
 }
 
 /** Why a run stopped cleanly. `hook_stop` is a `turn.before` stop and `hook_limit` a `run.end` continuation cap; the rest are loop ceilings (F4). */
-export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "hook_limit" | "hook_stop" | "denied";
+export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "hook_limit" | "hook_stop" | "denied" | "tool_end_run";
 
 /**
  * Where an event came from (K3). Absent means "this agent, executed by Prism". `vendor` is an
@@ -254,7 +275,7 @@ export type AgentEventPayload =
       readonly usage?: Usage;
       /** Why the loop stopped, when a limit/ceiling, a `turn.before` stop, or a `run.end` continuation cap ended the run cleanly (F4). */
       readonly stopReason?: AgentFinishReason;
-      /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). Present only with `stopReason: "hook_stop"`. */
+      /** Why the `turn.before` hook (`hook_stop`) or an `endRun` tool result (`tool_end_run`) stopped the run (≤256 bytes, redacted). */
       readonly stopDetail?: string;
       /** Same as `RunResult.output`: the validated structured-output value. */
       readonly output?: unknown;
@@ -585,6 +606,12 @@ export interface ToolDefinition {
    * all kinds (fail closed). Independent of `effect`, which classifies recovery behavior.
    */
   readonly effects?: readonly ToolCapabilityKind[];
+  /**
+   * `true`: a result of this tool may carry `endRun`, which ends the run after the current tool round. A tool
+   * that does not declare it has `endRun` dropped (with a `kernel` `tool.end_run_ignored` event), so an
+   * untrusted tool cannot cut a run short.
+   */
+  readonly endsRun?: boolean;
   /** Optional elicitation contract for durable gating; return undefined to fall back to plain tool approval. */
   readonly elicitation?: (args: JsonObject, context: ToolExecutionContext) => ToolElicitationRequest | undefined;
   execute(args: JsonObject, context: ToolExecutionContext): Promise<ToolResult> | ToolResult;
@@ -634,6 +661,13 @@ export interface ToolResult {
   readonly value?: unknown;
   readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /**
+   * Ends the run once the current tool round settles: every result of the round is recorded, no further
+   * provider turn runs, later tool calls in the run are refused (`run_ended`), and the run completes
+   * `stopped` with stop reason `tool_end_run` and `stopDetail` set to `reason`. The session stays usable;
+   * the next run continues the conversation. Honoured only for a tool that declares `endsRun: true`.
+   */
+  readonly endRun?: { readonly reason: string };
 }
 
 export type ToolEffectStatus = "pending" | "dispatched" | "completed" | "failed_retryable" | "failed_terminal" | "unknown";
@@ -725,7 +759,7 @@ export interface RunRecord extends OwnershipScope {
   readonly abortReason?: string;
   /** Present when the loop stopped on a ceiling or a `turn.before` stop instead of a natural end. */
   readonly stopReason?: AgentFinishReason;
-  /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). */
+  /** Why the `turn.before` hook or an `endRun` tool result stopped the run (≤256 bytes, redacted). */
   readonly stopDetail?: string;
   readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;

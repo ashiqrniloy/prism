@@ -6,15 +6,25 @@ export type { DelegateContextConfig };
 export type DelegateReport = "on-complete" | "milestones" | "stream";
 
 /**
- * One child the model may delegate to. The child is a session of the parent's own agent, linked to the parent session;
- * `inherit` names the packages whose tools it may call.
+ * One child the model may delegate to. By default the child is a session of the parent's own agent, linked to the
+ * parent session, and `inherit` names the packages whose tools it may call. With `agent`, it is a session of that
+ * host-supplied agent instead (an external CLI on `driver-process`, another native agent).
  */
 export interface DelegateChildConfig {
   /**
    * Package names (loaded in the parent) whose registered tools the child may call, narrowed by `tools.only`. `[]` gives
-   * no tools. Never includes this package. Hooks of every loaded package apply to the child either way.
+   * no tools. Never includes this package. Hooks of every loaded package apply to the child either way. Required unless
+   * `agent` is set; an agent child takes its tools from its own agent.
    */
-  readonly inherit: readonly string[];
+  readonly inherit?: readonly string[];
+  /**
+   * A host-supplied agent by name (supplied with `delegateWithAgents(...)` or registered through the `delegate.agents` service). The child
+   * runs as a session of that agent, linked to the parent session. `instructions` replace its system prompt, `model`
+   * picks its model, `tools.only` narrows its tools (names it does not register are passed to a driver as built-in
+   * tools: a read-only list such as `["Read", "Grep", "Glob"]` gives a launch with no write tools), and `limits`
+   * bound the run. Its usage is charged to the parent run. `context` and `isolation: "worktree"` are not supported.
+   */
+  readonly agent?: string;
   readonly instructions?: string;
   /** One line the parent model reads to choose this child. Defaults to the first sentence of `instructions`. */
   readonly description?: string;
@@ -126,6 +136,7 @@ export const delegateConfigSchema = {
         type: "object",
         properties: {
           inherit: { type: "array", items: { type: "string" } },
+          agent: { type: "string", minLength: 1 },
           instructions: { type: "string" },
           model: modelRef,
           tools: { type: "object", properties: { only: { type: "array", items: { type: "string" } } }, additionalProperties: false },
@@ -178,7 +189,6 @@ export const delegateConfigSchema = {
           isolation: { type: "string", enum: ["none", "worktree"] },
           description: { type: "string", minLength: 1 },
         },
-        required: ["inherit"],
         additionalProperties: false,
       },
     },

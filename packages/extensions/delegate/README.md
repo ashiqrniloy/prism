@@ -61,7 +61,8 @@ It tells the model that a child holds only what the brief and any forwarded cont
 
 | Field | Description |
 | --- | --- |
-| `children.<name>.inherit` | Package names loaded in the agent whose registered tools the child may call. `[]` gives no tools. A name that is not loaded fails the delegation. Listing `@arnilo/prism-extensions/delegate` fails `createAgent`. Hooks of every loaded package apply to the child either way. |
+| `children.<name>.inherit` | Package names loaded in the agent whose registered tools the child may call. `[]` gives no tools. A name that is not loaded fails the delegation. Listing `@arnilo/prism-extensions/delegate` fails `createAgent`. Hooks of every loaded package apply to the child either way. Required unless `agent` is set. |
+| `children.<name>.agent` | A host-supplied agent by name: the child runs as a session of that agent instead of the parent's. See [Children on another agent](#children-on-another-agent). |
 | `children.<name>.description` | One line the parent model reads to choose this child; it appears in the `delegate` tool description. Defaults to the first sentence of `instructions`; without either, `(no description)` and a setup note. |
 | `children.<name>.instructions` | The child's instructions, after the report contract ("Finish with a concise report for the parent…"), which is always prepended. They replace the agent's own instructions and system-prompt layers for the child's run (`systemPrompt: { source: "run", mode: "replace" }`); package context (`AGENTS.md`, memory) still applies. |
 | `children.<name>.model` | The child's model (`RunOptions.model`). Defaults to the parent session's model. It resolves through the agent's providers, so the child holds no credential. A child resumed after a suspension continues on the agent's model: a durable resume refuses a per-run model. |
@@ -82,6 +83,31 @@ It tells the model that a child holds only what the brief and any forwarded cont
 | `activityFlushMs` | How often a `report: "stream"` child's buffered `delegate.activity` text is flushed. Default 1,000. |
 | `ceilings` | Host-only ceilings over every child's config: `maxTurns` (200), `maxToolCalls` (1,000), `maxTotalTokens` (2,000,000), `maxWallTimeMs` (3,600,000), each raisable or `null` (no ceiling); `resultMaxChars` (64,000); `retainedResultChars` (256,000, at least `resultMaxChars`). A child value above one fails the load. The model's `delegate` arguments never reach a limit. |
 | `announceAsync` | `true` (default): when a run is about to end with async delegations of its session still running or unread, ask for one `run.end` continuation naming them. See [Async children at run end](#async-children-at-run-end). |
+
+## Children on another agent
+
+`agent` runs a child as a session of a host-supplied `Agent`: an external CLI on `@arnilo/prism-hosts/driver-process`, a `connectAgent` proxy, or another native agent. A native interviewer can hand a codebase deep-dive to a CLI and cite its report.
+
+```ts
+import delegate, { delegateWithAgents } from "@arnilo/prism-extensions/delegate";
+
+const claude = await createAgent({ packages: [processDriver(claudeCode)], packageConfig: { … } });
+delegateWithAgents(
+  { claude },
+  { children: { analyst: { agent: "claude", instructions: "Report on the named paths.", tools: { only: ["Read", "Grep", "Glob"] } } } },
+);
+```
+
+An agent is not JSON, so it cannot come from a manifest. A manifest-configured `delegate` gets its agents from another package, through the `delegate.agents` service (`register(name, agent | () => agent)`; a name registers once). A child whose agent is not registered fails its delegation with `unknown_agent`.
+
+- **Session.** The child is a session of that agent, linked to the parent session (`parent: { sessionId, delegationId }`), so `agent.sessions.list({ parentSessionId })` on the child's agent lists it. No memory tiers, worktree or seeded context of the parent's agent are created for it.
+- **Same guarantees.** `maxConcurrent`, `queueTimeoutMs`, `limits` and `ceilings`, `resultMaxChars` and paging, `report` modes and `delegate.activity` events, `hidden` and the `delegate` service all apply as for a same-agent child.
+- **Driver mapping.** For a model-less agent (a driver), the delegate narrows the driver's configured spec for the run (`RunOptions.external`): `instructions` replace its system prompt (after the report contract), `model` picks its model, `tools.only` names the agent registers become its `prismTools`, the other names its built-in allow-list (`["Read", "Grep", "Glob"]` launches no write tool), and `limits.maxTurns` caps its turns. A driver only narrows: it never gains a tool its config did not allow. A native agent gets them as `systemPrompt`, `model` and `tools.only` run options.
+- **Interaction.** The child runs with the parent run's interactivity. Under a non-interactive parent run its approval requests are denied (`RunOptions.approvals: "deny"`), never suspended, so they never wait on a terminal.
+- **Usage.** The child's usage, including usage a driver reports, is charged to the parent run (`RunOptions.chargeTo`, which accepts the linked parent of another agent).
+- **Origin.** A driver child's `delegate.step` and `delegate.activity` origin is `kind: "external"`, `executedBy: "external"`, `agentId` the agent's id.
+- **Not supported.** `inherit` (the child's tools are its agent's), `isolation: "worktree"` and `context` other than `"none"` fail `createAgent`. The link `depth` is 1, the child agent's own count.
+- **Requires** `@arnilo/prism` 0.14.2 (`RunOptions.external`, `approvals` and cross-agent `chargeTo`); an older kernel fails the child's run on the unknown option.
 
 ## Depth and queueing
 

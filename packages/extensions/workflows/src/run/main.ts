@@ -31,6 +31,7 @@ import {
 } from "../util.js";
 import { cloneState, deserializePendingActivations, parseStateHistory, resultFromRecord } from "./checkpoint.js";
 import { executeScheduler } from "./scheduler.js";
+import { clearOwnedSuspensions, readSuspensions, selectResumeTarget, suspensionOwner } from "./suspensions.js";
 
 export interface RuntimeNodeState {
   nodeId: string;
@@ -70,7 +71,14 @@ export interface SchedulerState {
   skipped: Set<string>;
   completed: Set<string>;
   conditionalSkip: Map<string, Set<string>>;
-  suspension?: WorkflowSuspensionDescriptor;
+  /** Pending suspensions by node id (child-qualified for a nested run), in request order. */
+  suspensions: Map<string, WorkflowSuspensionDescriptor>;
+  /** Agent nodes waiting on a busy profile: they hold no slot, but the run is not done while they wait. */
+  pacing: Set<string>;
+  /** Called whenever a node settles, so a paced node can try again. */
+  progress: Set<() => void>;
+  /** The scheduler's concurrency, so a paced node re-takes a slot only when one is free. */
+  concurrency?: number;
   resume?: WorkflowResumeRecord;
   /** Plan 094 Task 3: audit of the restore hooks that ran before this scheduler took over. */
   restore?: import("@arnilo/prism").CheckpointRestoreAudit;
@@ -166,6 +174,9 @@ export async function runWorkflow(
     skipped: new Set(),
     completed: new Set(),
     conditionalSkip: new Map(),
+    suspensions: new Map(),
+    pacing: new Set(),
+    progress: new Set(),
     state: initialState,
     stateVersion: 0,
     stateHistory: new Map([[0, initialState]]),
@@ -302,10 +313,17 @@ async function resumeUnleased(
   }
 
   let resumeRecord: WorkflowResumeRecord | undefined;
-  if (record.value.status === "suspended") {
-    const suspension = record.value.suspension;
-    if (!suspension) throw new WorkflowCheckpointError("Suspended checkpoint has no suspension descriptor");
-    if (!options.resume) throw new WorkflowCheckpointError("Suspended workflow requires resume input");
+  const pending = readSuspensions(record.value);
+  if (record.value.status === "suspended" && pending.size === 0) {
+    throw new WorkflowCheckpointError("Suspended checkpoint has no suspension descriptor");
+  }
+  // A run killed while other branches still ran holds suspensions under status "running": it resumes without
+  // input, and those nodes stay suspended. A "suspended" run needs input for one of them.
+  if (record.value.status === "suspended" && !options.resume) {
+    throw new WorkflowCheckpointError("Suspended workflow requires resume input");
+  }
+  if (options.resume && pending.size > 0) {
+    const suspension = selectResumeTarget(pending, options.resume.nodeId);
     if (options.resume.expectedVersion !== record.version) {
       throw new WorkflowCheckpointError(`Stale resume version ${options.resume.expectedVersion} (current ${record.version})`);
     }
@@ -326,6 +344,13 @@ async function resumeUnleased(
     throw new WorkflowCheckpointError("Resume input is only valid for a suspended workflow");
   }
 
+  // The node the resume releases: the suspended node itself, or the workflowNode whose child run holds it.
+  const owner = resumeRecord ? suspensionOwner(workflow, resumeRecord.nodeId) : undefined;
+  if (resumeRecord && !owner) throw new WorkflowCheckpointError(`Suspension "${resumeRecord.nodeId}" names no node of this workflow`);
+  const suspensions = new Map(pending);
+  if (owner && resumeRecord?.decision === "approve") clearOwnedSuspensions(workflow, suspensions, owner.nodeId);
+  if (resumeRecord?.decision === "deny") suspensions.delete(resumeRecord.nodeId);
+
   const graph = buildGraph(workflow);
   const nodes = new Map<string, RuntimeNodeState>();
   const outputs = new Map<string, unknown>();
@@ -338,6 +363,8 @@ async function resumeUnleased(
     const saved = record.value.nodes[nodeId];
     let status = saved?.status ?? "pending";
     const wasInterrupted = interrupted.some(([id]) => id === nodeId);
+    // Only the resumed node leaves "suspended"; every other suspended node keeps waiting for its own answer.
+    const released = owner?.nodeId === nodeId;
     // Resume retries failed/aborted/interrupted nodes; succeeded/skipped stay terminal.
     if (status === "running" || status === "failed" || status === "aborted") {
       status = "ready";
@@ -348,10 +375,10 @@ async function resumeUnleased(
       workflow.nodes[nodeId]?.kind === "agent" &&
       saved?.sessionId !== undefined &&
       ((wasInterrupted && nodeIdempotency(workflow.nodes[nodeId]!) === "resume-session") ||
-        (saved.status === "suspended" && resumeRecord?.decision === "approve"));
+        (saved.status === "suspended" && released && resumeRecord?.decision === "approve"));
     if (wasInterrupted && !sameSession && workflow.nodes[nodeId]?.kind === "agent") interruptedFresh.add(nodeId);
-    if (status === "suspended" && resumeRecord?.decision === "approve") status = "ready";
-    if (status === "suspended" && resumeRecord?.decision === "deny") status = "denied";
+    if (status === "suspended" && released && resumeRecord?.decision === "approve") status = "ready";
+    if (status === "suspended" && released && resumeRecord?.decision === "deny") status = "denied";
     nodes.set(nodeId, {
       nodeId,
       status,
@@ -392,11 +419,11 @@ async function resumeUnleased(
   for (const [nodeId] of interrupted) {
     if (nodes.get(nodeId)?.status === "ready" && !ready.includes(nodeId)) ready.push(nodeId);
   }
-  if (resumeRecord?.decision === "approve") {
-    if (!ready.includes(resumeRecord.nodeId)) {
-      ready.push(resumeRecord.nodeId);
+  if (resumeRecord?.decision === "approve" && owner) {
+    if (!ready.includes(owner.nodeId)) {
+      ready.push(owner.nodeId);
     }
-    const approvedNode = nodes.get(resumeRecord.nodeId);
+    const approvedNode = nodes.get(owner.nodeId);
     if (approvedNode) {
       approvedNode.status = "ready";
     }
@@ -440,7 +467,9 @@ async function resumeUnleased(
     skipped,
     completed,
     conditionalSkip: new Map(),
-    suspension: resumeRecord?.decision === "approve" ? undefined : record.value.suspension,
+    suspensions,
+    pacing: new Set(),
+    progress: new Set(),
     resume: redactValue(resumeRecord ?? record.value.resume, options.redactor),
     ...(restore ? { restore } : {}),
     resumeInput: resumeRecord?.input ?? record.value.resume?.input,
@@ -465,10 +494,10 @@ async function resumeUnleased(
     metadata: options.metadata ?? record.value.metadata,
     fencingToken: options.fencingToken ?? record.fencingToken,
   });
-  if (resumeRecord?.decision === "deny") {
-    const nested = workflow.nodes[resumeRecord.nodeId];
+  if (resumeRecord?.decision === "deny" && owner) {
+    const nested = workflow.nodes[owner.nodeId];
     if (nested?.kind === "workflow") {
-      const childRunId = `${record.runId}~${encodeURIComponent(resumeRecord.nodeId)}`;
+      const childRunId = `${record.runId}~${encodeURIComponent(owner.nodeId)}`;
       const child = await options.checkpoints.load({
         workflowId: nested.workflow.id,
         runId: childRunId,
@@ -482,7 +511,11 @@ async function resumeUnleased(
           {
             ...options,
             checkpoints: options.checkpoints,
-            resume: { decision: "deny", expectedVersion: child.version },
+            resume: {
+              ...(owner.child === undefined ? {} : { nodeId: owner.child }),
+              decision: "deny",
+              expectedVersion: child.version,
+            },
             nestedDepth: (options.nestedDepth ?? 0) + 1,
           },
         );

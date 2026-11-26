@@ -95,8 +95,10 @@ ledger row of scope `child_run`. A breach there ends the ancestor's run with `ru
 child run too. The ancestor's own `chargeTo` applies in turn, so a tree is charged up to its root, one call per level.
 
 - The target must be a kernel view of a session of the same agent that is an ancestor by links (checked through open
-  sessions); a sibling, a descendant, the session itself, another agent's view or a hand-built context fails the run
-  before any event.
+  sessions), or the session this one links to directly (`SessionOptions.parent.sessionId`) when that is another
+  agent's: a delegate child on a host-supplied agent charges its parent that way. A sibling, a descendant, the session
+  itself, any other agent's view or a hand-built context fails the run before any event.
+- Usage a loop reports through `run.observe({ kind: "usage" })` (a driver's vendor) is charged the same way.
 - With no active run on the ancestor (an async child outliving its parent's run), nothing is charged to it.
 - `child_run` rows mirror the child session's own `provider_turn` and `package_call` rows. A total summed across
   sessions must leave `child_run` out, or child turns count twice; a per-session total that should include its
@@ -536,8 +538,8 @@ session, an invalid option).
 | Field | Meaning |
 | --- | --- |
 | `status` | `completed`, `stopped`, `suspended`, `failed`, or `aborted`. |
-| `stopReason?` | Why a `stopped` run stopped: `turn_limit`, `token_limit`, `refusal`, `hook_stop` (a `turn.before` stop), `hook_limit` (a `run.end` continuation cap), or `denied`. |
-| `stopDetail?` | The bounded, redacted reason a `turn.before` handler gave. |
+| `stopReason?` | Why a `stopped` run stopped: `turn_limit`, `token_limit`, `refusal`, `hook_stop` (a `turn.before` stop), `hook_limit` (a `run.end` continuation cap), `denied`, or `tool_end_run` (a tool result's `endRun`; see [tools](tools.md#ending-the-run-from-a-tool)). |
+| `stopDetail?` | The bounded, redacted reason a `turn.before` handler or an `endRun` tool result gave. |
 | `pending?` | Present when `suspended`: the unresolved decisions to pass to `session.resume`. Redacted; never the raw arguments. |
 | `messages` | The messages this run appended to the branch, as stored (after `message.append`). |
 | `usage?`, `error?` | Aggregate usage; the redacted error of a failed run. `error.owner` and `error.hook` name the handler when a hook threw. |
@@ -760,7 +762,7 @@ Pinned member names:
 | `AgentInspection` | `packages`, `tools`, `skills`, `commands`, `hooks`, `slots`, `store`, `disabled`, `statusNotes` |
 | `Session` | `id`, `run`, `stream`, `steer`, `abort`, `resume`, `continue`, `continueStream`, `messages`, `fork`, `compact`, `limits`, `close`, plus the kernel members `leafId`, `entries`, `checkout`, `contextMeter`, `subscribe`, `getLoadedSkillNames`, `restoreLoadedSkills` |
 | `RunResult` | `sessionId`, `runId`, `status`, `leafId`, `text`, `content`, `message`, `messages`, `usage`, `limit`, `attribution`, `error`, `abortReason`, `stopReason`, `stopDetail`, `pending`, `runState`, `output`, `outputError` |
-| `RunOptions` | the per-run overrides (`signal`, `model`, `limits`, `metadata`, `tools`, `principal`, `skills`, `chargeTo`, …); the test lists all 23 |
+| `RunOptions` | the per-run overrides (`signal`, `model`, `limits`, `metadata`, `tools`, `principal`, `skills`, `chargeTo`, …); the test lists all 25 |
 | `HostUi` | `request` |
 | `HostPort` | `ui`, `log` |
 

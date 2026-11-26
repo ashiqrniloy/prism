@@ -2,7 +2,8 @@ import type { DriverError } from "@arnilo/prism/driver-kit";
 import { WorkflowAbortError, WorkflowRuntimeError } from "../errors.js";
 import { isAbortError } from "../util.js";
 
-const FIRST_BACKOFF_MS = 100;
+/** First wait of the profile backoff; it doubles up to `maxProfileBackoffMs`. */
+export const FIRST_BACKOFF_MS = 100;
 export const DEFAULT_MAX_PROFILE_BACKOFF_MS = 2000;
 
 /** True for the driver kit's structured `profile_busy`; only `code` is read, never the message. */

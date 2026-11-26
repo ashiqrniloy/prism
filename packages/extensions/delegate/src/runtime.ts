@@ -1,12 +1,13 @@
 import {
+  type Agent,
   type AgentEvent,
   type Decision,
   type EventOrigin,
   type ModelRef,
   type PackageAPI,
-  parseModelRef,
   type PendingDecision,
   type Principal,
+  parseModelRef,
   type RunOptions,
   type RunResult,
   type Session,
@@ -14,6 +15,7 @@ import {
   type Usage,
 } from "@arnilo/prism";
 import { createActivityReporter } from "./activity.js";
+import { createAgentRegistry } from "./agents.js";
 import type { DelegateChildConfig, DelegateConfig } from "./config.js";
 import { DEFAULT_MAX_CONCURRENT, DEFAULT_MAX_DEPTH, DEFAULT_QUEUE_TIMEOUT_MS } from "./config.js";
 import { buildSeededContext, type ContextUsed, resolveChildContext } from "./context.js";
@@ -228,6 +230,7 @@ export function createDelegateRuntime(
   prism: PackageAPI<DelegateConfig>,
   resolved?: Readonly<Record<string, DelegateChildConfig>>,
   ceilings: ResolvedDelegateCeilings = resolveDelegateCeilings(prism.config.ceilings),
+  agents: ReturnType<typeof createAgentRegistry> = createAgentRegistry((message) => new DelegateError(message)),
 ) {
   const config = prism.config;
   const children = resolved ?? config.children ?? {};
@@ -243,7 +246,8 @@ export function createDelegateRuntime(
    * a tool this agent does not have); an inherited package that is not loaded fails the delegation.
    */
   const allowListFor = (name: string, child: DelegateChildConfig, childDepth: number): readonly string[] => {
-    prism.packages.instances(child.inherit);
+    const inherit = child.inherit ?? [];
+    prism.packages.instances(inherit);
     // This package is never inherited, so a child that may delegate again gets its tools here (Task 5).
     const delegating =
       childDepth < maxDepth
@@ -252,7 +256,7 @@ export function createDelegateRuntime(
             .filter((tool) => tool.package === DELEGATE_PACKAGE && (DELEGATE_TOOL_NAMES as readonly string[]).includes(tool.name))
             .map((tool) => tool.name)
         : [];
-    const inherited = new Set(child.inherit);
+    const inherited = new Set(inherit);
     const own = prism.tools
       .list()
       .filter((tool) => inherited.has(tool.package))
@@ -312,6 +316,74 @@ export function createDelegateRuntime(
       ...(input.principal === undefined ? {} : { principal: input.principal }),
       // The child's turns count against the parent's run (and through it, its ancestors').
       ...(input.session === undefined ? {} : { chargeTo: input.session }),
+    };
+  };
+  /**
+   * The per-run options of a child on a host-supplied agent. A model-less agent is a driver: its instructions, model
+   * and tool allow-list narrow its configured spec (`RunOptions.external`); `tools.only` names the agent does not
+   * register are the driver's built-in tools. A native agent takes them as ordinary run options.
+   */
+  const agentRunOptions = (
+    child: DelegateChildConfig,
+    agent: Agent,
+    input: { session?: SessionContext; principal?: Principal; interactive?: boolean },
+    signal: AbortSignal,
+    leg: "run" | "resume",
+  ): RunOptions => {
+    const driver = agent.config.model === undefined;
+    const registered = new Set(agent.tools.map((tool) => tool.name));
+    const only = child.tools?.only;
+    const prismTools = only?.filter((name) => registered.has(name));
+    const builtin = only?.filter((name) => !registered.has(name));
+    const instructions = childInstructions(child.instructions);
+    // A durable resume refuses `RunOptions.model`; a driver takes its model through the spec instead.
+    const model = child.model;
+    const skills =
+      child.skills === "none"
+        ? false
+        : Array.isArray(child.skills)
+          ? child.skills.length === 0
+            ? false
+            : { only: child.skills }
+          : undefined;
+    const maxTurns = child.limits?.maxTurns ?? undefined;
+    return {
+      signal,
+      ...(prismTools === undefined ? {} : { tools: { only: prismTools } }),
+      ...(skills === undefined ? {} : { skills }),
+      limits: resolveChildLimits(child.limits, ceilings),
+      interactive: input.interactive ?? true,
+      // A non-interactive parent denies what the child asks: an external child cannot be resumed through the parent.
+      ...(input.interactive === false ? { approvals: "deny" as const } : {}),
+      ...(input.principal === undefined ? {} : { principal: input.principal }),
+      // The child's usage counts against the parent's run: the kernel accepts the linked parent of another agent.
+      ...(input.session === undefined ? {} : { chargeTo: input.session }),
+      ...(driver
+        ? {
+            external: {
+              systemPrompt: { replace: instructions },
+              ...(model === undefined ? {} : { model: typeof model === "string" ? model : model.model }),
+              ...(prismTools === undefined ? {} : { prismTools }),
+              ...(builtin === undefined ? {} : { builtinTools: { allow: builtin } }),
+              ...(maxTurns === undefined ? {} : { limits: { maxTurns } }),
+            },
+          }
+        : {
+            systemPrompt: { id: "delegate-child", source: "run", mode: "replace", text: instructions },
+            ...(model === undefined || leg === "resume" ? {} : { model }),
+          }),
+    };
+  };
+  /** The origin a child on a host-supplied agent reports: `external` when the agent is a driver. */
+  const agentOrigin = (name: string, id: string, depth: number, agent: Agent): EventOrigin => {
+    const external = agent.config.model === undefined;
+    return {
+      kind: external ? "external" : "prism",
+      agent: name,
+      agentId: agent.id,
+      delegationId: id,
+      depth,
+      executedBy: external ? "external" : "prism",
     };
   };
   const maxConcurrent = config.maxConcurrent ?? DEFAULT_MAX_CONCURRENT;
@@ -507,6 +579,7 @@ export function createDelegateRuntime(
     input: DelegateStartInput,
     controller: AbortController,
   ): Promise<DelegationOutcome> => {
+    if (child.agent !== undefined) return runOnAgent(id, name, child, child.agent, input, controller);
     let session: Session | undefined;
     let isolation: { workspace: IsolationWorkspace; worktree: IsolatedWorktree } | undefined;
     let settled = false;
@@ -585,6 +658,62 @@ export function createDelegateRuntime(
     }
   };
 
+  /**
+   * One delegation to a child on a host-supplied agent: a session of that agent linked to the parent session (no
+   * memory tiers, worktree or seeded context of the parent's agent), with the same queue, limits, report and paging.
+   */
+  const runOnAgent = async (
+    id: string,
+    name: string,
+    child: DelegateChildConfig,
+    agentName: string,
+    input: DelegateStartInput,
+    controller: AbortController,
+  ): Promise<DelegationOutcome> => {
+    let session: Session | undefined;
+    let watcher: ReturnType<typeof watch> | undefined;
+    const depth = depthOf(input.session) + 1;
+    let origin = originFor(name, id, depth);
+    const brief = input.input.trim().split("\n")[0]?.trim() ?? "";
+    try {
+      const agent = await agents.resolve(agentName);
+      origin = agentOrigin(name, id, depth, agent);
+      emit({ origin, phase: "started" });
+      const options = agentRunOptions(child, agent, input, controller.signal, "run");
+      session = await agent.session({ parent: { sessionId: input.parentSessionId, delegationId: id } });
+      watcher = watch(session, origin, child.report ?? "on-complete", input.parentSessionId);
+      const result = await session.run(input.input, options);
+      await session.close();
+      await watcher.done;
+      return await finishLeg({
+        id,
+        name,
+        brief,
+        parentSessionId: input.parentSessionId,
+        ...(input.session === undefined ? {} : { parentSession: input.session }),
+        sync: input.mode === "sync",
+        session,
+        end: {
+          status: result.status,
+          runId: result.runId,
+          ...(result.usage === undefined ? {} : { usage: result.usage }),
+          ...(result.pending === undefined ? {} : { pending: result.pending }),
+          ...(result.error === undefined ? {} : { error: result.error.message }),
+        },
+        text: result.text,
+        turns: watcher.turns,
+        controller,
+        origin,
+      });
+    } catch (error) {
+      emit({ origin, phase: "error" });
+      return failedOutcome(id, name, controller, watcher?.turns ?? 0, error);
+    } finally {
+      slots.release();
+      await session?.close().catch(() => undefined);
+    }
+  };
+
   /** Resumes a suspended sync child through the parent's `resumeNested`; reopens it from the store when it is not open. */
   const resume = async (input: DelegateResumeInput): Promise<DelegationOutcome> => {
     const record = input.session === undefined ? undefined : suspendedState.get(input.session)[input.childSessionId];
@@ -604,15 +733,23 @@ export function createDelegateRuntime(
       if (input.signal.aborted) controller.abort(input.signal.reason);
       else input.signal.addEventListener("abort", () => controller.abort(input.signal?.reason), { once: true });
     }
-    const origin = originFor(name, record.delegationId, depthOf(input.session) + 1);
+    let origin = originFor(name, record.delegationId, depthOf(input.session) + 1);
     let session: Session | undefined;
     let watcher: ReturnType<typeof watch> | undefined;
     // A resume continues a call that already holds its place in the round: it takes a slot without waiting.
     slots.force();
     const done = (async () => {
       try {
-        const options = childRunOptions(name, child, input, controller.signal, "resume");
-        session = await prism.sessions.open({ parent: { sessionId: input.parentSessionId }, id: input.childSessionId });
+        let options: RunOptions;
+        if (child.agent !== undefined) {
+          const agent = await agents.resolve(child.agent);
+          origin = agentOrigin(name, record.delegationId, depthOf(input.session) + 1, agent);
+          options = agentRunOptions(child, agent, input, controller.signal, "resume");
+          session = await agent.session({ id: input.childSessionId });
+        } else {
+          options = childRunOptions(name, child, input, controller.signal, "resume");
+          session = await prism.sessions.open({ parent: { sessionId: input.parentSessionId }, id: input.childSessionId });
+        }
         watcher = watch(session, origin, child.report ?? "on-complete", input.parentSessionId);
         let end: ChildEnd = { status: "failed", error: "The child's resume ended without a result" };
         for await (const event of session.resume(input.decisions, options)) {
@@ -672,6 +809,8 @@ export function createDelegateRuntime(
   });
 
   return {
+    /** The `delegate.agents` registry: the host-supplied agents `children.<name>.agent` names. */
+    agents: agents.registry,
     /** Visible children only: a hidden child is absent from the tool's `child` enum. */
     childNames: Object.keys(children).filter((name) => !isHidden(children[name] as DelegateChildConfig)),
     description,

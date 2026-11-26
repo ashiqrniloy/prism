@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory-system",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Prism memory bundle: session memory (STM compaction, recall) plus experimental long-term memory. Import each capability through its published entrypoint.",
   "type": "module",
   "exports": {

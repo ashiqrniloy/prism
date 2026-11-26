@@ -167,6 +167,53 @@ function majorOf(version: string): string {
   return /^v?(\d+)/.exec(version)?.[1] ?? version;
 }
 
+/** A driver's per-run narrowing of its configured spec: `RunOptions.external`. */
+export type ExternalRunSpec = NonNullable<RunController["external"]>;
+
+const intersect = (configured: readonly string[] | undefined, run: readonly string[]): readonly string[] =>
+  configured === undefined ? [...run] : configured.filter((name) => run.includes(name));
+
+/**
+ * The spec one run uses: the configured spec narrowed by `RunOptions.external`. Lists only shrink, `deny` only grows,
+ * `maxTurns` only drops; a prompt mode the driver cannot honour, or a model on a driver without per-run models, fails.
+ */
+export function narrowSpec(spec: ExternalAgentSpec, run: ExternalRunSpec | undefined, descriptor: DriverDescriptor): ExternalAgentSpec {
+  if (run === undefined) return spec;
+  if (run.systemPrompt !== undefined) {
+    const mode = "replace" in run.systemPrompt ? "replace" : "append";
+    if (!descriptor.controls.systemPrompt.includes(mode)) {
+      throw new DriverError("driver_capability_missing", `this driver cannot ${mode} the system prompt for one run`);
+    }
+  }
+  if (run.model !== undefined && descriptor.models === "none") {
+    throw new DriverError("driver_capability_missing", "this driver takes no per-run model");
+  }
+  const builtin = run.builtinTools;
+  const configuredAllow = spec.builtinTools?.allow;
+  const allow = builtin?.allow === undefined ? configuredAllow : intersect(configuredAllow, builtin.allow);
+  const maxTurns =
+    run.limits?.maxTurns === undefined
+      ? spec.limits?.maxTurns
+      : Math.min(run.limits.maxTurns, spec.limits?.maxTurns ?? Number.POSITIVE_INFINITY);
+  return {
+    ...spec,
+    ...(run.systemPrompt === undefined ? {} : { systemPrompt: run.systemPrompt }),
+    ...(run.model === undefined ? {} : { model: run.model }),
+    ...(run.prismTools === undefined ? {} : { prismTools: intersect(spec.prismTools ?? [], run.prismTools) }),
+    ...(builtin === undefined
+      ? {}
+      : {
+          builtinTools: {
+            ...(allow === undefined ? {} : { allow: [...allow] }),
+            ...(builtin.deny === undefined && spec.builtinTools?.deny === undefined
+              ? {}
+              : { deny: [...new Set([...(spec.builtinTools?.deny ?? []), ...(builtin.deny ?? [])])] }),
+          },
+        }),
+    ...(maxTurns === undefined ? {} : { limits: { ...spec.limits, maxTurns } }),
+  };
+}
+
 /** The loop a driver package provides. `binary` is `undefined` when the probe found nothing. */
 export function createDriverLoop<Extra extends object>(
   definition: DriverDefinition<Extra>,
@@ -207,7 +254,7 @@ export function createDriverLoop<Extra extends object>(
       try {
         await definition.start.run({
           run,
-          spec,
+          spec: narrowSpec(spec, run.external, definition.descriptor),
           config,
           binary,
           descriptor: definition.descriptor,

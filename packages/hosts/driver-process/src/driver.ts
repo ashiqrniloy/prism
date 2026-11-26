@@ -1,7 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import { createSecretRedactor, definePackage, type PackageDefinition } from "@arnilo/prism";
+import { createSecretRedactor, definePackage, type PackageDefinition, type RunController } from "@arnilo/prism";
 import {
   ALL_TOOL_EFFECTS,
   assertIsolation,
@@ -31,6 +31,39 @@ import { jsonlStream } from "./transports/jsonl-stream.js";
 import { createTurn } from "./turn.js";
 
 const DEFAULT_HOOK_TIMEOUT_MS = 5000;
+/** How long the vendor gets to read a run-ending tool result before its turn is interrupted. */
+const END_RUN_SETTLE_MS = 200;
+
+/** Resolves once a Prism-served tool returned an accepted `endRun` (the kernel drops an undeclared one). */
+function endRunSignal() {
+  let request: () => void = () => undefined;
+  let requested = false;
+  const promise = new Promise<void>((resolve) => {
+    request = resolve;
+  });
+  return {
+    promise,
+    get requested() {
+      return requested;
+    },
+    request() {
+      requested = true;
+      request();
+    },
+  };
+}
+
+/** The run as the vendor's tool calls see it: a result that ends the run also ends the vendor's turn. */
+function watchEndRun(run: RunController, ending: ReturnType<typeof endRunSignal>): RunController {
+  return {
+    ...run,
+    async executeTools(calls, options) {
+      const results = await run.executeTools(calls, options);
+      if (results.some((result) => result.endRun !== undefined)) ending.request();
+      return results;
+    },
+  };
+}
 
 export function adapterDriver(adapter: AgentAdapter): DriverDefinition<ProcessDriverConfig> {
   assertAdapter(adapter);
@@ -100,7 +133,9 @@ const noHooks: HookCodec = {
   },
 };
 
-async function runAdapter(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>): Promise<void> {
+async function runAdapter(adapter: AgentAdapter, outer: DriverRunContext<ProcessDriverConfig>): Promise<void> {
+  const ending = endRunSignal();
+  const ctx: DriverRunContext<ProcessDriverConfig> = { ...outer, run: watchEndRun(outer.run, ending) };
   const { run, spec, config, lease } = ctx;
   if (!lease) throw new DriverError("profile_invalid", "process driver needs a profile lease");
   const bound = ctx.services
@@ -190,8 +225,12 @@ async function runAdapter(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDr
             redactor,
             turn,
             session.resume,
+            ending,
           );
           if (completed && !run.signal.aborted) await session.archive(turn.encoding);
+          // An abort that arrived before turnEnd ends the run aborted, not completed: the kernel records
+          // `status: "aborted"` and `abortReason` only when the loop settles by throwing.
+          else if (!completed && run.signal.aborted) throw run.signal.reason;
         } catch (error) {
           if (error instanceof Error) {
             error.message = redactor.redact(error.message);
@@ -219,6 +258,7 @@ async function converse(
   redactor: ReturnType<typeof createSecretRedactor>,
   turn: ReturnType<typeof createTurn>,
   resume: import("./adapter.js").ResumeContext,
+  ending: ReturnType<typeof endRunSignal>,
 ): Promise<boolean> {
   const { run, binary, config, tools, spec } = ctx;
   if (run.signal.aborted) return false;
@@ -245,6 +285,13 @@ async function converse(
     void shutdown.abort();
   };
   run.signal.addEventListener("abort", abort, { once: true });
+  // A Prism tool ended the run: let the vendor read the result, then end its turn with the ladder's first step.
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  void ending.promise.then(() => {
+    if (finished) return;
+    turn.requestEnd();
+    settleTimer = setTimeout(() => void shutdown.interrupt(), END_RUN_SETTLE_MS);
+  });
   try {
     for (const frame of adapter.open?.({
       ...encoding,
@@ -277,6 +324,8 @@ async function converse(
       }
     }
     if (steeringError) throw steeringError;
+    // An interrupted turn may end with the process instead of `turnEnd`: the run still ended as the tool asked.
+    if (!ended && ending.requested && !run.signal.aborted && !spawnError) ended = true;
     if (!ended && !run.signal.aborted) {
       await shutdown.failure();
       await stderr.done;
@@ -285,13 +334,14 @@ async function converse(
         `${spawnError ? "could not start process" : "process exited before turnEnd"}${stderr.text() ? `: ${stderr.text()}` : ""}`,
       );
     }
-    return ended && !run.signal.aborted;
+    return ended;
   } catch (error) {
     if (run.signal.aborted) return false;
     if (error instanceof ProcessDriverError && error.code === "vendor_limit") await shutdown.abort();
     throw error;
   } finally {
     finished = true;
+    if (settleTimer !== undefined) clearTimeout(settleTimer);
     await steers.return?.();
     // A turn may finish while the process keeps listening; reap it before removing its files.
     if (aborted) await shutdown.abort();

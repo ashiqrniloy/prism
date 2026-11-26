@@ -1,7 +1,5 @@
 /** Provider-round phase of runInternal (plan 059). */
 
-import { cacheUsageReport } from "../../provider-kit/cache-helpers.js";
-import { estimateMessageTokens, estimateRequestExtrasTokens, resolveInputCap } from "../../models/estimate.js";
 import type {
   ContentBlock,
   CostCatalog,
@@ -21,29 +19,31 @@ import type {
   Usage,
   UsageRecord,
 } from "../../contracts.js";
-import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
-import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
-import { RunLimitError } from "../../run-limits.js";
-import { tryAgentRuntime } from "../runtime-registry.js";
+import { estimateMessageTokens, estimateRequestExtrasTokens, resolveInputCap } from "../../models/estimate.js";
 import { normalizeStopReason, providerError, providerToolCallDeltaContent } from "../../models/events.js";
-import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
 import { isTransientErrorInfo, mergeRetry, type RetryProbe, retryLoop } from "../../models/retry.js";
+import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
+import type { PackageUsageScope } from "../../package-call-seam.js";
+import { cacheUsageReport } from "../../provider-kit/cache-helpers.js";
+import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
+import { RunLimitError } from "../../run-limits.js";
 import { estimateTextTokensForFamily } from "../../usage-estimation.js";
+import { mergeContentBlocks } from "../coalesce.js";
+import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
 import {
   bridgeAbort,
   isSteerSoftInterrupt,
-  providerEventBytes,
-  requestBytes,
   ProviderTurnFailure,
   providerContent,
+  providerEventBytes,
   randomId,
   reconstructMissingToolCalls,
+  requestBytes,
   SteerSoftInterrupt,
   throwIfAborted,
 } from "../helpers.js";
-import { mergeContentBlocks } from "../coalesce.js";
+import { tryAgentRuntime } from "../runtime-registry.js";
 import type { RoundContext, SessionHost } from "./types.js";
-import type { PackageUsageScope } from "../../package-call-seam.js";
 
 function pushCoalescedContent(content: ContentBlock[], block: ContentBlock): void {
   const merged = mergeContentBlocks(content.at(-1), block);
@@ -170,7 +170,7 @@ async function meterUsage(
  * active run (an async child outliving its parent's run), no `child_run` ledger row is written while its session
  * limits (if any) are still charged (plan 239 Task 8). A breach aborts the ancestor's run and throws here.
  */
-async function chargeAncestor(session: RoundContext["session"], model: ModelConfig, usage: Usage): Promise<void> {
+export async function chargeAncestor(session: RoundContext["session"], model: ModelConfig, usage: Usage): Promise<void> {
   const seam = session.activeChargeTo;
   if (!seam) return;
   if (seam.recordUsage) await seam.recordUsage(model, usage, undefined, "child_run");

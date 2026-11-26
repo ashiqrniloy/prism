@@ -849,6 +849,7 @@ const FROZEN_DRIVER_KIT_EXPORTS: readonly string[] = [
   "mapPlan",
   "mapUsage",
   "materializeSkills",
+  "narrowSpec",
   "probeBinary",
   "readJsonl",
   "redactedStderr",
