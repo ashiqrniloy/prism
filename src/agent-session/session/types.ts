@@ -53,6 +53,12 @@ export type SessionHost = {
   readonly store: SessionStore;
   currentLeafId?: string;
   history: Message[];
+  /**
+   * The last main-turn request's tokens outside the branch the compaction vote estimates: system and developer
+   * instructions, rendered context blocks (a memory block, a host's retrieval) and tool declarations, less the
+   * carried summaries the vote already counts. The vote adds it, so a trigger sees the request it guards.
+   */
+  requestOverheadTokens?: number;
   activeRun?: AbortController;
   activeRunId?: string;
   activeProviderTurnAbort?: AbortController;

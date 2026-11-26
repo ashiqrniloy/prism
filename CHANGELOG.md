@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- `@arnilo/prism`: the compaction vote's estimate (`CompactionWhenPayload.estimatedTokens`, and every kernel trigger) now counts what the last main turn sent beside the branch: instructions, rendered context blocks and tool declarations. Before, it counted the branch's messages and summaries only, so a trigger at a share of the input cap fired late by the size of every block a package or host adds (the memory system's memory block, a `context.build` retrieval) and the provider's overflow did the compacting (plan 218.5 Task 7: a mem0 retrieval block overflowed the window 4 times in a 150-task session). Sessions with context blocks or many tools now compact earlier. Docs: `docs/slots.md`. Test: `adds the last turn's context blocks, instructions and tools to estimatedTokens`.
 - `@arnilo/prism-memory-system`: working-memory fixes from plan 218.5 Task 7's long-session pilot.
   - WM items count against the memory block's pool with the STM records, and are left out with them past it. WM `fact` items and items marked `neededLater` go last. Before, deterministic WM's block grew to 20,000 rendered tokens in a 150-task session.
   - Renamed: `wm.protectRequestPasses` (8 WM passes) to `wm.protectRequestTasks` (default 3 newer user requests). A link protection now lapses when the task has moved on. The old key is rejected as unknown config.

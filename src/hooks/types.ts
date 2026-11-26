@@ -168,6 +168,10 @@ export interface CompactionWhenPayload {
   readonly entryCount: number;
   /** Provider turns assembled so far in this run; undefined at run start (between turns, defined). */
   readonly turn?: number;
+  /**
+   * The request's estimated input tokens: the branch's messages and carried summaries plus the last main turn's
+   * overhead (instructions, rendered context blocks, tool declarations; the previous turn's at a run's start).
+   */
   readonly estimatedTokens?: number;
 }
 

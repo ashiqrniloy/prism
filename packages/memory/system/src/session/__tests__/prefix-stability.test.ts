@@ -253,7 +253,9 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
             stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
             wm: { model: "worker/w", policy: "model", triggerTokens: 1 },
             scope: { text: "Keep prefix stable across turns." },
-            context: { compactAfterRun: { maxTokens: 700 } },
+            // 990 = the 700 these turns were sized on plus about 290 tokens the request carries beside the branch
+            // (instructions, tools, the memory block), which the compaction vote counts since plan 218.5 Task 7.
+            context: { compactAfterRun: { maxTokens: 990 } },
           }),
         ],
         slots: { store },
@@ -391,8 +393,9 @@ describe("prefix stability between compactions (plan 218.3 Task 6)", () => {
           stm: { model: "worker/w", triggerTokens: 1, verbatimUserChars: 0 },
           wm: false,
           // Between-loop cap 300, mid-loop share 320, and keepRecentTokens 1,000 so both triggers can cross while the
-          // active tail still fits in `keepRecentTokens` / trailing user messages.
-          context: { compactAfterRun: { maxTokens: 300 }, compactAt: { ratio: 0.000_32 }, keepRecentTokens: 1_000 },
+          // active tail still fits in `keepRecentTokens` / trailing user messages. Each is raised by the about 290
+          // tokens the request carries beside the branch, which the vote counts since plan 218.5 Task 7.
+          context: { compactAfterRun: { maxTokens: 590 }, compactAt: { ratio: 0.000_61 }, keepRecentTokens: 1_000 },
         }),
       ],
       slots: { store },

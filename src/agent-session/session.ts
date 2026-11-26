@@ -185,6 +185,8 @@ export class RuntimeAgentSession implements Session {
   activeLoop?: LoopStrategy;
   activeLoopCheckpoint?: { readonly value: JsonValue };
   activeLoopHistory?: Message[];
+  /** See `SessionHost.requestOverheadTokens`: recorded per main turn, read by the compaction vote. */
+  requestOverheadTokens?: number;
   /** Gated calls of the current tool round awaiting one collected suspension. */
   activeGatedRound?: Map<string, { entry: PendingToolCall; decision: PendingDecision }>;
   /** Nested (child-run) suspensions of the current tool round, staged with the gated calls. */
@@ -1396,9 +1398,15 @@ export class RuntimeAgentSession implements Session {
     // A branch that just compacted keeps its fresh summary: no second pass over the same entries.
     if (snapshot.entries.at(-1)?.kind === "compaction") return undefined;
     let estimated: number | undefined;
+    // The branch (messages plus carried summaries) plus what the last main turn sent beside it: instructions,
+    // rendered context blocks and tool declarations. Without that overhead a trigger set at a share of the input
+    // cap fired late by the size of every block a package or host adds (a memory block, a retrieval), and the
+    // provider's overflow did the compacting. At a run's start it is the previous turn's, the nearest measure.
     const estimateInputTokens = () =>
       (estimated ??=
-        estimateAssemblyTokens(snapshot.messages) + snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0));
+        estimateAssemblyTokens(snapshot.messages) +
+        snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0) +
+        (this.requestOverheadTokens ?? 0));
     if (hasWhen) {
       // Tri-state: `true` compacts, `false` vetoes, and an abstention (`undefined`) falls through to
       // the configured trigger, so a handler with nothing to say cannot disable the host's gate.
@@ -1432,7 +1440,7 @@ export class RuntimeAgentSession implements Session {
       sessionId: this.id,
       entryCount: snapshotTail(snapshot).branchLength,
       ...(turn === undefined ? {} : { turn }),
-      // Estimates of the branch the run is about to send: messages plus carried summaries.
+      // Estimates of the request the run is about to send: the branch, its summaries and the last turn's overhead.
       estimateInputTokens,
       // The model-derived per-request cap (`contextWindow - maxOutputTokens - reserve`).
       resolveInputCapTokens: () => resolveInputCap({}, spec),

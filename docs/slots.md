@@ -190,8 +190,14 @@ is registered, the kernel's own trigger applies:
 
 - `AgentConfig.compaction.trigger` (a `CompactionTrigger`) when set,
 - else `compaction.thresholdEntries` when set,
-- else `DEFAULT_COMPACTION_TRIGGER`, `{ type: "input_ratio", ratio: 0.8 }`: compact once the branch's
+- else `DEFAULT_COMPACTION_TRIGGER`, `{ type: "input_ratio", ratio: 0.8 }`: compact once the request's
   estimate reaches 80% of the model's input cap (`contextWindow - maxOutputTokens - 1,024` reserve).
+
+The estimate every trigger reads (and `compaction.when`'s `estimatedTokens`) is the branch's messages and carried
+summaries plus what the last main turn sent beside them: instructions, rendered context blocks (a memory block, a
+host's `context.build` retrieval) and tool declarations. At a run's start that overhead is the previous turn's. Before
+plan 218.5 Task 7 it was the branch alone, so a trigger fired late by the size of every block a package or host added,
+and the provider's overflow did the compacting.
 
 ```ts
 createAgent({ model });                                                              // compacts at 80% of the input cap

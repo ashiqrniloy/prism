@@ -2,18 +2,18 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import {
   type AgentEvent,
-  type Session,
-  type ModelProvider,
   type CompactionTrigger,
   createAgent,
   type HookRegistrar,
   type ModelConfig,
+  type ModelProvider,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
   providerToolCall,
   resolveInputCap,
   resolveShouldCompact,
+  type Session,
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
@@ -269,5 +269,48 @@ describe("Between-turn auto-compaction (mid-run)", () => {
 
     const finishedEvent = events.find((e) => e.type === "compaction.completed");
     assert.equal(finishedEvent, undefined, "No compaction should occur without trigger");
+  });
+});
+
+describe("The compaction vote counts what the turn sends beside the branch (plan 218.5 Task 7)", () => {
+  // A host or package context block (a memory block, a retrieval) is rendered into the request after assembly. The
+  // vote used to estimate the branch and its summaries only, so a trigger at a share of the input cap fired late by
+  // the block's size and the provider's overflow did the compacting.
+  async function votedEstimates(block: string | undefined): Promise<number[]> {
+    const { provider } = multiTurnProvider({ rounds: 3 });
+    const estimates: number[] = [];
+    const agent = await createAgent({
+      model: cappedModel,
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [workTool] },
+      hooks: (hooks) => {
+        if (block !== undefined)
+          hooks.on("context.build", (draft) => ({
+            ...draft,
+            context: [...(draft.context ?? []), { id: "host-block", title: "Memory", content: block }],
+          }));
+        hooks.on("compaction.when", (payload) => {
+          if (payload.turn !== undefined) estimates.push(payload.estimatedTokens ?? 0);
+          return { compact: false };
+        });
+      },
+    });
+    const session = await agent.session({ id: `s-overhead-${block === undefined ? "none" : "block"}`, create: true });
+    assert.equal((await session.run("Start")).status, "completed");
+    return estimates;
+  }
+
+  it("adds the last turn's context blocks, instructions and tools to estimatedTokens", async () => {
+    const without = await votedEstimates(undefined);
+    const withBlock = await votedEstimates("memory line ".repeat(400));
+    assert.equal(without.length, 2);
+    assert.equal(withBlock.length, 2);
+    // The tool declarations alone are overhead the old vote left out.
+    assert.ok(without[0]! > 0);
+    // The ~4,800-character block adds roughly its estimate (about 1,200 tokens) to every mid-loop vote.
+    for (const [index, estimate] of withBlock.entries()) {
+      const added = estimate - without[index]!;
+      assert.ok(added > 1_000 && added < 1_500, `turn ${index + 2}: the block added ${added} tokens`);
+    }
   });
 });

@@ -2,6 +2,7 @@
 
 import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
 import { ModelError } from "../model-errors.js";
+import { estimateAssemblyTokens, estimateRequestExtrasTokens, estimateTextTokens } from "../../models/estimate.js";
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import { AgentRunSuspended } from "../../agent-approval.js";
 import { agentFingerprint, validateRunStateOptions } from "../../agent-run-state.js";
@@ -71,6 +72,17 @@ import {
 import { requestHostUi } from "../../host/response.js";
 import type { RoundContext, SessionHost } from "./types.js";
 import { packageCallSeamOf } from "../../package-call-seam.js";
+
+/**
+ * A request's tokens outside the branch the compaction vote counts: its system-role messages (instructions, rendered
+ * context blocks, carried summaries) and tool declarations, less the summaries (the vote counts those itself). The
+ * same estimators as the vote, so the two add up to the request the trigger guards.
+ */
+function requestOverheadTokens(request: import("../../contracts.js").ProviderRequest, summaryTokens: number): number {
+  const system = estimateAssemblyTokens(request.messages.filter((message) => message.role === "system"));
+  const tools = estimateRequestExtrasTokens(request.tools, undefined, estimateTextTokens);
+  return Math.max(0, system + tools - summaryTokens);
+}
 
 const PROMPT_VERSION_MAX_NAME_BYTES = 256;
 const PROMPT_VERSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
@@ -494,11 +506,13 @@ async function assembleRoundContext(params: {
     }
     const turnModel = options.model ?? session.agent.config.model;
     if (!turnModel) throw new ModelError("no_model", "A provider turn needs a model, and this agent was created without one");
+    const summaries = (await session.snapshot()).summaries;
+    lastSummaryTokens = summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0);
     const request = await assembleProviderInput({
       model: turnModel,
       input: nextInput,
       history: session.history,
-      summaries: (await session.snapshot()).summaries,
+      summaries,
       toolResults: toolResults ?? [],
       turn,
       inputLayout,
@@ -528,6 +542,9 @@ async function assembleRoundContext(params: {
     ctx.assembledTurn = true;
     return request;
   };
+
+  /** The carried summaries' tokens in the last assembly, as the compaction vote estimates them. */
+  let lastSummaryTokens = 0;
 
   /** The inputs of the last assembly: an overflow retry rebuilds from these, not from the old bytes. */
   let lastAssembly: { readonly nextInput: AgentInput; readonly turn: number; readonly runOptions?: RunTurnOptions } | undefined;
@@ -575,6 +592,9 @@ async function assembleRoundContext(params: {
       // Fill-if-missing sessionId / cacheKey / cache defaults and the portable thinking intent, then
       // redact: both run after `model.request`, so a transform can neither skip them nor un-redact.
       const send = (candidate: import("../../contracts.js").ProviderRequest, secrets: readonly (string | undefined)[]) => {
+        // What this turn sends beside the branch (after `context.build` and `model.request`): the compaction vote
+        // adds it (`SessionHost.requestOverheadTokens`).
+        session.requestOverheadTokens = requestOverheadTokens(candidate, lastSummaryTokens);
         const stamped = applyDefaultProviderRequestOptions(candidate, {
           sessionId: session.id,
           thinkingLevel: options.thinkingLevel ?? session.agent.config.thinkingLevel,
