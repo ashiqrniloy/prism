@@ -2,7 +2,6 @@
 
 - `@arnilo/prism-memory-system`: working-memory fixes from plan 218.5 Task 7's long-session pilot.
   - WM items count against the memory block's pool with the STM records, and are left out with them past it. WM `fact` items and items marked `neededLater` go last. Before, deterministic WM's block grew to 20,000 rendered tokens in a 150-task session.
-  - A user's task request kept word for word is now batched for WM once its task is over. Durable records and user statements stay out of every batch.
   - Renamed: `wm.protectRequestPasses` (8 WM passes) to `wm.protectRequestTasks` (default 3 newer user requests). A link protection now lapses when the task has moved on. The old key is rejected as unknown config.
   - Removed: `ObservationalMemoryLedger.wmPasses` and `ObservationalMemoryLedger.recordedAtWmPass`.
   - The deterministic WM policy no longer keeps every outcome; it keeps outcomes of high or critical relevance.

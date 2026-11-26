@@ -153,7 +153,7 @@ With the toggle on:
 | --- | --- | --- |
 | STM pass | after a turn, once the unscanned eligible tokens reach `stm.triggerTokens` (or, with `stm.boundaries: true`, when the tail holds a user turn after an idle gap: at most one extra STM call per boundary) | one branch read, one STM call per batch of the unread tail (one batch unless the tail exceeds about twice `stm.triggerTokens`, at least 32 KB serialized, or half of `worker.maxMessageBytes`; only the latter cuts an entry), one ledger record per recorded batch; date prefixes add about 6 tokens per message, plus gap markers; task state and supersession use the same call |
 | Habituation and boundary markers | inside the STM pass; idle-gap markers on every pass that sees a new one | a string comparison per new event against at most `stm.habituation.windowEvents` records, one ledger record per repeat or marker, no model call |
-| WM pass | in the same pass, once the STM records WM can judge (no WM verdict yet; not durable, not a user `statement`) reach `wm.triggerTokens`; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive. A boundary marker no longer runs one | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
+| WM pass | in the same pass, once the STM records WM can judge (no WM verdict yet; not durable, not a user statement) reach `wm.triggerTokens`; after an attempt that did nothing or failed, once another `wm.triggerTokens` of new records arrive. A boundary marker no longer runs one | one WM call over at most `wm.batchTokens` of the oldest records (it ends after a clean turn; calls past the per-turn limit are refused, not failed), one `wm.recorded` record plus one tombstone record per verdict reason ([Working memory](#working-memory)) |
 | Rehearsal pass | after the WM step (even if it records nothing), once the active pool exceeds `rehearsal.targetTokens` | one rehearsal call (or none with `policy: "lowest-relevance"`), one ledger record |
 | Context block | after foreign compaction only | pinned ledger in memory; one entry scan and log write per compaction, awaited before the next request; one reconciliation scan on reopen |
 | Compaction (`context.compaction` on) | mid-loop when the request reaches `context.compactAt.ratio` of the input cap; when a run starts after a completed loop, at `context.compactAfterRun` ([Compaction](#compaction)) | the vote is one state read and a comparison; the compaction first runs STM over the entries it will remove that no pass has covered yet (one STM call per batch, below `stm.triggerTokens`; none when the background passes are up to date), then reads the ledger already in memory. A mid-loop compaction breaks the cached prefix inside the loop; a between-loop one breaks it where the next run's new input starts anyway |
@@ -333,7 +333,7 @@ defaults below.
 | `stm.instruction`, `wm.instruction`, `rehearsal.instruction` | none | Text appended to that worker's default prompt; it cannot change the worker's tools |
 | `stm.thinkingLevel`, `wm.thinkingLevel`, `rehearsal.thinkingLevel` | `low` | Reasoning level for that worker's model calls (`none` … `max`). A model without reasoning levels ignores it; set a level to override |
 | `wm.model` | the session's model | WM worker model |
-| `wm.triggerTokens` | `10000` | Tokens of the STM records WM can judge (no WM verdict yet; durable records and user `statement` records are not counted) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
+| `wm.triggerTokens` | `10000` | Tokens of the STM records WM can judge (no WM verdict yet; durable records and user statements are not counted) that trigger a WM pass (was `wm.observationTokens`, 20,000) |
 | `wm.batchTokens` | `3000` | STM record tokens one WM pass is sent, oldest first; the rest waits for the next pass |
 | `wm.targetRatio` | `0.2` | Items' tokens over the batch's tokens a WM pass aims at (0.01 to 1), as pressure after relevance; protected records are never cut ([Working memory](#working-memory)) |
 | `wm.protectRequestTasks` | `3` | Newer user requests a user request or error stays protected through by its `resolves` link without a resolving outcome; then the next pass records `protectionLapsed` (was `wm.protectRequestPasses`, 8 WM passes) ([Working memory](#working-memory)) |
@@ -661,13 +661,11 @@ denied tool call (`hook_denied` on the branch) or a failed verification (`status
 without a status a failure phrase in its description). The signals come from the records the STM worker wrote and
 their source entries; the WM model sets none.
 
-**What WM judges (plan 218.5 Tasks 3 and 7).** WM judges what the agent did and found, and the user's finished task
-requests. A record marked `durable` and a `statement` that cites a user message are never in a batch, under either
-policy. They get no verdict, so no pass tombstones them, and they stay on the STM surface as recorded. No worker
-output can remove one. A user's task request kept word for word (`verbatim`) is batched: `task_state` protects it until
-its task is over (an outcome resolves it, or `wm.protectRequestTasks` newer requests arrive), and the discard tool
-refuses it while protected. Kept out of every batch (Task 3), the task requests of a 150-task session filled about two
-thirds of the pool, and WM could relieve none of it. Before this, a summary could fold a user's rule into a task line and the next pass rewrite it
+**What WM judges (plan 218.5 Tasks 3 and 7).** WM judges what the agent did and found. A record marked `durable`, a
+`statement` that cites a user message, and a user message kept word for word (`verbatim`) are never in a batch, under
+either policy. They get no verdict, so no pass tombstones them, and they stay on the STM surface as recorded. No worker
+output can remove one. (Task 7 tried batching a finished task request kept word for word and reverted it: the user's
+rules and revocations ride inside task requests, and WM discarded them.) Before this, a summary could fold a user's rule into a task line and the next pass rewrite it
 again (the Session-Bench screen's D2 loss).
 
 **Settled first (plan 218.2 Task 5).** A record protected as `constraint`, `task_state`, `unresolved_error` or

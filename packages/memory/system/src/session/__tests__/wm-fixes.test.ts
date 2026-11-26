@@ -8,7 +8,7 @@ import { it } from "bun:test";
 import assert from "node:assert/strict";
 import type { JsonValue, ModelClient, SessionContext, SessionEntry, SessionLog } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
-import { isDurableOrUserStatement, isUserStatement, isWmExempt } from "../attribution.js";
+import { isDurableOrUserStatement, isUserStatement } from "../attribution.js";
 import { resolveMemorySystemConfig } from "../config.js";
 import { createObservationalFlush } from "../flush.js";
 import { activeObservations, activeWmItems, foldObservationalMemoryLedger } from "../ledger.js";
@@ -320,7 +320,7 @@ it("wm_runs_on_pressure_only", async () => {
   assert.doesNotThrow(() => foldObservationalMemoryLedger([{ type: WM_RECORDED, items: [], boundaries: 3 }]));
 });
 
-it("durable_records_and_user_statements_never_tombstoned", async () => {
+it("durable_and_user_records_never_tombstoned", async () => {
   const statement = record("111111111111", "The release channel is #release", {
     kind: "statement",
     attribution: "user",
@@ -345,22 +345,20 @@ it("durable_records_and_user_statements_never_tombstoned", async () => {
   });
   const request = record("555555555555", "Rename the config loader", { kind: "request", attribution: "user", observedAt: at(4) });
   const proposal = record("666666666666", "Suggest moving the loader", { kind: "statement", attribution: "assistant", observedAt: at(5) });
-  // Plan 218.5 Task 7: a user's task request kept word for word is judged once its task is over (`task_state` protects
-  // the current one); only durable records and user statements stay out of every batch.
-  const held = [statement, preference, mixed];
-  const judged = [verbatim, request, proposal, A];
-  assert.deepEqual([...held, ...judged].map(isWmExempt), [true, true, true, false, false, false, false]);
-  // The protect-user eviction order still keeps a verbatim request with the user's side.
+  // Plan 218.5 Task 7: a user's task request kept word for word stays out of every batch (batching it let WM discard
+  // the user's rules that ride inside task requests).
+  const held = [statement, verbatim, preference, mixed];
+  const judged = [request, proposal, A];
   assert.deepEqual([...held, ...judged].map(isDurableOrUserStatement), [true, true, true, true, false, false, false]);
   assert.equal(isUserStatement(preference), false, "a durable mark holds a record on its own");
 
-  // The model tries to discard everything it can name. It is sent the four judgeable records only.
+  // The model tries to discard everything it can name. It is sent the three judgeable records only.
   const requests: ProviderRequest[] = [];
   const h = harness([recorded(...held, ...judged)], judging({ discard: { finished: [1, 2, 3, 4, 5, 6, 7] } }, requests));
   await h.flush.flush(h.session);
   const prompt = promptOf(requests[0]!);
   for (const kept of held) assert.equal(prompt.includes(kept.description), false, kept.description);
-  assert.match(prompt, /## New STM records \(4;/);
+  assert.match(prompt, /## New STM records \(3;/);
   assert.deepEqual(Object.keys(h.ledger().tombstones ?? {}).sort(), judged.map((made) => made.id).sort());
   assert.deepEqual(
     activeObservations(h.ledger()).map((made) => made.id),
@@ -368,7 +366,7 @@ it("durable_records_and_user_statements_never_tombstoned", async () => {
   );
   assert.deepEqual(activeWmItems(h.ledger()), []);
 
-  // The deterministic policy reads the same surface: at a target that discards all it can, the three stay.
+  // The deterministic policy reads the same surface: at a target that discards all it can, the four stay.
   const deterministic = harness([recorded(...held, ...judged)], done, {
     wm: { policy: "deterministic", triggerTokens: 1, targetRatio: 0.01 },
     rehearsal: { targetTokens: 1_000_000, policy: "lowest-relevance" },

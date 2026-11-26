@@ -10,7 +10,7 @@
  */
 import { type JsonValue, type ModelClient, redactSecrets, type SessionContext, type SessionEntry, type SessionLog } from "@arnilo/prism";
 import { resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-system/core";
-import { isWmExempt } from "./attribution.js";
+import { isDurableOrUserStatement } from "./attribution.js";
 import { type ResolvedMemorySystemConfig, type ResolvedWorkerSettings, resolveModelInputCap } from "./config.js";
 import {
   eligibleObservationSources,
@@ -306,10 +306,11 @@ async function pass(
 
     const afterObservations = ledgerOf(deps.log.entries(session));
     const stmSurface = activeObservations(afterObservations);
-    // Plan 218.5 Task 3: a durable record or a user statement is never in a batch, so no verdict tombstones it and it
-    // stays on the STM surface, under either policy. Task 7: a user's task request is batched; `task_state` protects it
-    // until its task is over. The trigger counts the records WM can judge: pressure it cannot relieve runs no pass.
-    const surface = stmSurface.filter((record) => !isWmExempt(record));
+    // Plan 218.5 Task 3: a durable record or a user statement (a user message kept word for word included) is never in
+    // a batch, so no verdict tombstones it and it stays on the STM surface, under either policy. Task 7 tried batching
+    // finished task requests and reverted it: the user's rules ride inside them, and WM discarded them (D2/D2R loss).
+    // The trigger counts the records WM can judge: pressure it cannot relieve runs no pass.
+    const surface = stmSurface.filter((record) => !isDurableOrUserStatement(record));
     const surfaceTokens = surface.reduce((sum, item) => sum + item.tokenCount, 0);
     // After an attempt that did nothing, wait for a fresh trigger of new records instead of re-running every pass.
     const sinceEmptyAttempt = observationTokensSinceEmptyWmAttempt(deps.log.entries(session));
