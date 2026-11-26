@@ -505,7 +505,12 @@ it("request_protection_lapses_after_newer_user_requests_and_is_recorded", async 
   assert.equal(protectedRecords(ledger, [request, error], { protectRequestTasks: 2, onLapse: (id) => lapsed.push(id) }).size, 0);
   assert.deepEqual(lapsed, [request.id, error.id]);
   // WM passes alone never lapse it, and an assistant's request is no newer task.
-  const passesOnly = foldObservationalMemoryLedger([recorded(other, outcome), recorded(request, error), wmPass([other.id]), wmPass([outcome.id])]);
+  const passesOnly = foldObservationalMemoryLedger([
+    recorded(other, outcome),
+    recorded(request, error),
+    wmPass([other.id]),
+    wmPass([outcome.id]),
+  ]);
   assert.equal(protectedRecords(passesOnly, [request], { protectRequestTasks: 1 }).size, 1);
   const assistantAsks = foldObservationalMemoryLedger([
     recorded(other, outcome),

@@ -89,10 +89,13 @@ describe("withoutConnectTimeout (plan 218.5 Task 7)", () => {
 
 describe("the main agent's output reserve (plan 218.5 Task 7, owner 2026-11-24)", () => {
   test("the main model asks for 16,384 output tokens and the product's input cap stays the design's", () => {
-    const model = mainModel({ provider: "p", model: "m", parameters: { maxTokens: 2_048, temperature: 0 } }, {
-      window: 32_000,
-      mainOutputTokens: MAIN_OUTPUT_TOKENS,
-    });
+    const model = mainModel(
+      { provider: "p", model: "m", parameters: { maxTokens: 2_048, temperature: 0 } },
+      {
+        window: 32_000,
+        mainOutputTokens: MAIN_OUTPUT_TOKENS,
+      },
+    );
     expect(model.limits).toEqual({ contextWindow: 46_336, maxOutputTokens: 16_384 });
     expect(model.parameters).toEqual({ maxTokens: 16_384, temperature: 0 });
     expect(resolveInputCap({}, model)).toBe(productInputCap(32_000));

@@ -114,7 +114,10 @@ it("wm_items_count_against_the_pool_and_are_left_out_with_the_records", () => {
   assert.deepEqual([fits.observations.length, fits.wmItems.length, fits.fullFold], [all.length, 3, false]);
   // One token over: the low-relevance routine item goes first, before any medium record.
   const over = bound(total + 49);
-  assert.deepEqual(over.wmItems.map((made) => made.id), [fact.id, later.id]);
+  assert.deepEqual(
+    over.wmItems.map((made) => made.id),
+    [fact.id, later.id],
+  );
   assert.equal(over.observations.length, all.length);
   assert.equal(over.fullFold, true);
   // The whole block stays within the bound, and the held items outlast every record.
@@ -124,5 +127,8 @@ it("wm_items_count_against_the_pool_and_are_left_out_with_the_records", () => {
     assert.ok(tokens <= maxTokens, `${tokens} <= ${maxTokens}`);
   }
   assert.deepEqual(bound(20).observations, []);
-  assert.deepEqual(bound(20).wmItems.map((made) => made.id), [fact.id, later.id]);
+  assert.deepEqual(
+    bound(20).wmItems.map((made) => made.id),
+    [fact.id, later.id],
+  );
 });
